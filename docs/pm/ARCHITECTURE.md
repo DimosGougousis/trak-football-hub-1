@@ -472,9 +472,9 @@ const { error } = await supabase
 | 8 | Onboarding state | Derived from table existence (profile exists? player exists? coach_invite_code set?) | No separate onboarding_step column; fewer moving parts |
 | 9 | Routing | React Router v6 with role-based layout routes | Standard, well-documented, no SSR needed |
 | 10 | Telemetry failure handling | Silent swallow (try/catch, no UI error) | Telemetry must never degrade UX |
-| 11 | Font loading | Google Fonts CDN (DM Sans + DM Mono) | No self-hosting complexity for pilot |
+| 11 | Font loading | Self-hosted woff2 in `public/fonts` (DM Sans + DM Mono) | Google Fonts CDN leaked player IPs to a third party; revised for the pilot's privacy review |
 | 12 | Session persistence | Supabase refresh tokens (localStorage) | Default Supabase behaviour, no custom session management |
-| 13 | Deployment | Lovable hosting (pilot) | Already in use; no infra work needed |
+| 13 | Deployment | Vercel (auto-deploys from `main`) | Moved off Lovable hosting 2026-09-04; Lovable is retained only for the AI gateway key |
 | 14 | Testing framework | Vitest + React Testing Library | Vite-native, fast, TypeScript-first |
 | 15 | Position modifiers | All 4 positions fully specced (GK: 5 questions, DEF: 6, MID: 6, ATT: 6) | Full algorithm doc provided by founder; no stubs needed |
 

@@ -112,5 +112,12 @@ Key migrations to be aware of:
 
 ## Deployment
 
-Production is hosted on Lovable (auto-deploys from `main`).
+Production is hosted on Vercel at `trakfootball.com` (auto-deploys from `main`).
+`vercel.json` holds the SPA rewrite, the long-cache rules for `/assets` and `/fonts`, and the
+security headers — the CSP there pins the Supabase and Sentry hosts, so a new external origin
+needs adding to `connect-src` or it will be blocked in production.
+
 Supabase project is at `xbykbqolvqyqmipikuae.supabase.co`.
+
+Lovable is no longer the host, but three edge functions still call its AI gateway with
+`LOVABLE_API_KEY` — `coach-assistant`, `parse-schedule` and `player-feedback`.
