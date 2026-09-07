@@ -1,0 +1,86 @@
+{
+  "UC-A02": {
+    "spec_version": 1,
+    "hash": "374935c99aa0be1670f4e30d7b29f530780c1a9dcf75f717e6af26f7219dc82a"
+  },
+  "UC-A03": {
+    "spec_version": 1,
+    "hash": "08d3c3479889f9745ac2a1b80ed27420c29748ee07b01a5453fbd0652d46eb71"
+  },
+  "UC-A04": {
+    "spec_version": 1,
+    "hash": "f4e58eb8fd3c26a3ed1e606443840dc8cb3605b58ed4573c779f6d522b1a0490"
+  },
+  "UC-A06": {
+    "spec_version": 1,
+    "hash": "38be00d8047bf522b42559732315edc36f1311c0a531f81fe6d6b5e11bf3f38c"
+  },
+  "UC-A07": {
+    "spec_version": 1,
+    "hash": "8692ff1e483611bda8e0a3911be64b362febad039ad3c0df2a0f8bb898cb50b6"
+  },
+  "UC-A08": {
+    "spec_version": 1,
+    "hash": "b1a260223c99429f65d82fe5d5210c772567db423ec8207349aa55425ae74650"
+  },
+  "UC-A09": {
+    "spec_version": 1,
+    "hash": "5023a031b1e66907a400d65e4b3954e1441bc941fa5bebf8cb6effeef5e1bb9f"
+  },
+  "UC-A10": {
+    "spec_version": 1,
+    "hash": "3fa2b97bcfce63fba6467ae36bd848f0b37e6cdcfc8ca265e3f0f087a9c50258"
+  },
+  "UC-C02": {
+    "spec_version": 1,
+    "hash": "77df7c6d548a6ecf7a1c7dc2f32a5b449670f3a156fb27692a4ef3929589b8fa"
+  },
+  "UC-C03": {
+    "spec_version": 1,
+    "hash": "27f8a55b295a4b3d4324562d29239b9840367d380096f61bc7f9c654716b8c23"
+  },
+  "UC-C04": {
+    "spec_version": 1,
+    "hash": "f2bc630b949348aadb9759654df347d26ef17f8b0e353cfb46799254b783fbb5"
+  },
+  "UC-C07": {
+    "spec_version": 1,
+    "hash": "4b6fa230cf6bd00d06f7fb3ab2621c248ace3c5000eb7b1e0ba7c0315543f1bb"
+  },
+  "UC-C08": {
+    "spec_version": 1,
+    "hash": "e69c2c0615825931bb9d2ab6b6cc6f980d3067c5fdc142929c569a576a041241"
+  },
+  "UC-P01": {
+    "spec_version": 1,
+    "hash": "e733d3f1ab288a642c74a78b043cadedf45f83b7cb1116d847e3be534a0941d8"
+  },
+  "UC-P02": {
+    "spec_version": 1,
+    "hash": "6e4bbefaadbe3c014c28eeec3f2c9be25eb98263efb80173904c83a3df0d663d"
+  },
+  "UC-P03": {
+    "spec_version": 1,
+    "hash": "9abb0d07e8e5e20310d603f3315f1bdc8ea8f5df14d5e6f060c95900eb8bd947"
+  },
+  "UC-P06": {
+    "spec_version": 1,
+    "hash": "ff58527b98b0feb6abe23fead513dc8fdea788f562484d91b6e78e48c2e2b67f"
+  },
+  "UC-P07": {
+    "spec_version": 1,
+    "hash": "81b475a7cd04b75f23d56709159cab1f441a6a85c55e1365fc9155798b43f275"
+  },
+  "UC-T01": {
+    "spec_version": 1,
+    "hash": "7eb10634683041548674313937dbe23ee0dd524bffc6a8b51a350c9e639c1d7b"
+  },
+  "UC-X01": {
+    "spec_version": 1,
+    "hash": "cb1e3d0f604cd0a7c8d54b207fcb9bf7a13fde04cfe200961d66883b3ad92d2c"
+  },
+  "UC-X02": {
+    "spec_version": 1,
+    "hash": "88a461861bfdc0e7c2d3c09fe135868a99111129c52e6ccdf87fb87800cf4353"
+  }
+}

@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "uc:check": "node scripts/uc-check.mjs --stage=commit",
+    "uc:lock": "node scripts/uc-check.mjs --write-lock",
+    "uc:report": "node scripts/uc-report.mjs"
   },
   "dependencies": {
     "@axe-core/react": "^4.11.1",
