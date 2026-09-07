@@ -1,0 +1,310 @@
+# Single source of truth for Trak's application use cases.
+# Product-owner-owned. Changing a given/when/then requires bumping that
+# entry's spec_version — scripts/uc-check.mjs enforces this via
+# registry.lock.json.
+version: 1
+owner: "@kostasanastasioubusiness-lang"
+use_cases:
+  - id: UC-A02
+    actor: athlete
+    title: Log a match with position inputs and live band preview
+    requirement: REQ-001
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A signed-in pilot athlete on mobile web
+    when: They complete the match log form and tap save
+    then:
+      - A matches row is persisted with a computed rating
+      - They are taken to the result screen for that match
+      - No decimal number is rendered anywhere in the UI
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A03
+    actor: athlete
+    title: See band result after saving a match
+    requirement: REQ-001
+    status: pending
+    tier: [1]
+    spec_version: 1
+    given: An athlete who has just saved a match
+    when: The result screen renders
+    then:
+      - The band word for the computed score is shown
+      - The band word is rendered in that band's configured colour
+      - No decimal number is rendered anywhere in the UI
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A04
+    actor: athlete
+    title: View match history and match detail
+    requirement: REQ-001
+    status: pending
+    tier: [1]
+    spec_version: 1
+    given: A signed-in athlete with previously logged matches
+    when: They open the match history screen
+    then:
+      - Every logged match appears as a card
+      - An athlete with no matches sees an explicit empty message
+      - A failed load is distinguishable from an empty history
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A06
+    actor: athlete
+    title: Create and track a goal
+    requirement: REQ-001
+    status: pending
+    tier: [1]
+    spec_version: 1
+    given: A signed-in athlete
+    when: They create a goal from the goals screen
+    then:
+      - The goal is persisted and appears in their goals list
+      - The goals screen is reachable from the athlete navigation
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A07
+    actor: athlete
+    title: Earn and see medals
+    requirement: REQ-001
+    status: pending
+    tier: [1]
+    spec_version: 1
+    given: An athlete whose logged matches satisfy a medal rule
+    when: They open the medals screen
+    then:
+      - Every earned medal is shown as earned
+      - Medal eligibility is evaluated from their real match history
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A08
+    actor: athlete
+    title: Enter a TRK-XXXX code and claim the squad row
+    requirement: REQ-003
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: An athlete holding a coach's TRK-XXXX code
+    when: They submit the code
+    then:
+      - The squad row is linked to their account
+      - The coach and athlete are genuinely connected in the database
+      - An invalid or already-claimed code is rejected with a reason
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A09
+    actor: athlete
+    title: See the coach's assessment as band and six category bars
+    requirement: REQ-002
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A linked athlete whose coach has submitted an assessment
+    when: They open their profile
+    then:
+      - The assessment's overall band is shown
+      - All six category scores are shown as bars
+      - The coach's private note is never shown to the athlete
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-A10
+    actor: athlete
+    title: Generate a PAR-XXXX code for a parent
+    requirement: REQ-003
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A signed-in athlete
+    when: They request a parent invite code
+    then:
+      - A unique PAR-XXXX code is stored against their account
+      - The same code is shown to them until it is redeemed
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-C02
+    actor: coach
+    title: Add a player to the squad manually
+    requirement: REQ-002
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A signed-in coach on the add-player screen
+    when: They enter a player name and save
+    then:
+      - A squad_players row is persisted against that coach
+      - They are returned to the squad screen
+      - Saving is refused while the name is empty
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-C03
+    actor: coach
+    title: View the squad
+    requirement: REQ-002
+    status: pending
+    tier: [1]
+    spec_version: 1
+    given: A signed-in coach
+    when: They open the squad screen
+    then:
+      - Every player in their squad is listed
+      - A coach with an empty squad sees an explicit empty message
+      - A failed load is distinguishable from an empty squad
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-C04
+    actor: coach
+    title: Assess a player on six sliders producing a band
+    requirement: REQ-002
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A signed-in coach with at least one squad player
+    when: They select a player, set the six sliders and submit
+    then:
+      - A coach_assessments row is persisted with all six category scores
+      - A band derived from the six scores is shown before submitting
+      - Submitting is refused until a player is selected
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-C07
+    actor: coach
+    title: Receive a real, stored, unique TRK-XXXX code
+    requirement: REQ-003
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A signed-in coach
+    when: They view their invite code
+    then:
+      - The code is persisted, not generated for display only
+      - The same code is returned on every subsequent view
+      - No two coaches hold the same code
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-C08
+    actor: coach
+    title: See linked athletes' logged matches, bands only
+    requirement: REQ-003
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A coach linked to an athlete who has logged matches
+    when: They open that athlete's profile
+    then:
+      - Each logged match is shown with its band
+      - The athlete's self-rating is never shown to the coach
+      - The athlete's body-condition input is never shown to the coach
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-P01
+    actor: parent
+    title: Redeem PAR-XXXX, create an account and link to the child
+    requirement: REQ-003
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A parent holding a PAR-XXXX code
+    when: They redeem it and complete sign-up
+    then:
+      - The parent account is linked to exactly that child
+      - The code cannot be redeemed a second time
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-P02
+    actor: parent
+    title: See the child's season band
+    requirement: REQ-004
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A linked parent
+    when: They open the parent home screen
+    then:
+      - The child's season band is shown
+      - A failed load is distinguishable from a child with no matches
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-P03
+    actor: parent
+    title: See the child's match feed
+    requirement: REQ-004
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A linked parent
+    when: They open the matches screen
+    then:
+      - Every match the child logged is listed with its band
+      - The child's self-rating is never shown to the parent
+      - The child's body-condition input is never shown to the parent
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-P06
+    actor: parent
+    title: See the coach's assessments
+    requirement: REQ-004
+    status: pending
+    tier: [1, 2]
+    spec_version: 1
+    given: A linked parent whose child has been assessed
+    when: They open the parent home screen
+    then:
+      - The assessment band is shown
+      - The coach's private note is never shown to the parent
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-P07
+    actor: parent
+    title: Give verifiable consent for a 13-14 year old
+    requirement: REQ-004
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A parent linking to a child aged 13 or 14
+    when: They complete the link flow
+    then:
+      - The flow cannot complete without a recorded consent
+      - The consent record is retrievable and timestamped
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-T01
+    actor: system
+    title: Every enforced use case emits telemetry answering the Q4 metric
+    requirement: REQ-005
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A pilot in progress
+    when: The founder runs the telemetry query
+    then:
+      - Weekly logging players can be counted for any given week
+      - The count matches a manual count of the underlying rows
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-X01
+    actor: system
+    title: No role reads data belonging to anyone they are not linked to
+    requirement: REQ-004
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: Two unlinked accounts of any roles
+    when: One attempts to read the other's rows
+    then:
+      - The read is rejected rather than returning an empty result
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
+
+  - id: UC-X02
+    actor: system
+    title: A failed load never renders as a false empty state
+    requirement: REQ-004
+    status: pending
+    tier: [1]
+    spec_version: 1
+    given: Any data-backed screen
+    when: The request fails or the network is unavailable
+    then:
+      - A retryable error is shown
+      - The error is visibly different from the genuine empty state
+    source: docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
