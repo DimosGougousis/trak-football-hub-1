@@ -31,6 +31,10 @@ useCase('UC-C04', () => {
         inserted.push(body)
         return { id: 'assess-1', ...body }
       }),
+      // handleSave navigates to /coach/home on success, and CoachHomePage
+      // fetches a coach_assessments count on mount — mock it so that
+      // post-redirect request doesn't reach MSW unhandled.
+      table('coach_assessments', []),
     )
 
     renderApp('/coach/assess')
@@ -74,7 +78,13 @@ useCase('UC-C04', () => {
 
   it('refuses to submit until a player is selected', async () => {
     signedInCoachWithSquad()
+    const inserted: unknown[] = []
+    server.use(
+      insertInto('coach_assessments', body => { inserted.push(body); return { id: 'x', ...body } }),
+    )
+
     renderApp('/coach/assess')
+    const user = userEvent.setup()
 
     // Assert disabled the instant the button exists and this would pass even
     // if the squad never loaded, since the button starts disabled before any
@@ -83,6 +93,14 @@ useCase('UC-C04', () => {
     // disabled state is checked while a player genuinely could be chosen but
     // has not been.
     await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
-    expect(screen.getByRole('button', { name: /submit assessment/i })).toBeDisabled()
+    const submit = screen.getByRole('button', { name: /submit assessment/i })
+    expect(submit).toBeDisabled()
+
+    // Clicking a disabled button should be inert. Verifying nothing was
+    // inserted distinguishes "the click did nothing" from "the click
+    // submitted anyway", matching the sibling assertion in
+    // UC-C02.add-player.test.tsx.
+    await user.click(submit)
+    expect(inserted).toHaveLength(0)
   })
 })
