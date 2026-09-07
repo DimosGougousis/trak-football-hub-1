@@ -17,9 +17,8 @@ const writeLockMode = args.includes('--write-lock')
 const TESTS_ROOT = resolve('tests/usecases')
 const failures = []
 // Use-case ids that must be escalated (a question appended) if the run ends
-// up blocked. Populated at the point a failure is attributed to a specific
-// use case, regardless of that use case's status — see the "Escalation"
-// section at the bottom for the one exception (enforced test-run failures).
+// up blocked. Populated only via failFor() — see its doc comment for which
+// kinds of failures qualify.
 const escalationIds = new Set()
 
 function fail(message) {
@@ -28,9 +27,15 @@ function fail(message) {
 }
 
 // Like fail(), but also marks `id` as needing a durable OPEN-QUESTIONS.md
-// entry if the commit ends up blocked. Use this for anything that is not a
-// test-run failure (registry integrity / drift, lock-check tamper) so a
-// `pending` use case still gets a record, not just console output.
+// entry if the commit ends up blocked. OPEN-QUESTIONS.md is a
+// product-owner-facing log — every entry asks a human to pick one of three
+// options about what a use case's spec should say, so only use failFor()
+// for failures that genuinely raise such a question for a specific use
+// case: lock-check tamper (spec text changed without a spec_version bump),
+// an enforced use case with no test file, and enforced test-run failures.
+// Registry *schema* bugs (duplicate id, missing required field) are
+// developer mistakes with no PO decision to make — those call fail()
+// directly so they still block the commit without polluting the log.
 function failFor(id, message) {
   escalationIds.add(id)
   fail(message)
@@ -69,14 +74,23 @@ const tests = findTestFiles()
 console.log('Registry integrity')
 const seen = new Set()
 for (const uc of registry.use_cases) {
-  if (seen.has(uc.id)) failFor(uc.id, `Duplicate use-case id ${uc.id}`)
+  // Duplicate ids and missing required fields are registry *schema* bugs —
+  // a developer mistake, not a product decision. None of the PO's three
+  // OPEN-QUESTIONS.md options ("spec stands", "spec changes", "spec
+  // ambiguous") apply, so these block the commit via plain fail() but must
+  // never escalate to a question. Duplicate ids also make `uc` an unsafe
+  // key to escalate under: which of the two would even own that entry?
+  if (seen.has(uc.id)) fail(`Duplicate use-case id ${uc.id}`)
   seen.add(uc.id)
   for (const field of ['actor', 'title', 'requirement', 'status', 'given', 'when', 'then', 'spec_version', 'source']) {
     if (uc[field] === undefined || uc[field] === null || uc[field] === '') {
-      failFor(uc.id, `${uc.id} is missing required field "${field}"`)
+      fail(`${uc.id} is missing required field "${field}"`)
     }
   }
   if (uc.status === 'enforced' && !tests.has(uc.id)) {
+    // Unlike the two checks above, this one genuinely implicates a specific
+    // use case in a state a PO could plausibly weigh in on (e.g. is this
+    // still meant to be enforced?), so it does escalate.
     failFor(uc.id, `${uc.id} is enforced but has no test file under tests/usecases/`)
   }
 }
@@ -168,11 +182,12 @@ function alreadyOpen(id) {
 }
 
 if (failures.length) {
-  // escalationIds already reflects the intended scoping: lock-check (tamper)
-  // and registry/test drift failures are recorded regardless of the use
-  // case's status, while enforced-test-run failures are only ever recorded
-  // for use cases that are actually `enforced` (see failFor() call sites
-  // above) — so no additional status filter is applied here.
+  // escalationIds already reflects the intended scoping (see failFor()'s
+  // doc comment): lock-check tamper and "enforced with no test file" are
+  // recorded regardless of the use case's status, enforced-test-run
+  // failures only for use cases that are actually `enforced`, and registry
+  // schema bugs (duplicate id / missing field) never end up in this set at
+  // all — so no additional status filter is applied here.
   const failing = registry.use_cases.filter(uc => escalationIds.has(uc.id))
   const date = new Date().toISOString().slice(0, 10)
   for (const uc of failing) {
@@ -181,9 +196,9 @@ if (failures.length) {
       QUESTIONS_PATH,
       [
         '',
-        `## Q-${date}-${uc.id} · ${uc.id} · ${uc.title}`,
-        `Raised: ${date} · commit blocked · ${uc.requirement}`,
-        `Spec (v${uc.spec_version}) says:`,
+        `## Q-${date}-${uc.id} · ${uc.id} · ${uc.title ?? '(missing title)'}`,
+        `Raised: ${date} · commit blocked · ${uc.requirement ?? '(missing requirement)'}`,
+        `Spec (v${uc.spec_version ?? '?'}) says:`,
         ...(uc.then ?? []).map(t => `  THEN ${t}`),
         '',
         'PO decision needed — one of:',
