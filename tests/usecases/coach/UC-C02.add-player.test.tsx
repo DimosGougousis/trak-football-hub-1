@@ -1,4 +1,4 @@
-import { it, expect, vi } from 'vitest'
+import { it, expect } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCase } from '../../support/use-case'
@@ -18,6 +18,15 @@ function signedInCoach() {
   )
 }
 
+async function setupAndAddPlayerName(playerName: string) {
+  renderApp('/coach/squad/add')
+  const user = userEvent.setup()
+  const nameInput = await screen.findByRole('textbox')
+  await user.type(nameInput, playerName)
+  const saveButton = screen.getByRole('button', { name: /add to squad/i })
+  return { user, saveButton }
+}
+
 useCase('UC-C02', () => {
   it('persists a squad_players row against that coach', async () => {
     signedInCoach()
@@ -30,12 +39,8 @@ useCase('UC-C02', () => {
       table('squad_players', []),
     )
 
-    renderApp('/coach/squad/add')
-    const user = userEvent.setup()
-
-    const nameInput = await screen.findByRole('textbox')
-    await user.type(nameInput, 'Nikos Papadopoulos')
-    await user.click(screen.getByRole('button', { name: /add to squad/i }))
+    const { user, saveButton } = await setupAndAddPlayerName('Nikos Papadopoulos')
+    await user.click(saveButton)
 
     await waitFor(() => expect(inserted).toHaveLength(1))
     expect(inserted[0]).toMatchObject({
@@ -53,11 +58,8 @@ useCase('UC-C02', () => {
       ]),
     )
 
-    renderApp('/coach/squad/add')
-    const user = userEvent.setup()
-
-    await user.type(await screen.findByRole('textbox'), 'Nikos Papadopoulos')
-    await user.click(screen.getByRole('button', { name: /add to squad/i }))
+    const { user, saveButton } = await setupAndAddPlayerName('Nikos Papadopoulos')
+    await user.click(saveButton)
 
     expect(await screen.findByText('SQUAD')).toBeInTheDocument()
   })
@@ -70,9 +72,11 @@ useCase('UC-C02', () => {
     )
 
     renderApp('/coach/squad/add')
+    const user = userEvent.setup()
     const save = await screen.findByRole('button', { name: /add to squad/i })
 
     expect(save).toBeDisabled()
+    await user.click(save)
     expect(inserted).toHaveLength(0)
   })
 })
