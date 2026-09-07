@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { supabase } from '@/integrations/supabase/client'
 import { server } from './server'
-import { table, tableError } from './supabase'
+import { table, tableError, insertInto } from './supabase'
 
 describe('supabase MSW handlers', () => {
   it('returns rows for a list query', async () => {
@@ -31,5 +31,57 @@ describe('supabase MSW handlers', () => {
     const { data, error } = await supabase.from('matches').select('*')
     expect(data).toBeNull()
     expect(error).not.toBeNull()
+  })
+
+  it('returns a bare object for .single() when the table has one row', async () => {
+    server.use(table('profiles', [{ id: 'p1', role: 'coach' }]))
+    const { data, error } = await supabase.from('profiles').select('*').single()
+    expect(error).toBeNull()
+    expect(data).toEqual({ id: 'p1', role: 'coach' })
+  })
+
+  it('surfaces PGRST116 for .single() when the table is empty', async () => {
+    server.use(table('profiles', []))
+    const { data, error } = await supabase.from('profiles').select('*').single()
+    expect(data).toBeNull()
+    expect(error).not.toBeNull()
+    expect(error?.code).toBe('PGRST116')
+  })
+
+  it('surfaces PGRST116 for .single() when the table has more than one row', async () => {
+    server.use(
+      table('profiles', [
+        { id: 'p1', role: 'coach' },
+        { id: 'p2', role: 'player' },
+      ]),
+    )
+    const { data, error } = await supabase.from('profiles').select('*').single()
+    expect(data).toBeNull()
+    expect(error).not.toBeNull()
+    expect(error?.code).toBe('PGRST116')
+  })
+
+  it('insert() without select() returns no data and no error', async () => {
+    server.use(
+      insertInto('squad_players', (body) => ({ id: 'new-id', ...body })),
+    )
+    const { data, error } = await supabase
+      .from('squad_players')
+      .insert({ player_name: 'Bea' })
+    expect(error).toBeNull()
+    expect(data).toBeNull()
+  })
+
+  it('insert().select().single() returns the created row', async () => {
+    server.use(
+      insertInto('squad_players', (body) => ({ id: 'new-id', ...body })),
+    )
+    const { data, error } = await supabase
+      .from('squad_players')
+      .insert({ player_name: 'Bea' })
+      .select()
+      .single()
+    expect(error).toBeNull()
+    expect(data).toEqual({ id: 'new-id', player_name: 'Bea' })
   })
 })

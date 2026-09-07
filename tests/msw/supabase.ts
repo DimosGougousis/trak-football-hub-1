@@ -7,17 +7,24 @@ const SINGLE_OBJECT_ACCEPT = 'application/vnd.pgrst.object+json'
 /**
  * PostgREST returns a bare object (not an array) when the client sends the
  * pgrst.object Accept header, and a 406/PGRST116 when it asks for one object
- * and finds none. supabase-js turns that 406 into `data: null` for
- * .maybeSingle() and into an error for .single(). Reproducing this exactly is
- * the whole reason for using MSW over a hand-written fake client.
+ * and the result set isn't exactly one row.
+ *
+ * In the pinned supabase-js / postgrest-js version, only `.single()` sends
+ * that Accept header; `.maybeSingle()` fetches a plain list and unwraps (or
+ * errors on) cardinality client-side instead. So this handler's bare-object
+ * and 406/PGRST116 branches are exercised by `.single()` callers, while
+ * `.maybeSingle()` callers always hit the plain-array branch. Reproducing
+ * PostgREST's actual response shapes exactly — rather than hand-rolling a
+ * fake client — is the whole reason MSW was chosen: an empty result and a
+ * permission failure must not render identically in the app.
  */
 function respond(rows: unknown[], accept: string) {
   if (!accept.includes(SINGLE_OBJECT_ACCEPT)) return HttpResponse.json(rows)
-  if (rows.length === 0) {
+  if (rows.length !== 1) {
     return HttpResponse.json(
       {
         code: 'PGRST116',
-        details: 'Results contain 0 rows',
+        details: `Results contain ${rows.length} rows`,
         hint: null,
         message: 'JSON object requested, multiple (or no) rows returned',
       },
