@@ -36,7 +36,13 @@ useCase('UC-C04', () => {
     renderApp('/coach/assess')
     const user = userEvent.setup()
 
-    await user.selectOptions(await screen.findByRole('combobox'), 'squad-1')
+    // The precondition is "a coach with at least one squad player" — that
+    // means the squad fetch has actually resolved, not merely that the
+    // (initially empty) <select> exists. Wait for the real option to render
+    // before selecting it, otherwise this selects against a placeholder-only
+    // combobox and fails with "Value not found in options".
+    await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
+    await user.selectOptions(screen.getByRole('combobox'), 'squad-1')
     await user.click(screen.getByRole('button', { name: /submit assessment/i }))
 
     await waitFor(() => expect(inserted).toHaveLength(1))
@@ -70,6 +76,13 @@ useCase('UC-C04', () => {
     signedInCoachWithSquad()
     renderApp('/coach/assess')
 
-    expect(await screen.findByRole('button', { name: /submit assessment/i })).toBeDisabled()
+    // Assert disabled the instant the button exists and this would pass even
+    // if the squad never loaded, since the button starts disabled before any
+    // player is selectable — that proves nothing about refusing submission
+    // while a choice is available. Wait for the squad to load first, so the
+    // disabled state is checked while a player genuinely could be chosen but
+    // has not been.
+    await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
+    expect(screen.getByRole('button', { name: /submit assessment/i })).toBeDisabled()
   })
 })
