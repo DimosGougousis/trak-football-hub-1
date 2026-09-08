@@ -126,7 +126,7 @@ use_cases:
     actor: coach
     title: Add a player to the squad manually
     requirement: REQ-002
-    status: pending
+    status: enforced
     tier: [1, 2]
     spec_version: 1
     given: A signed-in coach on the add-player screen
@@ -156,7 +156,7 @@ use_cases:
     actor: coach
     title: Assess a player on six sliders producing a band
     requirement: REQ-002
-    status: pending
+    status: enforced
     tier: [1, 2]
     spec_version: 1
     given: A signed-in coach with at least one squad player

@@ -37,12 +37,33 @@ useCase('UC-C03', () => {
     signedInCoach()
     server.use(table('squad_players', []))
 
-    renderApp('/coach/squad')
+    // CoachSquadPage renders the empty-squad message from its initial
+    // `players = []` state, before the fetch resolves — so a plain
+    // `findByText` here would pass immediately without ever observing the
+    // mocked response, and would keep passing even if the fetch replaced
+    // that state with real rows. Wait for the mocked response to land first
+    // so this genuinely exercises the post-fetch render, same as the
+    // settle-signal technique below.
+    let squadResponseLanded = false
+    function onResponseMocked({ request }: { request: Request }) {
+      if (request.url.includes('/squad_players')) {
+        squadResponseLanded = true
+      }
+    }
+    server.events.on('response:mocked', onResponseMocked)
 
-    // The redesigned empty state no longer reads "No players in your squad
-    // yet" — it reads "Add your first player" (src/pages/coach/CoachSquadPage.tsx).
-    // Same use-case clause, updated selector.
-    expect(await screen.findByText(/add your first player/i)).toBeInTheDocument()
+    try {
+      renderApp('/coach/squad')
+
+      await waitFor(() => expect(squadResponseLanded).toBe(true))
+
+      // The redesigned empty state no longer reads "No players in your squad
+      // yet" — it reads "Add your first player" (src/pages/coach/CoachSquadPage.tsx).
+      // Same use-case clause, updated selector.
+      expect(await screen.findByText(/add your first player/i)).toBeInTheDocument()
+    } finally {
+      server.events.removeListener('response:mocked', onResponseMocked)
+    }
   })
 
   // This is the assertion the audit's "false empty state" defect fails.
@@ -64,28 +85,31 @@ useCase('UC-C03', () => {
     function onResponseMocked({ request }: { request: Request }) {
       if (request.url.includes('/squad_players')) {
         squadResponseLanded = true
-        server.events.removeListener('response:mocked', onResponseMocked)
       }
     }
     server.events.on('response:mocked', onResponseMocked)
 
-    renderApp('/coach/squad')
+    try {
+      renderApp('/coach/squad')
 
-    await waitFor(() => expect(squadResponseLanded).toBe(true))
+      await waitFor(() => expect(squadResponseLanded).toBe(true))
 
-    // Same wording update as the sibling test above: "Add your first player"
-    // is the current empty-state copy. This assertion is EXPECTED TO FAIL —
-    // CoachSquadPage still destructures only `{ data }` from the failed
-    // request (src/pages/coach/CoachSquadPage.tsx:33), so `data` is null,
-    // `players` falls back to `[]`, and the empty-squad panel renders for a
-    // permission failure exactly as it would for a genuinely empty squad.
-    // Recorded as Q-2026-09-07-02 in docs/use-cases/OPEN-QUESTIONS.md — do
-    // not weaken this assertion to make it pass.
-    const emptyMessage = screen.queryByText(/add your first player/i)
-    expect(
-      emptyMessage,
-      'A failed load must not render the empty-squad message. ' +
-      'See UC-C03 and UC-X02 in docs/use-cases/registry.yaml.',
-    ).toBeNull()
+      // Same wording update as the sibling test above: "Add your first player"
+      // is the current empty-state copy. This assertion is EXPECTED TO FAIL —
+      // CoachSquadPage still destructures only `{ data }` from the failed
+      // request (src/pages/coach/CoachSquadPage.tsx:33), so `data` is null,
+      // `players` falls back to `[]`, and the empty-squad panel renders for a
+      // permission failure exactly as it would for a genuinely empty squad.
+      // Recorded as Q-2026-09-07-02 in docs/use-cases/OPEN-QUESTIONS.md — do
+      // not weaken this assertion to make it pass.
+      const emptyMessage = screen.queryByText(/add your first player/i)
+      expect(
+        emptyMessage,
+        'A failed load must not render the empty-squad message. ' +
+        'See UC-C03 and UC-X02 in docs/use-cases/registry.yaml.',
+      ).toBeNull()
+    } finally {
+      server.events.removeListener('response:mocked', onResponseMocked)
+    }
   })
 })

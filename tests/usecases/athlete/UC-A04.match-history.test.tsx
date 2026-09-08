@@ -28,15 +28,29 @@ const MATCH = {
   computed_rating: 7.4,
 }
 
+const OTHER_MATCH = {
+  id: 'match-2',
+  user_id: ATHLETE.id,
+  opponent: 'Olympiacos U15',
+  competition: 'Cup',
+  created_at: '2026-08-20T18:00:00.000Z',
+  team_score: 1,
+  opponent_score: 1,
+  computed_rating: 5.9,
+}
+
 useCase('UC-A04', () => {
   it('shows every logged match as a card', async () => {
     signedInAthlete()
-    server.use(table('matches', [MATCH]))
+    server.use(table('matches', [MATCH, OTHER_MATCH]))
 
     renderApp('/player/matches')
 
     expect(await screen.findByRole('heading', { name: 'Matches' })).toBeInTheDocument()
+    // A single mocked row cannot distinguish "renders the array" from
+    // "renders only the first element" — two distinguishable rows can.
     expect(await screen.findByText('vs Panathinaikos U15')).toBeInTheDocument()
+    expect(await screen.findByText('vs Olympiacos U15')).toBeInTheDocument()
   })
 
   it('shows an explicit empty message when nothing has been logged', async () => {

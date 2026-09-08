@@ -7,12 +7,14 @@ Owner: @kostasanastasioubusiness-lang
 Enforced use cases block commits when they fail. Pending ones are reported
 but do not block. Parked ones never run.
 
-## Enforced — 0
+## Enforced — 2
 
 | ID | Actor | Use case | Requirement | Tier |
 |----|-------|----------|-------------|------|
+| UC-C02 | coach | Add a player to the squad manually | REQ-002 | 1, 2 |
+| UC-C04 | coach | Assess a player on six sliders producing a band | REQ-002 | 1, 2 |
 
-## Pending — 21
+## Pending — 19
 
 | ID | Actor | Use case | Requirement | Tier |
 |----|-------|----------|-------------|------|
@@ -24,9 +26,7 @@ but do not block. Parked ones never run.
 | UC-A08 | athlete | Enter a TRK-XXXX code and claim the squad row | REQ-003 | 2 |
 | UC-A09 | athlete | See the coach's assessment as band and six category bars | REQ-002 | 1, 2 |
 | UC-A10 | athlete | Generate a PAR-XXXX code for a parent | REQ-003 | 2 |
-| UC-C02 | coach | Add a player to the squad manually | REQ-002 | 1, 2 |
 | UC-C03 | coach | View the squad | REQ-002 | 1 |
-| UC-C04 | coach | Assess a player on six sliders producing a band | REQ-002 | 1, 2 |
 | UC-C07 | coach | Receive a real, stored, unique TRK-XXXX code | REQ-003 | 2 |
 | UC-C08 | coach | See linked athletes' logged matches, bands only | REQ-003 | 2 |
 | UC-P01 | parent | Redeem PAR-XXXX, create an account and link to the child | REQ-003 | 2 |
