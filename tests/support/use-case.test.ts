@@ -8,7 +8,12 @@ describe('useCase binding', () => {
 })
 
 useCase('UC-A02', () => {
-  it('runs inside a suite bound to a real registry entry', () => {
-    expect(true).toBe(true)
+  it('names the suite after the bound use case\'s id and title', () => {
+    // useCase() builds the describe() title as `${uc.id} · ${uc.title}` —
+    // assert that binding actually happened, rather than a tautology that
+    // would pass whether or not useCase() ran at all.
+    const suite = expect.getState().currentTestName
+    expect(suite).toMatch(/^UC-A02 · /)
+    expect(suite).toContain('Log a match with position inputs and live band preview')
   })
 })

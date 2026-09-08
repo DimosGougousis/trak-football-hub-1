@@ -49,8 +49,12 @@ useCase('UC-A04', () => {
     expect(await screen.findByRole('heading', { name: 'Matches' })).toBeInTheDocument()
     // A single mocked row cannot distinguish "renders the array" from
     // "renders only the first element" — two distinguishable rows can.
+    // findByText on the first row waits out the fetch; getByText on the
+    // second then proves both are present in the same, already-settled
+    // render (a lone findByText per row would still pass if the second
+    // showed up in a later render), matching UC-C03's stronger shape.
     expect(await screen.findByText('vs Panathinaikos U15')).toBeInTheDocument()
-    expect(await screen.findByText('vs Olympiacos U15')).toBeInTheDocument()
+    expect(screen.getByText('vs Olympiacos U15')).toBeInTheDocument()
   })
 
   it('shows an explicit empty message when nothing has been logged', async () => {

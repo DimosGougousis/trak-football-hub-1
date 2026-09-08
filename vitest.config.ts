@@ -12,9 +12,10 @@ export default defineConfig({
       "src/**/*.{test,spec}.{ts,tsx}",
       "tests/**/*.{test,spec}.{ts,tsx}",
     ],
-    // The repo's tracked .env points at the real Supabase project. Pinning
-    // these here guarantees tier-1 tests can never reach production, and
-    // fixes the localStorage auth key at sb-test-auth-token.
+    // A developer's local, untracked .env can point at a real Supabase
+    // project. Pinning these here guarantees tier-1 tests can never reach
+    // production regardless of local env, and fixes the localStorage auth
+    // key at sb-test-auth-token.
     env: {
       VITE_SUPABASE_URL: "https://test.supabase.co",
       VITE_SUPABASE_PUBLISHABLE_KEY: "test-anon-key",

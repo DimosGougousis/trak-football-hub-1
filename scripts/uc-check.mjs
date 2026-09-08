@@ -16,28 +16,31 @@ const writeLockMode = args.includes('--write-lock')
 
 const TESTS_ROOT = resolve('tests/usecases')
 const failures = []
-// Use-case ids that must be escalated (a question appended) if the run ends
-// up blocked. Populated only via failFor() — see its doc comment for which
-// kinds of failures qualify.
-const escalationIds = new Set()
+// Escalations that must be turned into a durable OPEN-QUESTIONS.md entry if
+// the run ends up blocked. Populated only via failFor() — see its doc
+// comment for which kinds of failures qualify. Each entry carries both the
+// use-case id and the exact reason text, because a question is keyed on the
+// (id, reason) pair, not the id alone — see alreadyOpen()'s doc comment.
+const escalations = []
 
 function fail(message) {
   failures.push(message)
   console.error(`  ✗ ${message}`)
 }
 
-// Like fail(), but also marks `id` as needing a durable OPEN-QUESTIONS.md
-// entry if the commit ends up blocked. OPEN-QUESTIONS.md is a
-// product-owner-facing log — every entry asks a human to pick one of three
+// Like fail(), but also records `id`/`message` as needing a durable
+// OPEN-QUESTIONS.md entry if the commit ends up blocked. OPEN-QUESTIONS.md is
+// a product-owner-facing log — every entry asks a human to pick one of three
 // options about what a use case's spec should say, so only use failFor()
 // for failures that genuinely raise such a question for a specific use
 // case: lock-check tamper (spec text changed without a spec_version bump),
-// an enforced use case with no test file, and enforced test-run failures.
-// Registry *schema* bugs (duplicate id, missing required field) are
-// developer mistakes with no PO decision to make — those call fail()
-// directly so they still block the commit without polluting the log.
+// a locked use case removed from the registry, an enforced use case with no
+// test file, and enforced test-run failures. Registry *schema* bugs
+// (duplicate id, missing required field) are developer mistakes with no PO
+// decision to make — those call fail() directly so they still block the
+// commit without polluting the log.
 function failFor(id, message) {
-  escalationIds.add(id)
+  escalations.push({ id, message })
   fail(message)
 }
 
@@ -121,13 +124,47 @@ if (!lock) {
       )
     }
   }
+  // The loop above can only ever see ids that are still in the registry — it
+  // walks registry.use_cases and looks up lock[uc.id]. Delete an enforced
+  // use case's registry entry entirely and that lock entry is orphaned and
+  // never read, so a locked (enforced) use case disappearing is invisible to
+  // the check above. Close that hole by walking the lock itself and failing
+  // for any id it remembers that the registry no longer has.
+  for (const id of Object.keys(lock)) {
+    if (seen.has(id)) continue
+    failFor(
+      id,
+      `${id} is locked in registry.lock.json but no longer exists in docs/use-cases/registry.yaml.\n` +
+      `      A locked use case was removed. Removing one requires the same authority as\n` +
+      `      changing it — restore the entry, or have the PO approve the removal and\n` +
+      `      re-run npm run uc:lock.`,
+    )
+  }
 }
 
 // --- 3 & 4. Run the tests --------------------------------------------------
+// npx resolves to npx.cmd on win32. Node refuses to spawn a .cmd/.bat file
+// directly unless shell: true is set (its 2024 Windows-batch-file security
+// fix), so shell: true can't simply be dropped here — but shell: true does
+// NOT escape or quote args for us; it only concatenates them (Node emits
+// DEP0190 for exactly this reason). The bug this fixes is that concatenation:
+// an absolute test-file path under a checkout whose directory contains a
+// space (e.g. "C:\Users\Jane Doe\...") word-splits into two bogus arguments.
+// Quoting every argument individually — including on the non-Windows path,
+// which never used shell: true and so was never vulnerable to this, but
+// gains nothing by staying inconsistent — closes that.
+const isWin = process.platform === 'win32'
+const NPX = isWin ? 'npx.cmd' : 'npx'
+
 function runVitest(files) {
   if (files.length === 0) return true
   try {
-    execFileSync('npx', ['vitest', 'run', ...files], { stdio: 'inherit', shell: true })
+    const args = ['vitest', 'run', ...files]
+    if (isWin) {
+      execFileSync(NPX, args.map(a => `"${a}"`), { stdio: 'inherit', shell: true })
+    } else {
+      execFileSync(NPX, args, { stdio: 'inherit' })
+    }
     return true
   } catch {
     return false
@@ -146,14 +183,16 @@ const pendingFiles = registry.use_cases
   .flatMap(uc => tests.get(uc.id) ?? [])
 
 console.log(`Enforced use-case tests (${enforcedFiles.length} file(s))`)
-const enforcedPassed = runVitest(enforcedFiles)
-if (!enforcedPassed) {
-  // Attribute the failure to every enforced use case whose test file was
-  // part of this run — we don't parse vitest's output to figure out which
-  // file(s) actually failed, we escalate all of them. This block is the
-  // reason the whole mechanism exists: a real enforced-test failure must
-  // never go unescalated.
-  for (const uc of enforcedUseCases) {
+// Run each enforced use case's own test file(s) in its own vitest invocation
+// so a failure is attributable to that use case alone. Running the whole
+// enforced set in one vitest call (the previous approach) meant any single
+// failure looked identical to every other one, and every enforced use case
+// in the run got escalated together — a UC-C02 regression would fabricate a
+// question about UC-C04 too, even though its test never ran into trouble.
+for (const uc of enforcedUseCases) {
+  const files = tests.get(uc.id)
+  const passed = runVitest(files)
+  if (!passed) {
     failFor(uc.id, `${uc.id}: enforced use-case test failed`)
   }
 }
@@ -167,37 +206,49 @@ if (pendingFiles.length) {
 }
 
 // --- Escalation ------------------------------------------------------------
-function alreadyOpen(id) {
+// A question is a duplicate only if some OPEN section already raises the
+// *same reason* for the *same id*. Keying on id alone was wrong in both
+// directions:
+//   - OPEN-QUESTIONS.md is append-only, so a RESOLVED section can sit above
+//     a later OPEN one; .find() returned whichever came first regardless of
+//     its status, so once a resolved entry existed a duplicate question got
+//     appended on every subsequent failing run.
+//   - conversely, any OPEN section whose header merely *lists* an id (e.g. a
+//     multi-id investigation like Q-2026-09-07-02) permanently suppressed
+//     every future automated question for that id, including for reasons
+//     that section never addressed.
+// Matching the reason text against each section's "Observed:" line (added
+// below) fixes both: only a still-OPEN, already-generated question for this
+// exact failure counts as a duplicate.
+function alreadyOpen(id, reason) {
   if (!existsSync(QUESTIONS_PATH)) return false
   const text = readFileSync(QUESTIONS_PATH, 'utf8')
-  // Match against the section's header line only (the "## Q-..." line), not
-  // the whole body — otherwise an id merely mentioned in another question's
-  // prose (e.g. "add UC-P04 to the registry") is mistaken for an existing
-  // OPEN question about that id.
-  const section = text.split('\n## ').find(s => {
-    const headerLine = s.slice(0, s.indexOf('\n') === -1 ? s.length : s.indexOf('\n'))
-    return headerLine.includes(id)
+  return text.split('\n## ').some(section => {
+    const headerLine = section.slice(0, section.indexOf('\n') === -1 ? section.length : section.indexOf('\n'))
+    if (!headerLine.includes(id)) return false
+    if (!/Status: OPEN/.test(section)) return false
+    return section.includes(`Observed: ${reason}`)
   })
-  return Boolean(section && /Status: OPEN/.test(section))
 }
 
 if (failures.length) {
-  // escalationIds already reflects the intended scoping (see failFor()'s
-  // doc comment): lock-check tamper and "enforced with no test file" are
-  // recorded regardless of the use case's status, enforced-test-run
-  // failures only for use cases that are actually `enforced`, and registry
-  // schema bugs (duplicate id / missing field) never end up in this set at
-  // all — so no additional status filter is applied here.
-  const failing = registry.use_cases.filter(uc => escalationIds.has(uc.id))
   const date = new Date().toISOString().slice(0, 10)
-  for (const uc of failing) {
-    if (alreadyOpen(uc.id)) continue
+  for (const { id, message } of escalations) {
+    // A locked use case that was removed from the registry has no `uc` left
+    // to look up title/requirement/then from — there is nothing to ask the
+    // PO to reconsider in registry terms (the entry is simply gone). It
+    // still blocked the commit via fail() above; it just doesn't also get a
+    // fabricated OPEN-QUESTIONS.md entry with missing fields.
+    const uc = registry.use_cases.find(u => u.id === id)
+    if (!uc) continue
+    if (alreadyOpen(id, message)) continue
     appendFileSync(
       QUESTIONS_PATH,
       [
         '',
-        `## Q-${date}-${uc.id} · ${uc.id} · ${uc.title ?? '(missing title)'}`,
+        `## Q-${date}-${id} · ${id} · ${uc.title ?? '(missing title)'}`,
         `Raised: ${date} · commit blocked · ${uc.requirement ?? '(missing requirement)'}`,
+        `Observed: ${message}`,
         `Spec (v${uc.spec_version ?? '?'}) says:`,
         ...(uc.then ?? []).map(t => `  THEN ${t}`),
         '',
@@ -209,7 +260,7 @@ if (failures.length) {
         '',
       ].join('\n'),
     )
-    console.error(`  → question appended to docs/use-cases/OPEN-QUESTIONS.md for ${uc.id}`)
+    console.error(`  → question appended to docs/use-cases/OPEN-QUESTIONS.md for ${id}`)
   }
   console.error(`\n${failures.length} problem(s). Commit blocked.`)
   process.exit(1)

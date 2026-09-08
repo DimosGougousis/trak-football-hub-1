@@ -27,9 +27,16 @@ jobs:
       - name: Test
         run: npm test
 
+      # tests/msw and tests/support hold the MSW fidelity contract and the
+      # useCase() unknown-id guard — package.json's "test" script only runs
+      # src, so these run nowhere else in CI.
+      - name: Use-case harness
+        run: npm run test:harness
+
       # Runs the use-case suite through the registry ratchet: enforced use
-      # cases block, pending ones report without blocking. Nothing is enforced
-      # yet, so this reports coverage debt and exits 0.
+      # cases block, pending ones report without blocking. UC-C02 and UC-C04
+      # are enforced; everything else is pending and reports coverage debt
+      # without blocking.
       - name: Use cases
         run: npm run uc:check
 

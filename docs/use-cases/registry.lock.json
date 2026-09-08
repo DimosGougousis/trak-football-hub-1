@@ -1,86 +1,86 @@
 {
   "UC-A02": {
     "spec_version": 1,
-    "hash": "374935c99aa0be1670f4e30d7b29f530780c1a9dcf75f717e6af26f7219dc82a"
+    "hash": "4552182b87c50345d9568ec79a416592350e0d62b51065b9bac267d64c003b74"
   },
   "UC-A03": {
     "spec_version": 1,
-    "hash": "08d3c3479889f9745ac2a1b80ed27420c29748ee07b01a5453fbd0652d46eb71"
+    "hash": "97d4e14dec2bc95f0804fe394ebd013933224ce8347f32ddc6eabcb7ff6b3b2f"
   },
   "UC-A04": {
     "spec_version": 1,
-    "hash": "f4e58eb8fd3c26a3ed1e606443840dc8cb3605b58ed4573c779f6d522b1a0490"
+    "hash": "2eded4c49f104f7d6665c6b7c1fc1eb160372c79d56152d0d97dde80e934d017"
   },
   "UC-A06": {
     "spec_version": 1,
-    "hash": "38be00d8047bf522b42559732315edc36f1311c0a531f81fe6d6b5e11bf3f38c"
+    "hash": "9682443d8b3660b600717095bbbd8fa8d3c92f7ae6e26885ec7bd5a219125c59"
   },
   "UC-A07": {
     "spec_version": 1,
-    "hash": "8692ff1e483611bda8e0a3911be64b362febad039ad3c0df2a0f8bb898cb50b6"
+    "hash": "c7b95f181ed84554d26bc5976924b1c263c5e7f498083a502c844b1675aaca89"
   },
   "UC-A08": {
     "spec_version": 1,
-    "hash": "b1a260223c99429f65d82fe5d5210c772567db423ec8207349aa55425ae74650"
+    "hash": "b679c5024b0e10463d6a6de55a63eb309aa07f800513f7e7e3949f5d38207a9a"
   },
   "UC-A09": {
     "spec_version": 1,
-    "hash": "5023a031b1e66907a400d65e4b3954e1441bc941fa5bebf8cb6effeef5e1bb9f"
+    "hash": "deec8d262098d7a40efd5da1c164430534a817633645a7d7b9611d8d7f94be84"
   },
   "UC-A10": {
     "spec_version": 1,
-    "hash": "3fa2b97bcfce63fba6467ae36bd848f0b37e6cdcfc8ca265e3f0f087a9c50258"
+    "hash": "fb48aa3c86a68cc8781e9781c47fb81f6545f800f2727c2f0ae536a5fbe6aaf4"
   },
   "UC-C02": {
     "spec_version": 1,
-    "hash": "808781e237e6d5493b0367d0dd4bd910389eef0e7bd884050d9b35f5ae6ef398"
+    "hash": "1d95bc5155b3e940c5fdc042994fbe596100ab6b197516a2f80d759bd17d6ffc"
   },
   "UC-C03": {
     "spec_version": 1,
-    "hash": "27f8a55b295a4b3d4324562d29239b9840367d380096f61bc7f9c654716b8c23"
+    "hash": "e7421e3cc54d252488650e909f95b7dcad12edfe96f8570e0dc35ec2a3e63f02"
   },
   "UC-C04": {
     "spec_version": 1,
-    "hash": "43850da33303a4b34a785169c24f427f569d40a5871e1d470c7476db3b6b7506"
+    "hash": "080275e8ad26598686653481bbf87aa093faac563db2b08ba4c3f981d0b31d5f"
   },
   "UC-C07": {
     "spec_version": 1,
-    "hash": "4b6fa230cf6bd00d06f7fb3ab2621c248ace3c5000eb7b1e0ba7c0315543f1bb"
+    "hash": "857b6b380ce5a3de36309efafd9d7c2b2efc245ad6cdd19be41a017b8f5690db"
   },
   "UC-C08": {
     "spec_version": 1,
-    "hash": "e69c2c0615825931bb9d2ab6b6cc6f980d3067c5fdc142929c569a576a041241"
+    "hash": "133ce16683ecedf4b3a6e40c4ee00434f577c630d4ff76fc53f4fe202e322961"
   },
   "UC-P01": {
     "spec_version": 1,
-    "hash": "e733d3f1ab288a642c74a78b043cadedf45f83b7cb1116d847e3be534a0941d8"
+    "hash": "58e8928035013aac1a263c0202d8347aec9b6db64b01852a1a01be8f56195ee3"
   },
   "UC-P02": {
     "spec_version": 1,
-    "hash": "6e4bbefaadbe3c014c28eeec3f2c9be25eb98263efb80173904c83a3df0d663d"
+    "hash": "d2e6970a9b27fa7d5de7b3561aa8017fc6aa9a175eedad687b0db0e90a3123c0"
   },
   "UC-P03": {
     "spec_version": 1,
-    "hash": "9abb0d07e8e5e20310d603f3315f1bdc8ea8f5df14d5e6f060c95900eb8bd947"
+    "hash": "f37499236ea0028089f38d3d897a771e8bae824182c28ef07193a3257f7025f8"
   },
   "UC-P06": {
     "spec_version": 1,
-    "hash": "ff58527b98b0feb6abe23fead513dc8fdea788f562484d91b6e78e48c2e2b67f"
+    "hash": "de64fa423c4f0afb40b376df9bfc986b7094edb09fc0b86563ca1e9d81c78b70"
   },
   "UC-P07": {
     "spec_version": 1,
-    "hash": "81b475a7cd04b75f23d56709159cab1f441a6a85c55e1365fc9155798b43f275"
+    "hash": "77418206d751f8947d7a76d9d24f2f9e588745cd99087a582a2240f93067f04d"
   },
   "UC-T01": {
     "spec_version": 1,
-    "hash": "7eb10634683041548674313937dbe23ee0dd524bffc6a8b51a350c9e639c1d7b"
+    "hash": "c897ff5144ee3418f118070368070192582889a414305e8566b732a22db29547"
   },
   "UC-X01": {
     "spec_version": 1,
-    "hash": "cb1e3d0f604cd0a7c8d54b207fcb9bf7a13fde04cfe200961d66883b3ad92d2c"
+    "hash": "8691d7ea7505b7ac2e986a958c68ef3fe0079f4a3b3fe306a4284016b0d289a2"
   },
   "UC-X02": {
     "spec_version": 1,
-    "hash": "88a461861bfdc0e7c2d3c09fe135868a99111129c52e6ccdf87fb87800cf4353"
+    "hash": "49b47720b0687084d36424c58d13f3389b004a7c9886ec83a8070b9a89297b90"
   }
 }

@@ -12,11 +12,14 @@ export function loadRegistry() {
 }
 
 /**
- * Hashes the product owner's words plus the status. Any edit to given/when/
- * then without a spec_version bump changes this hash and is refused.
+ * Hashes the product owner's words plus the status. Any edit to title/
+ * requirement/given/when/then without a spec_version bump changes this hash
+ * and is refused.
  */
 export function hashUseCase(uc) {
   const material = JSON.stringify({
+    title: uc.title,
+    requirement: uc.requirement,
     given: uc.given,
     when: uc.when,
     then: uc.then,

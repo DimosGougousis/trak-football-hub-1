@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
@@ -43,7 +43,7 @@ async function findPlayerSelect() {
 }
 
 useCase('UC-C04', () => {
-  it('persists all six category scores', async () => {
+  it('persists six distinct slider values to the correct columns and updates the band', async () => {
     signedInCoachWithSquad()
     const inserted: Record<string, unknown>[] = []
     server.use(
@@ -67,6 +67,31 @@ useCase('UC-C04', () => {
     // combobox and fails with "Value not found in options".
     const playerSelect = await findPlayerSelect()
     await user.selectOptions(playerSelect, 'squad-1')
+
+    // All six sliders default to 5 — an implementation that hardcoded 5 into
+    // every column, or wired all six sliders to one shared value, would pass
+    // a test that only ever submits the defaults. Drive each slider (native
+    // <input type="range">, one per SliderInput in
+    // src/pages/coach/CoachAssessPage.tsx, in the DOM order Work Rate,
+    // Tactical, Attitude, Technical, Physical, Coachability — the same order
+    // the payload asserts below) to six *distinct* values instead.
+    const [workRate, tactical, attitude, technical, physical, coachability] =
+      screen.getAllByRole('slider')
+    fireEvent.change(workRate, { target: { value: '10' } })
+    fireEvent.change(tactical, { target: { value: '9' } })
+    fireEvent.change(attitude, { target: { value: '8' } })
+    fireEvent.change(technical, { target: { value: '7' } })
+    fireEvent.change(physical, { target: { value: '6' } })
+    fireEvent.change(coachability, { target: { value: '5' } })
+
+    // avg = (10+9+8+7+6+5)/6 = 7.5 -> scoreToBand clears the ">= 7" branch,
+    // i.e. 'good' / "Good" — distinct from the default avg-5 "Mixed" band,
+    // proving the band is derived from the six scores rather than fixed.
+    const overallBandLabel = await screen.findByText('OVERALL BAND')
+    const overallBandCard = overallBandLabel.parentElement as HTMLElement
+    expect(within(overallBandCard).getByText('Good')).toBeInTheDocument()
+    expect(within(overallBandCard).queryByText('Mixed')).not.toBeInTheDocument()
+
     // The submit button now reads "Save Assessment →", not "Submit Assessment".
     await user.click(screen.getByRole('button', { name: /save assessment/i }))
 
@@ -74,11 +99,11 @@ useCase('UC-C04', () => {
     expect(inserted[0]).toMatchObject({
       coach_user_id: COACH.id,
       squad_player_id: 'squad-1',
-      work_rate: 5,
-      tactical: 5,
-      attitude: 5,
-      technical: 5,
-      physical: 5,
+      work_rate: 10,
+      tactical: 9,
+      attitude: 8,
+      technical: 7,
+      physical: 6,
       coachability: 5,
     })
   })
