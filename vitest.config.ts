@@ -7,8 +7,19 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    setupFiles: ["./src/test/setup.ts", "./tests/setup-usecases.ts"],
+    include: [
+      "src/**/*.{test,spec}.{ts,tsx}",
+      "tests/**/*.{test,spec}.{ts,tsx}",
+    ],
+    // A developer's local, untracked .env can point at a real Supabase
+    // project. Pinning these here guarantees tier-1 tests can never reach
+    // production regardless of local env, and fixes the localStorage auth
+    // key at sb-test-auth-token.
+    env: {
+      VITE_SUPABASE_URL: "https://test.supabase.co",
+      VITE_SUPABASE_PUBLISHABLE_KEY: "test-anon-key",
+    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
