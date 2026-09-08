@@ -144,6 +144,14 @@ jobs:
           echo "Probing what the token can actually see..."
           WHO=$(vercel whoami --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || true)
           PROJECTS=$(vercel project ls ${{ steps.target.outputs.scope }} --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || true)
+          # Echo to stdout as well as the summary — the run log is what is
+          # readable from a terminal, and a diagnostic nobody can reach is not
+          # a diagnostic.
+          echo "--- vercel whoami ---"
+          echo "$WHO"
+          echo "--- vercel project ls ---"
+          echo "$PROJECTS"
+          echo "--- end probe ---"
           {
             echo "### Vercel could not resolve the project"
             echo ""
