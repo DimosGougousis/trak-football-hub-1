@@ -141,8 +141,27 @@ jobs:
       - name: Explain a failed Vercel link
         if: failure()
         run: |
+          echo "Probing what the token can actually see..."
+          WHO=$(vercel whoami --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || true)
+          PROJECTS=$(vercel project ls ${{ steps.target.outputs.scope }} --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || true)
           {
             echo "### Vercel could not resolve the project"
+            echo ""
+            echo "Token identity (\`vercel whoami\`):"
+            echo ""
+            echo '```'
+            echo "$WHO"
+            echo '```'
+            echo ""
+            echo "Projects this token can see in the current scope (\`vercel project ls\`):"
+            echo ""
+            echo '```'
+            echo "$PROJECTS"
+            echo '```'
+            echo ""
+            echo "If \`whoami\` names a person but the project list is empty or missing"
+            echo "**trak-football-hub**, the token is scoped to a personal account while the"
+            echo "project belongs to a team — cause 3 below."
             echo ""
             echo "\`vercel pull\` failed. The credentials exist, so one of these is the cause:"
             echo ""
