@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { CoachNav } from './CoachHome';
+import { User as UserIcon } from 'lucide-react';
 
 const CoachSquad = () => {
   const { user } = useAuth();
@@ -98,7 +99,9 @@ const CoachSquad = () => {
           {filtered.map(p => (
             <div key={p.id} className="bg-card border border-border rounded-[10px] p-3 flex items-center gap-3 cursor-pointer hover:border-gold/30 transition-colors"
               onClick={() => navigate(`/coach/player/${p.id}`)}>
-              <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-base flex-shrink-0">👦</div>
+              <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                <UserIcon size={16} className="text-muted-foreground" />
+              </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">{p.player_name}</p>
                 <p className="text-[11px] text-muted-foreground">{p.position} {p.age ? `· Age ${p.age}` : ''} {p.shirt_number ? `· #${p.shirt_number}` : ''}</p>

@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
@@ -15,11 +15,31 @@ const SQUAD = [
 function signedInCoachWithSquad() {
   signInAs(COACH)
   server.use(
+    // invite_code is set so CoachHomePage's invite-code effect doesn't try
+    // to generate one and PATCH /profiles, which nothing here mocks.
     table('profiles', [
-      { id: 'p-coach', user_id: COACH.id, role: 'coach', full_name: 'Coach Vasilis', nationality: 'GR' },
+      { id: 'p-coach', user_id: COACH.id, role: 'coach', full_name: 'Coach Vasilis', nationality: 'GR', invite_code: 'ABCD' },
     ]),
     table('squad_players', SQUAD),
+    // CoachAssessPage unconditionally fetches coach_sessions for the session
+    // dropdown, and coach_details on the destination home screen — mock both
+    // up front so every test in this file can reach the assess screen.
+    table('coach_sessions', []),
+    table('coach_details', []),
   )
+}
+
+/*
+ * The player <select> has no accessible name (its label is a plain <span>,
+ * not a <label for>), and the redesigned screen added a second <select> for
+ * the optional session — so `getByRole('combobox')` is now ambiguous between
+ * the two. The player option we already wait for is unique to the player
+ * select, so anchor off it with `.closest('select')` instead of guessing at
+ * an index or an accessible name that doesn't exist.
+ */
+async function findPlayerSelect() {
+  const option = await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
+  return option.closest('select') as HTMLSelectElement
 }
 
 useCase('UC-C04', () => {
@@ -45,9 +65,10 @@ useCase('UC-C04', () => {
     // (initially empty) <select> exists. Wait for the real option to render
     // before selecting it, otherwise this selects against a placeholder-only
     // combobox and fails with "Value not found in options".
-    await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
-    await user.selectOptions(screen.getByRole('combobox'), 'squad-1')
-    await user.click(screen.getByRole('button', { name: /submit assessment/i }))
+    const playerSelect = await findPlayerSelect()
+    await user.selectOptions(playerSelect, 'squad-1')
+    // The submit button now reads "Save Assessment →", not "Submit Assessment".
+    await user.click(screen.getByRole('button', { name: /save assessment/i }))
 
     await waitFor(() => expect(inserted).toHaveLength(1))
     expect(inserted[0]).toMatchObject({
@@ -66,14 +87,24 @@ useCase('UC-C04', () => {
     signedInCoachWithSquad()
     renderApp('/coach/assess')
 
-    // All six sliders default to 5. scoreToBand(5) in src/lib/rating-engine.ts
-    // returns 'developing' (5 is below the 5.6 threshold for 'mixed' but at
-    // or above the 4.8 threshold for 'developing'), which BANDS in
-    // src/lib/types.ts renders as the word "Developing". The registry clause
-    // only requires *a* band derived from the six scores to be shown before
-    // submitting — it does not name a particular word — so this asserts the
-    // word the engine actually produces.
-    expect(await screen.findByText('Developing')).toBeInTheDocument()
+    // All six sliders default to 5, so avg = 5. scoreToBand(5) in
+    // src/lib/rating-engine.ts checks thresholds high-to-low (9/8/7/6/4/2)
+    // and 5 clears the ">= 4" branch before the ">= 2" one, so it returns
+    // 'mixed' — not 'developing' (that needs avg in [2, 4)). BANDS in
+    // src/lib/types.ts renders 'mixed' as the word "Mixed". The registry
+    // clause only requires *a* band derived from the six scores to be shown
+    // before submitting — it does not name a particular word — so this
+    // asserts the word the engine actually produces for the default scores,
+    // verified against scoreToBand/BANDS rather than assumed.
+    //
+    // "Mixed" also appears once per slider (SliderInput shows a live
+    // per-category band next to each of the six sliders), so a bare
+    // `findByText('Mixed')` is ambiguous. Scope to the "OVERALL BAND" card,
+    // which is what the registry clause actually means by "a band derived
+    // from the six scores".
+    const overallBandLabel = await screen.findByText('OVERALL BAND')
+    const overallBandCard = overallBandLabel.parentElement as HTMLElement
+    expect(within(overallBandCard).getByText('Mixed')).toBeInTheDocument()
   })
 
   it('refuses to submit until a player is selected', async () => {
@@ -92,8 +123,8 @@ useCase('UC-C04', () => {
     // while a choice is available. Wait for the squad to load first, so the
     // disabled state is checked while a player genuinely could be chosen but
     // has not been.
-    await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
-    const submit = screen.getByRole('button', { name: /submit assessment/i })
+    await findPlayerSelect()
+    const submit = screen.getByRole('button', { name: /save assessment/i })
     expect(submit).toBeDisabled()
 
     // Clicking a disabled button should be inert. Verifying nothing was

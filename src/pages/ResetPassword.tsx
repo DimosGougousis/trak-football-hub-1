@@ -1,0 +1,205 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '@/integrations/supabase/client'
+import { toast } from 'sonner'
+import { Eye, EyeOff } from 'lucide-react'
+import { validatePassword } from '@/lib/password'
+
+export default function ResetPassword() {
+  const navigate = useNavigate()
+  const [password, setPassword]     = useState('')
+  const [confirm, setConfirm]       = useState('')
+  const [showPw, setShowPw]         = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [ready, setReady]           = useState(false)
+
+  // The reset link lands here with a session already in the URL hash.
+  // We just need an active session to be ready — no need to wait for a
+  // specific event. Poll briefly then show the form.
+  useEffect(() => {
+    // Supabase processes the hash token automatically — give it a moment
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setReady(true)
+        return
+      }
+      // Retry once after a short delay in case the token exchange is in progress
+      setTimeout(async () => {
+        const { data: { session: s2 } } = await supabase.auth.getSession()
+        setReady(!!s2)
+      }, 1500)
+    }
+    check()
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const pwError = validatePassword(password)
+    if (pwError) {
+      toast.error(pwError)
+      return
+    }
+    if (password !== confirm) {
+      toast.error('Passwords do not match')
+      return
+    }
+    setLoading(true)
+    const { error } = await supabase.auth.updateUser({ password })
+    setLoading(false)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    toast.success('Password updated — signing you in')
+    setTimeout(() => navigate('/'), 1500)
+  }
+
+  return (
+    <div
+      className="app-container flex flex-col items-center justify-center min-h-screen px-6"
+      style={{ background: '#0A0A0B' }}
+    >
+      {/* Ambient glow */}
+      <div
+        className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[420px] h-[320px] opacity-[0.07]"
+        style={{ background: 'radial-gradient(ellipse at center top, #C8F25A 0%, transparent 70%)' }}
+      />
+
+      {/* Wordmark */}
+      <div className="text-center mb-10">
+        <h1
+          className="text-[60px] leading-none text-white/90"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.04em' }}
+        >
+          TRAK
+        </h1>
+        <p
+          className="text-[#C8F25A] italic mt-1 tracking-[0.14em]"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15 }}
+        >
+          football
+        </p>
+      </div>
+
+      <div className="w-full">
+        <h2
+          className="text-white/88 text-[22px] mb-1"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300 }}
+        >
+          Set new password
+        </h2>
+        <p
+          className="text-white/35 text-[12px] mb-7"
+          style={{ fontFamily: "'DM Sans', sans-serif" }}
+        >
+          Choose a strong password: 8+ characters with upper, lower, a number and a symbol.
+        </p>
+
+        {!ready ? (
+          <div className="text-center py-8">
+            <p className="text-white/35 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Verifying your reset link…
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+            {/* New password */}
+            <div className="relative">
+              <FloatingInput
+                type={showPw ? 'text' : 'password'}
+                label="New password"
+                value={password}
+                onChange={setPassword}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                tabIndex={-1}
+              >
+                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
+            {/* Confirm password */}
+            <FloatingInput
+              type={showPw ? 'text' : 'password'}
+              label="Confirm password"
+              value={confirm}
+              onChange={setConfirm}
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-[15px] rounded-[14px] text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
+              style={{
+                background: loading ? 'rgba(200,242,90,0.5)' : '#C8F25A',
+                color: '#0A0A0B',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              {loading ? 'Updating…' : 'Update password'}
+            </button>
+
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FloatingInput({
+  type, label, value, onChange,
+}: {
+  type: string
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [focused, setFocused] = useState(false)
+  const id = label.toLowerCase().replace(/\s/g, '-')
+
+  return (
+    <div className="relative">
+      <label
+        htmlFor={id}
+        className="absolute left-4 transition-all pointer-events-none"
+        style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: focused || value ? 10 : 14,
+          top: focused || value ? 10 : '50%',
+          transform: focused || value ? 'none' : 'translateY(-50%)',
+          color: focused ? '#C8F25A' : 'rgba(255,255,255,0.3)',
+          letterSpacing: focused || value ? '0.08em' : '0',
+          textTransform: focused || value ? 'uppercase' : 'none',
+          fontWeight: focused || value ? 500 : 400,
+        }}
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        required
+        className="w-full outline-none transition-all"
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: `1px solid ${focused ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.07)'}`,
+          borderRadius: 14,
+          padding: value || focused ? '24px 16px 10px' : '16px',
+          fontSize: 15,
+          color: 'rgba(255,255,255,0.88)',
+          fontFamily: "'DM Sans', sans-serif",
+          caretColor: '#C8F25A',
+        }}
+      />
+    </div>
+  )
+}

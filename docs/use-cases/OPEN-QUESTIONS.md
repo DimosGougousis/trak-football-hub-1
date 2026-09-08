@@ -42,3 +42,32 @@ PO decision needed — one of:
   [ ] Spec stands -> fix the four screens to show a retryable error
   [ ] Spec changes -> bump spec_version and state what a failed load may show
 Status: OPEN
+
+---
+
+## Q-2026-09-08-01 · UC-A02 · Athlete match logging has no reachable entry point
+Raised: 2026-09-08 · found while repairing the use-case harness after merging main · REQ-001
+
+`main` deleted `src/pages/player/PlayerLogForm.tsx` and removed the
+`/player/log` route from `src/App.tsx`. Nothing left in `src/` references
+either. UC-A02, "Log a match with position inputs and live band preview", is
+REQ-001 — the use case the pilot's central hypothesis depends on — and it now
+has no screen to exercise. `tests/usecases/athlete/UC-A02.log-match.test.tsx`
+fails on all three assertions for exactly this reason and has been left
+failing rather than repointed at a different screen or weakened.
+
+`CLAUDE.md` documents a `log_match_for_player` RPC, and it is in fact called
+from `src/pages/coach/CoachAddSession.tsx` and
+`src/pages/coach/CoachQuickMatchLog.tsx` — both coach-driven. So match logging
+appears to have moved from player-driven to coach-driven, not simply been
+dropped. If that move is intentional, it changes the pilot's player-first
+thesis and REQ-001 itself, not just this one use case.
+
+PO decision needed — one of:
+  [ ] Spec stands -> restore a player-reachable match-logging screen and route
+  [ ] Spec changes -> logging is coach-driven now; rewrite REQ-001 and UC-A02
+      (and any other player-first use cases that assume it) to match
+  [ ] Ambiguous -> clarify whether the pilot's player-first thesis still holds
+      before the registry is changed either way
+
+Status: OPEN

@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
+import { setTelemetryRole, trackSessionOpen } from '@/lib/telemetry';
 
-type UserRole = 'player' | 'coach' | 'parent';
+type UserRole = 'player' | 'coach' | 'parent' | 'club';
 const PENDING_PROFILE_KEY = 'trak_pending_profile';
 
 interface PendingProfileData {
@@ -20,8 +22,13 @@ interface PendingProfileData {
     current_club: string;
     team: string;
     coach_role: string;
+    academy_code?: string;
+  };
+  club_details?: {
+    academy_name: string;
   };
   parent_email?: string | null;
+  coach_invite_code?: string | null;
 }
 
 interface Profile {
@@ -30,6 +37,7 @@ interface Profile {
   role: UserRole;
   full_name: string;
   nationality: string | null;
+  avatar_url?: string | null;
 }
 
 interface AuthContextType {
@@ -51,7 +59,7 @@ export const useAuth = () => {
 };
 
 /** Write pending onboarding data from localStorage to Supabase */
-const isValidRole = (value: unknown): value is UserRole => value === 'player' || value === 'coach' || value === 'parent';
+const isValidRole = (value: unknown): value is UserRole => value === 'player' || value === 'coach' || value === 'parent' || value === 'club';
 
 const parsePendingProfile = (value: unknown): PendingProfileData | null => {
   if (!value || typeof value !== 'object') return null;
@@ -65,7 +73,9 @@ const parsePendingProfile = (value: unknown): PendingProfileData | null => {
     nationality: typeof data.nationality === 'string' ? data.nationality : null,
     player_details: data.player_details as PendingProfileData['player_details'] | undefined,
     coach_details: data.coach_details as PendingProfileData['coach_details'] | undefined,
+    club_details: data.club_details as PendingProfileData['club_details'] | undefined,
     parent_email: typeof data.parent_email === 'string' ? data.parent_email : null,
+    coach_invite_code: typeof data.coach_invite_code === 'string' ? data.coach_invite_code : null,
   };
 };
 
@@ -74,7 +84,13 @@ const readPendingProfileFromLocalStorage = (): PendingProfileData | null => {
   if (!raw) return null;
 
   try {
-    return parsePendingProfile(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    // Expire onboarding data after 24 hours to avoid stale state
+    if (parsed._savedAt && Date.now() - parsed._savedAt > 86_400_000) {
+      localStorage.removeItem(PENDING_PROFILE_KEY);
+      return null;
+    }
+    return parsePendingProfile(parsed);
   } catch {
     return null;
   }
@@ -86,61 +102,34 @@ const readPendingProfileFromMetadata = (user: User): PendingProfileData | null =
 };
 
 async function writeProfileFromPendingData(userId: string, data: PendingProfileData): Promise<Profile | null> {
-  const { error: profileError } = await supabase.from('profiles').upsert({
-    user_id: userId,
-    role: data.role as any,
-    full_name: data.full_name,
-    nationality: data.nationality || null,
-  }, { onConflict: 'user_id' });
-  if (profileError) throw profileError;
+  // All provisioning happens server-side in ONE atomic SECURITY DEFINER RPC.
+  // This fixes: club profile creation (blocked by RLS for direct inserts),
+  // player→coach linking, parent→child linking, and partial-failure states.
+  const { data: result, error } = await supabase.rpc('provision_my_profile' as any, {
+    p: data as unknown as Record<string, unknown>,
+  });
+  if (error) throw error;
 
-  if (data.role === 'player' && data.player_details) {
-    const pd = data.player_details;
-    const { error: playerError } = await supabase.from('player_details').upsert({
-      user_id: userId,
-      date_of_birth: pd.date_of_birth,
-      position: pd.position,
-      current_club: pd.current_club,
-      age_group: pd.age_group,
-      shirt_number: pd.shirt_number,
-    }, { onConflict: 'user_id' });
-    if (playerError) throw playerError;
-
-    if (data.parent_email) {
-      const { data: existingInvite } = await supabase
-        .from('parent_invites')
-        .select('id')
-        .eq('player_user_id', userId)
-        .eq('parent_email', data.parent_email)
-        .maybeSingle();
-
-      if (!existingInvite) {
-        const { error: inviteError } = await supabase.from('parent_invites').insert({
-          player_user_id: userId,
-          parent_email: data.parent_email,
-        });
-        if (inviteError) throw inviteError;
-      }
-    }
-  }
-
-  if (data.role === 'coach' && data.coach_details) {
-    const cd = data.coach_details;
-    const { error: coachError } = await supabase.from('coach_details').upsert({
-      user_id: userId,
-      current_club: cd.current_club,
-      team: cd.team,
-      coach_role: cd.coach_role,
-    }, { onConflict: 'user_id' });
-    if (coachError) throw coachError;
-  }
+  // Surface non-fatal warnings (e.g. unrecognised coach/academy code)
+  const warnings = (result as { warnings?: string[] } | null)?.warnings ?? [];
+  for (const w of warnings) toast.warning(w, { duration: 8000 });
 
   const { data: newProfile } = await supabase
     .from('profiles')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
-  return newProfile as Profile | null;
+  return (newProfile as unknown as Profile | null);
+}
+
+async function clearPendingProfile() {
+  localStorage.removeItem(PENDING_PROFILE_KEY);
+  // Clear the metadata copy too so provisioning doesn't re-run every session
+  try {
+    await supabase.auth.updateUser({ data: { trak_onboarding: null } });
+  } catch {
+    // Non-critical — provisioning is idempotent if this fails
+  }
 }
 
 async function writePendingProfile(user: User): Promise<Profile | null> {
@@ -149,10 +138,11 @@ async function writePendingProfile(user: User): Promise<Profile | null> {
 
   try {
     const created = await writeProfileFromPendingData(user.id, data);
-    if (created) localStorage.removeItem(PENDING_PROFILE_KEY);
+    if (created) await clearPendingProfile();
     return created;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to write pending profile:', err);
+    toast.error(`Account setup hit a problem: ${err?.message || 'unknown error'}. Pull to refresh or sign in again to retry.`);
     return null;
   }
 }
@@ -171,7 +161,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .maybeSingle();
 
     if (data) {
-      setProfile(data as Profile);
+      // Repair path: if pending onboarding data was never cleared, a previous
+      // provisioning run failed partway (e.g. profile created but details/org/
+      // links missing). Re-run it — the RPC is idempotent.
+      const pending = readPendingProfileFromLocalStorage() || readPendingProfileFromMetadata(currentUser);
+      if (pending && pending.role === (data as { role: string }).role) {
+        void writePendingProfile(currentUser);
+      }
+      setProfile(data as unknown as Profile);
       return;
     }
 
@@ -199,7 +196,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // On the reset password page, suppress all auth redirects so the
+      // form stays visible. ResetPassword.tsx handles its own auth events.
+      if (window.location.pathname === '/reset-password') {
+        if (event === 'PASSWORD_RECOVERY') return;
+        if (event === 'SIGNED_IN') return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        window.location.replace('/');
+        return;
+      }
+
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.replace('/reset-password');
+        return;
+      }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       setLoading(true);
@@ -207,6 +223,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // If we're on the reset password page, don't auto-redirect — let
+      // the ResetPassword component handle the PASSWORD_RECOVERY event.
+      if (window.location.pathname === '/reset-password') {
+        setLoading(false);
+        return;
+      }
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       setLoading(true);
@@ -216,12 +238,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  // Pilot instrumentation. One place, so every sign-in path is covered:
+  // the role stamps subsequent events, and `app_opened` fires once per
+  // browser session — the sole source for the week-6 return metrics.
+  useEffect(() => {
+    setTelemetryRole(profile?.role ?? null);
+    if (user && profile) trackSessionOpen(user.id, profile.role);
+  }, [user?.id, profile?.role]);
+
   const signUp = async (email: string, password: string, pendingProfile?: PendingProfileData) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/`,
         ...(pendingProfile ? { data: { trak_onboarding: pendingProfile } } : {}),
       },
     });

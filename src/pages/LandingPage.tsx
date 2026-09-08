@@ -1,132 +1,477 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { IconRolePlayer, IconRoleCoach, IconRoleParent, IconRoleClub } from '@/components/icons/TrakIcons';
+import { Eye, EyeOff } from 'lucide-react';
 
-const LandingPage = () => {
+const IS_DEV = import.meta.env.DEV;
+
+const DEV_ACCOUNTS = [
+  { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
+  { role: 'player', label: 'Player', email: 'player@trak.dev', color: '#C8F25A' },
+  { role: 'parent', label: 'Parent', email: 'parent@trak.dev', color: 'hsl(214,60%,57%)' },
+  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgba(255,255,255,0.7)' },
+] as const;
+
+const DEV_PASSWORD = 'TrakDev123';
+
+type View = 'signin' | 'register';
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
+export default function LandingPage() {
   const navigate = useNavigate();
-  const [loginMode, setLoginMode] = useState(false);
-  const { user, loading } = useAuth();
+  const [view, setView] = useState<View>('signin');
+  const { user, profile, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && user) {
-      navigate('/dashboard', { replace: true });
+      const homeMap: Record<string, string> = {
+        coach: '/coach/home',
+        parent: '/parent/home',
+        club: '/club/home',
+      };
+      navigate(homeMap[profile?.role ?? ''] ?? '/player/home', { replace: true });
     }
-  }, [loading, user, navigate]);
+  }, [loading, user, profile, navigate]);
 
   const handleRoleSelect = (role: string) => {
-    if (role === 'parent') {
-      navigate('/parent-info');
-    } else {
-      navigate(`/onboarding/${role}`);
-    }
+    navigate(role === 'parent' ? '/parent-info' : `/onboarding/${role}`);
   };
 
   return (
-    <div className="app-container flex flex-col items-center justify-center min-h-screen px-6 py-10">
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <span className="text-7xl text-foreground block leading-none tracking-tight">TRAK</span>
-        <span className="text-primary italic text-lg tracking-[0.12em] block mt-1">football</span>
-        <p className="text-muted-foreground text-sm mt-3 tracking-wide">Own your career.</p>
-      </div>
+    <div
+      className="app-container relative flex flex-col min-h-screen overflow-hidden"
+      style={{ background: '#0A0A0B' }}
+    >
+      {/* Ambient glow — top centre */}
+      <div
+        className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[420px] h-[320px] opacity-[0.07]"
+        style={{
+          background: 'radial-gradient(ellipse at center top, #C8F25A 0%, transparent 70%)',
+        }}
+      />
 
-      {!loginMode ? (
-        <>
-          <h2 className="section-label mb-5">
-            Choose your account
-          </h2>
+      <div className="relative flex flex-col items-center justify-center flex-1 px-6 py-12">
 
-          <div className="flex flex-col gap-2.5 w-full">
-            <RoleCard
-              emoji="⚽"
-              name="Player"
-              desc="Track your career, log matches, earn medals and set goals"
-              colorClass="bg-primary/20"
-              onClick={() => handleRoleSelect('player')}
-            />
-            <RoleCard
-              emoji="📋"
-              name="Coach"
-              desc="Manage your squad, track attendance and assess players"
-              colorClass="bg-gold/15"
-              onClick={() => handleRoleSelect('coach')}
-            />
-            <RoleCard
-              emoji="👨‍👩‍👦"
-              name="Parent"
-              desc="Follow your child's development, see both ratings and progress"
-              colorClass="bg-training-blue/15"
-              onClick={() => handleRoleSelect('parent')}
-            />
-          </div>
-
-          <button
-            onClick={() => setLoginMode(true)}
-            className="mt-8 text-sm text-muted-foreground hover:text-primary transition-colors"
+        {/* ── Wordmark ── */}
+        <div className="text-center mb-12">
+          <h1
+            className="text-[72px] leading-none text-white/90 select-none"
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 300,
+              letterSpacing: '-0.04em',
+            }}
           >
-            Already have an account? <span className="text-primary font-semibold">Sign in</span>
-          </button>
-        </>
-      ) : (
-        <LoginForm onBack={() => setLoginMode(false)} />
-      )}
+            TRAK
+          </h1>
+          <p
+            className="text-[#C8F25A] italic mt-1 tracking-[0.14em]"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 400 }}
+          >
+            football
+          </p>
+          <p
+            className="mt-3 text-white/28 tracking-[0.08em] uppercase"
+            style={{ fontFamily: "'DM Mono', monospace", fontSize: 10 }}
+          >
+            Own your career
+          </p>
+        </div>
+
+        {/* ── Sign in view ── */}
+        {view === 'signin' && (
+          <SignInForm onCreateAccount={() => setView('register')} />
+        )}
+
+        {/* ── Register view ── */}
+        {view === 'register' && (
+          <RegisterView
+            onRoleSelect={handleRoleSelect}
+            onBack={() => setView('signin')}
+          />
+        )}
+
+        {/* ── Dev panel (localhost only) ── */}
+        {IS_DEV && <DevLoginPanel />}
+
+      </div>
     </div>
   );
-};
+}
 
-const RoleCard = ({ emoji, name, desc, colorClass, onClick }: {
-  emoji: string; name: string; desc: string; colorClass: string; onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className="w-full bg-card border border-border rounded-2xl p-[18px] flex items-center gap-4 text-left transition-all active:scale-[0.98] hover:border-primary/30"
-  >
-    <div className={`w-[52px] h-[52px] rounded-[14px] flex items-center justify-center text-2xl flex-shrink-0 ${colorClass}`}>
-      {emoji}
-    </div>
-    <div className="flex-1">
-      <p className="text-[22px] text-foreground">{name}</p>
-      <p className="text-xs text-muted-foreground leading-snug">{desc}</p>
-    </div>
-    <span className="text-lg text-muted-foreground">→</span>
-  </button>
-);
+// ─── Sign in form ─────────────────────────────────────────────────────────────
 
-const LoginForm = ({ onBack }: { onBack: () => void }) => {
+function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [showPw, setShowPw]     = useState(false);
+  const [loading, setLoading]   = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      navigate('/dashboard');
-    }
+    if (error) toast.error(error.message);
+  };
+
+  const handleForgot = async () => {
+    if (!email) { toast.error('Enter your email first'); return }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) toast.error(error.message);
+    else toast.success('Check your email for a reset link');
   };
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-      <h2 className="text-lg mb-2 text-foreground">Sign in</h2>
-      <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-card border-border" />
-      <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-card border-border" />
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? 'Signing in...' : 'Sign In'}
-      </Button>
-      <button type="button" onClick={onBack} className="text-sm text-muted-foreground hover:text-primary">
-        ← Back to role selection
+
+      {/* Email */}
+      <PremiumInput
+        type="email"
+        label="Email"
+        value={email}
+        onChange={setEmail}
+        autoComplete="email"
+      />
+
+      {/* Password */}
+      <div className="relative">
+        <PremiumInput
+          type={showPw ? 'text' : 'password'}
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="current-password"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPw(v => !v)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+          tabIndex={-1}
+        >
+          {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+
+      {/* Forgot */}
+      <button
+        type="button"
+        onClick={handleForgot}
+        className="text-[11px] text-white/35 hover:text-[#C8F25A] transition-colors self-end -mt-1 tracking-[0.04em]"
+        style={{ fontFamily: "'DM Mono', monospace" }}
+      >
+        Forgot password?
       </button>
+
+      {/* CTA */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-[15px] rounded-[14px] text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-1"
+        style={{
+          background: loading ? 'rgba(200,242,90,0.5)' : '#C8F25A',
+          color: '#0A0A0B',
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        {loading ? 'Signing in…' : 'Sign in'}
+      </button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3 my-1">
+        <div className="flex-1 h-px bg-white/[0.07]" />
+        <span
+          className="text-white/22 text-[10px] tracking-[0.08em] uppercase"
+          style={{ fontFamily: "'DM Mono', monospace" }}
+        >
+          New to Trak?
+        </span>
+        <div className="flex-1 h-px bg-white/[0.07]" />
+      </div>
+
+      {/* Create account */}
+      <button
+        type="button"
+        onClick={onCreateAccount}
+        className="w-full py-[14px] rounded-[14px] text-[14px] font-medium transition-all active:scale-[0.98] border"
+        style={{
+          background: 'transparent',
+          border: '1px solid rgba(200,242,90,0.2)',
+          color: '#C8F25A',
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        Create account
+      </button>
+
     </form>
   );
-};
+}
 
-export default LandingPage;
+// ─── Premium input ────────────────────────────────────────────────────────────
+
+function PremiumInput({
+  type, label, value, onChange, autoComplete,
+}: {
+  type: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const id = label.toLowerCase().replace(/\s/g, '-');
+
+  return (
+    <div className="relative">
+      <label
+        htmlFor={id}
+        className="absolute left-4 transition-all pointer-events-none"
+        style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: focused || value ? 10 : 14,
+          top: focused || value ? 10 : '50%',
+          transform: focused || value ? 'none' : 'translateY(-50%)',
+          color: focused ? '#C8F25A' : 'rgba(255,255,255,0.3)',
+          letterSpacing: focused || value ? '0.08em' : '0',
+          textTransform: focused || value ? 'uppercase' : 'none',
+          fontWeight: focused || value ? 500 : 400,
+        }}
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        autoComplete={autoComplete}
+        required
+        className="w-full outline-none transition-all"
+        style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: `1px solid ${focused ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.07)'}`,
+          borderRadius: 14,
+          padding: value || focused ? '24px 16px 10px' : '16px',
+          fontSize: 15,
+          color: 'rgba(255,255,255,0.88)',
+          fontFamily: "'DM Sans', sans-serif",
+          caretColor: '#C8F25A',
+        }}
+      />
+    </div>
+  );
+}
+
+// ─── Register view ────────────────────────────────────────────────────────────
+
+function RegisterView({
+  onRoleSelect,
+  onBack,
+}: {
+  onRoleSelect: (role: string) => void;
+  onBack: () => void;
+}) {
+  const roles = [
+    {
+      role: 'player',
+      icon: <IconRolePlayer size={24} />,
+      name: 'Player',
+      desc: 'Track your career, log matches and earn your card',
+      bg: 'rgba(200,242,90,0.08)',
+      border: 'rgba(200,242,90,0.18)',
+    },
+    {
+      role: 'coach',
+      icon: <IconRoleCoach size={24} />,
+      name: 'Coach',
+      desc: 'Manage your squad, assess players and log sessions',
+      bg: 'rgba(96,165,250,0.08)',
+      border: 'rgba(96,165,250,0.18)',
+    },
+    {
+      role: 'parent',
+      icon: <IconRoleParent size={24} />,
+      name: 'Parent',
+      desc: "Follow your child's development and progress",
+      bg: 'rgba(74,222,128,0.08)',
+      border: 'rgba(74,222,128,0.18)',
+    },
+    {
+      role: 'club',
+      icon: <IconRoleClub size={24} />,
+      name: 'Administrator',
+      desc: 'Academy overview across all coaches and squads',
+      bg: 'rgba(255,255,255,0.04)',
+      border: 'rgba(255,255,255,0.10)',
+    },
+  ];
+
+  return (
+    <div className="w-full">
+      <p
+        className="text-[10px] tracking-[0.12em] uppercase text-white/35 mb-5 text-center"
+        style={{ fontFamily: "'DM Mono', monospace" }}
+      >
+        I am a…
+      </p>
+
+      <div className="flex flex-col gap-2.5">
+        {roles.map(r => (
+          <button
+            key={r.role}
+            onClick={() => onRoleSelect(r.role)}
+            className="group w-full flex items-center gap-4 text-left rounded-[16px] px-4 py-[14px] transition-all active:scale-[0.98]"
+            style={{
+              background: r.bg,
+              border: `1px solid ${r.border}`,
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(0,0,0,0.2)', border: `1px solid ${r.border}` }}
+            >
+              {r.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="text-white/88 text-[16px] leading-tight"
+                style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 400 }}
+              >
+                {r.name}
+              </p>
+              <p
+                className="text-white/38 text-[11px] mt-0.5 leading-snug"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              >
+                {r.desc}
+              </p>
+            </div>
+            <span className="text-white/25 text-lg group-hover:text-white/50 transition-colors">→</span>
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={onBack}
+        className="w-full mt-6 text-[13px] text-white/35 hover:text-white/60 transition-colors text-center"
+        style={{ fontFamily: "'DM Sans', sans-serif" }}
+      >
+        ← Back to sign in
+      </button>
+    </div>
+  );
+}
+
+// ─── Dev login panel (localhost only) ────────────────────────────────────────
+
+const DEV_PIN = '013';
+
+function DevLoginPanel() {
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const [unlocked, setUnlocked] = useState(false);
+  const [pin, setPin]           = useState('');
+  const [shake, setShake]       = useState(false);
+  const [busyRole, setBusyRole] = useState<string | null>(null);
+
+  const handlePinChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 3);
+    setPin(digits);
+    if (digits.length === 3) {
+      if (digits === DEV_PIN) {
+        setUnlocked(true);
+      } else {
+        setShake(true);
+        setTimeout(() => { setShake(false); setPin(''); }, 600);
+      }
+    }
+  };
+
+  const loginAs = async (account: typeof DEV_ACCOUNTS[number]) => {
+    setBusyRole(account.role);
+    await supabase.auth.signOut();
+    const { error } = await signIn(account.email, DEV_PASSWORD);
+    if (error) {
+      toast.error(`Dev login failed: ${error.message}`);
+      setBusyRole(null);
+    } else {
+      navigate(`/${account.role}/home`, { replace: true });
+    }
+  };
+
+  return (
+    <div className="mt-10 w-full">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1 h-px bg-white/[0.07]" />
+        <span
+          className="text-[9px] font-medium tracking-[0.12em] text-white/20 uppercase"
+          style={{ fontFamily: "'DM Mono', monospace" }}
+        >
+          Dev quick-login
+        </span>
+        <div className="flex-1 h-px bg-white/[0.07]" />
+      </div>
+
+      {!unlocked ? (
+        <div className="flex flex-col items-center gap-2">
+          <input
+            type="password"
+            inputMode="numeric"
+            value={pin}
+            onChange={e => handlePinChange(e.target.value)}
+            placeholder="PIN"
+            maxLength={3}
+            className={`w-20 text-center py-2 rounded-[10px] text-[18px] tracking-[0.3em] outline-none transition-all ${shake ? 'animate-shake' : ''}`}
+            style={{
+              background: shake ? 'rgba(255,80,80,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1.5px solid ${shake ? 'rgba(255,80,80,0.35)' : 'rgba(255,255,255,0.08)'}`,
+              color: 'rgba(255,255,255,0.6)',
+              fontFamily: "'DM Mono', monospace",
+            }}
+            autoComplete="off"
+          />
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Enter PIN to access
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-4 gap-2">
+            {DEV_ACCOUNTS.map(account => (
+              <button
+                key={account.role}
+                onClick={() => loginAs(account)}
+                disabled={busyRole !== null}
+                className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1.5px solid rgba(255,255,255,0.08)',
+                  color: account.color,
+                }}
+              >
+                {busyRole === account.role ? '…' : account.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate('/dev-setup')}
+            className="w-full text-[9px] text-white/25 hover:text-white/50 text-center mt-2 transition-colors"
+            style={{ fontFamily: "'DM Mono', monospace" }}
+          >
+            First time? Run setup → /dev-setup
+          </button>
+        </>
+      )}
+    </div>
+  );
+}

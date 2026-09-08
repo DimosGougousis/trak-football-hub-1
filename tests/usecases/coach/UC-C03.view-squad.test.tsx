@@ -39,7 +39,10 @@ useCase('UC-C03', () => {
 
     renderApp('/coach/squad')
 
-    expect(await screen.findByText(/no players in your squad yet/i)).toBeInTheDocument()
+    // The redesigned empty state no longer reads "No players in your squad
+    // yet" — it reads "Add your first player" (src/pages/coach/CoachSquadPage.tsx).
+    // Same use-case clause, updated selector.
+    expect(await screen.findByText(/add your first player/i)).toBeInTheDocument()
   })
 
   // This is the assertion the audit's "false empty state" defect fails.
@@ -70,7 +73,15 @@ useCase('UC-C03', () => {
 
     await waitFor(() => expect(squadResponseLanded).toBe(true))
 
-    const emptyMessage = screen.queryByText(/no players in your squad yet/i)
+    // Same wording update as the sibling test above: "Add your first player"
+    // is the current empty-state copy. This assertion is EXPECTED TO FAIL —
+    // CoachSquadPage still destructures only `{ data }` from the failed
+    // request (src/pages/coach/CoachSquadPage.tsx:33), so `data` is null,
+    // `players` falls back to `[]`, and the empty-squad panel renders for a
+    // permission failure exactly as it would for a genuinely empty squad.
+    // Recorded as Q-2026-09-07-02 in docs/use-cases/OPEN-QUESTIONS.md — do
+    // not weaken this assertion to make it pass.
+    const emptyMessage = screen.queryByText(/add your first player/i)
     expect(
       emptyMessage,
       'A failed load must not render the empty-squad message. ' +

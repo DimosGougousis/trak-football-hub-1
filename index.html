@@ -2,23 +2,38 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trak Football</title>
-    <meta name="description" content="Track your football performance" />
+    <meta name="description" content="Track your football performance — matches, coach assessments and progress.">
     <meta name="author" content="Trak Football" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <meta property="og:title" content="Trak Football" />
-    <meta property="og:description" content="Track your football performance" />
+    <!-- Installable web app: gives Trak a home-screen icon and a standalone
+         window instead of a browser tab -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0A0A0B" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trak" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    
+    
+    <!-- og:image and twitter:image must stay ABSOLUTE URLs — WhatsApp,
+         Facebook and X will not resolve a relative path, so no preview shows.
+         This matters for the parent invite links players share. -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="https://trakfootball.com/og-image.png">
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-  </head>
+    <meta name="twitter:image" content="https://trakfootball.com/og-image.png">
+    <meta property="og:title" content="Trak Football">
+  <meta name="twitter:title" content="Trak Football">
+  <meta property="og:description" content="Track your football performance">
+  <meta name="twitter:description" content="Track your football performance">
+</head>
 
   <body>
     <div id="root"></div>

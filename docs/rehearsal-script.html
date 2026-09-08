@@ -1,0 +1,362 @@
+<title>Pilot Rehearsal Script</title>
+<style>
+  :root {
+    --ground:#0A0A0B; --surface:#121314; --surface-2:#17191A;
+    --line:rgba(255,255,255,0.075); --line-firm:rgba(255,255,255,0.14);
+    --ink:#F0F2EE; --ink-mid:rgba(240,242,238,0.62); --ink-low:rgba(240,242,238,0.38);
+    --accent:#C8F25A; --accent-ink:#C8F25A; --accent-bg:rgba(200,242,90,0.11);
+    --ok:#4ade80; --warn:#fb923c; --risk:#fb7185; --info:#60a5fa;
+    --code-bg:#0E0F10; --shadow:0 1px 2px rgba(0,0,0,0.5);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+      --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+      --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+      --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+      --ok:#15803d; --warn:#b45309; --risk:#be123c; --info:#1d4ed8;
+      --code-bg:#F3F4EE; --shadow:0 1px 2px rgba(20,24,16,0.07);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+    --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+    --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+    --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+    --ok:#15803d; --warn:#b45309; --risk:#be123c; --info:#1d4ed8;
+    --code-bg:#F3F4EE; --shadow:0 1px 2px rgba(20,24,16,0.07);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+    margin:0; padding:0 20px 90px;
+  }
+  .wrap { max-width:800px; margin:0 auto; }
+
+  h1,h2,h3 { text-wrap:balance; margin:0; line-height:1.2; letter-spacing:-0.018em; }
+  h1 { font-size:clamp(28px,5vw,40px); font-weight:600; }
+  h2 { font-size:clamp(19px,2.6vw,24px); font-weight:600; }
+  h3 { font-size:16px; font-weight:600; }
+  p { margin:0; }
+
+  code { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:0.88em; color:var(--ink); overflow-wrap:anywhere; }
+  pre { background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; font-size:13px; margin:0; color:var(--ink-mid); font-family:"DM Mono", ui-monospace, Menlo, monospace; }
+  .eyebrow { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:11px; letter-spacing:0.13em; text-transform:uppercase; color:var(--accent-ink); }
+  .lede { font-size:17px; color:var(--ink-mid); }
+  .small { font-size:14.5px; color:var(--ink-mid); }
+  .tiny { font-size:12.5px; color:var(--ink-low); }
+
+  header.mast { padding:58px 0 28px; border-bottom:1px solid var(--line-firm); display:flex; flex-direction:column; gap:16px; }
+  section { padding:42px 0 0; display:flex; flex-direction:column; gap:16px; }
+  .sec-head { display:flex; flex-direction:column; gap:8px; }
+
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:9px; }
+  .callout { background:var(--accent-bg); border:1px solid var(--line-firm); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:7px; }
+  .alarm { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--risk); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:7px; }
+  .callout p, .card p, .alarm p { font-size:14.5px; color:var(--ink-mid); }
+  .callout b, .card b, .alarm b { color:var(--ink); }
+
+  /* Each step is a checkable row — this is worked through, not read. */
+  .step { display:grid; grid-template-columns:26px 62px 1fr; gap:14px; padding:16px 0; border-top:1px solid var(--line); align-items:start; }
+  .step:first-of-type { border-top:none; }
+  .box { width:18px; height:18px; border:1.5px solid var(--line-firm); border-radius:5px; margin-top:3px; }
+  .uc { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:12px; color:var(--accent-ink); padding-top:3px; white-space:nowrap; }
+  .step .body { display:flex; flex-direction:column; gap:6px; }
+  .step .look { font-size:13.5px; color:var(--ink-low); }
+  .step .look b { color:var(--ink-mid); font-weight:500; }
+  .route { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:11.5px; color:var(--ink-low); }
+
+  .who-band {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--surface-2); border:1px solid var(--line);
+    border-radius:10px; padding:10px 14px; margin-top:4px;
+  }
+  .who-band .role { font-size:14px; font-weight:600; color:var(--ink); }
+  .who-band code { font-size:12.5px; }
+
+  .chip { display:inline-flex; align-items:center; gap:6px; align-self:flex-start; font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; border:1px solid currentColor; }
+  .chip::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+  .c-risk{color:var(--risk);} .c-warn{color:var(--warn);} .c-ok{color:var(--ok);} .c-info{color:var(--info);}
+
+  ul.plain { margin:0; padding-left:19px; display:flex; flex-direction:column; gap:6px; }
+  ul.plain li { font-size:14.5px; color:var(--ink-mid); }
+  ul.plain li b { color:var(--ink); font-weight:600; }
+
+  a { color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  /* On narrow screens the checkbox keeps its own column and everything else
+     stacks in the second. Both .uc and .body must be assigned explicitly:
+     giving only .uc a grid-column left .body to auto-place into the 22px
+     checkbox column, squashing every step to unreadable width. */
+  @media (max-width:560px) {
+    .step { grid-template-columns:22px 1fr; gap:6px 14px; }
+    .step .uc   { grid-column:2; padding-top:0; }
+    .step .body { grid-column:2; }
+  }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">Week &minus;2 &middot; before the academy sees anything</div>
+  <h1>Rehearsal script</h1>
+  <p class="lede">All fourteen use cases, walked against the seeded rehearsal academy. Roughly 45 minutes. The point is to find what breaks while it is still cheap &mdash; today's smoke test was about instrumentation, not coverage, and it still surfaced two serious bugs.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Before you start</div>
+    <h2>Setup</h2>
+  </div>
+
+  <div class="card">
+    <p class="small">Everything below uses the seeded rehearsal academy. Password for every account: <code>RehearsalTrak123!</code></p>
+    <div class="who-band"><span class="role">Director</span><code>director@rehearsal.trak.dev</code></div>
+    <div class="who-band"><span class="role">Coach U15</span><code>coach.u15@rehearsal.trak.dev</code><span class="tiny">16 players, 6 fixtures</span></div>
+    <div class="who-band"><span class="role">Coach U17</span><code>coach.u17@rehearsal.trak.dev</code><span class="tiny">second squad</span></div>
+    <div class="who-band"><span class="role">Player</span><code>&lt;firstname&gt;.&lt;lastname&gt;@rehearsal.trak.dev</code></div>
+    <div class="who-band"><span class="role">Parent</span><code>parent.&lt;firstname&gt;.&lt;lastname&gt;@rehearsal.trak.dev</code></div>
+  </div>
+
+  <div class="callout">
+    <h3>Grouped by role, not in demo order</h3>
+    <p>The pilot scope runs the use cases in narrative order because that is the story you tell the academy. <b>For a rehearsal that ordering is wrong</b> &mdash; it means signing in and out a dozen times. This groups them by who is signed in, which is the same fourteen cases in about a third of the time.</p>
+  </div>
+
+  <div class="alarm">
+    <h3>Log, do not fix</h3>
+    <p>When something breaks, write down <b>what you did, what you expected, what happened</b>, and carry on. Stopping to fix things mid-run means the later cases never get walked &mdash; and the later ones are precisely the ones nobody has looked at.</p>
+    <p><b>Keep the browser console open throughout.</b> Two of today's bugs were only visible there: the assessment failure printed a Postgres error, and a silent telemetry failure prints <code>[telemetry] "&lt;event&gt;" failed:</code>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Part 1 &middot; Club admin</div>
+    <h2>Sign in as the director</h2>
+    <p class="small"><code>director@rehearsal.trak.dev</code></p>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-01</div>
+    <div class="body">
+      <h3>Academy setup, squads, coach invites</h3>
+      <p class="small">Open the club home, squads and coaches screens. The academy already exists from seeding, so you are checking it <b>reads</b> correctly, then create one new squad by hand.</p>
+      <span class="route">/club/home &middot; /club/squads &middot; /club/coaches</span>
+      <p class="look"><b>Look for:</b> does the player count match the squads beneath it? That exact mismatch was a real bug (<code>3bd1507</code>). Three coaches should be listed, one with no squad of their own.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-13</div>
+    <div class="body">
+      <span class="chip c-risk">Never opened</span>
+      <h3>Squad radar</h3>
+      <p class="small">Band distribution, most improved, players needing attention.</p>
+      <span class="route">/club/radar</span>
+      <p class="look"><b>Look for:</b> does it render at all, and are the numbers consistent with the squads? <b>Nobody has opened this since the data was seeded.</b> The scope makes this hypothesis H5 &mdash; the director must be able to name one thing here they did not already know.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Part 2 &middot; Coach</div>
+    <h2>Sign in as the U15 coach</h2>
+    <p class="small"><code>coach.u15@rehearsal.trak.dev</code> &mdash; the longest stretch, and the one the pilot's load-bearing hypothesis depends on</p>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-02</div>
+    <div class="body">
+      <h3>Build the roster</h3>
+      <p class="small">Add three players using <b>Save &amp; add another</b>, then a fourth with <b>Save &amp; finish</b>. <b>Time it with a stopwatch.</b></p>
+      <span class="route">/coach/squad/add</span>
+      <p class="look"><b>Look for:</b> does the age group persist between players? Does focus return to the name field? Does Enter save? The elapsed time is UC-02's real number &mdash; the scope calls roster setup the single biggest adoption barrier.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-06</div>
+    <div class="body">
+      <h3>Assess a player &mdash; full</h3>
+      <p class="small"><b>Move every slider to a different, uneven value.</b> Add a written note. Save.</p>
+      <span class="route">/coach/assess</span>
+      <p class="look"><b>Look for:</b> it must save. This is where the card-stats bug lived — decimals into integer columns failed roughly three saves in four, and <b>only when sliders differ</b>. Even values pass every time, which is why it went unnoticed. Session is optional; leave it blank once deliberately.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-06</div>
+    <div class="body">
+      <h3>Assess &mdash; quick variant</h3>
+      <p class="small">Run quick-assess across the whole squad this time, to the end.</p>
+      <span class="route">/coach/quick-assess</span>
+      <p class="look"><b>Look for:</b> do sliders start from each player's previous assessment rather than the midpoint? Time the full run &mdash; the target is under 90 seconds per player.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-05</div>
+    <div class="body">
+      <h3>Log a match for the squad</h3>
+      <p class="small">Set a date in the past, pick opponent and score, use the bulk select, then expand two players and give them different minutes, goals and cards.</p>
+      <span class="route">/coach/sessions/quick</span>
+      <p class="look"><b>Look for:</b> this route now opens the full session screen preset to Match. Confirm per-player detail actually saves &mdash; the old screen gave every player identical inputs, which flattened the bands.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-09</div>
+    <div class="body">
+      <h3>Award recognition</h3>
+      <span class="route">/coach/recognition &rarr; /coach/award</span>
+      <p class="look"><b>Look for:</b> the award appears on that player's profile afterwards. Check the player side later in Part 3 &mdash; a duplicate "Player of the Week" on the passport is a known open observation.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-11</div>
+    <div class="body">
+      <h3>Paste fixtures and parse</h3>
+      <p class="small">Use <b>real, messy fixture text</b> — ideally the academy's own, or something equally untidy. Not a clean sample.</p>
+      <span class="route">/coach/schedule</span>
+      <p class="look"><b>Look for:</b> how many events come back, and how many are right? Parser accuracy on real text is the whole point; a clean sample proves nothing.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-12</div>
+    <div class="body">
+      <h3>Coach assistant</h3>
+      <p class="small">Ask for a session plan. Then ask a follow-up.</p>
+      <span class="route">/coach/assistant</span>
+      <p class="look"><b>Look for:</b> does a plan come back with drill diagrams, and is it something you would actually run at training? H6 is about <b>repeat</b> use, so the test is whether the output is good enough to come back to.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Part 3 &middot; Player</div>
+    <h2>Sign in as a player</h2>
+    <p class="small">Pick one you just assessed, so there is fresh data &mdash; e.g. <code>nikos.ioannou@rehearsal.trak.dev</code></p>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-03</div>
+    <div class="body">
+      <h3>Signup and squad linking</h3>
+      <p class="small">Rather than reusing a seeded account, <b>create a brand new player</b> with the coach's TRK code from Part 2.</p>
+      <span class="route">/onboarding/player</span>
+      <p class="look"><b>Look for:</b> after signup, does the coach's squad show <b>one</b> row for them, not two? Signup now claims the coach's typed roster entry instead of adding a duplicate &mdash; this is the check that it works.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-07</div>
+    <div class="body">
+      <span class="chip c-warn">Only half-tested</span>
+      <h3>Open the coach's feedback</h3>
+      <p class="small">From the <b>home screen card</b>, not a direct URL.</p>
+      <span class="route">/player/home &rarr; /player/feedback/:id</span>
+      <p class="look"><b>Look for:</b> the card must appear. It previously rendered only when the assessment carried a written note. Test <b>both</b> — an assessment with a note and one without. Both must reach the screen and produce sensible advice.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-08</div>
+    <div class="body">
+      <span class="chip c-risk">Never opened</span>
+      <h3>Passport, evolution card, profile trend</h3>
+      <span class="route">/player/passport &middot; /player/evolution &middot; /player/profile</span>
+      <p class="look"><b>Look for:</b> all three render with six weeks of seeded history. Check the passport on a narrow phone — horizontal overflow was fixed once (<code>866949a</code>) and is worth re-checking. Watch for duplicate award entries.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Part 4 &middot; Parent</div>
+    <h2>Sign in as a parent</h2>
+    <p class="small"><code>parent.&lt;firstname&gt;.&lt;lastname&gt;@rehearsal.trak.dev</code></p>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-04</div>
+    <div class="body">
+      <h3>Parent invite and linking</h3>
+      <p class="small">From the new player account in Part 3, send a parent invite, then redeem it on a fresh parent account.</p>
+      <span class="route">/parent-invite &rarr; /parent/home</span>
+      <p class="look"><b>Look for:</b> the share sheet appears, the link pre-fills the email, and the child's data shows up after linking. The scope calls this the most fragile step and it is safeguarding-critical.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-10</div>
+    <div class="body">
+      <span class="chip c-warn">Only half-tested</span>
+      <h3>Child summary, match history, alerts</h3>
+      <p class="small">Only the alerts feed has been opened. <b>Open all three.</b></p>
+      <span class="route">/parent/home &middot; /parent/matches &middot; /parent/alerts</span>
+      <p class="look"><b>Look for:</b> the parent sees bands, never raw numbers, and never the coach's private note. Confirm the assessment and award you created in Part 2 appear here.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Part 5 &middot; Any role</div>
+    <h2>Settings and deletion</h2>
+  </div>
+
+  <div class="step">
+    <div class="box"></div>
+    <div class="uc">UC-14</div>
+    <div class="body">
+      <span class="chip c-warn">RPC tested, button not</span>
+      <h3>Delete an account through the UI</h3>
+      <p class="small">Use the <b>new player account</b> from Part 3. Change a setting first, then delete.</p>
+      <span class="route">/settings &rarr; delete account</span>
+      <p class="look"><b>Look for:</b> the underlying function is verified working &mdash; an account with matches, assessments and a linked parent was deleted cleanly. <b>What is untested is the Settings button that calls it.</b> Confirm sign-in afterwards fails, and that the coach's squad no longer shows them.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Then confirm nothing is orphaned</h3>
+    <pre>SELECT * FROM squad_duplicate_candidates;
+SELECT * FROM pilot_safeguarding_checks;</pre>
+    <p class="small">Both should return <b>zero rows</b>. The first catches duplicate roster entries from signup, the second catches cross-role leakage. Any row is explained in writing before the pilot continues.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">After the run</div>
+    <h2>Reset</h2>
+  </div>
+  <div class="card">
+    <p class="small">The rehearsal run leaves extra players, matches and assessments behind. Before real data arrives:</p>
+    <pre>node seed-pilot-rehearsal.mjs --purge</pre>
+    <p class="small">Then set the pilot window to the real values &mdash; <code>starts_on</code> to the pilot start date and <code>org_id</code> to the academy's own organisation, once the director has created it. Leaving <code>org_id</code> pointing at Rehearsal FC makes every cohort metric wrong.</p>
+  </div>
+</section>
+
+</div>

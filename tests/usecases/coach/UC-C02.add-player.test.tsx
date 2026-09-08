@@ -18,12 +18,21 @@ function signedInCoach() {
   )
 }
 
+/*
+ * The redesigned add-player screen no longer has a single "Add to Squad"
+ * button — it has two: "Save & add another" (stays put, clears the name so a
+ * coach can enter the next player) and "Save & finish" (saves and navigates
+ * back to /coach/squad). Only "Save & finish" completes the use case as
+ * registered: UC-C02's `then` clauses require the row to persist AND the
+ * coach to land back on the squad screen. "Save & add another" satisfies
+ * only the first of those, so every test below drives "Save & finish".
+ */
 async function setupAndAddPlayerName(playerName: string) {
   renderApp('/coach/squad/add')
   const user = userEvent.setup()
   const nameInput = await screen.findByRole('textbox')
   await user.type(nameInput, playerName)
-  const saveButton = screen.getByRole('button', { name: /add to squad/i })
+  const saveButton = screen.getByRole('button', { name: /save & finish/i })
   return { user, saveButton }
 }
 
@@ -37,6 +46,10 @@ useCase('UC-C02', () => {
         return { id: 'squad-1', ...body }
       }),
       table('squad_players', []),
+      // "Save & finish" navigates to /coach/squad on success, and
+      // CoachSquadPage also fetches coach_assessments for the band pill —
+      // mock it so that post-redirect request doesn't reach MSW unhandled.
+      table('coach_assessments', []),
     )
 
     const { user, saveButton } = await setupAndAddPlayerName('Nikos Papadopoulos')
@@ -56,12 +69,16 @@ useCase('UC-C02', () => {
       table('squad_players', [
         { id: 'squad-1', coach_user_id: COACH.id, player_name: 'Nikos Papadopoulos', position: null, shirt_number: null },
       ]),
+      table('coach_assessments', []),
     )
 
     const { user, saveButton } = await setupAndAddPlayerName('Nikos Papadopoulos')
     await user.click(saveButton)
 
-    expect(await screen.findByText('SQUAD')).toBeInTheDocument()
+    // The squad screen's title is now "Squad" (rendered as an <h1>), not
+    // "SQUAD" — the NavBar also has a "Squad" tab label, so scope the query
+    // to the heading role to avoid matching both.
+    expect(await screen.findByRole('heading', { name: 'Squad' })).toBeInTheDocument()
   })
 
   it('refuses to save while the name is empty', async () => {
@@ -73,7 +90,7 @@ useCase('UC-C02', () => {
 
     renderApp('/coach/squad/add')
     const user = userEvent.setup()
-    const save = await screen.findByRole('button', { name: /add to squad/i })
+    const save = await screen.findByRole('button', { name: /save & finish/i })
 
     expect(save).toBeDisabled()
     await user.click(save)

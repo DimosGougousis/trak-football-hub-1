@@ -1,0 +1,234 @@
+# Vercel: Production Hosting Capabilities & GDPR for Applications Involving Minors
+
+Research date: 2026-09-07. Sources are Vercel docs, the ICO, EDPB and the European Commission (links at the end).
+**Not legal advice.** Vercel's own compliance guides state explicitly that compliance is a shared responsibility and that customers must consult their own legal advisors.
+
+---
+
+## Part 1 - Functions available on Vercel for production applications
+
+### 1. Compute & runtime
+
+| Capability | Notes | Plans |
+|---|---|---|
+| **Vercel Functions** (Fluid Compute) | Serverless compute billed on Active CPU + provisioned memory; invocations billed per unit | Hobby / Pro / Enterprise |
+| Runtimes: Node.js, Python, Ruby, Bun, Go | Bun 1.4 available; `Bun.serve` accepted as an entrypoint | varies by runtime |
+| **Edge Runtime** | Runs at CDN points of presence closest to the user | all plans (fewer regions on Hobby) |
+| **Routing Middleware** | Request interception before functions: rewrites, auth checks. Deployed to *all* regions by default regardless of your region setting - important for privacy design | all plans |
+| **Vercel Sandbox** | Run generated / untrusted AI code in isolated VMs with snapshots | Hobby 5 CPU-hrs incl.; Pro from $0.128/hr |
+| **Container Registry** (Beta) | OCI image storage for Functions and Sandbox | all plans |
+| **Services** (Beta) | Multiple backends and frontends inside one project, calls over a binding | Hobby 1M reqs incl.; Pro from $0.50/1M |
+| **Workflows** | Durable, resumable multi-step tasks with workflow storage | Hobby 50K events incl.; Pro $20/1M |
+| **Queues** (Beta) | Async job processing | Hobby 1M ops incl.; Pro from $0.60/1M |
+| **Cron Jobs** | Scheduled function execution | all plans |
+| **Streaming Functions** | Stream long-running responses (LLM output, SSR) | all plans |
+
+### 2. Delivery & networking
+
+- **Delivery Network / CDN** - global anycast, zero-config cache, automated compression, background revalidation, stale-while-revalidate. Over 126 points of presence behind 20 compute regions.
+- **Automatic routing**, HTTPS certificates, TLS/SSL (TLS 1.3), traffic load balancing, private inter-region network - included on every plan.
+- **Configurable routing** - reverse proxy, rewrites, redirects, middleware support.
+- **Fast Data Transfer** and **Fast Origin Transfer** between CDN, compute and storage.
+- **Domains** - add/transfer domains, apex and subdomains, DNS management.
+- **Static IPs (shared pool)** for IP-allowlisted backends - Pro add-on ($100/project/month).
+- **Secure Compute** - Enterprise only: dedicated private VPC network with a dedicated static IP pair, isolation from other customers, self-service AWS VPC peering where provisioned, VPN support, region of your choice, active + passive network failover. Max 50 peering connections per network. Edge runtime is *not* supported (so Routing Middleware and `edge` functions do not use the dedicated IPs).
+- **BYOC** - run Vercel compute inside your own AWS account. Enterprise only.
+
+### Region list (20 compute-capable regions)
+
+| Code | Location | Code | Location |
+|---|---|---|---|
+| `arn1` | Stockholm | `iad1` | Washington, D.C. (**default**) |
+| `bom1` | Mumbai | `icn1` | Seoul |
+| `cdg1` | Paris | `kix1` | Osaka |
+| `cle1` | Cleveland | `lhr1` | London |
+| `cpt1` | Cape Town | `pdx1` | Portland |
+| `dub1` | Dublin | `sfo1` | San Francisco |
+| `dxb1` | Dubai | `sin1` | Singapore |
+| `fra1` | Frankfurt | `syd1` | Sydney |
+| `gru1` | Sao Paulo | `yul1` | Montreal |
+| `hkg1` | Hong Kong | | |
+
+Function region limits: **Hobby = single region, Pro = 5 regions, Enterprise = all regions.** Deploying beyond your allowance fails before the build step. `functionFailoverRegions` is Enterprise only (up to 4 per function). Routing Middleware runs in all regions regardless of your settings.
+
+### 3. Storage
+
+| Product | Reads | Writes | Use case | Plans |
+|---|---|---|---|---|
+| **Vercel Blob** | milliseconds | milliseconds | files, images, video, user uploads - public or private stores | Hobby, Pro |
+| **Global Config** | ultra-fast (99% under 10ms) | seconds | runtime configuration, feature flags; replicated to all CDN regions | Hobby, Pro, Enterprise |
+| **Marketplace storage** | provider-dependent | provider-dependent | relational, key-value, NoSQL, vector data | provider-specific |
+
+- Blob encryption: **AES-256 at rest**, transparent (encrypted before being written to disk, decrypted on retrieval). Protected by the platform-wide firewall.
+- Files are private or public depending on the store you create, and **the access mode cannot be changed after store creation**. Private stores require authentication for *all* read and write operations; files in private stores **cannot be accessed via public URLs** - you deliver them through your own Functions where you implement authentication logic.
+- Signed URLs are available for Blob. Multipart uploads recommended above 100 MB. CDN caches blobs up to 1 month by default (`cacheControlMaxAge`).
+- Marketplace providers include Neon (Postgres), Upstash (Redis / KV), Supabase, plus vector/embedding options for semantic search. Credentials are injected into `.env.local` via `vercel install`.
+
+### 4. Build & deploy
+
+Automatic CI/CD on every git push; environment variables; build logs; remote caching; monorepo support; unlimited deployments; instant rollback; multi-tenant support; preview deployments; CLI and plugins/agent skills.
+Pro / Enterprise additions: webhook triggers, custom environments (Pro = 1, Enterprise = 12), skew protection, rolling releases, preview deployment suffix, standard/enhanced/elastic build machines.
+
+### 5. Security & protection
+
+- **Vercel Firewall** - platform-wide DDoS mitigation and bot protection included on all plans; automated attack challenge mode; AI-bots managed ruleset.
+- **Web Application Firewall (WAF)** - custom rules (Hobby up to 3, Pro up to 40, Enterprise up to 1,000), IP blocking (3 / 100 / 1,000), rate limiting. The OWASP managed core ruleset is not available on Hobby or Pro; custom on Enterprise.
+- **Bot Management** and **BotID** (invisible CAPTCHA alternative).
+- **Deployment Protection** - guard preview and production URLs ($150/month on Pro, included on Enterprise). SSO-protected previews behind your third-party identity provider: Enterprise only.
+- **Access security** - OAuth sign-in (GitHub, Google, GitLab, Bitbucket), MFA on all plans, RBAC (team level on Pro, team + project level on Enterprise), audit logs (Enterprise), SCIM directory sync (Enterprise), SAML SSO (Pro add-on or Enterprise owner role).
+- **Security headers / CSP** configuration; conformance rules including cookie validation.
+
+### 6. Operate & observe
+
+Observability (included all plans); Observability Plus add-on (30-day retention, advanced metrics, alerts on Pro/Enterprise); runtime logs (Hobby 1 hour, Pro 1 day / 30 days with Observability Plus, Enterprise 3 days / 30 days with the add-on); session tracing; Speed Insights (+Plus); Web Analytics (+Analytics Plus with UTM parameters, $10/month on Pro); **log drains** to external services ($0.50/GB on Pro).
+Feature Flags (`vercel flags`) with targeting rules, progressive rollouts and A/B tests. Toolbar for deploy inspection.
+
+### 7. AI stack (if your application uses models)
+
+AI Gateway (single endpoint across many models; bring-your-own-key; load balancing; managed fallback; app attribution; observability), AI SDK, Sandbox, Container Registry, Workflows, Vercel Agent (beta - $0.25/million tokens plus pass-through token cost on Pro), v0 (paid add-on), Vercel MCP, model integrations.
+
+### 8. Plans
+
+| Plan | Price | Positioning |
+|---|---|---|
+| Hobby | $0/month | personal, **non-commercial** use only |
+| Pro | $20/month + usage | professional developers, freelancers and businesses; includes a $20 monthly usage credit |
+| Enterprise | custom | critical security, performance, observability, platform SLAs and support |
+
+Compliance items listed as included on all plans: SOC 2 Type 2, PCI DSS, ISO 27001, EU-U.S. Data Privacy Framework, TISAX assessment level 2 (AL2). **HIPAA BAA is not available on Hobby** - it is a paid add-on on Pro and custom on Enterprise.
+
+---
+
+## Part 2 - Private data and GDPR when your application involves minors
+
+### The framing that matters most
+
+Vercel operates a **shared responsibility model**. Vercel secures compute, storage and networking, and is responsible for encryption in transit (TLS 1.3) and at rest (AES-256) *for the services it controls*. But its Data Processing Addendum states plainly:
+
+> "Vercel Customers unilaterally determine what Customer Data they route through the Vercel Services and how the Services are configured. As such, Vercel operates on a shared responsibility model."
+
+That means **you are the controller**. Vercel's certifications do not make your application GDPR-compliant, and their regulated-data guides say so explicitly: compliance is shared, customers are ultimately responsible for their own compliance with applicable law, and the documentation "does not constitute legal advice." For minors specifically, almost every hard requirement below lands on *your* design decisions rather than on the platform.
+
+### A. GDPR obligations that bite hardest with minors
+
+1. **Article 8 - consent age.** Where consent is your lawful basis for an information society service offered directly to a child, processing is lawful where the child is at least **16 years old**; below that it is lawful only if and to the extent consent is given or authorised by the holder of parental responsibility. Member States may set a lower age, but **not below 13**.
+   Verified examples from national law: Bulgaria 14 (Art. 25c), Croatia 16 (Art. 19), Czech Republic 14 (s.7), Denmark 15 (Art. 45), Greece 15 (Law 4624/2019 Art. 21), Germany 16, Hungary 16, Italy 14 (Art. 2-quinquies), Latvia 13 (s.33), Lithuania 14 (Art. 6), Netherlands 16 (Art. 5), Poland 16, Portugal 13 (Art. 16), Romania 16, Slovakia 16 (s.15), Slovenia currently applies the GDPR default of **16** pending national reform, Spain 14, Sweden 13 (c.2 s.4), UK 13 (s.9 DPA 2018). Ireland is **16** under its Data Protection Act 2018 s.31(1).
+   - **Practical consequence:** if you serve several EU markets, either apply the highest threshold in your footprint (**16**) as one conservative rule, or implement per-country thresholds driven by locale and verified jurisdiction. Do not silently assume 13 is acceptable everywhere.
+2. **Article 8(2) - reasonable verification efforts.** The controller must make reasonable efforts to verify that consent is given or authorised by the holder of parental responsibility, taking into consideration available technology. A bare age checkbox does not satisfy this. Regulators have hardened: self-declaration alone is not treated as effective age assurance in either the UK or the EU.
+3. **DPIA is effectively mandatory.** Article 35 requires a data protection impact assessment *before* processing where it is likely to result in high risk. Processing children's data, systematic monitoring, profiling and large-scale sensitive data are canonical high-risk triggers. The ICO Children's Code makes a DPIA a baseline expectation for any online service **likely to be accessed by children** - not only services that target them - and requires keeping it under review.
+4. **Article 5 principles applied per purpose.** Minimisation (5(1)(c)) and storage limitation (5(1)(e)) apply *by default to each specific purpose* via Article 25 privacy-by-design.
+5. **Article 22 - automated decisions.** The data subject has the right not to be subject to a decision based solely on automated processing, including profiling, producing legal or similarly significant effects; Recital 71 states such decisions should not concern a child.
+6. **Articles 12-17 - transparency and rights in child-appropriate language.** Information addressed to a child must be easily accessible and in clear plain language a child can understand. Access, rectification and erasure must be exercisable - including by the parent or guardian.
+7. **Articles 30, 32, 33, 34** - records of processing activities; appropriate technical and organisational security measures; breach notification to the supervisory authority within 72 hours, and to data subjects where the risk is high.
+8. **Article 27 - EU representative** if you are not established in the EU but offer services to EU data subjects, including children.
+9. **Articles 37-39 - DPO** where core activities involve large-scale processing of special categories or regular and systematic monitoring; frequently triggered by minors-facing products.
+10. **Article 28 - subprocessors.** Every third party touching children's data needs Art. 28(3)-equivalent terms in writing, plus a valid transfer mechanism if it processes outside the EU/adequacy list. Vercel maintains its own subprocessor list at security.vercel.com and you can subscribe to new-subprocessor notices by emailing privacy@vercel.com. **Your integrations are your subprocessors**, not Vercel's - AI model providers, analytics, auth and age-assurance vendors all need their own DPA and transfer analysis.
+11. **Article 48** - a third-country authority's request for data is only recognised within the EU where based on an international agreement; responding to such a request with no other legal basis infringes GDPR.
+
+### B. ICO Age Appropriate Design Code (the Children's Code) - 15 standards
+
+Not a new law: it explains how UK GDPR applies to children online, and the ICO enforces against it. It applies to information society services **likely to be accessed by children** (apps, games, connected toys, websites).
+
+1. Best interests of the child
+2. Data protection impact assessments
+3. Age appropriate application (know your users; consider how confident you are about age)
+4. Transparency - child-readable privacy information
+5. Detrimental use of data - don't serve content detrimental to health or wellbeing, and don't repurpose collected data for things like targeting children with ads or birthday offers without consent
+6. Policies and community standards
+7. **Default settings** - 'high privacy' by default unless you can demonstrate a compelling reason in the child's best interests; reset any new or significantly changed feature to high privacy. Note: privacy settings are **not** a consent mechanism on their own - Articles 7 and 8 still apply.
+8. Data minimisation - adequate, relevant and limited to what is necessary for each purpose
+9. Data sharing - don't share children's data unless there is a compelling reason, and document it
+10. Geolocation - off by default; an obvious indicator when location tracking is active; anything making a child's location visible to others defaults back to **off at the end of each session**
+11. Parental controls - be transparent about what they monitor; don't use them for covert surveillance
+12. Profiling - off by default unless a compelling best-interests reason; provide age-appropriate information at the exact point profiling is switched on; behavioural advertising that funds the service but is not part of the core service must be off by default, and non-essential cookies supporting it need PECR consent
+13. Nudge techniques - don't nudge children toward lower privacy or detrimental choices
+14. Connected toys and devices
+15. Online tools - tools that help children exercise their rights
+
+Plus governance and accountability throughout. Consider disabled children under applicable equality legislation.
+
+### C. Rules beyond GDPR that now also apply
+
+- **EU Digital Services Act, Article 28** - providers of online platforms accessible to minors must put in place appropriate and proportionate measures to ensure a high level of privacy, safety and security of minors on their service; profiling-based advertising targeting minors is prohibited. For very large online platforms and search engines, Articles 34 and 35(1) require assessing and mitigating actual or foreseeable risks to the protection of minors.
+- **EDPB Statement 1/2025 on Age Assurance** (adopted 12 February 2025) - ten principles for GDPR-compliant age determination: threshold-based checks are supported only where proportionate, the method must be the least intrusive possible, and privacy by default must be preserved. The EDPB is working on Guidelines on the processing of children's data under its 2024-2027 strategy.
+- **EU age verification blueprint** - open-source toolbox available since July 2025 (ageverification.dev). A second version in October 2025 added passport and identity-card methods plus zero-knowledge proof technology. As of April 2026 the app is technically ready for citizens, with a Commission recommendation encouraging Member States to act; Denmark, France, Greece, Italy and Spain are taking up customised national apps. The key design property: once the proof of age is issued, **the link between user and issuer is cut**, no further data is exchanged, and the proof contains no identity information traceable to the user - it proves "meets a threshold" without revealing exact age or identity.
+- **UK Online Safety Act 2023** (Ofcom) - requires age assurance that is "highly effective" at determining whether a user is a child, so children are not normally able to encounter harmful content. Ofcom required in-scope services to complete children's access assessments and risk assessments, has extended enforcement to all platforms allowing users to share pornographic material, issued its first OSA financial penalty (GBP 1 million for inadequate age checks), and on 12 March 2026 wrote to major platforms requiring them to enforce minimum-age policies with highly effective age assurance by 30 April 2026. Ofcom and the ICO issued a joint statement on 26 March 2026 reconciling online-safety duties with data-protection obligations - both confirm self-declaration alone is not effective, so you cannot play one regulator against the other.
+- **Audiovisual Media Services Directive** - video-sharing platforms must protect minors from accessing harmful audiovisual content; **Unfair Commercial Practices Directive** recognises minors as vulnerable users. The forthcoming Digital Fairness Act is expected to fill remaining gaps.
+
+### D. How to actually meet these on Vercel - concrete mapping
+
+**1. Choose lawful basis before choosing infrastructure.** Consent under Art. 8 is the hardest basis to operate honestly. Where a genuine alternative exists (contract performance for a school-provided service, legal obligation, legitimate interests with a documented balancing test that survives child-risk analysis), prefer it and document why. If you do rely on consent, build parental authorisation into the flow rather than bolting it on afterwards.
+
+**2. Age assurance - least intrusive first.**
+- Prefer threshold proofs over identity collection: the EU age verification blueprint / EUDI-wallet-compatible proofs give you "meets threshold X" without an exact age or an identity artifact.
+- **Do not store ID documents, passport scans or selfie/video KYC output as application data.** If a vendor processes them, that vendor is *your* subprocessor and needs Art. 28(3) terms plus a transfer mechanism - and storing identity evidence conflicts with minimisation.
+- Persist only the derived result: age band + verification timestamp + method used. That satisfies Article 5(1)(c) while still evidencing your Article 8(2) reasonable efforts.
+- Vet third-party age assurance providers against a recognised scheme (e.g. the ICO-referenced Age Check Certification Scheme / HEAA standard).
+
+**3. Parental consent flow.** Verify the consenting adult is the holder of parental responsibility; keep a consent record capturing purpose, privacy-notice version, timestamp and method; make withdrawal easy and effective at any time; re-consent when purposes change. Remember consent records are personal data *about the parent* - minimise and retention-limit them too.
+
+**4. Region selection is your compliance lever - and it has limits.** Vercel does **not** offer an EU-only processing guarantee out of the box: default compute is `iad1` (USA), and the DPA notes Vercel may transfer data to and in the United States and elsewhere where it or its providers operate. So set regions explicitly, keep functions in the same region as your database, and use EU regions for children's-data paths:
+
+```json filename="vercel.json"
+{
+  "$schema": "https://openxml.vercel.sh/vercel.json",
+  "regions": ["fra1"],
+  "functions": {
+    "api/child-data/*": {
+      "regions": ["cdg1"],
+      "functionFailoverRegions": ["lhr1"]
+    }
+  }
+}
+```
+
+Note the honest caveat: failover reroutes traffic to the next closest region, and static CDN content is served from whichever point of presence is nearest the user. If a contract or regulator requires processing confined to the EEA, that needs Secure Compute / BYOC plus an EU-region database and explicit contractual terms with Vercel - confirm scope in writing rather than assuming `regions` alone delivers residency.
+
+**5. Private storage patterns.**
+- Create Blob stores with `access: 'private'` for anything sensitive (you cannot switch mode later). Serve them through authenticated Functions, never via middleware-only auth - a middleware bug or misconfiguration could expose cached private content.
+- For PII responses set `Cache-Control: private, no-cache`; for the most sensitive data use `Cache-Control: private, no-store` so nothing is written to disk and every request re-runs your auth logic. Avoid `s-maxage` on private blob responses.
+- Use `useCache: false` when a read must reflect the latest write (overwrites can take up to 60 seconds to propagate through CDN cache).
+- Prefer unique pathnames (`addRandomSuffix`, UUID or timestamp) over `allowOverwrite: true`, so deletion is unambiguous and stale copies don't linger.
+
+**6. Encryption - what's covered and what isn't.** Vercel gives TLS 1.3 in transit and AES-256 at rest for services it controls, with strong ciphers and forward secrecy. But the shared responsibility model puts **server-side encryption of your own data in databases and integrations on you**. Apply field-level encryption for sensitive children's fields (e.g. pgcrypto or application-layer envelope encryption), separate keys from data, and keep secrets out of client bundles - environment variables exposed to the browser are effectively public.
+
+**7. Logging is a common leak.** Runtime logs include function invocations, middleware invocations and request metadata; up to 256 lines per request, 256 KB per line, 1 MB total per request. Retention is short by default (Hobby 1 hour, Pro 1 day, Enterprise 3 days). Two consequences:
+- **Never `console.log` children's identifiers, prompts, file contents or consent payloads.** Anything you log becomes personal data in a system whose retention you don't fully control.
+- Long-term retention is *your* job via log drains - so if you drain logs to Datadog/Honeycomb etc., that provider is your subprocessor and needs its own DPA. Scrub at the source rather than downstream.
+
+**8. Analytics and profiling defaults.** Vercel Web Analytics / Speed Insights are opt-in choices that increase data collected about end users, and integrations affect what is shared. For a minors-facing service: non-essential cookies require consent under PECR/ePrivacy (Germany's TDDDG s.25 transposes this), profiling must be off by default per Children's Code standard 12, and personalised advertising targeting minors is prohibited under DSA Art. 28. If you use AI Gateway or model providers, prompts containing children's data are transfers to those subprocessors - check each provider's training-data policy and region support (note some providers do not support certain regions, e.g. OpenAI does not support `hkg1` for Functions).
+
+**9. Access governance.** Enable MFA (all plans), RBAC scoped at project level (Enterprise), audit logs (Enterprise, exportable CSV from Team Settings > Security & Privacy), SCIM where you have an IdP, Deployment Protection so preview URLs aren't publicly crawlable, SSO-protected previews on Enterprise, and a WAF with rate limiting to blunt enumeration and abuse. The production checklist also calls for CSP/security headers, committed lockfiles, allowed-cookie conformance rules and firewall rules against unwanted agents.
+
+**10. Documentation artifacts you should actually produce.** Records of processing (Art. 30); a DPIA with explicit child-risk analysis and named mitigations, reviewed on a schedule; privacy notices in child-readable language *and* a parent-facing version; consent records with withdrawal path; subprocessor register covering Vercel plus your own integrations; EU representative appointment if non-EU established; DPO where triggered; breach runbook tested against the 72-hour clock and Art. 34 notification threshold; retention schedule per purpose, not one blanket TTL.
+
+### E. Honest limits of Vercel for this use case
+
+- **No EU data-residency guarantee as a product feature.** Region selection is yours; default compute is US; failover reroutes to the nearest region and CDN serves static content from the closest point of presence. Strict EEA-only processing needs Secure Compute/BYOC, an EU-region database, and explicit contractual terms - verify in writing.
+- **Certifications are platform-level, not application-level.** SOC 2 Type 2 (Security, Confidentiality, Availability), ISO 27001:2022, PCI DSS SAQ-D/SAQ-A, EU-U.S. DPF certification and TISAX AL2 attest *Vercel's* controls. None attests that your children's-data processing is lawful. A BAA (HIPAA) similarly does not make you compliant.
+- **Hobby plan is non-commercial only** - a production application involving minors should not run on Hobby; it also lacks RBAC, audit logs, WAF managed rulesets and deployment protection.
+- **Age assurance is not a Vercel feature.** You must integrate a provider or adopt the EU blueprint solution yourself, and that choice carries its own DPIA weight: age verification can itself create intrusive-data risks, which is exactly what the EDPB's least-intrusive principle addresses.
+- **Vercel does not review your data**, so detection of PII leaking into logs, blobs or an integration is your instrumentation job - build it (schema checks on log payloads, secret scanners, private-store access auditing).
+
+---
+
+## Sources
+
+- Vercel Products - https://vercel.com/docs/products
+- Vercel Pricing (plan feature matrices) - https://vercel.com/pricing
+- Storage overview - https://vercel.com/docs/storage ; Blob - https://vercel.com/docs/vercel-blob ; Blob security / private storage - https://vercel.com/docs/vercel-blob/security and https://vercel.com/docs/vercel-blob/private-storage
+- Global network and regions - https://vercel.com/docs/regions ; configuring function regions - https://vercel.com/docs/functions/configuring-functions/region
+- Secure Compute - https://vercel.com/docs/networking/secure-compute
+- Security overview / Compliance measures - https://vercel.com/docs/security and https://vercel.com/docs/security/compliance
+- Shared Responsibility Model - https://vercel.com/docs/security/shared-responsibility
+- Encryption and TLS - https://vercel.com/docs/cdn-security/encryption
+- Runtime logs - https://vercel.com/docs/observability/runtime-logs ; Production checklist - https://vercel.com/docs/production-checklist
+- HIPAA compliance guide (shared-responsibility framing) - https://vercel.com/kb/guide/hipaa-compliance-guide-vercel
+- Vercel Trust Center / subprocessors - https://security.vercel.com/ and https://security.vercel.com/subprocessors
+- Vercel Data Processing Addendum - https://vercel.com/legal/dpa (PDF: https://assets.vercel.com/image/upload/q_auto/front/legal/dpa/Vercel_Inc_-_Data_Processing_Addendum.pdf)
+- GDPR Art. 8 - https://gdpr-info.eu/art-8-gdpr ; DPIA guidance and template - https://gdpr.eu/data-protection-impact-assessment-template/ ; children's extra rules - https://gdprwise.eu/en/kennisbank/verplichtingen/gdpr-children-data/
+- ICO Age Appropriate Design Code (15 standards) - https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services (individual standards pages: default settings, data minimisation, geolocation, profiling)
+- Digital age of consent by member state - https://euconsent.eu/digital-age-of-consent-under-the-gdpr/ ; FRA mapping - https://fra.europa.eu/en/publication/2017/mapping-minimum-age-requirements-concerning-rights-child-eu/consent-use-data-children
+- EDPB Statement 1/2025 on Age Assurance - https://www.edpb.europa.eu/our-work-tools/our-documents/other/statement-12025-age-assurance_en ; Data Protection Day 2026 children statement - https://www.edpb.europa.eu/news/data-protection-day-2026-keeping-childrens-personal-data-safe-online_en
+- EU age verification blueprint - https://digital-strategy.ec.europa.eu/en/factpages/blueprint-age-verification-solution-help-protect-minors-online ; toolbox https://ageverification.dev/Setup/ ; Commission approach analysis - https://fpf.org/blog/the-eu-commissions-approach-to-age-verification-mobile-apps-dsa-enforcement-and-challenging-national-social-media-bans/
+- Age assurance in 2026 (UK OSA, ICO Children's Code, DSA Art. 28) - https://www.lewissilkin.com/insights/2026-04-17/age-assurance-in-2026-what-do-digital-businesses-operating-in-the-uk-and-eu-need-to-know ; EU rollout timeline - https://www.insideprivacy.com/minors/eu-sets-the-clock-on-age-verification-rollout-urged-by-end%E2%80%912026/

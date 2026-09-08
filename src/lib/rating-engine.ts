@@ -177,11 +177,12 @@ export function computeMatchScore(input: MatchInput): number {
 }
 
 export function scoreToBand(score: number): BandType {
-  if (score >= 9.2) return 'exceptional'
-  if (score >= 8.2) return 'standout'
-  if (score >= 7.2) return 'good'
-  if (score >= 6.4) return 'steady'
-  if (score >= 5.6) return 'mixed'
-  if (score >= 4.8) return 'developing'
+  // 0..10 scale — 5 lands in the middle of "Mixed".
+  if (score >= 9) return 'exceptional'
+  if (score >= 8) return 'standout'
+  if (score >= 7) return 'good'
+  if (score >= 6) return 'steady'
+  if (score >= 4) return 'mixed'
+  if (score >= 2) return 'developing'
   return 'difficult'
 }

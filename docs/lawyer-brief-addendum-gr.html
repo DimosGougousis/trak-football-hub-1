@@ -1,0 +1,231 @@
+<title>Συμπλήρωμα Νομικού Σημειώματος</title>
+<style>
+  :root {
+    --ground:#0A0A0B; --surface:#121314; --surface-2:#17191A;
+    --line:rgba(255,255,255,0.075); --line-firm:rgba(255,255,255,0.14);
+    --ink:#F0F2EE; --ink-mid:rgba(240,242,238,0.62); --ink-low:rgba(240,242,238,0.38);
+    --accent:#C8F25A; --accent-ink:#C8F25A; --accent-bg:rgba(200,242,90,0.11);
+    --ok:#4ade80; --warn:#fb923c; --risk:#fb7185;
+    --shadow:0 1px 2px rgba(0,0,0,0.5);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+      --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+      --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+      --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+      --ok:#15803d; --warn:#b45309; --risk:#be123c;
+      --shadow:0 1px 2px rgba(20,24,16,0.07);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+    --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+    --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+    --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+    --ok:#15803d; --warn:#b45309; --risk:#be123c;
+    --shadow:0 1px 2px rgba(20,24,16,0.07);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:16px; line-height:1.68; -webkit-font-smoothing:antialiased;
+    margin:0; padding:0 20px 90px;
+  }
+  .wrap { max-width:780px; margin:0 auto; }
+
+  h1,h2,h3 { text-wrap:balance; margin:0; line-height:1.22; letter-spacing:-0.015em; }
+  h1 { font-size:clamp(27px,4.6vw,38px); font-weight:600; }
+  h2 { font-size:clamp(19px,2.6vw,23px); font-weight:600; }
+  h3 { font-size:16.5px; font-weight:600; }
+  p { margin:0; }
+
+  code { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:0.87em; color:var(--ink); overflow-wrap:anywhere; }
+  .eyebrow {
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:11px; letter-spacing:0.13em; text-transform:uppercase; color:var(--accent-ink);
+  }
+  .lede { font-size:17px; color:var(--ink-mid); }
+  .small { font-size:14.5px; color:var(--ink-mid); }
+  .tiny { font-size:12.5px; color:var(--ink-low); }
+
+  header.mast {
+    padding:60px 0 30px; border-bottom:1px solid var(--line-firm);
+    display:flex; flex-direction:column; gap:18px;
+  }
+  section { padding:44px 0 0; display:flex; flex-direction:column; gap:18px; }
+  .sec-head { display:flex; flex-direction:column; gap:8px; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:18px 20px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:9px;
+  }
+  .grid-2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .callout {
+    background:var(--accent-bg); border:1px solid var(--line-firm);
+    border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:7px;
+  }
+  .alarm {
+    background:var(--surface); border:1px solid var(--line);
+    border-left:3px solid var(--risk); border-radius:12px;
+    padding:16px 18px; display:flex; flex-direction:column; gap:8px;
+  }
+  .callout p, .card p, .alarm p { font-size:14.5px; color:var(--ink-mid); }
+  .callout b, .card b, .alarm b { color:var(--ink); }
+
+  .tbl-scroll { overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+  table { border-collapse:collapse; width:100%; min-width:720px; font-size:13.5px; }
+  thead th {
+    text-align:left; font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--ink-low); font-weight:400; padding:12px 13px;
+    border-bottom:1px solid var(--line-firm); background:var(--surface-2); white-space:nowrap;
+  }
+  tbody td { padding:12px 13px; border-bottom:1px solid var(--line); vertical-align:top; color:var(--ink-mid); }
+  tbody tr:last-child td { border-bottom:none; }
+  td b { color:var(--ink); font-weight:600; }
+  td.prov { color:var(--accent-ink); white-space:nowrap; font-weight:500; }
+
+  ul.plain, ol.plain { margin:0; padding-left:19px; display:flex; flex-direction:column; gap:7px; }
+  ul.plain li, ol.plain li { font-size:14.5px; color:var(--ink-mid); }
+  ul.plain li b, ol.plain li b { color:var(--ink); font-weight:600; }
+
+  .chip {
+    display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; border:1px solid currentColor;
+  }
+  .chip::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+  .c-risk{color:var(--risk);} .c-warn{color:var(--warn);} .c-ok{color:var(--ok);}
+
+  a { color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">Συμπλήρωμα &middot; Σεπτέμβριος 2026</div>
+  <h1>Τι άλλαξε από τον Ιούλιο</h1>
+  <p class="lede">Συνοδεύει το αρχικό νομικό σημείωμα, το οποίο παραμένει σε ισχύ ως προς την ίδρυση, το σήμα και την πνευματική ιδιοκτησία. Εδώ καταγράφονται μόνο όσα άλλαξαν, μαζί με τα δημοσιευμένα στοιχεία των παρόχων που ζητήθηκαν.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">01</div>
+    <h2>Τέσσερις μεταβολές</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div><span class="chip c-warn">Νέο</span></div>
+      <h3>Το πιλοτικό είναι πλέον συγκεκριμένο</h3>
+      <p class="small">Δεν είναι πλέον «σχολείο ή ακαδημία». Είναι <b>ακαδημία ποδοσφαίρου</b>, περίπου 30 παιδιά ηλικίας 13&ndash;18, οκτώ εβδομάδες, χωρίς αμοιβή, με έναρξη σε δύο εβδομάδες. Το ερώτημα του αρχικού σημειώματος περί σχολείου έναντι ακαδημίας απαντήθηκε από μόνο του.</p>
+    </div>
+    <div class="card">
+      <div><span class="chip c-ok">Βελτίωση</span></div>
+      <h3>Δεν υπάρχουν πλέον δεδομένα υγείας</h3>
+      <p class="small">Ο πίνακας που αποθήκευε <b>διάθεση, ενέργεια, ποιότητα ύπνου</b> και ελεύθερο κείμενο ανά παιδί ανά ημέρα <b>διαγράφηκε</b>. Η λειτουργία είχε αφαιρεθεί από το πιλοτικό και κανένα σημείο της εφαρμογής δεν έγραφε σε αυτόν. Επομένως <b>δεν επεξεργαζόμαστε δεδομένα ειδικών κατηγοριών</b>, και το ερώτημα περί εκτίμησης αντικτύπου πιθανότατα δεν τίθεται.</p>
+    </div>
+    <div class="card">
+      <div><span class="chip c-risk">Νέο &mdash; χρήζει προσοχής</span></div>
+      <h3>Δεδομένα παιδιού αποστέλλονται σε πάροχο τεχνητής νοημοσύνης</h3>
+      <p class="small">Η οθόνη ανατροφοδότησης του παίκτη στέλνει <b>το μικρό όνομα του παιδιού, τη θέση του, έξι βαθμολογίες απόδοσης και το γραπτό σχόλιο του προπονητή</b> στο Google Gemini, μέσω της πύλης τεχνητής νοημοσύνης (ΤΝ) του Lovable. Δεν αναφερόταν στο αρχικό σημείωμα. Είναι το πιο εκτεθειμένο σημείο του συστήματος.</p>
+    </div>
+    <div class="card">
+      <div><span class="chip c-warn">Νέο</span></div>
+      <h3>Καταγραφή συμπεριφοράς χρήσης</h3>
+      <p class="small">Νέος πίνακας <code>telemetry_events</code> καταγράφει τι ανοίγει κάθε χρήστης και πότε, συμπεριλαμβανομένων των παιδιών. Είναι λειτουργικά δεδομένα, δεν εμφανίζονται πουθενά στην εφαρμογή και τα διαβάζουμε μόνο εμείς &mdash; αλλά αφορούν συμπεριφορά ανηλίκων και πρέπει να δηλωθούν, με συγκεκριμένο χρόνο διατήρησης.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">02</div>
+    <h2>Οι πάροχοι &mdash; τι δημοσιεύουν</h2>
+    <p class="small">Συλλέχθηκε από τα δημόσια νομικά κείμενα των παρόχων. Παρατίθεται ως πληροφορία προς επαλήθευση, όχι ως νομική εκτίμηση· οι όροι μεταβάλλονται.</p>
+  </div>
+
+  <div class="tbl-scroll">
+    <table>
+      <thead>
+        <tr><th>Πάροχος</th><th>Ρόλος</th><th>Σύμβαση επεξεργασίας</th><th>Μεταφορά εκτός ΕΕ</th><th>Υπεργολάβοι</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="prov">Supabase</td>
+          <td>Βάση δεδομένων, ταυτοποίηση, αποθήκευση, edge functions</td>
+          <td><b>Ναι &mdash; αυτόματη αποδοχή.</b> Η αποδοχή των όρων επέχει θέση υπογραφής των SCCs</td>
+          <td>SCCs, Module 2 (υπεύθυνος προς εκτελούντα). Εφαρμοστέο δίκαιο: ιρλανδικό</td>
+          <td><code>supabase.com/legal/customer-resources/subprocessor-list</code> &mdash; ειδοποίηση 30 ημερών</td>
+        </tr>
+        <tr>
+          <td class="prov">Lovable</td>
+          <td>Φιλοξενία, deployment, πύλη ΤΝ</td>
+          <td><b>Προς επιβεβαίωση.</b> Η πολιτική αναφέρει ότι καλύπτει Free και Pro, και ότι Business/Enterprise διέπονται από <b>χωριστή σύμβαση επεξεργασίας</b></td>
+          <td>SCCs Module 2 και UK IDTA</td>
+          <td><code>trust.lovable.dev</code> &mdash; δικαίωμα εναντίωσης εντός 10 εργάσιμων</td>
+        </tr>
+        <tr>
+          <td class="prov">Sentry</td>
+          <td>Καταγραφή σφαλμάτων (μόνο σε παραγωγή)</td>
+          <td><b>Ναι, αλλά απαιτεί ενεργή σύναψη</b> &mdash; δεν είναι αυτόματη</td>
+          <td>Data Privacy Framework, με SCCs ως εναλλακτική. <b>Δεν εγγυάται περιοχή ΕΕ</b></td>
+          <td><code>sentry.io/legal/subprocessors/</code> &mdash; ειδοποίηση 30 ημερών</td>
+        </tr>
+        <tr>
+          <td class="prov">Google (Gemini)</td>
+          <td>Παραγωγή ανατροφοδότησης προς τον παίκτη</td>
+          <td>Έμμεσα, μέσω Lovable. Κατά την πολιτική του Lovable τα prompts διαβιβάζονται <b>«pass-through»</b> και δεν αποθηκεύονται τα ακατέργαστα δεδομένα</td>
+          <td>Μέσω Lovable</td>
+          <td>Αναφέρεται ότι δεν χρησιμοποιούνται αναγνωρίσιμα προσωπικά δεδομένα για εκπαίδευση μοντέλων</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alarm">
+    <div><span class="chip c-risk">Επιβεβαιώθηκε</span></div>
+    <h3>Η βάση είναι εντός ΕΕ &mdash; η φιλοξενία όμως είναι σε δωρεάν πρόγραμμα</h3>
+    <p><b>1. Η βάση δεδομένων φιλοξενείται εντός ΕΕ.</b> Επιβεβαιώθηκε από τον πίνακα ελέγχου του Supabase. Τα δεδομένα των παιδιών &mdash; προφίλ, αξιολογήσεις, αγώνες, σχόλια προπονητών &mdash; παραμένουν εντός ΕΕ, με σύμβαση επεξεργασίας και SCCs σε ισχύ μέσω της αποδοχής των όρων.</p>
+    <p><b>2. Το Lovable είναι σε δωρεάν πρόγραμμα (Free).</b> Κατά την πολιτική τους, χωριστή σύμβαση επεξεργασίας προβλέπεται για τα προγράμματα Business και Enterprise. <b>Επομένως πιθανότατα δεν υπάρχει σύμβαση επεξεργασίας με τον πάροχο φιλοξενίας</b>, ενώ μέσω αυτού διέρχονται δεδομένα ανηλίκων. Αυτό είναι το σοβαρότερο κενό που εντοπίστηκε και χρειάζεται απάντηση πριν την έναρξη: αρκεί η πολιτική απορρήτου τους, ή απαιτείται αναβάθμιση προγράμματος για να υπάρξει υπογεγραμμένη σύμβαση;</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">03</div>
+    <h2>Ερωτήματα που προστίθενται</h2>
+    <p class="small">Πέραν όσων περιλαμβάνει ήδη το αρχικό σημείωμα.</p>
+  </div>
+
+  <div class="card">
+    <ol class="plain">
+      <li><b>Η αποστολή δεδομένων παιδιού σε πάροχο ΤΝ στις ΗΠΑ</b> &mdash; τι πρέπει να ισχύει, τι πρέπει να αναφέρει η γονική συγκατάθεση, και είναι προτιμότερο να απενεργοποιηθεί η λειτουργία κατά το πιλοτικό;</li>
+      <li><b>Αρκεί η αυτόματη αποδοχή</b> της σύμβασης επεξεργασίας του Supabase, ή χρειάζεται κάτι υπογεγραμμένο για δεδομένα ανηλίκων;</li>
+      <li><b>Το Sentry απαιτεί ενεργή σύναψη σύμβασης</b> και δεν εγγυάται περιοχή ΕΕ. Το συνάπτουμε, ή απενεργοποιούμε την καταγραφή σφαλμάτων κατά το πιλοτικό;</li>
+      <li><b>Χρόνος διατήρησης ανά κατηγορία δεδομένων</b> &mdash; τίποτα δεν διαγράφεται αυτόματα σήμερα. Τι πρέπει να προβλεφθεί, και τι γίνεται με το ιστορικό ενός παιδιού όταν αποχωρεί από την ακαδημία;</li>
+      <li><b>Φορητότητα:</b> η διαγραφή λογαριασμού υπάρχει, η εξαγωγή δεδομένων όχι. Αρκεί χειροκίνητη εξαγωγή για πιλοτικό αυτού του μεγέθους;</li>
+      <li><b>Αν το πιλοτικό υπογραφεί προσωπικά</b> και η εταιρεία ιδρυθεί αργότερα, πώς μεταβιβάζεται η σύμβαση στην εταιρεία;</li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">04</div>
+    <h2>Προτεραιότητα εκτός πιλοτικού</h2>
+  </div>
+  <div class="callout">
+    <p><b>Η εκχώρηση πνευματικής ιδιοκτησίας επείγει περισσότερο από την ίδρυση.</b> Ο κώδικας γράφτηκε με τη βοήθεια μηχανικού λογισμικού και δεν έχει υπογραφεί τίποτα. Σήμερα δεν είναι σαφές ότι η εταιρεία θα κατέχει το ίδιο της το προϊόν. Αυτό είναι διαχειρίσιμο τώρα και ανασταλτικό τη στιγμή που θα υπάρξει επένδυση, πώληση ή διαφωνία &mdash; και η αναδρομική εκχώρηση στηρίζεται σε καλή θέληση που υπάρχει σήμερα.</p>
+    <p><b>Η εταιρική μορφή και η γεωγραφία:</b> η αρχική σκέψη ήταν Ελλάδα. Ωστόσο οι επόμενες αγορές που εξετάζονται είναι η <b>Μέση Ανατολή και η Βόρεια Αμερική</b>. Αυτό αλλάζει το ερώτημα: δεν αρκεί «ποια ελληνική μορφή», αλλά <b>ποια δομή αντέχει επέκταση εκτός ΕΕ</b> &mdash; χωρίς να κατασκευαστεί σήμερα κάτι υπερβολικά σύνθετο για μια εταιρεία χωρίς έσοδα. Αξίζει επίσης να τεθεί τι συνεπάγεται για τα δεδομένα ανηλίκων η δραστηριοποίηση σε δικαιοδοσίες εκτός ΓΚΠΔ, όπου ισχύουν διαφορετικοί κανόνες για τους ανηλίκους.</p>
+    <p><b>Το σήμα «Trak»:</b> πρόκειται για σύντομη και κοινόχρηστη λέξη, κοντά στο «track». Αξίζει να ρωτηθεί νωρίς <b>αν μπορεί καν να κατοχυρωθεί</b> &mdash; γιατί αν η απάντηση είναι όχι, η απόφαση επωνυμίας είναι προτιμότερο να ληφθεί πριν μάθουν το όνομα μια ακαδημία και τριάντα οικογένειες.</p>
+  </div>
+</section>
+
+</div>
