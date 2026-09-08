@@ -50,14 +50,47 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       VITE_SENTRY_DSN: ''
 
+  # The `secrets` context is not available in a job-level `if`, so whether the
+  # Vercel credentials exist has to be resolved in a job and passed on as an
+  # output. Without this, a repo that has not yet added the secrets gets a red
+  # Deploy job on every pull request instead of a clear skip.
+  vercel-credentials:
+    name: Check Vercel credentials
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          ORG: ${{ secrets.VERCEL_ORG_ID }}
+          PROJECT: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ORG" ] && [ -n "$PROJECT" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Deployment skipped — Vercel credentials not configured"
+              echo ""
+              echo "\`VERCEL_TOKEN\`, \`VERCEL_ORG_ID\` and \`VERCEL_PROJECT_ID\` must all be set"
+              echo "as repository secrets under Settings → Secrets and variables → Actions."
+              echo ""
+              echo "**\`vercel.json\` disables Vercel's Git integration, so nothing is deploying"
+              echo "at all until those secrets exist.**"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   deploy:
     name: Deploy
-    needs: test
+    needs: [test, vercel-credentials]
     runs-on: ubuntu-latest
-    # Forked pull requests cannot read secrets, so skip rather than fail red.
+    # Skip rather than fail red when the credentials are absent, and on forked
+    # pull requests, which cannot read secrets at all.
     if: >-
-      github.event_name == 'push' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      needs.vercel-credentials.outputs.configured == 'true' &&
+      (github.event_name == 'push' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
     permissions:
       contents: read
       pull-requests: write
