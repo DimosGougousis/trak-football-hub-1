@@ -109,6 +109,7 @@ jobs:
         id: target
         env:
           SCOPE: ${{ secrets.VERCEL_SCOPE }}
+          RAW_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "env=production" >> "$GITHUB_OUTPUT"
@@ -125,6 +126,16 @@ jobs:
           else
             echo "scope=" >> "$GITHUB_OUTPUT"
           fi
+          # A secret pasted with a trailing newline or stray space is stored
+          # verbatim by GitHub and corrupts --token=. Report the shape (never
+          # the value) so that cause is visible rather than guessed at.
+          RAW_LEN=${#RAW_TOKEN}
+          CLEAN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          CLEAN_LEN=${#CLEAN}
+          echo "VERCEL_TOKEN length raw=$RAW_LEN trimmed=$CLEAN_LEN"
+          if [ "$RAW_LEN" -ne "$CLEAN_LEN" ]; then
+            echo "::warning::VERCEL_TOKEN contains whitespace; using the trimmed value."
+          fi
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -133,17 +144,24 @@ jobs:
       # build gets VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY from the
       # Vercel project rather than from a file committed to the repo.
       - name: Pull Vercel environment
-        run: vercel pull --yes --environment=${{ steps.target.outputs.env }} ${{ steps.target.outputs.scope }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          RAW_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          vercel pull --yes --environment=${{ steps.target.outputs.env }} ${{ steps.target.outputs.scope }} --token="$TOKEN"
 
       # "Could not retrieve Project Settings" is opaque. Turn it into
       # something actionable rather than making the next person read Vercel's
       # docs to guess which of the three credentials is wrong.
       - name: Explain a failed Vercel link
         if: failure()
+        env:
+          RAW_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           echo "Probing what the token can actually see..."
-          WHO=$(vercel whoami --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || true)
-          PROJECTS=$(vercel project ls ${{ steps.target.outputs.scope }} --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || true)
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          WHO=$(vercel whoami --token="$TOKEN" 2>&1 || true)
+          PROJECTS=$(vercel project ls ${{ steps.target.outputs.scope }} --token="$TOKEN" 2>&1 || true)
           # Echo to stdout as well as the summary — the run log is what is
           # readable from a terminal, and a diagnostic nobody can reach is not
           # a diagnostic.
@@ -186,13 +204,20 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build
-        run: vercel build ${{ steps.target.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          RAW_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          vercel build ${{ steps.target.outputs.flag }} --token="$TOKEN"
 
       - name: Deploy
         id: deploy
+        env:
+          RAW_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          URL=$(vercel deploy --prebuilt ${{ steps.target.outputs.flag }} ${{ steps.target.outputs.scope }} --token=${{ secrets.VERCEL_TOKEN }})
+          TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')
+          URL=$(vercel deploy --prebuilt ${{ steps.target.outputs.flag }} ${{ steps.target.outputs.scope }} --token="$TOKEN")
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "Deployed to $URL"
           {
