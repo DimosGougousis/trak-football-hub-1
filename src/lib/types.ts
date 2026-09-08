@@ -1,4 +1,4 @@
-export type Role = 'player' | 'coach' | 'parent'
+export type Role = 'player' | 'coach' | 'parent' | 'club'
 export type Position = 'gk' | 'def' | 'mid' | 'att'
 export type Competition = 'league' | 'cup' | 'tournament' | 'friendly'
 export type Venue = 'home' | 'away'
@@ -20,14 +20,16 @@ export interface BandConfig {
   minScore: number
 }
 
+// Bands span the full 0..10 slider range. 5 sits squarely in "Mixed" (the neutral middle).
+// Edges:  0–2 Difficult · 2–4 Developing · 4–6 Mixed · 6–7 Steady · 7–8 Good · 8–9 Standout · 9–10 Exceptional
 export const BANDS: BandConfig[] = [
-  { word: 'Exceptional', color: '#C8F25A', bg: 'rgba(200,242,90,0.15)', border: 'rgba(200,242,90,0.3)', minScore: 9.2 },
-  { word: 'Standout', color: '#86efac', bg: 'rgba(134,239,172,0.13)', border: 'rgba(134,239,172,0.26)', minScore: 8.2 },
-  { word: 'Good', color: '#4ade80', bg: 'rgba(74,222,128,0.13)', border: 'rgba(74,222,128,0.24)', minScore: 7.2 },
-  { word: 'Steady', color: '#60a5fa', bg: 'rgba(96,165,250,0.13)', border: 'rgba(96,165,250,0.24)', minScore: 6.4 },
-  { word: 'Mixed', color: '#fb923c', bg: 'rgba(251,146,60,0.13)', border: 'rgba(251,146,60,0.24)', minScore: 5.6 },
-  { word: 'Developing', color: '#a78bfa', bg: 'rgba(167,139,250,0.13)', border: 'rgba(167,139,250,0.24)', minScore: 4.8 },
-  { word: 'Difficult', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
+  { word: 'Exceptional', color: '#C8F25A', bg: 'rgba(200,242,90,0.15)', border: 'rgba(200,242,90,0.3)', minScore: 9 },
+  { word: 'Standout',    color: '#86efac', bg: 'rgba(134,239,172,0.13)', border: 'rgba(134,239,172,0.26)', minScore: 8 },
+  { word: 'Good',        color: '#4ade80', bg: 'rgba(74,222,128,0.13)',  border: 'rgba(74,222,128,0.24)',  minScore: 7 },
+  { word: 'Steady',      color: '#60a5fa', bg: 'rgba(96,165,250,0.13)',  border: 'rgba(96,165,250,0.24)',  minScore: 6 },
+  { word: 'Mixed',       color: '#fb923c', bg: 'rgba(251,146,60,0.13)',  border: 'rgba(251,146,60,0.24)',  minScore: 4 },
+  { word: 'Developing',  color: '#a78bfa', bg: 'rgba(167,139,250,0.13)', border: 'rgba(167,139,250,0.24)', minScore: 2 },
+  { word: 'Difficult',   color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
 ]
 
 export interface MatchInput {

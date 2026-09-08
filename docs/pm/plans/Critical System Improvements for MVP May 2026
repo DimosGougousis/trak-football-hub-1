@@ -1,0 +1,331 @@
+# Pre-Launch Production Readiness Report — Trak Football
+
+**Context:** Full codebase audit of a React + TypeScript + Supabase SPA deployed on Lovable.
+Stack: React 18, Vite, Tailwind/shadcn, TanStack Query v5, Vitest + RTL, Playwright (configured
+but unused), Supabase (PostgreSQL + Auth + RLS).
+Scope: 132 TypeScript files, 5 migrations, 13 DB tables, 6 milestones marked "pending" in STATE.md.
+
+---
+
+## 🔴 CRITICAL BLOCKER
+
+### CB-1 — Supabase Anon Key Committed to Repo
+**File:** `.env` (3 lines)
+**Issue:** The Supabase anon JWT (`VITE_SUPABASE_PUBLISHABLE_KEY`) is committed to the repository.
+While Supabase anon keys are intentionally public-facing, committing a *live* key means the
+project_id and key are indexed by GitHub forever. If RLS has any hole, this key is the entry point.
+**Action:**
+1. Run `git log --all --full-history -- .env` to check if key is in Git history.
+2. If yes, rotate the key in Supabase dashboard → Project Settings → API Keys.
+3. Create `.env.example` with placeholder values and ensure `.env` is in `.gitignore` (it is, but
+   confirm no prior commits ever included it).
+4. Add `.env` to git history purge via `git filter-repo --path .env --invert-paths` if exposed.
+
+---
+
+### CB-2 — No Database Indexes on Any FK or Query Field
+**Files:** `supabase/migrations/` (all 5 files)
+**Issue:** Every foreign key reference and every common WHERE clause field is unindexed. With the
+current query patterns (filter by user_id, coach_id, player_id, status) all queries do full table
+scans. Will degrade at ~50+ rows per table.
+**Missing indexes (exhaustive):**
+```sql
+-- matches table
+CREATE INDEX idx_matches_user_id ON matches(user_id);
+CREATE INDEX idx_matches_logged_at ON matches(logged_at DESC);
+
+-- coach_assessments table
+CREATE INDEX idx_coach_assessments_coach_id ON coach_assessments(coach_user_id);
+CREATE INDEX idx_coach_assessments_player_id ON coach_assessments(squad_player_id);
+
+-- squad_players table
+CREATE INDEX idx_squad_players_coach_id ON squad_players(coach_user_id);
+
+-- session_attendance table
+CREATE INDEX idx_session_attendance_session_id ON session_attendance(session_id);
+CREATE INDEX idx_session_attendance_squad_player_id ON session_attendance(squad_player_id);
+
+-- player_goals table
+CREATE INDEX idx_player_goals_player_id ON player_goals(player_user_id);
+CREATE INDEX idx_player_goals_status ON player_goals(status);
+
+-- telemetry_events (if present)
+CREATE INDEX idx_telemetry_user_id ON telemetry_events(user_id);
+CREATE INDEX idx_telemetry_created_at ON telemetry_events(created_at DESC);
+```
+**Action:** Create migration `20260526_add_indexes.sql` with all the above.
+
+---
+
+### CB-3 — No React Error Boundaries — Any Exception Crashes the App
+**Issue:** Zero `ErrorBoundary` components in the codebase. Any unhandled React render error
+or async error will unmount the entire application, showing a blank screen with no recovery path.
+**Action:** Add a root-level ErrorBoundary in `src/App.tsx`:
+```tsx
+// src/components/layout/ErrorBoundary.tsx
+class ErrorBoundary extends React.Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { /* log to Sentry */ }
+  render() {
+    if (this.state.error) return <AppErrorScreen onRetry={() => this.setState({ error: null })} />;
+    return this.props.children;
+  }
+}
+```
+Wrap each route cluster (Player, Coach, Parent) in its own boundary so one role's crash doesn't
+affect others.
+
+---
+
+### CB-4 — No Error Monitoring / Production Logging
+**Issue:** Only 3 `console.error` calls in 132 files. No remote error capture. You are completely
+blind to what breaks in production.
+**Action:** Add Sentry (free tier, easy Vite integration):
+```bash
+npm install @sentry/react
+```
+```tsx
+// src/main.tsx
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+  integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+  tracesSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+});
+```
+Add `VITE_SENTRY_DSN` to `.env`.
+
+---
+
+## ⚠️ WARNING / RISK
+
+### W-1 — tsconfig: Strict Null Checks Disabled
+**File:** `tsconfig.json` (strict: false, no noImplicitAny, unused vars allowed)
+**Risk:** Runtime `null` dereferences won't be caught at compile time. Supabase queries return
+`data | null` — if code assumes data is always present and null is returned, app silently breaks.
+**Action:** Enable `"strict": true` in `tsconfig.app.json` and fix resulting type errors.
+This is a one-time cost with long-term reliability benefit.
+
+---
+
+### W-2 — Test Coverage: 90% of UI Untested
+**Coverage breakdown:**
+- ✅ Rating engine (`rating-engine.test.ts`, 154 lines) — well tested
+- ✅ Medal eligibility (`medals.test.ts`, 64 lines) — basic coverage
+- ✅ Invite codes (`invite-codes.test.ts`, 28 lines) — minimal
+- ❌ **Zero component tests** — no tests for pages, forms, or role flows
+- ❌ **Zero Playwright E2E tests** despite `playwright.config.ts` being present
+- ❌ **Zero RLS policy tests** — no verification that data isolation actually works
+**Minimum bar for pilot launch:**
+```
+tests/e2e/
+  player-log-match.spec.ts     # happy path: sign up → log match → see result
+  coach-assess.spec.ts         # coach flow: see squad → assess player
+  parent-view.spec.ts          # parent: see child's matches, no cross-access
+  rls-isolation.spec.ts        # sign in as player A, cannot see player B's matches
+```
+
+---
+
+### W-3 — No Pagination on Data Lists
+**Files:** All list pages (matches history, coach squad, assessments, goals)
+**Risk:** Players who log 50+ matches will see increasingly slow loads. Supabase `.select('*')`
+without `.range()` returns the full table matching the RLS filter.
+**Action:** Add pagination to `useMatches`, `useAssessments`, `useGoals` hooks:
+```typescript
+const { data } = await supabase
+  .from('matches')
+  .select('*')
+  .eq('user_id', userId)
+  .order('logged_at', { ascending: false })
+  .range(0, 19); // First 20 records
+```
+For pilot (30 users, ~10 matches each) this is low-urgency but a fast win.
+
+---
+
+### W-4 — Password Minimum: 6 Characters
+**File:** `src/contexts/AuthContext.tsx`
+**Issue:** Password validation requires only 6 characters. Supabase Auth also defaults to 6.
+**Action:**
+1. Update Supabase Dashboard → Auth → Password Strength to require minimum 8 characters.
+2. Update frontend validation to match.
+
+---
+
+### W-5 — No Unhandled Promise Rejection Handler
+**File:** `src/main.tsx`
+**Risk:** Async errors not caught by try/catch (e.g., inside `useEffect`, `queryFn`) will silently
+disappear in production if no global handler is attached.
+**Action:**
+```typescript
+window.addEventListener('unhandledrejection', (event) => {
+  Sentry.captureException(event.reason);
+  event.preventDefault();
+});
+```
+
+---
+
+### W-6 — No CI/CD Pipeline
+**Status:** No `.github/workflows/` directory. Zero automated testing on push/PR.
+**Risk:** Code can be pushed without running tests. Deployment is entirely manual.
+**Action:** Add `.github/workflows/ci.yml`:
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --run
+      - run: npm run build
+```
+
+---
+
+### W-7 — No Input Sanitization on Free-Text Fields
+**Fields affected:** club name, player notes, assessment notes, goal titles
+**Risk:** Stored XSS if any text field is ever rendered with `dangerouslySetInnerHTML`. Currently one
+instance exists in `src/components/ui/chart.tsx`. Low risk for now but grows as features expand.
+**Action:** Add sanitization on insert for text fields using `DOMPurify`:
+```typescript
+import DOMPurify from 'dompurify';
+const safeNote = DOMPurify.sanitize(rawNote, { ALLOWED_TAGS: [] }); // plain text only
+```
+
+---
+
+### W-8 — RLS "ALL" Policies Allow Implicit DELETE
+**Files:** `supabase/migrations/20260327034734_*.sql`
+**Issue:** Policies like `POLICY "Coaches can manage own assessments" FOR ALL` implicitly permit
+DELETE. If a coach ID check passes, they can delete assessment records — which may be unintended
+(assessments are historical records that should arguably be immutable).
+**Action:** Split `FOR ALL` policies into explicit `FOR SELECT`, `FOR INSERT`, `FOR UPDATE` where
+DELETE should be restricted. Add `FOR DELETE USING (false)` to make intent explicit.
+
+---
+
+### W-9 — No README / CLAUDE.md
+**File:** `README.md` (4 lines — literally "TODO: Document your project here")
+**Risk:** New contributor or AI agent has no guide on how to run the project, set up Supabase locally,
+run tests, or understand environment variables.
+**Action:** Write `README.md` covering:
+- Prerequisites (Node, Supabase CLI)
+- Local dev setup (`npm install`, configure `.env`, `supabase start`)
+- Running tests (`npm test`)
+- Running Storybook (`npm run storybook`)
+
+Also create `CLAUDE.md` (project-level) with:
+- Tech stack summary
+- Where key files live
+- TDD workflow for this project
+
+---
+
+### W-10 — STATE.md Shows All Tasks "Pending" — Mismatch with Latest Commit
+**File:** `docs/pm/STATE.md`, git log
+**Issue:** Latest commit message says "Implement all 6 milestones" but STATE.md still shows all 31
+tasks as "pending". Documentation is inconsistent with implementation state — creates confusion about
+what's actually done vs what needs testing/verification.
+**Action:** Audit each milestone task against the actual source files, update STATE.md to reflect
+true completion status, and identify what still needs TDD verification.
+
+---
+
+### W-11 — Onboarding Data in localStorage — No Expiry
+**File:** `src/contexts/AuthContext.tsx` (`PENDING_PROFILE_KEY`)
+**Issue:** Partial onboarding data is stored in localStorage without an expiry timestamp. If a user
+abandons onboarding, stale data persists indefinitely and could cause incorrect state on their next
+visit.
+**Action:**
+```typescript
+const profileData = { ...data, savedAt: Date.now() };
+// On read: if Date.now() - savedAt > 86400000 (24h), discard it
+```
+
+---
+
+### W-12 — Session Timeout: Infinite (Supabase Default)
+**File:** `src/integrations/supabase/client.ts`
+**Issue:** `autoRefreshToken: true` with no session expiry means a user stays logged in forever unless
+they explicitly sign out. For a children's performance app, this is a parental consent concern.
+**Action:** Consider setting session timeout in Supabase Dashboard → Auth → JWT expiry (default 3600s
+= 1 hour). Ensure the app handles token expiry gracefully with a re-auth redirect.
+
+---
+
+## 🔵 NIT / ENHANCEMENT
+
+### N-1 — No `.env.example` File
+Create `.env.example` with placeholder values and comments explaining each variable.
+
+### N-2 — No Pre-commit Hooks
+ESLint is configured but not enforced on commit. Add `husky` + `lint-staged`:
+```json
+"lint-staged": { "*.{ts,tsx}": ["eslint --fix"] }
+```
+
+### N-3 — No Bundle Analysis or Code Splitting
+Vite supports lazy loading via `React.lazy` + `Suspense`. The 24 Radix UI component imports could
+be split into role-specific chunks (player bundle, coach bundle, parent bundle) to reduce initial
+load time on mobile.
+
+### N-4 — No PWA Manifest
+`index.html` has no `manifest.json` link. For a "mobile-first" app that users are expected to use
+weekly, adding a minimal PWA manifest (icon, name, `display: standalone`) costs < 30 minutes and
+dramatically improves mobile UX.
+
+### N-5 — axe-core / react-scan Dev-Only — No a11y Test Suite
+Both tools run at startup in dev mode but there are no automated a11y tests in CI. The findings from
+axe-core disappear when the dev console is closed. Add a smoke-test:
+```typescript
+// src/__tests__/a11y.test.tsx
+import { axe } from 'jest-axe';
+it('PlayerHome has no a11y violations', async () => {
+  const { container } = render(<PlayerHome />);
+  expect(await axe(container)).toHaveNoViolations();
+});
+```
+
+### N-6 — No Data Retention / GDPR Deletion
+Pilot will capture player performance data for minors (age groups visible in schema). No data
+deletion flow exists — neither `DELETE /profile` in the app nor a documented off-boarding process.
+Minimum: a "Delete my account" page that calls a Supabase RPC cascade-deleting all user data.
+
+### N-7 — No Offline / Network Error Handling
+When Supabase is unreachable, the app hangs silently. TanStack Query has built-in `networkMode`
+and `retry` config. Set `networkMode: 'offlineFirst'` and add a toast on network failure.
+
+### N-8 — Storybook Installed but Likely Outdated
+`@storybook/react` v10.3.5 is installed. If stories haven't been updated post-implementation, many
+will be broken. Run `npm run storybook` and fix failing stories before presenting to stakeholders.
+
+### N-9 — `user-scalable=no` in viewport meta
+**File:** `index.html`
+`maximum-scale=1.0, user-scalable=no` prevents accessibility users from zooming. Remove this
+restriction — it also violates WCAG 1.4.4 (Resize Text).
+
+---
+
+## Verification Steps
+
+After implementing fixes above, verify in this order:
+
+1. **Database indexes:** Run `supabase db push` and verify in Supabase Studio → Table Editor that
+   all FK columns show indexes.
+2. **Error boundary:** Open app, navigate to a route, open DevTools console, run
+   `throw new Error('test')` in a React component — confirm ErrorBoundary renders instead of
+   blank screen.
+3. **Sentry:** Trigger a deliberate error in dev and confirm it appears in Sentry dashboard.
+4. **Tests:** Run `npm test -- --run` and confirm all tests pass with coverage > 70%.
+5. **E2E:** Run `npx playwright test` — player-log-match.spec.ts, rls-isolation.spec.ts must pass.
+6. **CI:** Push to a branch and confirm GitHub Actions workflow runs and passes.
+7. **Build:** Run `npm run build` and confirm zero TypeScript errors (after strict mode is enabled).

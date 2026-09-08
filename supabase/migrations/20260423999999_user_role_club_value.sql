@@ -1,0 +1,22 @@
+-- Repo/production schema parity.
+--
+-- `user_role` is created as ENUM ('player', 'coach', 'parent') in the first
+-- migration and never altered anywhere in this folder — yet production has a
+-- fourth value, 'club', which the whole club-admin surface depends on:
+-- `is_club_admin()`, the org-scoped RLS policies, and the signup provisioning
+-- RPC all compare against it.
+--
+-- The practical consequence is that applying this folder to an empty database
+-- produces a schema that cannot run the app, so the migrations are not a
+-- recovery path. Backups have never been restore-tested, which makes that worth
+-- closing rather than noting.
+--
+-- Deliberately dated to sort immediately before 20260424000001_club_admin_rls,
+-- which is the first migration to reference 'club'. Dated later, a fresh
+-- rebuild would still fail at that file.
+--
+-- ALTER TYPE ... ADD VALUE cannot run inside a DO block or function, so this is
+-- a bare statement. IF NOT EXISTS makes it safe to re-run, and it is a no-op
+-- against the existing production database, where the value already exists.
+
+ALTER TYPE public.user_role ADD VALUE IF NOT EXISTS 'club';

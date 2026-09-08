@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { BANDS } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 
@@ -7,29 +8,59 @@ interface SliderInputProps {
   onChange: (value: number) => void
 }
 
-export function SliderInput({ label, value, onChange }: SliderInputProps) {
+function bandConfig(value: number) {
   const band = scoreToBand(value)
-  const config = BANDS.find(b => b.word.toLowerCase() === band)!
+  return BANDS.find(b => b.word.toLowerCase() === band) ?? BANDS[BANDS.length - 1]
+}
 
-  return (
-    <div className="space-y-2">
+export const SliderInput = forwardRef<HTMLDivElement, SliderInputProps>(
+  function SliderInput({ label, value, onChange }, ref) {
+    const cfg = bandConfig(value)
+    // 0..10 scale — 5 sits exactly at the centre of the track.
+    const pct = (value / 10) * 100
+
+    return (
+      <div ref={ref} className="space-y-2">
+      {/* label row: category left, band word right */}
       <div className="flex justify-between items-center">
-        <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-[rgba(255,255,255,0.45)]" style={{ fontFamily: "'DM Mono', monospace" }}>
+        <span className="text-[12px] font-medium text-white/[0.88]">
           {label}
         </span>
+        <span className="text-[12px] font-medium" style={{ color: cfg.color }}>
+          {cfg.word}
+        </span>
       </div>
-      <input
-        type="range"
-        min={1}
-        max={10}
-        step={1}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer"
-        style={{
-          background: `linear-gradient(to right, ${config.color} ${(value - 1) * 11.1}%, #202024 ${(value - 1) * 11.1}%)`,
-        }}
-      />
-    </div>
-  )
-}
+
+      {/* custom track + thumb */}
+      <div className="relative h-[5px] bg-white/[0.07] rounded-[3px]">
+        {/* filled portion */}
+        <div
+          className="absolute inset-y-0 left-0 rounded-[3px]"
+          style={{ width: `${pct}%`, background: cfg.color }}
+        />
+
+        {/* thumb circle */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-[16px] h-[16px] rounded-full bg-white border-[2.5px]"
+          style={{
+            left: `calc(${pct}% - 8px)`,
+            borderColor: cfg.color,
+          }}
+        />
+
+        {/* invisible range input for interaction */}
+        <input
+          type="range"
+          min={0}
+          max={10}
+          step={1}
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          className="absolute inset-0 w-full opacity-0 cursor-pointer"
+          style={{ height: 20, top: -7 }}
+        />
+      </div>
+      </div>
+    )
+  },
+)

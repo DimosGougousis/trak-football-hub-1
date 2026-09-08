@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RatingBandPill } from '@/lib/ratingBand';
+import { Home, ClipboardList, PlaySquare, Brain, User, type LucideIcon } from 'lucide-react';
 
 interface PlayerDetails {
   position: string | null;
@@ -184,11 +185,11 @@ const PlayerProfile = () => {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card/95 backdrop-blur-xl border-t border-border px-2 py-2 z-50">
         <div className="flex justify-around items-center">
-          <NavItem emoji="🏠" label="Home" onClick={() => navigate('/dashboard')} />
-          <NavItem emoji="📝" label="Log" onClick={() => navigate('/log')} />
-          <NavItem emoji="🎬" label="Highlights" onClick={() => {}} />
-          <NavItem emoji="🧠" label="Goals" onClick={() => {}} />
-          <NavItem emoji="👤" label="Profile" active onClick={() => {}} />
+          <NavItem icon={Home} label="Home" onClick={() => navigate('/dashboard')} />
+          <NavItem icon={ClipboardList} label="Log" onClick={() => navigate('/log')} />
+          <NavItem icon={PlaySquare} label="Highlights" onClick={() => {}} />
+          <NavItem icon={Brain} label="Goals" onClick={() => {}} />
+          <NavItem icon={User} label="Profile" active onClick={() => {}} />
         </div>
       </nav>
     </div>
@@ -216,9 +217,9 @@ const DetailRow = ({ label, value, editing, onChange, type = 'text' }: {
   </div>
 );
 
-const NavItem = ({ emoji, label, active, onClick }: { emoji: string; label: string; active?: boolean; onClick: () => void }) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 px-3 py-1 ${active ? '' : 'opacity-35 grayscale'}`}>
-    <span className="text-[19px]">{emoji}</span>
+const NavItem = ({ icon: Icon, label, active, onClick }: { icon: LucideIcon; label: string; active?: boolean; onClick: () => void }) => (
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 px-3 py-1 ${active ? '' : 'opacity-35'}`}>
+    <Icon size={18} strokeWidth={1.75} className={active ? 'text-primary' : 'text-muted-foreground'} />
     <span className={`text-[10px] font-medium tracking-wide ${active ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
   </button>
 );

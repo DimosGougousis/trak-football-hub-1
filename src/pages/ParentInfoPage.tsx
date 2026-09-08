@@ -1,8 +1,10 @@
+import { IconRoleParent } from '@/components/icons/TrakIcons';
+
 const ParentInfoPage = () => {
   return (
     <div className="app-container flex flex-col items-center justify-center px-6 py-12 min-h-screen">
       <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-        <span className="text-3xl">👨‍👩‍👦</span>
+        <IconRoleParent size={32} />
       </div>
       <h1 className="text-2xl text-foreground mb-4 text-center">Parent Access</h1>
       <p className="text-muted-foreground text-center text-sm max-w-[300px] mb-6">

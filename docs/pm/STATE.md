@@ -1,95 +1,104 @@
-# State: Trak Football — Pilot Wedge
-Last Updated: 2026-04-09 00:00
+# State: Trak Football
+Last Updated: 2026-05-26
 
 ## Summary
-| Metric | Value |
-|--------|-------|
-| Total milestones | 6 |
-| Total tasks | 31 |
-| Completed | 0 |
-| In progress | 0 |
-| Blocked | 0 |
 
-## Tasks
+The core loop for all 4 user roles is built and working. The codebase is in a
+production-readiness pass before the pilot launch (~15 players, 2 coaches, 15 parents).
 
-### Milestone 1: Foundation
-| ID | Task | Status | Commit SHA | Notes |
-|----|------|--------|------------|-------|
-| 1.1 | Scaffold React + Vite + TS project | pending | - | - |
-| 1.2 | Configure Tailwind with design tokens | pending | - | - |
-| 1.3 | Load fonts (DM Sans + DM Mono) | pending | - | - |
-| 1.4 | Initialize Supabase client | pending | - | - |
-| 1.5 | Build TypeScript types | pending | - | - |
-| 1.6 | Build rating engine | pending | - | - |
-| 1.7 | Build shared UI components | pending | - | - |
-| 1.8 | Build NavBar component | pending | - | - |
+| Milestone | Status |
+|---|---|
+| Foundation (scaffold, Tailwind, fonts, Supabase, rating engine, UI) | ✅ Complete |
+| Auth + Onboarding (all 4 roles) | ✅ Complete |
+| Player Core (match log, home, history, evolution card, passport) | ✅ Complete |
+| Coach Core (squad, assessments, session log, awards, AI assistant, calendar) | ✅ Complete |
+| Parent Core (home, matches, alerts) | ✅ Complete — parent auto-linking fixed |
+| Club Admin (squads, coaches, players, movement radar) | ✅ Complete |
+| Production Readiness (indexes, RLS hardening, GDPR, Sentry, CI) | ✅ Stage 1–7 complete |
 
-### Milestone 2: Auth + Onboarding
-| ID | Task | Status | Commit SHA | Notes |
-|----|------|--------|------------|-------|
-| 2.1 | Supabase schema migration | pending | - | - |
-| 2.2 | Auth context + hooks | pending | - | - |
-| 2.3 | Route guard | pending | - | - |
-| 2.4 | Landing page | pending | - | - |
-| 2.5 | Player onboarding | pending | - | - |
-| 2.6 | Coach onboarding + TRK-XXXX | pending | - | - |
-| 2.7 | Invite code utilities | pending | - | - |
-| 2.8 | Parent onboarding | pending | - | - |
-| 2.9 | App router setup | pending | - | - |
+---
 
-### Milestone 3: Player Core
-| ID | Task | Status | Commit SHA | Notes |
-|----|------|--------|------------|-------|
-| 3.1 | Match log form | pending | - | - |
-| 3.2 | Live band preview | pending | - | - |
-| 3.3 | Match save handler | pending | - | - |
-| 3.4 | Match result screen | pending | - | - |
-| 3.5 | Player home | pending | - | - |
-| 3.6 | Match history + detail | pending | - | - |
-| 3.7 | Integration tests for match log | pending | - | - |
+## What Each User Can Do
 
-### Milestone 4: Coach Core
-| ID | Task | Status | Commit SHA | Notes |
-|----|------|--------|------------|-------|
-| 4.1 | SliderInput component | pending | - | - |
-| 4.2 | Assessment form | pending | - | - |
-| 4.3 | Assessment save handler | pending | - | - |
-| 4.4 | Squad management | pending | - | - |
-| 4.5 | Player profile view (coach) | pending | - | - |
-| 4.6 | Session log | pending | - | - |
-| 4.7 | Invite code display screen | pending | - | - |
-| 4.8 | Coach home + profile | pending | - | - |
-| 4.9 | Integration tests for assessment | pending | - | - |
+### PLAYER ✅
+- Sign up via coach invite code (TRK-XXXX)
+- Home screen — season band, stats grid, recent matches, card reveal modal
+- Match history + individual match detail
+- Player evolution card (OVR, quests, tier progress, shimmer animation)
+- Player passport (shareable career doc, PNG export)
+- Profile page with trend chart + coach assessment bars
+- Invite parent (enter parent email during onboarding)
+- How TRAK Works explainer
+- Settings — edit position, shirt number, name, avatar
 
-### Milestone 5: Parent Core
-| ID | Task | Status | Commit SHA | Notes |
-|----|------|--------|------------|-------|
-| 5.1 | CategoryBar component | pending | - | - |
-| 5.2 | AlertCard component | pending | - | - |
-| 5.3 | Parent home | pending | - | - |
-| 5.4 | Parent match feed (filtered) | pending | - | - |
-| 5.5 | Parent goals view | pending | - | - |
-| 5.6 | Parent alerts | pending | - | - |
-| 5.7 | Integration tests for parent access | pending | - | - |
+### COACH ✅
+- Sign up + onboard (club, team, age group, role)
+- Generate invite code for players
+- Add squad players (name, position, age group, shirt #)
+- Log a match — quick log OR full session with per-player stats
+- Log a training session
+- Full player assessment (6 dimensions)
+- Quick assess
+- Award a player (POTW, POTM, POTS, Most Improved, Top Scorer)
+- View squad list with latest band per player
+- View individual player profile
+- AI assistant (session plans, drill suggestions)
+- Schedule / smart calendar
+- Settings — edit club, team, coach role
 
-### Milestone 6: Goals, Medals, Telemetry, Profiles
-| ID | Task | Status | Commit SHA | Notes |
-|----|------|--------|------------|-------|
-| 6.1 | Goals CRUD + auto-tracking | pending | - | - |
-| 6.2 | Goals screens | pending | - | - |
-| 6.3 | Medal checker | pending | - | - |
-| 6.4 | Medals screen | pending | - | - |
-| 6.5 | Telemetry client | pending | - | - |
-| 6.6 | Player profile | pending | - | - |
-| 6.7 | Log choose screen | pending | - | - |
-| 6.8 | Telemetry SQL views | pending | - | - |
-| 6.9 | End-to-end pilot verification | pending | - | - |
+### PARENT ✅
+- Sign up and auto-link to child (via parent_invites → player_parent_links)
+- View child's home / season summary / recent matches
+- View child's full match history
+- In-app alerts (new match, new assessment)
+- Settings
 
-## Blockers
-None
+### CLUB ADMIN ✅
+- Sign up as club admin
+- View all coaches across the academy
+- View all players across all squads
+- View assessment activity (read-only)
+- Copy coach invite codes
+- Movement radar — players consistently outperforming their age group
 
-## Decisions Log
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-04-09 | Approach A (Client-Heavy) | 30-user pilot, zero tamper risk, speed to build |
-| 2026-04-09 | GK/DEF/MID use universal-only until modifiers provided | Algorithm structure unchanged, no architectural impact |
+---
+
+## Production Readiness Stages
+
+| Stage | Description | Status |
+|---|---|---|
+| 1 | DB indexes on all FK + query columns | ✅ Committed `3169d9f` |
+| 2 | .env.example, rejection handler, onboarding cache expiry | ✅ Committed `2fe9422` |
+| 3 | Sentry error monitoring wired into ErrorBoundary | ✅ Committed `f3dfe3e` |
+| 4 | RLS: replace FOR ALL with explicit ops, block assessment deletion | ✅ Committed `1c58ee5` |
+| 5 | GDPR: delete_my_account RPC + Settings button | ✅ Committed `dfae8d3` |
+| 6 | CI/CD: GitHub Actions (lint + test + build) | ✅ Committed `31158d5` |
+| 7 | Docs: README.md, CLAUDE.md, STATE.md | ✅ In progress |
+| 8 | TypeScript strictness (noImplicitAny → strictNullChecks) | ⏳ Pending |
+
+---
+
+## Known Gaps (v2)
+
+- Player self-logging matches (coach logs on their behalf today)
+- Coach → player messaging
+- Push notifications (native)
+- Multiple children per parent
+- Public player profile links
+- Advanced club analytics / exports
+- Payment / subscription layer
+- Storybook component library
+- PWA manifest / install prompt
+
+---
+
+## Migrations Applied to Production
+
+Apply all files in `supabase/migrations/` in filename order.
+All migrations use IF NOT EXISTS / IF EXISTS guards.
+
+**Critical migrations not to skip:**
+- `20260425000001_security_hardening.sql` — base RLS + indexes
+- `20260526000001_supplemental_indexes.sql` — 4 additional indexes
+- `20260526000002_rls_explicit_operations.sql` — block assessment deletion
+- `20260526000003_gdpr_delete_account.sql` — GDPR delete RPC

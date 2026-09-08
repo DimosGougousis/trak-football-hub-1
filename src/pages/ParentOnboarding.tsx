@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { IconAlerts } from '@/components/icons/TrakIcons';
+import { validatePassword, PASSWORD_HINT } from '@/lib/password'
 
 const ParentOnboarding = () => {
   const [searchParams] = useSearchParams();
@@ -39,7 +41,7 @@ const ParentOnboarding = () => {
     return (
       <div className="app-container flex flex-col items-center justify-center px-6 py-12 min-h-screen">
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-          <span className="text-3xl">⚠️</span>
+          <IconAlerts size={28} color="hsl(var(--destructive))" />
         </div>
         <h1 className="text-2xl text-foreground mb-4">Invalid Invite</h1>
         <p className="text-muted-foreground text-center text-sm mb-6">
@@ -53,30 +55,23 @@ const ParentOnboarding = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return; }
-    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    const pwError = validatePassword(password); if (pwError) { toast.error(pwError); return; }
 
     setSubmitting(true);
     try {
-      const { user, error } = await signUp(email, password);
-      if (error || !user) throw error || new Error('Signup failed');
-
-      await supabase.from('profiles').insert({
-        user_id: user.id,
-        role: 'parent' as any,
+      // Pass pendingProfile so AuthContext.writeProfileFromPendingData handles
+      // profile creation and link_parent_to_players_by_email after email
+      // confirmation — direct DB calls here fail because auth.uid() is null
+      // until the user has confirmed their email and the session is active.
+      const { error } = await signUp(email, password, {
+        role: 'parent',
         full_name: name,
+        nationality: null,
       });
-
-      await supabase.from('player_parent_links').insert({
-        player_user_id: invite.player_user_id,
-        parent_user_id: user.id,
-      });
-
-      // Mark invite as used - we use update via RPC or just leave it
-      // Since we can't update parent_invites (RLS only allows player), we'll handle this differently
-      // The invite is effectively "used" once the parent account exists
+      if (error) throw error;
 
       toast.success('Account created! Check your email to verify.');
-      navigate('/dashboard');
+      navigate('/parent/home', { replace: true });
     } catch (err: any) {
       toast.error(err.message || 'Registration failed');
     } finally {
@@ -92,7 +87,7 @@ const ParentOnboarding = () => {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} required className="bg-card" />
         <Input type="email" value={email} readOnly className="bg-muted cursor-not-allowed" />
-        <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="bg-card" />
+        <Input type="password" placeholder={PASSWORD_HINT} value={password} onChange={e => setPassword(e.target.value)} required className="bg-card" />
         <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="bg-card" />
         <Button type="submit" disabled={submitting} className="w-full mt-2">
           {submitting ? 'Creating...' : 'Create Account'}

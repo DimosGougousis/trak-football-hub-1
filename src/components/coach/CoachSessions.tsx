@@ -59,7 +59,7 @@ const CoachSessions = () => {
 
         {/* Filter */}
         <div className="grid grid-cols-3 gap-1.5 mb-4">
-          {[{ k: 'all', l: 'All' }, { k: 'training', l: '🏃 Training' }, { k: 'match', l: '⚽ Matches' }].map(f => (
+          {[{ k: 'all', l: 'All' }, { k: 'training', l: 'Training' }, { k: 'match', l: 'Matches' }].map(f => (
             <button key={f.k} onClick={() => setFilter(f.k)}
               className={`border rounded-lg py-2 text-[11px] font-medium transition-colors
                 ${filter === f.k ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
@@ -73,7 +73,7 @@ const CoachSessions = () => {
           <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
             <p className="section-label">Session Type</p>
             <div className="grid grid-cols-2 gap-1.5">
-              {[{ k: 'training', l: '🏃 Training' }, { k: 'match', l: '⚽ Match Day' }].map(t => (
+              {[{ k: 'training', l: 'Training' }, { k: 'match', l: 'Match Day' }].map(t => (
                 <button key={t.k} onClick={() => setSessionType(t.k)}
                   className={`border rounded-lg py-2.5 text-xs font-medium transition-colors
                     ${sessionType === t.k ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
@@ -111,10 +111,10 @@ const CoachSessions = () => {
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {['🏠 Home', '✈️ Away'].map(v => (
-                        <button key={v} onClick={() => setVenue(v.includes('Home') ? 'Home' : 'Away')}
+                      {['Home', 'Away'].map(v => (
+                        <button key={v} onClick={() => setVenue(v)}
                           className={`border rounded-lg py-2 text-[11px] font-medium transition-colors
-                            ${venue === (v.includes('Home') ? 'Home' : 'Away') ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
+                            ${venue === v ? 'border-primary bg-primary/15 text-primary' : 'border-border bg-secondary text-muted-foreground'}`}>
                           {v}
                         </button>
                       ))}
@@ -149,7 +149,7 @@ const CoachSessions = () => {
                 </div>
                 <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                   s.session_type === 'match' ? 'bg-primary/20 text-primary' : 'bg-training-blue/15 text-training-blue'
-                }`}>{s.session_type === 'match' ? '⚽ Match' : '🏃 Training'}</span>
+                }`}>{s.session_type === 'match' ? 'Match' : 'Training'}</span>
               </div>
             </div>
           ))}

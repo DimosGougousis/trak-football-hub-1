@@ -1,1 +1,7 @@
 project_id = "xbykbqolvqyqmipikuae"
+
+[functions.parse-schedule]
+verify_jwt = false
+
+[functions.coach-assistant]
+verify_jwt = false

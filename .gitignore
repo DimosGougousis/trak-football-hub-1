@@ -39,3 +39,7 @@ Thumbs.db
 
 # Claude
 .claude/
+test-results/
+
+# Supabase CLI scratch
+supabase/.temp/

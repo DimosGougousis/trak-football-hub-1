@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
+import { Goal } from 'lucide-react';
 
 const LogChooser = () => {
   const { user, loading } = useAuth();
@@ -21,7 +22,7 @@ const LogChooser = () => {
             onClick={() => navigate('/log/match')}
             className="w-full flex flex-col items-center justify-center gap-3 rounded-[18px] p-7 border border-primary/20 cursor-pointer transition-all active:scale-95 active:border-primary bg-card"
           >
-            <span className="text-5xl">⚽</span>
+            <Goal size={48} strokeWidth={1.25} className="text-primary" />
             <div className="text-center">
               <p className="text-[22px] text-foreground">Match</p>
               <p className="text-[11px] text-muted-foreground mt-1 leading-snug">Log a match and<br/>compute your rating</p>

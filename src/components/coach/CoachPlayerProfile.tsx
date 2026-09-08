@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { RatingBandPill } from '@/lib/ratingBand';
+import { User as UserIcon, Star, MessageCircle } from 'lucide-react';
 
 const CoachPlayerProfile = () => {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ const CoachPlayerProfile = () => {
   const navigate = useNavigate();
   const [player, setPlayer] = useState<any>(null);
   const [assessments, setAssessments] = useState<any[]>([]);
+  const [notesById, setNotesById] = useState<Record<string, string>>({});
   const [showRequest, setShowRequest] = useState(false);
   const [requestReason, setRequestReason] = useState('');
 
@@ -21,7 +23,18 @@ const CoachPlayerProfile = () => {
       .then(({ data }) => setPlayer(data));
     supabase.from('coach_assessments').select('*, coach_sessions(title, session_type)')
       .eq('squad_player_id', id).eq('coach_user_id', user.id).order('created_at', { ascending: false })
-      .then(({ data }) => setAssessments(data || []));
+      .then(async ({ data }) => {
+        const list = data || [];
+        setAssessments(list);
+        if (list.length) {
+          const { data: notes } = await supabase.from('coach_assessment_notes')
+            .select('assessment_id, note')
+            .in('assessment_id', list.map((a: any) => a.id));
+          const map: Record<string, string> = {};
+          notes?.forEach((n: any) => { map[n.assessment_id] = n.note });
+          setNotesById(map);
+        }
+      });
   }, [user, id]);
 
   const handleRequest = async () => {
@@ -53,7 +66,9 @@ const CoachPlayerProfile = () => {
       {/* Player Header */}
       <div className="rounded-2xl p-4 mb-4 border border-border bg-card">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-[52px] h-[52px] rounded-[14px] bg-primary/15 flex items-center justify-center text-2xl flex-shrink-0">👦</div>
+          <div className="w-[52px] h-[52px] rounded-[14px] bg-primary/15 flex items-center justify-center flex-shrink-0">
+            <UserIcon size={22} className="text-primary" />
+          </div>
           <div>
             <h2 className="text-xl text-foreground">{player.player_name}</h2>
             <p className="text-[11px] text-muted-foreground">{player.position} {player.age ? `· Age ${player.age}` : ''} {player.shirt_number ? `· #${player.shirt_number}` : ''}</p>
@@ -78,12 +93,12 @@ const CoachPlayerProfile = () => {
       {/* Actions */}
       <div className="grid grid-cols-2 gap-2 mb-5">
         <button onClick={() => navigate('/coach/assess')}
-          className="rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium">
-          ⭐ New Assessment
+          className="rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium inline-flex items-center justify-center gap-1.5">
+          <Star size={14} /> New Assessment
         </button>
         <button onClick={() => setShowRequest(!showRequest)}
-          className="bg-card border border-border rounded-[10px] py-3 text-foreground text-sm font-medium">
-          💬 Request 1-on-1
+          className="bg-card border border-border rounded-[10px] py-3 text-foreground text-sm font-medium inline-flex items-center justify-center gap-1.5">
+          <MessageCircle size={14} /> Request 1-on-1
         </button>
       </div>
 
@@ -127,8 +142,8 @@ const CoachPlayerProfile = () => {
                   <span key={c.l} className="text-[10px] text-muted-foreground">{c.l} <span className="text-foreground font-medium">{c.v}</span></span>
                 ))}
               </div>
-              {a.private_note && (
-                <p className="text-xs text-muted-foreground mt-2 border-l-2 border-coach-orange/40 pl-2 italic">{a.private_note}</p>
+              {notesById[a.id] && (
+                <p className="text-xs text-muted-foreground mt-2 border-l-2 border-coach-orange/40 pl-2 italic">{notesById[a.id]}</p>
               )}
             </div>
           ))}

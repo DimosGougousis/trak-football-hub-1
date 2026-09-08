@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { computeMatchScore, scoreToBand } from '../lib/rating-engine'
-import { checkMedalEligibility } from '../lib/medals'
 import { BANDS } from '../lib/types'
 
 describe('pilot readiness checks', () => {
@@ -35,11 +34,6 @@ describe('pilot readiness checks', () => {
       expect(score).toBeGreaterThanOrEqual(4.0)
       expect(score).toBeLessThanOrEqual(10.0)
     })
-  })
-
-  it('medal checker returns array of valid medal types', () => {
-    const result = checkMedalEligibility([], [])
-    expect(Array.isArray(result)).toBe(true)
   })
 
   it('no decimal number in scoreToBand output', () => {

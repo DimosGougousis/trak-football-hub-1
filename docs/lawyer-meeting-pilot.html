@@ -1,0 +1,218 @@
+<title>Pilot Legal Agenda</title>
+<style>
+  :root {
+    --ground:#0A0A0B; --surface:#121314; --surface-2:#17191A;
+    --line:rgba(255,255,255,0.075); --line-firm:rgba(255,255,255,0.14);
+    --ink:#F0F2EE; --ink-mid:rgba(240,242,238,0.62); --ink-low:rgba(240,242,238,0.38);
+    --accent:#C8F25A; --accent-ink:#C8F25A; --accent-bg:rgba(200,242,90,0.11);
+    --ok:#4ade80; --warn:#fb923c; --risk:#fb7185;
+    --shadow:0 1px 2px rgba(0,0,0,0.5);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+      --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+      --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+      --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+      --ok:#15803d; --warn:#b45309; --risk:#be123c;
+      --shadow:0 1px 2px rgba(20,24,16,0.07);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+    --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+    --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+    --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+    --ok:#15803d; --warn:#b45309; --risk:#be123c;
+    --shadow:0 1px 2px rgba(20,24,16,0.07);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+    margin:0; padding:0 20px 90px;
+  }
+  .wrap { max-width:720px; margin:0 auto; }
+
+  h1,h2,h3 { text-wrap:balance; margin:0; line-height:1.18; letter-spacing:-0.02em; }
+  h1 { font-size:clamp(28px,5vw,40px); font-weight:600; }
+  h2 { font-size:clamp(19px,2.6vw,23px); font-weight:600; }
+  h3 { font-size:16.5px; font-weight:600; letter-spacing:-0.01em; }
+  p { margin:0; }
+
+  code { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:0.9em; color:var(--ink); }
+  .eyebrow {
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:11px; letter-spacing:0.13em; text-transform:uppercase; color:var(--accent-ink);
+  }
+  .lede { font-size:17px; color:var(--ink-mid); }
+  .small { font-size:14.5px; color:var(--ink-mid); }
+  .tiny { font-size:12.5px; color:var(--ink-low); }
+
+  header.mast {
+    padding:60px 0 30px; border-bottom:1px solid var(--line-firm);
+    display:flex; flex-direction:column; gap:18px;
+  }
+  section { padding:44px 0 0; display:flex; flex-direction:column; gap:18px; }
+  .sec-head { display:flex; flex-direction:column; gap:8px; }
+
+  /* Each question is a numbered decision, because the order is the priority. */
+  .q {
+    display:grid; grid-template-columns:34px 1fr; gap:16px;
+    padding:20px 0; border-top:1px solid var(--line);
+  }
+  .q:first-of-type { border-top:none; }
+  .q .n {
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:13px; color:var(--accent-ink); padding-top:2px;
+  }
+  .q .body { display:flex; flex-direction:column; gap:8px; }
+  .q .why { font-size:13.5px; color:var(--ink-low); }
+  .q .why b { color:var(--ink-mid); font-weight:500; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:18px 20px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:9px;
+  }
+  .callout {
+    background:var(--accent-bg); border:1px solid var(--line-firm);
+    border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:7px;
+  }
+  .callout p, .card p { font-size:14.5px; color:var(--ink-mid); }
+  .callout b, .card b { color:var(--ink); }
+
+  ul.plain { margin:0; padding-left:19px; display:flex; flex-direction:column; gap:6px; }
+  ul.plain li { font-size:14.5px; color:var(--ink-mid); }
+  ul.plain li b { color:var(--ink); font-weight:600; }
+
+  .chip {
+    display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:10.5px; letter-spacing:0.07em; text-transform:uppercase;
+    padding:3px 8px; border-radius:999px; border:1px solid currentColor;
+  }
+  .chip::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+  .c-risk{color:var(--risk);} .c-warn{color:var(--warn);} .c-ok{color:var(--ok);}
+
+  a { color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  @media (max-width:520px) { .q { grid-template-columns:1fr; gap:6px; } }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">Lawyer meeting &middot; tomorrow</div>
+  <h1>What we need answered to start the pilot</h1>
+  <p class="lede">A football academy pilot with roughly 30 children starts in two weeks. This is not the full legal agenda &mdash; company formation, trademark and IP assignment can follow. These six questions are the ones that decide whether the pilot can lawfully begin on time.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">The one framing question</div>
+    <h2>What is the minimum lawful path to run this pilot?</h2>
+  </div>
+  <div class="callout">
+    <p>There is <b>no company yet</b>, no terms, no privacy policy. The pilot is unpaid, one academy, eight weeks, about 30 children aged 13&ndash;18.</p>
+    <p><b>Ask first:</b> can a pilot of this shape run on a pilot agreement plus parental consent, with formation and the full policy set following behind &mdash; or does something have to exist before a single child's data is processed? Everything below is a detail of that answer.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Six decisions</div>
+    <h2>In priority order</h2>
+    <p class="small">Ordered so that if the meeting runs short, the unanswered ones are the ones that can wait.</p>
+  </div>
+
+  <div class="q">
+    <div class="n">01</div>
+    <div class="body">
+      <span class="chip c-risk">Blocks everything else</span>
+      <h3>Who is controller and who is processor &mdash; Trak or the academy?</h3>
+      <p class="small">The academy holds the relationship with the families, which points to academy-as-controller and Trak-as-processor. We want that confirmed rather than assumed.</p>
+      <p class="why"><b>Why it is first:</b> the answer decides who collects the parental consents, who answers a parent's access request, and who is liable if something goes wrong. The consent wording cannot be drafted until it is settled.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">02</div>
+    <div class="body">
+      <span class="chip c-risk">Sits in the demo</span>
+      <h3>A coach types a child's name and age before anyone has consented. Is that lawful?</h3>
+      <p class="small">The coach builds the squad by hand as the second step of the pilot &mdash; name, position, shirt number, age group &mdash; and the child may not sign up for days, or at all. Some never will.</p>
+      <p class="why"><b>Options if it is not lawful:</b> consent must precede roster entry; or the academy's own existing consent covers it; or the roster holds something less identifying (initials, a code) until the child joins. <b>The third would need a product change, so we need to know quickly.</b></p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">03</div>
+    <div class="body">
+      <span class="chip c-warn">Needed before week 0</span>
+      <h3>Parental consent &mdash; what must it say, who collects it, and in what form?</h3>
+      <p class="small">Ages 13&ndash;18. We would like to know from what age a child can consent for themselves in Greece, whether written or digital consent is required, and whether the academy can collect it on our behalf.</p>
+      <p class="why">We have a full inventory of what is stored and who can read it, ready to attach.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">04</div>
+    <div class="body">
+      <span class="chip c-warn">Needed before week 0</span>
+      <h3>What must the pilot agreement and DPA contain, and who drafts them?</h3>
+      <p class="small">One academy, eight weeks, no payment either way. We would rather have a short correct document than a long one.</p>
+      <p class="why"><b>Also:</b> the pilot ends with a promise to hand the academy their data and honour deletion requests. Account deletion is built; <b>data export is not</b>. We need to know whether a manual export satisfies portability for a pilot this size.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">05</div>
+    <div class="body">
+      <span class="chip c-warn">Sub-processors</span>
+      <h3>US providers, and one that receives a child's data directly</h3>
+      <p class="small"><b>Supabase</b> (database, auth, storage), <b>Lovable</b> (hosting), <b>Sentry</b> (error monitoring). All US.</p>
+      <p class="why"><b>The one to look at closely:</b> the player feedback screen sends a child's first name, position, six performance scores and the coach's written note to <b>Google Gemini</b> through Lovable's AI gateway, to generate advice. That is a child's data leaving the platform to a US AI provider. We need to know what has to be in place, or whether that feature should be off for the pilot.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">06</div>
+    <div class="body">
+      <span class="chip c-ok">Can follow</span>
+      <h3>Personal liability until the company exists</h3>
+      <p class="small">Everything currently happens in a personal capacity. What is genuinely exposed while running a pilot with children's data and no entity &mdash; and is that a reason to accelerate formation, or is insurance or the pilot agreement enough for eight weeks?</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Before the meeting</div>
+    <h2>Two things worth doing tonight</h2>
+  </div>
+  <div class="card">
+    <p><b>1. Check whether <code>wellness_logs</code> is empty, and drop it if so.</b> It stores mood, energy, sleep quality and free-text notes per child &mdash; plausibly special category data, which would raise the bar to explicit consent and probably a DPIA. Nothing writes to it; the feature was cut. Dropping it removes special category data from tomorrow's conversation entirely, which is likely to make the meeting shorter and the advice cheaper.</p>
+    <p><b>2. Bring the data inventory.</b> It lists all twenty tables, what each holds about a child, and who can read it &mdash; read from the schema, not from memory. A lawyer can answer questions 02 to 05 far faster with it than without.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">The ask</div>
+    <h2>What we want to leave with</h2>
+  </div>
+  <div class="card">
+    <ul class="plain">
+      <li><b>A yes or no</b> on whether the pilot can start in two weeks, and if not, what specifically has to exist first.</li>
+      <li><b>A decision on controller versus processor</b>, so consent drafting can begin immediately.</li>
+      <li><b>An answer on the pre-consent roster</b>, because the alternative is a product change with a two-week runway.</li>
+      <li><b>Who drafts what, by when, and at what cost</b> &mdash; consent wording, pilot agreement, DPA.</li>
+      <li><b>What can safely wait</b> until after the pilot: formation, trademark, IP assignments, full terms and privacy policy.</li>
+    </ul>
+  </div>
+</section>
+
+</div>

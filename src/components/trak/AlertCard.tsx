@@ -2,7 +2,7 @@ import { TrakCard } from './TrakCard'
 import { MetadataLabel } from './MetadataLabel'
 
 interface AlertCardProps {
-  type: 'match_logged' | 'assessment' | 'medal'
+  type: 'match_logged' | 'assessment'
   childName: string
   detail: string
   timestamp: string
@@ -12,7 +12,6 @@ export function AlertCard({ type, childName, detail, timestamp }: AlertCardProps
   const labels: Record<string, string> = {
     match_logged: 'Match logged',
     assessment: 'New assessment',
-    medal: 'Medal unlocked',
   }
   return (
     <TrakCard>

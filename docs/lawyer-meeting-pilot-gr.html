@@ -1,0 +1,220 @@
+<title>Νομικά για το Πιλοτικό</title>
+<style>
+  :root {
+    --ground:#0A0A0B; --surface:#121314; --surface-2:#17191A;
+    --line:rgba(255,255,255,0.075); --line-firm:rgba(255,255,255,0.14);
+    --ink:#F0F2EE; --ink-mid:rgba(240,242,238,0.62); --ink-low:rgba(240,242,238,0.38);
+    --accent:#C8F25A; --accent-ink:#C8F25A; --accent-bg:rgba(200,242,90,0.11);
+    --ok:#4ade80; --warn:#fb923c; --risk:#fb7185;
+    --shadow:0 1px 2px rgba(0,0,0,0.5);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+      --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+      --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+      --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+      --ok:#15803d; --warn:#b45309; --risk:#be123c;
+      --shadow:0 1px 2px rgba(20,24,16,0.07);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FAFAF6; --surface:#FFFFFF; --surface-2:#F3F4EE;
+    --line:rgba(20,24,16,0.10); --line-firm:rgba(20,24,16,0.20);
+    --ink:#16180F; --ink-mid:rgba(22,24,15,0.66); --ink-low:rgba(22,24,15,0.44);
+    --accent:#B4DE3C; --accent-ink:#4E6B0B; --accent-bg:rgba(180,222,60,0.20);
+    --ok:#15803d; --warn:#b45309; --risk:#be123c;
+    --shadow:0 1px 2px rgba(20,24,16,0.07);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size:16px; line-height:1.68; -webkit-font-smoothing:antialiased;
+    margin:0; padding:0 20px 90px;
+  }
+  .wrap { max-width:720px; margin:0 auto; }
+
+  h1,h2,h3 { text-wrap:balance; margin:0; line-height:1.22; letter-spacing:-0.015em; }
+  h1 { font-size:clamp(27px,4.6vw,38px); font-weight:600; }
+  h2 { font-size:clamp(19px,2.6vw,23px); font-weight:600; }
+  h3 { font-size:16.5px; font-weight:600; }
+  p { margin:0; }
+
+  code { font-family:"DM Mono", ui-monospace, Menlo, monospace; font-size:0.88em; color:var(--ink); }
+  .eyebrow {
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:11px; letter-spacing:0.13em; text-transform:uppercase; color:var(--accent-ink);
+  }
+  .lede { font-size:17px; color:var(--ink-mid); }
+  .small { font-size:14.5px; color:var(--ink-mid); }
+
+  header.mast {
+    padding:60px 0 30px; border-bottom:1px solid var(--line-firm);
+    display:flex; flex-direction:column; gap:18px;
+  }
+  section { padding:44px 0 0; display:flex; flex-direction:column; gap:18px; }
+  .sec-head { display:flex; flex-direction:column; gap:8px; }
+
+  .q {
+    display:grid; grid-template-columns:34px 1fr; gap:16px;
+    padding:20px 0; border-top:1px solid var(--line);
+  }
+  .q:first-of-type { border-top:none; }
+  .q .n {
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:13px; color:var(--accent-ink); padding-top:3px;
+  }
+  .q .body { display:flex; flex-direction:column; gap:8px; }
+  .q .why { font-size:13.5px; color:var(--ink-low); }
+  .q .why b { color:var(--ink-mid); font-weight:500; }
+
+  .card {
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:18px 20px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:9px;
+  }
+  .callout {
+    background:var(--accent-bg); border:1px solid var(--line-firm);
+    border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:7px;
+  }
+  .callout p, .card p { font-size:14.5px; color:var(--ink-mid); }
+  .callout b, .card b { color:var(--ink); }
+
+  ul.plain { margin:0; padding-left:19px; display:flex; flex-direction:column; gap:7px; }
+  ul.plain li { font-size:14.5px; color:var(--ink-mid); }
+  ul.plain li b { color:var(--ink); font-weight:600; }
+
+  .chip {
+    display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+    font-family:"DM Mono", ui-monospace, Menlo, monospace;
+    font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; border:1px solid currentColor;
+  }
+  .chip::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+  .c-risk{color:var(--risk);} .c-warn{color:var(--warn);} .c-ok{color:var(--ok);}
+
+  a { color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  @media (max-width:520px) { .q { grid-template-columns:1fr; gap:6px; } }
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">Συνάντηση με δικηγόρο</div>
+  <h1>Τι χρειαζόμαστε για να ξεκινήσει το πιλοτικό</h1>
+  <p class="lede">Πιλοτικό πρόγραμμα σε ακαδημία ποδοσφαίρου, με περίπου 30 παιδιά, ξεκινά σε δύο εβδομάδες. Δεν είναι η πλήρης νομική ατζέντα &mdash; η ίδρυση της εταιρείας, το σήμα και οι εκχωρήσεις πνευματικών δικαιωμάτων μπορούν να ακολουθήσουν. Τα παρακάτω έξι ερωτήματα είναι εκείνα που κρίνουν αν το πιλοτικό μπορεί να ξεκινήσει νόμιμα και εγκαίρως.</p>
+</header>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Το κεντρικό ερώτημα</div>
+    <h2>Ποιος είναι ο ελάχιστος νόμιμος δρόμος για αυτό το πιλοτικό;</h2>
+  </div>
+  <div class="callout">
+    <p><b>Δεν υπάρχει ακόμη εταιρεία</b>, ούτε όροι χρήσης, ούτε πολιτική απορρήτου. Το πιλοτικό είναι χωρίς αμοιβή, σε μία ακαδημία, διάρκειας οκτώ εβδομάδων, με περίπου 30 παιδιά ηλικίας 13&ndash;18 ετών.</p>
+    <p><b>Το πρώτο ερώτημα:</b> μπορεί ένα πιλοτικό αυτής της μορφής να λειτουργήσει με μια σύμβαση πιλοτικού και γονική συγκατάθεση, ενώ η ίδρυση και το πλήρες σετ πολιτικών ακολουθούν &mdash; ή πρέπει κάτι να προϋπάρχει πριν γίνει επεξεργασία δεδομένων έστω και ενός παιδιού;</p>
+    <p><b>Προσοχή στο ερώτημα 05.</b> Προέκυψε σήμερα, από γραπτή απάντηση του παρόχου φιλοξενίας, και είναι το μόνο που μπορεί από μόνο του να μεταθέσει την ημερομηνία έναρξης. Αν ο χρόνος πιέζει, προτεραιότητα έχουν τα 01, 02 και 05.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Έξι αποφάσεις</div>
+    <h2>Κατά σειρά προτεραιότητας</h2>
+    <p class="small">Με τη σειρά αυτή, ώστε αν ο χρόνος δεν επαρκέσει, όσα μείνουν αναπάντητα να είναι εκείνα που μπορούν να περιμένουν.</p>
+  </div>
+
+  <div class="q">
+    <div class="n">01</div>
+    <div class="body">
+      <span class="chip c-risk">Μπλοκάρει τα υπόλοιπα</span>
+      <h3>Ποιος είναι υπεύθυνος επεξεργασίας και ποιος εκτελών &mdash; το Trak ή η ακαδημία;</h3>
+      <p class="small">Η ακαδημία έχει τη σχέση με τις οικογένειες, κάτι που δείχνει προς «ακαδημία = υπεύθυνος επεξεργασίας» και «Trak = εκτελών την επεξεργασία». Θέλουμε αυτό να επιβεβαιωθεί και όχι να θεωρηθεί δεδομένο.</p>
+      <p class="why"><b>Γιατί προηγείται:</b> η απάντηση καθορίζει ποιος συλλέγει τις γονικές συγκαταθέσεις, ποιος απαντά σε αίτημα πρόσβασης γονέα και ποιος φέρει την ευθύνη σε περίπτωση προβλήματος. Το κείμενο της συγκατάθεσης δεν μπορεί να συνταχθεί πριν λυθεί αυτό.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">02</div>
+    <div class="body">
+      <span class="chip c-risk">Βρίσκεται μέσα στη ροή</span>
+      <h3>Ο προπονητής καταχωρεί όνομα και ηλικία παιδιού πριν δοθεί οποιαδήποτε συγκατάθεση. Είναι νόμιμο;</h3>
+      <p class="small">Ο προπονητής δημιουργεί το ρόστερ χειροκίνητα ως δεύτερο βήμα του πιλοτικού &mdash; όνομα, θέση, αριθμό φανέλας, ηλικιακή κατηγορία &mdash; και το παιδί μπορεί να μην εγγραφεί για μέρες, ή και ποτέ. Κάποια δεν θα εγγραφούν καθόλου.</p>
+      <p class="why"><b>Αν δεν είναι νόμιμο, οι επιλογές είναι:</b> η συγκατάθεση να προηγείται της καταχώρισης· ή να καλύπτεται από την υπάρχουσα συγκατάθεση που κρατά η ακαδημία· ή το ρόστερ να κρατά κάτι λιγότερο αναγνωρίσιμο (αρχικά, κωδικό) μέχρι να εγγραφεί το παιδί. <b>Η τρίτη επιλογή απαιτεί αλλαγή στο προϊόν, γι' αυτό χρειαζόμαστε γρήγορη απάντηση.</b></p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">03</div>
+    <div class="body">
+      <span class="chip c-warn">Πριν την έναρξη</span>
+      <h3>Γονική συγκατάθεση &mdash; τι πρέπει να αναφέρει, ποιος τη συλλέγει και σε ποια μορφή;</h3>
+      <p class="small">Ηλικίες 13&ndash;18. Θα θέλαμε να γνωρίζουμε από ποια ηλικία μπορεί ένα παιδί να συναινέσει μόνο του στην Ελλάδα, αν απαιτείται έγγραφη ή αρκεί ηλεκτρονική συγκατάθεση, και αν μπορεί η ακαδημία να τη συλλέγει για λογαριασμό μας.</p>
+      <p class="why">Έχουμε ετοιμάσει πλήρη κατάλογο των δεδομένων που αποθηκεύονται και του ποιος έχει πρόσβαση σε καθένα.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">04</div>
+    <div class="body">
+      <span class="chip c-warn">Πριν την έναρξη</span>
+      <h3>Τι πρέπει να περιλαμβάνει η σύμβαση πιλοτικού και η σύμβαση επεξεργασίας δεδομένων, και ποιος τις συντάσσει;</h3>
+      <p class="small">Μία ακαδημία, οκτώ εβδομάδες, χωρίς οικονομική συναλλαγή προς καμία κατεύθυνση. Προτιμούμε ένα σύντομο και σωστό κείμενο από ένα εκτενές.</p>
+      <p class="why"><b>Επίσης:</b> το πιλοτικό ολοκληρώνεται με τη δέσμευση να παραδώσουμε στην ακαδημία τα δεδομένα της και να ικανοποιήσουμε τυχόν αιτήματα διαγραφής. Η διαγραφή λογαριασμού υπάρχει· <b>η εξαγωγή δεδομένων δεν υπάρχει</b>. Χρειαζόμαστε να γνωρίζουμε αν μια χειροκίνητη εξαγωγή καλύπτει τη φορητότητα για πιλοτικό αυτού του μεγέθους.</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">05</div>
+    <div class="body">
+      <span class="chip c-risk">Νέο &mdash; πιθανό εμπόδιο έναρξης</span>
+      <h3>Ο πάροχος φιλοξενίας μάς λέει ότι η πλατφόρμα του δεν προορίζεται για δεδομένα παιδιών</h3>
+      <p class="small">Ζητήσαμε γραπτώς σύμβαση επεξεργασίας από το <b>Lovable</b>, τον πάροχο φιλοξενίας. Η απάντηση, σήμερα:</p>
+      <p class="small" style="border-left:2px solid var(--line-firm); padding-left:14px; color:var(--ink-low)">Οι Όροι τους ζητούν από τους πελάτες <b>να μην εισάγουν δεδομένα παιδιών στις τυπικές Υπηρεσίες τους, σε κάθε πρόγραμμα</b>. Επομένως το ερώτημα δεν είναι ποιο πρόγραμμα περιλαμβάνει σύμβαση επεξεργασίας: η αναβάθμιση θα έδινε σύμβαση χωρίς να λύνει το ζήτημα του πεδίου εφαρμογής. Προβλέπεται χωριστή γραπτή συμφωνία για ειδικές κατηγορίες, αλλά δεν επιβεβαιώνεται ότι είναι διαθέσιμη ούτε με ποιους όρους.</p>
+      <p class="small">Επιπλέον: σε δωρεάν πρόγραμμα <b>δεν υπάρχει σύμβαση επεξεργασίας</b> &mdash; απαιτείται τουλάχιστον Business. Η πύλη ΤΝ έχει σημείο εισόδου εντός ΕΕ, αλλά η επεξεργασία δρομολογείται σε παρόχους <b>εκτός ΕΟΧ</b>, με μηχανισμό τις Τυποποιημένες Συμβατικές Ρήτρες (Απόφαση ΕΕ 2021/914). Για τη διατήρηση από τον πάροχο του μοντέλου δεν δίνουν στοιχεία.</p>
+      <p class="why"><b>Τι προτείνουμε &mdash; και το ερώτημα:</b> ελέγξαμε πού ακριβώς βρίσκεται ο πάροχος στη ροή δεδομένων. Τα δεδομένα των παιδιών <b>δεν περνούν</b> από αυτόν κατά τη συνήθη χρήση: ο browser επικοινωνεί απευθείας με τη βάση εντός ΕΕ. Ο πάροχος εμπλέκεται σε δύο μόνο σημεία &mdash; τη φιλοξενία των στατικών αρχείων, και τρεις λειτουργίες ΤΝ που στέλνουν ονόματα, ηλικίες και βαθμολογίες παιδιών στην πύλη του.</p>
+      <p class="why"><b>Και τα δύο μπορούν να αρθούν σε περίπου μία ημέρα εργασίας:</b> μεταφορά της φιλοξενίας σε άλλον πάροχο, και απευθείας σύμβαση με πάροχο ΤΝ (Google, OpenAI ή Anthropic) με δική μας σύμβαση επεξεργασίας. <b>Το ερώτημα προς εσάς: αν το κάνουμε αυτό, θεωρείτε ότι το ζήτημα λύνεται;</b> Και στο μεσοδιάστημα, είναι ανεκτό να λειτουργεί το πιλοτικό στην τρέχουσα υποδομή;</p>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="n">06</div>
+    <div class="body">
+      <span class="chip c-ok">Μπορεί να ακολουθήσει</span>
+      <h3>Προσωπική ευθύνη μέχρι να υπάρξει εταιρεία</h3>
+      <p class="small">Προς το παρόν τα πάντα γίνονται με προσωπική ιδιότητα. Τι εκτίθεται πραγματικά κατά τη διάρκεια ενός πιλοτικού με δεδομένα παιδιών χωρίς νομική οντότητα &mdash; και αποτελεί αυτό λόγο να επισπευσθεί η ίδρυση, ή αρκεί μια ασφάλιση ή η σύμβαση πιλοτικού για οκτώ εβδομάδες;</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Τι έχει ήδη γίνει</div>
+    <h2>Δύο σημεία υπέρ μας</h2>
+  </div>
+  <div class="card">
+    <p><b>1. Αφαιρέσαμε τα δεδομένα υγείας.</b> Υπήρχε πίνακας που αποθήκευε διάθεση, ενέργεια, ποιότητα ύπνου και ελεύθερο κείμενο ανά παιδί ανά ημέρα &mdash; πιθανώς <b>ειδική κατηγορία δεδομένων</b>, με ό,τι αυτό συνεπάγεται (ρητή συγκατάθεση και πιθανή εκτίμηση αντικτύπου). Η λειτουργία είχε αφαιρεθεί από το πιλοτικό και κανένα σημείο της εφαρμογής δεν έγραφε πλέον σε αυτόν, οπότε ο πίνακας διαγράφηκε. <b>Επομένως δεν επεξεργαζόμαστε δεδομένα ειδικών κατηγοριών.</b></p>
+    <p><b>2. Η διαγραφή λογαριασμού είναι υλοποιημένη.</b> Υπάρχει μηχανισμός διαγραφής όλων των δεδομένων ενός χρήστη. Θα τον δοκιμάσουμε από άκρη σε άκρη πριν την έναρξη.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="eyebrow">Το ζητούμενο</div>
+    <h2>Τι θέλουμε να έχουμε φεύγοντας</h2>
+  </div>
+  <div class="card">
+    <ul class="plain">
+      <li><b>Ένα ναι ή όχι</b> στο αν το πιλοτικό μπορεί να ξεκινήσει σε δύο εβδομάδες &mdash; και αν όχι, τι ακριβώς πρέπει να προϋπάρχει.</li>
+      <li><b>Απόφαση για υπεύθυνο επεξεργασίας και εκτελούντα</b>, ώστε να ξεκινήσει άμεσα η σύνταξη της συγκατάθεσης.</li>
+      <li><b>Απάντηση για το ρόστερ πριν τη συγκατάθεση</b>, γιατί η εναλλακτική είναι αλλαγή στο προϊόν μέσα σε δύο εβδομάδες.</li>
+      <li><b>Ποιος συντάσσει τι, μέχρι πότε και με τι κόστος</b> &mdash; κείμενο συγκατάθεσης, σύμβαση πιλοτικού, σύμβαση επεξεργασίας δεδομένων.</li>
+      <li><b>Τι μπορεί με ασφάλεια να περιμένει</b> μέχρι μετά το πιλοτικό: ίδρυση εταιρείας, σήμα, εκχωρήσεις δικαιωμάτων, πλήρεις όροι χρήσης και πολιτική απορρήτου.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
