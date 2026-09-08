@@ -26,4 +26,13 @@ export default tseslint.config({ ignores: ["dist"] }, {
     // tailwind.config.ts uses require() for plugins — acceptable
     "@typescript-eslint/no-require-imports": "warn",
   },
+}, {
+  // The use-case harness binds each test suite to a registry entry with
+  // useCase('UC-XXX', ...). The `use` prefix makes the react-hooks plugin
+  // treat it as a React Hook, but it is a describe() wrapper — it is called
+  // at module top level by design and never inside a component.
+  files: ["tests/**/*.{ts,tsx}"],
+  rules: {
+    "react-hooks/rules-of-hooks": "off",
+  },
 });
