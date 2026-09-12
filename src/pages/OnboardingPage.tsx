@@ -11,6 +11,7 @@ import {
 } from '@/lib/constants';
 import { Mail, RefreshCw, ChevronDown } from 'lucide-react';
 import { validatePassword, PASSWORD_HINT } from '@/lib/password'
+import { CONSENT_THRESHOLD_AGE, ageFromDateOfBirth } from '@/lib/consent'
 
 const StyledSelect = ({ value, onChange, placeholder, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { placeholder?: string }) => (
   <div className="relative">
@@ -75,6 +76,35 @@ const EmailConfirmationScreen = ({ email }: { email: string }) => {
   );
 };
 
+/**
+ * Shown instead of the plain confirmation screen to players below the
+ * digital-consent age. Their account exists and is theirs — they are waiting
+ * on a parent to finish, not to start. Saying that plainly matters: the whole
+ * point of letting them sign up themselves is that it stays their account.
+ */
+const AwaitingParentScreen = ({ email, parentEmail }: { email: string; parentEmail: string }) => (
+  <div className="flex flex-col items-center text-center py-6">
+    <div className="w-20 h-20 rounded-full bg-primary/15 flex items-center justify-center mb-6">
+      <Mail className="w-10 h-10 text-primary" />
+    </div>
+    <h2 className="text-2xl text-foreground mb-2">Almost there</h2>
+    <p className="text-sm text-muted-foreground mb-2">
+      Your account is created. We've asked your parent or guardian at
+    </p>
+    <p className="text-sm font-medium text-foreground mb-6">{parentEmail}</p>
+    <p className="text-xs text-muted-foreground mb-2">
+      to approve it. As soon as they do, your coach can start recording your
+      progress and you'll see it here.
+    </p>
+    <p className="text-xs text-muted-foreground mb-8">
+      Confirm your own email at {email} in the meantime.
+    </p>
+    <a href="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+      ← Back to home
+    </a>
+  </div>
+);
+
 const OnboardingPage = () => {
   const { role } = useParams<{ role: string }>();
   const validRole = (role === 'player' || role === 'coach' || role === 'club') ? role as Role : null;
@@ -119,6 +149,14 @@ const PlayerOnboarding = () => {
   const [parentEmail, setParentEmail] = useState('');
   const [coachCode, setCoachCode] = useState('');
 
+  // Built once from the three selects, so the age check and the value sent to
+  // the database can never disagree.
+  const dateOfBirth = dobDay && dobMonth && dobYear
+    ? `${dobYear}-${String(MONTHS.indexOf(dobMonth) + 1).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`
+    : null;
+  const age = dateOfBirth ? ageFromDateOfBirth(dateOfBirth) : null;
+  const needsConsent = age !== null && age < CONSENT_THRESHOLD_AGE;
+
   const handleStep1 = () => {
     if (!name || !dobDay || !dobMonth || !dobYear || !nationality || !email || !password || !confirmPassword) {
       toast.error('Please fill in all fields'); return;
@@ -139,17 +177,22 @@ const PlayerOnboarding = () => {
   };
 
   const handleSubmit = async () => {
+    // Below the digital-consent age a parent has to authorise before anything
+    // can be recorded about them, so we cannot proceed without a way to reach
+    // one. Above it the player consents for themselves and this never fires.
+    if (needsConsent && !parentEmail.trim()) {
+      toast.error("Please enter a parent or guardian's email so we can ask them to approve your account");
+      return;
+    }
+
     setLoading(true);
     try {
-      const monthIndex = MONTHS.indexOf(dobMonth) + 1;
-      const dob = `${dobYear}-${String(monthIndex).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`;
-
       const pendingProfile = {
         role: 'player' as const,
         full_name: name,
         nationality,
         player_details: {
-          date_of_birth: dob,
+          date_of_birth: dateOfBirth!,
           position,
           current_club: club,
           age_group: ageGroup,
@@ -247,10 +290,31 @@ const PlayerOnboarding = () => {
             className="bg-card"
             maxLength={8}
           />
-          <p className="text-sm text-muted-foreground mt-3 mb-2">
-            Want to invite a parent? Enter their email below (optional).
-          </p>
-          <Input type="email" placeholder="Parent's email (optional)" value={parentEmail} onChange={e => setParentEmail(e.target.value)} className="bg-card" />
+          {needsConsent ? (
+            <>
+              <p className="text-sm text-foreground mt-3 mb-1">
+                You're under {CONSENT_THRESHOLD_AGE}, so a parent or guardian needs to approve your account first.
+              </p>
+              <p className="text-xs text-muted-foreground mb-2">
+                We'll email them. You can finish signing up now — you'll get in as soon as they say yes.
+              </p>
+              <Input
+                type="email"
+                placeholder="Parent or guardian's email"
+                value={parentEmail}
+                onChange={e => setParentEmail(e.target.value)}
+                className="bg-card"
+                required
+              />
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground mt-3 mb-2">
+                Want to invite a parent? Enter their email below (optional).
+              </p>
+              <Input type="email" placeholder="Parent's email (optional)" value={parentEmail} onChange={e => setParentEmail(e.target.value)} className="bg-card" />
+            </>
+          )}
           <div className="flex gap-2 mt-2">
             <Button variant="outline" onClick={() => setStep(2)} className="flex-1">Back</Button>
             <Button onClick={handleSubmit} disabled={loading} className="flex-1">
@@ -261,7 +325,9 @@ const PlayerOnboarding = () => {
       )}
 
       {step === 4 && (
-        <EmailConfirmationScreen email={email} />
+        needsConsent
+          ? <AwaitingParentScreen email={email} parentEmail={parentEmail} />
+          : <EmailConfirmationScreen email={email} />
       )}
     </div>
   );

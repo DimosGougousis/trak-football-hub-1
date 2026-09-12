@@ -114,6 +114,19 @@ async function writeProfileFromPendingData(userId: string, data: PendingProfileD
   const warnings = (result as { warnings?: string[] } | null)?.warnings ?? [];
   for (const w of warnings) toast.warning(w, { duration: 8000 });
 
+  // provision_my_profile creates the parent_invites row; this mails it. It runs
+  // here rather than at signup because the row does not exist until the RPC
+  // above has run. Failure is deliberately non-fatal: the player still has the
+  // share link on their home screen, and a child must never be left with a
+  // half-created account because an email bounced.
+  if (data.role === 'player' && data.parent_email) {
+    try {
+      await supabase.functions.invoke('send-parent-invite');
+    } catch (err) {
+      console.error('Parent invite email failed to send:', err);
+    }
+  }
+
   const { data: newProfile } = await supabase
     .from('profiles')
     .select('*')

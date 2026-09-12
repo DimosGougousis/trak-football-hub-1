@@ -12,7 +12,13 @@ const ParentOnboarding = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
+
+  // A parent who arrives from the emailed invitation is already signed in —
+  // Supabase created their account when it sent the invite. They only need to
+  // set a password, not register from scratch. A parent who was handed the
+  // link some other way is not signed in and registers normally.
+  const isInvitedSession = Boolean(user);
 
   const [invite, setInvite] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -59,15 +65,38 @@ const ParentOnboarding = () => {
 
     setSubmitting(true);
     try {
+      const pendingProfile = {
+        role: 'parent' as const,
+        full_name: name,
+        nationality: null,
+      };
+
+      if (isInvitedSession) {
+        // Already authenticated from the invite link: set the password on the
+        // existing account, then provision. The session is live, so auth.uid()
+        // resolves and the RPC can link them to their child immediately.
+        const { error: pwdError } = await supabase.auth.updateUser({
+          password,
+          data: { trak_onboarding: pendingProfile },
+        });
+        if (pwdError) throw pwdError;
+
+        const { error: rpcError } = await supabase.rpc(
+          'provision_my_profile' as any,
+          { p: pendingProfile as unknown as Record<string, unknown> },
+        );
+        if (rpcError) throw rpcError;
+
+        toast.success('Account ready');
+        navigate('/parent/consent', { replace: true });
+        return;
+      }
+
       // Pass pendingProfile so AuthContext.writeProfileFromPendingData handles
       // profile creation and link_parent_to_players_by_email after email
       // confirmation — direct DB calls here fail because auth.uid() is null
       // until the user has confirmed their email and the session is active.
-      const { error } = await signUp(email, password, {
-        role: 'parent',
-        full_name: name,
-        nationality: null,
-      });
+      const { error } = await signUp(email, password, pendingProfile);
       if (error) throw error;
 
       toast.success('Account created! Check your email to verify.');
@@ -82,7 +111,11 @@ const ParentOnboarding = () => {
   return (
     <div className="app-container px-6 py-8">
       <h1 className="text-2xl text-foreground mb-1">Parent Registration</h1>
-      <p className="text-muted-foreground text-sm mb-6">You've been invited to follow a player's journey</p>
+      <p className="text-muted-foreground text-sm mb-6">
+        {isInvitedSession
+          ? "Set a password, then approve your child's account"
+          : "You've been invited to follow a player's journey"}
+      </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} required className="bg-card" />
@@ -90,7 +123,7 @@ const ParentOnboarding = () => {
         <Input type="password" placeholder={PASSWORD_HINT} value={password} onChange={e => setPassword(e.target.value)} required className="bg-card" />
         <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required className="bg-card" />
         <Button type="submit" disabled={submitting} className="w-full mt-2">
-          {submitting ? 'Creating...' : 'Create Account'}
+          {submitting ? 'Saving...' : isInvitedSession ? 'Continue' : 'Create Account'}
         </Button>
       </form>
     </div>

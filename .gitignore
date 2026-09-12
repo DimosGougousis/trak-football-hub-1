@@ -43,3 +43,7 @@ test-results/
 
 # Supabase CLI scratch
 supabase/.temp/
+
+# Vercel CLI
+.vercel
+.env*
