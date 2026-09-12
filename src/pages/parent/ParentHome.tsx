@@ -18,6 +18,19 @@ export default function ParentHome() {
   const [coachName, setCoachName] = useState('')
   const [latestAward, setLatestAward] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [awaitingConsent, setAwaitingConsent] = useState<{ full_name: string }[]>([])
+
+  // A child below the digital-consent age cannot be assessed until their
+  // parent approves, and this is the only screen the parent reliably lands on.
+  // Without a prompt here they would see an empty app and no reason why.
+  useEffect(() => {
+    if (!user) return
+    // `as any`: the generated types predate this migration, same as
+    // delete_my_account in Settings.tsx. Regenerate them and the cast can go.
+    ;(supabase.rpc as any)('get_children_awaiting_consent').then(({ data }: { data: unknown }) => {
+      setAwaitingConsent((data as { full_name: string }[] | null) ?? [])
+    })
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -108,6 +121,20 @@ export default function ParentHome() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4">
+
+        {awaitingConsent.length > 0 && (
+          <button
+            onClick={() => navigate('/parent/consent')}
+            className="w-full text-left rounded-xl border border-primary/30 bg-primary/10 p-4 mb-4"
+          >
+            <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              {awaitingConsent[0].full_name.split(' ')[0]} is waiting on your approval
+            </p>
+            <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Their coach can't record anything until you approve. Tap to review.
+            </p>
+          </button>
+        )}
 
         {/* ── Header ── */}
         <div className="pt-2 pb-5">
