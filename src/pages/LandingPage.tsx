@@ -37,6 +37,16 @@ export default function LandingPage() {
     }
   }, [loading, user, profile, navigate]);
 
+  // /auth/confirm verifies the email, signs the person out on purpose, and
+  // sends them here. Without this they would arrive at a bare sign-in form with
+  // no sign that the confirmation worked, and try the email link again.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('confirmed') !== '1') return;
+    toast.success('Email confirmed — sign in to continue');
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
   const handleRoleSelect = (role: string) => {
     navigate(role === 'parent' ? '/parent-info' : `/onboarding/${role}`);
   };

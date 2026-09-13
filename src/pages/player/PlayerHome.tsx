@@ -60,6 +60,19 @@ export default function PlayerHome() {
   const [coachAssessment, setCoachAssessment] = useState<any>(null)
   const [coachName, setCoachName] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
+  const [consent, setConsent] = useState<{ required: boolean; invited_parent: string | null } | null>(null)
+
+  // Under the digital-consent age nothing can be recorded about this player
+  // until a parent approves. Without this they would sign in to a dashboard
+  // that stays permanently empty with no explanation — the same false-empty
+  // state the parent screens suffer from.
+  useEffect(() => {
+    if (!user) return
+    // `as any`: generated types predate the consent migration.
+    ;(supabase.rpc as any)('my_consent_status').then(({ data }: { data: unknown }) => {
+      setConsent(data as { required: boolean; invited_parent: string | null } | null)
+    })
+  }, [user])
   const [showReveal, setShowReveal] = useState(false)
   const [newMatchCount, setNewMatchCount] = useState(0)
   const [coachAssessmentNote, setCoachAssessmentNote] = useState<string | null>(null)
@@ -240,6 +253,19 @@ export default function PlayerHome() {
           <span className="text-[11px] font-medium tracking-[0.14em] uppercase text-white/20"
             style={{ fontFamily: "'DM Mono', monospace" }}>TRAK</span>
         </div>
+
+        {consent?.required && (
+          <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 my-4">
+            <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              Waiting for your parent
+            </p>
+            <p className="text-[12px] text-white/55 mt-1 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              {consent.invited_parent
+                ? `We asked ${consent.invited_parent} to approve your account. Once they do, your coach can start recording your progress and it'll show up here.`
+                : "Your account needs a parent or guardian's approval before your coach can record anything."}
+            </p>
+          </div>
+        )}
 
         {/* Identity */}
         <div className="py-2.5 pb-4">

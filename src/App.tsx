@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const ParentInfoPage = lazy(() => import("./pages/ParentInfoPage"));
 const ParentOnboarding = lazy(() => import("./pages/ParentOnboarding"));
+const AuthConfirm = lazy(() => import("./pages/AuthConfirm"));
 const Settings = lazy(() => import("./pages/Settings"));
 const DevSetupPage = lazy(() => import("./pages/DevSetupPage"));
 
@@ -85,6 +86,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/confirm" element={<AuthConfirm />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />

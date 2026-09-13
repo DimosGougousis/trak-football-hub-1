@@ -217,6 +217,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN') return;
       }
 
+      // Same on the confirmation page. It verifies, then signs out on purpose,
+      // and navigates itself — the SIGNED_OUT redirect below would race it and
+      // strip the ?confirmed=1 flag the sign-in form looks for.
+      if (window.location.pathname === '/auth/confirm') return;
+
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
