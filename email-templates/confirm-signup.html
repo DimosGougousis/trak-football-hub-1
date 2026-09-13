@@ -17,7 +17,7 @@
   the <head>, and with it the charset declaration, so raw Unicode arrives as
   mojibake - which is exactly how "Confirm email ,Uei" happened.
 
-  The link is token_hash, NOT {{ .ConfirmationURL }}. ConfirmationURL carries a
+  The link is token_hash, NOT `.ConfirmationURL`. ConfirmationURL carries a
   session and signs the person straight in, bypassing the password entirely.
   See src/pages/AuthConfirm.tsx.
 -->
