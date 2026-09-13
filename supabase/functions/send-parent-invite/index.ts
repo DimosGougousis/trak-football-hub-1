@@ -99,10 +99,33 @@ serve(async (req) => {
         console.error("send-parent-invite: send failed", inviteSendError.message);
         return json({ error: "Could not send the email" }, 502);
       }
-      return json({ sent: false, reason: "already_registered", redirectTo });
+
+      // The parent already has an account. This is not an edge case: it is
+      // every parent with a second child at the same academy, and it is also
+      // any parent who was invited once before. Returning quietly here meant
+      // they were never told a child was waiting on them, and nobody found
+      // out — the child's screen just read "waiting for your parent" forever.
+      //
+      // Supabase will not invite an existing user, so send a magic link to the
+      // same destination instead. They land signed in on /parent-invite, which
+      // resolves their pending invitation by email address.
+      const { error: magicLinkError } = await admin.auth.signInWithOtp({
+        email: invite.parent_email,
+        options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+      });
+
+      if (magicLinkError) {
+        console.error(
+          "send-parent-invite: existing parent, magic link failed",
+          magicLinkError.message,
+        );
+        return json({ sent: false, reason: "existing_parent_send_failed", redirectTo }, 502);
+      }
+
+      return json({ sent: true, via: "magic_link", reason: "already_registered" });
     }
 
-    return json({ sent: true });
+    return json({ sent: true, via: "invite" });
   } catch (err) {
     console.error("send-parent-invite: unexpected failure", err);
     return json({ error: "Could not send the email" }, 500);
