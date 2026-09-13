@@ -29,30 +29,67 @@ const ParentOnboarding = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Two ways to resolve the invitation, and the second one matters more than it
+  // looks. The token in the URL is lost whenever a link is resent from the
+  // Supabase dashboard, forwarded, truncated by a mail client, or opened on
+  // another device. A signed-in parent is then stranded: authenticated, no
+  // profile, no role, no link to their child. So fall back to matching their
+  // own verified email against pending invites, which is the same key the
+  // linking already uses.
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
-    supabase
-      .rpc('get_parent_invite_by_token', { p_token: token })
-      .maybeSingle()
-      .then(({ data }) => {
-        setInvite(data);
-        if (data) setEmail(data.parent_email);
-        setLoading(false);
-      });
-  }, [token]);
+    let cancelled = false;
+
+    const resolve = async () => {
+      if (token) {
+        const { data } = await supabase
+          .rpc('get_parent_invite_by_token', { p_token: token })
+          .maybeSingle();
+        if (!cancelled && data) {
+          setInvite(data);
+          setEmail((data as { parent_email: string }).parent_email);
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (user) {
+        // `as any`: generated types predate this migration.
+        const { data } = await (supabase.rpc as any)('get_my_pending_parent_invite');
+        const row = (data as { parent_email: string }[] | null)?.[0] ?? null;
+        if (!cancelled && row) {
+          setInvite(row);
+          setEmail(row.parent_email);
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (!cancelled) setLoading(false);
+    };
+
+    void resolve();
+    return () => { cancelled = true };
+  }, [token, user]);
 
   if (loading) return <div className="app-container p-6 text-foreground">Loading...</div>;
 
-  if (!token || !invite) {
+  if (!invite) {
     return (
       <div className="app-container flex flex-col items-center justify-center px-6 py-12 min-h-screen">
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <IconAlerts size={28} color="hsl(var(--destructive))" />
         </div>
-        <h1 className="text-2xl text-foreground mb-4">Invalid Invite</h1>
+        <h1 className="text-2xl text-foreground mb-4">No invitation found</h1>
         <p className="text-muted-foreground text-center text-sm mb-6">
-          This invite link is invalid or has expired. Ask your child to send you a new invite.
+          {user
+            ? "We couldn't find an invitation for this email address. It may have already been used, or the invitation may have been sent to a different address."
+            : 'This invite link is invalid or has expired. Ask your child to send you a new invite.'}
         </p>
+        {user && (
+          <p className="text-muted-foreground/70 text-center text-xs mb-6 max-w-[300px]">
+            Signed in as {user.email}
+          </p>
+        )}
         <a href="/" className="text-primary text-sm font-semibold">← Back to home</a>
       </div>
     );
