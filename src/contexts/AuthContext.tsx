@@ -120,11 +120,40 @@ async function writeProfileFromPendingData(userId: string, data: PendingProfileD
   // share link on their home screen, and a child must never be left with a
   // half-created account because an email bounced.
   if (data.role === 'player' && data.parent_email) {
+    // functions.invoke does NOT throw on a 4xx/5xx — it returns { data, error }.
+    // The first version of this wrapped it in try/catch and awaited nothing
+    // else, so the function could fail on every call and the browser showed
+    // nothing. Read the actual outcome, log it in full, and tell the player
+    // the truth: if the email did not go, they need to share the link instead.
+    let sent = false;
+    let detail = '';
     try {
-      await supabase.functions.invoke('send-parent-invite');
+      const { data: result, error } = await supabase.functions.invoke('send-parent-invite');
+      let body = result as { sent?: boolean; via?: string; reason?: string; detail?: string } | null;
+      if (error && !body) {
+        // On a non-2xx the body is on the error's response, not in `data`.
+        try { body = await (error as { context?: Response }).context?.json(); } catch { /* no body */ }
+      }
+      sent = body?.sent === true;
+      detail = body?.detail ?? body?.reason ?? error?.message ?? '';
+      console.info('[send-parent-invite]', { sent, via: body?.via, reason: body?.reason, detail, error: error?.message });
     } catch (err) {
-      console.error('Parent invite email failed to send:', err);
+      detail = err instanceof Error ? err.message : String(err);
+      console.error('[send-parent-invite] network failure', detail);
     }
+
+    if (!sent) {
+      toast.warning(
+        "We couldn't email your parent automatically. Share the invite link from your home screen instead.",
+        { duration: 12000 },
+      );
+    }
+    try {
+      // Read by the player home screen so the waiting banner can offer the
+      // share link only when it is actually needed.
+      if (sent) localStorage.removeItem('trak_parent_invite_email_failed');
+      else localStorage.setItem('trak_parent_invite_email_failed', detail || '1');
+    } catch { /* storage unavailable — banner falls back to always showing the link */ }
   }
 
   const { data: newProfile } = await supabase
