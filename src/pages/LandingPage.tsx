@@ -29,11 +29,18 @@ export default function LandingPage() {
   useEffect(() => {
     if (!loading && user) {
       const homeMap: Record<string, string> = {
+        player: '/player/home',
         coach: '/coach/home',
         parent: '/parent/home',
         club: '/club/home',
       };
-      navigate(homeMap[profile?.role ?? ''] ?? '/player/home', { replace: true });
+
+      // A missing role must never fall through to the player home. An invited
+      // parent whose profile was never provisioned has no role, and this line
+      // used to point them straight at a child's dashboard. Players, coaches
+      // and clubs all get a profile at signup, so the only way to be signed in
+      // without one is an invitation that was not completed.
+      navigate(homeMap[profile?.role ?? ''] ?? '/parent-invite', { replace: true });
     }
   }, [loading, user, profile, navigate]);
 
