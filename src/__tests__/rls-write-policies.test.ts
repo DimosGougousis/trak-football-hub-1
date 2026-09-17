@@ -268,6 +268,68 @@ describe('a departed coach keeps nothing', () => {
     ).toBe(true)
   })
 
+  it('F2: coach authority follows the academy on the row, not its status', () => {
+    // remove_coach_from_org() converted only 'active', and the K2 gate was
+    // status <> 'coach_departed', so a row the coach archived before leaving
+    // survived removal and stayed writable. status is a value the departing
+    // coach can set; the academy on the row is not.
+    const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
+    let latest = ''
+    for (const f of files) {
+      const sql = readFileSync(join(MIGRATIONS, f), 'utf8')
+      const i = sql.indexOf('FUNCTION public.squad_player_is_mine')
+      if (i >= 0) latest = sql.slice(i, i + 900)
+    }
+    expect(latest, 'squad_player_is_mine() is missing').not.toBe('')
+    expect(
+      latest.includes('my_coach_organization_id()'),
+      'squad_player_is_mine() gates on status alone. A coach who archives a row before being ' +
+        'removed keeps read and write access to that child afterwards (audit finding F2).',
+    ).toBe(true)
+
+    const own = live.filter(
+      p =>
+        p.table === 'squad_players' &&
+        ['SELECT', 'UPDATE', 'DELETE'].includes(p.op) &&
+        p.body.includes('coach_user_id = auth.uid()'),
+    )
+    expect(own.length).toBeGreaterThan(0)
+    for (const p of own) {
+      expect(
+        p.body.includes('my_coach_organization_id()'),
+        `Policy "${p.name}" on squad_players (${p.file}) gates on status alone, so a removed ` +
+          `coach keeps access to any row that was not 'active' at the moment of removal.`,
+      ).toBe(true)
+    }
+  })
+
+  it('F3: a coach cannot link a player by asserting their user id', () => {
+    // K1 checked that the referenced roster row belonged to the writer, but a
+    // coach could create a new row carrying another academy's child's
+    // linked_player_id — so the ownership check passed on a relationship the
+    // coach invented. link_player_to_coach() always sets linked_player_id to
+    // auth.uid(), so "only the caller may be linked" admits every real linkage.
+    const inserts = live.filter(p => p.table === 'squad_players' && ['INSERT', 'UPDATE'].includes(p.op))
+    expect(inserts.length).toBeGreaterThan(0)
+    for (const p of inserts) {
+      expect(
+        p.body.includes('linked_player_id'),
+        `Policy "${p.name}" on squad_players (${p.file}) does not constrain linked_player_id, so a ` +
+          `coach can attach any child to their squad by user id and then write about them (F3).`,
+      ).toBe(true)
+    }
+
+    const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
+    const guarded = files.some(f =>
+      readFileSync(join(MIGRATIONS, f), 'utf8').includes('FUNCTION public.enforce_self_linked_player'),
+    )
+    expect(
+      guarded,
+      'No trigger enforces self-linking. RLS alone is not enough: link_player_to_coach() is ' +
+        'SECURITY DEFINER, so policies do not apply on that path.',
+    ).toBe(true)
+  })
+
   it("a roster row's academy comes from the row, not from its coach's current club", () => {
     const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
     let latest = ''
