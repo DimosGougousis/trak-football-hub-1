@@ -15,10 +15,10 @@
   Light design and HTML entities only, for the same reasons as
   confirm-signup.html - see the note there.
 
-  {{ .ConfirmationURL }} is correct HERE, unlike confirm-signup.html. The parent
+  `.ConfirmationURL` is correct HERE, unlike confirm-signup.html. The parent
   has no password yet, and setting one requires a session.
 
-  Deliberately no {{ .Data }} variables. They depend on metadata passed at invite
+  Deliberately no `.Data` variables. They depend on metadata passed at invite
   time, and a variable that renders blank in a parent's inbox looks broken. The
   child's name appears on the approval screen after the link is clicked.
 -->
