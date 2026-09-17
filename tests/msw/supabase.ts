@@ -1,4 +1,5 @@
 import { http, HttpResponse, type HttpHandler } from 'msw'
+import { authUserForToken } from './auth-sessions'
 
 export const SUPABASE_URL = 'https://test.supabase.co'
 
@@ -18,7 +19,7 @@ const SINGLE_OBJECT_ACCEPT = 'application/vnd.pgrst.object+json'
  * fake client — is the whole reason MSW was chosen: an empty result and a
  * permission failure must not render identically in the app.
  */
-function respond(rows: unknown[], accept: string) {
+function respond(rows: Record<string, unknown>[], accept: string) {
   if (!accept.includes(SINGLE_OBJECT_ACCEPT)) return HttpResponse.json(rows)
   if (rows.length !== 1) {
     return HttpResponse.json(
@@ -34,7 +35,7 @@ function respond(rows: unknown[], accept: string) {
   return HttpResponse.json(rows[0])
 }
 
-export function table(name: string, rows: unknown[]): HttpHandler {
+export function table(name: string, rows: Record<string, unknown>[]): HttpHandler {
   return http.get(`${SUPABASE_URL}/rest/v1/${name}`, ({ request }) =>
     respond(rows, request.headers.get('Accept') ?? ''),
   )
@@ -63,12 +64,15 @@ export function insertInto(
   })
 }
 
-/** trackEvent() calls supabase.auth.getUser(), which is a real network call. */
+/** Auth hydration and telemetry verify the exact bearer token through Auth. */
 export function authHandlers(): HttpHandler[] {
   return [
-    http.get(`${SUPABASE_URL}/auth/v1/user`, () =>
-      HttpResponse.json({ id: 'test-user', aud: 'authenticated' }),
-    ),
+    http.get(`${SUPABASE_URL}/auth/v1/user`, ({ request }) => {
+      const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+      const user = authUserForToken(token)
+      return user ? HttpResponse.json(user)
+        : HttpResponse.json({ message: 'Unknown synthetic token' }, { status: 401 })
+    }),
     http.post(`${SUPABASE_URL}/auth/v1/token`, () =>
       HttpResponse.json({ error: 'not_implemented' }, { status: 400 }),
     ),
