@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, NavBar, BandPill, MetadataLabel } from '@/components/trak'
+import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
@@ -106,15 +106,22 @@ export default function PlayerHome() {
   const [showReveal, setShowReveal] = useState(false)
   const [newMatchCount, setNewMatchCount] = useState(0)
   const [coachAssessmentNote, setCoachAssessmentNote] = useState<string | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!user) return
     supabase.from('matches').select('*').eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        setLoading(false)
+        // A failed read is not an empty season — without this the home screen
+        // showed a player with a full record the same blank card as a new one.
+        if (error) { setLoadFailed(true); return }
+        setLoadFailed(false)
+
         const deduped = dedupeMatches(data)
         setMatches(deduped)
-        setLoading(false)
 
         // Card reveal — show once when new matches have been logged since last visit
         const storageKey = `trak_last_match_count_${user.id}`
@@ -172,7 +179,7 @@ export default function PlayerHome() {
           setUpcomingEvents(evs || [])
         }
       })
-  }, [user])
+  }, [user, reloadKey])
 
   const getBandDistribution = () => {
     const dist: Record<string, number> = {}
@@ -258,6 +265,18 @@ export default function PlayerHome() {
       <div className="pt-12 pb-4 space-y-6">
         <CardSkeleton />
         <div className="space-y-3"><Skeleton className="h-3 w-28" /><MatchCardSkeleton /><MatchCardSkeleton /></div>
+      </div>
+      <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
+    </MobileShell>
+  )
+
+  if (loadFailed) return (
+    <MobileShell>
+      <div className="pt-12 pb-4">
+        <LoadError
+          what="your card"
+          onRetry={() => { setLoading(true); setLoadFailed(false); setReloadKey(k => k + 1) }}
+        />
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
