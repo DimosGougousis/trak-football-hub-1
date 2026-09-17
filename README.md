@@ -46,6 +46,45 @@ npm run lint      # ESLint — warnings are fine, errors block CI
 npm run build     # Vite production build → dist/
 ```
 
+## Deployment
+
+Production is **trakfootball.com**, hosted on Vercel. Vercel's own Git integration is
+disabled (`git.deploymentEnabled: false` in `vercel.json`), so `.github/workflows/ci.yml`
+is the only route to a deployment — the `deploy` job needs `test`, meaning nothing
+reaches production unless lint, typecheck, tests and build all passed first.
+
+Nothing else auto-deploys. The Supabase half of the app ships separately, and
+forgetting this is the usual reason a merged change appears to do nothing:
+
+| What changed | How it ships |
+|---|---|
+| `src/**` | `deploy` job, on merge to `main` |
+| `supabase/migrations/*.sql` | `supabase` job (`db push`), on merge to `main` |
+| `supabase/functions/**` | `supabase` job (`functions deploy`), on merge to `main` |
+| `email-templates/*.html` | Supabase dashboard → Authentication → Email Templates, **by hand** |
+
+Merging to `main` ships the frontend *and* the backend. The `supabase` job runs
+before `deploy`, so a build that calls a new RPC can never reach production ahead
+of the migration that creates it, and a failed migration stops the frontend from
+shipping at all.
+
+Email templates are the one exception — they live in the dashboard and cannot be
+deployed from the repo. `supabase/config.toml` is the source of truth for each
+function's `verify_jwt`; a value changed in the dashboard is overwritten on the
+next deploy.
+
+For local work the CLIs need no global install (`npm i -g` fails against a
+root-owned prefix on a stock macOS Node):
+
+```bash
+npx --yes supabase@latest login
+npx --yes supabase@latest migration list
+```
+
+`vercel.json` holds the SPA rewrite, asset caching, and the security headers. Its
+CSP pins the Supabase and Sentry hosts, so any new external origin must be added
+to `connect-src` or it is blocked in production.
+
 ## Environment Variables
 
 | Variable | Description |
@@ -81,7 +120,8 @@ src/
     supabase/       Generated Supabase client + types
 supabase/
   migrations/       SQL migration files (apply in order)
-  functions/        Edge Functions (coach-assistant, player-feedback)
+  functions/        Edge Functions (coach-assistant, parse-schedule,
+                    player-feedback, send-parent-invite)
 ```
 
 ## User Roles

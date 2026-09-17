@@ -1,7 +1,26 @@
 project_id = "xbykbqolvqyqmipikuae"
 
+# All four functions are declared explicitly. `supabase functions deploy` applies
+# what is written here, so anything left out silently falls back to the CLI
+# default (verify_jwt = true) and a deploy can flip a setting that was changed in
+# the dashboard. Declaring every function keeps this file the source of truth.
+
+# No platform JWT gate, and no auth check in the function body either — it
+# forwards straight to the Lovable AI gateway. See the open task to fix this.
 [functions.parse-schedule]
 verify_jwt = false
 
+# Platform gate off, but the function calls getUser() itself and 401s without a
+# valid user, so authentication is enforced in the body rather than by the edge.
 [functions.coach-assistant]
 verify_jwt = false
+
+# Same self-enforced pattern as coach-assistant, with the platform gate left on.
+# The caller in PlayerFeedback.tsx refuses to fire without a session token.
+[functions.player-feedback]
+verify_jwt = true
+
+# Invoked via supabase.functions.invoke(), which forwards the caller's session
+# JWT; the body then re-reads it and uses the service role for the invite itself.
+[functions.send-parent-invite]
+verify_jwt = true
