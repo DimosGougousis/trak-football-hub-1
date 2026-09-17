@@ -330,6 +330,53 @@ describe('a departed coach keeps nothing', () => {
     ).toBe(true)
   })
 
+  it('F5: the match RPC checks departure, not just ownership', () => {
+    // log_match_for_player() is SECURITY DEFINER, so RLS does not apply inside
+    // it — K1's write policies and K2's departure gate are both invisible on
+    // this path. It authorised on ownership alone, so a removed coach could
+    // still log matches for that academy's children.
+    const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
+    let latest = ''
+    for (const f of files) {
+      const sql = readFileSync(join(MIGRATIONS, f), 'utf8')
+      const i = sql.indexOf('FUNCTION public.log_match_for_player')
+      if (i >= 0) latest = sql.slice(i, i + 3000)
+    }
+    expect(latest, 'log_match_for_player() is missing').not.toBe('')
+    expect(
+      latest.includes('squad_player_is_mine('),
+      'log_match_for_player() authorises on ownership alone. A coach removed from the academy, ' +
+        'or transferred away from it, can still log matches for its children (audit finding F5). ' +
+        'RLS cannot cover this: the function is SECURITY DEFINER.',
+    ).toBe(true)
+    expect(
+      latest.includes('is_coach()'),
+      'log_match_for_player() stamps logged_by_role = \'coach\' without checking the role.',
+    ).toBe(true)
+  })
+
+  it('F4: attendance reads and deletes follow the roster, not just the session', () => {
+    // K1 rewrote session_attendance INSERT and UPDATE to prove ownership of the
+    // roster row and left SELECT and DELETE checking the session alone, so a
+    // departed coach kept reading and deleting former players' attendance.
+    // Coach policies are the ones routed through the session; the player's
+    // own-attendance policy is keyed on linked_player_id and is not in scope.
+    const attendance = live.filter(
+      p =>
+        p.table === 'session_attendance' &&
+        ['SELECT', 'DELETE', 'ALL'].includes(p.op) &&
+        p.body.includes('coach_session'),
+    )
+    expect(attendance.length, 'no coach attendance read/delete policy found').toBeGreaterThan(0)
+    for (const p of attendance) {
+      expect(
+        p.body.includes('squad_player_is_mine('),
+        `Policy "${p.name}" on session_attendance (${p.file}) checks session ownership only, so a ` +
+          `coach who has left the academy keeps reading and deleting its children's attendance (F4).`,
+      ).toBe(true)
+    }
+  })
+
   it("a roster row's academy comes from the row, not from its coach's current club", () => {
     const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
     let latest = ''
