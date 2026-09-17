@@ -7,6 +7,7 @@ import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
+import { isTimeTBC } from '@/lib/event-time'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { toast } from 'sonner'
@@ -538,7 +539,7 @@ export default function PlayerHome() {
                 const label = typeLabels[ev.event_type] || 'EVENT'
                 const d = new Date(ev.starts_at)
                 const dayStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-                const timeStr = d.getHours() === 0 && d.getMinutes() === 0
+                const timeStr = isTimeTBC(ev.starts_at)
                   ? 'TBC'
                   : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 return (
