@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, NavBar, MatchCard } from '@/components/trak'
+import { MobileShell, NavBar, MatchCard, LoadError } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 
 const FILTERS = ['All', 'League', 'Cup', 'Friendly']
@@ -16,17 +16,26 @@ export default function PlayerMatches() {
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
 
   const fetchPage = async (pageIndex: number, append: boolean) => {
     if (!user) return
     if (pageIndex > 0) setLoadingMore(true)
     const from = pageIndex * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
-    const { data } = await supabase.from('matches').select('*')
+    const { data, error } = await supabase.from('matches').select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+      .order('match_date', { ascending: false, nullsFirst: false })
       .range(from, to)
     if (pageIndex > 0) setLoadingMore(false)
+    setLoading(false)
+
+    // A failed read is not an empty season. Without this the screen told a
+    // player with a full record that they had never played a match.
+    if (error) { setFailed(true); return }
+    setFailed(false)
+
     const rows = data || []
     setHasMore(rows.length === PAGE_SIZE)
     if (append) {
@@ -35,6 +44,8 @@ export default function PlayerMatches() {
       setMatches(rows)
     }
   }
+
+  const retry = () => { setLoading(true); setPage(0); fetchPage(0, false) }
 
   useEffect(() => {
     if (!user) return
@@ -63,7 +74,7 @@ export default function PlayerMatches() {
               style={{ fontFamily: "'DM Sans', sans-serif" }}>Matches</h1>
           </div>
           <span className="text-[10px] text-white/30" style={{ fontFamily: "'DM Mono', monospace" }}>
-            {filtered.length} {filtered.length === 1 ? 'match' : 'matches'}
+            {failed ? '—' : `${filtered.length} ${filtered.length === 1 ? 'match' : 'matches'}`}
           </span>
         </div>
 
@@ -87,7 +98,11 @@ export default function PlayerMatches() {
         </div>
 
         {/* Match list */}
-        {filtered.length === 0 ? (
+        {failed ? (
+          <LoadError what="your matches" onRetry={retry} retrying={loading} />
+        ) : loading ? (
+          <p className="text-white/35 text-sm mt-4">Loading…</p>
+        ) : filtered.length === 0 ? (
           <p className="text-white/35 text-sm mt-4">No matches found.</p>
         ) : (
           <div className="space-y-2">
@@ -95,11 +110,11 @@ export default function PlayerMatches() {
               <MatchCard
                 key={m.id}
                 opponent={m.opponent ? `vs ${m.opponent}` : m.competition || 'Match'}
-                date={m.created_at}
+                date={m.match_date || m.created_at}
                 scoreUs={m.team_score}
                 scoreThem={m.opponent_score}
                 competition={m.competition}
-                band={scoreToBand(m.computed_rating || 6.5)}
+                band={scoreToBand(m.computed_rating ?? 6.5)}
                 onClick={() => navigate(`/player/match/${m.id}`)}
               />
             ))}
