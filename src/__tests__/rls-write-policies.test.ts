@@ -330,6 +330,31 @@ describe('a departed coach keeps nothing', () => {
     ).toBe(true)
   })
 
+  it('F5: the match RPC checks departure, not just ownership', () => {
+    // log_match_for_player() is SECURITY DEFINER, so RLS does not apply inside
+    // it — K1's write policies and K2's departure gate are both invisible on
+    // this path. It authorised on ownership alone, so a removed coach could
+    // still log matches for that academy's children.
+    const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
+    let latest = ''
+    for (const f of files) {
+      const sql = readFileSync(join(MIGRATIONS, f), 'utf8')
+      const i = sql.indexOf('FUNCTION public.log_match_for_player')
+      if (i >= 0) latest = sql.slice(i, i + 3000)
+    }
+    expect(latest, 'log_match_for_player() is missing').not.toBe('')
+    expect(
+      latest.includes('squad_player_is_mine('),
+      'log_match_for_player() authorises on ownership alone. A coach removed from the academy, ' +
+        'or transferred away from it, can still log matches for its children (audit finding F5). ' +
+        'RLS cannot cover this: the function is SECURITY DEFINER.',
+    ).toBe(true)
+    expect(
+      latest.includes('is_coach()'),
+      'log_match_for_player() stamps logged_by_role = \'coach\' without checking the role.',
+    ).toBe(true)
+  })
+
   it("a roster row's academy comes from the row, not from its coach's current club", () => {
     const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
     let latest = ''
