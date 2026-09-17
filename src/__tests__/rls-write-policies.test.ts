@@ -355,6 +355,28 @@ describe('a departed coach keeps nothing', () => {
     ).toBe(true)
   })
 
+  it('F4: attendance reads and deletes follow the roster, not just the session', () => {
+    // K1 rewrote session_attendance INSERT and UPDATE to prove ownership of the
+    // roster row and left SELECT and DELETE checking the session alone, so a
+    // departed coach kept reading and deleting former players' attendance.
+    // Coach policies are the ones routed through the session; the player's
+    // own-attendance policy is keyed on linked_player_id and is not in scope.
+    const attendance = live.filter(
+      p =>
+        p.table === 'session_attendance' &&
+        ['SELECT', 'DELETE', 'ALL'].includes(p.op) &&
+        p.body.includes('coach_session'),
+    )
+    expect(attendance.length, 'no coach attendance read/delete policy found').toBeGreaterThan(0)
+    for (const p of attendance) {
+      expect(
+        p.body.includes('squad_player_is_mine('),
+        `Policy "${p.name}" on session_attendance (${p.file}) checks session ownership only, so a ` +
+          `coach who has left the academy keeps reading and deleting its children's attendance (F4).`,
+      ).toBe(true)
+    }
+  })
+
   it("a roster row's academy comes from the row, not from its coach's current club", () => {
     const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
     let latest = ''
