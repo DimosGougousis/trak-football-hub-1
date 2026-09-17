@@ -68,6 +68,12 @@ before `deploy`, so a build that calls a new RPC can never reach production ahea
 of the migration that creates it, and a failed migration stops the frontend from
 shipping at all.
 
+The `supabase` job deliberately does not run `supabase link`: linking fetches the
+project's API keys, which would mean giving the CI token read access to the
+service-role key. It passes `--db-url` and `--project-ref` explicitly instead, so
+the token needs only Edge Functions and Migrations. Required secrets:
+`SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_URL`.
+
 Email templates are the one exception — they live in the dashboard and cannot be
 deployed from the repo. `supabase/config.toml` is the source of truth for each
 function's `verify_jwt`; a value changed in the dashboard is overwritten on the
