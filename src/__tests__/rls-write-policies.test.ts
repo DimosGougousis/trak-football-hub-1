@@ -243,6 +243,31 @@ describe('a departed coach keeps nothing', () => {
     }
   })
 
+  it('a roster row with no academy can still acquire one', () => {
+    // 20260917000002 pinned organization_id on every UPDATE, which also pinned
+    // NULL: a row orphaned by ON DELETE SET NULL on the coach FK could never
+    // gain an academy again, so a coach adopting it left the player invisible
+    // to the academy. 20260917000003 pins only a real academy.
+    const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
+    let latest = ''
+    for (const f of files) {
+      const sql = readFileSync(join(MIGRATIONS, f), 'utf8')
+      const i = sql.indexOf('FUNCTION public.set_squad_player_org_id')
+      if (i >= 0) latest = sql.slice(i, i + 1600)
+    }
+    expect(latest, 'set_squad_player_org_id() is missing').not.toBe('')
+    expect(
+      latest.includes('OLD.organization_id IS NOT NULL'),
+      'set_squad_player_org_id() pins organization_id on update without checking whether there ' +
+        'is one. That pins NULL too, so an orphaned roster row can never join an academy and the ' +
+        'player stays invisible to it.',
+    ).toBe(true)
+    expect(
+      latest.includes('coach_details'),
+      'set_squad_player_org_id() no longer derives the academy from the coach on the row',
+    ).toBe(true)
+  })
+
   it("a roster row's academy comes from the row, not from its coach's current club", () => {
     const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
     let latest = ''
