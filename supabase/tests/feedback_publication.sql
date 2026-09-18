@@ -1,3 +1,4 @@
+-- @trak-suite mode=--feedback-publication-review in-all=true
 -- T2 — does "the coach reviews every word" actually hold against the database?
 --
 -- Synthetic fixtures only. Run after real migrations in a disposable database.

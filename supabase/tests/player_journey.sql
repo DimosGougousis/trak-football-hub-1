@@ -1,3 +1,4 @@
+-- @trak-suite mode=--player-journey-review in-all=false
 -- Gate 1, boxes 3, 4 and 10 — the whole loop, end to end, as roles.
 --
 -- Synthetic fixtures only. Run after real migrations in a disposable database.
