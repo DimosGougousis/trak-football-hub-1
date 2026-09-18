@@ -1,3 +1,4 @@
+-- @trak-suite mode=--academy-isolation-review in-all=true
 -- U7 and U8 — the destructive half, against a disposable database.
 --
 -- Synthetic fixtures only. Run after real migrations in a disposable database.
