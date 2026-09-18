@@ -83,6 +83,24 @@ describe('edge functions that spend the AI key require a session', () => {
           `authenticated coach spending without limit.`,
       ).toBe(true)
     })
+
+    it(`${name}: validates the body before spending the allowance`, () => {
+      // Imad's review of #41: parse-schedule claimed the quota before it had
+      // even parsed the body, so a malformed request cost the coach one of
+      // their forty. Reject everything that costs nothing to reject, then
+      // charge. coach-assistant and player-feedback already did this; only
+      // parse-schedule did not, which is why the invariant is asserted for all
+      // three rather than fixed in one place and forgotten.
+      const src = code(name)
+      const parsedAt = src.indexOf('req.json()')
+      const claimedAt = src.indexOf('claim_ai_call')
+      expect(parsedAt, `${name} never parses a request body`).toBeGreaterThan(-1)
+      expect(
+        parsedAt < claimedAt,
+        `${name} claims the daily allowance before parsing and validating the request body, ` +
+          `so a malformed request spends the caller's quota. Move the claim after the 400.`,
+      ).toBe(true)
+    })
   }
 
   it('player-feedback does not dereference an absent coach note', () => {
@@ -98,6 +116,33 @@ describe('edge functions that spend the AI key require a session', () => {
         'when there is no note, so the feedback screen 500s in exactly the case the fallback ' +
         'above it exists to handle. Use coachNote, which is already "" when absent.',
     ).toBe(false)
+  })
+
+  it('the quota RPC only accepts the functions that spend the AI key', () => {
+    // Also Imad's review: claim_ai_call took unconstrained text straight into
+    // the primary key of ai_usage_daily, and EXECUTE is granted to
+    // `authenticated` — so any signed-in user could insert unbounded rows under
+    // names nothing enforces. A quota key nothing enforces is worse than none,
+    // because it reads like coverage.
+    const migrations = join(process.cwd(), 'supabase', 'migrations')
+    const latest = readdirSync(migrations)
+      .filter(f => f.includes('claim_ai_call') || f.includes('ai_call_quota') || f.includes('ai_quota'))
+      .sort()
+      .pop()
+    expect(latest, 'no migration defines the AI quota RPC').toBeTruthy()
+    const sql = readFileSync(join(migrations, latest!), 'utf8')
+    for (const fn of ['parse-schedule', 'coach-assistant', 'player-feedback']) {
+      expect(
+        sql.includes(`'${fn}'`),
+        `the newest AI-quota migration does not name ${fn}, so either it is no longer allowed ` +
+          `to claim a call or the function name is no longer constrained.`,
+      ).toBe(true)
+    }
+    expect(
+      /NOT IN \(/.test(sql) || /RAISE EXCEPTION 'Unknown AI function/.test(sql),
+      'claim_ai_call does not reject an unknown function name, so any authenticated user can ' +
+        'write arbitrary keys into ai_usage_daily.',
+    ).toBe(true)
   })
 
   it('config.toml does not claim a protection the code lacks', () => {

@@ -71,8 +71,22 @@ serve(async (req) => {
       });
     }
 
+    const { text, imageBase64, imageMimeType, todayISO } = await req.json();
+    if (!text && !imageBase64) {
+      return new Response(JSON.stringify({ error: "Provide text or imageBase64" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Count the call before making it. An authenticated coach can still run
     // the bill up without this, by accident or otherwise.
+    //
+    // Claimed only once the request is known to be well-formed, so a malformed
+    // body does not consume someone's allowance — a coach who fires an empty
+    // import three times should not have lost three of their forty. The first
+    // version of this claimed before parsing; Imad caught it on #41. The rule
+    // is: reject everything that costs nothing to reject, then charge.
     const { data: allowed, error: quotaError } = await supabase
       .rpc("claim_ai_call", { p_function_name: "parse-schedule", p_daily_limit: DAILY_CALL_LIMIT });
 
@@ -88,14 +102,6 @@ serve(async (req) => {
         JSON.stringify({ error: `Daily limit of ${DAILY_CALL_LIMIT} schedule imports reached. Try again tomorrow.` }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    const { text, imageBase64, imageMimeType, todayISO } = await req.json();
-    if (!text && !imageBase64) {
-      return new Response(JSON.stringify({ error: "Provide text or imageBase64" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     const userParts: any[] = [];
