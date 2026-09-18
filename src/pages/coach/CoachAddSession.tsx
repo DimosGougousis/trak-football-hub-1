@@ -271,8 +271,25 @@ export default function CoachAddSession() {
           p_goals:           d.goals === 2 ? 2 : d.goals,
           p_assists:         d.assists === 2 ? 2 : d.assists,
           p_card_received:   d.card,
-          p_body_condition:  'Average',
-          p_self_rating:     'Average',
+          // Null, not 'Average'. These are the player's own account of the
+          // match and this is a coach logging it — nobody asked the child how
+          // they felt or how they rated themselves, so the record must not say
+          // they answered. Both columns are nullable; the previous values were
+          // invented for no reason.
+          //
+          // Score-neutral, deliberately: computeMatchScore only moves on
+          // self_rating 'excellent'/'good'/'poor' and body_condition
+          // 'fresh'/'tired'/'knock'. 'Average' and 'good' matched nothing and
+          // contributed 0, so no existing or future rating changes. The engine
+          // call above still passes its neutral values and is untouched.
+          //
+          // Cast because the generated types declare both as `string`: a
+          // Postgres function parameter carries no nullability, so the
+          // generator cannot know. The database accepts null and both columns
+          // are nullable. Cast narrowly rather than `as any` on the call, so
+          // the other fourteen arguments stay type-checked.
+          p_body_condition:  null as unknown as string,
+          p_self_rating:     null as unknown as string,
           p_computed_rating: computed_rating,
           p_match_date:      date,
         })
