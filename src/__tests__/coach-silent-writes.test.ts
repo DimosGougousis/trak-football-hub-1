@@ -151,4 +151,55 @@ describe('routed coach surfaces do not treat a missing error as success', () => 
       ).toBe(true)
     })
   }
+
+  // ── The class arriving through an RPC's return value ──────────────────────
+  //
+  // join_organization() is the first place the pattern reaches us from a
+  // function none of us wrote:
+  //
+  //   UPDATE public.coach_details SET organization_id = v_org_id
+  //   WHERE user_id = auth.uid();
+  //   RETURN v_org_id;                    -- unconditionally
+  //
+  // A coach with no coach_details row updates zero rows and still receives the
+  // organisation's id. `error` is null, the return value is a real uuid, and
+  // every signal the caller can see says it worked. Only reading the row back
+  // distinguishes the two outcomes — and a coach who believes they joined an
+  // academy that has never heard of them will not find out until the academy
+  // dashboard is empty in front of a customer.
+  const academyJoiners = files.filter(f => f.code.includes("'join_organization'"))
+
+  it('finds the academy join path', () => {
+    expect(
+      academyJoiners.length,
+      'no coach surface calls join_organization — the signup warning tells coaches they can ' +
+        'join their academy later from their profile, so something must implement it.',
+    ).toBeGreaterThan(0)
+  })
+
+  for (const { name, code } of academyJoiners) {
+    it(`${name}: does not trust join_organization's return value alone`, () => {
+      const after = code.slice(code.indexOf("'join_organization'"))
+      expect(
+        /select\('organization_id'\)/.test(after),
+        `${name} calls join_organization and never reads coach_details back, so a zero-row ` +
+          `update reports a successful join.`,
+      ).toBe(true)
+      expect(
+        /storedOrgId !== returnedOrgId/.test(after),
+        `${name} does not compare the stored organisation against the one the RPC returned.`,
+      ).toBe(true)
+    })
+
+    it(`${name}: does not offer to join an academy it could not check`, () => {
+      // A failed read must not render the join form. Showing it to a coach who
+      // is already in an academy invites them to "join" one they are in, and
+      // treats a network failure as a statement about their membership.
+      expect(
+        /'loading' \| 'none' \| 'joined' \| 'failed'/.test(code),
+        `${name} tracks academy membership as something other than an explicit ` +
+          `loading/none/joined/failed state, so an unknown membership renders as "not joined".`,
+      ).toBe(true)
+    })
+  }
 })
