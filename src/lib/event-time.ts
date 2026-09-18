@@ -16,11 +16,40 @@
  * interpreted in that person's own timezone, in both directions.
  */
 
-/** Build an absolute instant from wall-clock parts entered locally. */
-export function toInstant(date: string, time?: string | null): string {
-  const [y, m, d] = date.split('-').map(Number)
-  const [hh, mm] = (time || '00:00').split(':').map(Number)
-  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0).toISOString()
+/** Days in a month. `month` is 1-based. */
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate()
+}
+
+/**
+ * Build an absolute instant from wall-clock parts entered locally, or null if
+ * those parts are not a real date and time.
+ *
+ * Strict on purpose. This used to coerce: `new Date(2026, 1, 31)` does not
+ * fail, it rolls over to 3 March, and an unparseable string produced an
+ * Invalid Date whose .toISOString() threw a RangeError — which crashed the
+ * bulk draft save rather than reporting a bad row. Neither is acceptable for
+ * a value that ends up as the date of a child's session.
+ */
+export function toInstant(date: string, time?: string | null): string | null {
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec((date || '').trim())
+  if (!dm) return null
+  const y = Number(dm[1]), m = Number(dm[2]), d = Number(dm[3])
+  if (m < 1 || m > 12) return null
+  if (d < 1 || d > daysInMonth(y, m)) return null
+
+  let hh = 0, mm = 0
+  const raw = (time ?? '').trim()
+  if (raw) {
+    const tm = /^(\d{1,2}):(\d{2})/.exec(raw)
+    if (!tm) return null
+    hh = Number(tm[1]); mm = Number(tm[2])
+    if (hh > 23 || mm > 59) return null
+  }
+
+  const built = new Date(y, m - 1, d, hh, mm, 0, 0)
+  if (Number.isNaN(built.getTime())) return null
+  return built.toISOString()
 }
 
 /** Split an instant back into the local date and time a person would read. */
@@ -61,3 +90,18 @@ export function normalizeInstant(value: string | null | undefined): string | nul
   if (!datePart) return null
   return toInstant(datePart, timePart ? timePart.slice(0, 5) : null)
 }
+
+/*
+ * Known limitation, deliberately not papered over.
+ *
+ * "No time given" is stored as local midnight, because coach_calendar_events
+ * has only `starts_at timestamptz` and no way to say the time is unknown. An
+ * instant is not a calendar date, so an untimed session entered as 1 March in
+ * Dubai is 28 Feb 20:00Z, which an Athens reader sees as 28 Feb 22:00 — wrong
+ * date, and no longer detected as TBC.
+ *
+ * That cannot be fixed in this file. It needs a column saying whether the time
+ * is known, and the date kept as a date. Raised with Kostas as a follow-up
+ * migration on his table rather than bolted on here. Within a single academy,
+ * where writer and reader share a timezone, the behaviour is correct.
+ */

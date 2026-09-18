@@ -204,6 +204,11 @@ export default function CoachSchedule() {
     // A naive string handed to timestamptz is read as UTC, so the coach's
     // 18:00 was stored four hours late in Dubai. Send a real instant.
     const starts_at = toInstant(modal.date, modal.time || null)
+    if (!starts_at) {
+      setSaving(false)
+      toast.error("That date and time isn't valid — please check it")
+      return
+    }
     const { error } = await supabase.from('coach_calendar_events').insert({
       coach_user_id: user.id,
       title:         modal.title.trim(),
@@ -269,13 +274,19 @@ export default function CoachSchedule() {
       toast.error(`"${ev.title}" has no usable date — set one before saving it`)
       return
     }
-    await supabase.from('coach_calendar_events').insert({
+    const { error } = await supabase.from('coach_calendar_events').insert({
       coach_user_id: user.id,
       title: ev.title, event_type: ev.event_type, starts_at: startsAt,
       ends_at: normalizeInstant(ev.ends_at), venue: ev.venue || null,
       opponent: ev.opponent || null, notes: ev.notes || null,
       published: false, source: 'ai_text',
     })
+    // A rejected insert used to remove the draft and report success, so the
+    // coach believed a session was in the calendar that was never written.
+    if (error) {
+      toast.error(`Couldn't save "${ev.title}" — it's still here, try again`)
+      return
+    }
     setDrafts(d => d.filter((_, i) => i !== idx))
     loadData()
     toast.success('Event saved')
@@ -295,7 +306,7 @@ export default function CoachSchedule() {
     }
     if (!rows.length) return
 
-    await supabase.from('coach_calendar_events').insert(
+    const { error } = await supabase.from('coach_calendar_events').insert(
       rows.map(({ ev, startsAt }) => ({
         coach_user_id: user.id,
         title: ev.title, event_type: ev.event_type, starts_at: startsAt,
@@ -304,6 +315,12 @@ export default function CoachSchedule() {
         published: false, source: 'ai_text',
       }))
     )
+    // A rejected insert used to clear every draft and report them all saved.
+    // Nothing was written, so nothing is removed and nothing is claimed.
+    if (error) {
+      toast.error("Couldn't save those events — they're still here, try again")
+      return
+    }
     // Keep the ones that were not saved, so they are not lost silently, and
     // report the number actually written rather than the number attempted.
     setDrafts(drafts.filter(ev => normalizeInstant(ev.starts_at) === null))
