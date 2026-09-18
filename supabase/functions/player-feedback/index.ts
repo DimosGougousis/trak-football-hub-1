@@ -237,7 +237,16 @@ ${contextBlock}`;
     return new Response(JSON.stringify({
       feedback,
       context: {
-        note: noteRow.note,
+        // `coachNote`, not `noteRow.note`. maybeSingle() returns null when the
+        // coach assessed without writing anything, and the comment above says
+        // that is most of the time pitch-side. Dereferencing noteRow here threw
+        // a TypeError into the outer catch, so the fallback four lines up bought
+        // nothing: the screen still failed, as a 500 instead of a 404, after the
+        // AI call had already been made and a daily claim spent.
+        //
+        // "" is what the player sees when there is no note, and PlayerFeedback
+        // already guards on `context?.note &&`, so it renders nothing.
+        note: coachNote,
         playerName,
         position,
         rating,

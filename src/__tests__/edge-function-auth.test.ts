@@ -28,6 +28,20 @@ function source(name: string): string {
   return readFileSync(join(FUNCTIONS, name, 'index.ts'), 'utf8')
 }
 
+/**
+ * The source with comments stripped.
+ *
+ * For assertions about what the code *does*, prose must not count. A comment
+ * explaining why a dangerous line was removed otherwise re-triggers the very
+ * check that caught it — which is how the first version of the noteRow
+ * assertion below failed against its own fix.
+ */
+function code(name: string): string {
+  return source(name)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+}
+
 /** Functions that spend LOVABLE_API_KEY and must therefore prove a session. */
 function aiFunctions(): string[] {
   return readdirSync(FUNCTIONS, { withFileTypes: true })
@@ -70,6 +84,21 @@ describe('edge functions that spend the AI key require a session', () => {
       ).toBe(true)
     })
   }
+
+  it('player-feedback does not dereference an absent coach note', () => {
+    // maybeSingle() returns null when the coach assessed without writing a
+    // note, which the function's own comment calls the common case. The
+    // response block dereferenced noteRow.note anyway, throwing into the outer
+    // catch — so the documented fallback produced a 500 rather than the
+    // note-less feedback it was written to produce, after the AI call had
+    // already been paid for.
+    expect(
+      /noteRow\.note/.test(code('player-feedback')),
+      'player-feedback dereferences noteRow.note without a guard. maybeSingle() returns null ' +
+        'when there is no note, so the feedback screen 500s in exactly the case the fallback ' +
+        'above it exists to handle. Use coachNote, which is already "" when absent.',
+    ).toBe(false)
+  })
 
   it('config.toml does not claim a protection the code lacks', () => {
     const config = readFileSync(join(process.cwd(), 'supabase', 'config.toml'), 'utf8')
