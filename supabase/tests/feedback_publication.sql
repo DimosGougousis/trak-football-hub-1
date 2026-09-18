@@ -33,7 +33,7 @@ $test$;
 -- the raised exception, so a vulnerable build reports rather than mutates.
 CREATE FUNCTION pg_temp.fdenied(statement text, description text)
 RETURNS void LANGUAGE plpgsql AS $test$
-DECLARE denied boolean := false; failure text;
+DECLARE denied boolean := false; failure text; state text;
 BEGIN
   BEGIN
     EXECUTE statement;
@@ -41,16 +41,22 @@ BEGIN
     -- so a vulnerable build reports rather than mutating later assertions.
     RAISE EXCEPTION 'trak-unexpectedly-allowed';
   EXCEPTION
-    -- The sentinel is matched on its message, not its SQLSTATE. A custom
-    -- ERRCODE lands in WHEN OTHERS, and an earlier version of this helper
-    -- treated that as "denied" — which made every F-1 assertion pass even with
-    -- the hole deliberately restored. A negative control caught it; without one
-    -- this suite would have been decorative.
     WHEN OTHERS THEN
+      state := SQLSTATE;
       IF SQLERRM = 'trak-unexpectedly-allowed' THEN
         denied := false; failure := 'statement succeeded';
+      ELSIF state IN (
+        '42501',  -- insufficient_privilege: RLS or a missing GRANT refused it
+        'P0001'   -- raise_exception: one of our own RPC guards refused it
+      ) THEN
+        denied := true; failure := state;
       ELSE
-        denied := true; failure := SQLSTATE;
+        -- Any other error means the STATEMENT is broken, not that access was
+        -- denied. Imad found this suite counting 42703 (undefined_column) as a
+        -- successful denial: mutate a column name and all 16 assertions still
+        -- passed, testing nothing. An unrecognised SQLSTATE now fails loudly
+        -- and says which one, because a typo must never read as security.
+        denied := false; failure := 'NOT A DENIAL — ' || state || ': ' || left(SQLERRM, 60);
       END IF;
   END;
   INSERT INTO pg_temp.feedback_results VALUES (description, denied, failure);

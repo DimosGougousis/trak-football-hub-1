@@ -188,7 +188,7 @@ ${coachNote
     const aiJson = await aiResp.json();
     const raw = aiJson.choices?.[0]?.message?.content || "";
 
-    let feedback: { points?: unknown[]; encouragement?: string };
+    let feedback: { points?: unknown[]; encouragement?: unknown };
     try {
       const clean = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
       feedback = JSON.parse(clean);
@@ -197,7 +197,25 @@ ${coachNote
       return json({ error: "Failed to parse AI response" }, 500);
     }
 
-    if (!Array.isArray(feedback?.points) || feedback.points.length === 0) {
+    // Shape-checked, not just "is there an array". Imad found four malformed
+    // payloads getting through on non-emptiness alone: points of the wrong
+    // type, points missing fields, fields that are not strings, and fields
+    // that are empty. Any of those reaches a coach as a half-blank review
+    // screen, and a coach who publishes without noticing sends it to a child.
+    const isFilledString = (v: unknown): v is string =>
+      typeof v === "string" && v.trim().length > 0;
+
+    const pointsAreWellFormed = Array.isArray(feedback?.points)
+      && feedback.points.length > 0
+      && feedback.points.every((p) =>
+        p !== null && typeof p === "object"
+        && ["title", "what", "why", "drill"].every((k) =>
+          isFilledString((p as Record<string, unknown>)[k])));
+
+    if (!pointsAreWellFormed || !isFilledString(feedback?.encouragement)) {
+      // Logged, because a model that starts returning a different shape is
+      // something we want to see rather than silently retry around.
+      console.error("malformed AI payload", JSON.stringify(feedback)?.slice(0, 400));
       return json({ error: "The model returned nothing usable" }, 500);
     }
 

@@ -200,6 +200,15 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
+  -- Lock the roster row BEFORE authorising, not after.
+  --
+  -- Authorising first left a window: a coach removal committing between the
+  -- ownership check and the write still allowed one publication through.
+  -- Taking the lock first means a removal already committed is visible to the
+  -- check below, and a removal still in flight waits behind us — in which case
+  -- the publication genuinely happened before the removal, which is correct.
+  PERFORM 1 FROM public.squad_players WHERE id = p_squad_player_id FOR UPDATE;
+
   -- SECURITY DEFINER bypasses RLS, so the ownership rule is restated here on
   -- purpose. This is the class of hole F5 turned out to be: a definer function
   -- that authorised on ownership alone and went around every policy.
@@ -222,10 +231,9 @@ BEGIN
     RAISE EXCEPTION 'Parental consent has not been given for this player';
   END IF;
 
-  -- [F-5] Serialise per roster row. The unique indexes make a lost race an
-  -- error rather than a second current revision; this makes the ordinary
-  -- concurrent case wait instead of failing.
-  PERFORM 1 FROM public.squad_players WHERE id = p_squad_player_id FOR UPDATE;
+  -- [F-5] The row is already locked above, which also serialises concurrent
+  -- publications: the unique indexes make a lost race an error rather than a
+  -- second current revision, and the lock makes the ordinary case wait.
 
   SELECT organization_id INTO v_org
   FROM public.squad_players WHERE id = p_squad_player_id;
