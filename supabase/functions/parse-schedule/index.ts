@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { fillTimeKnown } from "./time-known.ts";
 
 // A coach parsing a season's fixtures might reasonably do it a handful of
 // times while getting the input right. This is a ceiling on abuse, not a
@@ -16,9 +17,14 @@ const SYSTEM_PROMPT = `You are a sports schedule parser for a youth football aca
 Extract every distinct event (match, training, tournament, friendly, meeting, etc.) from the user's input.
 Return ONLY valid JSON via the provided tool. Use ISO 8601 for timestamps.
 If the year is missing, assume the current or next occurrence (whichever is closest in the future).
-If the time is missing, set starts_at to the date with time 00:00 and put a note like "time TBC".
 Never invent opponents or venues — leave them empty if not stated.
-Event types must be one of: match, training, tournament, other.`;
+Event types must be one of: match, training, tournament, other.
+
+TIME KNOWN vs TIME MISSING — read this carefully, it is the one thing callers cannot work out for themselves.
+- If the input states a time for an event, set time_known to true.
+- If the input gives only a day with no time, set time_known to false, set starts_at to that date at 00:00, and put a note like "time TBC".
+- An event the input explicitly places at midnight ("kick-off 00:00", "midnight friendly") has a KNOWN time: set time_known to true and starts_at to 00:00.
+Never infer time_known from the value of starts_at. Report what the input said.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -130,11 +136,17 @@ serve(async (req) => {
                         event_type: { type: "string", enum: ["match", "training", "tournament", "other"] },
                         starts_at: { type: "string", description: "ISO 8601 timestamp" },
                         ends_at: { type: "string", description: "ISO 8601 timestamp or empty" },
+                        time_known: {
+                          type: "boolean",
+                          description:
+                            "True if the input stated a time for this event, false if it gave only a day. " +
+                            "An event explicitly placed at midnight by the input is time_known = true.",
+                        },
                         venue: { type: "string" },
                         opponent: { type: "string" },
                         notes: { type: "string" },
                       },
-                      required: ["title", "event_type", "starts_at"],
+                      required: ["title", "event_type", "starts_at", "time_known"],
                       additionalProperties: false,
                     },
                   },
@@ -178,6 +190,10 @@ serve(async (req) => {
       try { parsed = typeof args === "string" ? JSON.parse(args) : args; }
       catch (e) { console.error("Parse failed", e); }
     }
+
+    // Callers need time_known to be a boolean every time, or they are back to
+    // guessing. See time-known.ts for why the fallback is what it is.
+    fillTimeKnown(parsed);
 
     return new Response(JSON.stringify(parsed), {
       status: 200,
