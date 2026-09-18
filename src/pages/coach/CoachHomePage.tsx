@@ -4,22 +4,22 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, BandPill } from '@/components/trak'
 import { toast } from 'sonner'
-import { Zap, Star, Check, Circle, Minus } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { calculateSquadAnalytics, type SquadAnalytics } from '@/lib/squad-analytics'
 import { trackEvent } from '@/lib/telemetry'
 import { generateCode } from '@/lib/invite-codes'
 
-const BAND_COLORS: Record<string, string> = {
-  exceptional: '#C8F25A',
-  standout: '#86efac',
-  good: '#4ade80',
-  steady: '#60a5fa',
-  mixed: '#fb923c',
-  developing: '#a78bfa',
-  difficult: 'rgba(255,255,255,0.4)',
-}
+// Derived from BANDS rather than restated. CLAUDE.md says colours never live
+// outside the BANDS config, and this file had a seventh-hand copy of them: the
+// two maps happened to agree today, which is exactly how a colour survives a
+// rename in one place and not the other. Two more copies exist in
+// src/lib/clubMock.ts and src/lib/matchDetailHelpers.ts — player-side files,
+// flagged to Tarek rather than edited here.
+const BAND_COLORS: Record<string, string> = Object.fromEntries(
+  BANDS.map(b => [b.word.toLowerCase(), b.color]),
+)
 
 export default function CoachHomePage() {
   const { user, profile } = useAuth()
@@ -37,6 +37,10 @@ export default function CoachHomePage() {
   // screen for a coach to hand over in good faith. Only 'ready' may be copied.
   const [inviteStatus, setInviteStatus] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [squadAnalytics, setSquadAnalytics] = useState<SquadAnalytics | null>(null)
+  // Distinguishes "nothing to show" from "we could not find out". Without it
+  // the band strip and the distribution chart render their empty state on a
+  // failed read, which is a claim about the squad rather than about the network.
+  const [analyticsFailed, setAnalyticsFailed] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -44,17 +48,35 @@ export default function CoachHomePage() {
     // state on an Auth refresh for the same account.
     let cancelled = false
     supabase.from('squad_players').select('id, player_name').eq('coach_user_id', user.id)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return
+        // A failed roster read is not an empty roster. Falling through to
+        // `data || []` here reported the squad as 0 players AND handed
+        // calculateSquadAnalytics an empty roster, which flags nobody and
+        // bands nobody — a coach offline would be told their squad is empty
+        // and that nothing needs attention. Both statements would be false.
+        if (error) {
+          console.error('Squad read failed:', error)
+          setAnalyticsFailed(true)
+          return
+        }
         const players = data || []
         setPlayerCount(players.length)
         // Fetch all assessments for analytics
         supabase.from('coach_assessments').select('id, squad_player_id, coach_rating, created_at')
           .eq('coach_user_id', user.id)
           .order('created_at', { ascending: false })
-          .then(({ data: allData }) => {
+          .then(({ data: allData, error: assessError }) => {
+            if (cancelled) return
+            if (assessError) {
+              console.error('Assessment read failed:', assessError)
+              setAnalyticsFailed(true)
+              return
+            }
             const allAssess = allData || []
             setAllAssessments(allAssess)
-            const analytics = calculateSquadAnalytics(players, allAssess as any)
+            setAnalyticsFailed(false)
+            const analytics = calculateSquadAnalytics(players, allAssess)
             setSquadAnalytics(analytics)
             trackEvent('squad_analytics_viewed', {})
           })
@@ -114,20 +136,34 @@ export default function CoachHomePage() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning,' : hour < 18 ? 'Good afternoon,' : 'Good evening,'
 
-  // Band distribution from all assessments
-  const bandDist = { star: 0, check: 0, circle: 0, dash: 0 }
-  allAssessments.forEach(a => {
-    const band = scoreToBand(a.coach_rating || 5)
-    if (band === 'exceptional' || band === 'standout') bandDist.star++
-    else if (band === 'good' || band === 'steady') bandDist.check++
-    else if (band === 'mixed') bandDist.circle++
-    else bandDist.dash++
-  })
+  // Squad bands: one chip per band that any player is currently in, in that
+  // band's own colour.
+  //
+  // This strip used to collapse seven bands into four glyphs, and both halves
+  // of that were wrong:
+  //
+  //   good + steady  -> one green check, in Good's green. Tarek saw it on a
+  //                     real phone: "1 of the 3 classified as good should have
+  //                     been steady." The screen could not tell them apart.
+  //   developing +
+  //   difficult      -> one dash, coloured #60a5fa — which BANDS assigns to
+  //                     STEADY. The two weakest bands rendered in a mid-band
+  //                     blue, so a struggling squad read as an unremarkable one.
+  //
+  // It also counted ASSESSMENTS while sitting beside the player count and
+  // calling itself "Squad bands". The busiest coach in the pilot database has
+  // 52 assessments across 21 players, so the strip added up to 52 next to a
+  // squad of 21. squadBands takes each player's latest assessment instead.
+  const squadBandChips = squadAnalytics
+    ? BANDS.map(b => ({ word: b.word, color: b.color, count: squadAnalytics.squadBands[b.word.toLowerCase()] || 0 }))
+        .filter(c => c.count > 0)
+    : []
 
-  // Trend: last 5 assessments for mini-chart
-  const trendAssessments = allAssessments.slice(0, 5).reverse()
+  // Trend: last 5 assessments for mini-chart. An unrated assessment is dropped
+  // rather than drawn at the midpoint — a bar the coach never earned.
+  const trendAssessments = allAssessments.filter(a => a.coach_rating != null).slice(0, 5).reverse()
   const trendHeights = trendAssessments.map(a => {
-    const r = a.coach_rating || 5
+    const r = Number(a.coach_rating)
     return Math.max(20, Math.min(100, ((r - 2) / 8) * 100))
   })
 
@@ -293,30 +329,37 @@ export default function CoachHomePage() {
                 Squad bands
               </span>
             </div>
-            <div className="flex items-center gap-2.5">
-              {bandDist.star > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#C8F25A' }}>
-                  {bandDist.star}
-                  <Star size={11} strokeWidth={2} fill="#C8F25A" />
+            <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar">
+              {analyticsFailed ? (
+                <span
+                  className="text-[10px]"
+                  style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(251,191,36,0.7)' }}
+                >
+                  Couldn't load
                 </span>
-              )}
-              {bandDist.check > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#4ade80' }}>
-                  {bandDist.check}
-                  <Check size={11} strokeWidth={2.5} />
+              ) : squadBandChips.length === 0 ? (
+                <span
+                  className="text-[10px]"
+                  style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.25)' }}
+                >
+                  No assessments yet
                 </span>
-              )}
-              {bandDist.circle > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#fb923c' }}>
-                  {bandDist.circle}
-                  <Circle size={10} strokeWidth={2} />
-                </span>
-              )}
-              {bandDist.dash > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: '#60a5fa' }}>
-                  {bandDist.dash}
-                  <Minus size={11} strokeWidth={2.5} />
-                </span>
+              ) : (
+                squadBandChips.map(chip => (
+                  // The word, not a glyph. Four glyphs cannot name seven bands,
+                  // and a coach reading a colour alone is reading the thing that
+                  // was wrong here in the first place.
+                  <span
+                    key={chip.word}
+                    className="inline-flex items-center gap-1 text-xs whitespace-nowrap flex-shrink-0"
+                    style={{ fontFamily: "'DM Sans', sans-serif", color: chip.color }}
+                  >
+                    {chip.count}
+                    <span className="text-[9px]" style={{ fontFamily: "'DM Mono', monospace" }}>
+                      {chip.word}
+                    </span>
+                  </span>
+                ))
               )}
             </div>
           </div>
@@ -525,9 +568,11 @@ export default function CoachHomePage() {
                         {formattedDate} · {a.appearance || 'Assessment'}
                       </p>
                     </div>
-                    {/* Band pill */}
+                    {/* Band pill. No `|| 5` fallback: showing "Mixed" for an
+                        assessment whose rating we do not have is an opinion
+                        about a child that no coach recorded. */}
                     <div className="flex-shrink-0">
-                      <BandPill band={scoreToBand(a.coach_rating || 5)} />
+                      {a.coach_rating != null && <BandPill band={scoreToBand(Number(a.coach_rating))} />}
                     </div>
                   </div>
                 )
@@ -555,7 +600,7 @@ export default function CoachHomePage() {
                 className="text-[9px] font-medium tracking-[0.08em] uppercase block mb-3"
                 style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}
               >
-                Band Distribution
+                Band Distribution · all assessments
               </span>
               <div className="flex flex-col gap-[7px]">
                 {BANDS.map(b => {
