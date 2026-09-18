@@ -31,6 +31,9 @@ export default function CoachHomePage() {
   const [sessionCount, setSessionCount] = useState(0)
   const [coachDetails, setCoachDetails] = useState<any>(null)
   const [inviteCode, setInviteCode] = useState('TRK-XXXX')
+  // The placeholder above is copyable. Without this, a failed lookup left it on
+  // screen and a coach could hand a player "TRK-XXXX" in good faith.
+  const [inviteCodeFailed, setInviteCodeFailed] = useState(false)
   const [squadAnalytics, setSquadAnalytics] = useState<SquadAnalytics | null>(null)
 
   useEffect(() => {
@@ -61,14 +64,35 @@ export default function CoachHomePage() {
     supabase.from('coach_details').select('current_club, team, coach_role').eq('user_id', user.id).maybeSingle()
       .then(({ data }) => setCoachDetails(data))
     supabase.from('profiles').select('invite_code').eq('user_id', user.id).maybeSingle()
-      .then(async ({ data }) => {
+      .then(async ({ data, error }) => {
+        // A failed read is not "this coach has no code". The error was
+        // discarded here, so an offline moment or an RLS denial fell through to
+        // the else branch and OVERWROTE the coach's existing invite code with a
+        // freshly generated one — silently rotating the code every player had
+        // already been given, and breaking every pending link.
+        if (error) {
+          console.error('Invite code read failed:', error)
+          setInviteCodeFailed(true)
+          return
+        }
+
         if (data?.invite_code) {
           setInviteCode(`TRK-${data.invite_code}`)
-        } else {
-          const newCode = generateCode()
-          await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', user.id)
-          setInviteCode(`TRK-${newCode}`)
+          return
         }
+
+        // Genuinely no code yet. Only now is generating one correct.
+        const newCode = generateCode()
+        const { error: writeError } = await supabase
+          .from('profiles').update({ invite_code: newCode }).eq('user_id', user.id)
+        if (writeError) {
+          // Showing a code that was never stored hands the coach something a
+          // player can type but nothing will ever match.
+          console.error('Invite code write failed:', writeError)
+          setInviteCodeFailed(true)
+          return
+        }
+        setInviteCode(`TRK-${newCode}`)
       })
   }, [user])
 
@@ -334,6 +358,10 @@ export default function CoachHomePage() {
           </button>
           <button
             onClick={() => {
+              if (inviteCodeFailed) {
+                toast.error("Couldn't load your invite code — reload and try again.")
+                return
+              }
               navigator.clipboard.writeText(inviteCode)
               toast.success('Code copied!')
             }}
@@ -352,7 +380,7 @@ export default function CoachHomePage() {
                 color: '#C8F25A',
               }}
             >
-              {inviteCode}
+              {inviteCodeFailed ? 'Unavailable' : inviteCode}
             </p>
             <span
               className="text-[8px] font-medium tracking-[0.1em] uppercase mt-[5px] block"
