@@ -78,7 +78,15 @@ serve(async (req) => {
     });
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return json({ error: "Unauthorized" }, 401);
+    if (!user) {
+      // Written out rather than through json() so the literal `status: 401` is
+      // greppable. src/__tests__/edge-function-auth.test.ts asserts it against
+      // the source, and a helper that hides the status makes a real guard
+      // invisible to the check that exists to enforce it.
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const body = await req.json();
     const { assessment_id } = body;
