@@ -74,7 +74,7 @@ Greece, or both.
 | Question | Document's position | Code today | If yes | If no |
 | --- | --- | --- | --- | --- |
 | **Collect injury, mood or sleep?** | Article 9 health data; separate conditions, access controls and DPIA scope | Not collected | Separate consent purpose, stricter access, wider DPIA | Keep out of pilot — the document's own recommendation |
-| **Academy SaaS, direct-to-family, or both?** | Changes controller/processor analysis entirely | Both paths exist: players self-register *and* coaches add them | Must resolve, because it changes A1 | — |
+| **Academy SaaS, direct-to-family, or both?** | Changes controller/processor analysis entirely | Both paths exist: players self-register *and* coaches add them — and **consent only reaches the first**, see B-bis | Must resolve, because it changes A1 | — |
 | **Media, messaging or public sharing?** | Changes safeguarding, DSA and UK scope | None exists | Significant new safeguarding work | Deferred, recommended |
 | **AI recommendations enabled?** | Requires use-case classification and decision safeguards | **Yes, live.** AI drafts feedback; T2 (#40) adds coach approval before a child sees it | Needs classification and supplier review | — |
 | **What establishes parental responsibility?** | *"Authentication alone does not establish legal authority"* | Email invitation only. Nothing verifies the recipient is a guardian | Academy-assisted verification, per the document | Current state is not defensible for real children |
@@ -83,6 +83,40 @@ Greece, or both.
 
 The AI row and the supplier row are the two where the code has already answered
 the question and the paperwork has not caught up.
+
+### B-bis. The consent gate reaches accounts, not children
+
+Proven on a replayed database in `supabase/tests/consent_coverage.sql`
+(`npm run test:db -- --consent-review`), fourteen assertions with both
+controls.
+
+`squad_player_consent_required()` establishes a child's age by following
+`squad_players.linked_player_id` into `player_details.date_of_birth`. A roster
+row a coach typed in has no linked account, so the function returns `false` and
+the assessment is written. The coach's add-player screen collects a name, a
+position, a shirt number and an age *band* (`U12`) — **there is no
+date-of-birth column on `squad_players` at all.**
+
+`20260912000001_parental_consent.sql` states this in its own header and argues
+the unlinked row *"is the academy's own paper record of its own squad."* That
+is a defensible position and it was reasoned deliberately.
+
+**What the test shows is that the record does not stay the academy's own.**
+When the child later signs up and links — the ordinary pilot flow —
+`link_player_to_coach()` adopts that same roster row, and every assessment
+written while nobody could check consent becomes part of the child's account
+and readable by them. Writes from that moment on are correctly blocked; the
+ones already there are not. The gate is a check at the moment of writing, not a
+property of the record.
+
+The same assessment text is what `player-feedback` sends to the Lovable AI
+gateway, which is the supplier row above.
+
+**What changes:** if the academy's own record is accepted as out of scope, this
+needs writing down explicitly and the linking behaviour needs an answer of its
+own. If it is not, the fix is a schema change — collect a date of birth at
+add-player — not a policy change, and it has to be estimated as one.
+**Decides:** counsel on the position; Imad on the schema (P2).
 
 ---
 
@@ -105,7 +139,9 @@ Worth stating so the list above is not read as "nothing works":
 
 - Consent records are **append-only and versioned**, which is the hard part and
   a real head start.
-- The consent gate blocks assessments and awards where it applies.
+- The consent gate blocks assessments and awards **where it applies**, and it
+  is verified to do so, including that it opens again once consent is recorded.
+  How far it applies is B-bis, and that is a real limit on this line.
 - Cross-academy isolation is enforced and verified on reads between two real
   academies, and on writes against a replayed database.
 - AI feedback will reach a child only after a coach approves it, once #40 lands.
