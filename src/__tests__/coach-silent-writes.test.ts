@@ -90,20 +90,32 @@ describe('routed coach surfaces do not treat a missing error as success', () => 
     })
   }
 
-  it('the invite-code lookup cannot rotate a code on a failed read', () => {
-    // The sharpest instance, because it did not merely hide a failure — it
-    // caused one. A discarded read error fell through to the "no code yet"
-    // branch and overwrote the coach's existing invite code, invalidating every
-    // code already handed to a player.
-    const home = files.find(f => f.name === 'CoachHomePage.tsx')
-    expect(home, 'CoachHomePage.tsx not found').toBeTruthy()
-    const lookup = home!.code.slice(home!.code.indexOf("select('invite_code')"))
-    const generateAt = lookup.indexOf('generateCode()')
-    expect(generateAt, 'the invite-code generation path moved').toBeGreaterThan(-1)
-    expect(
-      /if \(error\)/.test(lookup.slice(0, generateAt)),
-      'CoachHomePage generates and stores a new invite code without first ruling out a failed ' +
-        'read. An offline moment silently rotates the code every player was already given.',
-    ).toBe(true)
+  // The sharpest instance of the class, because it does not merely hide a
+  // failure — it causes one. A discarded read error falls through to the
+  // "no code yet" branch and overwrites the coach's existing invite code,
+  // invalidating every code already handed to a player.
+  //
+  // Asserted across every file that generates a code, not just the one I fixed
+  // first: CoachProfilePage carried an identical copy, commented "same pattern
+  // as CoachHomePage". The duplicate was deliberate, so a single-file check
+  // would have proved nothing about the bug.
+  const codeGenerators = files.filter(f => f.code.includes('generateCode()'))
+
+  it('finds the invite-code generators', () => {
+    expect(codeGenerators.length, 'no coach surface generates an invite code').toBeGreaterThan(0)
   })
+
+  for (const { name, code } of codeGenerators) {
+    it(`${name}: cannot rotate an invite code on a failed read`, () => {
+      const lookup = code.slice(code.indexOf("select('invite_code')"))
+      const generateAt = lookup.indexOf('generateCode()')
+      expect(generateAt, `${name}: the invite-code generation path moved`).toBeGreaterThan(-1)
+      expect(
+        /if \(error\)/.test(lookup.slice(0, generateAt)),
+        `${name} generates and stores a new invite code without first ruling out a failed read. ` +
+          `An offline moment silently rotates the code every player was already given, and ` +
+          `nothing they were told will match.`,
+      ).toBe(true)
+    })
+  }
 })

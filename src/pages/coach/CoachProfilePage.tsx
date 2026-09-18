@@ -22,15 +22,31 @@ export default function CoachProfilePage() {
     // The real invite code lives on profiles.invite_code — it's what
     // get_coach_id_by_invite_code matches when players link up.
     supabase.from('profiles').select('invite_code').eq('user_id', user.id).maybeSingle()
-      .then(async ({ data }) => {
+      .then(async ({ data, error }) => {
+        // The read's error was discarded here too, so a failed read looked
+        // exactly like "no code yet" and the self-heal below overwrote the
+        // coach's real invite code — the code players type to join. This page
+        // and CoachHomePage each rotated it independently, so an offline
+        // moment on either one invalidated every code already handed out.
+        if (error) {
+          console.error('Invite code read failed:', error)
+          return
+        }
+
         if (data?.invite_code) {
           setInviteCode(formatCoachCode(data.invite_code))
-        } else {
-          // Self-heal: generate and persist one (same pattern as CoachHomePage)
-          const newCode = generateCode()
-          const { error } = await supabase.from('profiles').update({ invite_code: newCode }).eq('user_id', user.id)
-          if (!error) setInviteCode(formatCoachCode(newCode))
+          return
         }
+
+        // Self-heal, now only when the read actually succeeded and found none.
+        const newCode = generateCode()
+        const { error: writeError } = await supabase
+          .from('profiles').update({ invite_code: newCode }).eq('user_id', user.id)
+        if (writeError) {
+          console.error('Invite code write failed:', writeError)
+          return
+        }
+        setInviteCode(formatCoachCode(newCode))
       })
   }, [user])
 
