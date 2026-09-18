@@ -449,6 +449,45 @@ describe('a departed coach keeps nothing', () => {
     ).toEqual([])
   })
 
+  it('K7: the academy read policy resolves the COACH org, not the club admin org', () => {
+    // squad_player_in_my_org(uuid) sounds like a coach helper and is not: it
+    // resolves my_organization_id(), which is organizations.admin_user_id =
+    // auth.uid() — the club admin. Using it in a coach policy silently grants
+    // nothing, because it returns NULL for every coach.
+    const academy = live.filter(
+      p => p.table === 'coach_assessments' && ['SELECT', 'ALL'].includes(p.op) &&
+           /my_coach_org|squad_player_in_my_coach_org/.test(p.body),
+    )
+    expect(academy.length, 'no academy-scoped read policy on coach_assessments').toBeGreaterThan(0)
+    for (const p of academy) {
+      expect(
+        /squad_player_in_my_org\s*\(/.test(p.body),
+        `Policy "${p.name}" (${p.file}) uses squad_player_in_my_org(), which resolves the CLUB ` +
+          `ADMIN's organisation and is NULL for a coach. Use squad_player_in_my_coach_org().`,
+      ).toBe(false)
+      expect(
+        p.body.includes('is_coach()'),
+        `Policy "${p.name}" (${p.file}) does not require the coach role.`,
+      ).toBe(true)
+    }
+  })
+
+  it('K7: widening assessment reads does not widen the private note', () => {
+    // A colleague seeing a band must not become a colleague reading what the
+    // assessing coach wrote to themselves. K9 made notes coach-private and K7
+    // must not quietly undo it.
+    const notes = live.filter(
+      p => p.table === 'coach_assessment_notes' && ['SELECT', 'ALL'].includes(p.op),
+    )
+    for (const p of notes) {
+      expect(
+        /my_coach_org|organization_id/.test(p.body),
+        `Policy "${p.name}" (${p.file}) makes coach notes academy-visible. Notes are private to ` +
+          `the coach who wrote them; only coach_shared_feedback is shareable.`,
+      ).toBe(false)
+    }
+  })
+
   it("a roster row's academy comes from the row, not from its coach's current club", () => {
     const files = readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()
     let latest = ''

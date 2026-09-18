@@ -146,6 +146,133 @@ SELECT pg_temp.assert_true(
   (SELECT count(*) FROM public.coach_shared_feedback) = 0,
   'K9: another academy''s coach reads none of coach A''s shared feedback');
 
+-- ── K7: academy-scoped assessment reads ─────────────────────────────────
+-- Coach A and Coach B are both coaches, but so far in this fixture neither
+-- belongs to an organisation, so B must NOT see A's assessment. That is the
+-- pre-condition: the new policy must not grant anything on its own.
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
+
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments) = 0,
+  'K7: a coach with no academy sees no other coach''s assessments');
+
+-- Put both coaches in the SAME academy and attribute the roster row to it.
+RESET ROLE;
+INSERT INTO auth.users (id, email, email_confirmed_at)
+VALUES ('e0000000-0000-0000-0000-000000000001', 'admin@k9.test', now());
+INSERT INTO public.organizations (id, admin_user_id, name, join_code) VALUES
+  ('f0000000-0000-0000-0000-000000000001',
+   'e0000000-0000-0000-0000-000000000001', 'K9 Academy', 'K9ACAD'),
+  ('f0000000-0000-0000-0000-000000000002',
+   'e0000000-0000-0000-0000-000000000001', 'Other Academy', 'OTHER1');
+
+INSERT INTO public.coach_details (user_id, organization_id) VALUES
+  ('a0000000-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000001'),
+  ('a0000000-0000-0000-0000-000000000002', 'f0000000-0000-0000-0000-000000000001');
+
+UPDATE public.squad_players
+   SET organization_id = 'f0000000-0000-0000-0000-000000000001'
+ WHERE id = 'c0000000-0000-0000-0000-000000000001';
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
+
+-- The point of K7: a colleague in the same academy now sees the assessment.
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments) = 1,
+  'K7: a coach reads a colleague''s assessment on a roster row in their own academy');
+
+-- ...and still not the private note that came with it.
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessment_notes) = 0,
+  'K7: widening assessment reads does not widen the private note');
+
+-- Move coach B to a different academy. Same coach, same query, no access.
+RESET ROLE;
+UPDATE public.coach_details
+   SET organization_id = 'f0000000-0000-0000-0000-000000000002'
+ WHERE user_id = 'a0000000-0000-0000-0000-000000000002';
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
+
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments) = 0,
+  'K7: a coach in another academy reads none of it');
+
+-- A departed coach has coach_details.organization_id NULL (remove_coach_from_org
+-- sets it), which must resolve to no access rather than to "any academy".
+RESET ROLE;
+UPDATE public.coach_details SET organization_id = NULL
+ WHERE user_id = 'a0000000-0000-0000-0000-000000000002';
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
+
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments) = 0,
+  'K7/U8: a departed coach reads no academy assessments');
+
+-- An UNATTRIBUTED roster row must not become academy-visible.
+--
+-- The first version of this tried to null an existing row's organization_id
+-- and silently failed: trg_set_squad_player_org pins the value and refuses
+-- A -> NULL, so the row kept its academy and the assertion was testing nothing.
+-- (That refusal is F6, still open and Imad's.) A row must therefore be created
+-- unattributed, which means a coach who has no academy — the stamp trigger
+-- takes the org from the coach on INSERT.
+RESET ROLE;
+INSERT INTO auth.users (id, email, email_confirmed_at)
+VALUES ('a0000000-0000-0000-0000-000000000003', 'coachC@k9.test', now());
+INSERT INTO public.profiles (user_id, role, full_name)
+VALUES ('a0000000-0000-0000-0000-000000000003', 'coach', 'Coach C');
+-- Deliberately no coach_details row: Coach C belongs to no academy.
+INSERT INTO public.squad_players (id, coach_user_id, player_name, status)
+VALUES ('c0000000-0000-0000-0000-000000000002',
+        'a0000000-0000-0000-0000-000000000003', 'Child Two', 'active');
+INSERT INTO public.coach_assessments (id, squad_player_id, coach_user_id)
+VALUES ('d0000000-0000-0000-0000-000000000002',
+        'c0000000-0000-0000-0000-000000000002',
+        'a0000000-0000-0000-0000-000000000003');
+
+SELECT pg_temp.assert_true(
+  (SELECT organization_id IS NULL FROM public.squad_players
+    WHERE id = 'c0000000-0000-0000-0000-000000000002'),
+  'PREMISE: the second roster row really is unattributed');
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
+
+-- Coach B is in academy 1 and must still see only academy 1's row, not the
+-- unattributed one.
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments
+    WHERE squad_player_id = 'c0000000-0000-0000-0000-000000000002') = 0,
+  'K7: an unattributed roster row is not visible to the academy, only to its own coach');
+
+-- CONTROL: its own coach still reads it, so the zero above is scoping rather
+-- than the row being unreadable by everyone.
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
+
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments
+    WHERE squad_player_id = 'c0000000-0000-0000-0000-000000000002') = 1,
+  'CONTROL: the unattributed row IS readable by the coach who owns it');
+
+-- CONTROL: the owning coach still reads their own throughout.
+SELECT set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+
+SELECT pg_temp.assert_true(
+  (SELECT count(*) FROM public.coach_assessments) = 1,
+  'CONTROL: the assessing coach still reads their own assessment');
+
 -- ── Table privileges, which RLS does not govern ─────────────────────────
 -- Tarek found this on #44: the migration revoked from PUBLIC and anon but not
 -- from `authenticated`, so the table kept the schema's default grants. RLS
