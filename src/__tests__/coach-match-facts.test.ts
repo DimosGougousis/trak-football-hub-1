@@ -63,6 +63,58 @@ describe('K4: the coach flow does not fabricate the player\'s own report', () =>
   })
 })
 
+describe('K5: the coach match flow does not discard a failed write', () => {
+  // Three of the four writes in handleSave threw their error away and the
+  // function then said "Match saved" and navigated off the screen. A rejected
+  // log_match_for_player — a departed coach, a roster row in another academy,
+  // a dropped connection — left the child with no match row and the coach with
+  // no way to know. K1/K2/F5 added legitimate reasons for that RPC to refuse,
+  // so the silence became more dangerous over the week, not less.
+  //
+  // Asserted as an invariant over every write in the file rather than three
+  // fixed lines, so a fourth write added later is covered too.
+  const src = code(ROUTED_FLOW)
+
+  const statements = src
+    .split('\n')
+    .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+    .filter(s => /await supabase\b/.test(s.line))
+
+  it('finds the writes to check', () => {
+    expect(statements.length, 'no supabase calls found — did the flow move?').toBeGreaterThan(0)
+  })
+
+  for (const s of statements) {
+    it(`line ${s.n} captures its error`, () => {
+      expect(
+        /\berror\b/.test(s.line),
+        `CoachAddSession line ${s.n} awaits a supabase call without destructuring its error:\n` +
+          `  ${s.line}\n` +
+          `A discarded error here is a silent partial save: the coach is told the match saved ` +
+          `and the child has no record of it.`,
+      ).toBe(true)
+    })
+  }
+
+  it('does not report success while any write failed', () => {
+    const save = src.slice(src.indexOf('const handleSave'))
+    const successAt = save.indexOf("toast.success(isMatch ? 'Match saved'")
+    expect(successAt, 'the success toast moved').toBeGreaterThan(-1)
+    expect(
+      /failures\.length\s*>\s*0/.test(save.slice(0, successAt)),
+      'the success toast fires without first checking whether any write failed.',
+    ).toBe(true)
+  })
+
+  it('a retry cannot duplicate the session or a match row', () => {
+    // Staying on the screen to retry is only safe if the second press finishes
+    // the job instead of writing everything twice.
+    expect(/if \(!sessionId\)/.test(src), 'the session is re-inserted on retry').toBe(true)
+    expect(/nowLogged\.has\(/.test(src), 'an already-logged player is logged again on retry').toBe(true)
+    expect(/!attendanceSaved/.test(src), 'attendance is re-inserted on retry').toBe(true)
+  })
+})
+
 describe('removing them changes no rating, which is why it is safe', () => {
   // The claim the fix rests on. If someone later adds an 'average' branch to
   // either ladder, these two stop being neutral and every coach-logged match
