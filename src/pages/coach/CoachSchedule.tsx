@@ -304,7 +304,7 @@ export default function CoachSchedule() {
       // Imported rows need the calendar columns too. Without this every row
       // the parser creates lands with them NULL after the one-time backfill,
       // and keeps the untimed/filter ambiguity the columns exist to remove.
-      ...(calendarFieldsFromInstant(startsAt) ?? {}),
+      ...(calendarFieldsFromInstant(startsAt, ev.time_known) ?? {}),
       ends_at: endsAt, venue: ev.venue || null,
       opponent: ev.opponent || null, notes: ev.notes || null,
       published: false, source: 'ai_text',
@@ -345,7 +345,7 @@ export default function CoachSchedule() {
       rows.map(({ ev, startsAt, endsAt }) => ({
         coach_user_id: user.id,
         title: ev.title, event_type: ev.event_type, starts_at: startsAt,
-        ...(calendarFieldsFromInstant(startsAt) ?? {}),
+        ...(calendarFieldsFromInstant(startsAt, ev.time_known) ?? {}),
         ends_at: endsAt, venue: ev.venue || null,
         opponent: ev.opponent || null, notes: ev.notes || null,
         published: false, source: 'ai_text',

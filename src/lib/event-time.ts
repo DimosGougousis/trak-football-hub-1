@@ -200,15 +200,23 @@ export function displayEventTime(row: {
  * Only the parser emitting an explicit flag fixes that, which is K8's
  * `parse-schedule` work, not something a caller can infer.
  */
-export function calendarFieldsFromInstant(iso: string | null): {
-  event_date: string
-  start_time: string | null
-} | null {
+export function calendarFieldsFromInstant(
+  iso: string | null,
+  timeKnown?: boolean | null,
+): { event_date: string; start_time: string | null } | null {
   if (!iso) return null
   const parts = localParts(iso)
   if (!parts.date) return null
+
+  // parse-schedule now states whether the time was known, because it is the
+  // last point that still knows — it saw the text. A schedule that genuinely
+  // says "midnight friendly" is indistinguishable from "day known, time TBC"
+  // once the row is written, and nothing downstream can recover which it was.
+  // The midnight heuristic remains only for rows that carry no flag.
+  const known = typeof timeKnown === 'boolean' ? timeKnown : !isTimeTBC(iso)
+
   return {
     event_date: parts.date,
-    start_time: isTimeTBC(iso) ? null : `${parts.time}:00`,
+    start_time: known ? `${parts.time}:00` : null,
   }
 }

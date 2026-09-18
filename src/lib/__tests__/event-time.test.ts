@@ -222,3 +222,33 @@ describe('calendarFieldsFromInstant — the importer path (Imad, PR42 review)', 
     expect(displayEventTime(cols)).toEqual({ date: '2026-12-31', time: '23:30' })
   })
 })
+
+describe('calendarFieldsFromInstant with parse-schedule\'s time_known flag', () => {
+  it('trusts an explicit true over the midnight heuristic', () => {
+    // The case the flag exists for: a schedule that genuinely says "midnight
+    // friendly". Without the flag this is indistinguishable from "time TBC",
+    // and nothing downstream can recover which it was.
+    const midnight = toInstant('2026-03-01', '00:00')!
+    expect(calendarFieldsFromInstant(midnight, true)).toEqual({
+      event_date: '2026-03-01',
+      start_time: '00:00:00',
+    })
+  })
+
+  it('trusts an explicit false even when a time is present', () => {
+    const evening = toInstant('2026-03-01', '18:00')!
+    expect(calendarFieldsFromInstant(evening, false)?.start_time).toBeNull()
+  })
+
+  it('falls back to the midnight heuristic when no flag is supplied', () => {
+    // Rows from an older parser response, which carry no flag at all.
+    expect(calendarFieldsFromInstant(toInstant('2026-03-01', '00:00')!)?.start_time).toBeNull()
+    expect(calendarFieldsFromInstant(toInstant('2026-03-01', '18:00')!)?.start_time).toBe('18:00:00')
+  })
+
+  it('treats undefined and null as "no flag", not as false', () => {
+    const evening = toInstant('2026-03-01', '18:00')!
+    expect(calendarFieldsFromInstant(evening, undefined)?.start_time).toBe('18:00:00')
+    expect(calendarFieldsFromInstant(evening, null)?.start_time).toBe('18:00:00')
+  })
+})
