@@ -117,5 +117,38 @@ describe('routed coach surfaces do not treat a missing error as success', () => 
           `nothing they were told will match.`,
       ).toBe(true)
     })
+
+    it(`${name}: verifies the generated code was actually stored`, () => {
+      // Imad, second review: both writes checked only `error`. An absent
+      // profile row updates nothing, returns no error, and the coach is shown
+      // a code the database never accepted — the same "no error means success"
+      // mistake one layer down from the one I had just fixed.
+      const lookup = code.slice(code.indexOf('generateCode()'))
+      expect(
+        /\.select\('invite_code'\)/.test(lookup),
+        `${name} stores a generated invite code without selecting it back, so a zero-row update ` +
+          `is indistinguishable from a successful one.`,
+      ).toBe(true)
+      expect(
+        /stored\?\.invite_code !== newCode/.test(lookup),
+        `${name} does not compare the stored code against the one it generated.`,
+      ).toBe(true)
+    })
+
+    it(`${name}: only a verified code is shown as copyable`, () => {
+      // A boolean failure flag that nothing clears leaves a valid code reading
+      // "Unavailable" after a later read succeeds; and while the first read is
+      // pending, the placeholder is copyable. Three states, not two.
+      expect(
+        /'loading' \| 'ready' \| 'failed'/.test(code),
+        `${name} tracks invite-code availability as something other than an explicit ` +
+          `loading/ready/failed state, so a pending or stale value can be copied.`,
+      ).toBe(true)
+      expect(
+        (code.match(/setInviteStatus\('ready'\)/g) || []).length >= 2,
+        `${name} does not set 'ready' on both success paths — the existing-code path and the ` +
+          `freshly generated one — so a recovered read still reads as unavailable.`,
+      ).toBe(true)
+    })
   }
 })

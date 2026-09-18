@@ -85,6 +85,12 @@ export default function PlayerHome() {
 
   useEffect(() => {
     if (!user) return
+    // This effect re-runs on an Auth refresh for the same account. Without a
+    // guard, a response from the previous run can land after the current one
+    // and reinstate what it read — which is how retracted feedback stayed on
+    // screen. Only the newest run may write to state.
+    let cancelled = false
+
     supabase.from('matches').select('*').eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
@@ -148,9 +154,20 @@ export default function PlayerHome() {
             .eq('assessment_id', latest.id)
             .not('published_at', 'is', null)
             .maybeSingle()
+          if (cancelled) return
+          // Assign unconditionally, including null. The previous version only
+          // assigned a truthy body, so once feedback had been displayed it
+          // could never be taken away: a coach retracting a publication left
+          // the old text on the child's screen on every later render. Imad
+          // reproduced it with an Auth refresh returning zero rows.
+          //
+          // An error clears it too. If we cannot confirm the text is still
+          // published, continuing to show it is the wrong side to fail on —
+          // the whole point of K9 is that the child sees only what a coach
+          // currently means them to see.
           if (sharedError) console.error('[Trak] shared feedback fetch failed', sharedError.message)
           const body = (sharedRow as { body?: string } | null)?.body?.trim()
-          if (body) setCoachAssessmentNote(body)
+          setCoachAssessmentNote(body || null)
         }
 
         // Published upcoming calendar events from coach
@@ -166,6 +183,8 @@ export default function PlayerHome() {
           setUpcomingEvents(evs || [])
         }
       })
+
+    return () => { cancelled = true }
   }, [user, reloadKey])
 
   const getBandDistribution = () => {
