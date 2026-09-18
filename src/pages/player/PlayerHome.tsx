@@ -80,6 +80,8 @@ export default function PlayerHome() {
   const [showReveal, setShowReveal] = useState(false)
   const [newMatchCount, setNewMatchCount] = useState(0)
   const [coachAssessmentNote, setCoachAssessmentNote] = useState<string | null>(null)
+  // A failed feedback read must not look like "no feedback yet".
+  const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -165,7 +167,19 @@ export default function PlayerHome() {
           // published, continuing to show it is the wrong side to fail on —
           // the whole point of K9 is that the child sees only what a coach
           // currently means them to see.
-          if (sharedError) console.error('[Trak] shared feedback fetch failed', sharedError.message)
+          // A console line is not a user-visible state. An empty card reads as
+          // "my coach hasn't written anything yet", which is the false-empty
+          // state #30 fixed on this screen — arriving back in the same file.
+          // Tarek raised it on #44; #42 makes the sibling queries in this
+          // effect set loadFailed, so this one would have stood out as the
+          // exception once both landed.
+          if (sharedError) {
+            console.error('[Trak] shared feedback fetch failed', sharedError.message)
+            setFeedbackLoadFailed(true)
+            setCoachAssessmentNote(null)
+            return
+          }
+          setFeedbackLoadFailed(false)
           const body = (sharedRow as { body?: string } | null)?.body?.trim()
           setCoachAssessmentNote(body || null)
         }
@@ -634,12 +648,16 @@ export default function PlayerHome() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-white/88">
-                  {coachAssessmentNote ? 'Your coach left feedback' : 'What to work on'}
+                  {feedbackLoadFailed
+                    ? "Couldn't load your feedback"
+                    : coachAssessmentNote ? 'Your coach left feedback' : 'What to work on'}
                 </p>
                 <p className="text-[11px] text-white/40 mt-0.5 truncate">
-                  {coachAssessmentNote
-                    ? `"${coachAssessmentNote}"`
-                    : 'Based on your latest assessment'}
+                  {feedbackLoadFailed
+                    ? 'Pull down to refresh and try again'
+                    : coachAssessmentNote
+                      ? `"${coachAssessmentNote}"`
+                      : 'Based on your latest assessment'}
                 </p>
               </div>
               <span className="text-[#C8F25A] text-[13px] flex-shrink-0">→</span>
