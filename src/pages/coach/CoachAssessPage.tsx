@@ -74,6 +74,15 @@ export default function CoachAssessPage() {
   const [physical, setPhysical]         = useState(5)
   const [coachability, setCoachability] = useState(5)
   const [note, setNote] = useState('')
+
+  // Shared feedback (K9). Deliberately separate state from `note`, mirroring
+  // the schema: the note is the coach's private working record and the child
+  // never sees it. This is written for the child to read, and only once the
+  // coach publishes it. Nothing copies one into the other — that is the whole
+  // point of the two tables, and it has to be true in the UI as well.
+  const [shared,          setShared]          = useState('')
+  const [sharedPublished, setSharedPublished] = useState(false)
+  const [sharedExists,    setSharedExists]    = useState(false)
   const [saving, setSaving] = useState(false)
 
   /* Scorecard metric 4: median time to assess one player, target <90s.
@@ -104,13 +113,39 @@ export default function CoachAssessPage() {
       .limit(1)
       .maybeSingle()
       .then(({ data }) => {
-        if (!data) { setExistingId(null); return }
+        if (!data) {
+          setExistingId(null)
+          setShared(''); setSharedPublished(false); setSharedExists(false)
+          return
+        }
         setExistingId(data.id)
         setWorkRate(data.work_rate); setTactical(data.tactical)
         setAttitude(data.attitude); setTechnical(data.technical)
         setPhysical(data.physical); setCoachability(data.coachability)
         if (data.appearance) setAppearance(data.appearance as 'started' | 'sub' | 'training')
         if (data.session_id) setSessionId(data.session_id)
+
+        // Read back what the child can already see. A coach editing today's
+        // assessment must be shown the published text — otherwise the box is
+        // blank, they assume nothing is shared, and they cannot correct
+        // something the child is currently reading.
+        // Cast until src/integrations/supabase/types.ts is regenerated: the
+        // table ships in this PR's migration, so it does not exist in the
+        // project the types were generated from. Same idiom AuthContext uses
+        // for link_player_to_coach. Regenerate once #44 is in production.
+        supabase
+          .from('coach_shared_feedback' as any)
+          .select('body, published_at')
+          .eq('assessment_id', data.id)
+          .maybeSingle()
+          .then(res => {
+            // Shaped here rather than leaving `any` to spread through the file.
+            const sf = res.data as { body: string | null; published_at: string | null } | null
+            if (!sf) { setShared(''); setSharedPublished(false); setSharedExists(false); return }
+            setShared(sf.body ?? '')
+            setSharedPublished(sf.published_at != null)
+            setSharedExists(true)
+          })
       })
   }, [user, playerId])
 
@@ -192,6 +227,26 @@ export default function CoachAssessPage() {
       if (noteError) {
         console.error('Note save failed:', noteError)
         toast.error(`Assessment saved, note failed: ${noteError.message}`)
+      }
+    }
+
+    // Shared feedback, written separately and published deliberately (K9).
+    // Never derived from `note`. Saved whenever there is text OR a row already
+    // exists, so clearing the box and unpublishing both take effect.
+    if (saved?.id && (shared.trim() || sharedExists)) {
+      // Cast for the same reason as the read above.
+      const { error: sharedError } = await supabase.from('coach_shared_feedback' as any).upsert({
+        assessment_id: saved.id,
+        coach_user_id: user.id,
+        body:          shared.trim(),
+        // NULL retracts: the child stops seeing it immediately.
+        published_at:  sharedPublished && shared.trim() ? new Date().toISOString() : null,
+      }, { onConflict: 'assessment_id' })
+      if (sharedError) {
+        console.error('Shared feedback save failed:', sharedError)
+        toast.error(`Assessment saved, shared feedback failed: ${sharedError.message}`)
+      } else {
+        setSharedExists(true)
       }
     }
     trackEvent('assessment_submitted', {
@@ -353,8 +408,13 @@ export default function CoachAssessPage() {
               <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
                 IMPROVEMENT AREAS
               </span>
+              {/* This used to read "AI will expand these into personalised
+                  feedback for the player". K9 made that false: the note is
+                  private and the player's feedback screen can no longer read
+                  it. A label promising a coach their words reach the child,
+                  when they do not, is worse than no label. */}
               <p className="text-[9px] text-white/25 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                AI will expand these into personalised feedback for the player
+                Private to you. The player never sees this.
               </p>
             </div>
             <span className="text-[10px] text-white/25">{note.length}/300</span>
@@ -369,6 +429,49 @@ export default function CoachAssessPage() {
             placeholder="e.g. First touch under pressure, positioning when defending set pieces"
             className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none resize-none placeholder:text-white/20"
           />
+        </div>
+
+        {/* ---- 8b. shared feedback (K9) ---- */}
+        {/* Two boxes rather than one, because the schema has two tables and the
+            coach needs to see which words the child will read. Nothing copies
+            the note into here. */}
+        <div className="px-5 pb-5 space-y-2">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
+                FEEDBACK FOR THE PLAYER
+              </span>
+              <p className="text-[9px] text-white/25 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                {sharedPublished && shared.trim()
+                  ? 'The player can read this'
+                  : 'Only the player sees this, and only once you publish it'}
+              </p>
+            </div>
+            <span className="text-[10px] text-white/25">{shared.length}/300</span>
+          </div>
+          <textarea
+            value={shared}
+            onChange={e => {
+              if (e.target.value.length <= 300) setShared(e.target.value)
+            }}
+            maxLength={300}
+            rows={3}
+            placeholder="e.g. Great week. Keep working on your first touch — try the cone drill before training."
+            className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none resize-none placeholder:text-white/20"
+          />
+          <button
+            type="button"
+            onClick={() => setSharedPublished(v => !v)}
+            disabled={!shared.trim()}
+            className="w-full py-2.5 rounded-[10px] text-[11px] font-semibold transition-colors disabled:opacity-30"
+            style={{
+              background: sharedPublished ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.04)',
+              color:      sharedPublished ? '#C8F25A' : 'rgba(255,255,255,0.4)',
+              border:     `1px solid ${sharedPublished ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
+            }}
+          >
+            {sharedPublished ? 'Published — tap to unpublish' : 'Publish to the player'}
+          </button>
         </div>
 
         {/* ---- 9. save button ---- */}
