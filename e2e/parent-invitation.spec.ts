@@ -338,7 +338,9 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   await page.getByRole('combobox').selectOption(alexId);
   await expect(page.getByText(`Following ${alex.name} · 2 children linked`, { exact: true })).toBeVisible();
   await page.getByRole('combobox').selectOption(zaraId);
-  await page.getByRole('button', { name: 'SETTINGS Account settings', exact: true }).click();
+  // P6 owns the subtitle change; this journey follows the Settings entry in
+  // both independently reviewed branches, then verifies the actual children.
+  await page.getByRole('button', { name: /^SETTINGS / }).click();
   const connections = page.getByRole('list', { name: 'Linked children', exact: true });
   await expect(connections.getByText(alex.name, { exact: true })).toHaveCount(1);
   await expect(connections.getByText(zara.name, { exact: true })).toHaveCount(1);

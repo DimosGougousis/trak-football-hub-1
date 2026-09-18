@@ -54,3 +54,27 @@ observed outcomes separately; local browser success does not establish them.
 At the user's request, only the standalone P2 zero-approval test conversion is
 parked and has not been retried here. Broader consent requirements and real-child
 admission gates remain in scope; this task neither resolves nor parks them.
+
+## Port to existing PR39
+
+The existing family branch now includes parent security `5a14efe` and deployed
+main `09d22d4`. The P7 test/evidence commit alone was cherry-picked as `6969c47`;
+no other integration-branch code was imported. Existing family behavior stayed
+unchanged. Source: 241 tests passed; harness: 17 passed; typecheck/build passed;
+lint: zero errors and 135 warnings. Both 59-migration orders and all 282 reporting
+assertions passed. Both negative database baselines failed for their expected
+defects. The enforced use-case gate passes; four pending player assertions and
+16 untested pending cases remain.
+
+The first browser run passed four scenarios but the new case timed out looking
+for P6's pending “Account settings” subtitle. PR39 still had the previous subtitle.
+The selector now uses the visible `SETTINGS` entry, leaving exact wording to P6's
+tests and retaining every linking/recovery/isolation assertion. No app change was
+needed. The final rerun passed **5/5 browser tests in 12.6s**, including the new
+case in 5.9s. Strict browser-file typecheck, lint and whitespace checks pass.
+Evidence: `/private/tmp/trak-family-current-browser-final.log` and
+`/private/tmp/trak-family-upgrade-*.log`.
+
+This ports the regression through an existing PR; it does not create a new PR or
+claim release/live verification. PR39 still depends on reviewed PR33, while P6's
+settings changes remain separately reviewable in PR32.
