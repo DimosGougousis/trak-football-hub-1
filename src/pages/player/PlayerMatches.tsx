@@ -18,6 +18,7 @@ export default function PlayerMatches() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
+  const [pageFailed, setPageFailed] = useState(false)
 
   const fetchPage = async (pageIndex: number, append: boolean) => {
     if (!user) return
@@ -33,7 +34,17 @@ export default function PlayerMatches() {
 
     // A failed read is not an empty season. Without this the screen told a
     // player with a full record that they had never played a match.
-    if (error) { setFailed(true); return }
+    if (error) {
+      if (append) setPageFailed(true)
+      else setFailed(true)
+      return
+    }
+
+    // Only advance once the page is actually in hand. Advancing on request
+    // meant a failed page 2 left the cursor at 2, so the next Load more
+    // fetched page 3 and the middle twenty matches vanished without a word.
+    setPage(pageIndex)
+    setPageFailed(false)
     setFailed(false)
 
     const rows = data || []
@@ -45,18 +56,18 @@ export default function PlayerMatches() {
     }
   }
 
-  const retry = () => { setLoading(true); setPage(0); fetchPage(0, false) }
+  const retry = () => { setLoading(true); setFailed(false); fetchPage(0, false) }
 
   useEffect(() => {
     if (!user) return
-    setPage(0)
     fetchPage(0, false)
   }, [user])
 
+  // Always re-requests the page after the last one successfully loaded, so a
+  // retry cannot skip a page and a double tap cannot request two.
   const loadMore = () => {
-    const next = page + 1
-    setPage(next)
-    fetchPage(next, true)
+    if (loadingMore) return
+    fetchPage(page + 1, true)
   }
 
   const [filter, setFilter] = useState('All')
@@ -122,15 +133,23 @@ export default function PlayerMatches() {
         )}
 
         {/* Load more */}
-        {hasMore && filter === 'All' && (
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="w-full mt-4 py-3 rounded-[12px] text-[11px] tracking-[0.08em] uppercase text-white/45 border border-white/[0.07] bg-transparent active:bg-white/[0.04] transition-colors"
-            style={{ fontFamily: "'DM Mono', monospace" }}
-          >
-            {loadingMore ? 'Loading…' : 'Load more'}
-          </button>
+        {hasMore && filter === 'All' && !failed && (
+          <>
+            {pageFailed && (
+              <p className="mt-4 text-[11px] text-white/45 text-center leading-relaxed" role="alert">
+                Couldn't load the next matches. Nothing is missing from your record —
+                tap again to retry.
+              </p>
+            )}
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full mt-2 py-3 rounded-[12px] text-[11px] tracking-[0.08em] uppercase text-white/45 border border-white/[0.07] bg-transparent active:bg-white/[0.04] transition-colors disabled:opacity-40"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+            >
+              {loadingMore ? 'Loading…' : pageFailed ? 'Retry' : 'Load more'}
+            </button>
+          </>
         )}
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
