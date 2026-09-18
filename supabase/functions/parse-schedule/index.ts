@@ -1,4 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
+// A coach parsing a season's fixtures might reasonably do it a handful of
+// times while getting the input right. This is a ceiling on abuse, not a
+// budget for normal use.
+const DAILY_CALL_LIMIT = 40;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +26,63 @@ serve(async (req) => {
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Authenticate before spending anything. This function had no check at
+    // all: verify_jwt was off and the body forwarded straight to the paid
+    // gateway, so any unauthenticated request on the internet could spend
+    // LOVABLE_API_KEY, image input included.
+    //
+    // The platform gate alone would not be enough even when enabled — the
+    // publishable anon key is a validly-signed JWT and ships in the client
+    // bundle, so verify_jwt accepts it. Only getUser() proves a real session.
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const authHeader = req.headers.get("Authorization") || "";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Only coaches have a schedule to parse. Checked through the profile
+    // rather than assumed from the caller reaching this endpoint.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "coach") {
+      return new Response(JSON.stringify({ error: "Coaches only" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Count the call before making it. An authenticated coach can still run
+    // the bill up without this, by accident or otherwise.
+    const { data: allowed, error: quotaError } = await supabase
+      .rpc("claim_ai_call", { p_function_name: "parse-schedule", p_daily_limit: DAILY_CALL_LIMIT });
+
+    if (quotaError) {
+      console.error("quota check failed", quotaError);
+      return new Response(JSON.stringify({ error: "Could not verify your daily allowance" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: `Daily limit of ${DAILY_CALL_LIMIT} schedule imports reached. Try again tomorrow.` }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const { text, imageBase64, imageMimeType, todayISO } = await req.json();
     if (!text && !imageBase64) {

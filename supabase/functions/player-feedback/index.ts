@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// This one already authenticated properly, so it was never open to strangers.
+// The cap is for the other half of the problem: one authenticated account can
+// still spend without limit. Set high — a child re-reading their feedback or
+// asking follow-up questions should never meet it in ordinary use.
+const DAILY_CALL_LIMIT = 200;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -77,6 +83,24 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "assessment_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Counted after the request is known to be well-formed, so a malformed
+    // body does not consume someone's allowance.
+    const { data: allowed, error: quotaError } = await supabase
+      .rpc("claim_ai_call", { p_function_name: "player-feedback", p_daily_limit: DAILY_CALL_LIMIT });
+
+    if (quotaError) {
+      console.error("quota check failed", quotaError);
+      return new Response(JSON.stringify({ error: "Could not verify your daily allowance" }), {
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: "You've reached today's limit for feedback. Try again tomorrow." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // Fetch the assessment — it must belong to a squad_player linked to this user
