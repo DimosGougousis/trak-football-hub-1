@@ -28,13 +28,30 @@ export function calculateSquadAnalytics(
   // practice it is always present — but a `|| 5` fallback on a column that
   // cannot be null was protecting against nothing while silently rewriting a
   // real 0.0 (six sliders at zero) into "mixed". Absent is not five.
-  assessments: { id: string; squad_player_id: string; coach_rating: number | null; created_at: string }[],
+  // created_at is nullable too: the column is `timestamptz DEFAULT now()` with
+  // no NOT NULL, so the type is honest even though all 134 live rows have one.
+  // The caller used to pass `as any`, which is what kept this signature looking
+  // stricter than the data.
+  assessments: { id: string; squad_player_id: string; coach_rating: number | null; created_at: string | null }[],
 ): SquadAnalytics {
   const totalPlayers = players.length
   const totalAssessments = assessments.length
 
-  const rated = assessments.filter(a => a.coach_rating != null) as
-    { id: string; squad_player_id: string; coach_rating: number; created_at: string }[]
+  // Parse each timestamp once. `at` is null when there is no usable one — an
+  // unparseable date must not become epoch 0, which would silently read as
+  // "assessed in 1970" and flag the child as stale forever.
+  const rated = assessments
+    .filter(a => a.coach_rating != null)
+    .map(a => {
+      const parsed = a.created_at ? Date.parse(a.created_at) : NaN
+      return {
+        id: a.id,
+        squad_player_id: a.squad_player_id,
+        coach_rating: a.coach_rating as number,
+        created_at: a.created_at,
+        at: Number.isNaN(parsed) ? null : parsed,
+      }
+    })
   const unratedAssessments = totalAssessments - rated.length
 
   // Average rating, over the rated rows only. Counting an absent rating as 0
@@ -63,12 +80,16 @@ export function calculateSquadAnalytics(
   // still on the roster. An assessment on a transferred or removed roster row
   // is not part of this coach's squad today.
   const rosterIds = new Set(players.map(p => p.id))
-  const latestByPlayer = new Map<string, { rating: number; at: number }>()
+  const latestByPlayer = new Map<string, { rating: number; at: number | null }>()
   for (const a of rated) {
     if (!rosterIds.has(a.squad_player_id)) continue
-    const at = new Date(a.created_at).getTime()
     const seen = latestByPlayer.get(a.squad_player_id)
-    if (!seen || at > seen.at) latestByPlayer.set(a.squad_player_id, { rating: a.coach_rating, at })
+    // An undated assessment still bands the player when it is all we have, but
+    // it never outranks one we can place in time.
+    if (!seen) latestByPlayer.set(a.squad_player_id, { rating: a.coach_rating, at: a.at })
+    else if (a.at != null && (seen.at == null || a.at > seen.at)) {
+      latestByPlayer.set(a.squad_player_id, { rating: a.coach_rating, at: a.at })
+    }
   }
   for (const { rating } of latestByPlayer.values()) {
     const band = scoreToBand(rating)
@@ -77,13 +98,17 @@ export function calculateSquadAnalytics(
   const assessedPlayers = latestByPlayer.size
 
   // Group assessments by player, sorted chronologically (oldest first)
-  const byPlayer = new Map<string, { rating: number; created_at: string }[]>()
+  // Undated rows are excluded here: every rule below is about WHEN, and a row
+  // that cannot be placed in time would either sort to 1970 and flag the child
+  // as stale forever, or land arbitrarily inside a trend window.
+  const byPlayer = new Map<string, { rating: number; at: number }[]>()
   for (const a of rated) {
+    if (a.at == null) continue
     if (!byPlayer.has(a.squad_player_id)) byPlayer.set(a.squad_player_id, [])
-    byPlayer.get(a.squad_player_id)!.push({ rating: a.coach_rating, created_at: a.created_at })
+    byPlayer.get(a.squad_player_id)!.push({ rating: a.coach_rating, at: a.at })
   }
   for (const entries of byPlayer.values()) {
-    entries.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    entries.sort((a, b) => a.at - b.at)
   }
 
   // Player name lookup
@@ -131,6 +156,10 @@ export function calculateSquadAnalytics(
 
     // Rule 1: no assessments at all
     if (!entries || entries.length === 0) {
+      // Assessed, but not datably. Every rule here makes a claim about time,
+      // and we have none to make: "No assessments recorded" would be false,
+      // and "No assessment in 14+ days" would be a guess. Say nothing.
+      if (latestByPlayer.has(player.id)) continue
       candidates.push({
         name: player.player_name,
         playerId: player.id,
@@ -140,7 +169,7 @@ export function calculateSquadAnalytics(
       continue
     }
 
-    const lastDate = new Date(entries[entries.length - 1].created_at).getTime()
+    const lastDate = entries[entries.length - 1].at
     const daysSince = Math.floor((now - lastDate) / (24 * 60 * 60 * 1000))
 
     // Rule 2: stale — last assessment 14+ days ago

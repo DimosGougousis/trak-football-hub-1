@@ -160,6 +160,33 @@ describe('calculateSquadAnalytics', () => {
     expect(result.avgRating).toBe(0)
   })
 
+  it('never lets an undated assessment outrank a dated one', () => {
+    const players = [makePlayer('p1', 'Alice')]
+    const assessments = [
+      { id: 'a1', squad_player_id: 'p1', coach_rating: 9.5, created_at: null },
+      makeAssessment('a2', 'p1', 6.5, '2026-04-11T10:00:00Z'), // steady, dated
+    ]
+    const result = calculateSquadAnalytics(players, assessments)
+    expect(result.squadBands['steady']).toBe(1)
+    expect(result.squadBands['exceptional']).toBe(0)
+    // And it does not read as 1970, which would flag Alice stale forever.
+    expect(result.needsAttention).toEqual([])
+  })
+
+  it('still bands a player whose only assessment is undated', () => {
+    const players = [makePlayer('p1', 'Alice')]
+    const assessments = [
+      { id: 'a1', squad_player_id: 'p1', coach_rating: 8.5, created_at: null },
+    ]
+    const result = calculateSquadAnalytics(players, assessments)
+    expect(result.squadBands['standout']).toBe(1)
+    expect(result.assessedPlayers).toBe(1)
+    // And makes no claim about when. Parsing an absent date to epoch 0 would
+    // put the last assessment in 1970 and flag Alice stale forever; treating
+    // her as unassessed would be equally false — she has been assessed.
+    expect(result.needsAttention).toEqual([])
+  })
+
   it('identifies most improved player', () => {
     const players = [makePlayer('p1', 'Alice'), makePlayer('p2', 'Bob')]
     // Alice: first half avg 5.0, second half avg 8.0 => improvement 3.0
