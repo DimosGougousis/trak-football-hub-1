@@ -101,3 +101,31 @@ describe('toInstant strictness — Imad review findings on #20', () => {
     expect(normalizeInstant('2026-02-31T10:00:00')).toBeNull()
   })
 })
+
+describe('normalizeInstant — offset-bearing values are validated too (Imad, PR30 review)', () => {
+  it('rejects an impossible day carrying a Z', () => {
+    // JavaScript parses this as 3 March rather than rejecting it, so the
+    // calendar save path stored the wrong date.
+    expect(normalizeInstant('2026-02-31T10:00:00Z')).toBeNull()
+    expect(normalizeInstant('2026-04-31T10:00:00Z')).toBeNull()
+  })
+
+  it('rejects an impossible day carrying a numeric offset', () => {
+    expect(normalizeInstant('2026-02-31T10:00:00+04:00')).toBeNull()
+    expect(normalizeInstant('2026-02-31T10:00:00+0400')).toBeNull()
+    expect(normalizeInstant('2026-02-31T10:00:00-05:00')).toBeNull()
+  })
+
+  it('rejects 29 February in a non-leap year however it is written', () => {
+    expect(normalizeInstant('2026-02-29T10:00:00Z')).toBeNull()
+    expect(normalizeInstant('2026-02-29T10:00:00+04:00')).toBeNull()
+    expect(normalizeInstant('2026-02-29T10:00:00')).toBeNull()
+  })
+
+  it('still accepts real dates with an offset, preserving the instant', () => {
+    expect(normalizeInstant('2024-02-29T10:00:00Z')).toBe('2024-02-29T10:00:00.000Z')
+    expect(normalizeInstant('2026-03-01T18:00:00Z')).toBe('2026-03-01T18:00:00.000Z')
+    // +04:00 means 18:00 in Dubai, which is 14:00Z — the offset is authoritative.
+    expect(normalizeInstant('2026-03-01T18:00:00+04:00')).toBe('2026-03-01T14:00:00.000Z')
+  })
+})

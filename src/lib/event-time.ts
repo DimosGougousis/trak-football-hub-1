@@ -81,12 +81,29 @@ export function isTimeTBC(iso: string): boolean {
  */
 export function normalizeInstant(value: string | null | undefined): string | null {
   if (!value) return null
-  const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/.test(value.trim())
+  const raw = value.trim()
+
+  // The calendar date is validated whether or not the value carries an offset.
+  // Skipping this for offset-bearing values was a real hole: JavaScript parses
+  // '2026-02-31T10:00:00Z' as 3 March rather than rejecting it, so an
+  // impossible day arriving from the parser with a Z or a +04:00 was saved as
+  // the wrong date — the same defect toInstant already refuses for naive
+  // strings, reachable by the other route.
+  const dm = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw)
+  if (!dm) return null
+  const y = Number(dm[1]), m = Number(dm[2]), d = Number(dm[3])
+  if (m < 1 || m > 12) return null
+  if (d < 1 || d > daysInMonth(y, m)) return null
+
+  const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw)
   if (hasOffset) {
-    const d = new Date(value)
-    return Number.isNaN(d.getTime()) ? null : d.toISOString()
+    // The offset is authoritative for the instant; the calendar parts above
+    // have already been checked against the frame they were written in.
+    const parsed = new Date(raw)
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
   }
-  const [datePart, timePart] = value.trim().split('T')
+
+  const [datePart, timePart] = raw.split('T')
   if (!datePart) return null
   return toInstant(datePart, timePart ? timePart.slice(0, 5) : null)
 }
