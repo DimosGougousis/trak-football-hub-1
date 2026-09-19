@@ -68,7 +68,8 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
   breaks the 70% margin line at roughly 4× the assumed unit cost, which agentic workflows can reach.
 - **At pilot scale, fixed platform cost sinks the margin — not AI.** On a placeholder €200 a month
   platform bill, gross margin is 31.6% at 100 players and 86.3% at 1,000; the 70% line needs about
-  270 paying players.
+  270 paying players. At scale, routing 70% of requests to a model at a tenth of the cost keeps even
+  a 10×-cost agentic workload at a healthy 65.8%.
 
 ---
 
