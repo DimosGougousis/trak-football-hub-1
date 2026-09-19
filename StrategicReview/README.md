@@ -1,8 +1,9 @@
 # Strategic Review — Trak Football
 
-Outputs of a strategy workshop run against the Trak codebase and docs on **12 September 2026**:
-where Trak places its bet, a working prototype of the most critical use case, and a stress test of
-whether anything about the business is defensible.
+Outputs of a strategy workshop run against the Trak codebase and docs on **12 September 2026**, with
+the margin module added on 19 September: where Trak places its bet, a working prototype of the most
+critical use case, a stress test of whether anything about the business is defensible, and how it
+should package and price.
 
 **Read [What has changed since](#what-has-changed-since) first.** The analysis is kept exactly as
 delivered, but several facts it rested on have been superseded by the
@@ -13,7 +14,8 @@ delivered, but several facts it rested on have been superseded by the
 ## Contents
 
 Grouped by workshop module. Module 1 is named in the workshop's own material ("your M1 Three-Axis
-Scorecard"); the moat exercises follow it in order, each building on the one before.
+Scorecard"); the moat exercises follow it in order, each building on the one before. The margin
+module uses the workshop's own path, `03-the-margin/cost-curve.md`.
 
 ### [01-the-bet/](01-the-bet/)
 
@@ -34,6 +36,12 @@ Scorecard"); the moat exercises follow it in order, each building on the one bef
 | [threat-board.md](02-the-moat/threat-board.md) | Who attacks, from where, how fast, and how much value is at risk? |
 | [90-day-encroachment-plan.md](02-the-moat/90-day-encroachment-plan.md) | What would the strongest attacker do in 90 days, and how does Trak defend? |
 
+### [03-the-margin/](03-the-margin/)
+
+| File | Question it answers |
+|---|---|
+| [cost-curve.md](03-the-margin/cost-curve.md) | What do customers come for, what raises revenue per player, what must be sold separately — and where does AI cost break the margin? |
+
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
 ---
@@ -53,6 +61,10 @@ Scorecard"); the moat exercises follow it in order, each building on the one bef
   defence.
 - **Touchline — Claude drafts, the coach signs.** The prototype's central idea is that an
   AI-authored assessment destroys believability the same way a self-fabricated one does.
+- **Package as Leader / Filler / Killer:** the coach-signed record is what institutions buy; AI
+  debriefs and training plans lift revenue per player through metered overage; the trial
+  application pack is sold separately. On illustrative costs, AI spend is 7.6% of revenue — and
+  breaks the 70% margin line at roughly 4× the assumed unit cost, which agentic workflows can reach.
 
 ---
 
