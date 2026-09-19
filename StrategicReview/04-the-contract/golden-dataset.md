@@ -78,6 +78,8 @@ check); and one row for every correction a pilot coach makes that the current ro
 
 ## 2. Confidence UX — three tiers
 
+*The course tool's version of this section is in [confidence-ux.md](confidence-ux.md).*
+
 **Where confidence comes from.** Not the model's opinion of itself. The draft's score is built from
 checks Trak can explain: rule checks pass (R1–R5), each drafted band **cites the coach's phrase it
 came from**, the input names a player on the roster, and the judge's fidelity score. Every tier sets

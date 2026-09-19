@@ -49,6 +49,7 @@ contract modules use the workshop's own paths, `03-the-margin/cost-curve.md` and
 | File | Question it answers |
 |---|---|
 | [golden-dataset.md](04-the-contract/golden-dataset.md) | How do we test the agent's output, how does the coach see its confidence, and what reliability do we promise? |
+| [confidence-ux.md](04-the-contract/confidence-ux.md) | What does the coach see at each confidence tier, and what can they control? The course tool's output and how the tool works. |
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
