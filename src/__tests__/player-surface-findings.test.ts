@@ -70,14 +70,43 @@ describe.skipIf(!ENABLED)('player surface findings (expected to fail until fixed
     ).toEqual(thresholds.length === 0 ? [] : canonical)
   })
 
-  it('F-1: the profile page renders no hardcoded band colours', () => {
+  // Corrected after @t-bones29 fixed F-1 and this assertion stayed red on a
+  // construct that was never the defect.
+  //
+  // The original checked PlayerProfilePage for ANY band hex and found #C8F25A
+  // four times — all four the BRAND ACCENT: three icon tints and the
+  // trend-filter highlight. #C8F25A is also the Exceptional band colour, so a
+  // grep cannot tell the two uses apart, and Tarek was right to leave the file
+  // alone rather than contort it to satisfy a bad test. He notes the same
+  // approach matches 52 files repo-wide for exactly this reason.
+  //
+  // The accent is excluded and the other six stay, which is still a real
+  // tripwire: none of them has a second meaning. The threshold assertion above
+  // is the load-bearing one and it is green.
+  const ACCENT = '#C8F25A'
+  it('F-1: the profile page renders no unambiguous band colours', () => {
     const text = code(src('pages', 'player', 'PlayerProfilePage.tsx'))
-    const bandColours = BANDS.map(b => b.color).filter(c => c.startsWith('#'))
+    const bandColours = BANDS.map(b => b.color).filter(c => c.startsWith('#') && c !== ACCENT)
     const found = bandColours.filter(c => text.includes(c))
     expect(
       found,
       `PlayerProfilePage hardcodes band colours ${found.join(', ')} rather than reading ` +
         `them from BANDS, so a change to the palette updates one screen and not the other.`,
+    ).toEqual([])
+  })
+
+  // The fifth ladder, which @t-bones29 found and I had missed: a score of 4
+  // read "Developing" here against "Mixed" canonically, live on the player's
+  // match detail screen. Covered now so the tripwire matches what was actually
+  // wrong rather than only the copy I happened to find.
+  it('F-1: matchDetailHelpers defines no band thresholds of its own', () => {
+    const text = code(src('lib', 'matchDetailHelpers.ts'))
+    const thresholds = [...text.matchAll(/score\s*>=\s*(\d+(?:\.\d+)?)/g)].map(m => Number(m[1]))
+    expect(
+      thresholds,
+      'matchDetailHelpers carries its own score->band ladder again. It disagreed with ' +
+        'scoreToBand() on 2, 3 and 4, so the same child read differently depending on ' +
+        'which screen they opened.',
     ).toEqual([])
   })
 
@@ -122,16 +151,29 @@ describe.skipIf(!ENABLED)('player surface findings (expected to fail until fixed
   // PlayerPassport captures an image and shares `files`. PlayerEvolutionCard
   // shares `{ title, text }` with no files key, so the OS share sheet has only
   // a string to hand to Messages.
+  // Re-pointed after @t-bones29 fixed F-4. The original anchored on
+  // `navigator.share` inside this file; the fix moved the share behind a shared
+  // `@/lib/card-export` helper, so the anchor vanished and the assertion failed
+  // with "the share path moved" rather than on the defect. The property that
+  // matters is unchanged: the card leaves as an image, not a sentence.
   it('F-4: the Evolution Card shares an image, not a string', () => {
     const text = code(src('pages', 'player', 'PlayerEvolutionCard.tsx'))
-    const shareAt = text.indexOf('navigator.share')
-    expect(shareAt, 'the Evolution Card share path moved').toBeGreaterThan(-1)
-    const call = text.slice(shareAt, shareAt + 300)
+    const viaHelper = /captureElementToPng|shareOrSaveImage/.test(text)
+    const directShare = text.indexOf('navigator.share')
+    if (directShare > -1) {
+      const call = text.slice(directShare, directShare + 300)
+      expect(
+        /files\s*:/.test(call),
+        'PlayerEvolutionCard calls navigator.share without a `files` key, so the card is ' +
+          'shared as plain text and Messages pastes it as writing.',
+      ).toBe(true)
+      return
+    }
     expect(
-      /files\s*:/.test(call),
-      'PlayerEvolutionCard calls navigator.share without a `files` key, so the card is ' +
-        'shared as plain text. PlayerPassport already does this correctly — html2canvas, ' +
-        'canvas.toBlob, then share({ files: [file] }).',
+      viaHelper,
+      'PlayerEvolutionCard neither shares an image through the card-export helper nor calls ' +
+        'navigator.share directly. If the share path moved again, re-point this assertion — ' +
+        'the property is that the card leaves as an image.',
     ).toBe(true)
   })
 
@@ -143,6 +185,28 @@ describe.skipIf(!ENABLED)('player surface findings (expected to fail until fixed
   // Supabase returns the EXISTING user for a duplicate-email signup, so
   // auth.uid() is the old account for everything downstream. Two independent
   // consequences, and the second is the serious one.
+  //
+  // ⚠️ CORRECTED 19 September. The rename half above is UNVERIFIED.
+  //
+  // @t-bones29 traced it (#56) and the chain does not survive: onboarding data
+  // reaches provision_my_profile only through user_metadata.trak_onboarding, so
+  // a stranger's data renames a child only if Supabase writes that stranger's
+  // options.data onto the existing user's metadata — untested by either of us.
+  // Kostas's own report says "It didnt override the old account", and the
+  // triage explained the guardian email with a rename he said did not happen.
+  //
+  // The database cannot settle it: trak_onboarding is cleared once provisioning
+  // succeeds and is absent on all 12 live accounts. It needs the console
+  // experiment, which is Kostas's.
+  //
+  // Both assertions stay anyway, and Tarek agrees they should: they are correct
+  // even if the branch is unreachable today, it is one Supabase behaviour change
+  // from being reachable, and nothing would warn us. What changed is the
+  // justification, not the target.
+  //
+  // If it IS reachable it is worse than either of us first said — the same
+  // ON CONFLICT also overwrites date_of_birth, which squad_player_consent_required()
+  // reads, and runs link_player_to_coach with the signup's own code.
   //
   // No fix is asserted here, because the right behaviour is a product decision
   // with a real tradeoff — telling the user an account exists gives up

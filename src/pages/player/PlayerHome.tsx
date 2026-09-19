@@ -8,6 +8,7 @@ import { BANDS, type BandType } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
 import { isTimeTBC } from '@/lib/event-time'
+import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
@@ -120,22 +121,28 @@ export default function PlayerHome() {
         }
       })
     supabase.from('player_details').select('position, current_club, age_group').eq('user_id', user.id).maybeSingle()
-      .then(({ data }) => setDetails(data))
+      .then(({ data, error }) => {
+        // These sibling reads used to destructure only `data`, so a failure
+        // rendered as "nothing recorded yet" — the same false empty state this
+        // screen's main query was fixed for, arriving one query along.
+        if (error) { setLoadFailed(true); return }
+        setDetails(data)
+      })
     // Fetch squad link → coach assessments + published calendar events
     supabase.from('squad_players').select('id, coach_user_id').eq('linked_player_id', user.id)
-      .then(async ({ data: squadRows }) => {
+      .then(async ({ data: squadRows, error: squadError }) => {
+        if (squadError) { setLoadFailed(true); return }
         if (!squadRows?.length) return
         const ids = squadRows.map((r: any) => r.id)
         const coachIds = squadRows.map((r: any) => r.coach_user_id).filter(Boolean)
 
         // Latest coach assessment
-        const { data: assessments } = await supabase.from('coach_assessments')
+        const { data: assessments, error: assessError } = await supabase.from('coach_assessments')
           .select('*')
           .in('squad_player_id', ids)
           .order('created_at', { ascending: false })
           .limit(1)
-        console.log('[Trak] squad ids:', ids)
-        console.log('[Trak] assessments found:', assessments?.length, assessments?.[0]?.id)
+        if (assessError) { setLoadFailed(true); return }
         if (assessments?.length) {
           const latest = assessments[0]
           setCoachAssessment(latest)
@@ -186,7 +193,7 @@ export default function PlayerHome() {
 
         // Published upcoming calendar events from coach
         if (coachIds.length) {
-          const { data: evs } = await supabase
+          const { data: evs, error: evsError } = await supabase
             .from('coach_calendar_events')
             .select('*')
             .in('coach_user_id', coachIds)
@@ -194,6 +201,10 @@ export default function PlayerHome() {
             .gte('starts_at', new Date().toISOString())
             .order('starts_at', { ascending: true })
             .limit(5)
+          // A failed calendar read is not an empty calendar. Without this the
+          // player is told they have no sessions coming up, which is a
+          // statement about their week, not about the network.
+          if (evsError) { setLoadFailed(true); return }
           setUpcomingEvents(evs || [])
         }
       })
@@ -672,7 +683,11 @@ export default function PlayerHome() {
             <div className="mt-2.5 space-y-2">
               {recentMatches.map(m => {
                 const band = scoreToBand(m.computed_rating || 6.5)
-                const formattedDate = new Date(m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                // Same source of truth as PlayerMatches: when the match was played,
+                // falling back to when the row was logged. The two screens used
+                // to disagree about the same match's date.
+                const formattedDate = parseDisplayDate(m.match_date || m.created_at)
+                  ?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) ?? ''
                 const result = m.team_score != null && m.opponent_score != null
                   ? (m.team_score > m.opponent_score ? 'W' : m.team_score < m.opponent_score ? 'L' : 'D')
                   : null

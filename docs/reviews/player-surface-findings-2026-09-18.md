@@ -4,10 +4,21 @@ Kostas tested the player profile end to end and reported twelve observations. Th
 triages all twelve: what is confirmed against the code or the live database, what
 is not, who owns each, and what the fix costs.
 
-**Nothing here is fixed.** Every item on the player surface belongs to Tarek, and
-this was written while he and Imad were offline. This document and its companion
-test file are the whole deliverable, so that his next pass is one pass instead of
-twelve investigations.
+**Nothing here was fixed when this was written.** Every item on the player surface
+belongs to Tarek, and this was written while he and Imad were offline. The document
+and its companion tests were the whole deliverable, so that his next pass would be
+one pass instead of twelve investigations.
+
+> **19 September update.** @t-bones29 took F-1, F-4 and F-6 in #55 and they are
+> now on `main`. He also corrected two things here, both of which stand: there
+> was a **fifth** band ladder I had missed (`categoryScoreToBand()` in
+> `matchDetailHelpers.ts`, live on the player's match-detail screen, where a 4
+> read "Developing" against "Mixed"), and **one of my F-1 assertions was checking
+> the wrong construct** — it grepped for band hexes and matched the brand accent
+> `#C8F25A`, which is also the Exceptional colour, so a grep cannot tell them
+> apart. He was right not to contort the file to satisfy it; the assertion is
+> corrected instead. F-5's mechanism is corrected below. F-2 and F-3 remain mine
+> and blocked behind #48.
 
 Where a root cause is stated it was read from the code or queried from the live
 database. Where it is not, the row says so rather than guessing — five of the
@@ -49,10 +60,16 @@ without moving the sliders genuinely is all fives. So the data was right and bot
 screens were describing it, differently.
 
 CLAUDE.md: *"never use hardcoded colour strings outside of the `BANDS` config."*
-This is the fourth copy of that map found on 18 September — the others are
+Counted as the fourth copy of that map when written — the others being
 `src/lib/clubMock.ts`, `src/lib/matchDetailHelpers.ts`, and one in
-`CoachHomePage.tsx` removed the same evening. It is the only copy whose
-**thresholds** differ rather than only its storage.
+`CoachHomePage.tsx` removed the same evening.
+
+**There were five.** @t-bones29 went looking for the rest and found
+`categoryScoreToBand()` in `matchDetailHelpers.ts` carrying its own *thresholds*,
+not just its own colours — a 4 reads "Developing" there against "Mixed"
+canonically, and a 3 reads "Difficult" against "Developing". Live on the player's
+match-detail screen, so the same child reads differently depending on which
+screen they open. Fixing only the copy reported here would have left it.
 
 **Owner:** Tarek. **Cost:** deletion — use `scoreToBand` + `BANDS`. The other two
 copies should go the same way.
@@ -114,7 +131,48 @@ Messages.
 `PlayerPassport`, including its transform handling (`PlayerPassport.tsx:77` removes
 a CSS transform before capture, which the Evolution Card will need too).
 
-### F-5 · A second signup on an existing email renames the first account and emails its parent
+### F-5 · A second signup on an existing email emails the first account's parent
+
+> **CORRECTED 19 September, after @t-bones29 traced it (#56). The mechanism
+> below was asserted, not traced, and the observation it was built on
+> contradicts it.**
+>
+> Kostas's report says, in his own words: *"**It didnt override the old
+> account**… Once trying to create the new account it sent an email to the
+> parent that was linked to the old account."* **The triage explained the
+> guardian email with a rename that the reporter explicitly said did not
+> happen**, and nobody — me least of all — reconciled the two. That is the
+> failure this document criticises elsewhere: characterising a mechanism
+> without following it.
+>
+> Tarek's trace: onboarding data reaches `provision_my_profile` through exactly
+> one channel, `user_metadata.trak_onboarding`. The browser-storage channel is
+> dead by design — `PENDING_PROFILE_KEY` appears twice in the whole codebase,
+> its declaration and a `removeItem`, and is never read. So a stranger's data
+> can rename a child **only if Supabase writes that stranger's `options.data`
+> onto the existing user's metadata**, which is an assumption neither of us has
+> tested.
+>
+> His alternative fits both halves of the report without a rename: an account
+> whose first sign-in never completed still holds its own `trak_onboarding`.
+> The duplicate signup makes Supabase mail the *existing* address; following
+> that link opens a session for the existing account, provisioning runs on
+> **that account's own original data**, and the invite goes to **its own
+> original guardian**. No rename, one guardian email, late.
+>
+> **I could not settle it from the database.** `trak_onboarding` is cleared
+> once provisioning succeeds, and it is absent on all 12 live accounts, so
+> there is nothing to read back. Tarek's experiment is the right test and it
+> needs the console: sign up again with a *completed* account's email, a
+> different name, then read `auth.users.raw_user_meta_data` for that account.
+> Unchanged → the rename is unreachable. Contains the new name → it is worse
+> than either of us said, see below.
+>
+> **What is not in doubt:** the guardian of an existing account received an
+> email triggered by someone else's signup attempt. That half is Kostas's
+> direct observation and it stands.
+>
+> The original text follows, with its unverified claim marked.
 
 > *"I created a new player account using an email that I had already used… It didnt
 > override the old account… Once trying to create the new account it sent an email
@@ -127,8 +185,10 @@ Supabase deliberately returns the **existing** user for a duplicate-email signup
 to prevent email enumeration. So `auth.uid()` is the *old* account for everything
 that follows, and two things happen that should not:
 
-1. **The existing account is renamed.** `provision_my_profile`
-   (`20260611000001`) does:
+1. **The existing account is renamed — ⚠️ UNVERIFIED, see the correction
+   above.** This depends on Supabase writing the second signup's `options.data`
+   onto the existing user's metadata, which has not been tested.
+   `provision_my_profile` (`20260611000001`) does:
    ```sql
    INSERT INTO public.profiles (user_id, role, full_name, nationality)
    VALUES (...)
@@ -146,8 +206,23 @@ that follows, and two things happen that should not:
    nothing to do with whoever just attempted the signup. Live: 8 invite rows across
    8 players.
 
-So someone who knows a child's registered email can rename that child's account and
-cause an email to reach their guardian, without ever proving control of the address.
+So someone who knows a child's registered email can cause an email to reach their
+guardian without ever proving control of the address — and, *if* the metadata
+branch turns out to be reachable, rename the account too.
+
+**@t-bones29 found two further writes on that same conditional branch, and they
+are worse than the rename.** The same `ON CONFLICT DO UPDATE` also writes
+`date_of_birth` — `COALESCE(EXCLUDED.date_of_birth, player_details.date_of_birth)`,
+so a supplied date overwrites a stored one — and `date_of_birth` is the field
+`squad_player_consent_required()` reads. And the same call runs
+`link_player_to_coach()` with whatever coach code the signup supplied. Together:
+add a child to your own squad, age them past the consent threshold, and begin
+recording against them, knowing only their email address. Neither write was in
+my original finding.
+
+**This is why the experiment comes before the decision.** If the branch is
+unreachable, only the product question remains. If it is reachable, the severity
+is not "a confusing signup".
 
 **The fix is a product decision, not an engineering one**, which is why nothing is
 changed here. The tradeoff:
@@ -243,12 +318,12 @@ never-reused link also hangs.
 
 | | Finding | Confirmed | Owner | Blocked by |
 |---|---|---|---|---|
-| F-1 | Band ladder diverges between screens | yes | Tarek | — |
+| F-1 | Band ladder diverges between screens | yes | Tarek | **fixed in #55** — and there was a *fifth* ladder I missed |
 | F-2 | Name save does not refresh the profile | yes | Kostas | Imad's #48 |
 | F-3 | Profile photo URL is unusable | yes | Kostas | Imad's #48 |
-| F-4 | Evolution Card shares text, not an image | yes | Tarek | — |
-| F-5 | Duplicate signup renames account, emails wrong parent | yes | all three | product decision |
-| F-6 | DOB and age group never cross-checked | yes | Tarek | product decision |
+| F-4 | Evolution Card shares text, not an image | yes | Tarek | **fixed in #55** |
+| F-5 | Duplicate signup emails the wrong parent | **partly — rename UNVERIFIED** | all three | Kostas's console experiment, then a product decision |
+| F-6 | DOB and age group never cross-checked | yes | Tarek | **fixed in #55**; age fix rides #38 |
 | F-7 | Passport "loads wonky" | no | Tarek | needs detail |
 | F-8 | AI answers incomplete | no | Kostas | needs transcript |
 | F-9 | What "series 2" looks like | n/a | product | — |
