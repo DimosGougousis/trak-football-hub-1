@@ -1,36 +1,20 @@
 import { describe, it, expect } from 'vitest'
-import { ageInYears, ageGroupCeiling, ageGroupMatches, lowestEligibleAgeGroup } from '@/lib/age-group'
+import { ageGroupCeiling, ageGroupMatches, lowestEligibleAgeGroup } from '@/lib/age-group'
 
-const on = (iso: string) => new Date(`${iso}T12:00:00Z`)
+// F-6. Onboarding took date_of_birth and age_group as independent fields and
+// accepted any pairing. Playing UP a group is ordinary youth football; playing
+// DOWN is the direction that matters, because squad_player_consent_required()
+// follows date_of_birth and a band contradicting it is a signal nobody reads.
+//
+// The age itself comes from ageFromDateOfBirth in consent.ts — there is no
+// second implementation here, and its timezone behaviour is #38's to prove.
 
-describe('ageInYears', () => {
-  it('counts whole years', () => {
-    expect(ageInYears('2010-09-19', on('2026-09-19'))).toBe(16)
-  })
-
-  it('does not credit the birthday a day early', () => {
-    // The off-by-one that would let a child into a younger band for one day.
-    expect(ageInYears('2010-09-20', on('2026-09-19'))).toBe(15)
-    expect(ageInYears('2010-09-19', on('2026-09-18'))).toBe(15)
-  })
-
-  it('handles a 29 February birthday in a non-leap year', () => {
-    expect(ageInYears('2008-02-29', on('2026-02-28'))).toBe(17)
-    expect(ageInYears('2008-02-29', on('2026-03-01'))).toBe(18)
-  })
-
-  it('rejects dates that do not exist rather than rolling them over', () => {
-    // The bug class S7/T5 already fixed once: 31 February silently becoming 3 March.
-    expect(ageInYears('2010-02-31', on('2026-09-19'))).toBeNull()
-    expect(ageInYears('2010-13-01', on('2026-09-19'))).toBeNull()
-  })
-
-  it('returns null for junk and for the future', () => {
-    expect(ageInYears('', on('2026-09-19'))).toBeNull()
-    expect(ageInYears('not-a-date', on('2026-09-19'))).toBeNull()
-    expect(ageInYears('2030-01-01', on('2026-09-19'))).toBeNull()
-  })
-})
+/** A YYYY-MM-DD that is exactly `years` old today, offset by `days`. */
+const dob = (years: number, days = 0) => {
+  const n = new Date()
+  const d = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + days))
+  return `${d.getUTCFullYear() - years}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+}
 
 describe('ageGroupCeiling', () => {
   it('reads the number out of a closed band', () => {
@@ -47,44 +31,50 @@ describe('ageGroupCeiling', () => {
 
 describe('ageGroupMatches', () => {
   it('allows playing up', () => {
-    // A 12-year-old in U15 is ordinary youth football, not a defect.
-    expect(ageGroupMatches('2014-01-01', 'U15', on('2026-09-19'))).toBe(true)
-    expect(ageGroupMatches('2014-01-01', 'U19+', on('2026-09-19'))).toBe(true)
+    expect(ageGroupMatches(dob(12), 'U15')).toBe(true)
+    expect(ageGroupMatches(dob(12), 'U19+')).toBe(true)
   })
 
   it('refuses playing down, which is the direction that matters', () => {
-    // A 16-year-old cannot be in U13. This is the case that makes the age band
+    // A 16-year-old cannot be in U13. This is the pairing that makes the band
     // contradict the date of birth the consent gate reads.
-    expect(ageGroupMatches('2010-01-01', 'U13', on('2026-09-19'))).toBe(false)
-    expect(ageGroupMatches('2010-01-01', 'U16', on('2026-09-19'))).toBe(false)
+    expect(ageGroupMatches(dob(16), 'U13')).toBe(false)
+    expect(ageGroupMatches(dob(16), 'U16')).toBe(false)
   })
 
   it('is exact at the boundary', () => {
-    // Under 17 means under 17. Someone who turned 17 today is not eligible.
-    expect(ageGroupMatches('2009-09-19', 'U17', on('2026-09-19'))).toBe(false)
-    expect(ageGroupMatches('2009-09-20', 'U17', on('2026-09-19'))).toBe(true)
+    // Under 17 means under 17: someone who turned 17 today is not eligible,
+    // and someone whose 17th birthday is tomorrow still is.
+    expect(ageGroupMatches(dob(17), 'U17')).toBe(false)
+    expect(ageGroupMatches(dob(17, 1), 'U17')).toBe(true)
   })
 
   it('permits what it cannot evaluate, so it never blocks a signup blindly', () => {
-    expect(ageGroupMatches('', 'U13', on('2026-09-19'))).toBe(true)
-    expect(ageGroupMatches('garbage', 'U13', on('2026-09-19'))).toBe(true)
-    expect(ageGroupMatches('2010-01-01', '', on('2026-09-19'))).toBe(true)
+    expect(ageGroupMatches('', 'U13')).toBe(true)
+    expect(ageGroupMatches('garbage', 'U13')).toBe(true)
+    expect(ageGroupMatches(dob(16), '')).toBe(true)
+    // An impossible date like 2011-02-31 is deliberately NOT asserted here.
+    // On main it still normalises to 3 March and yields a real age — that is
+    // the defect #38 fixes, and asserting either behaviour would pin one PR's
+    // state into the other's suite. Onboarding rejects impossible dates before
+    // this check runs (isRealCalendarDate, from T5), so the path is unreachable
+    // from the screen either way.
   })
 
   it('accepts the reported case, which was never the defect', () => {
-    // "born in 2000 playing for U19+" — 26 years old in the open band is fine.
-    expect(ageGroupMatches('2000-05-05', 'U19+', on('2026-09-19'))).toBe(true)
+    // "born in 2000 playing for U19+" — an adult in the open band is fine.
+    expect(ageGroupMatches('2000-05-05', 'U19+')).toBe(true)
   })
 })
 
 describe('lowestEligibleAgeGroup', () => {
   it('names the youngest band a player may join', () => {
-    expect(lowestEligibleAgeGroup('2014-01-01', on('2026-09-19'))).toBe('U13')
-    expect(lowestEligibleAgeGroup('2010-01-01', on('2026-09-19'))).toBe('U17')
-    expect(lowestEligibleAgeGroup('2000-01-01', on('2026-09-19'))).toBe('U19+')
+    expect(lowestEligibleAgeGroup(dob(12))).toBe('U13')
+    expect(lowestEligibleAgeGroup(dob(16))).toBe('U17')
+    expect(lowestEligibleAgeGroup(dob(26))).toBe('U19+')
   })
 
   it('says nothing when it cannot tell', () => {
-    expect(lowestEligibleAgeGroup('', on('2026-09-19'))).toBeNull()
+    expect(lowestEligibleAgeGroup('')).toBeNull()
   })
 })

@@ -23,8 +23,7 @@
     "uc:report": "node scripts/uc-report.mjs",
     "prepare": "husky",
     "test:usecases": "node scripts/uc-check.mjs --stage=ci",
-    "test:browser": "npm run build && playwright test --config playwright.pilot.config.ts",
-    "test:tz": "for tz in UTC Asia/Dubai America/New_York America/Los_Angeles Pacific/Kiritimati Pacific/Auckland; do echo \"== $tz\"; TZ=$tz vitest run src/lib/__tests__/consent.test.ts src/lib/__tests__/age-group.test.ts src/lib/__tests__/event-time.test.ts src/lib/__tests__/calendar.test.ts || exit 1; done"
+    "test:browser": "npm run build && playwright test --config playwright.pilot.config.ts"
   },
   "dependencies": {
     "@axe-core/react": "^4.11.1",
