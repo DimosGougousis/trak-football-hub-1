@@ -154,7 +154,9 @@ Three consequences:
 
 ## Not in this model
 
-- **Non-AI costs:** hosting (Supabase, Vercel), monitoring (Sentry), email (Resend), support.
+- **Non-AI costs:** hosting (Supabase, Vercel), monitoring (Sentry), email (Resend), support. The
+  [margin calculator](margin-calculator.md) adds them as a placeholder — at pilot scale they
+  outweigh AI cost eight to one.
 - **Payment processing.** A fixed per-transaction fee takes a larger share of a €5 top-up than of a
   €30 one — consider a higher minimum top-up.
 - **The AI gateway.** Three edge functions still route through Lovable's gateway on

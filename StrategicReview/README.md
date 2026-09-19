@@ -41,6 +41,7 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
 | File | Question it answers |
 |---|---|
 | [cost-curve.md](03-the-margin/cost-curve.md) | What do customers come for, what raises revenue per player, what must be sold separately — and where does AI cost break the margin? |
+| [margin-calculator.md](03-the-margin/margin-calculator.md) | What is Trak's gross margin per player, and what breaks it — AI cost, usage, or scale? |
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
@@ -65,6 +66,9 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
   debriefs and training plans lift revenue per player through metered overage; the trial
   application pack is sold separately. On illustrative costs, AI spend is 7.6% of revenue — and
   breaks the 70% margin line at roughly 4× the assumed unit cost, which agentic workflows can reach.
+- **At pilot scale, fixed platform cost sinks the margin — not AI.** On a placeholder €200 a month
+  platform bill, gross margin is 31.6% at 100 players and 86.3% at 1,000; the 70% line needs about
+  270 paying players.
 
 ---
 
