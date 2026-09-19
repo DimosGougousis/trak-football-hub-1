@@ -98,11 +98,67 @@ not mine to decide unilaterally.
 
 ---
 
-## Unrelated, found while checking
+## Week 7 — investigated, and it is a defect in the metric
 
-Week 7 dropping from six consecutive weeks at ~78% to zero is worth someone
-looking at independently of this decision. It is one fixture on 5 September with
-14 expected rows and nothing logged against it, by anyone, in a period where the
-preceding six weeks were consistent. Either the fixture did not happen and the
-calendar entry is stale, or a logging path stopped working. I have not
-investigated which.
+I first recorded this as "either the calendar entry is stale or a logging path
+stopped working, I have not investigated which". It is neither.
+
+**`pilot_match_coverage` counts unpublished draft calendar entries as fixtures.**
+
+The `fixtures` CTE is:
+
+```sql
+FROM public.coach_calendar_events e
+JOIN public.pilot_coach_ids() pc ON pc.coach_user_id = e.coach_user_id
+WHERE e.event_type IN ('match', 'tournament')
+```
+
+There is **no `published` filter**. Weeks 1–6 are twelve events, all
+`published = true`, all with real opponents, two coaches each. Week 7 is two
+events dated 5 September, both by a single coach, both:
+
+| | |
+|---|---|
+| `published` | **false** |
+| `opponent` | **null** |
+
+They are half-finished drafts. No match was played, so nothing could be logged
+against them — and `matches` confirms it: nothing at all on 5 September, the
+last rows in that window being 26 August and 1 September.
+
+The product already treats unpublished events as invisible — `PlayerHome`'s
+calendar query filters `.eq('published', true)`. The metric does not.
+
+### What it costs
+
+Splitting the same query by `published`:
+
+| fixtures | expected | logged | coverage |
+|---|---|---|---|
+| **published** | 84 | 65 | **77.4%** |
+| unpublished drafts | 14 | 0 | 0.0% |
+| *as the view currently reports* | *98* | *65* | *66.3%* |
+
+So a coach's two unfinished drafts are the entire difference between the
+scorecard reading **77.4%, above the 70% target**, and **66.3%, below it** — and
+they alone produce the 0.0% week.
+
+### ⚠️ Read this before agreeing with me
+
+**This fix moves a customer-facing number in our favour**, from failing to
+passing. That is the direction that deserves the most suspicion, not the least,
+so I am flagging it rather than presenting it as a win. I have not changed
+anything.
+
+The argument that it is a defect and not a convenient reinterpretation: the view
+is named `pilot_match_coverage` and its comment says *"Target: >=70% logged"* —
+an unplayed draft with no opponent is not a fixture by any reading, and counting
+it means the academy's number can be moved by a coach opening the calendar and
+not finishing. The counter-argument worth hearing is that a draft may represent a
+real fixture someone forgot to publish, in which case the miss is genuine and the
+current number is right.
+
+**The fix, if agreed, is one line** — `AND e.published` in the `fixtures` CTE —
+in a new migration against `20260901000005`. It touches `pilot_scorecard`, so it
+wants a second pair of eyes for the reason above, and I would want the same
+suspicion applied to it that I am applying myself.
