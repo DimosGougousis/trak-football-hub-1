@@ -299,28 +299,68 @@ Built so an academy director can be shown it in a sales call.
 
 ## 5. Reliability contract
 
-What Trak promises, how it is measured and what happens when it slips. Numbers are provisional until
-the pilot measures a baseline. Rows 1, 2, 4 and 5 follow the workshop's four metrics. Row 3 is the
-one Trak can't do without.
+*Drafted in the course's Reliability Contract Builder on 19 September and taken from its own
+"Copy Reliability Contract" output, starting from the worked example.
+[reliability-contract-builder.md](reliability-contract-builder.md) has the worked example and how
+the builder works. Every number is provisional: the pilot has not yet measured a baseline.*
 
-| Metric | Target | Measurement | Alert → consequence |
+## Reliability Contract
+
+| Metric | Target | Measurement | Alert Threshold |
+|--------|--------|-------------|-----------------|
+| Accuracy | 92% of golden rows | Every prompt or model change + weekly · all golden rows (10 today, ~150 at v1) · LLM-as-Judge from a different family than the Gemini 3 Flash drafter (fidelity rubric) + rule checks R1–R5 | <88% → page on-call |
+| Hallucination rate | <1% of drafted claims | Same run · safety rubric flags invented facts, praise or coach quotes · plus every "not what I said" label from coaches | >2%, or any invented claim in a signed record → auto-rollback to last good model |
+| Latency (p95) | <4s coach submit → draft on screen | Continuous · Supabase edge-function logs + Sentry performance span on the draft request · p95 per AI function | >8s for 15min → page on-call |
+| Drift velocity | <0.5 pt / 4w | 4-week rolling fidelity on golden rows + 4-week rolling coach override rate on signed records (every signature is a free label) | >1 pt decay / 4w, or coach override rate +5 pts / 4w → trigger gold-set audit |
+
+## HITL Architecture
+
+**Trigger:** Always: the coach signs every record — no tier auto-signs. Review queue: confidence <50% (verified ÷ drafted fields) OR any safety flag (safeguarding disclosure, instruction in note, demeaning language, character grade) OR a coach presses "not what I said"
+
+**Reviewer:** Coach on every record · flagged drafts: Trak on-call PM (Dimos until a rota is named), UAE and Greece business hours, next working day otherwise · safeguarding: the academy's designated safeguarding lead, never Trak alone
+
+**Feedback loop:** Yes. Coach edits and labels save source_text, drafted_band, signed_band, coach_id → weekly gold-set audit adds a row per new failure (10 → ~150 by v1). 5+ corrections of one kind in a week → prompt revision candidate, re-run golden rows before release. No model training on children's records until the GDPR legal basis exists.
+
+### The row the builder doesn't have: safety leaks
+
+The builder has four fixed metrics. Trak needs a fifth, because a child can be harmed by one bad
+output, not by an average.
+
+| Metric | Target | Measurement | Alert Threshold |
+|--------|--------|-------------|-----------------|
+| Safety leaks — digits, red, a banded character or a disclosure reaching a child or parent | 0 | Rule checks R1–R5 on 100% of live drafts before display, and on every golden row in CI | Any one → that draft is blocked at runtime; a failing golden row fails CI; a leak in a signed record is an incident the same day |
+
+### What each alert does at Trak
+
+The builder's consequence wording is fixed. At Trak, each one means this:
+
+| Alert | Builder says | What actually happens |
+|---|---|---|
+| Accuracy < 88% | page on-call | On a prompt or model change, the change is **blocked from release**. On the weekly run, the on-call PM is paged. |
+| Hallucination > 2%, or one invented claim in a signed record | auto-rollback to last good model | Roll back the **prompt and the model** together, and **pause agent drafting**: coaches use the manual form until the golden rows pass again. The signed record is corrected with the coach and the parent is told. |
+| Latency > 8 s for 15 min | page on-call | The coach is offered the manual form with their input kept, and on-call is paged. The coach is never left waiting. |
+| Drift | trigger gold-set audit | Gold-set audit and prompt review. **Not** a rollback: the builder's point is that the world changed, not the model. For Trak that might be a new age group or a new language. |
+
+### Where Trak departs from the worked example
+
+| | Worked example (support copilot) | Trak | Why |
 |---|---|---|---|
-| **Fidelity** — each drafted band and sentence traces to the coach's input | **≥ 92%** of gold rows | Every prompt or model change, and weekly · all gold rows · LLM judge, fidelity rubric | **< 88%** → the change is blocked from release; weekly run pages the on-call PM |
-| **Invented claims** — facts, praise or quotes the coach didn't give | **< 1%** of drafted claims | Same run · safety rubric · plus every *"This draft is wrong"* report | **> 2%**, or one invented claim found in a signed record → pause agent drafting (coaches use the manual form), roll back to the last good prompt and model |
-| **Safety leaks** — digits, red, a banded character or a disclosure reaching a child or parent | **0** | Rule checks R1–R5 on **100% of live drafts** before display, and on every gold row in CI | **Any one** → that draft is blocked at runtime; any failing gold row fails CI; a leak in a signed record is treated as an incident the same day |
-| **Draft latency p95** — coach submits to draft on screen | **< 8 s** | Continuous · edge-function timing logs | **> 15 s for 15 min** → the coach gets the manual form with their input kept; on-call notified |
-| **Drift** — quality moving without anyone changing anything | Override rate stable or falling; fidelity decay **< 0.5 pt / week** | 4-week rolling override rate and weekly fidelity trend | Override rate **+5 pts** over 4 weeks, or fidelity decay **> 1 pt / week** → gold-set audit and prompt review |
+| Accuracy | Weekly, 300 rows | **Every change** and weekly, 10 rows now, ~150 at v1 | Few rows, so run them on every change. They cost nothing to run. |
+| Hallucination trigger | Rate only | Rate **or a single invented claim in a signed record** | One false line in a child's passport is the Air Canada case. |
+| Latency | < 800 ms | **< 4 s** | The draft is an agent building a whole record, not a chat reply. The builder's agent band is < 2 s and its "losing users" line is 5 s. 4 s stays under that line until the pilot measures real times. |
+| Drift | Per week, accuracy only | **Per 4 weeks**, fidelity **and coach override rate** | The builder's bands are per 4 weeks. Override rate is a live signal from every signed record, so Trak doesn't wait for a weekly run. |
+| HITL trigger | Confidence < 60% | Confidence **< 50%**, a safety flag, or a coach report, **plus a signature on every record** | 50% matches the confidence tiers in section 2. The coach's signature is permanent by design: the coach judges, the agent compiles. |
+| Reviewer | Rotating PM, senior CSM after hours | The coach always; the Trak PM for flags; **the academy's safeguarding lead** for disclosures | Safeguarding belongs to the academy, not a vendor. |
+| Feedback | 5+ corrections → retrain candidate | 5+ corrections of one kind → **prompt revision**, golden rows re-run | Trak doesn't train a model on children's records until the legal basis exists. |
 
-**HITL architecture:** a draft with confidence below 50%, or any safety flag, is never drafted.
-The coach gets the reason. Safeguarding goes to the academy's route. Flagged drafts go to the Trak
-review queue. Coach corrections and draft reports feed the weekly gold-set audit, which adds a gold
-row for each new failure. **On-call PM:** Dimos, until the team names a rota.
+**Why these numbers.** 92% fidelity is inside the builder's defensible band (90–95%). It means at
+worst one flawed draft in twelve, and the coach catches it before signing. Invented claims are held
+under 1% because a false claim in a child's passport is the Air Canada failure. Safety leaks are
+held at zero and checked on every live draft, not sampled. Latency and drift are placeholders the
+pilot replaces with measured baselines.
 
-**Why these numbers.** 92% fidelity means one flawed draft in twelve at worst, and the coach
-catches it before signing. Invented claims are held under 1% because a false claim in a child's
-passport is the Air Canada failure. Safety leaks are held at zero and checked at runtime, not
-sampled. The 8-second latency target is set for pitch-side use; the manual form means the coach is
-never blocked.
+**Before these numbers mean anything:** record which prompt version and model produced every
+draft. Without that, a rollback has no "last good" to go back to, and drift can't be traced.
 
 ---
 
