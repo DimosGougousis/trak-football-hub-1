@@ -1,3 +1,5 @@
+import { ageInYears } from '@/lib/age-group'
+
 /**
  * Parental consent for players below the digital-consent age.
  *
@@ -18,17 +20,16 @@ export const CONSENT_THRESHOLD_AGE = 15
  */
 export const CONSENT_NOTICE_VERSION = '2026-09-12.1'
 
-/** Whole years, the way an age threshold is read in law. */
-export const ageFromDateOfBirth = (dob: string | Date): number | null => {
-  const birth = dob instanceof Date ? dob : new Date(dob)
-  if (Number.isNaN(birth.getTime())) return null
-
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const monthDelta = today.getMonth() - birth.getMonth()
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) age--
-  return age
-}
+/**
+ * Whole years, the way an age threshold is read in law.
+ *
+ * Delegates to the single implementation in age-group.ts. This used to compute
+ * the age itself and got it wrong in negative-offset timezones — see the note
+ * there. It decides whether the signup asks for a guardian's email, so being
+ * one day out is the difference between a fourteen-year-old being asked for a
+ * parent and being quietly allowed to finish alone.
+ */
+export const ageFromDateOfBirth = (dob: string | Date): number | null => ageInYears(dob)
 
 export const needsParentalConsent = (dob: string | Date): boolean => {
   const age = ageFromDateOfBirth(dob)
