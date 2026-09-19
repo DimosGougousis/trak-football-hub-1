@@ -17,8 +17,9 @@ one pass instead of twelve investigations.
 > the wrong construct** — it grepped for band hexes and matched the brand accent
 > `#C8F25A`, which is also the Exceptional colour, so a grep cannot tell them
 > apart. He was right not to contort the file to satisfy it; the assertion is
-> corrected instead. F-5's mechanism is corrected below. F-2 and F-3 remain mine
-> and blocked behind #48.
+> corrected instead. F-5's mechanism is corrected below. **F-2 turns out to be
+> fixed by Imad's #48** and is not mine to do; **F-3 is not**, and is mine once
+> #48 merges.
 
 Where a root cause is stated it was read from the code or queried from the live
 database. Where it is not, the row says so rather than guessing — five of the
@@ -89,8 +90,15 @@ read-back, so a zero-row update — an absent profile row, an RLS denial — rep
 "Name updated" having written nothing. That is the twenty-second instance of
 "absence of an error treated as evidence of success" found on 18 September.
 
-**Owner:** Kostas (`Settings.tsx`), but blocked behind Imad's open #48 on the same
-file. **Cost:** two lines.
+> **19 September: already fixed, and not by me.** @t-bones29 reviewed #48 and
+> **#48 is the fix** — a better one than this finding asked for. It adds the
+> `.select()` read-back, throws `'Name save was not confirmed'` on a zero-row
+> update, calls `refreshProfile()`, and renders the value the database returned
+> rather than the local draft. Both of my F-2 assertions pass against it. I do
+> not owe this one; it needs #48 merged and nothing else.
+
+**Owner:** was Kostas (`Settings.tsx`) — **superseded by Imad's #48**.
+**Cost:** nil, already written.
 
 ### F-3 · The profile photo cannot be updated
 
@@ -107,10 +115,22 @@ upload itself genuinely succeeds; only the URL is unusable.
 Live scale: the bucket holds **one** object and `profiles` has **one** non-null
 `avatar_url`. Not "every avatar since May" — there has only ever been one.
 
-**Owner:** Kostas, blocked behind Imad's #48. **Cost:** not a one-liner. A signed
-URL expires, so storing one in `avatar_url` trades a URL that never works for one
-that stops working. Doing it properly means storing the object path and signing at
-render time: four render sites across all four roles.
+> **19 September: #48 does NOT fix this**, and it is worth stating so it is not
+> marked done when #48 lands. @t-bones29 confirmed `getPublicUrl` survives at
+> `Settings.tsx:228` on that branch and line 230 still persists the dead URL —
+> #48 scopes that write to the right account, it does not make the URL work.
+
+**Owner:** Kostas. **Sequencing:** he calls it unblocked; I would still take it
+*after* #48 merges rather than alongside it. #48 is open, `mergeable_state:
+clean`, and touches this exact region — Tarek's own line numbers come from its
+branch, not from `main`. Editing the same function in a second open PR is the
+collision shape that has cost us #34/#44, #44/#51 and #44/#42 in two days, and
+this one is avoidable by waiting for a merge that is ready now.
+
+**Cost:** not a one-liner. A signed URL expires, so storing one in `avatar_url`
+trades a URL that never works for one that stops working. Doing it properly means
+storing the object path and signing at render time: four render sites across all
+four roles.
 
 ### F-4 · The Evolution Card shares as plain text
 
@@ -319,8 +339,8 @@ never-reused link also hangs.
 | | Finding | Confirmed | Owner | Blocked by |
 |---|---|---|---|---|
 | F-1 | Band ladder diverges between screens | yes | Tarek | **fixed in #55** — and there was a *fifth* ladder I missed |
-| F-2 | Name save does not refresh the profile | yes | Kostas | Imad's #48 |
-| F-3 | Profile photo URL is unusable | yes | Kostas | Imad's #48 |
+| F-2 | Name save does not refresh the profile | yes | ~~Kostas~~ | **fixed by #48** — both assertions pass |
+| F-3 | Profile photo URL is unusable | yes | Kostas | **not** fixed by #48; take it once #48 merges |
 | F-4 | Evolution Card shares text, not an image | yes | Tarek | **fixed in #55** |
 | F-5 | Duplicate signup emails the wrong parent | **partly — rename UNVERIFIED** | all three | Kostas's console experiment, then a product decision |
 | F-6 | DOB and age group never cross-checked | yes | Tarek | **fixed in #55**; age fix rides #38 |
