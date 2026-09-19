@@ -40,7 +40,7 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
 
 | File | Question it answers |
 |---|---|
-| [cost-curve.md](03-the-margin/cost-curve.md) | What do customers come for, what raises revenue per player, what must be sold separately — and where does AI cost break the margin? |
+| [cost-curve.md](03-the-margin/cost-curve.md) | What do customers come for, what is metered, what is sold separately, how is it priced — and where does AI cost break the margin? |
 | [margin-calculator.md](03-the-margin/margin-calculator.md) | What is Trak's gross margin per player, and what breaks it — AI cost, usage, or scale? |
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
@@ -62,14 +62,14 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
   defence.
 - **Touchline — Claude drafts, the coach signs.** The prototype's central idea is that an
   AI-authored assessment destroys believability the same way a self-fabricated one does.
-- **Package as Leader / Filler / Killer:** the coach-signed record is what institutions buy; AI
-  debriefs and training plans lift revenue per player through metered overage; the trial
-  application pack is sold separately. On illustrative costs, AI spend is 7.6% of revenue — and
-  breaks the 70% margin line at roughly 4× the assumed unit cost, which agentic workflows can reach.
-- **At pilot scale, fixed platform cost sinks the margin — not AI.** On a placeholder €200 a month
-  platform bill, gross margin is 31.6% at 100 players and 86.3% at 1,000; the 70% line needs about
-  270 paying players. At scale, routing 70% of requests to a model at a tenth of the cost keeps even
-  a 10×-cost agentic workload at a healthy 65.8%.
+- **Package as Leader / Filler / Killer:** the player passport and coach-signed record is what
+  customers come for; agent-built session records — the coach judges, the agent compiles — are the
+  metered unit; the trial application pack is sold separately.
+- **Priced per player: $30 base + $0.50 per session record, about $55 a month.** At that price
+  margin stops being the constraint — 94.3% at 100 players on illustrative costs, still healthy at
+  10× AI cost, and about 13 paying players cover a $200 platform bill. The risk moves to
+  willingness to pay: $550 a season is more than the ~€500 a year parents pay the academy, and
+  every billable unit starts with an unpaid coach's input.
 
 ---
 
@@ -99,7 +99,8 @@ the repository on 19 September 2026. [CLAUDE.md](../CLAUDE.md) now marks `docs/p
 
 ### Still open
 
-- **No billing and no payer decision.** Billing is explicitly out of scope.
+- **No billing yet, and the payer is undecided.** Billing is out of scope for September 25. The
+  pricing model sets the billing unit — per player — but not whether a guardian or the academy pays.
 - **No real-child pilot yet.** September 25 is a synthetic-account demonstration; real-child
   admission is a separate gate with its own requirements.
 - **GDPR data export** — the portability the passport depends on — does not appear in the
