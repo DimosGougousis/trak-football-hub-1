@@ -59,6 +59,26 @@ average.
 
 ---
 
+## Pricing model
+
+### Pricing Strategy
+
+- Strategy posture: Maximize
+- Pricing model: Hybrid (base + usage)
+- Unit of work metered: Summarise Game, Trainings and feedback per game and training.
+- Base fee ($/month): 30
+- Price per unit: $0.5
+- Estimated units/user/month: 50
+- Implied revenue/user/month: $55.00
+
+### Decision Note
+
+Why this pricing structure fits the buyer and the value delivered:
+
+*To be written.*
+
+---
+
 ## Cost model
 
 ### Assumptions
