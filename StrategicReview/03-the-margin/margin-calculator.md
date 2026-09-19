@@ -72,69 +72,70 @@ Non-AI COGS does not move with volume.
 
 "User" is one player — the billing unit. A request is one **delivered AI output**: a Touchline draft,
 an agent-built session record, a pack. Pricing and derivation are in the [cost curve](cost-curve.md):
-$30 base + $0.50 per session record, 50 a month. $ and € at parity.
+a $10 a month season pass paid by parents through the academy, every session record included (~16 a
+month), and a $4 trial pack bought by the guardian. $ and € at parity.
 
 ### Inputs
-- Avg requests/user/month: **54.58**
-- Blended cost/request: **$0.0206**
-- Revenue/user/month: **$55.06** — $30 base + $25 metered (50 × $0.50) + $0.06 trial packs, average
+- Avg requests/user/month: **20.58**
+- Blended cost/request: **$0.0216**
+- Revenue/user/month: **$10.06** — $10 season pass + $0.06 trial packs, average
 - Non-AI COGS/user/month: **$2.00** — *placeholder:* $200 a month of platform cost (hosting,
   database, monitoring, email) spread over 100 players
 
 ### Current Margin
-- AI COGS/user: **$1.12**
-- Total COGS/user: **$3.12**
-- Gross margin: **94.3% ($51.94/user)**
+- AI COGS/user: **$0.44**
+- Total COGS/user: **$2.44**
+- Gross margin: **75.7% ($7.62/user)**
 
 ### Stress Test
 
-Revenue held flat in every row, as the calculator does. With metering, more usage also brings more
-revenue, so the usage row is conservative. Computed from unrounded inputs.
+Revenue held flat in every row, as the calculator does — and here it really is flat, because the
+season pass doesn't change with usage. Computed from unrounded inputs.
 
 | Scenario | AI COGS | Non-AI COGS | Margin | Verdict |
 |----------|--------:|------------:|--------|---------|
-| Pilot, 100 players | $1.12 | $2.00 | 94.3% ($51.94) | Healthy |
-| 3x Cost | $3.37 | $2.00 | 90.2% ($49.69) | Healthy |
-| 2x Usage | $2.25 | $2.00 | 92.3% ($50.81) | Healthy |
-| 10x Cost — agentic | $11.25 | $2.00 | 75.9% ($41.81) | Healthy |
-| 1,000 players | $1.12 | $0.20 | 97.6% ($53.74) | Healthy |
-| 1,000 players, 10x Cost | $11.25 | $0.20 | 79.2% ($43.61) | Healthy |
+| Pilot, 100 players | $0.44 | $2.00 | 75.7% ($7.62) | Healthy |
+| 3x Cost | $1.33 | $2.00 | 66.9% ($6.73) | Healthy |
+| 2x Usage | $0.89 | $2.00 | 71.3% ($7.17) | Healthy |
+| 10x Cost — agentic | $4.45 | $2.00 | **35.9% ($3.61)** | Danger |
+| 1,000 players | $0.44 | $0.20 | 93.6% ($9.42) | Healthy |
+| 1,000 players, 10x Cost | $4.45 | $0.20 | 53.8% ($5.41) | Caution |
 
-**Calculator stress verdict**, judged on the 3× margin (90.2%): **survives both** scenarios.
+**Calculator stress verdict**, judged on the 3× margin (66.9%): **survives both** scenarios — but a
+10× agentic cost puts pilot scale in Danger.
 
-### Units: the input that moves revenue
+### Records per player: the input that moves cost
 
-| Session records per player per month | Revenue | Margin |
-|---|---:|---:|
-| 16 — one per session | $38.06 | 93.6% |
-| 32 — two per session | $46.06 | 94.0% |
-| 50 — the pricing block's estimate | $55.06 | 94.3% |
+Revenue is fixed by the season pass, so more records per player only add cost.
 
-A player with one match and three trainings a week has about 16 sessions a month.
+| Session records per player per month | Margin, 100 players |
+|---|---:|
+| 16 — one per session | 75.7% |
+| 32 — the fair-use cap, two per session | 72.5% |
+| 50 — above the cap | 68.9% |
 
 ### What the calculator shows
 
-1. **At $55 per player, margin is not the constraint.** 94.3% at pilot scale, and Healthy even at
-   10× AI cost.
-2. **About 13 paying players cover a $200 monthly platform bill** at a 70% margin.
-3. **The unit estimate moves revenue, not margin:** $38–$55 a month across 16–50 records, with
-   margin between 93.6% and 94.3%.
-4. **The risk has moved to willingness to pay** — $550 a season against the ~€500 a year parents pay
-   the academy. See the Decision Note in the [cost curve](cost-curve.md).
+1. **At $10 per player, pilot scale is Healthy (75.7%) but has little headroom.** AI cost can rise
+   only ~2.3× before margin drops below 70%; at 10× it is in Danger.
+2. **About 78 paying players cover a $200 monthly platform bill** at a 70% margin — one or two
+   academies.
+3. **Routing to a cheaper model is a requirement at this price, not an option** — see below.
+4. **The fair-use cap protects the margin.** Past two records per session, margin falls under 70%.
 
 ### Scenario lab: routing to a cheaper model
 
-At this price routing isn't needed to stay Healthy. At 100 players and 10× AI cost, margin is 75.9%
-without routing; sending 70% of requests to the cheap model lifts it to 88.8%. The session record
-carries ~89% of AI cost, so it is where routing would matter — once measured cost shows whether a
-cheaper model can build the record without losing quality.
+At 10× AI cost, sending 70% of requests to the cheap model lifts margin from 35.9% to **63.8%** at 100
+players (Danger to Healthy) and to **81.7%** at 1,000. The session record carries ~72% of AI cost, so
+it is where routing matters — once measured cost shows whether a cheaper model can build the record
+without losing quality.
 
 ### Replace first
 
 1. **Cost per agent-built session record.** The multi-step run — tokens and $ per record.
-2. **Session records per player.** The pilot's real count per month.
-3. **Non-AI COGS.** Replace the $200 a month placeholder with real invoices for hosting, database,
-   monitoring and email, plus card fees on each monthly charge.
+2. **Non-AI COGS.** Replace the $200 a month placeholder with real invoices for hosting, database,
+   monitoring and email. At this price it is the largest cost line.
+3. **Sessions per player.** The pilot's real count per month.
 
 **Breakeven check:** paying players needed for a 70% margin = monthly platform cost ÷
-(0.30 × revenue per player − AI COGS per player) = $200 ÷ ($16.52 − $1.12) ≈ **13 players**.
+(0.30 × revenue per player − AI COGS per player) = $200 ÷ ($3.02 − $0.44) ≈ **78 players**.

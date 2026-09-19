@@ -63,13 +63,15 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
 - **Touchline — Claude drafts, the coach signs.** The prototype's central idea is that an
   AI-authored assessment destroys believability the same way a self-fabricated one does.
 - **Package as Leader / Filler / Killer:** the player passport and coach-signed record is what
-  customers come for; agent-built session records — the coach judges, the agent compiles — are the
-  metered unit; the trial application pack is sold separately.
-- **Priced per player: $30 base + $0.50 per session record, about $55 a month.** At that price
-  margin stops being the constraint — 94.3% at 100 players on illustrative costs, still healthy at
-  10× AI cost, and about 13 paying players cover a $200 platform bill. The risk moves to
-  willingness to pay: $550 a season is more than the ~€500 a year parents pay the academy, and
-  every billable unit starts with an unpaid coach's input.
+  customers come for; agent-built session records — the coach judges, the agent compiles — are
+  priced per session but billed as a season pass; the trial application pack is sold separately.
+- **Priced for squad coverage, paid by parents through the academy.** Penetrate, not Maximize: a
+  $100 season pass ($10 a month, 20% of the ~€500 academy fee) on the academy's own invoice, with
+  only parent-chosen extras billed per unit. On illustrative costs, margin is 75.7% at 100 players
+  and ~78 paying players cover a $200 platform bill — but AI cost can rise only ~2.3× at pilot
+  scale before margin drops below 70%, so cost control and routing to cheaper models are the
+  discipline. The $55-a-month option was replaced: it cost more than the academy fee and metered
+  parents for the coach's activity.
 
 ---
 
@@ -99,8 +101,8 @@ the repository on 19 September 2026. [CLAUDE.md](../CLAUDE.md) now marks `docs/p
 
 ### Still open
 
-- **No billing yet, and the payer is undecided.** Billing is out of scope for September 25. The
-  pricing model sets the billing unit — per player — but not whether a guardian or the academy pays.
+- **No billing yet.** Billing is out of scope for September 25. The pricing policy has parents
+  paying a season pass through the academy's invoice; whether academies will collect it is untested.
 - **No real-child pilot yet.** September 25 is a synthetic-account demonstration; real-child
   admission is a separate gate with its own requirements.
 - **GDPR data export** — the portability the passport depends on — does not appear in the
