@@ -140,33 +140,132 @@ and Greek. Add one row for every correction a pilot coach makes that no existing
 
 ---
 
-## 2. Confidence UX — three tiers
+## 2. Confidence UX — three modes, not one "here's the answer"
 
-*The course tool's version of this section is in [confidence-ux.md](confidence-ux.md).*
+*Taken from the course's Confidence UX Designer on 19 September, from its own "Copy as Text"
+output. [confidence-ux.md](confidence-ux.md) explains how the tool works.*
 
-**Where confidence comes from.** Not the model's opinion of itself. The draft's score is built from
-checks Trak can explain: rule checks pass (R1–R5), each drafted band **cites the coach's phrase it
-came from**, the input names a player on the roster, and the judge's fidelity score. Every tier sets
-a floor on the coach's effort. **No tier signs for the coach.** For a child's record the signature
-is the product, not a crutch.
+## Confidence UX Design
 
-**Who sees confidence:** only the coach. Children and parents see the signed record, marked
-*"Signed by Coach Andreas · 14 Oct · built from the coach's notes."* What makes it trustworthy to
-them is who signed it.
+**Approach:** Tiered confidence with a citation under every band and a human-in-loop trigger. Confidence is not the model's opinion of itself: the drafter must quote the coach's words behind each band, code checks each quote is really in the input, and the score is verified fields ÷ drafted fields. Safety flags bypass the score. Only the coach sees it, and no tier signs for the coach.
 
-| Tier | What the coach sees | Copy |
+**Confident (>90%):** Full record, full rewrite: the agent turns the coach's fragments into the finished record and fuses it into the passport draft. Each band shows the coach's quote it came from. Direct copy, no hedging: "Built from what you said. Check and sign." One tap to sign, or edit first. Never auto-signed; an unsigned draft stays invisible to the player and parent (T2).
+
+**Uncertain (50-90%):** Lighter rewrite: the coach's own words stay verbatim in the note and only verified bands are pre-filled. Each unverified band shows as a ? chip with two or three band options, next to the quote it might come from. Softer copy: "You said 'lost his man at corners' — which band for Tactical?" Sign stays disabled until every ? is chosen. The AI asks; it does not guess.
+
+**Not confident (<50%):** No draft, and say why. Safeguarding disclosure: nothing drafted, the note kept off the record, the academy's safeguarding route shown, and a human always reviews. Instruction in the note, demeaning language or a character grade: no draft, the flag named, and the input sent to Trak's review queue. Unclear player: "Which Youssef?" Nothing to build from: attendance only, "Add a line?" The manual form is always there.
+
+**User control surface:** 
+
+Every draft has five buttons: "accurate", "wrong band", "not what I said", "wrong player", "too harsh". Those labels, and every band change, save source_text, drafted_band, signed_band and coach_id, which feed the weekly gold-set audit and prompt review. Corrections improve the dataset and prompts; training a model on children's records waits for the GDPR legal basis. Thresholds are fixed child-safety floors, not a coach setting. Children and parents never see confidence, only "Signed by Coach Andreas · 14 Oct · built from the coach's notes."
+
+- Users see AI reasoning / drivers
+- Users correct & override outputs
+- Corrections feed back into the model / dataset
+- Users adjust the confidence threshold _(not yet)_
+
+> "Not yet" is the tool's fixed wording for a control that is switched off. For Trak it means
+> **never**: the thresholds are a child-safety floor.
+
+### User controls — Y/N
+
+| Control | Y/N | How |
+|---|:-:|---|
+| Users adjust threshold? | **N** | Fixed floors. A coach who could lower them could publish unchecked text to a child. |
+| See AI reasoning? | **Y** | The coach's quote under each band. That quote *is* the reasoning: the agent claims nothing the coach didn't say. |
+| Correct & override? | **Y** | Cycle a band, edit, delete a line, "wrong player", and the five label buttons. |
+| Corrections → model? | **Y, to the dataset** | Correction rows feed the gold set and prompt reviews. Training on children's records waits for the GDPR legal basis the [data flywheel](../02-the-moat/data-flywheel.md) calls for. |
+
+### How the workshop anchors apply
+
+- **Depth of rewrite depends on confidence** (Grammarly). Confident gets a full rewrite into the
+  finished record. Uncertain gets a light one: the coach's words stay verbatim. Not confident gets
+  none.
+- **Citations, and a softer tone when unsure** (Copilot). Every drafted band cites the coach's
+  phrase. Uncertain copy asks instead of stating. Not confident copy says what is missing.
+
+### Workflow paths
+
+Four checks run before any confidence score: a safeguarding disclosure, a safety flag, an unclear
+player, and nothing to build from. Any of them sends the input down a not-confident path whatever
+the score would have been.
+
+```mermaid
+flowchart TD
+  A[Coach submits attendance, feedback, recommendation] --> B{Safeguarding disclosure?}
+  B -->|yes| SG[No draft. Note kept off the record. Academy safeguarding route. Human reviews]
+  B -->|no| C{Instruction in note, demeaning language or character grade?}
+  C -->|yes| FL[No draft. Flag named. Trak review queue. Coach rewrites or uses manual form]
+  C -->|no| D{Exactly one roster match?}
+  D -->|no| WP[Ask which player. Nothing fused until confirmed]
+  D -->|yes| E{Any feedback to build from?}
+  E -->|no| AT[Attendance recorded only. Add a line?]
+  E -->|yes| G[Agent drafts. Every field quotes its source]
+  G --> H[Code checks each quote is in the input. Rule checks R1 to R5]
+  H -->|rule check fails twice| NC
+  H --> S{Score = verified fields / drafted fields}
+  S -->|above 90%| CF[Confident: full record, citations, one-tap sign]
+  S -->|50 to 90%| UN[Uncertain: verified bands only, ? chips, sign disabled until resolved]
+  S -->|below 50%| NC[Not confident: no draft, say what is missing]
+  CF --> SIGN[Coach signs]
+  UN --> SIGN
+  SIGN --> P[Passport updated. Player and parent see the signed record]
+  SIGN --> L[Edits and labels saved as correction rows. Weekly gold-set audit]
+```
+
+**How the score works.** The drafter returns each field together with the exact words of the
+coach's it came from. Code checks those words are really in the input: a string match, not a
+second model call, so it costs nothing extra at the ~$0.02 a record in the
+[cost curve](../03-the-margin/cost-curve.md). Score = verified fields ÷ drafted fields. A category
+the coach said nothing about is left empty, not guessed, so a thin input like "Good game." gives a
+short record, not a padded one. If a rule check (R1–R5) fails, the draft is regenerated once; if it
+fails again, the input goes down the not-confident path.
+
+#### The confident path (>90%)
+
+| Step | What happens | Who sees it |
 |---|---|---|
-| **Confident** (>90%) | Draft pre-filled. Under each band, the coach's own phrase that produced it. One tap to sign. | "Built from what you said. Check and sign." |
-| **Uncertain** (50–90%) | Bands it could ground are pre-filled. The others show as an empty **?** chip with two or three band options. Sign stays disabled until each **?** is chosen. The source phrase is shown next to each one. | "You said 'lost his man at corners' — which band for Tactical?" |
-| **Not confident** (<50%) **or any safety flag** | No draft. Say why, and what would help. For row 7 (a safeguarding disclosure), the route and nothing else. | "I couldn't build Nikos's record from this. What did he do well, and what should he work on?" / Safeguarding: "This won't go on Nikos's record. [Your academy's safeguarding route]." |
+| 1 | The coach submits attendance, feedback and a recommendation. | Coach |
+| 2 | The pre-checks pass and every drafted field is verified against the coach's words. | — |
+| 3 | The agent writes the full record, fused with the passport, with the coach's quote under each band. | Coach only |
+| 4 | "Built from what you said. Check and sign." The coach signs in one tap, or edits first. | Coach only |
+| 5 | Signed → passport updated, marked "Signed by Coach … · built from the coach's notes." | Player, parent |
+| 6 | Any edit or label is saved as a correction row. | Trak (weekly audit) |
 
-**What the coach can do on every draft:** cycle a band, edit the note, delete a line, say *"Not this
-player"*, or report *"This draft is wrong"*. Every edit saves `source_text`, `drafted_band`,
-`signed_band` and `coach_id`. That is the four-column correction loop from the
-[data flywheel](../02-the-moat/data-flywheel.md), and it feeds the weekly gold-set audit.
+An unsigned draft is never auto-signed, never expires into the record, and is never visible to the
+player or parent (T2, verification U6).
 
-**Still to settle:** the safeguarding route belongs to the academy, not Trak. It needs to be in the
-academy agreement (P9) and confirmed with the lawyer before any real-child pilot.
+#### The not-so-confident paths
+
+**Uncertain (50–90%): the coach finishes the draft.**
+
+| Step | What happens |
+|---|---|
+| 1–2 | As in the confident path, but some drafted bands have no verified quote. |
+| 3 | Light rewrite. The coach's words stay verbatim in the note. Only verified bands are pre-filled. |
+| 4 | Each unverified band shows as a **?** with two or three options, beside the phrase it might come from: "You said 'lost his man at corners' — which band for Tactical?" |
+| 5 | Sign is disabled until every **?** is answered. The coach can also delete the band. |
+| 6 | Signed → passport, as in the confident path. Each **?** the coach answered becomes a labelled correction, with the drafted band left empty and the signed band set. |
+
+**Not confident (<50%) and the four pre-checks: no draft, and the coach is told why.**
+
+| Trigger | Golden row | What the coach sees | What happens next |
+|---|:-:|---|---|
+| Safeguarding disclosure | 7 | "This won't go on Nikos's record." The academy's safeguarding route. | Nothing reaches the record, the player or the parent. A human always reviews. How long the note is kept, and who can read it, are decided with the lawyer (P9) before any real-child pilot. |
+| Instruction in the note, demeaning language, character grade | 5, 6, 9 | The flag, named: "This note asks me to rate him — I only record what you saw." / "Rephrase before signing?" / "Describe what he did?" | The input goes to the Trak review queue. The coach rewrites or uses the manual form. |
+| Unclear player | 8 | "Which Youssef — Yusuf K. or Youssef M.?" | Nothing is fused until the coach confirms. |
+| Nothing to build from | 2 | "Attendance saved. Nothing else to build from — add a line?" | Attendance only. No bands, no invented praise. |
+| Score below 50%, or rule check failed twice | — | "I couldn't build Nikos's record from this. What did he do well, and what should he work on?" | The coach adds detail or uses the manual form. |
+
+**The coach is never blocked.** On every path the manual form is one tap away, with the coach's
+input kept.
+
+**Still to settle:**
+- **The safeguarding route belongs to the academy, not Trak.** It needs to be written into the
+  academy agreement (P9) and confirmed with the lawyer.
+- **The cut-offs (90% and 50%) are the tool's.** Recalibrate them once the pilot shows how often
+  coaches override confident drafts. If confident drafts are overridden more than about 1 time in
+  10, raise the cut-off.
 
 ---
 

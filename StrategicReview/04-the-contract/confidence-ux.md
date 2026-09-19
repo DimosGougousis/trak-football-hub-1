@@ -1,9 +1,9 @@
 # Confidence UX Designer, Module 4
 
-*Session: 19 September 2026. Trak's run of the course's Confidence UX Designer, taken from the
+*Session: 19 September 2026, second run. Trak's run of the course's Confidence UX Designer, taken from the
 tool's own "Copy as Text" output. The tool says its output mirrors the Confidence UX Design section
-of [golden-dataset.md](golden-dataset.md); section 2 there has the fuller version, with the table
-and the reasoning.*
+of [golden-dataset.md](golden-dataset.md); section 2 there adds the workflow paths for
+each tier.*
 
 ---
 
@@ -11,17 +11,17 @@ and the reasoning.*
 
 ## Confidence UX Design
 
-**Approach:** Tiered confidence built from checks we can explain (rule checks R1–R5 pass, each drafted band cites the coach's own phrase, the player is on the roster, judge fidelity score) — not the model's opinion of itself. Only the coach sees confidence; no tier ever signs for the coach, and any safety flag routes to a human.
+**Approach:** Tiered confidence with a citation under every band and a human-in-loop trigger. Confidence is not the model's opinion of itself: the drafter must quote the coach's words behind each band, code checks each quote is really in the input, and the score is verified fields ÷ drafted fields. Safety flags bypass the score. Only the coach sees it, and no tier signs for the coach.
 
-**Confident (>90%):** Draft pre-filled. Under each band, the coach's own phrase that produced it. One tap to sign — never auto-signed. Copy: "Built from what you said. Check and sign." The AI may only say what the coach said: band words only, no numbers, character described never banded.
+**Confident (>90%):** Full record, full rewrite: the agent turns the coach's fragments into the finished record and fuses it into the passport draft. Each band shows the coach's quote it came from. Direct copy, no hedging: "Built from what you said. Check and sign." One tap to sign, or edit first. Never auto-signed; an unsigned draft stays invisible to the player and parent (T2).
 
-**Uncertain (50-90%):** Bands it could ground are pre-filled; the rest show as an empty ? chip with two or three band options. Sign stays disabled until each ? is chosen. The source phrase sits next to each one. Copy: "You said 'lost his man at corners' — which band for Tactical?" The AI asks; it does not guess.
+**Uncertain (50-90%):** Lighter rewrite: the coach's own words stay verbatim in the note and only verified bands are pre-filled. Each unverified band shows as a ? chip with two or three band options, next to the quote it might come from. Softer copy: "You said 'lost his man at corners' — which band for Tactical?" Sign stays disabled until every ? is chosen. The AI asks; it does not guess.
 
-**Not confident (<50%):** No draft. Say why and what would help: "I couldn't build Nikos's record from this. What did he do well, and what should he work on?" Any safety flag (instruction in the note, demeaning language, grading character) blocks the draft whatever the score. A safeguarding disclosure goes to the academy's safeguarding route only and never reaches the record, the player or the parent.
+**Not confident (<50%):** No draft, and say why. Safeguarding disclosure: nothing drafted, the note kept off the record, the academy's safeguarding route shown, and a human always reviews. Instruction in the note, demeaning language or a character grade: no draft, the flag named, and the input sent to Trak's review queue. Unclear player: "Which Youssef?" Nothing to build from: attendance only, "Add a line?" The manual form is always there.
 
 **User control surface:** 
 
-Every draft lets the coach cycle a band, edit the note, delete a line, say "Not this player", or report "This draft is wrong". Each edit saves source_text, drafted_band, signed_band and coach_id — the correction loop that feeds the weekly gold-set audit. Coaches cannot lower the thresholds: the safety floors protect children, so they are fixed. Children and parents never see confidence; they see "Signed by Coach Andreas · 14 Oct · built from the coach's notes."
+Every draft has five buttons: "accurate", "wrong band", "not what I said", "wrong player", "too harsh". Those labels, and every band change, save source_text, drafted_band, signed_band and coach_id, which feed the weekly gold-set audit and prompt review. Corrections improve the dataset and prompts; training a model on children's records waits for the GDPR legal basis. Thresholds are fixed child-safety floors, not a coach setting. Children and parents never see confidence, only "Signed by Coach Andreas · 14 Oct · built from the coach's notes."
 
 - Users see AI reasoning / drivers
 - Users correct & override outputs
