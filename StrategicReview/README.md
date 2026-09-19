@@ -1,9 +1,9 @@
 # Strategic Review — Trak Football
 
 Outputs of a strategy workshop run against the Trak codebase and docs on **12 September 2026**, with
-the margin module added on 19 September: where Trak places its bet, a working prototype of the most
-critical use case, a stress test of whether anything about the business is defensible, and how it
-should package and price.
+the margin and contract modules added on 19 September: where Trak places its bet, a working
+prototype of the most critical use case, a stress test of whether anything about the business is
+defensible, how it should package and price, and why anyone should trust what its AI writes.
 
 **Read [What has changed since](#what-has-changed-since) first.** The analysis is kept exactly as
 delivered, but several facts it rested on have been superseded by the
@@ -14,8 +14,9 @@ delivered, but several facts it rested on have been superseded by the
 ## Contents
 
 Grouped by workshop module. Module 1 is named in the workshop's own material ("your M1 Three-Axis
-Scorecard"); the moat exercises follow it in order, each building on the one before. The margin
-module uses the workshop's own path, `03-the-margin/cost-curve.md`.
+Scorecard"); the moat exercises follow it in order, each building on the one before. The margin and
+contract modules use the workshop's own paths, `03-the-margin/cost-curve.md` and
+`04-the-contract/golden-dataset.md`.
 
 ### [01-the-bet/](01-the-bet/)
 
@@ -42,6 +43,12 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
 |---|---|
 | [cost-curve.md](03-the-margin/cost-curve.md) | What do customers come for, what is metered, what is sold separately, how is it priced — and where does AI cost break the margin? |
 | [margin-calculator.md](03-the-margin/margin-calculator.md) | What is Trak's gross margin per player, and what breaks it — AI cost, usage, or scale? |
+
+### [04-the-contract/](04-the-contract/)
+
+| File | Question it answers |
+|---|---|
+| [golden-dataset.md](04-the-contract/golden-dataset.md) | How do we test the agent's output, how does the coach see its confidence, and what reliability do we promise? |
 
 `00-Makis` is an existing placeholder in this folder and was left untouched.
 
@@ -72,6 +79,12 @@ module uses the workshop's own path, `03-the-margin/cost-curve.md`.
   scale before margin drops below 70%, so cost control and routing to cheaper models are the
   discipline. The $55-a-month option was replaced: it cost more than the academy fee and metered
   parents for the coach's activity.
+- **Trust comes from the coach's signature and the source, not accuracy.** Trak has no evals
+  today, and `player-feedback` already writes AI text to children with no filter on numbers. The
+  contract module sets a 10-row golden dataset (4 adversarial, including prompt injection and a
+  safeguarding disclosure), three confidence tiers where no tier signs for the coach, and a
+  reliability contract: fidelity ≥ 92%, invented claims < 1%, safety leaks zero and checked on
+  every live draft.
 
 ---
 
@@ -105,5 +118,7 @@ the repository on 19 September 2026. [CLAUDE.md](../CLAUDE.md) now marks `docs/p
   paying a season pass through the academy's invoice; whether academies will collect it is untested.
 - **No real-child pilot yet.** September 25 is a synthetic-account demonstration; real-child
   admission is a separate gate with its own requirements.
+- **No AI evals.** No golden rows, judge or prompt/model version record exist; the contract module
+  lists what to do before September 25.
 - **GDPR data export** — the portability the passport depends on — does not appear in the
   September 25 scope.
