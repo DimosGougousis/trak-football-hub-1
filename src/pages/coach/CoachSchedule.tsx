@@ -14,6 +14,7 @@ import {
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
+import { TimeReel } from '@/components/coach/TimeReel'
 import { fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
@@ -136,6 +137,13 @@ type Sheet =
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
   | { kind: 'import' }
+
+/** "Meet earlier" starts half an hour before the start; the coach rolls it from there. */
+function halfHourBefore(time: string) {
+  const [h, m] = time.split(':').map(Number)
+  const t = Math.max(0, h * 60 + m - 30)
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+}
 
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
   !!row?.series_id && !!row.event_date
@@ -721,21 +729,16 @@ export default function CoachSchedule() {
                 className={inputClass} style={font} />
             </Field>
 
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Field label={sheet.repeat.on ? 'First date' : 'Date'}>
-                  <input type="date" value={sheet.form.date} onChange={e => setForm({ date: e.target.value })}
-                    disabled={sheet.scope === 'following'}
-                    className={inputClass} style={{ ...font, colorScheme: 'dark', opacity: sheet.scope === 'following' ? 0.5 : 1 }} />
-                </Field>
-              </div>
-              <div className="w-[120px]">
-                <Field label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'}>
-                  <input type="time" value={sheet.form.time} onChange={e => setForm({ time: e.target.value })}
-                    className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
-                </Field>
-              </div>
-            </div>
+            {/* TRAK-157: one wheel for the day and the time. A time is picked
+                whole, or "Time not set yet" is chosen on purpose. */}
+            <TimeReel label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'}
+              date={sheet.form.date} onDateChange={date => setForm({ date })} dateLocked={sheet.scope === 'following'}
+              time={sheet.form.time} onTimeChange={time => setForm({ time, timeLater: false })}
+              disabled={sheet.form.timeLater} emptyText={sheet.form.timeLater ? 'Time not set yet' : 'Pick a time'} />
+            <Chip on={sheet.form.timeLater}
+              onClick={() => setForm(sheet.form.timeLater ? { timeLater: false } : { timeLater: true, time: '', meetTime: '' })}>
+              Time not set yet
+            </Chip>
 
             {sheet.scope === 'following' && (
               <p className="text-[11px] text-white/40" style={font}>Each week keeps its own date; everything else changes.</p>
@@ -782,10 +785,17 @@ export default function CoachSchedule() {
               </datalist>
             </Field>
 
-            <Field label="Meet time (if earlier)">
-              <input type="time" value={sheet.form.meetTime} onChange={e => setForm({ meetTime: e.target.value })}
-                className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
-            </Field>
+            {sheet.form.time && (
+              <div className="space-y-2">
+                <Chip on={!!sheet.form.meetTime}
+                  onClick={() => setForm({ meetTime: sheet.form.meetTime ? '' : halfHourBefore(sheet.form.time) })}>
+                  Meet earlier
+                </Chip>
+                {sheet.form.meetTime && (
+                  <TimeReel label="Meet time" time={sheet.form.meetTime} onTimeChange={meetTime => setForm({ meetTime })} />
+                )}
+              </div>
+            )}
 
             {sheet.form.kind === 'match' && (
               <Field label="Kit">

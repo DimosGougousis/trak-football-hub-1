@@ -8,6 +8,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { pickTime, shownTime } from '../../../../tests/support/time-reel'
 
 /**
  * TRAK-127 (J8.4). With events switched on, the coach creates a training,
@@ -94,10 +95,11 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
     await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Away' }))
-    await userEvent.type(within(sheet).getByLabelText('Kickoff'), '16:00')
+    await pickTime(sheet, 'Kickoff', '16:00')
     await userEvent.click(within(sheet).getByRole('button', { name: '75 min' }))
     await userEvent.type(within(sheet).getByLabelText('Venue'), 'United Ground')
-    await userEvent.type(within(sheet).getByLabelText('Meet time (if earlier)'), '15:15')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Meet earlier' }))
+    await pickTime(sheet, 'Meet time', '15:15')
     await userEvent.type(within(sheet).getByLabelText('Kit'), 'Red shirts')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
 
@@ -140,8 +142,9 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     expect(within(sheet).getByRole('alert')).toHaveTextContent('Add the opponent')
 
     await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
-    await userEvent.type(within(sheet).getByLabelText('Kickoff'), '16:00')
-    await userEvent.type(within(sheet).getByLabelText('Meet time (if earlier)'), '16:30')
+    await pickTime(sheet, 'Kickoff', '16:00')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Meet earlier' }))
+    await pickTime(sheet, 'Meet time', '16:30')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
     expect(within(sheet).getByRole('alert')).toHaveTextContent('Meet time must be before the start')
     expect(writes).toEqual([])
@@ -156,14 +159,14 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
       failWrites = mode
       await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
       const sheet = screen.getByRole('dialog', { name: 'New event' })
-      await userEvent.type(within(sheet).getByLabelText('Start'), '17:00')
+      await pickTime(sheet, 'Start', '17:00')
       await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 1')
       await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
 
       expect(await within(sheet).findByRole('alert')).toHaveTextContent("Couldn't save the event")
       expect(screen.getByRole('dialog', { name: 'New event' })).toBeInTheDocument()
       expect(within(sheet).getByLabelText('Venue')).toHaveValue('Academy Pitch 1')
-      expect(within(sheet).getByLabelText('Start')).toHaveValue('17:00')
+      expect(shownTime(sheet, 'Start')).toBe('17:00')
     })
 
   it('publishes a draft', async () => {
@@ -181,7 +184,7 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
     // The saved event fills the form.
     expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers')
-    expect(within(sheet).getByLabelText('Kickoff')).toHaveValue('18:30')
+    expect(shownTime(sheet, 'Kickoff')).toBe('18:30')
     expect(within(sheet).getByText('Families see the change as soon as you save.')).toBeInTheDocument()
     const venue = within(sheet).getByLabelText('Venue')
     await userEvent.clear(venue)

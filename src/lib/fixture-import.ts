@@ -17,6 +17,8 @@ export function fixtureToForm(fixture: Fixture): EventForm {
     title: '',
     date: fixture.date,
     time: fixture.kickoff ?? '',
+    // A fixture list without a kickoff is "time not set yet" on purpose.
+    timeLater: !fixture.kickoff,
     duration: 90,
     venue: fixture.venue ?? '',
     meetTime: fixture.meetTime ?? '',
