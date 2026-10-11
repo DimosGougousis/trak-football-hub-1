@@ -28,6 +28,7 @@ serve(async (req) => {
 
     const { response, work } = await handleReminderRequest(req, {
       secretKeys: keyValues(secretRaw),
+      cronToken: Deno.env.get('TRAK_CRON_TOKEN')?.trim() ?? '',
       async claim() {
         return must(await admin.rpc('claim_event_reminders')) ?? [];
       },

@@ -1,6 +1,6 @@
 // TRAK-136 (J8.13): sends the reminders due 2 days from today (Dubai). Only
-// the scheduler calls it (pg_cron through pg_net, with a project secret key
-// from Vault), or the operator by hand; nobody else. It takes no input: the
+// the scheduler calls it (pg_cron through pg_net, with its own token from
+// Vault, never a project key), or the operator by hand; nobody else. It takes no input: the
 // database decides the day and who is due, and hands each person out once.
 //
 // One email per person, paced within Resend's 10 requests/second and retried
@@ -11,13 +11,15 @@
 // takes it back after 10 minutes. Responses and logs carry no addresses.
 import { composeReminderEmail, remindable, type ClaimedReminder } from '../_shared/event-reminder.ts';
 import type { PlainEmail, SendResult } from '../_shared/send-email.ts';
-import { reasonCode, sendPaced } from '../send-event-emails/handler.ts';
+import { isScheduler, reasonCode, sendPaced } from '../send-event-emails/handler.ts';
 import { corsHeaders, json, sameSecret } from '../send-roster-invites/handler.ts';
 
 export type ReminderOutcome = 'sent' | 'failed' | 'nothing_to_send';
 export interface ReminderDependencies {
-  /** Every value of SUPABASE_SECRET_KEYS: the scheduler's key is one of them. */
+  /** Every value of SUPABASE_SECRET_KEYS: the operator's key is one of them. */
   secretKeys: string[];
+  /** TRAK_CRON_TOKEN: the scheduler's own token; '' when unset. */
+  cronToken: string;
   claim(): Promise<ClaimedReminder[]>;
   finish(userId: string, day: string, outcome: ReminderOutcome, eventCount: number,
     providerId: string | null, error: string | null): Promise<void>;
@@ -63,7 +65,7 @@ export async function deliverReminders(reminders: ClaimedReminder[], deps: Remin
   }
 }
 
-/** The scheduler or the operator (a secret key on apikey) starts a run; nobody else. */
+/** The scheduler (its token on x-trak-cron) or the operator (a secret key on apikey) starts a run; nobody else. */
 export async function handleReminderRequest(
   req: Request, deps: ReminderDependencies,
 ): Promise<{ response: Response; work: Promise<ReminderReport> | null }> {
@@ -72,7 +74,8 @@ export async function handleReminderRequest(
   if (req.method !== 'POST') return done(json({ accepted: false, reason: 'method_not_allowed' }, 405));
 
   const apikey = req.headers.get('apikey')?.trim() ?? '';
-  if (!apikey || !deps.secretKeys.some(key => sameSecret(apikey, key))) {
+  const isOperator = apikey.length > 0 && deps.secretKeys.some(key => sameSecret(apikey, key));
+  if (!isOperator && !isScheduler(req, deps.cronToken)) {
     return done(json({ accepted: false, error: 'Not authenticated' }, 401));
   }
   // Nothing to choose: an empty body or {} only.

@@ -17,9 +17,11 @@
 -- the database call an Edge Function, flagged on the PR): every minute it
 -- calls send-event-emails if a change email is due, failed and retryable, or
 -- stuck; every 5 minutes, between 09:00 and 20:00 Dubai, it calls
--- send-event-reminders if anyone is due. Each call carries a project secret
--- key read from Vault at run time (trak_functions_url, trak_cron_secret_key;
--- setup in docs/pilot-runbook.md). The extensions and schedules are only
+-- send-event-reminders if anyone is due. Each call carries the scheduler's
+-- own token (x-trak-cron), read from Vault at run time (trak_functions_url,
+-- trak_cron_token; setup in docs/pilot-runbook.md), never a project key:
+-- pg_net keeps each request's headers in net.http_request_queue, which any
+-- database login can read, and the token can only start a run (Imad, #271). The extensions and schedules are only
 -- created where pg_cron and pg_net exist: the test databases have neither,
 -- and every function below works without them.
 
@@ -209,20 +211,20 @@ SET search_path = ''
 AS $fn$
 DECLARE
   v_url text;
-  v_key text;
+  v_token text;
 BEGIN
   IF p_name NOT IN ('send-event-emails', 'send-event-reminders') THEN
     RAISE EXCEPTION 'call_trak_function: % is not a scheduled function', p_name USING ERRCODE = '22023';
   END IF;
   SELECT s.decrypted_secret INTO v_url FROM vault.decrypted_secrets s WHERE s.name = 'trak_functions_url';
-  SELECT s.decrypted_secret INTO v_key FROM vault.decrypted_secrets s WHERE s.name = 'trak_cron_secret_key';
-  IF v_url IS NULL OR v_key IS NULL THEN
-    RAISE EXCEPTION 'Vault secrets trak_functions_url and trak_cron_secret_key are needed to call %', p_name;
+  SELECT s.decrypted_secret INTO v_token FROM vault.decrypted_secrets s WHERE s.name = 'trak_cron_token';
+  IF v_url IS NULL OR v_token IS NULL THEN
+    RAISE EXCEPTION 'Vault secrets trak_functions_url and trak_cron_token are needed to call %', p_name;
   END IF;
   RETURN net.http_post(
     url := rtrim(v_url, '/') || '/' || p_name,
     body := '{}'::jsonb,
-    headers := jsonb_build_object('Content-Type', 'application/json', 'apikey', v_key),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-trak-cron', v_token),
     timeout_milliseconds := 5000
   );
 END;

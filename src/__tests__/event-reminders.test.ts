@@ -59,9 +59,12 @@ describe('the reminder a family reads', () => {
     expect(emailProblem(email)).toBeNull();
   });
 
-  it('says how to say "can\'t make it" and how to turn reminders off, with no unsubscribe link', () => {
+  it('links the schedule and says how to turn reminders off, with no unsubscribe link', () => {
     const email = composeReminderEmail(reminder([event()]))!;
-    expect(email.text).toContain("Can't make it? Let the coach know in Trak: https://trakfootball.com");
+    expect(email.text).toContain('See the full schedule in Trak: https://trakfootball.com');
+    // No "Can't make it" until its screen ships (TRAK-137's app half); the email
+    // mustn't ask families for something the app can't do yet (Tarek, #271).
+    expect(email.text).not.toMatch(/make it/i);
     expect(email.text).toContain('Turn these reminders off in Trak: Settings → Notifications.');
     expect(email.text.endsWith(WHO_TO_ASK)).toBe(true);
     expect(email.text).not.toMatch(/unsubscribe/i);
@@ -79,6 +82,7 @@ function deps(over: Partial<ReminderDependencies> = {}) {
   const calls = { sent: [] as PlainEmail[], sentAt: [] as number[], finished: [] as unknown[][] };
   const d: ReminderDependencies = {
     secretKeys: ['sb_secret_operator-test-key'],
+    cronToken: 'cron-test-token-0123456789abcdef0123456789abcdef',
     claim: vi.fn(async () => []),
     finish: vi.fn(async (...args) => { calls.finished.push(args); }),
     send: vi.fn(async (message: PlainEmail): Promise<SendResult> => {
@@ -176,9 +180,30 @@ describe('who may start it', () => {
     expect(await work).toEqual({ reminders: 1, emails: 1, failed: 0 });
   });
 
-  it('nobody else: no key, a wrong key, or any signed-in user', async () => {
+  it('the scheduler\'s own token starts a run: it never sends a project key (pg_net queues headers where any database login can read them)', async () => {
+    const { d } = deps({ claim: vi.fn(async () => [reminder([event()])]) });
+    const { response, work } = await handleReminderRequest(post({ 'x-trak-cron': 'cron-test-token-0123456789abcdef0123456789abcdef' }), d);
+    expect(response.status).toBe(202);
+    expect(await work).toEqual({ reminders: 1, emails: 1, failed: 0 });
+  });
+
+  it('the scheduler token only works on its own header, and never when it is unset or too short to be one', async () => {
+    for (const [cronToken, headers] of [
+      ['cron-test-token-0123456789abcdef0123456789abcdef', { apikey: 'cron-test-token-0123456789abcdef0123456789abcdef' }],
+      ['', { 'x-trak-cron': '' }],
+      ['short', { 'x-trak-cron': 'short' }],
+    ] as [string, Record<string, string>][]) {
+      const { d } = deps({ cronToken });
+      const { response, work } = await handleReminderRequest(post(headers), d);
+      expect(response.status).toBe(401);
+      expect(work).toBeNull();
+      expect(d.claim).not.toHaveBeenCalled();
+    }
+  });
+
+  it('nobody else: no key, a wrong key or token, or any signed-in user', async () => {
     const { d } = deps();
-    for (const headers of [{}, { apikey: 'sb_secret_wrong' }, { Authorization: 'Bearer coach-jwt' }] as Record<string, string>[]) {
+    for (const headers of [{}, { apikey: 'sb_secret_wrong' }, { 'x-trak-cron': 'cron-test-token-0123456789abcdef0123456789abcdeX' }, { Authorization: 'Bearer coach-jwt' }] as Record<string, string>[]) {
       const { response, work } = await handleReminderRequest(post(headers), d);
       expect(response.status).toBe(401);
       expect(work).toBeNull();

@@ -117,7 +117,11 @@ SELECT pg_temp.r136refused(format('INSERT INTO public.notification_settings(user
  '1 a parent cannot turn off someone else''s reminders','42501');
 SELECT pg_temp.r136actor(30);
 SELECT pg_temp.r136check((SELECT count(*) FROM public.notification_settings) = 0,'1 a parent cannot read someone else''s setting');
+-- No filter: only the update policy stands between this and everyone's row.
+UPDATE public.notification_settings SET event_reminders = true;
 RESET ROLE;
+SELECT pg_temp.r136check((SELECT NOT event_reminders FROM public.notification_settings WHERE user_id = pg_temp.r136id(31)),
+ '1 a parent cannot switch someone else''s reminders back on');
 
 -- ── 2. Who is due, for which events ───────────────────────────────────────
 -- 2 days out: 20 and 26 (A's two events), parent 30 once with A's two and
@@ -132,7 +136,8 @@ SELECT pg_temp.r136check(pg_temp.r136due(3) = '020:704,026:704,030:704','2 anoth
 CREATE TEMP TABLE r136_claim(n integer, claimed jsonb);
 GRANT SELECT, INSERT ON r136_claim TO service_role;
 SET LOCAL ROLE service_role;
-INSERT INTO r136_claim SELECT 1, public.claim_event_reminders(pg_temp.r136day(2));
+-- No day given, as send-event-reminders calls it: 2 days ahead in Dubai.
+INSERT INTO r136_claim SELECT 1, public.claim_event_reminders();
 SELECT pg_temp.r136check((SELECT pg_temp.r136people(claimed) = '020:2,023:1,026:2,027:1,030:3,033:1' FROM r136_claim WHERE n = 1),
  '3 the claim hands out one email per person, grouped',(SELECT pg_temp.r136people(claimed) FROM r136_claim WHERE n = 1));
 SELECT pg_temp.r136check((SELECT x->>'email' = 'synthetic-30@reminders136.invalid'
@@ -186,6 +191,10 @@ UPDATE public.coach_calendar_events SET status = 'cancelled' WHERE id = pg_temp.
 RESET ROLE;
 UPDATE public.event_change_notices SET due_at = now() - interval '1 second';
 SELECT pg_temp.r136check(trak_private.event_change_work_due() IS TRUE,'4 a cancellation email due and unsent: the sweep calls');
+UPDATE public.event_change_notices SET status = 'sending', claimed_at = now() - interval '1 minute';
+SELECT pg_temp.r136check(trak_private.event_change_work_due() IS FALSE,'4 a change email being sent right now: the sweep waits');
+UPDATE public.event_change_notices SET claimed_at = now() - interval '11 minutes';
+SELECT pg_temp.r136check(trak_private.event_change_work_due() IS TRUE,'4 a change email stuck sending for 10 minutes: the sweep calls');
 
 -- ── 5. App roles can't touch the sends or the scheduler's helpers ────────
 SET LOCAL ROLE authenticated;
@@ -198,14 +207,15 @@ RESET ROLE;
 SET LOCAL ROLE anon;
 SELECT pg_temp.r136refused('SELECT count(*) FROM public.notification_settings','5 signed-out visitors cannot read settings','42501');
 RESET ROLE;
+SELECT pg_temp.r136refused('SELECT trak_private.call_trak_function(''send-roster-invites'')','5 the database calls only the two scheduled functions','22023');
 -- No pg_cron here, so no schedule: the migration applied without it.
 SELECT pg_temp.r136check(NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'),'5 without pg_cron the migration applies and schedules nothing');
 
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.r136_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.r136_results;
- IF n <> 26 THEN
-  RAISE EXCEPTION 'Event reminders: % checks ran; expected exactly 26', n;
+ IF n <> 30 THEN
+  RAISE EXCEPTION 'Event reminders: % checks ran; expected exactly 30', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event reminders failed',DETAIL=failures;

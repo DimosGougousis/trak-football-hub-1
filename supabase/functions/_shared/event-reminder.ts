@@ -62,7 +62,7 @@ export function composeReminderEmail(reminder: ClaimedReminder): PlainEmail | nu
   const text = [
     `Coming up on ${longDay(reminder.day)}:`,
     ...events.map(block),
-    `Can't make it? Let the coach know in Trak: ${TRAK_URL}`,
+    `See the full schedule in Trak: ${TRAK_URL}`,
     'Turn these reminders off in Trak: Settings → Notifications.',
     WHO_TO_ASK,
   ].join('\n\n');
