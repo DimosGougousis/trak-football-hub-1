@@ -27,8 +27,12 @@ describe('toPlayerEvent', () => {
     expect(toPlayerEvent(ROW)).toEqual({
       id: 'ev-1', kind: 'match', title: 'League match', date: '2026-11-14', time: '10:00', meetTime: '09:15',
       venue: 'Rivals Park', kit: 'White', opponent: 'Rivals FC', homeAway: 'away',
-      status: 'scheduled', cancelReason: null, sequence: 2,
+      status: 'scheduled', cancelReason: null, sequence: 2, updatedAt: null,
     })
+  })
+
+  it("reads when the coach last changed it, where the read includes it (TRAK-134, the parent's bell)", () => {
+    expect(toPlayerEvent({ ...ROW, updated_at: '2026-10-10T08:00:00Z' })?.updatedAt).toBe('2026-10-10T08:00:00Z')
   })
 
   it('reads a row written before J8.2 as scheduled, sequence 0, with no meet time or kit', () => {

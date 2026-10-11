@@ -38,6 +38,8 @@ export interface PlayerEvent {
   cancelReason: string | null
   /** Goes up on every change the coach makes (J8.2). */
   sequence: number
+  /** When the coach last changed it, or null where the read doesn't say (TRAK-134). */
+  updatedAt: string | null
 }
 
 export const EVENT_KIND_LABEL: Record<EventKind, string> = {
@@ -75,6 +77,7 @@ export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null 
     status: row[EVENT_COLUMNS.status] === 'cancelled' ? 'cancelled' : 'scheduled',
     cancelReason: text(row[EVENT_COLUMNS.cancelReason]),
     sequence: Number.isInteger(sequence) && sequence > 0 ? sequence : 0,
+    updatedAt: text(row.updated_at),
   }
 }
 
