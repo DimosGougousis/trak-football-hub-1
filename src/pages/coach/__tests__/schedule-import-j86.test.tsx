@@ -76,6 +76,8 @@ describe('J8.6: league fixtures from a CSV on the schedule', () => {
     const [match, training] = inserts[0]
     expect(match).toMatchObject({
       coach_user_id: COACH.id, published: false, source: 'csv', event_type: 'match',
+      // 10:00 in Dubai whatever the device's zone (#263's pin, through formToRow).
+      starts_at: '2099-11-21T06:00:00.000Z',
       event_date: '2099-11-21', start_time: '10:00:00', meet_time: '09:15:00',
       opponent: 'Al Wasl FC', home_away: 'home', venue: 'Main pitch', kit: 'Green', title: 'vs Al Wasl FC',
     })

@@ -50,6 +50,27 @@ export function toInstant(date: string, time?: string | null): string | null {
   return built.toISOString()
 }
 
+/** Dubai is UTC+4 all year: no daylight saving. */
+const ACADEMY_UTC_OFFSET_MS = 4 * 60 * 60 * 1000
+
+/**
+ * The instant of a date and time typed for an academy event, read as Dubai
+ * wall clock whatever the device's zone (Imad, 10 Oct, #263), or null if the
+ * parts are not a real date and time. A blank time is Dubai midnight.
+ *
+ * Event readers take event_date + start_time as Dubai already (the calendar
+ * feed's TZID, the emails); this keeps starts_at agreeing with them, so
+ * ordering, J8.12's "today/tomorrow" and J8.13's "2 days before" don't move
+ * for a coach whose phone is set to Athens or New York.
+ */
+export function toAcademyInstant(date: string, time?: string | null): string | null {
+  if (!toInstant(date, time)) return null
+  const [y, m, d] = date.trim().split('-').map(Number)
+  const tm = /^(\d{1,2}):(\d{2})/.exec((time ?? '').trim())
+  const wallClockAsUtc = Date.UTC(y, m - 1, d, tm ? Number(tm[1]) : 0, tm ? Number(tm[2]) : 0)
+  return new Date(wallClockAsUtc - ACADEMY_UTC_OFFSET_MS).toISOString()
+}
+
 /**
  * Today, as the person holding the device would write it (YYYY-MM-DD).
  *

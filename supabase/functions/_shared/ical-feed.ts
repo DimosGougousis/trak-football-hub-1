@@ -96,7 +96,8 @@ export function foldLine(line: string): string {
   return parts.join('\r\n ')
 }
 
-function namePatterns(names: string[]): RegExp[] {
+/** One pattern per name part that could identify a child; shared with event emails (TRAK-135). */
+export function namePatterns(names: string[]): RegExp[] {
   const parts = new Set<string>()
   for (const name of names) {
     for (const part of name.toLowerCase().split(/[\s'’-]+/)) {
