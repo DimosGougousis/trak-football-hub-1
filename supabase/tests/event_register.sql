@@ -77,10 +77,12 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id)
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.g138id(100),'events');
 -- A's events: 800 training 2 days ago; 801 "other" yesterday; 802 training
 -- tomorrow; 803 cancelled 2 days ago; 804 a draft 2 days ago; 805 a match 2
--- days ago; 806 a training an hour from now. B's 810, 2 days ago.
+-- days ago (at 15:00: a coach's live events can't overlap, TRAK-158); 806 a
+-- training an hour from now. B's 810, 2 days ago.
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,venue,published,status)
  SELECT pg_temp.g138id(id), pg_temp.g138id(coach), 'Register '||id, kind,
-  (pg_temp.g138day(d) + time '17:00') AT TIME ZONE 'Asia/Dubai', pg_temp.g138day(d), '17:00', 'Pitch 2', pub, st
+  (pg_temp.g138day(d) + CASE WHEN id = 805 THEN time '15:00' ELSE time '17:00' END) AT TIME ZONE 'Asia/Dubai', pg_temp.g138day(d),
+  CASE WHEN id = 805 THEN time '15:00' ELSE time '17:00' END, 'Pitch 2', pub, st
  FROM (VALUES (800,10,'training',-2,true,'scheduled'),(801,10,'other',-1,true,'scheduled'),
               (802,10,'training',1,true,'scheduled'),(803,10,'training',-2,true,'cancelled'),
               (804,10,'training',-2,false,'scheduled'),(805,10,'match',-2,true,'scheduled'),
