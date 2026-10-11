@@ -81,6 +81,7 @@ function installFamily() {
 }
 
 const MatchDetailProbe = () => <p>Match detail {useParams().id}</p>
+const EventPageProbe = () => <p>Event page {useParams().id}</p>
 
 const clients: QueryClient[] = []
 function renderFamily(route = '/parent/home') {
@@ -94,6 +95,7 @@ function renderFamily(route = '/parent/home') {
           <Route path="/parent/matches" element={<ParentMatches />} />
           <Route path="/parent/alerts" element={<ParentAlerts />} />
           <Route path="/parent/match/:id" element={<MatchDetailProbe />} />
+          <Route path="/parent/event/:id" element={<EventPageProbe />} />
           <Route path="/parent/profile" element={<ParentProfilePage />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
@@ -258,6 +260,98 @@ describe('parent alerts bell', () => {
     const sheet = await openAlerts()
     expect(await within(sheet).findByRole('alert')).toHaveTextContent("Couldn't load alerts")
     expect(within(sheet).queryByText('No alerts yet')).toBeNull()
+  })
+})
+
+// J8.11 (TRAK-134): the bell also lists the selected child's events: new,
+// changed (with the new time) or cancelled, counted by the same seen rule.
+describe('J8.11 events in the parent alerts bell', () => {
+  let eventsFor: Record<string, Record<string, unknown>[]>
+  const eventRow = (child: string, over: Record<string, unknown> = {}) => ({
+    id: `event-${child}`, event_type: 'training', title: 'Training', event_date: '2099-11-16', start_time: '18:00:00',
+    starts_at: '2099-11-16T14:00:00Z', meet_time: null, venue: 'Main pitch', kit: null, opponent: null, home_away: null,
+    status: 'scheduled', cancel_reason: null, sequence: 1, updated_at: '2026-09-19T10:00:00Z', ...over,
+  })
+  beforeEach(() => {
+    localStorage.clear()
+    eventsFor = { Alex: [eventRow('Alex')] }
+    server.use(http.post(endpoint('rpc/child_events'), async ({ request }) => {
+      const { p_child } = await request.json() as { p_child: string }
+      return HttpResponse.json(eventsFor[p_child] ?? [])
+    }))
+  })
+  const openAlerts = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: /^Alerts/ }))
+    return screen.findByRole('dialog', { name: 'Alerts' })
+  }
+
+  it('counts a newly published event and says what it is', async () => {
+    renderFamily()
+    expect(await screen.findByRole('button', { name: 'Alerts, 3 new' })).toBeInTheDocument()
+    const sheet = await openAlerts()
+    expect(within(sheet).getByText('New: Training')).toBeInTheDocument()
+    expect(within(sheet).getByText('Mon 16 Nov, 18:00 · Main pitch')).toBeInTheDocument()
+  })
+
+  it('the coach moves it: one more on the next load, saying "Changed" and the new time; opening clears it', async () => {
+    const { client } = renderFamily()
+    expect(await screen.findByRole('button', { name: 'Alerts, 3 new' })).toBeInTheDocument()
+    await openAlerts()
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
+
+    eventsFor = { Alex: [eventRow('Alex', {
+      start_time: '18:30:00', starts_at: '2099-11-16T14:30:00Z', sequence: 2,
+      updated_at: new Date(Date.now() + 60_000).toISOString(),
+    })] }
+    await act(async () => { await client.invalidateQueries({ queryKey: ['parent', 'parent-a', 'Alex', 'events'] }) })
+    expect(await screen.findByRole('button', { name: 'Alerts, 1 new' })).toBeInTheDocument()
+    const sheet = await openAlerts()
+    expect(within(sheet).getByText('Changed: Training')).toBeInTheDocument()
+    expect(within(sheet).getByText('Now Mon 16 Nov, 18:30 · Main pitch')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
+  })
+
+  it('says "Cancelled" with the reason', async () => {
+    eventsFor = { Alex: [eventRow('Alex', { status: 'cancelled', cancel_reason: 'Pitch closed', sequence: 3 })] }
+    renderFamily()
+    const sheet = await openAlerts()
+    expect(await within(sheet).findByText('Cancelled: Training')).toBeInTheDocument()
+    expect(within(sheet).getByText('Mon 16 Nov, 18:00 · Pitch closed')).toBeInTheDocument()
+  })
+
+  it('an event alert opens that event', async () => {
+    renderFamily()
+    const sheet = await openAlerts()
+    await userEvent.click(await within(sheet).findByRole('button', { name: /New: Training/ }))
+    expect(await screen.findByText('Event page event-Alex')).toBeInTheDocument()
+  })
+
+  it("shows only the selected child's events", async () => {
+    eventsFor = { Alex: [eventRow('Alex', { title: 'Finishing' })], Zara: [eventRow('Zara', { title: 'Fitness' })] }
+    renderFamily()
+    const alexSheet = await openAlerts()
+    expect(await within(alexSheet).findByText('New: Finishing')).toBeInTheDocument()
+    expect(within(alexSheet).queryByText(/Fitness/)).toBeNull()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Following' }), 'Zara')
+    expect(await screen.findByRole('button', { name: 'Alerts, 3 new' })).toBeInTheDocument()
+    const zaraSheet = await openAlerts()
+    expect(within(zaraSheet).getByText('New: Fitness')).toBeInTheDocument()
+    expect(within(zaraSheet).queryByText(/Finishing/)).toBeNull()
+  })
+
+  it('a failed events read is an error in the bell, never a count without them', async () => {
+    server.use(http.post(endpoint('rpc/child_events'), fail))
+    renderFamily()
+    expect(await screen.findByText('Alex opposition')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByRole('alert').length).toBeGreaterThan(0))
+    expect(screen.getByRole('button', { name: 'Alerts' })).toBeInTheDocument()
+    const sheet = await openAlerts()
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent("Couldn't load alerts")
   })
 })
 

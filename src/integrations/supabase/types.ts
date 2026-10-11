@@ -804,6 +804,7 @@ export type Database = {
           status: string
           cancel_reason: string | null
           sequence: number
+          updated_at: string
         }[]
       }
       create_parent_invite: {

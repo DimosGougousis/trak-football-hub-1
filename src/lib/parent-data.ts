@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client'
 import { scoreToBand } from '@/lib/rating-engine'
 import type { Tables } from '@/integrations/supabase/types'
-import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
+import { eventDay, eventHeading, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 
 export interface ParentChild {
   id: string
@@ -147,16 +147,38 @@ export function formatParentAward(type: string): string {
 
 export interface ParentAlert {
   id: string
-  kind: 'match' | 'assessment' | 'award'
+  kind: 'match' | 'assessment' | 'award' | 'event'
   targetId: string
   title: string
   description: string
   date: string | null
 }
 
+/**
+ * One of the child's events in the bell (TRAK-134, J8.11), dated when the
+ * coach last changed it. "Changed" means edited since the bell first had it
+ * (eventsFirstSeen: per device, the sequence when first listed), so a family
+ * that never saw the old version gets "New", and the title never flips back.
+ */
+function eventAlert(event: PlayerEvent, firstSeen: Record<string, number>): ParentAlert {
+  const when = `${eventDay(event)}, ${event.time ?? 'time to be confirmed'}`
+  const heading = eventHeading(event)
+  const base = { id: `event-${event.id}`, kind: 'event' as const, targetId: event.id, date: event.updatedAt }
+  if (event.status === 'cancelled') {
+    return { ...base, title: `Cancelled: ${heading}`, description: [when, event.cancelReason].filter(Boolean).join(' · ') }
+  }
+  const changed = firstSeen[event.id] !== undefined && event.sequence > firstSeen[event.id]
+  return {
+    ...base,
+    title: `${changed ? 'Changed' : 'New'}: ${heading}`,
+    description: [changed ? `Now ${when}` : when, event.venue].filter(Boolean).join(' · '),
+  }
+}
+
 /** Newest first. Awards are left out on Home's bell while awards are parked (TRAK-31). */
 export function parentAlerts(matches: ParentMatch[], development: ParentDevelopment | undefined,
-  { awards = true }: { awards?: boolean } = {}): ParentAlert[] {
+  { awards = true, events = [], eventsFirstSeen = {} }:
+  { awards?: boolean, events?: PlayerEvent[], eventsFirstSeen?: Record<string, number> } = {}): ParentAlert[] {
   const coach = (id: string | null) => (id && development?.coachNames[id]) || 'Coach'
   return [
     // Activity is ordered by when it was recorded, including backfilled games.
@@ -175,5 +197,6 @@ export function parentAlerts(matches: ParentMatch[], development: ParentDevelopm
       id: `award-${award.id}`, kind: 'award', targetId: award.id, title: formatParentAward(award.award_type), date: award.created_at,
       description: [award.awarded_for, `by ${coach(award.coach_user_id)}`].filter(Boolean).join(' · '),
     })),
+    ...events.map(event => eventAlert(event, eventsFirstSeen)),
   ].sort((a, b) => (Date.parse(b.date ?? '') || 0) - (Date.parse(a.date ?? '') || 0))
 }

@@ -103,6 +103,10 @@ SELECT pg_temp.ceactor(30);
 SELECT pg_temp.cecheck(public.withdraw_parental_consent(pg_temp.ceid(20)) >= 1,'3 the parent withdraws for sibling one');
 SELECT pg_temp.cecheck(pg_temp.ceseen(20)='none','3 after withdrawal, that child''s events are gone',pg_temp.ceseen(20));
 SELECT pg_temp.cecheck(pg_temp.ceseen(22)='602','3 the other child''s events stay',pg_temp.ceseen(22));
+-- TRAK-134 (J8.11): the parent bell counts an event as new when it changed after
+-- the bell was last opened, so the function says when each event last changed.
+SELECT pg_temp.cecheck((SELECT updated_at IS NOT NULL FROM public.child_events(pg_temp.ceid(22)) WHERE id = pg_temp.ceid(602)),
+  '4 it returns when each event last changed (updated_at), for the parent bell');
 RESET ROLE;
 SELECT pg_temp.cecheck(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.proname='child_events' AND p.pronamespace='public'::regnamespace
   AND (pg_get_function_result(p.oid) ILIKE '%notes%' OR pg_get_function_result(p.oid) ILIKE '%SETOF%')),
@@ -112,7 +116,7 @@ SELECT pg_temp.cecheck(NOT has_function_privilege('anon','public.child_events(uu
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.ce_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.ce_results;
- IF n <> 14 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 14', n; END IF;
+ IF n <> 15 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 15', n; END IF;
  IF failures IS NOT NULL THEN RAISE EXCEPTION USING MESSAGE='Child events failed',DETAIL=failures; END IF;
  RAISE NOTICE 'Child events: % checks passed',n;
 END $$;
