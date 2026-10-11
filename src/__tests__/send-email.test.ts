@@ -41,6 +41,16 @@ describe('onlySafeLinks', () => {
     expect(onlySafeLinks('https://xbykbqolvqyqmipikuae.supabase.co/auth/v1/verify')).toBe(false);
     expect(onlySafeLinks('www.example.com')).toBe(false);
   });
+
+  // Imad's #264 review: mail apps turn a bare address into a link too.
+  it('refuses a bare address that mail apps turn into a link, but not ordinary text', () => {
+    for (const bare of ['maps.app.goo.gl/x', 'Pitch 2 maps.app.goo.gl/AbC123?g_st=iw', 'bit.ly/abc', 'club.example/info', 'wa.me/971500000000', 'example.com', 'Meet at maps.google.com']) {
+      expect(onlySafeLinks(bare), bare).toBe(false);
+    }
+    for (const plain of ['trakfootball.com', 'Training 18:00–19:30', 'Sat 14.10 at 18.30', 'St.Mary\'s pitch, e.g. gate 2', 'U15, Synthetic FC', 'Al Barsha Pitch 2']) {
+      expect(onlySafeLinks(plain), plain).toBe(true);
+    }
+  });
 });
 
 describe('emailProblem', () => {
@@ -96,6 +106,15 @@ describe('sendPlainEmail', () => {
     expect(await sendPlainEmail(message, { apiKey: 're_test', from: 'Trak <a@resend.dev>', fetch }))
       .toEqual({ sent: false, reason: 'not_configured' });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('passes an idempotency key to Resend, so a retried email is never sent twice', async () => {
+    const fetch = resend();
+    await sendPlainEmail({ ...message, idempotencyKey: 'trak-event-abc' }, { apiKey: 're_test', from: FROM, fetch });
+    const [, init] = fetch.mock.calls[0];
+    expect(init?.headers).toEqual({ Authorization: 'Bearer re_test', 'Content-Type': 'application/json', 'Idempotency-Key': 'trak-event-abc' });
+    // The key is a header, never part of the email.
+    expect(JSON.parse(String(init?.body))).toEqual({ from: FROM, to: [message.to], subject: message.subject, text: message.text });
   });
 
   it('reports a refusal or a network failure as delivery_failed', async () => {

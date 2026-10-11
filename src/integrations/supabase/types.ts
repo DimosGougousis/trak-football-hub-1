@@ -811,6 +811,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      child_events: {
+        Args: { p_child: string }
+        Returns: {
+          id: string
+          event_type: string
+          title: string
+          event_date: string | null
+          start_time: string | null
+          starts_at: string
+          meet_time: string | null
+          venue: string | null
+          kit: string | null
+          opponent: string | null
+          home_away: string | null
+          status: string
+          cancel_reason: string | null
+          sequence: number
+          updated_at: string
+        }[]
+      }
       create_parent_invite: {
         Args: { p_email: string }
         Returns: {
@@ -820,7 +840,13 @@ export type Database = {
           status: string
         }[]
       }
+      create_my_calendar_link: { Args: never; Returns: string }
       delete_my_account: { Args: never; Returns: undefined }
+      my_calendar_link: {
+        Args: never
+        Returns: { created_at: string; last_fetched_at: string | null }[]
+      }
+      revoke_my_calendar_link: { Args: never; Returns: boolean }
       feature_on: { Args: { p_feature: string }; Returns: boolean }
       get_children_awaiting_consent: {
         Args: never
