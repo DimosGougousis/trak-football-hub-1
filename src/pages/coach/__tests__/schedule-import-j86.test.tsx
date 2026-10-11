@@ -111,6 +111,21 @@ describe('J8.6: league fixtures from a CSV on the schedule', () => {
     expect(screen.queryByText(/added 1 fixture as drafts/i)).not.toBeInTheDocument()
   })
 
+  it('says "Couldn\'t save" when the database confirms fewer fixtures than were sent, never "Added"', async () => {
+    // J4's no-silent-loss rule: an answer short of the rows sent (RLS hiding a
+    // row from the returned list) must not read as a whole import. Kostas's
+    // #265 review: the guard survived every test before this one.
+    fixtures()
+    server.use(http.post(EVENTS, () => HttpResponse.json([{ id: 'new-0' }], { status: 201 })))
+    const { user, dialog } = await openImport()
+    await user.upload(within(dialog).getByLabelText(/choose a csv file/i),
+      csv('2099-11-21,10:00,,Al Wasl FC,Home,,', '2099-11-24,17:30,,,,Main pitch,'))
+    await user.click(await within(dialog).findByRole('button', { name: 'Add 2 fixtures' }))
+    expect(await within(dialog).findByText(/couldn't save the fixtures/i)).toBeInTheDocument()
+    expect(within(dialog).getByRole('listitem', { name: 'Line 2' })).toBeInTheDocument()
+    expect(screen.queryByText(/added 2 fixtures as drafts/i)).not.toBeInTheDocument()
+  })
+
   it('offers no AI or PDF reading: the import takes a CSV only', async () => {
     fixtures()
     const { user, dialog } = await openImport()
