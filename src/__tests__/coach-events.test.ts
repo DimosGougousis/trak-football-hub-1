@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { blankForm, canDelete, formProblem, formToRow, rowToForm, savedVenues, type EventForm } from '@/lib/coach-events'
-import { toInstant } from '@/lib/event-time'
+import { toAcademyInstant } from '@/lib/event-time'
 
 /** TRAK-127 (J8.4): the event form and its row, without the screen. */
 
@@ -10,6 +10,27 @@ const match: EventForm = {
 }
 
 describe('coach event form', () => {
+  // Imad, 10 Oct (#263): starts_at is pinned to Dubai, whatever the coach's
+  // device says. Readers take event_date + start_time as Dubai, and J8.12's
+  // "today/tomorrow" and J8.13's "2 days before" run on the instant.
+  it.each(['Asia/Dubai', 'Europe/Athens', 'America/New_York', 'UTC'])(
+    'stores 18:00 as 18:00 Dubai (14:00Z) on a device set to %s', tz => {
+      const real = process.env.TZ
+      process.env.TZ = tz
+      try {
+        const row = formToRow({ ...match, date: '2026-10-14', time: '18:00', duration: 90 })
+        expect(row.starts_at).toBe('2026-10-14T14:00:00.000Z')
+        expect(row.ends_at).toBe('2026-10-14T15:30:00.000Z')
+        expect(row).toMatchObject({ event_date: '2026-10-14', start_time: '18:00:00', end_time: '19:30:00' })
+        // A time still to be confirmed is Dubai midnight, on the coach's day.
+        expect(formToRow({ ...match, date: '2026-10-14', time: '' }).starts_at).toBe('2026-10-13T20:00:00.000Z')
+        // Editing reads the wall clock back, unchanged.
+        expect(rowToForm({ id: 'e', published: false, status: 'scheduled', ...row }).time).toBe('18:00')
+      } finally {
+        process.env.TZ = real
+      }
+    })
+
   it('round-trips a match through its row', () => {
     const row = { id: 'e', published: true, status: 'scheduled', ...formToRow(match) }
     expect(row.venue).toBe('United Ground')
@@ -25,7 +46,7 @@ describe('coach event form', () => {
     expect(formToRow({ ...match, time: '', meetTime: '' })).toMatchObject({ ends_at: null, end_time: null, start_time: null })
     const late = formToRow({ ...match, time: '23:00', duration: 90 })
     expect(late.end_time).toBeNull()
-    expect(late.ends_at).toBe(new Date(new Date(toInstant('2026-10-20', '23:00')!).getTime() + 90 * 60_000).toISOString())
+    expect(late.ends_at).toBe(new Date(new Date(toAcademyInstant('2026-10-20', '23:00')!).getTime() + 90 * 60_000).toISOString())
   })
 
   it('refuses an impossible date, a meet time with no start, and an untitled "other"', () => {

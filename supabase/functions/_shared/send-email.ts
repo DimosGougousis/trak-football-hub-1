@@ -9,7 +9,11 @@
 // string or fragment to carry a token. Results and logs carry no addresses.
 export const RESEND_API = 'https://api.resend.com/emails';
 
-export interface PlainEmail { to: string; subject: string; text: string }
+export interface PlainEmail {
+  to: string; subject: string; text: string;
+  /** Resend's Idempotency-Key (24 h): every try of one email counts as one send (TRAK-135). */
+  idempotencyKey?: string;
+}
 export interface EmailSender {
   /** RESEND_API_KEY, a Supabase secret: never in the repo or the browser. */
   apiKey: string;
@@ -22,7 +26,18 @@ export type SendResult =
   | { sent: false; reason: 'invalid_email' | 'not_configured' | 'delivery_failed'; status?: number };
 
 const ADDRESS = /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[^\s@<>()",;:]+$/;
-const LINK = /\bhttps?:\/\/[^\s<>"')\]]+|\bwww\.[^\s<>"')\]]+/gi;
+// Mail apps also turn a bare address into a link: any host with a path
+// ("maps.app.goo.gl/x"), or a host alone on a common top-level domain
+// ("example.com"). Times, dates and initials ("18.30", "e.g.") have no
+// letters-only domain at the end, so they are not links.
+const BARE_TLDS = 'com|net|org|info|biz|io|co|me|ly|gl|gg|to|tv|app|link|page|site|online|ae|uk|eu';
+/** Every link the sender checks; event emails replace these in coach-typed text (TRAK-135). */
+export const LINK = new RegExp([
+  String.raw`\bhttps?:\/\/[^\s<>"')\]]+`,
+  String.raw`\bwww\.[^\s<>"')\]]+`,
+  String.raw`\b(?:[a-z0-9-]+\.)+[a-z]{2,63}\/[^\s<>"')\]]*`,
+  String.raw`\b(?:[a-z0-9-]+\.)+(?:${BARE_TLDS})(?![\w-]|\.[\w-])`,
+].join('|'), 'gi');
 const TRAK_HOSTS = new Set(['trakfootball.com', 'www.trakfootball.com']);
 
 /** True when the address is the from address's domain: trakfootball.com, where SPF and DKIM are set. */
@@ -68,7 +83,10 @@ export async function sendPlainEmail(message: PlainEmail, sender: EmailSender): 
   try {
     const response = await sender.fetch(RESEND_API, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json',
+        ...(message.idempotencyKey ? { 'Idempotency-Key': message.idempotencyKey } : {}),
+      },
       body: JSON.stringify({ from, to: [message.to.trim()], subject: message.subject.trim(), text: message.text }),
     });
     if (!response.ok) return { sent: false, reason: 'delivery_failed', status: response.status };
