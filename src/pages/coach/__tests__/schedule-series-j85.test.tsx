@@ -239,6 +239,7 @@ describe('J8.5: a weekly training series', () => {
 
   it('marks a series week as Weekly on its card', async () => {
     await open()
-    expect(screen.getByText(/Training · Weekly · 18:00/)).toBeInTheDocument()
+    // TRAK-159: the time leads the card.
+    expect(screen.getByText(/Training · Weekly/)).toHaveTextContent('18:00 · Training · Weekly')
   })
 })
