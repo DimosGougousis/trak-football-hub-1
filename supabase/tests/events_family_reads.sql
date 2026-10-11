@@ -148,10 +148,41 @@ SELECT pg_temp.e82refused(format('UPDATE public.coach_calendar_events SET publis
 SELECT pg_temp.e82refused(format('DELETE FROM public.coach_calendar_events WHERE id=%L',pg_temp.e82id(500)),'2 a published event cannot be deleted','zero-rows');
 SELECT pg_temp.e82allowed(format('DELETE FROM public.coach_calendar_events WHERE id=%L',pg_temp.e82id(501)),'2 a draft can be deleted',1);
 RESET ROLE;
-SELECT pg_temp.e82is(format('SELECT organization_id=%L AND sequence=3 AND published AND status=''cancelled'' AND cancel_reason=''Pitch closed''
+-- The academy and counter the app sent are overwritten, so that first edit
+-- changed nothing and doesn't count (TRAK-152): publish + cancel = 2.
+SELECT pg_temp.e82is(format('SELECT organization_id=%L AND sequence=2 AND published AND status=''cancelled'' AND cancel_reason=''Pitch closed''
   FROM public.coach_calendar_events WHERE id=%L',pg_temp.e82id(100),pg_temp.e82id(520)),
- '2 readback: the cancel kept the row, academy pinned, counter bumped once per accepted edit');
+ '2 readback: the cancel kept the row, academy pinned, counter bumped once per real change');
 SELECT pg_temp.e82check(NOT EXISTS(SELECT 1 FROM public.coach_calendar_events WHERE id=pg_temp.e82id(501)),'2 readback: the draft is gone');
+
+-- ── 2b. An unchanged save changes nothing families see (TRAK-152) ───────
+-- Families' bells count updated_at and calendars count sequence, so a Save
+-- with nothing changed must keep both. now() is fixed inside this
+-- transaction, so 500's change time is first set in the past, with both
+-- stamps off for that one write.
+ALTER TABLE public.coach_calendar_events DISABLE TRIGGER trg_coach_calendar_events_updated_at;
+ALTER TABLE public.coach_calendar_events DISABLE TRIGGER trg_stamp_calendar_event;
+UPDATE public.coach_calendar_events SET updated_at='2026-01-01 00:00+00' WHERE id=pg_temp.e82id(500);
+ALTER TABLE public.coach_calendar_events ENABLE TRIGGER trg_stamp_calendar_event;
+ALTER TABLE public.coach_calendar_events ENABLE TRIGGER trg_coach_calendar_events_updated_at;
+CREATE TEMP TABLE e82_before AS SELECT sequence, updated_at FROM public.coach_calendar_events WHERE id=pg_temp.e82id(500);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.e82actor(10);
+SELECT pg_temp.e82allowed(format('UPDATE public.coach_calendar_events SET title=title, event_type=event_type, starts_at=starts_at,
+  venue=venue, meet_time=meet_time, kit=kit, opponent=opponent, home_away=home_away WHERE id=%L',pg_temp.e82id(500)),
+ '2b coach A saves a published event without changing anything',1);
+RESET ROLE;
+SELECT pg_temp.e82is(format('SELECT e.sequence=b.sequence AND e.updated_at=b.updated_at
+  FROM public.coach_calendar_events e, pg_temp.e82_before b WHERE e.id=%L',pg_temp.e82id(500)),
+ '2b readback: an unchanged save keeps the change counter and the change time');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.e82actor(10);
+SELECT pg_temp.e82allowed(format('UPDATE public.coach_calendar_events SET venue=''Pitch 2'' WHERE id=%L',pg_temp.e82id(500)),
+ '2b coach A moves it to another pitch',1);
+RESET ROLE;
+SELECT pg_temp.e82is(format('SELECT e.sequence=b.sequence+1 AND e.updated_at>b.updated_at
+  FROM public.coach_calendar_events e, pg_temp.e82_before b WHERE e.id=%L',pg_temp.e82id(500)),
+ '2b readback: a real change still counts once and moves the change time');
 
 -- ── 3. Families see the cancellation; a coach's move doesn't leak events ──
 SET LOCAL ROLE authenticated;
@@ -184,8 +215,8 @@ SELECT pg_temp.e82is(format('SELECT organization_id IS NULL FROM public.coach_ca
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.e82_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.e82_results;
- IF n <> 30 THEN
-  RAISE EXCEPTION 'Events reads: % checks ran; expected exactly 30', n;
+ IF n <> 34 THEN
+  RAISE EXCEPTION 'Events reads: % checks ran; expected exactly 34', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Events reads failed',DETAIL=failures;

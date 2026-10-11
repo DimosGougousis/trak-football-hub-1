@@ -52,3 +52,9 @@ verify_jwt = false
 # the credential; the handler and calendar_feed_for_token check it.
 [functions.calendar-feed]
 verify_jwt = false
+
+# TRAK-135 (J8.12): the coach's app (their session) or the operator (a secret
+# key on apikey, which the gateway can't verify) asks it to send the queued
+# event emails. The handler authorises every call itself (handler.ts).
+[functions.send-event-emails]
+verify_jwt = false

@@ -7,7 +7,7 @@
  * cancel_reason. The sequence number goes up in the database on every change;
  * the app never writes it.
  */
-import { calendarFields, displayEventTime, toInstant } from '@/lib/event-time'
+import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -43,6 +43,7 @@ export type EventRow = {
   home_away?: string | null
   status?: string | null
   cancel_reason?: string | null
+  series_id?: string | null
 }
 
 export function blankForm(date: string): EventForm {
@@ -73,7 +74,8 @@ export function eventTitle(form: EventForm): string {
 
 /** The columns a save writes. Call only when formProblem() is null. */
 export function formToRow(form: EventForm) {
-  const starts_at = toInstant(form.date, form.time || null)!
+  // Dubai, whatever the device says (Imad, 10 Oct): readers use event_date + start_time as Dubai.
+  const starts_at = toAcademyInstant(form.date, form.time || null)!
   const cal = calendarFields(form.date, form.time || null)!
   const isMatch = form.kind === 'match'
   // A length only means something from a known start. An end past midnight
@@ -131,6 +133,69 @@ export const isCancelled = (row: Pick<EventRow, 'status'>) => row.status === 'ca
 
 /** Delete is only for a mistake nobody has seen: a draft never published. */
 export const canDelete = (row: Pick<EventRow, 'published' | 'status'>) => !row.published && !isCancelled(row)
+
+/* TRAK-128 (J8.5): weekly repeat. A series is stored as one row per date, all
+   sharing a series_id; no repeat rule is stored, so attendance, "can't make
+   it" and cancelling stay per week. Dates are calendar dates (Dubai wall
+   clock), so the arithmetic below never touches a time zone. */
+
+export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+/** A slip of the end date (a year instead of a term) shouldn't make 300 events. */
+export const MAX_SERIES_EVENTS = 60
+
+export type Repeat = { on: boolean; days: number[]; until: string }   // days: 0 = Monday
+
+const DAY_MS = 86_400_000
+const dayNumber = (date: string) => Date.parse(`${date}T00:00:00Z`) / DAY_MS
+const realDate = (date: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(date) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date
+
+/** Monday = 0 … Sunday = 6. */
+export function weekdayOf(date: string): number {
+  return (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7
+}
+
+export function blankRepeat(date: string): Repeat {
+  return { on: false, days: realDate(date) ? [weekdayOf(date)] : [], until: '' }
+}
+
+/** Every date from `start` to `until`, both included, on the chosen weekdays. */
+export function seriesDates(start: string, until: string, days: number[]): string[] {
+  if (!realDate(start) || !realDate(until)) return []
+  const out: string[] = []
+  for (let n = dayNumber(start); n <= dayNumber(until); n++) {
+    const date = new Date(n * DAY_MS).toISOString().slice(0, 10)
+    if (days.includes(weekdayOf(date))) out.push(date)
+  }
+  return out
+}
+
+/** What's wrong with the repeat in words the coach can act on, or null. */
+export function repeatProblem(form: EventForm, repeat: Repeat): string | null {
+  if (!repeat.on) return null
+  if (!repeat.days.length) return 'Pick at least one day of the week'
+  if (!repeat.until || !realDate(repeat.until)) return 'Pick the date the series ends'
+  if (repeat.until < form.date) return 'The series has to end on or after its first date'
+  const count = seriesDates(form.date, repeat.until, repeat.days).length
+  if (!count) return 'None of those days fall between the start and end dates'
+  if (count > MAX_SERIES_EVENTS) return `That makes ${count} events. Keep a series to ${MAX_SERIES_EVENTS} or fewer.`
+  return null
+}
+
+/** The rows a new series inserts: the form's details on each of its dates. */
+export function seriesRows(form: EventForm, repeat: Repeat, seriesId: string) {
+  return seriesDates(form.date, repeat.until, repeat.days)
+    .map(date => ({ ...formToRow({ ...form, date }), series_id: seriesId }))
+}
+
+/** This week and the rest of its series that can still change (not cancelled). */
+export function thisAndFollowing<R extends Pick<EventRow, 'series_id' | 'status'> & { event_date?: string | null }>(
+  rows: R[], row: R,
+): R[] {
+  if (!row.series_id || !row.event_date) return [row]
+  return rows.filter(r => r.series_id === row.series_id && !isCancelled(r)
+    && !!r.event_date && r.event_date >= row.event_date!)
+}
 
 /** The coach's venues, most recently used first, for "pick or add". */
 export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): string[] {
