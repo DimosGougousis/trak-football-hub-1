@@ -7,7 +7,7 @@
  * cancel_reason. The sequence number goes up in the database on every change;
  * the app never writes it.
  */
-import { calendarFields, displayEventTime, toInstant } from '@/lib/event-time'
+import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -74,7 +74,8 @@ export function eventTitle(form: EventForm): string {
 
 /** The columns a save writes. Call only when formProblem() is null. */
 export function formToRow(form: EventForm) {
-  const starts_at = toInstant(form.date, form.time || null)!
+  // Dubai, whatever the device says (Imad, 10 Oct): readers use event_date + start_time as Dubai.
+  const starts_at = toAcademyInstant(form.date, form.time || null)!
   const cal = calendarFields(form.date, form.time || null)!
   const isMatch = form.kind === 'match'
   // A length only means something from a known start. An end past midnight
