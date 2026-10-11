@@ -1,18 +1,20 @@
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { IconAlerts } from '@/components/icons/TrakIcons'
 import { ParentAssessmentBands, ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
-import { useParentDevelopment, useParentMatches } from '@/hooks/useParentData'
+import { useParentDevelopment, useParentEvents, useParentMatches } from '@/hooks/useParentData'
 import { formatParentDate, parentAlerts } from '@/lib/parent-data'
+import type { PlayerEvent } from '@/lib/player-events'
 import { trackEvent } from '@/lib/telemetry'
 
 /* TRAK-74 (decision 25 Sep): the parent's alerts are a bell on Home instead of
-   a tab. It counts the selected child's matches and assessments recorded since
-   the list was last opened on this device, and lists them: a match opens its
-   detail, an assessment shows its bands (never the coach's message, TRAK-63).
-   Awards stay out while they're parked (TRAK-31). */
+   a tab. It counts the selected child's matches, assessments and events
+   (TRAK-134) recorded or changed since the list was last opened on this
+   device, and lists them: a match opens its detail, an event opens its page,
+   an assessment shows its bands (never the coach's message, TRAK-63). Awards
+   stay out while they're parked (TRAK-31). */
 
 const time = (date: string | null) => Date.parse(date ?? '') || 0
 
@@ -25,20 +27,41 @@ function writeSeen(key: string, value: number) {
   try { localStorage.setItem(key, String(value)) } catch { /* storage unavailable */ }
 }
 
+// Per device: each event's sequence when the bell first listed it, so a later
+// edit reads "Changed". Without storage every event simply reads "New".
+const firstSeenKey = (parentId: string) => `trak:parent-alerts-events:${parentId}`
+function readFirstSeen(parentId: string): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(firstSeenKey(parentId)) ?? '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, number>) : {}
+  } catch { return {} }
+}
+function noteFirstSeen(parentId: string, events: PlayerEvent[]) {
+  const seen = readFirstSeen(parentId)
+  const fresh = events.filter(event => seen[event.id] === undefined)
+  if (!fresh.length) return
+  for (const event of fresh) seen[event.id] = event.sequence
+  try { localStorage.setItem(firstSeenKey(parentId), JSON.stringify(seen)) } catch { /* storage unavailable */ }
+}
+
 export function ParentAlertsBell() {
   const navigate = useNavigate()
   const { parentId, selectedChild } = useParentChildren()
   const matches = useParentMatches()
   const development = useParentDevelopment()
+  const events = useParentEvents()
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [, seenChanged] = useReducer((n: number) => n + 1, 0)
+  useEffect(() => { if (parentId && events.data) noteFirstSeen(parentId, events.data) }, [parentId, events.data])
   if (!parentId || !selectedChild) return null
 
   const key = `trak:parent-alerts-seen:${parentId}:${selectedChild.id}`
-  const failed = matches.isError || development.isError
-  const loading = matches.isPending || development.isPending
-  const alerts = failed || loading ? [] : parentAlerts(matches.data ?? [], development.data, { awards: false })
+  const failed = matches.isError || development.isError || events.isError
+  const loading = matches.isPending || development.isPending || events.isPending
+  // Read before this render's events are recorded as first seen.
+  const alerts = failed || loading ? [] : parentAlerts(matches.data ?? [], development.data,
+    { awards: false, events: events.data ?? [], eventsFirstSeen: readFirstSeen(parentId) })
   const seen = readSeen(key)
   const unread = alerts.filter(alert => time(alert.date) > seen).length
 
@@ -64,13 +87,14 @@ export function ParentAlertsBell() {
       <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto rounded-t-2xl">
         <SheetHeader>
           <SheetTitle>Alerts</SheetTitle>
-          <SheetDescription>{selectedChild.name}'s latest matches and coach assessments.</SheetDescription>
+          <SheetDescription>{selectedChild.name}'s latest matches, events and coach assessments.</SheetDescription>
         </SheetHeader>
-        {failed ? <ParentLoadError message="Couldn't load alerts." onRetry={() => { void matches.refetch(); void development.refetch() }} />
+        {failed ? <ParentLoadError message="Couldn't load alerts."
+          onRetry={() => { void matches.refetch(); void development.refetch(); void events.refetch() }} />
           : loading ? <ParentLoading />
             : !alerts.length ? <div className="text-center py-10">
               <p className="text-sm text-foreground">No alerts yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Matches and assessments will appear here.</p>
+              <p className="text-xs text-muted-foreground mt-1">Matches, events and assessments will appear here.</p>
             </div>
               : <ul className="divide-y divide-border mt-2">
                 {alerts.map(alert => {
@@ -79,7 +103,8 @@ export function ParentAlertsBell() {
                   const isOpen = expanded === alert.id
                   return <li key={alert.id} className="py-1">
                     <button type="button" aria-expanded={assessment ? isOpen : undefined}
-                      onClick={() => assessment ? setExpanded(isOpen ? null : alert.id) : navigate(`/parent/match/${alert.targetId}`)}
+                      onClick={() => assessment ? setExpanded(isOpen ? null : alert.id)
+                        : navigate(`/parent/${alert.kind === 'event' ? 'event' : 'match'}/${alert.targetId}`)}
                       className="w-full min-h-11 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg">
                       <p className="text-sm text-foreground">{alert.title}</p>
                       <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
