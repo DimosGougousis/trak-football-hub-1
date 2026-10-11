@@ -38,17 +38,18 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
 
   return (
     <section aria-label="This week" className="arc mb-5">
-      <SegmentedControl label="Next 7 days" value={day} onValueChange={setDay}
-        options={days.map((date, i) => {
+      <SegmentedControl className="arc-week" label="Next 7 days" value={day} onValueChange={setDay}
+        options={days.map(date => {
           const value = format(date, 'yyyy-MM-dd')
           const dots = onDay(value)
+          // M T W T F S S, as in the Therabody strip; the full date is read out.
           return {
             value,
-            label: i === 0 ? 'Today' : format(date, 'EEE d'),
-            accessory: dots.length > 0 && <span className="ml-1.5 inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
+            label: format(date, 'EEEEE'),
+            accessory: <><span className="sr-only">{format(date, 'EEEE d MMMM')}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
               {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[5px] h-[5px] rounded-full"
                 style={{ background: event.status === 'cancelled' ? 'transparent' : EVENT_KIND_COLOR[event.kind], boxShadow: event.status === 'cancelled' ? 'inset 0 0 0 1px #a1a1aa' : undefined }} />)}
-            </span>,
+            </span>}</>,
           }
         })} />
       <p className="text-[11px] tracking-[0.08em] uppercase text-white/35 mt-3 mb-1" style={{ fontFamily: "'DM Mono', monospace" }}>

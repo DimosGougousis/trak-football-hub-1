@@ -115,3 +115,8 @@
   --font-display: inherit;
   --font-body: inherit;
 }
+
+/* TRAK-163: the Home week strip spans the screen, seven equal days (the Therabody strip). */
+.arc-week { width: 100%; }
+.arc-week > * { flex: 1 1 auto; }
+.arc-week button { flex: 1 1 0; padding-inline: 0; }
