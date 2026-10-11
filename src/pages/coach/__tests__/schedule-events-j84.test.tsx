@@ -7,7 +7,7 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
-import { localTodayISO, toInstant } from '@/lib/event-time'
+import { localTodayISO, toAcademyInstant, toInstant } from '@/lib/event-time'
 
 /**
  * TRAK-127 (J8.4). With events switched on, the coach creates a training,
@@ -107,8 +107,8 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     const [inserted] = writes[0].body as Record<string, unknown>[]
     expect(inserted).toMatchObject({
       coach_user_id: COACH.id, title: 'vs Synthetic United', event_type: 'match',
-      starts_at: toInstant(today, '16:00'),
-      ends_at: new Date(new Date(toInstant(today, '16:00')!).getTime() + 75 * 60_000).toISOString(),
+      starts_at: toAcademyInstant(today, '16:00'),
+      ends_at: new Date(new Date(toAcademyInstant(today, '16:00')!).getTime() + 75 * 60_000).toISOString(),
       event_date: today, start_time: '16:00:00', end_time: '17:15:00',
       venue: 'United Ground', meet_time: '15:15:00', opponent: 'Synthetic United',
       home_away: 'away', kit: 'Red shirts', published: false, source: 'manual',

@@ -3,7 +3,7 @@ import {
   MAX_SERIES_EVENTS, blankForm, blankRepeat, repeatProblem, seriesDates, seriesRows, thisAndFollowing,
   weekdayOf, type EventForm, type Repeat,
 } from '@/lib/coach-events'
-import { toInstant } from '@/lib/event-time'
+import { toAcademyInstant } from '@/lib/event-time'
 
 /** TRAK-128 (J8.5): a weekly series, without the screen. 12 Oct 2026 is a Monday. */
 
@@ -62,7 +62,7 @@ describe('the rows a series saves', () => {
     expect(new Set(rows.map(r => r.series_id))).toEqual(new Set(['series-1']))
     expect(rows[3]).toMatchObject({
       event_date: '2026-10-21', start_time: '18:00:00', venue: 'Academy Pitch 2', event_type: 'training',
-      starts_at: toInstant('2026-10-21', '18:00'),
+      starts_at: toAcademyInstant('2026-10-21', '18:00'),
     })
   })
 

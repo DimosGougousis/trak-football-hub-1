@@ -6,7 +6,7 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
-import { localTodayISO, toInstant } from '@/lib/event-time'
+import { localTodayISO, toAcademyInstant, toInstant } from '@/lib/event-time'
 
 /**
  * TRAK-128 (J8.5). The coach enters a weekly training once, with an end date,
@@ -101,7 +101,7 @@ describe('J8.5: a weekly training series', () => {
     expect(new Set(inserted.map(r => r.series_id)).size).toBe(1)
     expect(inserted[0].series_id).toMatch(/^[0-9a-f-]{36}$/)
     expect(inserted.map(r => r.event_date).slice(0, 3)).toEqual(['2030-01-07', '2030-01-09', '2030-01-14'])
-    expect(inserted.at(-1)).toMatchObject({ event_date: '2030-02-27', starts_at: toInstant('2030-02-27', '18:00') })
+    expect(inserted.at(-1)).toMatchObject({ event_date: '2030-02-27', starts_at: toAcademyInstant('2030-02-27', '18:00') })
     expect(inserted.every(r => r.published === false && r.start_time === '18:00:00' && r.venue === 'Academy Pitch 2')).toBe(true)
     expect(await screen.findByText(/Saved 16 events as drafts/)).toBeInTheDocument()
   })
@@ -156,11 +156,31 @@ describe('J8.5: a weekly training series', () => {
     await waitFor(() => expect(writes).toHaveLength(2))
     const byId = Object.fromEntries(writes.map(w => [w.query.match(/id=eq\.(\w+)/)![1], w.body as Record<string, unknown>]))
     expect(Object.keys(byId).sort()).toEqual(['w1', 'w3'])   // not last week, not the cancelled week
-    expect(byId.w1).toMatchObject({ event_date: today, start_time: '18:30:00', starts_at: toInstant(today, '18:30') })
+    expect(byId.w1).toMatchObject({ event_date: today, start_time: '18:30:00', starts_at: toAcademyInstant(today, '18:30') })
     expect(byId.w3).toMatchObject({ event_date: shift(today, 14), start_time: '18:30:00' })
     expect(await screen.findByText('Saved 2 weeks. Families see the change.')).toBeInTheDocument()
     // TRAK-135: published weeks changed, so queued family emails are sent.
     expect(emailNudges).toBe(1)
+  })
+
+  it('says how many weeks saved when one of "this and following" fails, never "Saved" for all', async () => {
+    // One week's update fails (connection, or RLS answering no row): the coach
+    // must be told, or that week silently keeps the old time.
+    server.use(http.patch(EVENTS, ({ request }) =>
+      new URL(request.url).search.includes('w3')
+        ? HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })
+        : HttpResponse.json([{ id: 'written-0' }])))
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Training' }))
+    const sheet = screen.getByRole('dialog', { name: 'Edit event' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
+    const start = within(sheet).getByLabelText('Start')
+    await userEvent.clear(start)
+    await userEvent.type(start, '18:30')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+
+    expect(await within(sheet).findByText(/Saved 1 of 2 weeks/)).toBeInTheDocument()
+    expect(screen.queryByText(/Saved 2 weeks/)).not.toBeInTheDocument()
   })
 
   it('cancels only this week, or this and following weeks', async () => {
