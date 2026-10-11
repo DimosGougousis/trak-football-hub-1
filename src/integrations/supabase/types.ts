@@ -809,12 +809,14 @@ export type Database = {
       }
       coach_match_score_clash: {
         Args: {
+          p_goals?: number
           p_match_date: string
           p_opponent: string
           p_team_score: number
           p_opponent_score: number
         }
         Returns: {
+          saved_goals: number
           team_score: number
           opponent_score: number
         }[]

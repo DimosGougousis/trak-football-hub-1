@@ -298,16 +298,34 @@ export default function CoachAddSession() {
         ? trainingTitle(trainingFocus, title)
         : title.trim()
 
-    // TRAK-153: a match already saved with another score is refused by the
-    // database player by player (TRAK-149), but only after the session and
-    // attendance below are in, and a coach can't delete those. Ask first, and
-    // save nothing if the answer is a clash or no answer came.
+    const playedPlayers = squad.filter(p => details[p.id]?.played)
+    // matches rows — only for linked players, deduplicated by linked_player_id
+    // (guards against duplicate squad entries writing two match rows for the same player)
+    const seenIds = new Set<string>()
+    const linkedPlayers = playedPlayers.filter(p => {
+      if (!p.linked_player_id) return false
+      if (seenIds.has(p.linked_player_id)) return false
+      seenIds.add(p.linked_player_id)
+      return true
+    })
+
+    // TRAK-153: a match already saved with another score, or whose saved goals
+    // plus these would pass the team's score, is refused by the database player
+    // by player (TRAK-149), but only after the session and attendance below are
+    // in, and a coach can't delete those. Ask first, and save nothing if the
+    // answer is a clash or no answer came.
     if (isMatch) {
+      // Only the rows this save will write count: a player already written on
+      // an earlier attempt is in the saved goals already.
+      const newGoals = linkedPlayers
+        .filter(p => !loggedPlayerIds.has(p.linked_player_id!))
+        .reduce((sum, p) => sum + (details[p.id].goals ?? 0), 0)
       const { data: clash, error: clashErr } = await supabase.rpc('coach_match_score_clash', {
         p_match_date: date,
         p_opponent: opponent.trim(),
         p_team_score: Number(scoreUs) || 0,
         p_opponent_score: Number(scoreThem) || 0,
+        p_goals: newGoals,
       })
       if (clashErr) {
         console.error('Match score check failed:', clashErr)
@@ -317,7 +335,11 @@ export default function CoachAddSession() {
       }
       const saved = clash?.[0]
       if (saved) {
-        toast.error(`${sessionTitle} is already saved as ${saved.team_score}-${saved.opponent_score}; every player in it needs the same score. Nothing was saved.`, { duration: 12000 })
+        const sameScore = saved.team_score === (Number(scoreUs) || 0) && saved.opponent_score === (Number(scoreThem) || 0)
+        toast.error(sameScore
+          ? `${sessionTitle} already has ${saved.saved_goals} goal${saved.saved_goals === 1 ? '' : 's'} saved; with these it would be ${saved.saved_goals + newGoals}, but the team scored ${saved.team_score}. Nothing was saved.`
+          : `${sessionTitle} is already saved as ${saved.team_score}-${saved.opponent_score}; every player in it needs the same score. Nothing was saved.`,
+          { duration: 12000 })
         setSaving(false)
         return
       }
@@ -370,9 +392,6 @@ export default function CoachAddSession() {
     const refusals: string[] = []
 
     if (isMatch) {
-      // Collect players who played
-      const playedPlayers = squad.filter(p => details[p.id]?.played)
-
       // session_attendance
       if (playedPlayers.length > 0 && !attendanceSaved) {
         const { error: attErr } = await supabase.from('session_attendance').insert(
@@ -390,15 +409,6 @@ export default function CoachAddSession() {
         }
       }
 
-      // matches rows — only for linked players, deduplicated by linked_player_id
-      // (guards against duplicate squad entries writing two match rows for the same player)
-      const seenIds = new Set<string>()
-      const linkedPlayers = playedPlayers.filter(p => {
-        if (!p.linked_player_id) return false
-        if (seenIds.has(p.linked_player_id)) return false
-        seenIds.add(p.linked_player_id)
-        return true
-      })
       const nowLogged = new Set(loggedPlayerIds)
       for (const p of linkedPlayers) {
         // Already written on an earlier attempt — logging again would give the
