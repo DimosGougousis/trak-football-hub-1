@@ -98,6 +98,13 @@ function failed(error: unknown, data: unknown[] | null) {
 
 const SAVE_FAILED = "Couldn't save the event. Check your connection and try again; your details are still here."
 
+/** TRAK-158: the database refuses an overlapping live event with a sentence
+    for the coach, naming the clash; saving again won't help, so show it. */
+function clashMessage(error: unknown): string | null {
+  const e = error as { code?: string, message?: string } | null
+  return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
+}
+
 const inputClass = 'w-full bg-[#0A0A0B] border border-white/[0.07] rounded-[12px] px-3 py-2.5 text-[14px] text-white/88 placeholder-white/20 outline-none'
 const font = { fontFamily: "'DM Sans', sans-serif" }
 const mono = { fontFamily: "'DM Mono', monospace" }
@@ -314,8 +321,10 @@ export default function CoachSchedule() {
       if (targets.some(t => t.published)) askToEmailFamilies()
       const saved = results.filter(r => !failed(r.error, r.data)).length
       if (saved < targets.length) {
-        // Saving again rewrites every week the same way, so it is safe to retry.
-        setSheet({ ...sheet, error: `Saved ${saved} of ${targets.length} weeks. Check your connection and save again.` })
+        // Saving again rewrites every week the same way, so it is safe to retry;
+        // a week refused for a clash needs the time changed first.
+        const clash = results.map(r => clashMessage(r.error)).find(Boolean)
+        setSheet({ ...sheet, error: `Saved ${saved} of ${targets.length} weeks. ${clash ?? 'Check your connection and save again.'}` })
         return
       }
       setSheet({ kind: 'closed' })
@@ -337,7 +346,7 @@ export default function CoachSchedule() {
     setSaving(false)
     // Errors keep what was typed and say what failed (the J4 standard). A
     // series is one insert, so it saves whole or not at all.
-    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: SAVE_FAILED }); return }
+    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? SAVE_FAILED }); return }
     setSheet({ kind: 'closed' })
     setSelected(form.date)
     loadData()
@@ -353,7 +362,7 @@ export default function CoachSchedule() {
     if (inSeries(row)) { setSheet({ kind: 'series', action: 'publish', row, error: null }); return }
     const { data, error } = await supabase.from('coach_calendar_events')
       .update({ published: true }).eq('id', row.id).select('id')
-    if (failed(error, data)) { toast.error(`Couldn't publish "${row.title}". Try again.`); return }
+    if (failed(error, data)) { toast.error(clashMessage(error) ?? `Couldn't publish "${row.title}". Try again.`); return }
     loadData()
     toast.success('Published to the squad')
   }
@@ -413,7 +422,7 @@ export default function CoachSchedule() {
       : await query.eq('series_id', row.series_id).gte('event_date', row.event_date)
           .eq('published', false).eq('status', 'scheduled').select('id')
     if (failed(error, data)) {
-      setSheet({ ...sheet, error: `Couldn't ${action} "${row.title}". Check your connection and try again.` })
+      setSheet({ ...sheet, error: clashMessage(error) ?? `Couldn't ${action} "${row.title}". Check your connection and try again.` })
       return
     }
     setSheet({ kind: 'closed' })
