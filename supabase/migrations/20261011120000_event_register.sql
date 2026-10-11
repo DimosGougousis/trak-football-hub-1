@@ -76,7 +76,7 @@ BEGIN
   UPDATE public.session_attendance a SET status = 'present'
   WHERE a.session_id = v_session AND a.status <> 'present';
   INSERT INTO public.session_attendance (session_id, squad_player_id, status)
-  SELECT v_session, p, 'present' FROM unnest(COALESCE(p_present, '{}'::uuid[])) AS p
+  SELECT v_session, p, 'present' FROM (SELECT DISTINCT unnest(COALESCE(p_present, '{}'::uuid[])) AS p) d
   WHERE NOT EXISTS (SELECT 1 FROM public.session_attendance a WHERE a.session_id = v_session AND a.squad_player_id = p);
 
   RETURN v_session;

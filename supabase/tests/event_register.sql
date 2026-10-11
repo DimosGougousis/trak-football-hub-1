@@ -88,6 +88,10 @@ INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,start
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published)
  SELECT pg_temp.g138id(806), pg_temp.g138id(10), 'Register 806', 'training', now() + interval '1 hour',
   ((now() + interval '1 hour') AT TIME ZONE 'Asia/Dubai')::date, ((now() + interval '1 hour') AT TIME ZONE 'Asia/Dubai')::time, true;
+-- 807 started two hours ago on the coach's Dubai clock.
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published)
+ SELECT pg_temp.g138id(807), pg_temp.g138id(10), 'Register 807', 'training', now() - interval '2 hours',
+  ((now() - interval '2 hours') AT TIME ZONE 'Asia/Dubai')::date, ((now() - interval '2 hours') AT TIME ZONE 'Asia/Dubai')::time, true;
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.g138actor(30);
@@ -121,6 +125,15 @@ SELECT public.take_event_register(pg_temp.g138id(801), ARRAY[pg_temp.g138sp(21)]
 RESET ROLE;
 SELECT pg_temp.g138check((SELECT session_type = 'other' FROM public.coach_sessions WHERE event_id = pg_temp.g138id(801)),
  '1 an "other" event becomes an "other" session');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.g138actor(10);
+SELECT public.take_event_register(pg_temp.g138id(801), ARRAY[pg_temp.g138sp(20), pg_temp.g138sp(20)]);
+SELECT pg_temp.g138check((SELECT public.take_event_register(pg_temp.g138id(807), ARRAY[pg_temp.g138sp(20)])) IS NOT NULL,
+ '2 the register opens once the event has started on the Dubai clock, not hours later');
+RESET ROLE;
+SELECT pg_temp.g138check((SELECT count(*) FROM public.session_attendance a JOIN public.coach_sessions s ON s.id = a.session_id
+  WHERE s.event_id = pg_temp.g138id(801) AND a.squad_player_id = pg_temp.g138sp(20)) = 1,
+ '1 a player sent twice is recorded once');
 
 -- ── 2. Only an event that went ahead, has happened, and isn't a match ────
 SET LOCAL ROLE authenticated;
@@ -152,8 +165,8 @@ SELECT pg_temp.g138check(
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.g138_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.g138_results;
- IF n <> 19 THEN
-  RAISE EXCEPTION 'Event register: % checks ran; expected exactly 19', n;
+ IF n <> 21 THEN
+  RAISE EXCEPTION 'Event register: % checks ran; expected exactly 21', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event register failed',DETAIL=failures;
