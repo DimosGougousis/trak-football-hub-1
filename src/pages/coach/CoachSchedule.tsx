@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X } from 'l
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime } from '@/lib/event-time'
+import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
@@ -285,6 +286,8 @@ export default function CoachSchedule() {
           .update(formToRow({ ...form, date: displayEventTime(t).date })).eq('id', t.id).select('id')))
       setSaving(false)
       loadData()
+      // Even a partial save may have changed a published week (TRAK-135).
+      if (targets.some(t => t.published)) askToEmailFamilies()
       const saved = results.filter(r => !failed(r.error, r.data)).length
       if (saved < targets.length) {
         // Saving again rewrites every week the same way, so it is safe to retry.
@@ -314,6 +317,7 @@ export default function CoachSchedule() {
     setSheet({ kind: 'closed' })
     setSelected(form.date)
     loadData()
+    if (editing?.published) askToEmailFamilies()
     toast.success(editing
       ? editing.published ? 'Saved. Families see the change.' : 'Draft saved'
       : series ? `Saved ${rows.length} events as drafts. Tap Publish when they’re ready.`
@@ -356,6 +360,9 @@ export default function CoachSchedule() {
       : { data: null, error: null }
     setSaving(false)
     loadData()
+    // A cancelled published event emails its families (TRAK-135); "this and
+    // following" may reach published weeks after a draft one.
+    if (row.published || following) askToEmailFamilies()
     if (draftError) {
       setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
       return

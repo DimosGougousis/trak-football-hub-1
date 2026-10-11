@@ -39,11 +39,13 @@ let writes: Write[]
 let requests: string[]
 let rows: Record<string, unknown>[]
 let failWrites: false | 'error' | 'no-row'
+let emailNudges: number
 
 function fixtures() {
   writes = []
   requests = []
   failWrites = false
+  emailNudges = 0
   rows = [DRAFT, LIVE]
   server.events.on('request:start', ({ request }) => { requests.push(new URL(request.url).pathname) })
   const write = (method: string) => async ({ request }: { request: Request }) => {
@@ -61,6 +63,11 @@ function fixtures() {
     http.post(EVENTS, write('post')),
     http.patch(EVENTS, write('patch')),
     http.delete(EVENTS, write('delete')),
+    // TRAK-135: the app asks the server to send queued family emails.
+    http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => {
+      emailNudges++
+      return HttpResponse.json({ accepted: true }, { status: 202 })
+    }),
   )
 }
 
@@ -111,6 +118,8 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     expect(inserted).not.toHaveProperty('sequence')
     expect(inserted).not.toHaveProperty('series_id')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // A draft has no families yet: no email (TRAK-135).
+    expect(emailNudges).toBe(0)
   })
 
   it('picks a venue the coach has used before', async () => {
@@ -161,6 +170,8 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Publish Finishing' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.draft-1&select=id', body: { published: true } })
+    // Publishing isn't a change families need emailing about (TRAK-135).
+    expect(emailNudges).toBe(0)
   })
 
   it('edits a published event live, without touching published', async () => {
@@ -180,6 +191,8 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.live-1&select=id' })
     expect(writes[0].body).toMatchObject({ venue: 'Rovers Park Pitch 3', title: 'vs Synthetic Rovers', opponent: 'Synthetic Rovers' })
     expect(writes[0].body).not.toHaveProperty('published')
+    // TRAK-135: the server is asked to send whatever email the change queued.
+    await waitFor(() => expect(emailNudges).toBe(1))
   })
 
   it('cancels a published event: it stays, marked Cancelled, and nothing is deleted', async () => {
@@ -201,6 +214,8 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     // A cancelled event can't be edited, published or cancelled again.
     expect(within(card('vs Synthetic Rovers')).queryAllByRole('button')).toEqual([])
     expect(writes.some(w => w.method === 'delete')).toBe(false)
+    // TRAK-135: and the families' cancellation email is sent.
+    expect(emailNudges).toBe(1)
   })
 
   it('deletes only a draft nobody has seen', async () => {
@@ -208,6 +223,7 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete Finishing' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'delete', query: '?id=eq.draft-1&select=id' })
+    expect(emailNudges).toBe(0)
   })
 
   it('offers no AI import and never calls parse-schedule (G7)', async () => {
