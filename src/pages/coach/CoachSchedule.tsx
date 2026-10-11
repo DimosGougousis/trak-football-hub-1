@@ -164,16 +164,19 @@ export default function CoachSchedule() {
 
   useEffect(() => { loadData() }, [user])
 
-  // TRAK-139 (J8.16): the squad for the WhatsApp message title ("U15 Match").
-  // Optional: a failed read leaves "Squad" and never blocks the calendar.
-  const [squadLabel, setSquadLabel] = useState('Squad')
+  // TRAK-139 (J8.16): the squad for the WhatsApp message title ("U15 Match"),
+  // and its children's names, so coach-typed text naming one stays out.
+  // Optional: a failed read leaves "Squad" and no reason, and never blocks
+  // the calendar.
+  const [squad, setSquad] = useState<{ label: string, childNames: string[] | null }>({ label: 'Squad', childNames: null })
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    supabase.from('squad_players').select('age_group').eq('coach_user_id', user.id)
+    supabase.from('squad_players').select('age_group, player_name, status').eq('coach_user_id', user.id)
       .then(({ data, error }) => {
         if (cancelled || error) return
-        setSquadLabel(squadLabelFrom((data ?? []).map(r => (r as { age_group: string | null }).age_group)))
+        const rows = (data ?? []) as { age_group: string | null, player_name: string | null, status: string | null }[]
+        setSquad({ label: squadLabelFrom(rows), childNames: rows.map(r => r.player_name ?? '').filter(Boolean) })
       })
     return () => { cancelled = true }
   }, [user])
@@ -500,7 +503,7 @@ export default function CoachSchedule() {
                         <Share2 size={14} color="rgba(255,255,255,0.5)" />
                       </button>
                     ) : (
-                      <a href={whatsAppShareUrl(shareableFromRow(row, squadLabel))} target="_blank" rel="noopener noreferrer"
+                      <a href={whatsAppShareUrl(shareableFromRow(row, squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
                         aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
                         <Share2 size={14} color="#25D366" />
                       </a>

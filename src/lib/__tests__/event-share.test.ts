@@ -17,7 +17,7 @@ const training: ShareableEvent = {
   status: 'scheduled',
   cancelReason: null,
 }
-const opts = { today: '2026-10-08' }
+const opts = { today: '2026-10-08', childNames: [] as string[] }
 
 describe('whatsAppShareText', () => {
   it('writes a training: squad and type, day and time, venue, and the Trak line', () => {
@@ -51,7 +51,7 @@ describe('whatsAppShareText', () => {
   })
 
   it('writes "Training cancelled today" with the reason for a cancellation today', () => {
-    const text = whatsAppShareText({ ...training, status: 'cancelled', cancelReason: 'Pitch closed' }, { today: '2026-10-13' })
+    const text = whatsAppShareText({ ...training, status: 'cancelled', cancelReason: 'Pitch closed' }, { today: '2026-10-13', childNames: [] })
     expect(text.split('\n').slice(0, 3)).toEqual([
       '*U15 Training cancelled today*',
       'Tue 13 Oct, 18:00',
@@ -84,6 +84,56 @@ describe('whatsAppShareText', () => {
     const withExtras = { ...training, absent: ['Omar Haddad'], players: ['Lucas Petit'], notes: 'Omar back' }
     const text = whatsAppShareText(withExtras as ShareableEvent, opts)
     expect(text).not.toMatch(/Omar|Lucas|absent|can't make it/i)
+  })
+})
+
+// Imad's 10 Oct rule, as in the calendar feed (#258) and the change emails
+// (#264): coach-typed text that names a child on the squad, or a cancel
+// reason with a link, never reaches the group chat.
+describe('whatsAppShareText: no child names in coach-typed text', () => {
+  const squad = { ...opts, childNames: ['Omar Haddad', 'Lucas Petit'] }
+  const cancelled = { ...training, status: 'cancelled' as const }
+
+  it('leaves out a cancel reason that names a child on the squad, by first name or surname', () => {
+    for (const reason of ["Training off, Omar's family away", 'Petit injured, pitch too small']) {
+      const text = whatsAppShareText({ ...cancelled, cancelReason: reason }, squad)
+      expect(text).not.toContain('Reason:')
+      expect(text).not.toMatch(/Omar|Petit/)
+    }
+  })
+
+  it('keeps a clean reason', () => {
+    expect(whatsAppShareText({ ...cancelled, cancelReason: 'Pitch closed' }, squad)).toContain('Reason: Pitch closed')
+  })
+
+  it('leaves out a reason with a link, bare or full', () => {
+    for (const reason of ['Moved, see maps.app.goo.gl/abc', 'Details: https://example.com/x', 'Ask on www.example.org']) {
+      expect(whatsAppShareText({ ...cancelled, cancelReason: reason }, squad)).not.toContain('Reason:')
+    }
+  })
+
+  it('leaves out the reason while the squad\'s names are unknown (the read failed)', () => {
+    expect(whatsAppShareText({ ...cancelled, cancelReason: 'Pitch closed' }, { ...opts, childNames: null })).not.toContain('Reason:')
+  })
+
+  it('leaves out a venue, kit or opponent that names a child, as the calendar feed does', () => {
+    const text = whatsAppShareText({
+      ...training, kind: 'match', opponent: 'Haddad Select', homeAway: 'home', venue: "Omar's garden", kit: 'Lucas kit',
+    }, squad)
+    expect(text).not.toMatch(/Omar|Haddad|Lucas/)
+    expect(text.split('\n')[0]).toBe('*U15 Match (home)*')
+  })
+
+  it('reads a name as a whole word only, at either end', () => {
+    const text = whatsAppShareText({ ...training, venue: 'Omarina Park' }, { ...opts, childNames: ['Omar Example', 'Rina Example'] })
+    expect(text).toContain('Venue: Omarina Park')
+  })
+
+  it('never reads a particle such as "Abu" or "Bin" as a name', () => {
+    const text = whatsAppShareText({ ...training, venue: 'Abu Dhabi Sports City', kit: 'Bin Hendi blue' },
+      { ...opts, childNames: ['Zaid Abu Example', 'Rashid Bin Example'] })
+    expect(text).toContain('Venue: Abu Dhabi Sports City')
+    expect(text).toContain('Kit: Bin Hendi blue')
   })
 })
 
@@ -126,10 +176,14 @@ describe('shareableFromRow: a saved event on the coach schedule', () => {
 
 describe('squadLabelFrom: the coach\'s squad, for the message title', () => {
   it('is the age group most of the squad is in', () => {
-    expect(squadLabelFrom(['U15', 'U15', 'U14', null])).toBe('U15')
+    expect(squadLabelFrom(['U15', 'U15', 'U14', null].map(age_group => ({ age_group })))).toBe('U15')
+  })
+  it('leaves out players whose coach has departed (Imad, #266)', () => {
+    expect(squadLabelFrom([{ age_group: 'U14', status: 'coach_departed' }, { age_group: 'U14', status: 'coach_departed' },
+      { age_group: 'U15', status: 'active' }])).toBe('U15')
   })
   it('falls back to "Squad" when no age group is known', () => {
     expect(squadLabelFrom([])).toBe('Squad')
-    expect(squadLabelFrom([null, '  '])).toBe('Squad')
+    expect(squadLabelFrom([{ age_group: null }, { age_group: '  ' }])).toBe('Squad')
   })
 })

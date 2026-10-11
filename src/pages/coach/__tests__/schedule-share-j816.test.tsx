@@ -39,17 +39,27 @@ const CANCELLED_NO_REASON = row({
   id: 'off-2', title: 'Fitness', published: true, status: 'cancelled', cancel_reason: null,
   starts_at: toInstant(today, '20:30'), start_time: '20:30:00',
 })
+// Imad's #266 review: the coach's reason names a child on the squad.
+const CANCELLED_NAMING_A_CHILD = row({
+  id: 'off-3', title: 'Recovery', published: true, status: 'cancelled', cancel_reason: "Lucas's family away, too few players",
+  starts_at: toInstant(today, '21:00'), start_time: '21:00:00',
+})
+
+const SQUAD = [
+  { age_group: 'U15', player_name: 'Omar Haddad', status: 'active' }, { age_group: 'U15', player_name: 'Lucas Petit', status: 'active' },
+  { age_group: 'U14', player_name: 'Zara Example', status: 'active' },
+  // Two departed U14 rows: counted, they would make the label U14.
+  { age_group: 'U14', player_name: 'Nadia Former', status: 'coach_departed' }, { age_group: 'U14', player_name: 'Rami Former', status: 'coach_departed' },
+]
 
 let eventsOn: boolean
 function fixtures() {
   eventsOn = true
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
-    http.get(EVENTS, () => HttpResponse.json([DRAFT, LIVE, CANCELLED, CANCELLED_NO_REASON])),
+    http.get(EVENTS, () => HttpResponse.json([DRAFT, LIVE, CANCELLED, CANCELLED_NO_REASON, CANCELLED_NAMING_A_CHILD])),
     table('coach_sessions', []),
-    table('squad_players', [
-      { age_group: 'U15', player_name: 'Omar Haddad' }, { age_group: 'U15', player_name: 'Lucas Petit' }, { age_group: 'U14', player_name: 'Zara Synthetic' },
-    ]),
+    table('squad_players', SQUAD),
     rpc('feature_on', () => eventsOn),
   )
 }
@@ -82,8 +92,9 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     fixtures()
     renderApp('/coach/schedule')
     const link = await screen.findByRole('link', { name: 'Share Training to WhatsApp' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/cancelled today/))
-    expect(sharedText(link)).toContain('Reason: Pitch closed')
+    // The reason waits for the squad's names (the child-name check).
+    await waitFor(() => expect(sharedText(link)).toContain('Reason: Pitch closed'))
+    expect(sharedText(link)).toMatch(/^\*U15 Training cancelled today\*/)
   })
 
   it('offers nothing to share for a draft only the coach can see', async () => {
@@ -101,6 +112,23 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     for (const l of screen.getAllByRole('link', { name: /to WhatsApp$/ })) {
       expect(sharedText(l)).not.toMatch(/Omar|Lucas|Zara|bench/)
     }
+  })
+
+  it('leaves out a cancel reason that names a child on the squad, and still shares the cancellation', async () => {
+    fixtures()
+    renderApp('/coach/schedule')
+    const link = await screen.findByRole('link', { name: 'Share Recovery to WhatsApp' })
+    await waitFor(() => expect(sharedText(link)).toMatch(/^\*U15 Training cancelled today\*/))
+    expect(sharedText(link)).not.toMatch(/Reason:|Lucas/)
+  })
+
+  it('leaves out every reason, and titles the squad "Squad", when the squad read fails', async () => {
+    fixtures()
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
+    renderApp('/coach/schedule')
+    const link = await screen.findByRole('link', { name: 'Share Training to WhatsApp' })
+    await waitFor(() => expect(sharedText(link)).toMatch(/^\*Squad Training cancelled today\*/))
+    expect(sharedText(link)).not.toContain('Reason:')
   })
 
   it('says "Coming soon" instead of sharing while events are off for the academy', async () => {

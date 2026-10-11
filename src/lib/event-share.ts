@@ -9,10 +9,12 @@ import type { EventRow } from './coach-events'
  * coach picks the chat and taps send. There is no integration, account or
  * approval behind it.
  *
- * The message is built only from the event's own fields. There is no field
- * for a child, so no name and no "who can't make it" list can reach a group
- * chat from here; absences stay in Trak (J8.14). The cancel reason is the
- * coach's own words, which they read in WhatsApp before sending.
+ * The message is built only from the event's own fields, never a "who can't
+ * make it" list; absences stay in Trak (J8.14). Venue, kit, opponent and the
+ * cancel reason are coach-typed, so they get Imad's 10 Oct rule, as in the
+ * calendar feed (#258) and the change emails (#264): text naming a child on
+ * the squad is left out, and so is a reason with a link, or any reason while
+ * the squad's names are unknown.
  */
 export interface ShareableEvent {
   kind: 'training' | 'match' | 'tournament' | 'other'
@@ -34,7 +36,33 @@ export interface ShareableEvent {
 export interface ShareOptions {
   /** Today as YYYY-MM-DD on the coach's device; defaults to localTodayISO(). */
   today?: string
+  /** Every child on the coach's squad rows, departed too; null while unknown. */
+  childNames: string[] | null
 }
+
+// The same two checks as supabase/functions/_shared: namePatterns
+// (ical-feed.ts) and LINK (send-email.ts). Copied, not imported: those are
+// Deno modules, and #264 is the one that exports them.
+const NOT_A_NAME = new Set(['al', 'el', 'bin', 'bint', 'ibn', 'abu', 'van', 'von', 'de', 'da', 'di', 'del', 'la', 'le'])
+
+function namePatterns(names: string[]): RegExp[] {
+  const parts = new Set<string>()
+  for (const name of names) {
+    for (const part of name.toLowerCase().split(/[\s'’-]+/)) {
+      if (part.length >= 3 && !NOT_A_NAME.has(part)) parts.add(part)
+    }
+  }
+  // Whole words only, by Unicode letters rather than \b, which knows only ASCII.
+  return [...parts].map(p => new RegExp(`(?<![\\p{L}\\p{N}])${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu'))
+}
+
+const BARE_TLDS = 'com|net|org|info|biz|io|co|me|ly|gl|gg|to|tv|app|link|page|site|online|ae|uk|eu'
+const LINK = new RegExp([
+  String.raw`\bhttps?:\/\/[^\s<>"')\]]+`,
+  String.raw`\bwww\.[^\s<>"')\]]+`,
+  String.raw`\b(?:[a-z0-9-]+\.)+[a-z]{2,63}\/[^\s<>"')\]]*`,
+  String.raw`\b(?:[a-z0-9-]+\.)+(?:${BARE_TLDS})(?![\w-]|\.[\w-])`,
+].join('|'), 'i')
 
 const TRAK_LINE = 'Full schedule in Trak: https://trakfootball.com'
 const KIND_LABEL: Record<ShareableEvent['kind'], string> = {
@@ -55,12 +83,16 @@ function dayLabel(date: string): string {
 
 const text = (value: string | null) => (value ?? '').trim()
 
-export function whatsAppShareText(event: ShareableEvent, options: ShareOptions = {}): string {
+export function whatsAppShareText(event: ShareableEvent, options: ShareOptions): string {
   const today = options.today ?? localTodayISO()
   const cancelled = event.status === 'cancelled'
+  const names = namePatterns(options.childNames ?? [])
+  const clean = (value: string | null) => (names.some(p => p.test(text(value))) ? '' : text(value))
+  const reason = options.childNames && !LINK.test(text(event.cancelReason)) ? clean(event.cancelReason) : ''
+  const opponent = clean(event.opponent)
 
   let title = `${event.squadLabel} ${KIND_LABEL[event.kind]}`
-  if (event.kind === 'match' && text(event.opponent)) title += ` vs ${text(event.opponent)}`
+  if (event.kind === 'match' && opponent) title += ` vs ${opponent}`
   if (cancelled) title += event.date === today ? ' cancelled today' : ' cancelled'
   else if (event.kind === 'match' && event.homeAway) title += ` (${event.homeAway})`
 
@@ -68,18 +100,18 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions =
     `*${title}*`,
     `${dayLabel(event.date)}, ${event.startTime ?? 'time to be confirmed'}`,
   ]
-  if (cancelled && text(event.cancelReason)) lines.push(`Reason: ${text(event.cancelReason)}`)
+  if (cancelled && reason) lines.push(`Reason: ${reason}`)
   if (!cancelled) {
-    if (text(event.venue)) lines.push(`Venue: ${text(event.venue)}`)
+    if (clean(event.venue)) lines.push(`Venue: ${clean(event.venue)}`)
     if (text(event.meetTime)) lines.push(`Meet: ${text(event.meetTime)}`)
-    if (text(event.kit)) lines.push(`Kit: ${text(event.kit)}`)
+    if (clean(event.kit)) lines.push(`Kit: ${clean(event.kit)}`)
   }
   lines.push('', TRAK_LINE)
   return lines.join('\n')
 }
 
 /** WhatsApp's standard share link: no phone number, so WhatsApp asks which chat. */
-export function whatsAppShareUrl(event: ShareableEvent, options: ShareOptions = {}): string {
+export function whatsAppShareUrl(event: ShareableEvent, options: ShareOptions): string {
   return `https://wa.me/?text=${encodeURIComponent(whatsAppShareText(event, options))}`
 }
 
@@ -102,11 +134,12 @@ export function shareableFromRow(row: EventRow, squadLabel: string): ShareableEv
   }
 }
 
-/** The coach's squad for the message title: the age group most of the squad is in. */
-export function squadLabelFrom(ageGroups: (string | null)[]): string {
+/** The coach's squad for the message title: the age group most of the current squad is in. */
+export function squadLabelFrom(rows: { age_group: string | null, status?: string | null }[]): string {
   const counts = new Map<string, number>()
-  for (const g of ageGroups) {
-    const label = (g ?? '').trim()
+  for (const row of rows) {
+    if (row.status === 'coach_departed') continue
+    const label = (row.age_group ?? '').trim()
     if (label) counts.set(label, (counts.get(label) ?? 0) + 1)
   }
   let best = 'Squad'
