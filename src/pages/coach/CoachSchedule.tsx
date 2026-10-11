@@ -8,15 +8,19 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
 import {
-  DURATIONS, EVENT_KINDS, blankForm, canDelete, cancelPatch, formProblem, formToRow,
-  isCancelled, rowToForm, savedVenues, type EventForm, type EventKind, type EventRow,
+  DURATIONS, EVENT_KINDS, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
+  isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
+  type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
    published, an edit goes live on save. A cancel keeps the event on the
    schedule as Cancelled; only a draft nobody has seen can be deleted. The AI
-   "Read Schedule" import is gone (G7): fixtures come in by CSV (J8.6). */
+   "Read Schedule" import is gone (G7): fixtures come in by CSV (J8.6).
+   TRAK-128 (J8.5): a training repeats weekly until an end date, one row per
+   date under one series_id. Editing, cancelling, publishing or deleting a
+   week of a series asks: only this week, or this and following weeks. */
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,10 +123,25 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+type Scope = 'one' | 'following'
+
 type Sheet =
   | { kind: 'closed' }
-  | { kind: 'edit'; id: string | null; form: EventForm; published: boolean; error: string | null }
-  | { kind: 'cancel'; row: EventRow; reason: string; error: string | null }
+  | { kind: 'edit'; row: EventRow | null; form: EventForm; repeat: Repeat; scope: Scope; error: string | null }
+  | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
+  | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
+
+const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
+  !!row?.series_id && !!row.event_date
+
+function ScopeChoice({ scope, onChange }: { scope: Scope; onChange: (s: Scope) => void }) {
+  return (
+    <div className="flex gap-2 flex-wrap" role="group" aria-label="Which weeks">
+      <Chip on={scope === 'one'} onClick={() => onChange('one')}>Only this week</Chip>
+      <Chip on={scope === 'following'} onClick={() => onChange('following')}>This and following weeks</Chip>
+    </div>
+  )
+}
 
 export default function CoachSchedule() {
   // TRAK-85: parked, so actions say "Coming soon" and send nothing.
@@ -224,38 +243,86 @@ export default function CoachSchedule() {
   const selectedEvents = byDate[selected] ?? []
 
   const openNew = (date: string) =>
-    setSheet({ kind: 'edit', id: null, form: blankForm(date), published: false, error: null })
+    setSheet({ kind: 'edit', row: null, form: blankForm(date), repeat: blankRepeat(date), scope: 'one', error: null })
   const openEdit = (row: EventRow) =>
-    setSheet({ kind: 'edit', id: row.id, form: rowToForm(row), published: row.published, error: null })
+    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', error: null })
   const setForm = (patch: Partial<EventForm>) =>
-    setSheet(s => s.kind === 'edit' ? { ...s, form: { ...s.form, ...patch }, error: null } : s)
+    setSheet(s => {
+      if (s.kind !== 'edit') return s
+      // Until the coach turns repeat on, its weekday follows the first date.
+      // A match never repeats: picking Match switches the repeat off, so a
+      // hidden repeat can't save a series of identical matches.
+      const repeat = patch.kind === 'match' ? { ...s.repeat, on: false }
+        : patch.date && !s.repeat.on ? blankRepeat(patch.date) : s.repeat
+      return { ...s, form: { ...s.form, ...patch }, repeat, error: null }
+    })
+  const setRepeat = (patch: Partial<Repeat>) =>
+    setSheet(s => s.kind === 'edit' ? { ...s, repeat: { ...s.repeat, ...patch }, error: null } : s)
+  const toggleDay = (day: number) =>
+    setSheet(s => {
+      if (s.kind !== 'edit') return s
+      const days = s.repeat.days.includes(day) ? s.repeat.days.filter(d => d !== day) : [...s.repeat.days, day].sort()
+      return { ...s, repeat: { ...s.repeat, days }, error: null }
+    })
 
   const saveEvent = async () => {
     if (parked) return comingSoon()
     if (!user || sheet.kind !== 'edit') return
-    const problem = formProblem(sheet.form)
+    const { row: editing, form, repeat, scope } = sheet
+    const problem = formProblem(form) ?? (editing ? null : repeatProblem(form, repeat))
     if (problem) { setSheet({ ...sheet, error: problem }); return }
+
+    // This and following weeks: each week keeps its own date and takes the rest.
+    if (editing && scope === 'following' && inSeries(editing)) {
+      if (form.date !== rowToForm(editing).date) {
+        setSheet({ ...sheet, error: 'To move the day, change only this week.' })
+        return
+      }
+      const targets = thisAndFollowing(calEvents, editing)
+      setSaving(true)
+      const results = await Promise.all(targets.map(t =>
+        supabase.from('coach_calendar_events')
+          .update(formToRow({ ...form, date: displayEventTime(t).date })).eq('id', t.id).select('id')))
+      setSaving(false)
+      loadData()
+      const saved = results.filter(r => !failed(r.error, r.data)).length
+      if (saved < targets.length) {
+        // Saving again rewrites every week the same way, so it is safe to retry.
+        setSheet({ ...sheet, error: `Saved ${saved} of ${targets.length} weeks. Check your connection and save again.` })
+        return
+      }
+      setSheet({ kind: 'closed' })
+      toast.success(`Saved ${saved} weeks.${targets.some(t => t.published) ? ' Families see the change.' : ''}`)
+      return
+    }
+
     setSaving(true)
-    const row = formToRow(sheet.form)
+    const fresh = { coach_user_id: user.id, published: false, source: 'manual' }
+    const series = !editing && repeat.on && form.kind !== 'match'
+    const rows = series
+      ? seriesRows(form, repeat, crypto.randomUUID()).map(r => ({ ...r, ...fresh }))
+      : [{ ...formToRow(form), ...fresh }]
     // New events start as drafts; an edit leaves published alone, so a
     // published event's change goes live on save.
-    const { data, error } = sheet.id
-      ? await supabase.from('coach_calendar_events').update(row).eq('id', sheet.id).select('id')
-      : await supabase.from('coach_calendar_events')
-          .insert({ ...row, coach_user_id: user.id, published: false, source: 'manual' }).select('id')
+    const { data, error } = editing
+      ? await supabase.from('coach_calendar_events').update(formToRow(form)).eq('id', editing.id).select('id')
+      : await supabase.from('coach_calendar_events').insert(rows).select('id')
     setSaving(false)
-    // Errors keep what was typed and say what failed (the J4 standard).
-    if (failed(error, data)) { setSheet({ ...sheet, error: SAVE_FAILED }); return }
+    // Errors keep what was typed and say what failed (the J4 standard). A
+    // series is one insert, so it saves whole or not at all.
+    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: SAVE_FAILED }); return }
     setSheet({ kind: 'closed' })
-    setSelected(sheet.form.date)
+    setSelected(form.date)
     loadData()
-    toast.success(sheet.id
-      ? sheet.published ? 'Saved. Families see the change.' : 'Draft saved'
-      : 'Saved as a draft. Tap Publish when it’s ready.')
+    toast.success(editing
+      ? editing.published ? 'Saved. Families see the change.' : 'Draft saved'
+      : series ? `Saved ${rows.length} events as drafts. Tap Publish when they’re ready.`
+        : 'Saved as a draft. Tap Publish when it’s ready.')
   }
 
   const publish = async (row: EventRow) => {
     if (parked) return comingSoon()
+    if (inSeries(row)) { setSheet({ kind: 'series', action: 'publish', row, error: null }); return }
     const { data, error } = await supabase.from('coach_calendar_events')
       .update({ published: true }).eq('id', row.id).select('id')
     if (failed(error, data)) { toast.error(`Couldn't publish "${row.title}". Try again.`); return }
@@ -266,25 +333,73 @@ export default function CoachSchedule() {
   const confirmCancel = async () => {
     if (parked) return comingSoon()
     if (sheet.kind !== 'cancel') return
+    const { row, scope } = sheet
     setSaving(true)
-    const { data, error } = await supabase.from('coach_calendar_events')
-      .update(cancelPatch(sheet.reason)).eq('id', sheet.row.id).select('id')
-    setSaving(false)
+    const following = scope === 'following' && inSeries(row)
+    const update = supabase.from('coach_calendar_events').update(cancelPatch(sheet.reason))
+    // This and following: cancel only what families have seen. A draft week
+    // cancelled would be stuck on the schedule (only drafts can be deleted),
+    // so the drafts in the range are deleted instead.
+    const { data, error } = following
+      ? await update.eq('series_id', row.series_id).gte('event_date', row.event_date)
+          .eq('status', 'scheduled').eq('published', true).select('id')
+      : await update.eq('id', row.id).select('id')
     if (failed(error, data)) {
+      setSaving(false)
       setSheet({ ...sheet, error: "Couldn't cancel the event. Check your connection and try again." })
+      return
+    }
+    // Zero drafts is normal here, so only an error counts as a failure.
+    const { data: removedDrafts, error: draftError } = following
+      ? await supabase.from('coach_calendar_events').delete().eq('series_id', row.series_id)
+          .gte('event_date', row.event_date).eq('published', false).eq('status', 'scheduled').select('id')
+      : { data: null, error: null }
+    setSaving(false)
+    loadData()
+    if (draftError) {
+      setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
+      return
+    }
+    setSheet({ kind: 'closed' })
+    const removed = removedDrafts?.length ?? 0
+    toast.success((data!.length > 1
+      ? `${data!.length} events cancelled. They stay on the schedule as Cancelled.`
+      : 'Event cancelled. It stays on the schedule as Cancelled.')
+      + (removed ? ` ${removed} unpublished draft${removed > 1 ? 's' : ''} removed.` : ''))
+  }
+
+  /** Publish or delete a week of a series: only this week, or this and following. */
+  const seriesAction = async (scope: Scope) => {
+    if (parked) return comingSoon()
+    if (sheet.kind !== 'series' || !inSeries(sheet.row)) return
+    const { action, row } = sheet
+    const table = supabase.from('coach_calendar_events')
+    const query = action === 'publish' ? table.update({ published: true }) : table.delete()
+    // Only drafts still scheduled: a published week is never deleted, and a
+    // cancelled one stays as it is.
+    const { data, error } = scope === 'one'
+      ? await query.eq('id', row.id).select('id')
+      : await query.eq('series_id', row.series_id).gte('event_date', row.event_date)
+          .eq('published', false).eq('status', 'scheduled').select('id')
+    if (failed(error, data)) {
+      setSheet({ ...sheet, error: `Couldn't ${action} "${row.title}". Check your connection and try again.` })
       return
     }
     setSheet({ kind: 'closed' })
     loadData()
-    toast.success('Event cancelled. It stays on the schedule as Cancelled.')
+    const n = data!.length
+    toast.success(action === 'publish'
+      ? n > 1 ? `Published ${n} events to the squad` : 'Published to the squad'
+      : n > 1 ? `Deleted ${n} drafts` : 'Draft deleted')
   }
 
   const deleteDraft = async (row: EventRow) => {
     if (parked) return comingSoon()
     if (!canDelete(row)) return
+    if (inSeries(row)) { setSheet({ kind: 'series', action: 'delete', row, error: null }); return }
     const { data, error } = await supabase.from('coach_calendar_events').delete().eq('id', row.id).select('id')
     if (failed(error, data)) { toast.error(`Couldn't delete "${row.title}". Try again.`); return }
-    if (sheet.kind === 'edit' && sheet.id === row.id) setSheet({ kind: 'closed' })
+    if (sheet.kind === 'edit' && sheet.row?.id === row.id) setSheet({ kind: 'closed' })
     loadData()
     toast.success('Draft deleted')
   }
@@ -431,7 +546,7 @@ export default function CoachSchedule() {
                         {ev.title}
                       </p>
                       <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgba(255,255,255,0.35)' }}>
-                        {TYPE_LABEL[ev.type]}{ev.time ? ` · ${ev.time}` : ''}
+                        {TYPE_LABEL[ev.type]}{row?.series_id ? ' · Weekly' : ''}{ev.time ? ` · ${ev.time}` : ''}
                         {row?.meet_time ? ` · meet ${row.meet_time.slice(0, 5)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
                         {ev.venue ? ` · ${ev.venue}` : ''}
@@ -470,7 +585,7 @@ export default function CoachSchedule() {
                             <Trash2 size={14} color="rgba(255,255,255,0.3)" />
                           </button>
                         ) : (
-                          <button onClick={() => setSheet({ kind: 'cancel', row, reason: '', error: null })}
+                          <button onClick={() => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })}
                             aria-label={`Cancel ${row.title}`}>
                             <Ban size={14} color="rgba(248,113,113,0.8)" />
                           </button>
@@ -498,17 +613,22 @@ export default function CoachSchedule() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgba(0,0,0,0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
-          <div role="dialog" aria-label={sheet.id ? 'Edit event' : 'New event'}
+          <div role="dialog" aria-label={sheet.row ? 'Edit event' : 'New event'}
             className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3 overflow-y-auto"
             style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', maxHeight: '85vh', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-white/88" style={font}>
-                {sheet.id ? 'Edit event' : 'New event'}
+                {sheet.row ? 'Edit event' : 'New event'}
               </span>
               <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
                 <X size={18} color="rgba(255,255,255,0.5)" />
               </button>
             </div>
+
+            {inSeries(sheet.row) && (
+              <ScopeChoice scope={sheet.scope}
+                onChange={scope => setSheet(s => s.kind === 'edit' ? { ...s, scope, error: null } : s)} />
+            )}
 
             <div className="flex gap-2 flex-wrap" role="group" aria-label="Event type">
               {EVENT_KINDS.map(t => (
@@ -539,9 +659,10 @@ export default function CoachSchedule() {
 
             <div className="flex gap-2">
               <div className="flex-1">
-                <Field label="Date">
+                <Field label={sheet.repeat.on ? 'First date' : 'Date'}>
                   <input type="date" value={sheet.form.date} onChange={e => setForm({ date: e.target.value })}
-                    className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
+                    disabled={sheet.scope === 'following'}
+                    className={inputClass} style={{ ...font, colorScheme: 'dark', opacity: sheet.scope === 'following' ? 0.5 : 1 }} />
                 </Field>
               </div>
               <div className="w-[120px]">
@@ -551,6 +672,34 @@ export default function CoachSchedule() {
                 </Field>
               </div>
             </div>
+
+            {sheet.scope === 'following' && (
+              <p className="text-[11px] text-white/40" style={font}>Each week keeps its own date; everything else changes.</p>
+            )}
+
+            {!sheet.row && sheet.form.kind !== 'match' && (
+              <div className="space-y-2">
+                <Chip on={sheet.repeat.on} onClick={() => setRepeat({ on: !sheet.repeat.on })}>Repeats weekly</Chip>
+                {sheet.repeat.on && (
+                  <>
+                    <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Repeat on">
+                      {WEEKDAYS.map((label, day) => (
+                        <Chip key={label} on={sheet.repeat.days.includes(day)} onClick={() => toggleDay(day)}>{label}</Chip>
+                      ))}
+                    </div>
+                    <Field label="Ends on">
+                      <input type="date" value={sheet.repeat.until} onChange={e => setRepeat({ until: e.target.value })}
+                        className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
+                    </Field>
+                    {!repeatProblem(sheet.form, sheet.repeat) && (
+                      <p className="text-[11px] text-white/50" style={font}>
+                        {seriesDates(sheet.form.date, sheet.repeat.until, sheet.repeat.days).length} events, last one {formatEventDay(sheet.repeat.until)}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <span className="text-[9px] tracking-[0.1em] uppercase text-white/40" style={mono}>Length</span>
@@ -590,9 +739,13 @@ export default function CoachSchedule() {
               disabled={saving}
               className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
               style={{ background: '#C8F25A', color: '#000', opacity: saving ? 0.6 : 1 }}>
-              {saving ? 'Saving…' : sheet.published ? 'Save changes' : 'Save draft'}
+              {saving ? 'Saving…'
+                : sheet.row?.published ? 'Save changes'
+                : !sheet.row && sheet.repeat.on && !repeatProblem(sheet.form, sheet.repeat)
+                  ? `Save ${seriesDates(sheet.form.date, sheet.repeat.until, sheet.repeat.days).length} drafts`
+                : 'Save draft'}
             </button>
-            {sheet.published && (
+            {sheet.row?.published && (
               <p className="text-[11px] text-white/40 text-center" style={font}>Families see the change as soon as you save.</p>
             )}
           </div>
@@ -611,6 +764,10 @@ export default function CoachSchedule() {
             <p className="text-[12px] text-white/50" style={font}>
               It stays on everyone's schedule, marked Cancelled.
             </p>
+            {inSeries(sheet.row) && (
+              <ScopeChoice scope={sheet.scope}
+                onChange={scope => setSheet(s => s.kind === 'cancel' ? { ...s, scope, error: null } : s)} />
+            )}
             <Field label="Reason (optional)">
               <input value={sheet.reason}
                 onChange={e => setSheet(s => s.kind === 'cancel' ? { ...s, reason: e.target.value, error: null } : s)}
@@ -625,6 +782,41 @@ export default function CoachSchedule() {
             <button onClick={() => setSheet({ kind: 'closed' })}
               className="w-full py-2 text-[13px] text-white/60" style={font}>
               Keep event
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Series sheet: publish or delete which weeks ───────────────────── */}
+      {sheet.kind === 'series' && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
+          <div role="dialog" aria-label={sheet.action === 'publish' ? 'Publish event' : 'Delete draft'}
+            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', marginBottom: 64 }}>
+            <span className="text-[16px] font-medium text-white/88 block" style={font}>
+              {sheet.action === 'publish' ? 'Publish' : 'Delete'} {sheet.row.title}, {formatEventDay(sheet.row.event_date!)}
+            </span>
+            <p className="text-[12px] text-white/50" style={font}>
+              {sheet.action === 'publish'
+                ? 'This week is part of a weekly series. Families see what you publish.'
+                : 'This week is part of a weekly series. Only drafts are deleted; published weeks stay.'}
+            </p>
+            {sheet.error && <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{sheet.error}</p>}
+            <button onClick={() => seriesAction('one')}
+              className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+              style={{ background: sheet.action === 'publish' ? '#C8F25A' : 'rgba(255,255,255,0.08)', color: sheet.action === 'publish' ? '#000' : 'rgba(255,255,255,0.88)' }}>
+              Only this week
+            </button>
+            <button onClick={() => seriesAction('following')}
+              className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+              style={{ background: sheet.action === 'publish' ? '#C8F25A' : 'rgba(255,255,255,0.08)', color: sheet.action === 'publish' ? '#000' : 'rgba(255,255,255,0.88)' }}>
+              This and following weeks
+            </button>
+            <button onClick={() => setSheet({ kind: 'closed' })}
+              className="w-full py-2 text-[13px] text-white/60" style={font}>
+              Not now
             </button>
           </div>
         </div>
