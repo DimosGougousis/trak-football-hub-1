@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime } from '@/lib/event-time'
+import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
@@ -12,6 +13,7 @@ import {
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
+import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -182,6 +184,23 @@ export default function CoachSchedule() {
 
   useEffect(() => { loadData() }, [user])
 
+  // TRAK-139 (J8.16): the squad for the WhatsApp message title ("U15 Match"),
+  // and its children's names, so coach-typed text naming one stays out.
+  // Optional: a failed read leaves "Squad" and no reason, and never blocks
+  // the calendar.
+  const [squad, setSquad] = useState<{ label: string, childNames: string[] | null }>({ label: 'Squad', childNames: null })
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    supabase.from('squad_players').select('age_group, player_name, status').eq('coach_user_id', user.id)
+      .then(({ data, error }) => {
+        if (cancelled || error) return
+        const rows = (data ?? []) as { age_group: string | null, player_name: string | null, status: string | null }[]
+        setSquad({ label: squadLabelFrom(rows), childNames: rows.map(r => r.player_name ?? '').filter(Boolean) })
+      })
+    return () => { cancelled = true }
+  }, [user])
+
   const retry = async () => { setRetrying(true); await loadData(); setRetrying(false) }
 
   // Normalise both data sources into CalEvent[]
@@ -285,6 +304,8 @@ export default function CoachSchedule() {
           .update(formToRow({ ...form, date: displayEventTime(t).date })).eq('id', t.id).select('id')))
       setSaving(false)
       loadData()
+      // Even a partial save may have changed a published week (TRAK-135).
+      if (targets.some(t => t.published)) askToEmailFamilies()
       const saved = results.filter(r => !failed(r.error, r.data)).length
       if (saved < targets.length) {
         // Saving again rewrites every week the same way, so it is safe to retry.
@@ -314,6 +335,7 @@ export default function CoachSchedule() {
     setSheet({ kind: 'closed' })
     setSelected(form.date)
     loadData()
+    if (editing?.published) askToEmailFamilies()
     toast.success(editing
       ? editing.published ? 'Saved. Families see the change.' : 'Draft saved'
       : series ? `Saved ${rows.length} events as drafts. Tap Publish when they’re ready.`
@@ -356,6 +378,9 @@ export default function CoachSchedule() {
       : { data: null, error: null }
     setSaving(false)
     loadData()
+    // A cancelled published event emails its families (TRAK-135); "this and
+    // following" may reach published weeks after a draft one.
+    if (row.published || following) askToEmailFamilies()
     if (draftError) {
       setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
       return
@@ -592,6 +617,19 @@ export default function CoachSchedule() {
                         )}
                       </div>
                     )}
+                    {/* TRAK-139 (J8.16): WhatsApp's own share link. Trak sends
+                        nothing; the coach picks the group. Drafts have nothing
+                        to share yet. */}
+                    {row?.published && (parked ? (
+                      <button onClick={comingSoon} aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
+                        <Share2 size={14} color="rgba(255,255,255,0.5)" />
+                      </button>
+                    ) : (
+                      <a href={whatsAppShareUrl(shareableFromRow(row, squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
+                        aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
+                        <Share2 size={14} color="#25D366" />
+                      </a>
+                    ))}
                     {ev.source === 'session' && (
                       <button
                         onClick={() => navigate('/coach/sessions/list')}

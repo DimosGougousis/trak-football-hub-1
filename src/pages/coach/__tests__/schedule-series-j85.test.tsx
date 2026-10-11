@@ -34,9 +34,11 @@ const week = (id: string, offset: number, over: Record<string, unknown> = {}) =>
 type Write = { method: string; query: string; body: unknown }
 let writes: Write[]
 let rows: Record<string, unknown>[]
+let emailNudges: number
 
 function fixtures() {
   writes = []
+  emailNudges = 0
   // Last week, this week (today), and two more; the one after next is cancelled.
   rows = [week('w0', -7), week('w1', 0), week('w2', 7, { status: 'cancelled' }), week('w3', 14)]
   const write = (method: string) => async ({ request }: { request: Request }) => {
@@ -53,6 +55,11 @@ function fixtures() {
     http.post(EVENTS, write('post')),
     http.patch(EVENTS, write('patch')),
     http.delete(EVENTS, write('delete')),
+    // TRAK-135: the app asks the server to send queued family emails.
+    http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => {
+      emailNudges++
+      return HttpResponse.json({ accepted: true }, { status: 202 })
+    }),
   )
 }
 
@@ -152,6 +159,8 @@ describe('J8.5: a weekly training series', () => {
     expect(byId.w1).toMatchObject({ event_date: today, start_time: '18:30:00', starts_at: toAcademyInstant(today, '18:30') })
     expect(byId.w3).toMatchObject({ event_date: shift(today, 14), start_time: '18:30:00' })
     expect(await screen.findByText('Saved 2 weeks. Families see the change.')).toBeInTheDocument()
+    // TRAK-135: published weeks changed, so queued family emails are sent.
+    expect(emailNudges).toBe(1)
   })
 
   it('says how many weeks saved when one of "this and following" fails, never "Saved" for all', async () => {
@@ -200,6 +209,8 @@ describe('J8.5: a weekly training series', () => {
       method: 'delete',
       query: `?series_id=eq.series-1&event_date=gte.${today}&published=eq.false&status=eq.scheduled&select=id`,
     })
+    // TRAK-135: each cancel asks for the families' email; the series is one email per person.
+    await waitFor(() => expect(emailNudges).toBe(2))
   })
 
   it('publishes this and following draft weeks in one go', async () => {
