@@ -9,6 +9,9 @@ import { bandForScore, scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
 import { isChanged, noteEventsShown, readSeenSequences, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
+import { PlayerAlertsBell } from '@/components/player/PlayerAlertsBell'
+import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
+import { WeekStrip } from '@/components/trak/WeekStrip'
 import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
@@ -261,7 +264,8 @@ export default function PlayerHome() {
             .or(upcomingEventsFilter())
             .order('event_date', { ascending: true, nullsFirst: false })
             .order('starts_at', { ascending: true })
-            .limit(5)
+            // Enough for the bell and the seven-day strip (TRAK-163), not just Next up.
+            .limit(20)
           if (cancelled) return
           // A failed calendar read is not an empty calendar. Without this the
           // player is told they have no sessions coming up, which is a
@@ -403,11 +407,10 @@ export default function PlayerHome() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] font-medium tracking-[0.14em] uppercase text-white/20"
-            style={{ fontFamily: "'DM Mono', monospace" }}>TRAK</span>
-        </div>
+        {/* TRAK-163: calendar, the player's name, the bell; then the next seven days. */}
+        <HomeHeader calendarTo="/player/matches" center={<HomeTitle>{profile?.full_name || 'Player'}</HomeTitle>}
+          right={user && <PlayerAlertsBell userId={user.id} events={upcomingEvents} />} />
+        <WeekStrip events={upcomingEvents} eventHref={event => `/player/event/${event.id}`} />
 
         {mayHaveMissedHistory && (
           <div className="rounded-xl border p-4 my-4" role="status"
@@ -438,11 +441,8 @@ export default function PlayerHome() {
 
         {/* Identity */}
         <div className="py-2.5 pb-4">
+          {/* The name is in the header now (TRAK-163). */}
           <p className="text-xs text-white/22 mb-1">{timeOfDayGreeting()}</p>
-          <p className="text-[28px] font-semibold text-white/88 leading-tight tracking-tight"
-            style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.03em' }}>
-            {profile?.full_name || 'Player'}
-          </p>
           {details && (
             <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
               <span className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45"

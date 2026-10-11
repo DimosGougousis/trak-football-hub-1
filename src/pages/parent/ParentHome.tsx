@@ -1,12 +1,14 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
-import { ParentAssessmentBands, ParentChildSelector, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
+import { HomeHeader } from '@/components/trak/HomeHeader'
+import { WeekStrip } from '@/components/trak/WeekStrip'
+import { ParentAssessmentBands, ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ParentUpcomingEvents } from '@/components/parent/ParentEvents'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
-import { useChildrenAwaitingConsent, useParentDevelopment, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
+import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
 import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
 import { trackEvent } from '@/lib/telemetry'
 
@@ -16,6 +18,7 @@ export default function ParentHome() {
   const { selectedChild } = useParentChildren()
   const matchQuery = useParentMatches()
   const developmentQuery = useParentDevelopment()
+  const eventsQuery = useParentEvents()
   const consentQuery = useChildrenAwaitingConsent()
   const rosterConsentQuery = useRosterChildrenAwaitingConsent()
   const loginQuery = useChildLogins()
@@ -42,11 +45,8 @@ export default function ParentHome() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4">
-        {/* TRAK-74: alerts are a bell here, not a tab. */}
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl text-foreground">Home</h1>
-          <ParentAlertsBell />
-        </div>
+        {/* TRAK-163: calendar, the child (switcher), the bell (TRAK-74: alerts are a bell, not a tab). */}
+        <HomeHeader calendarTo="/parent/matches" center={<ParentChildSwitcher />} right={<ParentAlertsBell />} />
         {consentQuery.isError || rosterConsentQuery.isError ? (
           <ParentLoadError message="Couldn't check pending approvals." onRetry={() => { void consentQuery.refetch(); void rosterConsentQuery.refetch() }} />
         ) : waitingNames.length > 0 && (
@@ -60,7 +60,6 @@ export default function ParentHome() {
         )}
         {/* TRAK-98: approved children who haven't signed up aren't in the family list yet. */}
         <ApprovedAwaitingList />
-        <ParentChildSelector />
         {/* TRAK-111: only for a login still to make; a ready one is listed until the child's first sign-in. */}
         {loginQuery.isError ? <ParentLoadError message="Couldn't check your children's logins." onRetry={() => {void loginQuery.refetch()}} />
           : loginQuery.data?.some(login => !login.ready) && <button onClick={()=>navigate('/parent/consent')}
@@ -72,12 +71,11 @@ export default function ParentHome() {
           {hasError ? <ParentLoadError onRetry={() => { void matchQuery.refetch(); void developmentQuery.refetch() }} />
             : loading ? <ParentLoading /> : (
               <>
-                <div className="pb-5">
-                  <h2 className="text-2xl font-light text-foreground">{selectedChild?.name}</h2>
-                  {details && <p className="text-xs text-muted-foreground mt-2">
-                    {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
-                  </p>}
-                </div>
+                {details && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">
+                  {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
+                </p>}
+                {/* TRAK-163: the selected child's next seven days, under the header. */}
+                {eventsQuery.data && <WeekStrip events={eventsQuery.data} eventHref={event => `/parent/event/${event.id}`} />}
                 {/* J8.8 (TRAK-131): what's next for the selected child. */}
                 <ParentUpcomingEvents nextUpOnly />
                 {matches.length > 0 && (

@@ -152,6 +152,8 @@ export interface ParentAlert {
   title: string
   description: string
   date: string | null
+  /** An event the coach cancelled (TRAK-163: shown as a warning). */
+  cancelled?: boolean
 }
 
 /**
@@ -160,12 +162,12 @@ export interface ParentAlert {
  * (eventsFirstSeen: per device, the sequence when first listed), so a family
  * that never saw the old version gets "New", and the title never flips back.
  */
-function eventAlert(event: PlayerEvent, firstSeen: Record<string, number>): ParentAlert {
+export function eventAlert(event: PlayerEvent, firstSeen: Record<string, number>): ParentAlert {
   const when = `${eventDay(event)}, ${event.time ?? 'time to be confirmed'}`
   const heading = eventHeading(event)
   const base = { id: `event-${event.id}`, kind: 'event' as const, targetId: event.id, date: event.updatedAt }
   if (event.status === 'cancelled') {
-    return { ...base, title: `Cancelled: ${heading}`, description: [when, event.cancelReason].filter(Boolean).join(' · ') }
+    return { ...base, cancelled: true, title: `Cancelled: ${heading}`, description: [when, event.cancelReason].filter(Boolean).join(' · ') }
   }
   const changed = firstSeen[event.id] !== undefined && event.sequence > firstSeen[event.id]
   return {
