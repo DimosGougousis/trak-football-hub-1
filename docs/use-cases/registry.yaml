@@ -624,3 +624,22 @@ use_cases:
     then:
       - One tap subscribes their phone calendar to Trak
     source: https://linear.app/trak-football/issue/TRAK-25
+
+  # ADDED 2026-10-11. TRAK-139 (J8.16), in J8's scope (MVP Requirements) but
+  # not one of TRAK-25's nine checks. Built and merged (#266, 11 Oct); the
+  # desktop share text was checked live on 11 Oct. This is the phone part,
+  # planned for a call with the whole team.
+  - id: UC-E10
+    actor: coach
+    title: Share an event to the squad's WhatsApp group, pre-written, with no child names
+    requirement: J8
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A coach on iPhone and on Android, with a published training, a published match and a cancelled event
+    when: They tap Share on each event
+    then:
+      - WhatsApp opens with the message pre-written and asks the coach to choose a chat; nothing is sent until the coach taps Send
+      - The message has the squad and type, the day and time, the venue and meet time, kit for a match, and a cancellation's reason
+      - No child's name and no absence list appear; a cancellation reason that names a squad child or contains a link is left out
+    source: https://linear.app/trak-football/issue/TRAK-139

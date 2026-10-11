@@ -146,5 +146,9 @@
   "UC-E09": {
     "spec_version": 1,
     "hash": "a97341d7498795362e303c42221a5fd672f2442fac35640f2ace073cab8d868c"
+  },
+  "UC-E10": {
+    "spec_version": 1,
+    "hash": "fa86e1c2dc36faab21a4cb0b91206b7799d5e889b3d779aba6c6d3d44f7e1376"
   }
 }
