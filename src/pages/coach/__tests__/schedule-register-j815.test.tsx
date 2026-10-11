@@ -171,7 +171,9 @@ describe('J8.15: the coach takes the register from the schedule', () => {
     const user = userEvent.setup()
     renderApp('/coach/schedule')
     await user.click(await screen.findByRole('button', { name: 'Log match for vs Synthetic Rovers' }))
-    expect(await screen.findByPlaceholderText('Opponent name')).toHaveValue('Synthetic Rovers')
+    const opponent = await screen.findByPlaceholderText('Opponent name')
+    // The screen fills it in just after it first draws.
+    await waitFor(() => expect(opponent).toHaveValue('Synthetic Rovers'))
     expect(screen.getAllByLabelText('Session date')[0]).toHaveValue(DAY)
     expect(screen.getByRole('button', { name: 'Away' })).toHaveAttribute('aria-pressed', 'true')
   }, 20_000)
