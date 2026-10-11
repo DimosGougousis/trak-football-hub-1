@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, Share2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime } from '@/lib/event-time'
@@ -13,6 +13,9 @@ import {
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
+import { FixtureImport } from '@/components/coach/FixtureImport'
+import { fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
+import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
@@ -132,6 +135,7 @@ type Sheet =
   | { kind: 'edit'; row: EventRow | null; form: EventForm; repeat: Repeat; scope: Scope; error: string | null }
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
+  | { kind: 'import' }
 
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
   !!row?.series_id && !!row.event_date
@@ -235,6 +239,8 @@ export default function CoachSchedule() {
   }, [calEvents, sessions])
 
   const venues = useMemo(() => savedVenues(calEvents), [calEvents])
+  // TRAK-129 (J8.6): fixtures already on the schedule are skipped on import.
+  const fixtureKeys = useMemo(() => scheduleFixtureKeys(calEvents), [calEvents])
 
   // Index events by date string for fast lookup
   const byDate = useMemo<Record<string, CalEvent[]>>(() => {
@@ -429,6 +435,17 @@ export default function CoachSchedule() {
     toast.success('Draft deleted')
   }
 
+  // TRAK-129 (J8.6): one insert for the whole file, so it saves whole or not
+  // at all. FixtureImport keeps every row and says so if this throws.
+  const importFixtures = async (fixtures: Fixture[]) => {
+    if (!user) throw new Error('Not signed in')
+    const rows = fixtureInsertRows(fixtures, user.id)
+    const { data, error } = await supabase.from('coach_calendar_events').insert(rows).select('id')
+    if (error || (data?.length ?? 0) !== rows.length) throw new Error("Couldn't save the fixtures")
+    toast.success(`Added ${rows.length} ${rows.length === 1 ? 'fixture' : 'fixtures'} as drafts. Publish each when it's ready.`)
+    await loadData()
+  }
+
   return (
     <MobileShell>
       <div className="pt-3 pb-28 space-y-4">
@@ -439,12 +456,21 @@ export default function CoachSchedule() {
             style={{ ...font, letterSpacing: '-0.02em' }}>
             Calendar
           </h1>
-          <button
-            onClick={() => openNew(selected)}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-[#C8F25A]"
-            aria-label="Add event">
-            <Plus size={16} color="#000" strokeWidth={2.5} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => (parked ? comingSoon() : setSheet({ kind: 'import' }))}
+              className="flex items-center justify-center w-8 h-8 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.08)' }}
+              aria-label="Import fixtures">
+              <FileUp size={15} color="rgba(255,255,255,0.75)" />
+            </button>
+            <button
+              onClick={() => openNew(selected)}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-[#C8F25A]"
+              aria-label="Add event">
+              <Plus size={16} color="#000" strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
 
         {loadFailed && <LoadError what="your calendar" onRetry={retry} retrying={retrying} />}
@@ -821,6 +847,28 @@ export default function CoachSchedule() {
               className="w-full py-2 text-[13px] text-white/60" style={font}>
               Keep event
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Import sheet (TRAK-129, J8.6) ─────────────────────────────────── */}
+      {sheet.kind === 'import' && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
+          <div role="dialog" aria-label="Import fixtures"
+            className="w-full max-w-[430px] max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', marginBottom: 64 }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[16px] font-medium text-white/88" style={font}>Import fixtures</span>
+              <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
+                <X size={18} className="text-white/50" />
+              </button>
+            </div>
+            <p className="text-[12px] text-white/50" style={font}>
+              Fixtures arrive as drafts. Families see each one once you publish it.
+            </p>
+            <FixtureImport existingKeys={fixtureKeys} onConfirm={importFixtures} />
           </div>
         </div>
       )}
