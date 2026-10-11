@@ -8,16 +8,18 @@
 -- across coaches, so this closes a path rather than a known leak.
 --
 -- Restrictive, so it adds to the existing policies without restating them: a
--- session with no event is unaffected (every J4 save today).
+-- session with no event is unaffected (every J4 save today). is_coach() is
+-- already required by the J4 policies; it is repeated so every write policy
+-- on the table names it (rls-write-policies.test.ts).
 CREATE POLICY "A session completes only the coach's own event"
   ON public.coach_sessions AS RESTRICTIVE FOR INSERT TO authenticated
-  WITH CHECK (event_id IS NULL OR EXISTS (
+  WITH CHECK (public.is_coach() AND (event_id IS NULL OR EXISTS (
     SELECT 1 FROM public.coach_calendar_events e
-    WHERE e.id = event_id AND e.coach_user_id = (SELECT auth.uid())));
+    WHERE e.id = event_id AND e.coach_user_id = (SELECT auth.uid()))));
 
 CREATE POLICY "A session moves only to the coach's own event"
   ON public.coach_sessions AS RESTRICTIVE FOR UPDATE TO authenticated
   USING (true)
-  WITH CHECK (event_id IS NULL OR EXISTS (
+  WITH CHECK (public.is_coach() AND (event_id IS NULL OR EXISTS (
     SELECT 1 FROM public.coach_calendar_events e
-    WHERE e.id = event_id AND e.coach_user_id = (SELECT auth.uid())));
+    WHERE e.id = event_id AND e.coach_user_id = (SELECT auth.uid()))));
