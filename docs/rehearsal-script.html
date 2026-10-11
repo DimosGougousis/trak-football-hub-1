@@ -105,12 +105,12 @@
 <body>
 <main class="wrap">
 <header class="mast">
-  <div class="eyebrow">Updated 8 October 2026 · synthetic families only</div>
+  <div class="eyebrow">Updated 11 October 2026 · synthetic families only</div>
   <h1>Rehearsal script</h1>
-  <p class="lede">Walk the J1–J8 journeys and G1–G7 guarantees on the deployed build, using two real phones and approved inboxes. Record what happens; this checklist is not evidence that a run passed.</p>
+  <p class="lede">Walk the J1–J8 journeys and G1–G7 guarantees on the deployed build, using two real phones and approved inboxes. Record what happens; this checklist is not evidence that a run passed. Keep it current: a PR that adds or changes something a coach, family or operator can see adds its live check here in the same PR.</p>
 </header>
 <section aria-labelledby="setup"><div class="sec-head"><h2 id="setup">Before the run</h2></div>
-<div class="alarm"><p><b>Events are required; only the per-academy off switch is built (TRAK-124).</b> TRAK-25 has nine acceptance checks and 18 implementation issues (TRAK-124–141); their status lives in Linear. The final rehearsal cannot pass until all nine checks below pass. Earlier journey passes do not waive the event gate.</p></div>
+<div class="alarm"><p><b>Events are required and are being built slice by slice.</b> TRAK-25 has nine acceptance checks and 18 implementation issues (TRAK-124–141); their status lives in Linear. The final rehearsal cannot pass until all nine checks below pass. Earlier journey passes do not waive the event gate.</p></div>
 <ul class="plain">
 <li>Read <a href="../MVP%20Requirements">MVP Requirements</a>, the <a href="pilot-runbook.md">operational runbook</a> and the <a href="release/merge-gate.md">release gate</a>. Record commit, workflow, served build, backend target, operator and start time.</li>
 <li>Use designated synthetic roles and an approved roster: two siblings and a child whose guardian withholds consent, plus a separate academy for isolation tests. Exercise both email activation and a child without email. Prepare a synthetic squad of at least 25 players for the size check.</li>
@@ -181,7 +181,7 @@
   <div class="body">
     <h3>Log and edit sessions</h3>
     <p>As the assigned coach, log training with attendance and a match with distinct per-player minutes, goals and assists. Check saved values and edit a saved session. Run the agreed check on the synthetic squad of at least 25 players.</p>
-    <p class="look"><b>Record:</b> No invented match defaults, duplicate writes or unexplained errors; attendance and edits persist. Use the routed session flow, not an old Quick Match Log component.</p>
+    <p class="look"><b>Record:</b> No invented match defaults, duplicate writes or unexplained errors; attendance and edits persist. An impossible score (two scorers in a 1–0 win) is refused with a reason the coach can act on (TRAK-149, TRAK-151). Use the routed session flow, not an old Quick Match Log component.</p>
   </div>
 </div>
 
@@ -237,14 +237,14 @@
 </div>
 </section>
 <section aria-labelledby="events"><div class="sec-head"><div class="eyebrow">J8 · TRAK-25 · required before real families receive events</div><h2 id="events">Events and phone calendars</h2></div>
-<p class="small">These are the nine acceptance outcomes in <a href="https://linear.app/trak-football/issue/TRAK-25">TRAK-25</a>, as expanded on 8 October, and MVP Requirements. The numbers below identify acceptance checks, not the implementation issue numbers. The behavior is specified but remains unbuilt. Once implemented, record all nine on the same deployed build with synthetic families and real phones.</p>
+<p class="small">These are the nine acceptance outcomes in <a href="https://linear.app/trak-football/issue/TRAK-25">TRAK-25</a>, as expanded on 8 October, and MVP Requirements. The numbers below identify acceptance checks, not the implementation issue numbers. Check each one as soon as its slices are live; then record all nine on the same deployed build with synthetic families and real phones.</p>
 <div class="step">
   <input class="box" type="checkbox" aria-label="J8 check 1 Weekly scheduling">
   <span class="uc">J8 · 1</span>
   <div class="body">
     <h3>Weekly scheduling</h3>
-    <p>Create eight weeks of weekly training.</p>
-    <p class="look"><b>Record:</b> Elapsed time is under two minutes.</p>
+    <p>Create eight weeks of weekly training. Repeat once from a phone set to another time zone (for example Athens or New York).</p>
+    <p class="look"><b>Record:</b> Elapsed time is under two minutes. Every week lands at the Dubai time entered, whatever the phone’s time zone. A match cannot be saved as a series.</p>
   </div>
 </div>
 
@@ -253,8 +253,8 @@
   <span class="uc">J8 · 2</span>
   <div class="body">
     <h3>Changes and cancellations reach families</h3>
-    <p>Change and cancel events; check every affected player and guardian on next app load, including the selected child’s parent bell and the player’s Next up marker. Test changes for today and tomorrow in Dubai time, including venue and meet time. Cancel a published match five days out: it is emailed too, while moving it (not today or tomorrow) is not. Make three quick edits and check that only the final change is emailed.</p>
-    <p class="look"><b>Record:</b> Correct, consented guardian recipients only; the email arrives in Gmail and in the Microsoft 365 inbox within 60 seconds, in the Inbox (not Junk, spam or Other), with SPF, DKIM and DMARC = pass in the headers. Microsoft's link scanner opening it changes nothing. Record send time and inbox receipt metadata. No child name in the subject, coach notes or state-changing link. Record failed-delivery visibility/retry and the implemented edit-collapse window; no window is assumed here.</p>
+    <p>Change and cancel events; check every affected player and guardian on next app load, including the selected child’s parent bell and the player’s Next up marker. Test changes for today and tomorrow in Dubai time, including venue and meet time. Cancel a published match five days out: it is emailed too, while moving it (not today or tomorrow) is not. Make three quick edits and check that only the final change is emailed. Open an event and save without changing anything. Save an event as a draft without publishing it.</p>
+    <p class="look"><b>Record:</b> Correct, consented guardian recipients only; the email arrives in Gmail and in the Microsoft 365 inbox within 60 seconds, in the Inbox (not Junk, spam or Other), with SPF, DKIM and DMARC = pass in the headers. Microsoft's link scanner opening it changes nothing. Record send time and inbox receipt metadata. No child name in the subject, coach notes or state-changing link. Record failed-delivery visibility/retry and the implemented edit-collapse window; no window is assumed here. A move or a cancellation shows once in the parent bell, opening the bell clears it, and tapping it opens the event page; siblings are counted per child. An unchanged save shows no “Changed”, updates no calendar and sends no email (known open: today every save counts as a change). A draft reaches no one: app, bell, calendar, email or share text.</p>
   </div>
 </div>
 
@@ -331,10 +331,11 @@
 <h3>Exercise the specified operating cases as their slices are delivered</h3>
 <p class="small">These support the nine checks; they do not create a tenth acceptance check or claim that a pending feature is available.</p>
 <ul class="plain">
-<li><b>Import and kit (TRAK-129):</b> preview 12 CSV fixtures, correct a bad row, confirm 12 matches and re-import with zero duplicates. Verify date, kickoff, meet time, opponent, home/away, venue and kit. No writes occur before confirmation. CSV only (PDF reading is out for now); no AI parsing.</li>
+<li><b>Import and kit (TRAK-129):</b> preview 12 CSV fixtures, correct a bad row, confirm 12 matches and re-import with zero duplicates. Verify date, kickoff, meet time, opponent, home/away, venue and kit. No writes occur before confirmation, and the “Added N” count equals the rows actually saved. CSV only (PDF reading is out for now); no AI parsing.</li>
+<li><b>Family event lists (TRAK-130, TRAK-131):</b> as the guardian of two children, open each child’s upcoming events and one event page; as the player, check Next up and the list. A guardian whose child has no consent sees no events for that child.</li>
 <li><b>Absence (TRAK-137):</b> the linked guardian reports Can't make it for one child, optionally adds a reason, then undoes before start. The coach sees it after one reload; the sibling is unaffected. Guardians of another child, withdrawn consent and players cannot submit it; families cannot see others’ absences.</li>
 <li><b>Reminders (TRAK-136):</b> check a two-day-ahead reminder, one email per guardian/day across their children, Settings → Notifications opt-out, and safe rerun without duplicate mail. Omit cancelled events and withdrawn children; email contains no unsubscribe action link.</li>
-<li><b>Manual WhatsApp share (TRAK-139):</b> on iPhone and Android, inspect training, match and cancellation text, including kit where applicable. No child names or absence lists. The coach must choose a destination and send; opening the share control must not send.</li>
+<li><b>Manual WhatsApp share (TRAK-139):</b> on iPhone and Android, inspect training, match and cancellation text, including kit where applicable. No child names or absence lists; a cancellation reason that names a child or holds a link is left out, as in the email. The coach must choose a destination and send; opening the share control must not send.</li>
 <li><b>Additional links (TRAK-140):</b> this lower-priority slice follows the core work. When delivered, verify named extra links, one/all-child and match/all-event choices, independent revocation and last-fetch data. Revoking an extra link must not break the guardian’s own link; withdrawal/departure removes the affected access.</li>
 </ul>
 </div>
