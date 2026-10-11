@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime } from '@/lib/event-time'
@@ -13,6 +13,7 @@ import {
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
+import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -182,6 +183,23 @@ export default function CoachSchedule() {
   }
 
   useEffect(() => { loadData() }, [user])
+
+  // TRAK-139 (J8.16): the squad for the WhatsApp message title ("U15 Match"),
+  // and its children's names, so coach-typed text naming one stays out.
+  // Optional: a failed read leaves "Squad" and no reason, and never blocks
+  // the calendar.
+  const [squad, setSquad] = useState<{ label: string, childNames: string[] | null }>({ label: 'Squad', childNames: null })
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    supabase.from('squad_players').select('age_group, player_name, status').eq('coach_user_id', user.id)
+      .then(({ data, error }) => {
+        if (cancelled || error) return
+        const rows = (data ?? []) as { age_group: string | null, player_name: string | null, status: string | null }[]
+        setSquad({ label: squadLabelFrom(rows), childNames: rows.map(r => r.player_name ?? '').filter(Boolean) })
+      })
+    return () => { cancelled = true }
+  }, [user])
 
   const retry = async () => { setRetrying(true); await loadData(); setRetrying(false) }
 
@@ -599,6 +617,19 @@ export default function CoachSchedule() {
                         )}
                       </div>
                     )}
+                    {/* TRAK-139 (J8.16): WhatsApp's own share link. Trak sends
+                        nothing; the coach picks the group. Drafts have nothing
+                        to share yet. */}
+                    {row?.published && (parked ? (
+                      <button onClick={comingSoon} aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
+                        <Share2 size={14} color="rgba(255,255,255,0.5)" />
+                      </button>
+                    ) : (
+                      <a href={whatsAppShareUrl(shareableFromRow(row, squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
+                        aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
+                        <Share2 size={14} color="#25D366" />
+                      </a>
+                    ))}
                     {ev.source === 'session' && (
                       <button
                         onClick={() => navigate('/coach/sessions/list')}
