@@ -12,7 +12,7 @@ import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, tableError, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { table, tableError, rpc, SUPABASE_URL, rpcRows, rpcError } from '../../../../tests/msw/supabase'
 
 const PLAYER = { id: 'player-events-j8' }
 const ASSESSMENT = { id: 'assessment-1', squad_player_id: 'squad-1', coach_user_id: 'coach-1', created_at: '2026-10-01T10:00:00Z',
@@ -36,8 +36,8 @@ function setup(events: unknown[] | 'fail' = [MATCH_EVENT, TRAINING_EVENT, UNTIME
     table('coach_assessments', [ASSESSMENT]),
     http.get(`${SUPABASE_URL}/rest/v1/coach_shared_feedback`, () => HttpResponse.json({ body: 'Keep scanning before you receive.' })),
     events === 'fail'
-      ? tableError('coach_calendar_events', 500, { code: 'XX000', message: 'unavailable' })
-      : table('coach_calendar_events', events as Record<string, unknown>[]),
+      ? rpcError('child_events', 500, { code: 'XX000', message: 'unavailable' })
+      : rpcRows('child_events', events as Record<string, unknown>[]),
     table('recognition_awards', []),
     rpc('get_player_invites_for_current_user', () => []),
     rpc('family_training_history', () => []),
@@ -118,7 +118,7 @@ describe('TRAK-130: the Sessions tab lists what is coming up', () => {
     renderApp('/player/matches')
     const upcoming = await screen.findByRole('region', { name: 'Upcoming' })
     expect(await within(upcoming).findByText(/couldn't load upcoming events/i)).toBeInTheDocument()
-    server.use(table('coach_calendar_events', [MATCH_EVENT]))
+    server.use(rpcRows('child_events', [MATCH_EVENT]))
     await userEvent.click(within(upcoming).getByRole('button', { name: /retry/i }))
     expect(await within(upcoming).findByText('Match vs Rivals FC (away)')).toBeInTheDocument()
   })
@@ -131,22 +131,34 @@ describe('TRAK-130: the Sessions tab lists what is coming up', () => {
   })
 })
 
-describe('TRAK-130: only published events are asked for (drafts are coach-only, Imad 9 Oct)', () => {
+describe('TRAK-130/TRAK-164: events are read through child_events, for this player', () => {
+  // child_events() applies the player's consent, returns published events only
+  // (drafts are coach-only, Imad 9 Oct) and drops a cancel reason naming a
+  // squad-mate or holding a link (TRAK-164). The screens must not read the
+  // table around it.
   function captureEventRequests() {
-    const urls: URL[] = []
-    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_calendar_events`, ({ request }) => {
-      urls.push(new URL(request.url))
-      return HttpResponse.json(request.headers.get('Accept')?.includes('vnd.pgrst.object') ? MATCH_EVENT : [MATCH_EVENT])
-    }))
-    return urls
+    const bodies: Record<string, unknown>[] = []
+    const tableReads: string[] = []
+    server.use(
+      http.post(`${SUPABASE_URL}/rest/v1/rpc/child_events`, async ({ request }) => {
+        bodies.push(await request.json() as Record<string, unknown>)
+        return HttpResponse.json(request.headers.get('Accept')?.includes('vnd.pgrst.object') ? MATCH_EVENT : [MATCH_EVENT])
+      }),
+      http.get(`${SUPABASE_URL}/rest/v1/coach_calendar_events`, ({ request }) => {
+        tableReads.push(request.url)
+        return HttpResponse.json([])
+      }),
+    )
+    return { bodies, tableReads }
   }
 
-  it.each(['/player/home', '/player/matches', '/player/event/ev-1'])('%s filters on published', async path => {
+  it.each(['/player/home', '/player/matches', '/player/event/ev-1'])('%s asks child_events for this player, never the table', async path => {
     setup()
-    const urls = captureEventRequests()
+    const { bodies, tableReads } = captureEventRequests()
     renderApp(path)
-    await waitFor(() => expect(urls.length).toBeGreaterThan(0))
-    for (const url of urls) expect(url.searchParams.get('published')).toBe('eq.true')
+    await waitFor(() => expect(bodies.length).toBeGreaterThan(0))
+    for (const body of bodies) expect(body).toEqual({ p_child: PLAYER.id })
+    expect(tableReads).toEqual([])
   })
 })
 

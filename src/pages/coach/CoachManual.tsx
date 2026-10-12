@@ -248,7 +248,7 @@ const SECTIONS: Section[] = [
   { id: 'ratings',     Icon: IconProgress,    title: 'The Rating System',      subtitle: 'How bands and OVR are calculated',    Content: ContentRatings     },
   { id: 'recognition', Icon: IconAward,       title: 'Recognition & Awards',   subtitle: 'Motivating your squad',               Content: ContentRecognition },
   { id: 'parents',     Icon: IconParentLink,  title: 'Parent Connections',     subtitle: 'What parents can and cannot see',     Content: ContentParents     },
-  { id: 'schedule',    Icon: IconSessions,    title: 'The Smart Calendar',     subtitle: 'Schedule and publish sessions',       Content: ContentSchedule    },
+  { id: 'schedule',    Icon: IconSessions,    title: 'The calendar',           subtitle: 'Top left on Home: schedule and publish',       Content: ContentSchedule    },
   { id: 'tips',        Icon: IconTips,        title: 'Tips for Getting Started', subtitle: 'Your first week with TRAK',         Content: ContentTips        },
 ]
 

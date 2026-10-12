@@ -11,6 +11,19 @@ import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
+
+/* TRAK-159 (11 Oct live run): one colour per type on the coach calendar,
+   agreed as training blue, match red, other orange; Tailwind's 400 shades,
+   which read on the dark theme. Cancelled is grey, never match red. */
+export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
+  training:   '#60a5fa',
+  match:      '#f87171',
+  other:      '#fb923c',
+  tournament: '#c084fc',
+}
+export const CANCELLED_COLOR = '#a1a1aa'
+/** "No time set" on a card: a warning, unlike every type colour. */
+export const NO_TIME_COLOR = '#facc15'
 export const DURATIONS = [60, 75, 90, 120] as const
 
 export type EventForm = {
