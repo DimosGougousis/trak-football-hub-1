@@ -104,7 +104,7 @@ describe('TRAK-72 How Trak works', () => {
     // so open each in turn and check what it shows.
     const titles = ['What is TRAK?', 'Building Your Squad', 'Logging Matches', 'Logging Training',
       'Assessing Players', 'The Rating System', 'Recognition & Awards', 'Parent Connections',
-      'The Smart Calendar', 'Tips for Getting Started']
+      'The calendar', 'Tips for Getting Started']
     for (const title of titles) {
       const header = screen.getByText(title)
       if (!header.closest('button')!.nextElementSibling) await userEvent.click(header)
