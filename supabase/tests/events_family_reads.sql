@@ -98,11 +98,11 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id) 
  (pg_temp.e82id(43),pg_temp.e82id(10),'Adult A',pg_temp.e82id(23));
 UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.e82id(43);
 -- 500 A published, 501 A draft, 502 B published, 503 Y published.
-INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published) VALUES
- (pg_temp.e82id(500),pg_temp.e82id(10),'A training','2026-11-02 16:00+00',true),
- (pg_temp.e82id(501),pg_temp.e82id(10),'A draft','2026-11-03 16:00+00',false),
- (pg_temp.e82id(502),pg_temp.e82id(11),'B training','2026-11-02 16:00+00',true),
- (pg_temp.e82id(503),pg_temp.e82id(12),'Y training','2026-11-02 16:00+00',true);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published) VALUES
+ (pg_temp.e82id(500),pg_temp.e82id(10),'A training','2026-11-02 16:00+00','20:00',true),
+ (pg_temp.e82id(501),pg_temp.e82id(10),'A draft','2026-11-03 16:00+00','20:00',false),
+ (pg_temp.e82id(502),pg_temp.e82id(11),'B training','2026-11-02 16:00+00','20:00',true),
+ (pg_temp.e82id(503),pg_temp.e82id(12),'Y training','2026-11-02 16:00+00','20:00',true);
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e82id(100),'events');
 
 -- Consent through each parent's own RPC, the way the app records it.
@@ -128,9 +128,9 @@ SELECT pg_temp.e82actor(12); SELECT pg_temp.e82check(pg_temp.e82seen()='503','1 
 -- ── 2. Coach A writes: the database owns academy and change counter ───────
 SELECT pg_temp.e82actor(10);
 SELECT pg_temp.e82allowed(format(
- 'INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,opponent,meet_time,kit,home_away,organization_id,sequence)
-  VALUES(%L,%L,%L,%L,%L,%L,%L,%L,%L,%L,99)',
- pg_temp.e82id(520),pg_temp.e82id(10),'A match','match','2026-11-07 09:00+00','Synthetic Rovers','08:15','White','away',pg_temp.e82id(101)),
+ 'INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,start_time,opponent,meet_time,kit,home_away,organization_id,sequence)
+  VALUES(%L,%L,%L,%L,%L,%L,%L,%L,%L,%L,%L,99)',
+ pg_temp.e82id(520),pg_temp.e82id(10),'A match','match','2026-11-07 09:00+00','09:00','Synthetic Rovers','08:15','White','away',pg_temp.e82id(101)),
  '2 coach A creates a match with meet time, kit and home/away',1);
 RESET ROLE;
 SELECT pg_temp.e82is(format('SELECT organization_id=%L AND sequence=0 AND status=''scheduled'' AND NOT published
@@ -191,8 +191,8 @@ RESET ROLE;
 -- Coach A moves to academy Y. Their old squad rows stay in X, so an event
 -- made in Y is not read through them.
 UPDATE public.coach_details SET organization_id=pg_temp.e82id(101) WHERE user_id=pg_temp.e82id(10);
-INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published)
- VALUES(pg_temp.e82id(530),pg_temp.e82id(10),'A training in Y','2026-11-09 16:00+00',true);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published)
+ VALUES(pg_temp.e82id(530),pg_temp.e82id(10),'A training in Y','2026-11-09 16:00+00','20:00',true);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.e82actor(20); SELECT pg_temp.e82check(pg_temp.e82seen()='500,520','3 a child in academy X does not read their coach''s event made in academy Y',pg_temp.e82seen());
 

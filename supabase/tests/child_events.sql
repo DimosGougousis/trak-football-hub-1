@@ -64,11 +64,11 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id) 
  (pg_temp.ceid(43),pg_temp.ceid(10),'Adult D',pg_temp.ceid(23));
 UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.ceid(43);
 -- 600 A published, 601 A draft, 602 B published, 603 Y published.
-INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published,notes) VALUES
- (pg_temp.ceid(600),pg_temp.ceid(10),'A training','2026-11-02 16:00+00',true,'SECRET coach note'),
- (pg_temp.ceid(601),pg_temp.ceid(10),'A draft','2026-11-03 16:00+00',false,NULL),
- (pg_temp.ceid(602),pg_temp.ceid(11),'B training','2026-11-02 16:00+00',true,NULL),
- (pg_temp.ceid(603),pg_temp.ceid(12),'Y training','2026-11-02 16:00+00',true,NULL);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published,notes) VALUES
+ (pg_temp.ceid(600),pg_temp.ceid(10),'A training','2026-11-02 16:00+00','20:00',true,'SECRET coach note'),
+ (pg_temp.ceid(601),pg_temp.ceid(10),'A draft','2026-11-03 16:00+00','20:00',false,NULL),
+ (pg_temp.ceid(602),pg_temp.ceid(11),'B training','2026-11-02 16:00+00','20:00',true,NULL),
+ (pg_temp.ceid(603),pg_temp.ceid(12),'Y training','2026-11-02 16:00+00','20:00',true,NULL);
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.ceactor(30);
@@ -93,8 +93,8 @@ SELECT pg_temp.cecheck(pg_temp.ceseen(23)='none','2 a squad row the coach has le
 -- makes in Y is not read through it.
 RESET ROLE;
 UPDATE public.coach_details SET organization_id=pg_temp.ceid(101) WHERE user_id=pg_temp.ceid(11);
-INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published)
- VALUES(pg_temp.ceid(604),pg_temp.ceid(11),'B training in Y','2026-11-09 16:00+00',true);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published)
+ VALUES(pg_temp.ceid(604),pg_temp.ceid(11),'B training in Y','2026-11-09 16:00+00','20:00',true);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.ceactor(30);
 SELECT pg_temp.cecheck(pg_temp.ceseen(22)='602','2 a coach''s event in another academy is not read through the old squad row',pg_temp.ceseen(22));
