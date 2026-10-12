@@ -54,6 +54,8 @@ async function loginFixture(page: Page, context: BrowserContext, role: 'parent' 
     if (url.pathname === '/functions/v1/create-child-login') { created = true; return json({ username: 'striker7', state: 'created' }) }
     if (url.pathname === '/rest/v1/rpc/provision_my_profile') { provisioned = true; return json({ warnings: [] }) }
     if (url.pathname === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
+    // TRAK-163: Home's week strip reads this week's events (a read, over POST).
+    if (url.pathname === '/rest/v1/rpc/child_events') return json([])
     if (url.pathname === '/rest/v1/rpc/my_session_is_live') return json(true)
     if (url.pathname === '/rest/v1/rpc/my_roster_name') return json('Ana Synthetic')
     if (url.pathname === '/rest/v1/rpc/get_player_invites_for_current_user') return json([])
