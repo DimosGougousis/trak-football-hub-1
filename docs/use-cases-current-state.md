@@ -17,7 +17,7 @@ production behavior, the absence of defects or readiness to admit real children.
 | Who owns implementation and acceptance? | The linked Linear issue; a PR or a passing local test is not completion |
 | How do changes reach production? | [Release gate](release/merge-gate.md) |
 | How are admission, recovery and incidents operated? | [Pilot runbook](pilot-runbook.md) and [restore procedure](release/s5-restore-rehearsal.md) |
-| What data and legal decisions need review? | [Data inventory](data-inventory.html) and [UAE counsel brief](lawyer-meeting-brief-uae.md) |
+| What data and legal decisions need review? | [Data inventory](data-inventory.html) and the founders' private legal pack (not in this public repository; ask a founder) |
 
 ## Journey map
 
