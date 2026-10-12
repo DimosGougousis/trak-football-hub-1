@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
 import {
-  DURATIONS, EVENT_KINDS, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
+  CANCELLED_COLOR, DURATIONS, EVENT_COLOR, EVENT_KINDS, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
@@ -45,12 +45,7 @@ type CalEvent = {
 
 // ── Colours ──────────────────────────────────────────────────────────────────
 
-const TYPE_COLOR: Record<ShownType, string> = {
-  match:      '#4ade80',
-  training:   '#C8F25A',
-  tournament: '#c084fc',
-  other:      'rgba(255,255,255,0.45)',
-}
+const TYPE_COLOR: Record<ShownType, string> = EVENT_COLOR
 
 const TYPE_LABEL: Record<ShownType, string> = {
   match: 'Match', training: 'Training', tournament: 'Tournament', other: 'Other',
@@ -598,7 +593,11 @@ export default function CoachSchedule() {
                         {ev.title}
                       </p>
                       <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgba(255,255,255,0.35)' }}>
-                        {TYPE_LABEL[ev.type]}{row?.series_id ? ' · Weekly' : ''}{ev.time ? ` · ${ev.time}` : ''}
+                        {/* TRAK-159: a scheduled event says its time, or that it has none. */}
+                        {ev.time
+                          ? <><span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>{ev.time}</span>{' · '}</>
+                          : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>No time set</span>{' · '}</>}
+                        {TYPE_LABEL[ev.type]}{row?.series_id ? ' · Weekly' : ''}
                         {row?.meet_time ? ` · meet ${row.meet_time.slice(0, 5)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
                         {ev.venue ? ` · ${ev.venue}` : ''}
@@ -614,7 +613,7 @@ export default function CoachSchedule() {
                       )}
                       {row && (
                         <span className="text-[8px] tracking-[0.06em] uppercase mt-0.5 inline-block"
-                          style={{ color: cancelled ? '#f87171' : row.published ? '#C8F25A' : 'rgba(255,255,255,0.35)', ...mono }}>
+                          style={{ color: cancelled ? CANCELLED_COLOR : row.published ? '#C8F25A' : 'rgba(255,255,255,0.35)', ...mono }}>
                           {cancelled ? 'Cancelled' : row.published ? 'Published' : 'Draft · only you see this'}
                         </span>
                       )}
@@ -628,8 +627,10 @@ export default function CoachSchedule() {
                           <Pencil size={14} color="rgba(255,255,255,0.5)" />
                         </button>
                         {!row.published && (
-                          <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}>
-                            <Send size={14} color="#C8F25A" />
+                          <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium"
+                            style={{ background: '#C8F25A', color: '#000', ...font }}>
+                            <Send size={11} color="#000" />Publish
                           </button>
                         )}
                         {canDelete(row) ? (
