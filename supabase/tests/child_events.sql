@@ -61,7 +61,9 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id) 
  (pg_temp.ceid(40),pg_temp.ceid(10),'Sibling One',pg_temp.ceid(20)),
  (pg_temp.ceid(41),pg_temp.ceid(10),'Sibling Two',pg_temp.ceid(21)),
  (pg_temp.ceid(42),pg_temp.ceid(11),'Child C',pg_temp.ceid(22)),
- (pg_temp.ceid(43),pg_temp.ceid(10),'Adult D',pg_temp.ceid(23));
+ (pg_temp.ceid(43),pg_temp.ceid(10),'Adult D',pg_temp.ceid(23)),
+ -- TRAK-164 parity fixture: an unlinked roster name on coach B's squad.
+ (pg_temp.ceid(44),pg_temp.ceid(11),'Ali Al Mansouri',NULL);
 UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.ceid(43);
 -- 600 A published, 601 A draft, 602 B published, 603 Y published.
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published,notes) VALUES
@@ -126,6 +128,11 @@ SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Pitch closed')='Pitch closed','5 a
 SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Child C is away, so we cancel')='(none)','5 a reason naming a squad child is left out',pg_temp.ce_reason_for('Child C is away, so we cancel'));
 SELECT pg_temp.cecheck(pg_temp.ce_reason_for('New pitch: maps.app.goo.gl/abc')='(none)','5 a reason holding a bare link is left out',pg_temp.ce_reason_for('New pitch: maps.app.goo.gl/abc'));
 SELECT pg_temp.cecheck(pg_temp.ce_reason_for('See https://example.com/x')='(none)','5 a reason holding a full link is left out',pg_temp.ce_reason_for('See https://example.com/x'));
+-- Pinned the other way (Tarek's #285 parity cases): the rule must not over-hide.
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Ali is away')='(none)','5 a squad first name on its own is left out',pg_temp.ce_reason_for('Ali is away'));
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Alison is coaching')='Alison is coaching','5 a longer word containing a name is kept (whole words only)',pg_temp.ce_reason_for('Alison is coaching'));
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Al Ain trip cancelled')='Al Ain trip cancelled','5 a name particle (Al) is not a name',pg_temp.ce_reason_for('Al Ain trip cancelled'));
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Sibling squad training clash')='Sibling squad training clash','5 a name from another coach''s squad is kept',pg_temp.ce_reason_for('Sibling squad training clash'));
 SELECT pg_temp.cecheck(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.proname='child_events' AND p.pronamespace='public'::regnamespace
   AND (pg_get_function_result(p.oid) ILIKE '%notes%' OR pg_get_function_result(p.oid) ILIKE '%SETOF%')),
   '3 the function returns named columns, never the coach''s notes');
@@ -134,7 +141,7 @@ SELECT pg_temp.cecheck(NOT has_function_privilege('anon','public.child_events(uu
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.ce_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.ce_results;
- IF n <> 19 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 19', n; END IF;
+ IF n <> 23 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 23', n; END IF;
  IF failures IS NOT NULL THEN RAISE EXCEPTION USING MESSAGE='Child events failed',DETAIL=failures; END IF;
  RAISE NOTICE 'Child events: % checks passed',n;
 END $$;
