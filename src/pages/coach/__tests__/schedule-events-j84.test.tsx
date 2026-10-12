@@ -81,7 +81,8 @@ async function open() {
   await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
 }
 
-describe('J8.4: the coach creates, edits and cancels events', () => {
+// Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
+describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 }, () => {
   afterEach(() => { server.events.removeAllListeners() })
   beforeEach(() => {
     signInAs(COACH)

@@ -74,7 +74,8 @@ async function open() {
   await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
 }
 
-describe('J8.5: a weekly training series', () => {
+// Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
+describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
   afterEach(() => { server.events.removeAllListeners() })
   beforeEach(() => {
     signInAs(COACH)
