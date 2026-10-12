@@ -108,6 +108,24 @@ SELECT pg_temp.cecheck(pg_temp.ceseen(22)='602','3 the other child''s events sta
 SELECT pg_temp.cecheck((SELECT updated_at IS NOT NULL FROM public.child_events(pg_temp.ceid(22)) WHERE id = pg_temp.ceid(602)),
   '4 it returns when each event last changed (updated_at), for the parent bell');
 RESET ROLE;
+-- TRAK-164 (J8.11): a cancel reason reaches families only when it names no
+-- child on that coach's squad and holds no link, the rule email, feed and
+-- WhatsApp already apply. Coach B's squad row is "Child C".
+CREATE FUNCTION pg_temp.ce_reason_for(reason text) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE r text;
+BEGIN
+ RESET ROLE;
+ UPDATE public.coach_calendar_events SET status='cancelled', cancel_reason=reason WHERE id=pg_temp.ceid(602);
+ SET LOCAL ROLE authenticated;
+ PERFORM pg_temp.ceactor(30);
+ SELECT e.cancel_reason INTO r FROM public.child_events(pg_temp.ceid(22)) e WHERE e.id=pg_temp.ceid(602);
+ RESET ROLE;
+ RETURN coalesce(r,'(none)');
+END $$;
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Pitch closed')='Pitch closed','5 a reason naming no child reaches the family as typed',pg_temp.ce_reason_for('Pitch closed'));
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Child C is away, so we cancel')='(none)','5 a reason naming a squad child is left out',pg_temp.ce_reason_for('Child C is away, so we cancel'));
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('New pitch: maps.app.goo.gl/abc')='(none)','5 a reason holding a bare link is left out',pg_temp.ce_reason_for('New pitch: maps.app.goo.gl/abc'));
+SELECT pg_temp.cecheck(pg_temp.ce_reason_for('See https://example.com/x')='(none)','5 a reason holding a full link is left out',pg_temp.ce_reason_for('See https://example.com/x'));
 SELECT pg_temp.cecheck(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.proname='child_events' AND p.pronamespace='public'::regnamespace
   AND (pg_get_function_result(p.oid) ILIKE '%notes%' OR pg_get_function_result(p.oid) ILIKE '%SETOF%')),
   '3 the function returns named columns, never the coach''s notes');
@@ -116,7 +134,7 @@ SELECT pg_temp.cecheck(NOT has_function_privilege('anon','public.child_events(uu
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.ce_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.ce_results;
- IF n <> 15 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 15', n; END IF;
+ IF n <> 19 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 19', n; END IF;
  IF failures IS NOT NULL THEN RAISE EXCEPTION USING MESSAGE='Child events failed',DETAIL=failures; END IF;
  RAISE NOTICE 'Child events: % checks passed',n;
 END $$;

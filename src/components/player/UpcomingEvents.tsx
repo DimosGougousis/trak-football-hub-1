@@ -17,8 +17,8 @@ export function UpcomingEvents({ playerUserId }: { playerUserId: string }) {
   useEffect(() => {
     let cancelled = false
     setFailed(false)
-    supabase.from('coach_calendar_events').select('*')
-      .eq('published', true)
+    // Through child_events (TRAK-164), the family read path with the reason rule.
+    supabase.rpc('child_events', { p_child: playerUserId })
       .or(upcomingEventsFilter())
       .order('event_date', { ascending: true, nullsFirst: false })
       .order('starts_at', { ascending: true })

@@ -4,7 +4,7 @@ import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
 import { signInAs } from '../../support/session'
 import { server } from '../../msw/server'
-import { rpc, table, tableError } from '../../msw/supabase'
+import { rpc, table, tableError, rpcRows } from '../../msw/supabase'
 import { http, HttpResponse } from 'msw'
 import { SUPABASE_URL } from '../../msw/supabase'
 
@@ -13,7 +13,7 @@ const ATHLETE = { id: 'athlete-1' }
 function signedInAthlete() {
   signInAs(ATHLETE)
   server.use(
-    table('coach_calendar_events', []), // TRAK-130: the Sessions tab also reads upcoming events
+    rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [
       { id: 'p-athlete', user_id: ATHLETE.id, role: 'player', full_name: 'Nikos Papadopoulos', nationality: 'GR' },
     ]),
