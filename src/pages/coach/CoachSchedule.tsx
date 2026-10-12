@@ -14,7 +14,7 @@ import {
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
-import { fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
+import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 
@@ -457,13 +457,14 @@ export default function CoachSchedule() {
             Calendar
           </h1>
           <div className="flex items-center gap-2">
-            <button
+            {/* TRAK-162: the CSV import is parked; no coach is offered it. */}
+            {FIXTURE_IMPORT_ENABLED && <button
               onClick={() => (parked ? comingSoon() : setSheet({ kind: 'import' }))}
               className="flex items-center justify-center w-8 h-8 rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)' }}
               aria-label="Import fixtures">
               <FileUp size={15} color="rgba(255,255,255,0.75)" />
-            </button>
+            </button>}
             <button
               onClick={() => openNew(selected)}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-[#C8F25A]"
