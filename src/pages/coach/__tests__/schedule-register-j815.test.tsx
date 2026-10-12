@@ -123,6 +123,24 @@ describe('J8.15: the coach takes the register from the schedule', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Take register' })).toBeNull())
   }, 20_000)
 
+  it("a child whose consent couldn't be checked is never offered or pre-ticked", async () => {
+    // The PR's own rule (Coach OS ticked a player who had declined): a failed
+    // check counts as not confirmed, so that child can't be marked present.
+    fixtures()
+    server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, async ({ request }) => {
+      const { p_squad_player_id } = await request.json() as { p_squad_player_id: string }
+      if (p_squad_player_id === 'sp-3') return HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })
+      return HttpResponse.json(p_squad_player_id === 'sp-6')
+    }))
+    const user = userEvent.setup()
+    const sheet = await openRegister(user)
+    expect(await within(sheet).findByText(/Cal Moss/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cal Moss:/ })).toBeNull()
+    await user.click(within(sheet).getByRole('button', { name: 'Save register' }))
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0].p_present).not.toContain('sp-3')
+  }, 20_000)
+
   it('a register already taken reopens as it was saved, not from the absences, and the session isn\'t listed twice', async () => {
     fixtures()
     sessions = [{ id: 'session-1', title: 'Finishing', session_type: 'training', session_date: DAY, event_id: 'past-1' }]
