@@ -130,6 +130,28 @@ describe('player bell', () => {
     expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).getByText('Changed: Technical')).toBeInTheDocument()
   })
 
+  // TRAK-163 (Tarek's review): Dismiss removes an alert until the coach changes the event.
+  it('a dismissed alert stays gone, and comes back when the event changes', async () => {
+    const { rerender } = render(<MemoryRouter><PlayerAlertsBell userId="hugo" events={events} /></MemoryRouter>)
+    await userEvent.click(await screen.findByRole('button', { name: /^Alerts/ }))
+    let panel = await screen.findByRole('dialog', { name: 'Alerts' })
+    await userEvent.click(within(panel).getByRole('button', { name: /New: Fitness/ }))
+    await userEvent.click(await within(panel).findByRole('button', { name: 'Dismiss' }))
+    // jsdom doesn't finish Arc's exit animation, so check after closing and reopening.
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('button', { name: 'Alerts, 1 unread' })).toBeInTheDocument()
+
+    rerender(<MemoryRouter><PlayerAlertsBell userId="hugo" events={[...events]} /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
+    panel = await screen.findByRole('dialog', { name: 'Alerts' })
+    expect(within(panel).queryByText(/Fitness/)).toBeNull()
+    await userEvent.keyboard('{Escape}')
+
+    rerender(<MemoryRouter><PlayerAlertsBell userId="hugo" events={[events[0], { ...events[1], sequence: 2, updatedAt: '2026-10-12T08:00:00Z' }]} /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
+    expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).getByText('Changed: Fitness')).toBeInTheDocument()
+  })
+
   it('opens the event', async () => {
     at(<PlayerAlertsBell userId="hugo" events={events} />)
     await userEvent.click(await screen.findByRole('button', { name: /^Alerts/ }))

@@ -338,6 +338,20 @@ describe('J8.11 events in the parent alerts bell', () => {
     expect(await screen.findByText('Event page event-Alex')).toBeInTheDocument()
   })
 
+  // TRAK-163 (Tarek's review): read state is per child (TRAK-74). Siblings on one
+  // squad share an event; marking it read for one child leaves it unread for the other.
+  it('marking all read for one child leaves the same event unread for the sibling', async () => {
+    eventsFor = { Alex: [eventRow('Alex', { id: 'event-shared' })], Zara: [eventRow('Zara', { id: 'event-shared' })] }
+    renderFamily()
+    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    await userEvent.click(within(await openAlerts()).getByRole('button', { name: 'Mark all read' }))
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
+    await followChild('Zara')
+    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    expect(within(await openAlerts()).getByText('New: Training')).toBeInTheDocument()
+  })
+
   it("shows only the selected child's events", async () => {
     eventsFor = { Alex: [eventRow('Alex', { title: 'Finishing' })], Zara: [eventRow('Zara', { title: 'Fitness' })] }
     renderFamily()
