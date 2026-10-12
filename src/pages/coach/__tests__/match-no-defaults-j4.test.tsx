@@ -28,6 +28,8 @@ function setup(player: Record<string, unknown> = PLAYER) {
     insertInto('session_attendance', body => ({ id: 'att-1', ...body })),
     // The child's consent is confirmed, so the screen offers them (G1).
     rpc('coach_squad_player_consent_required', () => false),
+    // TRAK-153: the screen asks whether this match is already saved with another score.
+    rpc('coach_match_score_clash', () => []),
     http.post(`${SUPABASE_URL}/rest/v1/rpc/log_match_for_player`, async ({ request }) => {
       calls.push(await request.json() as Record<string, unknown>)
       return HttpResponse.json(null)
