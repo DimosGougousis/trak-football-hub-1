@@ -142,6 +142,24 @@ export function markEventOpened(userId: string, event: PlayerEvent) {
   writeSeen(userId, seen)
 }
 
+// The bell's own baseline (parent and player): each event's sequence when the
+// bell first listed it, so a later edit reads "Changed" and opening the event
+// page never flips the title back to "New". Without storage every event reads "New".
+export function readFirstSeen(key: string): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, number>) : {}
+  } catch { return {} }
+}
+
+export function noteFirstSeen(key: string, events: PlayerEvent[]) {
+  const seen = readFirstSeen(key)
+  const fresh = events.filter(event => seen[event.id] === undefined)
+  if (!fresh.length) return
+  for (const event of fresh) seen[event.id] = event.sequence
+  try { localStorage.setItem(key, JSON.stringify(seen)) } catch { /* storage unavailable */ }
+}
+
 export function isChanged(event: PlayerEvent, seen: Record<string, number>): boolean {
   if (event.status === 'cancelled') return false
   const baseline = seen[event.id]

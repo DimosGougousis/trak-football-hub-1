@@ -403,6 +403,7 @@ export type Database = {
       coach_sessions: {
         Row: {
           coach_user_id: string
+          event_id: string | null
           competition: string | null
           created_at: string | null
           id: string
@@ -415,6 +416,7 @@ export type Database = {
         }
         Insert: {
           coach_user_id: string
+          event_id?: string | null
           competition?: string | null
           created_at?: string | null
           id?: string
@@ -427,6 +429,7 @@ export type Database = {
         }
         Update: {
           coach_user_id?: string
+          event_id?: string | null
           competition?: string | null
           created_at?: string | null
           id?: string
@@ -831,6 +834,20 @@ export type Database = {
           updated_at: string
         }[]
       }
+      coach_match_score_clash: {
+        Args: {
+          p_goals?: number
+          p_match_date: string
+          p_opponent: string
+          p_team_score: number
+          p_opponent_score: number
+        }
+        Returns: {
+          saved_goals: number
+          team_score: number
+          opponent_score: number
+        }[]
+      }
       create_parent_invite: {
         Args: { p_email: string }
         Returns: {
@@ -937,6 +954,10 @@ export type Database = {
           p_venue: string
         }
         Returns: undefined
+      }
+      take_event_register: {
+        Args: { p_event_id: string; p_present: string[] }
+        Returns: string
       }
     }
     Enums: {

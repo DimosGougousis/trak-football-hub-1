@@ -319,7 +319,9 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   await page.goto('/parent/home');
   await expect(page.getByRole('heading', { name: alex.name, exact: true })).toBeVisible();
   await expect(page.getByText(alex.opponent, { exact: true })).toBeVisible();
-  await expect(page.getByRole('option')).toHaveCount(1);
+  // TRAK-163: one child is a plain name in Home's header; siblings make it a menu.
+  const following = page.getByRole('group', { name: 'Following' });
+  await expect(following).toHaveCount(0);
   expect(observed.linkedIds()).toEqual([alexId]);
 
   const membershipReadsBeforeInvite = observed.memberships.length;
@@ -344,10 +346,11 @@ test('existing parent accepts a second child, recovers a failed family refresh a
 
   observed.restoreMembership();
   await failure.getByRole('button', { name: 'Retry', exact: true }).click();
-  await expect(page.getByRole('option')).toHaveCount(2);
+  await expect(following.getByRole('button', { name: alex.name, exact: true })).toBeVisible();
   await expect(page.getByText(alex.opponent, { exact: true })).toBeVisible();
-  await page.getByRole('combobox').selectOption(zaraId);
-  await expect(page.getByRole('heading', { name: zara.name, exact: true })).toBeVisible();
+  await following.getByRole('button').click();
+  await page.getByRole('menuitem', { name: zara.name, exact: true }).click();
+  await expect(following.getByRole('button', { name: zara.name, exact: true })).toBeVisible();
   await expect(page.getByText(zara.opponent, { exact: true })).toBeVisible();
   await expect(page.getByText(alex.opponent, { exact: true })).toHaveCount(0);
 
@@ -371,7 +374,7 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   await alertsSheet.evaluate(el => Promise.all(el.getAnimations().map(a => a.finished)));
   await page.keyboard.press('Escape');
   await expect(alertsSheet).toHaveCount(0);
-  await expect(page.getByRole('combobox')).toHaveValue(zaraId);
+  await expect(following.getByRole('button', { name: zara.name, exact: true })).toBeVisible();
   await expect(page.getByText(zara.opponent, { exact: true })).toBeVisible();
   await expect(page.getByText(alex.opponent, { exact: true })).toHaveCount(0);
 
