@@ -195,6 +195,40 @@ SELECT pg_temp.assert_true(pg_temp.outcome($$
   UPDATE public.roster_children SET date_of_birth = '2020-01-01' WHERE child_email = 'thirteen@roster.test'
 $$) = '23514', 'TRAK-165 a date of birth cannot be changed to under 13 either');
 
+-- TRAK-165, per academy (Imad, 12 Oct): 13 is the default; the operator can
+-- lower it for an academy whose law allows (e.g. Athens), and only the operator.
+SELECT pg_temp.assert_true(
+  (SELECT min_player_age = 13 FROM public.organizations WHERE id = 'a9100000-0000-0000-0000-000000000001'),
+  'TRAK-165 an academy''s minimum age is 13 by default');
+SELECT pg_temp.assert_true(pg_temp.outcome($$
+  UPDATE public.organizations SET min_player_age = 10 WHERE id = 'a9100000-0000-0000-0000-000000000002'
+$$) = 'allowed', 'TRAK-165 the operator can set another academy''s minimum age');
+SELECT pg_temp.assert_true(pg_temp.outcome(format($$
+  SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000006',
+    'Eleven In B', 'U12', %L, 'eleven-b@roster.test', ARRAY['g-eleven-b@roster.test'], 'kostas')
+$$, ((now() AT TIME ZONE 'Asia/Dubai')::date - interval '11 years')::date)) = 'allowed',
+  'TRAK-165 an 11-year-old is admitted where the academy''s minimum is 10');
+SELECT pg_temp.assert_true(pg_temp.outcome(format($$
+  SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000001', 'a9000000-0000-0000-0000-000000000003',
+    'Eleven In A', 'U12', %L, 'eleven-a@roster.test', ARRAY['g-eleven-a@roster.test'], 'kostas')
+$$, ((now() AT TIME ZONE 'Asia/Dubai')::date - interval '11 years')::date)) = '23514',
+  'TRAK-165 the same 11-year-old is refused where the minimum is 13');
+RESET ROLE;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', '{"sub":"a9000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+SELECT pg_temp.assert_true(pg_temp.outcome($$
+  UPDATE public.organizations SET min_player_age = 0 WHERE id = 'a9100000-0000-0000-0000-000000000001'
+$$) = '42501', 'TRAK-165 an academy admin cannot lower their academy''s minimum age');
+SELECT pg_temp.assert_true(pg_temp.outcome($$
+  INSERT INTO public.organizations (id, admin_user_id, name, join_code, min_player_age)
+  VALUES ('a9100000-0000-0000-0000-000000000009', 'a9000000-0000-0000-0000-000000000001', 'Admin Made', 'ROSTER-Z', 5)
+$$) IN ('allowed', '42501'), 'TRAK-165 an academy admin''s insert runs or is refused, never errors otherwise');
+RESET ROLE;
+SELECT pg_temp.assert_true(
+  NOT EXISTS (SELECT 1 FROM public.organizations WHERE id = 'a9100000-0000-0000-0000-000000000009' AND min_player_age <> 13),
+  'TRAK-165 an academy an admin creates gets the default minimum age, whatever they send');
+SET LOCAL ROLE service_role;
+
 CREATE TEMP TABLE squad_count_before AS SELECT count(*) AS n FROM public.squad_players;
 SELECT pg_temp.assert_true(pg_temp.outcome($$
   SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000003',

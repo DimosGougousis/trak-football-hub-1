@@ -130,7 +130,7 @@
   <div class="body">
     <h3>Load the academy-supplied roster</h3>
     <p>Use the operator loader dry run, review it, then apply only the agreed synthetic rows. Verify the coach sees each child’s correct waiting/approved state. Repeat the load and check that it does not create duplicates.</p>
-    <p class="look"><b>Record:</b> Exact roster IDs, expected membership, repeat result and any partial-load failure. A coach cannot add a child or link one by a TRK code. A row for a child under 13 by date of birth is refused by the loader's dry run and by the database (TRAK-165); check one on the synthetic roster.</p>
+    <p class="look"><b>Record:</b> Exact roster IDs, expected membership, repeat result and any partial-load failure. A coach cannot add a child or link one by a TRK code. A row for a child younger than the academy's minimum age (13 for UAE academies) by date of birth is refused by the loader's dry run and by the database (TRAK-165); check one on the synthetic roster, and that an academy admin can't lower the minimum.</p>
   </div>
 </div>
 

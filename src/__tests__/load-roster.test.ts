@@ -31,8 +31,17 @@ describe('load-roster validation', () => {
       'Day Short,2013-09-25,U13,short@roster.test,g@roster.test,c@roster.test',
       'Birthday Today,2013-09-24,U14,today@roster.test,g@roster.test,c@roster.test',
     ), TODAY)
-    expect(errors).toEqual(['Line 2: the child is under 13 (Trak serves children aged 13 and over)'])
+    expect(errors).toEqual(['Line 2: the child is under 13 (this academy serves children aged 13 and over)'])
     expect(rows.map(r => r.child_name)).toEqual(['Birthday Today'])
+  })
+
+  it('uses the academy\'s own minimum age when the operator set it lower (e.g. Athens)', () => {
+    const { rows, errors } = validateRoster(file(
+      'Eleven,2015-09-24,U12,eleven@roster.test,g@roster.test,c@roster.test',
+      'Nine,2017-09-25,U10,nine@roster.test,g@roster.test,c@roster.test',
+    ), { ...TODAY, minAge: 10 })
+    expect(errors).toEqual(['Line 3: the child is under 10 (this academy serves children aged 10 and over)'])
+    expect(rows.map(r => r.child_name)).toEqual(['Eleven'])
   })
 
   it('refuses a missing column', () => {
