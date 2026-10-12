@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import type { Session, User } from '@supabase/supabase-js'
 import { server } from '../../../../tests/msw/server'
+import { followChild, followedChild } from '@/test/follow-child'
 import { supabase } from '@/integrations/supabase/client'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
@@ -96,6 +97,8 @@ beforeEach(async () => {
       return HttpResponse.json(body ? [{ body }] : [])
     }),
     http.post(table('rpc/get_roster_children_awaiting_consent'), () => HttpResponse.json([])),
+    // TRAK-163: Home's week strip reads this week's events.
+    http.post(table('rpc/child_events'), () => HttpResponse.json([])),
     http.post(table('rpc/get_children_awaiting_consent'), () => HttpResponse.json([])),
   )
 })
@@ -180,7 +183,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     expect(screen.getByRole('region', { name: 'Latest coach assessment' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Message from the coach' })).not.toBeInTheDocument()
     expect(screen.queryByText(/keep working on your first touch/)).not.toBeInTheDocument()
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: zara } })
+    await followChild('Zara')
     await screen.findByText('Zara opposition')
     expect(screen.queryByText(/great pressing this week/)).not.toBeInTheDocument()
     expect(messageFilters).toEqual([])
@@ -197,13 +200,13 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     }))
     mount()
     await waitFor(() => expect(started).toBe(true))
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: zara } })
+    await followChild('Zara')
     await screen.findByText('Zara opposition')
     expect(screen.getByText('Synthetic Zara Coach')).toBeInTheDocument()
     await act(async () => { release(); await delayed; await new Promise(resolve => setTimeout(resolve, 20)) })
     expect(screen.queryByText('Late Alex Coach')).not.toBeInTheDocument()
     expect(screen.queryByText('Alex opposition')).not.toBeInTheDocument()
-    expect(screen.getByRole('combobox')).toHaveValue(zara)
+    expect(followedChild()).toHaveTextContent('Zara')
     expectPreserved(zara)
   })
 })

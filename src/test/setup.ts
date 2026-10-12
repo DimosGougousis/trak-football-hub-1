@@ -18,3 +18,11 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => {},
   }),
 });
+
+// TRAK-163: Arc components measure themselves with ResizeObserver, which every
+// browser Trak supports has and jsdom lacks. Nothing in jsdom ever resizes.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};

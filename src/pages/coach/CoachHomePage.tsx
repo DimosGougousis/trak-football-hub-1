@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, BandPill, LoadError} from '@/components/trak'
 import { Zap } from 'lucide-react'
+import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
+import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { calculateSquadAnalytics, missedLastSession, playerOverview, type SquadAnalytics } from '@/lib/squad-analytics'
@@ -224,15 +226,9 @@ export default function CoachHomePage() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4">
-        {/* TRAK header row */}
-        <div className="flex items-center justify-between mb-1">
-          <span
-            className="text-[11px] font-medium tracking-[0.14em] uppercase"
-            style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.2)' }}
-          >
-            TRAK
-          </span>
-        </div>
+        {/* TRAK-163: the calendar is top left (it replaces the "Smart Calendar" button), then the next seven days. */}
+        <HomeHeader calendarTo="/coach/schedule" center={<HomeTitle>{profile?.full_name || 'Coach'}</HomeTitle>} />
+        {user && <CoachWeekStrip coachId={user.id} />}
 
         {/* A failed load must not be reported as a season with nothing in it.
             Shown above the stats rather than replacing them, so anything that
@@ -247,17 +243,6 @@ export default function CoachHomePage() {
         {/* Identity section */}
         <div className="py-2.5 pb-4">
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>{greeting}</p>
-          <p
-            className="text-[28px] leading-tight"
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 300,
-              letterSpacing: '-0.03em',
-              color: 'rgba(255,255,255,0.88)',
-            }}
-          >
-            {profile?.full_name || 'Coach'}
-          </p>
           <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
             <span
               className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase"
@@ -523,19 +508,11 @@ export default function CoachHomePage() {
           </button>
         )}
 
-        {/* AI Tools */}
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <button
-            onClick={() => navigate('/coach/schedule')}
-            className="rounded-[14px] border p-3.5 text-left active:scale-[0.98] transition-transform"
-            style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
-          >
-            <p className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.88)' }}>Smart Calendar</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Paste a schedule, parse to events</p>
-          </button>
+        {/* AI Tools. TRAK-163: "Smart Calendar" removed; the calendar is the header's top-left button. */}
+        <div className="mt-3">
           <button
             onClick={() => navigate('/coach/assistant')}
-            className="rounded-[14px] border p-3.5 text-left active:scale-[0.98] transition-transform"
+            className="w-full rounded-[14px] border p-3.5 text-left active:scale-[0.98] transition-transform"
             style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
           >
             <p className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.88)' }}>Coach Assistant</p>
