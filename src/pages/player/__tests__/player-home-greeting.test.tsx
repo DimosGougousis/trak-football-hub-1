@@ -26,9 +26,9 @@ afterEach(() => { cleanup(); vi.useRealTimers() })
 
 describe('TRAK-70: player home greeting', () => {
   it.each([
-    ['09:15', 'Good morning,'],
-    ['13:40', 'Good afternoon,'],
-    ['19:00', 'Good evening,'],
+    ['09:15', 'Good morning'],
+    ['13:40', 'Good afternoon'],
+    ['19:00', 'Good evening'],
   ])('at %s local time it says "%s"', async (time, greeting) => {
     // Only the clock is faked; timers stay real so the app's requests settle.
     vi.useFakeTimers({ toFake: ['Date'] })

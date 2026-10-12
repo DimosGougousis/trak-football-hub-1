@@ -2,6 +2,8 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
+// TRAK-163: Arc component tokens, scoped to .arc (see the file for why).
+import "./components/arc/arc-theme.css";
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
