@@ -14,7 +14,7 @@ export declare const COLUMNS: readonly string[]
 export declare function parseCsv(text: string): string[][]
 export declare function validateRoster(
   text: string,
-  options?: { today?: string },
+  options?: { today?: string; minAge?: number },
 ): { rows: RosterRow[]; errors: string[] }
 export declare function planLoad(
   rows: RosterRow[],
