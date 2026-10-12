@@ -80,6 +80,14 @@ SELECT pg_temp.account_check(NOT EXISTS (SELECT 1 FROM public.player_parent_link
 SELECT pg_temp.account_check((SELECT count(*) = 3 FROM public.coach_assessments WHERE id IN (pg_temp.account_id(302),pg_temp.account_id(303),pg_temp.account_id(304))), 'other children assessments survive player deletion');
 SELECT pg_temp.account_check(EXISTS (SELECT 1 FROM public.coach_sessions WHERE id = pg_temp.account_id(501)), 'player deletion preserves the coach session');
 
+-- TRAK-155: each guardian holds an active coaching approval. Parent 10 approved
+-- child 8; parent 11 approved child 9. Deleting parent 10 must withdraw only
+-- parent 10's approval, keeping the row as evidence.
+INSERT INTO public.parental_consents (id, player_user_id, parent_user_id, relationship_declared, verification_method, purposes, notice_version, consent_text, threshold_age, player_age_at_consent) VALUES
+  (pg_temp.account_id(1201), pg_temp.account_id(8), pg_temp.account_id(10), 'parent', 'email_confirmed', '{"coaching_records": true}', 'synthetic', 'synthetic', 18, 12),
+  (pg_temp.account_id(1202), pg_temp.account_id(9), pg_temp.account_id(11), 'parent', 'email_confirmed', '{"coaching_records": true}', 'synthetic', 'synthetic', 18, 12);
+SELECT pg_temp.account_check(public.player_has_parental_consent(pg_temp.account_id(8)) AND public.player_has_parental_consent(pg_temp.account_id(9)), 'control: both children have an active approval before parent deletion');
+
 -- Parent deletion removes guardian access while preserving children/records.
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.account_id(10), 'role', 'authenticated')::text, true);
@@ -91,6 +99,10 @@ SELECT pg_temp.account_check((SELECT count(*) = 2 FROM public.parent_invites WHE
 SELECT pg_temp.account_check((SELECT count(*) = 2 FROM public.player_details WHERE user_id IN (pg_temp.account_id(8),pg_temp.account_id(9))), 'parent deletion preserves child details');
 SELECT pg_temp.account_check((SELECT count(*) = 2 FROM public.matches WHERE user_id IN (pg_temp.account_id(8),pg_temp.account_id(9))), 'parent deletion preserves child matches');
 SELECT pg_temp.account_check((SELECT count(*) = 3 FROM public.coach_assessments WHERE id IN (pg_temp.account_id(302),pg_temp.account_id(303),pg_temp.account_id(304))), 'parent deletion preserves development history');
+SELECT pg_temp.account_check((SELECT withdrawn_at IS NOT NULL FROM public.parental_consents WHERE id = pg_temp.account_id(1201)), 'TRAK-155: deleting a guardian account withdraws that guardian''s approval');
+SELECT pg_temp.account_check(NOT public.player_has_parental_consent(pg_temp.account_id(8)), 'TRAK-155: with no other approval, the child has no active consent after the guardian deletes');
+SELECT pg_temp.account_check((SELECT withdrawn_at IS NULL FROM public.parental_consents WHERE id = pg_temp.account_id(1202)), 'TRAK-155: another guardian''s approval for another child is untouched');
+SELECT pg_temp.account_check(EXISTS (SELECT 1 FROM public.parental_consents WHERE id = pg_temp.account_id(1201)), 'TRAK-155: the withdrawn approval is kept as evidence');
 -- A replacement account with the same verified email has no old authority.
 SELECT set_config('request.jwt.claims', '{}', true);
 INSERT INTO auth.users (id,email,email_confirmed_at) VALUES (pg_temp.account_id(12),'account-deletion-10@test.invalid',now());

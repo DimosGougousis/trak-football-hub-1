@@ -128,8 +128,12 @@ function AccountSettings({ userId }: { userId: string }) {
   }
 
   const deleteAccount = async () => {
+    // TRAK-155: deleting a guardian account withdraws the approvals they gave.
+    const approvals = role === 'parent'
+      ? ' It also withdraws the approvals you gave for your children.'
+      : ''
     if (operation.current || !window.confirm(
-      'Delete your account? Your sign-in and profile will be removed. Some academy history and consent records may be retained. This cannot be undone.'
+      `Delete your account? Your sign-in and profile will be removed.${approvals} Some academy history and consent records may be retained. This cannot be undone.`
     ) || !begin('delete')) return
     try {
       const { client } = await getSettingsAccount(userId, isCurrent)
