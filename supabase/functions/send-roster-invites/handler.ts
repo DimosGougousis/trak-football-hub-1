@@ -4,6 +4,8 @@
 // invited once they have consented. Who may be emailed is decided in SQL by
 // roster_invite_targets(); this file authenticates, delivers, records and
 // reports. Responses and logs carry no email addresses.
+import { isUnmailableAddress } from '../_shared/unmailable.ts';
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -135,6 +137,13 @@ export async function handleRosterInviteRequest(req: Request, deps: RosterInvite
     for (const target of targets) {
       const role = target.kind === 'child' ? 'player' : 'parent';
       const redirectTo = `${site}/onboarding/${role}`;
+      // TRAK-94: a reserved test address or a placeholder is never emailed or
+      // marked invited, whoever calls; it counts as failed, so the operator
+      // hears the invitation didn't go. The loader refuses it first (TRAK-93).
+      if (isUnmailableAddress(target.email)) {
+        results.push({ kind: target.kind, sent: false, reason: 'unmailable_address' });
+        continue;
+      }
       if (target.kind === 'guardian') {
         const pending = await deps.recentGuardianInvite(rosterChildId, target.email);
         // Unsure whether a fresh link exists: send nothing rather than risk killing it.
