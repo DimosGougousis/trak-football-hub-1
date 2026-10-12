@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc } from '../../../../tests/msw/supabase'
+import { table, rpc, rpcRows } from '../../../../tests/msw/supabase'
 
 const PLAYER = { id: 'player-sessions-tab' }
 const MATCH = { id: 'match-1', user_id: PLAYER.id, opponent: 'Synthetic United', competition: 'League',
@@ -20,7 +20,7 @@ const TRAINING = { session_id: 'session-1', session_date: '2026-10-04', focus: [
 beforeEach(() => {
   signInAs(PLAYER)
   server.use(
-    table('coach_calendar_events', []), // TRAK-130: the Sessions tab also reads upcoming events
+    rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('matches', [MATCH]),
     rpc('family_training_history', () => [TRAINING]),
