@@ -11,6 +11,19 @@ import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
+
+/* TRAK-159 (11 Oct live run): one colour per type on the coach calendar,
+   agreed as training blue, match red, other orange; Tailwind's 400 shades,
+   which read on the dark theme. Cancelled is grey, never match red. */
+export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
+  training:   '#60a5fa',
+  match:      '#f87171',
+  other:      '#fb923c',
+  tournament: '#c084fc',
+}
+export const CANCELLED_COLOR = '#a1a1aa'
+/** "No time set" on a card: a warning, unlike every type colour. */
+export const NO_TIME_COLOR = '#facc15'
 export const DURATIONS = [60, 75, 90, 120] as const
 
 export type EventForm = {
@@ -18,8 +31,6 @@ export type EventForm = {
   title: string
   date: string       // YYYY-MM-DD
   time: string       // HH:MM kickoff or start, '' while unknown
-  /** TRAK-157: the coach chose "Time not set yet"; without it a time is required. */
-  timeLater: boolean
   duration: number   // minutes
   venue: string
   meetTime: string   // HH:MM, '' when it's the same as the start
@@ -49,7 +60,7 @@ export type EventRow = {
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', timeLater: false, duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -64,8 +75,6 @@ export function formProblem(form: EventForm): string | null {
   if (form.kind === 'other' && !form.title.trim()) return 'Say what the event is'
   if (form.meetTime && !form.time) return 'Add the start time before the meet time'
   if (form.meetTime && form.time && minutes(form.meetTime) > minutes(form.time)) return 'Meet time must be before the start'
-  // TRAK-157: no time is a choice the coach makes, never what a half-entered field leaves.
-  if (!form.time && !form.timeLater) return 'Pick a start time, or choose “Time not set yet”'
   return null
 }
 
@@ -120,7 +129,6 @@ export function rowToForm(row: EventRow): EventForm {
     title: row.title === autoTitle ? '' : row.title,
     date,
     time: time ?? '',
-    timeLater: !time,
     duration: duration > 0 ? duration : 90,
     venue: row.venue ?? '',
     meetTime: row.meet_time ? row.meet_time.slice(0, 5) : '',

@@ -9,13 +9,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
 import {
-  DURATIONS, EVENT_KINDS, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
+  CANCELLED_COLOR, DURATIONS, EVENT_COLOR, EVENT_KINDS, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
-import { TimeReel } from '@/components/coach/TimeReel'
-import { fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
+import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 
@@ -46,12 +45,7 @@ type CalEvent = {
 
 // ── Colours ──────────────────────────────────────────────────────────────────
 
-const TYPE_COLOR: Record<ShownType, string> = {
-  match:      '#4ade80',
-  training:   '#C8F25A',
-  tournament: '#c084fc',
-  other:      'rgba(255,255,255,0.45)',
-}
+const TYPE_COLOR: Record<ShownType, string> = EVENT_COLOR
 
 const TYPE_LABEL: Record<ShownType, string> = {
   match: 'Match', training: 'Training', tournament: 'Tournament', other: 'Other',
@@ -137,13 +131,6 @@ type Sheet =
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
   | { kind: 'import' }
-
-/** "Meet earlier" starts half an hour before the start; the coach rolls it from there. */
-function halfHourBefore(time: string) {
-  const [h, m] = time.split(':').map(Number)
-  const t = Math.max(0, h * 60 + m - 30)
-  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
-}
 
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
   !!row?.series_id && !!row.event_date
@@ -465,13 +452,14 @@ export default function CoachSchedule() {
             Calendar
           </h1>
           <div className="flex items-center gap-2">
-            <button
+            {/* TRAK-162: the CSV import is parked; no coach is offered it. */}
+            {FIXTURE_IMPORT_ENABLED && <button
               onClick={() => (parked ? comingSoon() : setSheet({ kind: 'import' }))}
               className="flex items-center justify-center w-8 h-8 rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)' }}
               aria-label="Import fixtures">
               <FileUp size={15} color="rgba(255,255,255,0.75)" />
-            </button>
+            </button>}
             <button
               onClick={() => openNew(selected)}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-[#C8F25A]"
@@ -605,7 +593,11 @@ export default function CoachSchedule() {
                         {ev.title}
                       </p>
                       <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgba(255,255,255,0.35)' }}>
-                        {TYPE_LABEL[ev.type]}{row?.series_id ? ' · Weekly' : ''}{ev.time ? ` · ${ev.time}` : ''}
+                        {/* TRAK-159: a scheduled event says its time, or that it has none. */}
+                        {ev.time
+                          ? <><span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>{ev.time}</span>{' · '}</>
+                          : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>No time set</span>{' · '}</>}
+                        {TYPE_LABEL[ev.type]}{row?.series_id ? ' · Weekly' : ''}
                         {row?.meet_time ? ` · meet ${row.meet_time.slice(0, 5)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
                         {ev.venue ? ` · ${ev.venue}` : ''}
@@ -621,7 +613,7 @@ export default function CoachSchedule() {
                       )}
                       {row && (
                         <span className="text-[8px] tracking-[0.06em] uppercase mt-0.5 inline-block"
-                          style={{ color: cancelled ? '#f87171' : row.published ? '#C8F25A' : 'rgba(255,255,255,0.35)', ...mono }}>
+                          style={{ color: cancelled ? CANCELLED_COLOR : row.published ? '#C8F25A' : 'rgba(255,255,255,0.35)', ...mono }}>
                           {cancelled ? 'Cancelled' : row.published ? 'Published' : 'Draft · only you see this'}
                         </span>
                       )}
@@ -635,8 +627,10 @@ export default function CoachSchedule() {
                           <Pencil size={14} color="rgba(255,255,255,0.5)" />
                         </button>
                         {!row.published && (
-                          <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}>
-                            <Send size={14} color="#C8F25A" />
+                          <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium"
+                            style={{ background: '#C8F25A', color: '#000', ...font }}>
+                            <Send size={11} color="#000" />Publish
                           </button>
                         )}
                         {canDelete(row) ? (
@@ -729,16 +723,21 @@ export default function CoachSchedule() {
                 className={inputClass} style={font} />
             </Field>
 
-            {/* TRAK-157: one wheel for the day and the time. A time is picked
-                whole, or "Time not set yet" is chosen on purpose. */}
-            <TimeReel label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'}
-              date={sheet.form.date} onDateChange={date => setForm({ date })} dateLocked={sheet.scope === 'following'}
-              time={sheet.form.time} onTimeChange={time => setForm({ time, timeLater: false })}
-              disabled={sheet.form.timeLater} emptyText={sheet.form.timeLater ? 'Time not set yet' : 'Pick a time'} />
-            <Chip on={sheet.form.timeLater}
-              onClick={() => setForm(sheet.form.timeLater ? { timeLater: false } : { timeLater: true, time: '', meetTime: '' })}>
-              Time not set yet
-            </Chip>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Field label={sheet.repeat.on ? 'First date' : 'Date'}>
+                  <input type="date" value={sheet.form.date} onChange={e => setForm({ date: e.target.value })}
+                    disabled={sheet.scope === 'following'}
+                    className={inputClass} style={{ ...font, colorScheme: 'dark', opacity: sheet.scope === 'following' ? 0.5 : 1 }} />
+                </Field>
+              </div>
+              <div className="w-[120px]">
+                <Field label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'}>
+                  <input type="time" value={sheet.form.time} onChange={e => setForm({ time: e.target.value })}
+                    className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
+                </Field>
+              </div>
+            </div>
 
             {sheet.scope === 'following' && (
               <p className="text-[11px] text-white/40" style={font}>Each week keeps its own date; everything else changes.</p>
@@ -785,17 +784,10 @@ export default function CoachSchedule() {
               </datalist>
             </Field>
 
-            {sheet.form.time && (
-              <div className="space-y-2">
-                <Chip on={!!sheet.form.meetTime}
-                  onClick={() => setForm({ meetTime: sheet.form.meetTime ? '' : halfHourBefore(sheet.form.time) })}>
-                  Meet earlier
-                </Chip>
-                {sheet.form.meetTime && (
-                  <TimeReel label="Meet time" time={sheet.form.meetTime} onTimeChange={meetTime => setForm({ meetTime })} />
-                )}
-              </div>
-            )}
+            <Field label="Meet time (if earlier)">
+              <input type="time" value={sheet.form.meetTime} onChange={e => setForm({ meetTime: e.target.value })}
+                className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
+            </Field>
 
             {sheet.form.kind === 'match' && (
               <Field label="Kit">

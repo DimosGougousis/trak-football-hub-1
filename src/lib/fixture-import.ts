@@ -11,14 +11,20 @@ import { fixtureKey, type Fixture } from './fixtures-csv'
  * one insert, so an import lands whole or not at all.
  */
 
+/**
+ * TRAK-162: parked by the founders in the J8 live run (11 Oct). The import
+ * reads only its own template's columns, and we don't yet know how UAE
+ * leagues send fixtures, so coaches aren't offered it. Everything stays built
+ * and tested; set this to true when the feature comes back.
+ */
+export const FIXTURE_IMPORT_ENABLED = false
+
 export function fixtureToForm(fixture: Fixture): EventForm {
   return {
     kind: fixture.kind,
     title: '',
     date: fixture.date,
     time: fixture.kickoff ?? '',
-    // A fixture list without a kickoff is "time not set yet" on purpose.
-    timeLater: !fixture.kickoff,
     duration: 90,
     venue: fixture.venue ?? '',
     meetTime: fixture.meetTime ?? '',

@@ -56,22 +56,6 @@ describe('coach event form', () => {
     expect(formProblem(match)).toBeNull()
   })
 
-  // TRAK-157, 11 Oct live run: a half-entered time saved as "no time" on 8
-  // published trainings. A start is now picked whole, or left out on purpose.
-  it('needs a start time, or "Time not set yet" chosen on purpose', () => {
-    const untimed = { ...blankForm('2026-10-20'), title: 'Training' }
-    expect(blankForm('2026-10-20').timeLater).toBe(false)
-    expect(formProblem(untimed)).toBe('Pick a start time, or choose “Time not set yet”')
-    expect(formProblem({ ...untimed, timeLater: true })).toBeNull()
-    expect(formProblem({ ...untimed, time: '18:00' })).toBeNull()
-  })
-
-  it('an event saved with no time opens as "Time not set yet"; a timed one doesn\'t', () => {
-    const base = { id: 'e', published: true, status: 'scheduled', ...formToRow({ ...match, meetTime: '' }) }
-    expect(rowToForm({ ...base, start_time: null, starts_at: '2026-10-19T20:00:00.000Z' }).timeLater).toBe(true)
-    expect(rowToForm(base).timeLater).toBe(false)
-  })
-
   it('deletes only a draft that was never published and is not cancelled', () => {
     expect(canDelete({ published: false, status: 'scheduled' })).toBe(true)
     expect(canDelete({ published: true, status: 'scheduled' })).toBe(false)
