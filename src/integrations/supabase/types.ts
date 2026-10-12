@@ -403,6 +403,7 @@ export type Database = {
       coach_sessions: {
         Row: {
           coach_user_id: string
+          event_id: string | null
           competition: string | null
           created_at: string | null
           id: string
@@ -415,6 +416,7 @@ export type Database = {
         }
         Insert: {
           coach_user_id: string
+          event_id?: string | null
           competition?: string | null
           created_at?: string | null
           id?: string
@@ -427,6 +429,7 @@ export type Database = {
         }
         Update: {
           coach_user_id?: string
+          event_id?: string | null
           competition?: string | null
           created_at?: string | null
           id?: string
@@ -951,6 +954,10 @@ export type Database = {
           p_venue: string
         }
         Returns: undefined
+      }
+      take_event_register: {
+        Args: { p_event_id: string; p_present: string[] }
+        Returns: string
       }
     }
     Enums: {
