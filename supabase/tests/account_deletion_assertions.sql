@@ -86,6 +86,10 @@ SELECT pg_temp.account_check(EXISTS (SELECT 1 FROM public.coach_sessions WHERE i
 INSERT INTO public.parental_consents (id, player_user_id, parent_user_id, relationship_declared, verification_method, purposes, notice_version, consent_text, threshold_age, player_age_at_consent) VALUES
   (pg_temp.account_id(1201), pg_temp.account_id(8), pg_temp.account_id(10), 'parent', 'email_confirmed', '{"coaching_records": true}', 'synthetic', 'synthetic', 18, 12),
   (pg_temp.account_id(1202), pg_temp.account_id(9), pg_temp.account_id(11), 'parent', 'email_confirmed', '{"coaching_records": true}', 'synthetic', 'synthetic', 18, 12);
+-- Evidence integrity (Tarek's #283 review): an approval parent 10 already
+-- withdrew keeps its own withdrawal date when the account is later deleted.
+INSERT INTO public.parental_consents (id, player_user_id, parent_user_id, relationship_declared, verification_method, purposes, notice_version, consent_text, threshold_age, player_age_at_consent, granted_at, withdrawn_at) VALUES
+  (pg_temp.account_id(1203), pg_temp.account_id(9), pg_temp.account_id(10), 'parent', 'email_confirmed', '{"coaching_records": true}', 'synthetic', 'synthetic', 18, 12, '2026-09-01 10:00+00', '2026-09-15 10:00+00');
 SELECT pg_temp.account_check(public.player_has_parental_consent(pg_temp.account_id(8)) AND public.player_has_parental_consent(pg_temp.account_id(9)), 'control: both children have an active approval before parent deletion');
 
 -- Parent deletion removes guardian access while preserving children/records.
@@ -103,6 +107,7 @@ SELECT pg_temp.account_check((SELECT withdrawn_at IS NOT NULL FROM public.parent
 SELECT pg_temp.account_check(NOT public.player_has_parental_consent(pg_temp.account_id(8)), 'TRAK-155: with no other approval, the child has no active consent after the guardian deletes');
 SELECT pg_temp.account_check((SELECT withdrawn_at IS NULL FROM public.parental_consents WHERE id = pg_temp.account_id(1202)), 'TRAK-155: another guardian''s approval for another child is untouched');
 SELECT pg_temp.account_check(EXISTS (SELECT 1 FROM public.parental_consents WHERE id = pg_temp.account_id(1201)), 'TRAK-155: the withdrawn approval is kept as evidence');
+SELECT pg_temp.account_check((SELECT withdrawn_at = '2026-09-15 10:00+00' FROM public.parental_consents WHERE id = pg_temp.account_id(1203)), 'TRAK-155: an approval withdrawn earlier keeps its own withdrawal date');
 -- A replacement account with the same verified email has no old authority.
 SELECT set_config('request.jwt.claims', '{}', true);
 INSERT INTO auth.users (id,email,email_confirmed_at) VALUES (pg_temp.account_id(12),'account-deletion-10@test.invalid',now());
