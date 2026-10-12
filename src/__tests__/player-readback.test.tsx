@@ -6,7 +6,7 @@ import { renderApp } from '../../tests/support/render-app'
 import { signInAs } from '../../tests/support/session'
 import { registerAuthUser } from '../../tests/msw/auth-sessions'
 import { server } from '../../tests/msw/server'
-import { table, rpc, SUPABASE_URL } from '../../tests/msw/supabase'
+import { table, rpc, SUPABASE_URL, rpcRows } from '../../tests/msw/supabase'
 import { supabase } from '@/integrations/supabase/client'
 
 // These tests count Home's own my_consent_status requests to order stale
@@ -93,7 +93,7 @@ beforeEach(() => {
     table('squad_players', [{ id: 'squad-a', coach_user_id: 'coach-a', linked_player_id: account }]),
     table('coach_assessments', [assessment]),
     table('coach_shared_feedback', [{ assessment_id: assessment.id, body: WORDS, published_at: '2026-09-20T10:00:00Z' }]),
-    table('coach_calendar_events', []), table('recognition_awards', []),
+    rpcRows('child_events', []), table('recognition_awards', []),
     table('player_parent_links', [{ player_user_id: CHILD_A }, { player_user_id: CHILD_B }]),
     rpc('get_player_invites_for_current_user', () => []),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
@@ -176,7 +176,7 @@ describe('player readback through authenticated routes', () => {
 
   it.each(['squad_players', 'coach_assessments'])(
     'clears the old coach message after refreshed %s returns no accessible rows', async name => {
-      server.use(table('coach_calendar_events', [event]))
+      server.use(rpcRows('child_events', [event]))
       renderApp('/player/home')
       await screen.findByText(WORDS, { exact: false })
       await screen.findByText('Team training')
@@ -339,7 +339,7 @@ describe('player readback through authenticated routes', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
-  it.each(['matches', 'player_details', 'squad_players', 'coach_assessments', 'profiles', 'coach_shared_feedback', 'coach_calendar_events'])(
+  it.each(['matches', 'player_details', 'squad_players', 'coach_assessments', 'profiles', 'coach_shared_feedback', 'rpc/child_events'])(
     'ignores a late superseded Home %s response', async name => {
       const pending = deferred()
       let requested = false
@@ -351,14 +351,15 @@ describe('player readback through authenticated routes', () => {
         coach_assessments: [assessment],
         profiles: [{ user_id: 'coach-a', full_name: 'Stale Coach' }],
         coach_shared_feedback: [{ assessment_id: assessment.id, body: WORDS, published_at: '2026-09-20T10:00:00Z' }],
-        coach_calendar_events: [event],
+        'rpc/child_events': [event],
       }
       server.use(
         http.get(endpoint('matches'), () => HttpResponse.json([match(fresh ? 'current' : 'recent')])),
         http.get(endpoint('player_details'), () => HttpResponse.json([{ position: 'Defender', current_club: fresh ? 'Current Academy' : 'Audit Academy', age_group: 'U15' }])),
         http.get(endpoint('squad_players'), () => HttpResponse.json(fresh ? [] : staleRows.squad_players)),
       )
-      server.use(http.get(endpoint(name), async ({ request }) => {
+      // Events come through child_events (TRAK-164), a POST.
+      server.use((name.startsWith('rpc/') ? http.post : http.get)(endpoint(name), async ({ request }) => {
         if (name === 'profiles' && new URL(request.url).searchParams.get('user_id') !== 'eq.coach-a') return
         if (fresh) return // Let the current-load handlers above answer.
         requested = true
@@ -407,7 +408,7 @@ describe('player readback through authenticated routes', () => {
   })
 
   it('keeps feedback failures visible while still loading the calendar', async () => {
-    server.use(http.get(endpoint('coach_shared_feedback'), failure), table('coach_calendar_events', [event]))
+    server.use(http.get(endpoint('coach_shared_feedback'), failure), rpcRows('child_events', [event]))
     renderApp('/player/home')
     expect(await screen.findByText(/Couldn't load your (feedback|coach's message)/)).toBeInTheDocument()
     expect(await screen.findByText('Team training')).toBeInTheDocument()
