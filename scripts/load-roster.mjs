@@ -100,7 +100,8 @@ function isRealDate(s) {
 
 // Validates the whole file. Returns the rows ready to load and every problem
 // found, each naming its CSV line (the header is line 1) and never the data.
-export function validateRoster(text, { today = new Date().toISOString().slice(0, 10) } = {}) {
+// "Today" is the Dubai date (UTC+4 all year), like the database's age checks.
+export function validateRoster(text, { today = new Date(Date.now() + 4 * 3600_000).toISOString().slice(0, 10) } = {}) {
   const table = parseCsv(text.replace(/^﻿/, ''));
   const errors = [];
   if (table.length === 0) return { rows: [], errors: ['The file is empty'] };
@@ -128,6 +129,9 @@ export function validateRoster(text, { today = new Date().toISOString().slice(0,
     if (!child_name) problems.push('child_name is empty');
     if (!isRealDate(date_of_birth)) problems.push('date_of_birth is not a real YYYY-MM-DD date');
     else if (date_of_birth > today || date_of_birth <= '1990-01-01') problems.push('date_of_birth is out of range');
+    // TRAK-165: 13 and over only (UAE Child Digital Safety Law). The database
+    // refuses it too; this names the row before anything loads.
+    else if (date_of_birth > `${Number(today.slice(0, 4)) - 13}${today.slice(4)}`) problems.push('the child is under 13 (Trak serves children aged 13 and over)');
     if (child_email && !EMAIL.test(child_email)) problems.push('child_email is not an email address');
     if (!EMAIL.test(coach_email)) problems.push('coach_email is not an email address');
     if (guardian_emails.length === 0) problems.push('no guardian email');

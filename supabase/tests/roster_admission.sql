@@ -179,6 +179,22 @@ SELECT pg_temp.assert_true(
    WHERE rc.child_email = 'loaded-child@roster.test'),
   'guardian emails are normalized, de-duplicated and blanks dropped');
 
+-- TRAK-165: no child under 13 by date of birth (Dubai date), decided 12 Oct
+-- under the UAE Child Digital Safety Law. A 13th birthday today is allowed.
+SELECT pg_temp.assert_true(pg_temp.outcome(format($$
+  SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000001', 'a9000000-0000-0000-0000-000000000003',
+    'Twelve Year Old', 'U13', %L, 'twelve@roster.test', ARRAY['g-twelve@roster.test'], 'kostas')
+$$, ((now() AT TIME ZONE 'Asia/Dubai')::date - interval '13 years' + interval '1 day')::date)) = '23514',
+  'TRAK-165 a child one day short of 13 is refused');
+SELECT pg_temp.assert_true(pg_temp.outcome(format($$
+  SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000006',
+    'Thirteen Today', 'U14', %L, 'thirteen@roster.test', ARRAY['g-thirteen@roster.test'], 'kostas')
+$$, ((now() AT TIME ZONE 'Asia/Dubai')::date - interval '13 years')::date)) = 'allowed',
+  'TRAK-165 a child who turns 13 today is admitted');
+SELECT pg_temp.assert_true(pg_temp.outcome($$
+  UPDATE public.roster_children SET date_of_birth = '2020-01-01' WHERE child_email = 'thirteen@roster.test'
+$$) = '23514', 'TRAK-165 a date of birth cannot be changed to under 13 either');
+
 CREATE TEMP TABLE squad_count_before AS SELECT count(*) AS n FROM public.squad_players;
 SELECT pg_temp.assert_true(pg_temp.outcome($$
   SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000003',
@@ -209,7 +225,7 @@ SELECT pg_temp.assert_true(
 SELECT pg_temp.assert_true(
   (SELECT public.admit_roster_child(
      'a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000006',
-     'No Email Child', 'U11', '2016-02-03', '  ', ARRAY['no-email-parent@roster.test'], 'kostas') IS NOT NULL),
+     'No Email Child', 'U11', '2012-02-03', '  ', ARRAY['no-email-parent@roster.test'], 'kostas') IS NOT NULL),
   'TRAK-84 a child with a blank email is admitted');
 SELECT pg_temp.assert_true(
   (SELECT rc.child_email IS NULL AND sp.player_name = 'No Email Child'
@@ -219,11 +235,11 @@ SELECT pg_temp.assert_true(
 SELECT pg_temp.assert_true(
   (SELECT public.admit_roster_child(
      'a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000006',
-     'Second No Email', 'U11', '2016-04-05', NULL, ARRAY['no-email-parent@roster.test'], 'kostas') IS NOT NULL),
+     'Second No Email', 'U11', '2012-04-05', NULL, ARRAY['no-email-parent@roster.test'], 'kostas') IS NOT NULL),
   'TRAK-84 two email-less siblings can share a guardian');
 SELECT pg_temp.assert_true(pg_temp.outcome($$
   SELECT public.admit_roster_child('a9100000-0000-0000-0000-000000000002', 'a9000000-0000-0000-0000-000000000006',
-    ' no email child ', 'U11', '2016-02-03', NULL, ARRAY['no-email-parent@roster.test'], 'kostas')
+    ' no email child ', 'U11', '2012-02-03', NULL, ARRAY['no-email-parent@roster.test'], 'kostas')
 $$) = '23505', 'TRAK-84 the same email-less child (name and date of birth) cannot be admitted twice in one academy');
 SELECT pg_temp.assert_true(pg_temp.outcome($$
   UPDATE public.roster_children SET child_email = '' WHERE child_email IS NULL

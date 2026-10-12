@@ -216,7 +216,7 @@ INSERT INTO public.profiles (user_id, role, full_name) VALUES (pg_temp.rc(23), '
 INSERT INTO public.squad_players (id, coach_user_id, player_name, age_group) VALUES
   (pg_temp.rc(64), pg_temp.rc(2), 'Eve Synthetic', 'U11');
 INSERT INTO public.roster_children (id, organization_id, squad_player_id, date_of_birth, child_email, loaded_by) VALUES
-  (pg_temp.rc(74), pg_temp.rc(50), pg_temp.rc(64), '2016-02-03', 'eve@roster-consent.test', 'fixture');
+  (pg_temp.rc(74), pg_temp.rc(50), pg_temp.rc(64), '2012-02-03', 'eve@roster-consent.test', 'fixture');
 INSERT INTO public.roster_guardians (roster_child_id, email, loaded_by) VALUES
   (pg_temp.rc(74), 'guardian-a@roster-consent.test', 'fixture'),
   (pg_temp.rc(74), 'coach@roster-consent.test', 'fixture'),
