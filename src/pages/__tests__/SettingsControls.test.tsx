@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../tests/msw/server'
-import { SUPABASE_URL, table } from '../../../tests/msw/supabase'
+import { SUPABASE_URL, rpc, table } from '../../../tests/msw/supabase'
 import Settings from '../Settings'
 
 type Role = 'player' | 'coach' | 'parent' | 'club'
@@ -42,12 +43,15 @@ beforeEach(() => {
     table('organizations', [{ name: 'Test Academy' }]),
     table('squad_players', []),
     table('player_parent_links', []),
+    // TRAK-133: Settings → Calendar reads whether a calendar link exists.
+    rpc('my_calendar_link', () => []),
   )
 })
 afterEach(cleanup)
 
 function mount() {
-  return render(<MemoryRouter><Settings /></MemoryRouter>)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(<QueryClientProvider client={client}><MemoryRouter><Settings /></MemoryRouter></QueryClientProvider>)
 }
 
 describe('settings controls reflect supported behavior', () => {
@@ -75,6 +79,19 @@ describe('settings controls reflect supported behavior', () => {
     // TRAK-73: a parent's linked children moved to the Profile tab, like the player's (TRAK-71).
     if (role === 'parent') expect(screen.queryByText('Linked children component')).toBeNull()
     expect(localStorage.getItem('trak.settings.v1')).toBe(legacy)
+  })
+
+  it.each<Role>(['player', 'coach', 'parent', 'club'])('offers Settings → Calendar to players and parents only (TRAK-133): %s', async role => {
+    state.role = role
+    mount()
+    if (role === 'player' || role === 'parent') {
+      expect(await screen.findByText('Not added yet')).toBeInTheDocument()
+      expect(screen.getByText('Calendar')).toBeInTheDocument()
+    } else {
+      await screen.findByRole('button', { name: 'Sign out' })
+      expect(screen.queryByText('Calendar')).toBeNull()
+      expect(screen.queryByText('Not added yet')).toBeNull()
+    }
   })
 
   it('still sends password recovery for the signed-in account', async () => {

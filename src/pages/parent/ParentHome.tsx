@@ -9,9 +9,10 @@ import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ParentUpcomingEvents } from '@/components/parent/ParentEvents'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
-import { useChildrenAwaitingConsent, useParentDevelopment, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
+import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
 import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
 import { trackEvent } from '@/lib/telemetry'
+import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 
 export default function ParentHome() {
   const navigate = useNavigate()
@@ -19,6 +20,8 @@ export default function ParentHome() {
   const { selectedChild } = useParentChildren()
   const matchQuery = useParentMatches()
   const developmentQuery = useParentDevelopment()
+  // TRAK-133: the same query Next up reads (no extra request).
+  const eventsQuery = useParentEvents()
   const consentQuery = useChildrenAwaitingConsent()
   const rosterConsentQuery = useRosterChildrenAwaitingConsent()
   const loginQuery = useChildLogins()
@@ -78,6 +81,8 @@ export default function ParentHome() {
                 {selectedChild && <LoadedWeekStrip loadKey={selectedChild.id} eventHref={event => `/parent/event/${event.id}`}
                   load={(from, to) => supabase.rpc('child_events', { p_child: selectedChild.id })
                     .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
+                {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
+                <CalendarHomePrompt hasEvents={(eventsQuery.data?.length ?? 0) > 0} />
                 {/* J8.8 (TRAK-131): what's next for the selected child. */}
                 <ParentUpcomingEvents nextUpOnly />
                 {matches.length > 0 && (

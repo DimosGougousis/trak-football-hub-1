@@ -12,6 +12,7 @@ import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
 import { PlayerAlertsBell } from '@/components/player/PlayerAlertsBell'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
+import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
@@ -413,6 +414,8 @@ export default function PlayerHome() {
         {user && <LoadedWeekStrip loadKey={user.id} eventHref={event => `/player/event/${event.id}`}
           load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
             .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
+        {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
+        <CalendarHomePrompt hasEvents={upcomingEvents.length > 0} />
 
         {mayHaveMissedHistory && (
           <div className="rounded-xl border p-4 my-4" role="status"
