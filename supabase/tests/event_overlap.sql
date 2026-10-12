@@ -138,12 +138,17 @@ SELECT pg_temp.o158clash(format('UPDATE public.coach_calendar_events SET publish
 RESET ROLE;
 SELECT pg_temp.o158check((SELECT bool_and(NOT published) FROM public.coach_calendar_events WHERE id IN (pg_temp.o158id(740), pg_temp.o158id(741))),
  '6 readback: neither was published');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.o158actor(10);
+SELECT pg_temp.o158ok(pg_temp.o158event(742,'Fixed session','training','17:15','18:15',true,9),
+ '6 a live event may overlap the coach''s drafts: they are still plans');
+RESET ROLE;
 
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.o158_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.o158_results;
- IF n <> 24 THEN
-  RAISE EXCEPTION 'Event overlap: % checks ran; expected exactly 24', n;
+ IF n <> 25 THEN
+  RAISE EXCEPTION 'Event overlap: % checks ran; expected exactly 25', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event overlap failed',DETAIL=failures;
