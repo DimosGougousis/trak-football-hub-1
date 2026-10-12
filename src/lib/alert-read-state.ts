@@ -1,12 +1,12 @@
 import { format } from 'date-fns'
 
 /**
- * TRAK-163: what the bell (parent and player) has shown on this device.
+ * TRAK-163: the bell's read state (parent and player) on this device.
  *
- * - `key` holds the newest alert time seen when the bell last closed, the same
- *   value and key the parent bell has used since TRAK-74, so nothing reads as
- *   new again after this change.
- * - `key:read` holds alerts the person marked read or unread one by one.
+ * - `key` is the old parent bell's seen time (TRAK-74, same key): alerts from
+ *   before it count as read, so nothing reads as new again after this change.
+ *   Nothing writes it any more.
+ * - `key:read` holds alerts marked read or unread (one by one or all at once).
  * - `key:dismissed` holds alerts they dismissed.
  *
  * An alert is identified with its date, so an event the coach changes later
@@ -46,12 +46,6 @@ export function readBellState(key: string): BellState {
 
 export function isAlertRead(alert: DatedAlert, state: BellState): boolean {
   return state.overrides[alertKey(alert)] ?? time(alert.date) <= state.seen
-}
-
-/** The bell closed: everything shown so far is read. */
-export function markAllSeen(key: string, alerts: DatedAlert[]) {
-  const { seen } = readBellState(key)
-  write(key, String(Math.max(seen, ...alerts.map(alert => time(alert.date)))))
 }
 
 export function setAlertRead(key: string, alert: DatedAlert, read: boolean) {

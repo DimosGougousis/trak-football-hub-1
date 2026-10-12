@@ -2,13 +2,14 @@ import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { HomeHeader } from '@/components/trak/HomeHeader'
-import { WeekStrip } from '@/components/trak/WeekStrip'
+import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
+import { supabase } from '@/integrations/supabase/client'
 import { ParentAssessmentBands, ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ParentUpcomingEvents } from '@/components/parent/ParentEvents'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
-import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
+import { useChildrenAwaitingConsent, useParentDevelopment, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
 import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
 import { trackEvent } from '@/lib/telemetry'
 
@@ -18,7 +19,6 @@ export default function ParentHome() {
   const { selectedChild } = useParentChildren()
   const matchQuery = useParentMatches()
   const developmentQuery = useParentDevelopment()
-  const eventsQuery = useParentEvents()
   const consentQuery = useChildrenAwaitingConsent()
   const rosterConsentQuery = useRosterChildrenAwaitingConsent()
   const loginQuery = useChildLogins()
@@ -74,8 +74,10 @@ export default function ParentHome() {
                 {details && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">
                   {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
                 </p>}
-                {/* TRAK-163: the selected child's next seven days, under the header. */}
-                {eventsQuery.data && <WeekStrip events={eventsQuery.data} eventHref={event => `/parent/event/${event.id}`} />}
+                {/* TRAK-163: the selected child's week, Monday to Sunday, under the header. */}
+                {selectedChild && <LoadedWeekStrip loadKey={selectedChild.id} eventHref={event => `/parent/event/${event.id}`}
+                  load={(from, to) => supabase.rpc('child_events', { p_child: selectedChild.id })
+                    .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
                 {/* J8.8 (TRAK-131): what's next for the selected child. */}
                 <ParentUpcomingEvents nextUpOnly />
                 {matches.length > 0 && (

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { dismissAlert, isAlertRead, markAllSeen, readBellState, relativeLabel, setAlertRead } from '../alert-read-state'
+import { dismissAlert, isAlertRead, readBellState, relativeLabel, setAlertRead } from '../alert-read-state'
 
 // TRAK-163: the bell's read state, per device, for parents and players.
 describe('alert read state', () => {
@@ -14,24 +14,19 @@ describe('alert read state', () => {
     expect(isAlertRead(fresh, state)).toBe(false)
   })
 
-  it('closing the bell reads everything up to the newest alert, keeping the parent seen key', () => {
-    markAllSeen(key, [old, fresh])
-    expect(localStorage.getItem(key)).toBe(String(Date.parse(fresh.date)))
+  it("keeps the old parent bell's seen time: what was seen before stays read", () => {
+    localStorage.setItem(key, String(Date.parse(fresh.date)))
     const state = readBellState(key)
     expect(isAlertRead(old, state)).toBe(true)
     expect(isAlertRead(fresh, state)).toBe(true)
     expect(isAlertRead({ id: 'c', date: '2026-10-12T10:00:00Z' }, state)).toBe(false)
-  })
-
-  it('a changed event (new date on the same id) is unread again', () => {
-    markAllSeen(key, [fresh])
-    expect(isAlertRead({ ...fresh, date: '2026-10-12T09:00:00Z' }, readBellState(key))).toBe(false)
+    // A changed event (same id, later date) is unread again.
+    expect(isAlertRead({ ...fresh, date: '2026-10-12T09:00:00Z' }, state)).toBe(false)
   })
 
   it('remembers one alert marked read or unread', () => {
     setAlertRead(key, fresh, true)
     expect(isAlertRead(fresh, readBellState(key))).toBe(true)
-    markAllSeen(key, [fresh])
     setAlertRead(key, fresh, false)
     expect(isAlertRead(fresh, readBellState(key))).toBe(false)
   })

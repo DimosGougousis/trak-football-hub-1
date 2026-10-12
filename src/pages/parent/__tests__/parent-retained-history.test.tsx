@@ -97,6 +97,8 @@ beforeEach(async () => {
       return HttpResponse.json(body ? [{ body }] : [])
     }),
     http.post(table('rpc/get_roster_children_awaiting_consent'), () => HttpResponse.json([])),
+    // TRAK-163: Home's week strip reads this week's events.
+    http.post(table('rpc/child_events'), () => HttpResponse.json([])),
     http.post(table('rpc/get_children_awaiting_consent'), () => HttpResponse.json([])),
   )
 })

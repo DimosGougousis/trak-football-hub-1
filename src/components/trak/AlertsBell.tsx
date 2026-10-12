@@ -1,6 +1,6 @@
 import { useReducer, type ReactNode } from 'react'
 import { NotificationCenter, type NotificationItem } from '@/components/arc/notification-center/notification-center'
-import { alertKey, dismissAlert, isAlertRead, markAllSeen, readBellState, relativeLabel, setAlertRead } from '@/lib/alert-read-state'
+import { alertKey, dismissAlert, isAlertRead, readBellState, relativeLabel, setAlertRead } from '@/lib/alert-read-state'
 
 export interface BellAlert {
   id: string
@@ -14,9 +14,11 @@ export interface BellAlert {
 }
 
 /**
- * TRAK-163: the bell at the top right of parent and player Home, built on
- * Arc's notification center. The badge counts what arrived since the bell
- * last closed (TRAK-74's rule), and closing it reads everything shown.
+ * TRAK-163: the bell at the top right of parent and player Home: Arc's
+ * notification center, working as Arc designed it (Imad, 12 Oct). The badge
+ * counts unread alerts; an alert is read once marked read (or "Mark all
+ * read"), and a dismissed one is gone. Both are remembered on this device.
+ * Alerts read under the old bell (TRAK-74's seen time) stay read.
  * `storageKey` null means the person isn't known yet: no bell.
  */
 export function AlertsBell({ alerts, storageKey, notice, onOpen }: {
@@ -45,11 +47,7 @@ export function AlertsBell({ alerts, storageKey, notice, onOpen }: {
   return (
     <div className="arc">
       <NotificationCenter label="Alerts" notifications={items} notice={notice}
-        onOpenChange={open => {
-          if (open) { onOpen?.(); return }
-          markAllSeen(storageKey, shown)
-          stored()
-        }}
+        onOpenChange={open => { if (open) onOpen?.() }}
         onReadChange={(item, read) => { const alert = byId.get(item.id); if (alert) { setAlertRead(storageKey, alert, read); stored() } }}
         onDismiss={item => { const alert = byId.get(item.id); if (alert) { dismissAlert(storageKey, alert); stored() } }} />
     </div>

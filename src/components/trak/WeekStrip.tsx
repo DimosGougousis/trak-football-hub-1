@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { addDays, format, parseISO } from 'date-fns'
+import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { Accordion } from '@/components/arc/accordion/accordion'
-import { eventHeading, type EventKind, type PlayerEvent } from '@/lib/player-events'
+import { LoadError } from '@/components/trak/LoadError'
+import { eventHeading, toPlayerEvent, type EventKind, type PlayerEvent } from '@/lib/player-events'
 
 /** Agreed in the J8 live run, 11 Oct: training blue, match red, other orange; the same
  *  shades as the coach calendar in #276 (TRAK-159).
@@ -20,17 +21,22 @@ export interface StripEvent extends PlayerEvent {
   draft?: boolean
 }
 
+/** Monday to Sunday of the week `today` is in, as YYYY-MM-DD (Imad, 12 Oct). */
+export function weekDays(today: Date): string[] {
+  const monday = startOfWeek(today, { weekStartsOn: 1 })
+  return Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), 'yyyy-MM-dd'))
+}
+
 /**
- * TRAK-163: the next seven days under the Home header (the Therabody strip).
- * A day with events shows a dot per event; tapping it lists that day's events,
- * each opening to its details. `eventHref` is the role's event page.
+ * TRAK-163: this week, Monday to Sunday, under the Home header (the Therabody
+ * strip). Today is selected; a day with events shows a dot per event; tapping
+ * a day lists its events, each opening to its details.
  */
 export function WeekStrip({ events, eventHref, today = new Date() }: {
   events: StripEvent[]
   eventHref: (event: StripEvent) => string
   today?: Date
 }) {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i))
   const [day, setDay] = useState(format(today, 'yyyy-MM-dd'))
   const onDay = (date: string) => events.filter(event => event.date === date)
     .sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'))
@@ -38,9 +44,9 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
 
   return (
     <section aria-label="This week" className="arc mb-5">
-      <SegmentedControl className="arc-week" label="Next 7 days" value={day} onValueChange={setDay}
-        options={days.map(date => {
-          const value = format(date, 'yyyy-MM-dd')
+      <SegmentedControl className="arc-week" label="This week" value={day} onValueChange={setDay}
+        options={weekDays(today).map(value => {
+          const date = parseISO(value)
           const dots = onDay(value)
           // M T W T F S S, as in the Therabody strip; the full date is read out.
           return {
@@ -69,4 +75,43 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
       )}
     </section>
   )
+}
+
+type WeekRows = PromiseLike<{ data: unknown[] | null; error: unknown }>
+
+/**
+ * The strip with its own read of this week, past days included (Home's lists
+ * only load from today). `loadKey` names whose week it is. A failed read is
+ * an error with Retry, never an empty week (the J4 standard).
+ */
+export function LoadedWeekStrip({ load, loadKey, eventHref }: {
+  load: (from: string, to: string) => WeekRows
+  loadKey: string
+  eventHref: (event: StripEvent) => string
+}) {
+  const [events, setEvents] = useState<StripEvent[] | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const loadRef = useRef(load)
+  loadRef.current = load
+
+  useEffect(() => {
+    let cancelled = false
+    const days = weekDays(new Date())
+    setFailed(false)
+    setEvents(null)
+    loadRef.current(days[0], days[6]).then(({ data, error }) => {
+      if (cancelled) return
+      if (error) { setFailed(true); return }
+      setEvents((data ?? []).flatMap(row => {
+        const event = toPlayerEvent(row as Record<string, unknown>)
+        return event ? [{ ...event, draft: (row as { published?: boolean }).published === false }] : []
+      }))
+    }, () => { if (!cancelled) setFailed(true) })
+    return () => { cancelled = true }
+  }, [loadKey, attempt])
+
+  if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
+  if (!events) return null
+  return <WeekStrip events={events} eventHref={eventHref} />
 }

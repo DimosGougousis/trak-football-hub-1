@@ -11,7 +11,7 @@ import { isChanged, noteEventsShown, readSeenSequences, toPlayerEvent, upcomingE
 import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
 import { PlayerAlertsBell } from '@/components/player/PlayerAlertsBell'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
-import { WeekStrip } from '@/components/trak/WeekStrip'
+import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
@@ -264,7 +264,7 @@ export default function PlayerHome() {
             .or(upcomingEventsFilter())
             .order('event_date', { ascending: true, nullsFirst: false })
             .order('starts_at', { ascending: true })
-            // Enough for the bell and the seven-day strip (TRAK-163), not just Next up.
+            // Enough for the bell (TRAK-163), not just Next up.
             .limit(20)
           if (cancelled) return
           // A failed calendar read is not an empty calendar. Without this the
@@ -410,7 +410,9 @@ export default function PlayerHome() {
         {/* TRAK-163: calendar, the player's name, the bell; then the next seven days. */}
         <HomeHeader calendarTo="/player/matches" center={<HomeTitle>{profile?.full_name || 'Player'}</HomeTitle>}
           right={user && <PlayerAlertsBell userId={user.id} events={upcomingEvents} />} />
-        <WeekStrip events={upcomingEvents} eventHref={event => `/player/event/${event.id}`} />
+        {user && <LoadedWeekStrip loadKey={user.id} eventHref={event => `/player/event/${event.id}`}
+          load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
+            .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
 
         {mayHaveMissedHistory && (
           <div className="rounded-xl border p-4 my-4" role="status"

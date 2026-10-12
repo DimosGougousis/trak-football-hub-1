@@ -1,9 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
-import { WeekStrip, type StripEvent } from '@/components/trak/WeekStrip'
+import { LoadedWeekStrip, WeekStrip, weekDays, type StripEvent } from '@/components/trak/WeekStrip'
 import { PlayerAlertsBell } from '@/components/player/PlayerAlertsBell'
 import type { PlayerEvent } from '@/lib/player-events'
 
@@ -42,7 +42,7 @@ describe('week strip', () => {
       event(),
       event({ id: 'e2', kind: 'match', title: null, opponent: 'Palm United', homeAway: 'away', date: '2026-10-16', time: '17:00' }),
     ]} />)
-    const days = screen.getByRole('group', { name: 'Next 7 days' })
+    const days = screen.getByRole('group', { name: 'This week' })
     expect(within(days).getAllByRole('button')).toHaveLength(7)
     expect(within(days).getByRole('button', { name: /Monday 12 October/, pressed: true })).toBeInTheDocument()
     expect(within(within(days).getByRole('button', { name: /Friday 16 October/ })).getByLabelText('1 event')).toBeInTheDocument()
@@ -64,6 +64,33 @@ describe('week strip', () => {
     expect(await screen.findByText('Event page e2')).toBeInTheDocument()
   })
 
+  it('runs Monday to Sunday with today selected, and keeps the past days of the week (Imad, 12 Oct)', async () => {
+    const wednesday = new Date('2026-10-14T09:00:00')
+    expect(weekDays(wednesday)).toEqual(['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'])
+    expect(weekDays(new Date('2026-10-18T22:00:00'))[0]).toBe('2026-10-12')
+    at(<WeekStrip today={wednesday} eventHref={() => '/calendar'} events={[event()]} />)
+    const days = within(screen.getByRole('group', { name: 'This week' })).getAllByRole('button')
+    expect(days.map(day => day.textContent?.[0])).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+    expect(days[2]).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Nothing planned.')).toBeInTheDocument()
+    await userEvent.click(days[0])
+    expect(screen.getByText('18:00 · Technical')).toBeInTheDocument()
+  })
+
+  it("loads this week's events itself, and a failed read is an error with Retry", async () => {
+    const days = weekDays(new Date())
+    const load = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: { message: 'offline' } })
+      .mockResolvedValueOnce({ data: [{ id: 'e9', event_type: 'match', title: null, opponent: 'Rivals', event_date: days[0], start_time: '10:00:00', published: false }], error: null })
+    at(<LoadedWeekStrip loadKey="dora" load={load} eventHref={() => '/calendar'} />)
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing planned.')).toBeNull()
+    expect(load).toHaveBeenCalledWith(days[0], days[6])
+    await userEvent.click(screen.getByRole('button', { name: /retry/i }))
+    await userEvent.click(within(await screen.findByRole('group', { name: 'This week' })).getAllByRole('button')[0])
+    expect(screen.getByText('10:00 · Match vs Rivals · Draft')).toBeInTheDocument()
+  })
+
   it('marks a cancelled event, a draft and a missing time', () => {
     at(<WeekStrip today={today} eventHref={() => '/calendar'} events={[
       event({ status: 'cancelled', cancelReason: 'Pitch closed' }),
@@ -79,13 +106,18 @@ describe('player bell', () => {
   beforeEach(() => localStorage.clear())
   const events: PlayerEvent[] = [event(), event({ id: 'e2', title: 'Fitness', time: '19:30', updatedAt: '2026-10-11T20:00:00Z' })]
 
-  it('counts new events, says "Changed" after an edit, and clears when closed', async () => {
+  it('counts new events, says "Changed" after an edit; Mark all read clears the count', async () => {
     const { rerender } = render(<MemoryRouter><PlayerAlertsBell userId="hugo" events={events} /></MemoryRouter>)
     expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
     const panel = await screen.findByRole('dialog', { name: 'Alerts' })
     expect(within(panel).getByText('New: Technical')).toBeInTheDocument()
     expect(within(panel).getByText('Mon 12 Oct, 18:00 · Main pitch')).toBeInTheDocument()
+    // Arc's notification center: closing keeps the count; Mark all read clears it.
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Alerts' })).getByRole('button', { name: 'Mark all read' }))
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Alerts' })).toBeInTheDocument())
 
