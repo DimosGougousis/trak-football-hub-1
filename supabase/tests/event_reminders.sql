@@ -210,14 +210,17 @@ SET LOCAL ROLE anon;
 SELECT pg_temp.r136refused('SELECT count(*) FROM public.notification_settings','5 signed-out visitors cannot read settings','42501');
 RESET ROLE;
 SELECT pg_temp.r136refused('SELECT trak_private.call_trak_function(''send-roster-invites'')','5 the database calls only the two scheduled functions','22023');
+-- A Vault value pasted with a trailing line break or slash still makes the right address.
+SELECT pg_temp.r136check(trak_private.scheduled_function_url(E'https://x.supabase.co/functions/v1\n', 'send-event-reminders') = 'https://x.supabase.co/functions/v1/send-event-reminders','5 a Vault address with a trailing line break still calls the right function');
+SELECT pg_temp.r136check(trak_private.scheduled_function_url(E' https://x.supabase.co/functions/v1/ \r\n', 'send-event-emails') = 'https://x.supabase.co/functions/v1/send-event-emails','5 a Vault address with spaces and a trailing slash still calls the right function');
 -- No pg_cron here, so no schedule: the migration applied without it.
 SELECT pg_temp.r136check(NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'),'5 without pg_cron the migration applies and schedules nothing');
 
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.r136_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.r136_results;
- IF n <> 30 THEN
-  RAISE EXCEPTION 'Event reminders: % checks ran; expected exactly 30', n;
+ IF n <> 32 THEN
+  RAISE EXCEPTION 'Event reminders: % checks ran; expected exactly 32', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event reminders failed',DETAIL=failures;

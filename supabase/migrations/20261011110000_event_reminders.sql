@@ -200,9 +200,21 @@ AS $fn$
 $fn$;
 REVOKE ALL ON FUNCTION trak_private.event_reminder_work_due(timestamptz) FROM PUBLIC, anon, authenticated;
 
--- Calls one of our Edge Functions as the operator: POST {} with a project
--- secret key on apikey, the way the operator retries by hand. Both values come
--- from Vault at run time, so no key is in the repo or in cron's job table. A
+-- The address of one of our Edge Functions from the Vault base address. A
+-- value pasted into Vault with spaces, a line break or a trailing slash still
+-- makes the right address (the first prod paste ended in a line break).
+CREATE FUNCTION trak_private.scheduled_function_url(p_base text, p_name text)
+RETURNS text
+LANGUAGE sql IMMUTABLE
+SET search_path = ''
+AS $fn$
+  SELECT rtrim(btrim(p_base, E' \t\r\n'), '/') || '/' || p_name;
+$fn$;
+REVOKE ALL ON FUNCTION trak_private.scheduled_function_url(text, text) FROM PUBLIC, anon, authenticated;
+
+-- Calls one of our Edge Functions as the scheduler: POST {} with the
+-- scheduler's own token on x-trak-cron, never an API key. Both values come
+-- from Vault at run time, so no token is in the repo or in cron's job table. A
 -- missing secret fails loudly in cron.job_run_details. Needs pg_net.
 CREATE FUNCTION trak_private.call_trak_function(p_name text)
 RETURNS bigint
@@ -217,12 +229,12 @@ BEGIN
     RAISE EXCEPTION 'call_trak_function: % is not a scheduled function', p_name USING ERRCODE = '22023';
   END IF;
   SELECT s.decrypted_secret INTO v_url FROM vault.decrypted_secrets s WHERE s.name = 'trak_functions_url';
-  SELECT s.decrypted_secret INTO v_token FROM vault.decrypted_secrets s WHERE s.name = 'trak_cron_token';
+  SELECT btrim(s.decrypted_secret, E' \t\r\n') INTO v_token FROM vault.decrypted_secrets s WHERE s.name = 'trak_cron_token';
   IF v_url IS NULL OR v_token IS NULL THEN
     RAISE EXCEPTION 'Vault secrets trak_functions_url and trak_cron_token are needed to call %', p_name;
   END IF;
   RETURN net.http_post(
-    url := rtrim(v_url, '/') || '/' || p_name,
+    url := trak_private.scheduled_function_url(v_url, p_name),
     body := '{}'::jsonb,
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-trak-cron', v_token),
     timeout_milliseconds := 5000
