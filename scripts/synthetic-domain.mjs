@@ -17,7 +17,7 @@ export const isSyntheticAddress = (email) => isSyntheticDomain(String(email ?? '
 // YOURNAME+…@gmail.com. At a real provider such an address is a stranger's
 // mailbox, so a roster must never store or email one. Matched on the part
 // before any +tag, whole, so youssef@ or yourname-fc@ still pass.
-const PLACEHOLDER_LOCAL = new Set([
+export const PLACEHOLDER_LOCAL = new Set([
   'yourname', 'your.name', 'your_name', 'your-name', 'youremail', 'your.email', 'your_email',
   'yourinbox', 'your.inbox', 'you', 'name', 'email', 'inbox', 'user', 'username',
   'firstname', 'lastname', 'firstname.lastname', 'first.last', 'someone',

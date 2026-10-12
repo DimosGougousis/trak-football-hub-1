@@ -23,15 +23,15 @@ const SECRET_KEY = 'sb_secret_operator-test-key';
 const OTHER_SECRET_KEY = 'sb_secret_second-named-key';
 const PUBLISHABLE_KEY = 'sb_publishable_browser-test-key';
 
-const guardianTarget: RosterInviteTarget = { kind: 'guardian', email: 'g@example.test', first_name: 'Ana', academy: 'Invite FC' };
-const childTarget: RosterInviteTarget = { kind: 'child', email: 'ana@example.test', first_name: 'Ana', academy: 'Invite FC' };
+const guardianTarget: RosterInviteTarget = { kind: 'guardian', email: 'g@family.trakfootball.com', first_name: 'Ana', academy: 'Invite FC' };
+const childTarget: RosterInviteTarget = { kind: 'child', email: 'ana@family.trakfootball.com', first_name: 'Ana', academy: 'Invite FC' };
 
 function dependencies(targets: RosterInviteTarget[] = [guardianTarget]) {
   return {
     siteUrl: 'https://trakfootball.test/',
     secretKeys: [SECRET_KEY, OTHER_SECRET_KEY],
     getCaller: vi.fn<RosterInviteDependencies['getCaller']>().mockResolvedValue({
-      data: { id: guardianId, email: 'g@example.test', email_confirmed_at: '2026-09-26T00:00:00Z' }, error: null,
+      data: { id: guardianId, email: 'g@family.trakfootball.com', email_confirmed_at: '2026-09-26T00:00:00Z' }, error: null,
     }),
     getTargets: vi.fn<RosterInviteDependencies['getTargets']>().mockResolvedValue({ data: targets, error: null }),
     markSent: vi.fn<RosterInviteDependencies['markSent']>().mockResolvedValue({ error: null }),
@@ -60,7 +60,7 @@ describe('send-roster-invites', () => {
     expect(res.status).toBe(200);
     expect(deps.getCaller).not.toHaveBeenCalled();
     expect(deps.getTargets).toHaveBeenCalledWith(rosterChildId, null, false);
-    expect(deps.sendInvite).toHaveBeenCalledWith('g@example.test', 'https://trakfootball.test/onboarding/parent',
+    expect(deps.sendInvite).toHaveBeenCalledWith('g@family.trakfootball.com', 'https://trakfootball.test/onboarding/parent',
       { invited_as: 'parent', child_first_name: 'Ana', academy_name: 'Invite FC' });
     expect(deps.markSent).toHaveBeenCalledWith(rosterChildId, guardianTarget);
     expect(await res.json()).toEqual({ sent: 1, failed: 0, results: [{ kind: 'guardian', sent: true, via: 'invite' }] });
@@ -71,7 +71,7 @@ describe('send-roster-invites', () => {
     const res = await handleRosterInviteRequest(request(), deps);
     expect(res.status).toBe(200);
     expect(deps.getTargets).toHaveBeenCalledWith(rosterChildId, guardianId, false);
-    expect(deps.sendInvite).toHaveBeenCalledWith('ana@example.test', 'https://trakfootball.test/onboarding/player',
+    expect(deps.sendInvite).toHaveBeenCalledWith('ana@family.trakfootball.com', 'https://trakfootball.test/onboarding/player',
       { invited_as: 'player', child_first_name: 'Ana', academy_name: 'Invite FC' });
   });
 
@@ -90,7 +90,7 @@ describe('send-roster-invites', () => {
     expect((await handleRosterInviteRequest(request(undefined, null), deps)).status).toBe(401);
     deps.getCaller.mockResolvedValueOnce({ data: null, error: { message: 'bad jwt' } });
     expect((await handleRosterInviteRequest(request(), deps)).status).toBe(401);
-    deps.getCaller.mockResolvedValueOnce({ data: { id: guardianId, email: 'g@example.test' }, error: null });
+    deps.getCaller.mockResolvedValueOnce({ data: { id: guardianId, email: 'g@family.trakfootball.com' }, error: null });
     expect((await handleRosterInviteRequest(request(), deps)).status).toBe(403);
     expect((await handleRosterInviteRequest(request({ roster_child_id: 'not-a-uuid' }), deps)).status).toBe(400);
     expect((await handleRosterInviteRequest(request({ roster_child_id: rosterChildId, email: 'x@y.z' }), deps)).status).toBe(400);
@@ -103,15 +103,15 @@ describe('send-roster-invites', () => {
     const deps = dependencies();
     deps.sendInvite.mockResolvedValue({ error: { message: 'A user with this email address has already been registered', code: 'email_exists' } });
     const res = await handleRosterInviteRequest(operator(), deps);
-    expect(deps.sendMagicLink).toHaveBeenCalledWith('g@example.test', 'https://trakfootball.test/onboarding/parent',
+    expect(deps.sendMagicLink).toHaveBeenCalledWith('g@family.trakfootball.com', 'https://trakfootball.test/onboarding/parent',
       { invited_as: 'parent', child_first_name: 'Ana', academy_name: 'Invite FC' });
     expect(await res.json()).toMatchObject({ sent: 1, results: [{ kind: 'guardian', sent: true, via: 'magic_link' }] });
   });
 
   it('reports a failed delivery without the address, records nothing for it, and keeps going', async () => {
-    const second: RosterInviteTarget = { ...guardianTarget, email: 'g2@example.test' };
+    const second: RosterInviteTarget = { ...guardianTarget, email: 'g2@family.trakfootball.com' };
     const deps = dependencies([guardianTarget, second]);
-    deps.sendInvite.mockResolvedValueOnce({ error: { message: 'SMTP refused g@example.test', status: 500 } });
+    deps.sendInvite.mockResolvedValueOnce({ error: { message: 'SMTP refused g@family.trakfootball.com', status: 500 } });
     const res = await handleRosterInviteRequest(operator(), deps);
     expect(res.status).toBe(502);
     const body = await res.json();
@@ -257,7 +257,7 @@ describe('one working invitation per guardian with several children (TRAK-97)', 
     deps.recentGuardianInvite.mockResolvedValue({ data: true, error: null });
     const res = await handleRosterInviteRequest(operator(), deps);
     expect(res.status).toBe(200);
-    expect(deps.recentGuardianInvite).toHaveBeenCalledWith(rosterChildId, 'g@example.test');
+    expect(deps.recentGuardianInvite).toHaveBeenCalledWith(rosterChildId, 'g@family.trakfootball.com');
     expect(deps.sendInvite).not.toHaveBeenCalled();
     expect(deps.sendMagicLink).not.toHaveBeenCalled();
     expect(deps.markSent).toHaveBeenCalledWith(rosterChildId, guardianTarget);
@@ -288,8 +288,8 @@ describe('one working invitation per guardian with several children (TRAK-97)', 
   it('replays 1 Oct: two siblings, one guardian, one email; a deliberate resend hours later still goes', async () => {
     let now = NOW;
     const rows: { roster_child_id: string; email: string; invited_at: string | null }[] = [
-      { roster_child_id: rosterChildId, email: 'g@example.test', invited_at: null },
-      { roster_child_id: SIBLING, email: 'g@example.test', invited_at: null },
+      { roster_child_id: rosterChildId, email: 'g@family.trakfootball.com', invited_at: null },
+      { roster_child_id: SIBLING, email: 'g@family.trakfootball.com', invited_at: null },
     ];
     const deps = dependencies();
     deps.recentGuardianInvite.mockImplementation(async (childId, email) => ({
@@ -312,5 +312,47 @@ describe('one working invitation per guardian with several children (TRAK-97)', 
     now += 3_000;
     expect((await (await send(SIBLING)).json()).results).toEqual([{ kind: 'guardian', sent: false, reason: 'guardian_invite_pending' }]);
     expect(deps.sendInvite).toHaveBeenCalledTimes(2);
+  });
+});
+
+// TRAK-94 (Tarek's P3 on #204): load-roster refuses a reserved test address
+// and a placeholder before it sends (TRAK-93), but this function emailed
+// whatever roster_invite_targets() returned. Any other caller, and the
+// guardian-session path that invites the child, skipped the check. Now the
+// function refuses them too, with the same rule (scripts/synthetic-domain.mjs).
+describe('never emails a test or placeholder address (TRAK-94)', () => {
+  const real: RosterInviteTarget = { ...guardianTarget, email: 'real.guardian@family.trakfootball.com' };
+  const reserved: RosterInviteTarget = { ...guardianTarget, email: 'parent.sami@rehearsal.trak.test' };
+  const placeholder: RosterInviteTarget = { ...childTarget, email: 'YOURNAME+ana@gmail.com' };
+
+  it('skips a .test and a YOURNAME+ target, marks neither, and still sends the real one (CONTROL)', async () => {
+    const deps = dependencies([reserved, real, placeholder]);
+    const res = await handleRosterInviteRequest(operator(), deps);
+    expect(deps.sendInvite).toHaveBeenCalledTimes(1);
+    expect(deps.sendInvite.mock.calls[0][0]).toBe('real.guardian@family.trakfootball.com');
+    expect(deps.sendMagicLink).not.toHaveBeenCalled();
+    expect(deps.markSent).toHaveBeenCalledTimes(1);
+    expect(deps.markSent).toHaveBeenCalledWith(rosterChildId, real);
+    // Not asked whether a fresh invitation exists: it would never be sent anyway.
+    expect(deps.recentGuardianInvite).toHaveBeenCalledTimes(1);
+    const body = await res.json();
+    expect(body).toEqual({
+      sent: 1, failed: 2, results: [
+        { kind: 'guardian', sent: false, reason: 'unmailable_address' },
+        { kind: 'guardian', sent: true, via: 'invite' },
+        { kind: 'child', sent: false, reason: 'unmailable_address' },
+      ],
+    });
+    // A skipped address is a failed invitation: load-roster tells the operator it didn't go.
+    expect(res.status).toBe(502);
+    expect(JSON.stringify(body)).not.toMatch(/@/);
+  });
+
+  it('refuses the child on the guardian-session path too', async () => {
+    const deps = dependencies([placeholder]);
+    const res = await handleRosterInviteRequest(request(), deps);
+    expect(deps.sendInvite).not.toHaveBeenCalled();
+    expect(deps.markSent).not.toHaveBeenCalled();
+    expect(await res.json()).toMatchObject({ sent: 0, failed: 1 })
   });
 });
