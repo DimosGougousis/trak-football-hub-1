@@ -55,10 +55,14 @@ await context.route('**/*',async route=>{
  unexpected.push(req.method()+' '+u.pathname); return json({message:'Unmocked request blocked'},500);
 });
  await page.goto('http://127.0.0.1:4189/parent/home');
- await expect(page.getByRole('heading',{name:'Alex Example'})).toBeVisible();
+ // TRAK-163: Home's header names the followed child; with siblings it is a menu.
+ const following=page.getByRole('group',{name:'Following'});
+ await expect(following.getByRole('button',{name:'Alex Example'})).toBeVisible();
  await expect(page.getByText('Alex Opposition',{exact:true})).toBeVisible();
- await page.getByRole('combobox').selectOption(zara);
- await expect(page.getByRole('heading',{name:'Zara Example'})).toBeVisible();
+ await page.screenshot({path:testInfo.outputPath('home-mobile.png'),fullPage:true});
+ await following.getByRole('button').click();
+ await page.getByRole('menuitem',{name:'Zara Example'}).click();
+ await expect(following.getByRole('button',{name:'Zara Example'})).toBeVisible();
  await expect(page.getByText('Zara Opposition',{exact:true})).toBeVisible();
  await expect(page.getByText('Alex Opposition',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Matches',exact:true}).click();
@@ -85,7 +89,7 @@ await context.route('**/*',async route=>{
  await alertsSheet.evaluate(el=>Promise.all(el.getAnimations().map(a=>a.finished)));
  await page.keyboard.press('Escape');
  await expect(alertsSheet).toHaveCount(0);
- await expect(page.getByRole('combobox')).toHaveValue(zara);
+ await expect(following.getByRole('button',{name:'Zara Example'})).toBeVisible();
  await expect(page.getByText('Zara Opposition',{exact:true})).toBeVisible();
  await expect(page.getByText('Alex Opposition',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Profile',exact:true}).click();
