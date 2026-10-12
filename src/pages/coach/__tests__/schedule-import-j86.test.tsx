@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -7,6 +7,13 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { toInstant } from '@/lib/event-time'
+
+// TRAK-162: the import is parked for coaches (schedule-import-parked-j86).
+// These tests switch it on, so the flow stays proven for when it comes back.
+vi.mock('@/lib/fixture-import', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/fixture-import')>()),
+  FIXTURE_IMPORT_ENABLED: true,
+}))
 
 /**
  * TRAK-129 (J8.6). League fixtures from a CSV on the coach's schedule: the
