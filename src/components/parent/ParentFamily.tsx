@@ -1,6 +1,8 @@
 import { useId, type ReactNode } from 'react'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { BandPill } from '@/components/trak'
+import { HomeTitle } from '@/components/trak/HomeHeader'
+import { DropdownMenu } from '@/components/arc/dropdown-menu/dropdown-menu'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { ParentAssessment } from '@/lib/parent-data'
@@ -35,6 +37,20 @@ export function ParentChildSelector() {
         className="w-full min-h-11 rounded-xl border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary">
         {children.map(child => <option key={child.id} value={child.id}>{child.name}</option>)}
       </select>
+    </div>
+  )
+}
+
+// TRAK-163: the child's name at the top of parent Home; with siblings it is
+// Arc's dropdown menu and switches the child everywhere, like the selector.
+export function ParentChildSwitcher() {
+  const { children, selectedChild, selectChild } = useParentChildren()
+  if (!selectedChild) return <HomeTitle>Home</HomeTitle>
+  if (children.length < 2) return <HomeTitle>{selectedChild.name}</HomeTitle>
+  return (
+    <div className="arc min-w-0" role="group" aria-label="Following">
+      <DropdownMenu label={selectedChild.name}
+        items={children.map(child => ({ label: child.name, onSelect: () => selectChild(child.id) }))} />
     </div>
   )
 }
