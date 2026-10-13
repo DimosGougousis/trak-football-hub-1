@@ -107,6 +107,21 @@ describe('settings controls reflect supported behavior', () => {
     }
   })
 
+  // TRAK-155: deleting a guardian account withdraws the approvals they gave, so
+  // the parent is told before confirming. Other roles have no approvals.
+  it.each<[Role, boolean]>([['parent', true], ['player', false], ['coach', false]])('says deletion withdraws approvals only to a parent (%s)', async (role, warned) => {
+    state.role = role
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    try {
+      mount()
+      fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }))
+      const text = String(confirm.mock.calls[0]?.[0] ?? '')
+      expect(text.includes('withdraws the approvals you gave')).toBe(warned)
+    } finally {
+      confirm.mockRestore()
+    }
+  })
+
   it('keeps a failed name save editable and persists only the valid retry to this account', async () => {
     state.role = 'parent'
     const requests: unknown[] = []
