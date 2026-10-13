@@ -127,6 +127,28 @@ function utcStamp(iso: string): string {
   return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
 
+const minutesOf = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+
+/** "1 h 30 min", "1 h", "45 min". */
+function lead(minutes: number): string {
+  const h = Math.floor(minutes / 60), m = minutes % 60
+  return [h ? `${h} h` : '', m ? `${m} min` : ''].filter(Boolean).join(' ')
+}
+
+/**
+ * TRAK-169: calendars move DTSTART to the phone's time zone but never touch
+ * text, so a bare "Meet: 12:30" read as local time beside a converted
+ * kickoff. Say the meet relative to the start, which holds in any zone, and
+ * label the clock time as Dubai's.
+ */
+function meetLine(meet: string, start: string | null, kind: FeedEventKind): string {
+  const clock = `${meet.slice(0, 5)} Dubai time`
+  if (!start) return `Meet at ${clock}`
+  const before = minutesOf(start) - minutesOf(meet)
+  if (before <= 0) return `Meet at ${clock}`
+  return `Meet ${lead(before)} before ${kind === 'match' ? 'kick-off' : 'the start'} (${clock})`
+}
+
 function eventLines(event: FeedEvent, patterns: RegExp[]): string[] {
   const opponent = clean(event.opponent, patterns)
   const venue = clean(event.venue, patterns)
@@ -140,7 +162,7 @@ function eventLines(event: FeedEvent, patterns: RegExp[]): string[] {
 
   const details: string[] = []
   if (cancelled) details.push('This event is cancelled.')
-  if (event.meetTime) details.push(`Meet: ${event.meetTime}`)
+  if (event.meetTime) details.push(meetLine(event.meetTime, event.startTime, event.kind))
   if (kit) details.push(`Kit: ${kit}`)
   details.push(`Full schedule in Trak: ${TRAK_LINK}`)
 
