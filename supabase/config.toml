@@ -58,3 +58,8 @@ verify_jwt = false
 # event emails. The handler authorises every call itself (handler.ts).
 [functions.send-event-emails]
 verify_jwt = false
+
+# TRAK-136 (J8.13): only the scheduler calls it, with a project secret key on
+# apikey (read from Vault), which the gateway can't verify; the handler does.
+[functions.send-event-reminders]
+verify_jwt = false

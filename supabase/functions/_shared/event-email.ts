@@ -51,7 +51,7 @@ export function withoutLinks(text: string | null | undefined): string {
 }
 
 /** Coach-typed text for the email, or '' when it names a child in the squad. */
-function clean(text: string | null | undefined, names: RegExp[]): string {
+export function clean(text: string | null | undefined, names: RegExp[]): string {
   const safe = withoutLinks(text);
   return names.some(p => p.test(safe)) ? '' : safe;
 }
@@ -87,7 +87,8 @@ export const longDay = (date: string | null) => dayName(date, 'long');
 /** "Wed 14 Oct" */
 export const shortDay = (date: string | null) => dayName(date, 'short');
 
-function timeRange(e: EventFields): string {
+/** "17:00–18:30", "17:00" or "time to be confirmed". */
+export function timeRange(e: EventFields): string {
   const start = startTime(e);
   const end = hhmm(e.end_time);
   if (!start) return 'time to be confirmed';

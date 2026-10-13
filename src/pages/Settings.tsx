@@ -128,8 +128,12 @@ function AccountSettings({ userId }: { userId: string }) {
   }
 
   const deleteAccount = async () => {
+    // TRAK-155: deleting a guardian account withdraws the approvals they gave.
+    const approvals = role === 'parent'
+      ? ' It also withdraws the approvals you gave for your children.'
+      : ''
     if (operation.current || !window.confirm(
-      'Delete your account? Your sign-in and profile will be removed. Some academy history and consent records may be retained. This cannot be undone.'
+      `Delete your account? Your sign-in and profile will be removed.${approvals} Some academy history and consent records may be retained. This cannot be undone.`
     ) || !begin('delete')) return
     try {
       const { client } = await getSettingsAccount(userId, isCurrent)
@@ -260,6 +264,15 @@ function AccountSettings({ userId }: { userId: string }) {
           </Section>
         )}
 
+        {/* TRAK-136 (J8.13): the reminder 2 days before each event goes to
+            guardians and to players with their own email, so only they get
+            the switch. A child's username login never gets email. */}
+        {(role === 'parent' || (role === 'player' && !childLogin)) && (
+          <Section label="Notifications">
+            <EventReminders userId={userId} />
+          </Section>
+        )}
+
         {/* Club admin info */}
         {role === 'club' && (
           <Section label="Access">
@@ -302,6 +315,91 @@ function AccountSettings({ userId }: { userId: string }) {
         </div>
       </div>
     </div>
+  )
+}
+
+/* ------- notifications ------- */
+
+/**
+ * TRAK-136 (J8.13): the one place reminders are turned off. There is no
+ * unsubscribe link in the email: Microsoft's scanner clicks links (TRAK-107).
+ * No row means on. Shows only what the database confirmed; a failed read
+ * offers a retry rather than a switch that may be wrong.
+ */
+function EventReminders({ userId }: { userId: string }) {
+  const [on, setOn] = useState<boolean | null>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [saving, setSaving] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    setState('loading')
+    void (async () => {
+      const { client } = await getSettingsAccount(userId, () => !cancelled)
+      const { data, error } = await client.from('notification_settings').select('event_reminders')
+        .eq('user_id', userId).maybeSingle()
+      if (error) throw error
+      if (cancelled) return
+      setOn(data?.event_reminders ?? true)
+      setState('ready')
+    })().catch(() => { if (!cancelled) setState('error') })
+    return () => { cancelled = true }
+  }, [userId, attempt])
+
+  const toggle = async () => {
+    if (on === null || saving) return
+    const next = !on
+    setSaving(true)
+    try {
+      const { client } = await getSettingsAccount(userId, () => true)
+      const { data, error } = await client.from('notification_settings')
+        .upsert({ user_id: userId, event_reminders: next }, { onConflict: 'user_id' })
+        .select('event_reminders').single()
+      if (error || data?.event_reminders !== next) throw error ?? new Error('Reminder setting was not confirmed')
+      setOn(next)
+      toast.success(next ? 'Event reminders on' : 'Event reminders off')
+    } catch {
+      toast.error("Couldn't save your reminder setting. Try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (state === 'loading') return <p role="status" className="py-3.5 text-sm text-muted-foreground">Loading…</p>
+  if (state === 'error') {
+    return (
+      <div role="alert" className="py-3.5 text-sm text-muted-foreground">
+        <p>Couldn't load your reminder setting.</p>
+        <button onClick={() => setAttempt(value => value + 1)} className="mt-2 text-primary">Retry</button>
+      </div>
+    )
+  }
+  return (
+    <>
+      <Row
+        label="Event reminders"
+        right={
+          <button
+            role="switch"
+            aria-checked={!!on}
+            aria-label="Event reminders"
+            disabled={saving}
+            onClick={toggle}
+            className="relative rounded-full transition-colors"
+            style={{ width: 40, height: 24, background: on ? '#C8F25A' : 'rgba(255,255,255,0.12)' }}
+          >
+            <span
+              className="absolute top-[3px] rounded-full transition-all"
+              style={{ width: 18, height: 18, left: on ? 19 : 3, background: on ? '#0A0A0B' : 'rgba(255,255,255,0.7)' }}
+            />
+          </button>
+        }
+      />
+      <p className="py-3" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+        An email 2 days before each event, listing what's on, when and where. One email a day, whatever the number of children.
+      </p>
+    </>
   )
 }
 
