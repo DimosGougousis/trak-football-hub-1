@@ -60,20 +60,23 @@ describe('TRAK-159: the coach calendar cards', () => {
     expect(publish).toHaveTextContent('Publish')
   }, 20_000)
 
-  it('a cancelled event is marked in a colour that isn\'t match red', async () => {
+  it('a cancelled event is marked red, label and stripe (founders, 12 Oct)', async () => {
     fixtures()
     renderApp('/coach/schedule')
     await screen.findByText('Rained off', { selector: 'p' })
     const label = within(card('Rained off')).getByText('Cancelled')
-    expect(label.style.color).not.toBe(hexToRgb(EVENT_COLOR.match))
+    expect(label.style.color).toBe(hexToRgb(CANCELLED_COLOR))
+    const stripe = card('Rained off').firstElementChild as HTMLElement
+    expect(stripe.style.background).toBe(hexToRgb(CANCELLED_COLOR))
   }, 20_000)
 })
 
 describe('TRAK-159: one colour per type', () => {
-  it('training blue, match red, other orange (agreed in the live run)', () => {
+  it('training blue, match green, other orange, cancelled red (founders, 12 Oct; replaces 11 Oct\'s match red)', () => {
     expect(hue(EVENT_COLOR.training)).toBe('blue')
-    expect(hue(EVENT_COLOR.match)).toBe('red')
+    expect(hue(EVENT_COLOR.match)).toBe('green')
     expect(hue(EVENT_COLOR.other)).toBe('orange')
+    expect(hue(CANCELLED_COLOR)).toBe('red')
   })
 
   it('every type and the cancelled style are told apart', () => {
@@ -88,7 +91,7 @@ function hexToRgb(hex: string): string {
 }
 
 /** The colour family a hex reads as, by its hue angle. */
-function hue(hex: string): 'red' | 'orange' | 'blue' | 'other' {
+function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'other' {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
   if (d === 0) return 'other'
@@ -96,6 +99,7 @@ function hue(hex: string): 'red' | 'orange' | 'blue' | 'other' {
   h = (h * 60 + 360) % 360
   if (h < 15 || h >= 345) return 'red'
   if (h < 40) return 'orange'
+  if (h >= 90 && h < 160) return 'green'
   if (h >= 195 && h < 250) return 'blue'
   return 'other'
 }

@@ -10,7 +10,7 @@ import { HttpResponse, http } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { table, rpc, SUPABASE_URL, rpcRows } from '../../../../tests/msw/supabase'
 
 const PLAYER = { id: 'player-home-zero' }
 const ASSESSMENT = { id: 'assessment-zero', squad_player_id: 'squad-1', coach_user_id: 'coach-1', created_at: '2026-10-04T16:30:46Z',
@@ -24,7 +24,7 @@ beforeEach(() => {
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),
     table('coach_assessments', [ASSESSMENT]),
     http.get(`${SUPABASE_URL}/rest/v1/coach_shared_feedback`, () => HttpResponse.json(null)),
-    table('coach_calendar_events', []), table('recognition_awards', []),
+    rpcRows('child_events', []), table('recognition_awards', []),
     rpc('get_player_invites_for_current_user', () => []),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
   )

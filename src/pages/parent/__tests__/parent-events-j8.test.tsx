@@ -100,6 +100,17 @@ function renderAt(path: string) {
 }
 
 describe('TRAK-131: the parent\'s Upcoming list', () => {
+  // TRAK-170 (live run 2): the same rule as the player's Sessions tab.
+  it('shows the next 3 events, then See more for the rest', async () => {
+    EVENTS.Alex = [1, 2, 3, 4, 5].map(n => event(`ev-a${n}`, { title: `Alex session ${n}` }))
+    renderAt('/parent/matches')
+    const list = await screen.findByRole('region', { name: 'Upcoming' })
+    expect(await within(list).findByText('Alex session 1')).toBeInTheDocument()
+    expect(within(list).getAllByRole('link')).toHaveLength(3)
+    await userEvent.click(within(list).getByRole('button', { name: 'See more (2)' }))
+    expect(within(list).getAllByRole('link')).toHaveLength(5)
+  })
+
   it('shows only the selected child\'s events, and the other child\'s after switching', async () => {
     renderAt('/parent/matches')
     const list = await screen.findByRole('region', { name: 'Upcoming' })

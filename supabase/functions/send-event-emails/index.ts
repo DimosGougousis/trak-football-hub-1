@@ -28,6 +28,7 @@ serve(async (req) => {
 
     const { response, work } = await handleEventEmailRequest(req, {
       secretKeys: keyValues(secretRaw),
+      cronToken: Deno.env.get('TRAK_CRON_TOKEN')?.trim() ?? '',
       async getCaller(jwt) {
         const { data, error } = await admin.auth.getUser(jwt);
         return { data: data.user, error };

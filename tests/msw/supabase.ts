@@ -41,6 +41,19 @@ export function table(name: string, rows: Record<string, unknown>[]): HttpHandle
   )
 }
 
+/** A set-returning RPC answered like a table read (one row for .maybeSingle()). */
+export function rpcRows(name: string, rows: Record<string, unknown>[]): HttpHandler {
+  return http.post(`${SUPABASE_URL}/rest/v1/rpc/${name}`, ({ request }) =>
+    respond(rows, request.headers.get('Accept') ?? ''),
+  )
+}
+
+export function rpcError(name: string, status: number, body: object): HttpHandler {
+  return http.post(`${SUPABASE_URL}/rest/v1/rpc/${name}`, () =>
+    HttpResponse.json(body, { status }),
+  )
+}
+
 export function tableError(name: string, status: number, body: object): HttpHandler {
   return http.get(`${SUPABASE_URL}/rest/v1/${name}`, () =>
     HttpResponse.json(body, { status }),

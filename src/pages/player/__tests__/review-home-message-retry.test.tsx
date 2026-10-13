@@ -10,7 +10,7 @@ import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { table, rpc, SUPABASE_URL, rpcRows } from '../../../../tests/msw/supabase'
 
 const PLAYER = { id: 'player-home-retry' }
 const ASSESSMENT = { id: 'assessment-1', squad_player_id: 'squad-1', coach_user_id: 'coach-1', created_at: '2026-09-24T10:00:00Z',
@@ -30,7 +30,7 @@ describe('#141 review: a failed coach-message read', () => {
       http.get(`${SUPABASE_URL}/rest/v1/coach_shared_feedback`, () => fail
         ? HttpResponse.json({ code: 'XX000', message: 'unavailable' }, { status: 500 })
         : HttpResponse.json({ body: 'Keep your head up after a mistake.' })),
-      table('coach_calendar_events', []), table('recognition_awards', []),
+      rpcRows('child_events', []), table('recognition_awards', []),
       rpc('get_player_invites_for_current_user', () => []),
       rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
     )

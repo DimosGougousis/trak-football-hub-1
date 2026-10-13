@@ -101,7 +101,7 @@ INSERT INTO public.squad_players (id, coach_user_id, player_name, age_group, lin
 INSERT INTO public.roster_children (id, organization_id, squad_player_id, date_of_birth, child_email, player_user_id, loaded_by) VALUES
   (pg_temp.rs(50), pg_temp.rs(30), pg_temp.rs(40), '2012-05-06', 'child@roster-signup.test',       NULL,           'fixture'),
   (pg_temp.rs(51), pg_temp.rs(30), pg_temp.rs(41), '2012-01-01', 'claimed@roster-signup.test',     pg_temp.rs(14), 'fixture'),
-  (pg_temp.rs(52), pg_temp.rs(30), pg_temp.rs(42), '2014-03-03', 'sibling@roster-signup.test',     NULL,           'fixture'),
+  (pg_temp.rs(52), pg_temp.rs(30), pg_temp.rs(42), '2012-03-03', 'sibling@roster-signup.test',     NULL,           'fixture'),
   (pg_temp.rs(53), pg_temp.rs(30), pg_temp.rs(43), '2012-09-09', 'unconfirmed@roster-signup.test', NULL,           'fixture');
 INSERT INTO public.roster_guardians (roster_child_id, email, loaded_by) VALUES
   (pg_temp.rs(50), 'guardian@roster-signup.test',  'fixture'),
@@ -182,7 +182,7 @@ SELECT pg_temp.rs_allowed(pg_temp.rs_player('Sibling Synthetic', ''), '4 CONTROL
 RESET ROLE;
 SELECT pg_temp.rs_check(EXISTS (SELECT 1 FROM public.player_parent_links WHERE player_user_id = pg_temp.rs(16) AND parent_user_id = pg_temp.rs(20)),
   '4 J2 a guardian who signed up first is linked to the sibling who arrives later');
-SELECT pg_temp.rs_check((SELECT date_of_birth = '2014-03-03' FROM public.player_details WHERE user_id = pg_temp.rs(16)),
+SELECT pg_temp.rs_check((SELECT date_of_birth = '2012-03-03' FROM public.player_details WHERE user_id = pg_temp.rs(16)),
   '4 the sibling''s date of birth also comes from the roster');
 SET LOCAL ROLE authenticated;
 

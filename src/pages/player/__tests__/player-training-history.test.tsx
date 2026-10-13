@@ -12,7 +12,7 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { table, rpc, SUPABASE_URL, rpcRows } from '../../../../tests/msw/supabase'
 import { supabase } from '@/integrations/supabase/client'
 import { formatParentDate } from '@/lib/parent-data'
 
@@ -32,7 +32,7 @@ beforeEach(() => {
   account = `training-player-${++sequence}`
   signInAs({ id: account })
   server.use(
-    table('coach_calendar_events', []), // TRAK-130: the Sessions tab also reads upcoming events
+    rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [{ id: 'p', user_id: account, role: 'player', full_name: 'Training Player' }]),
     table('matches', []),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),

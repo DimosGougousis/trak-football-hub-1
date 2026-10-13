@@ -1,4 +1,5 @@
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
+import { CANCELLED_COLOR } from '@/lib/coach-events'
 
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
@@ -19,8 +20,8 @@ export function EventDetails({ event: e }: { event: PlayerEvent }) {
     <div className="space-y-4">
       <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-white/50' : 'text-white/90'}`}>{eventHeading(e)}</h1>
       {cancelled && (
-        <div className="rounded-[14px] px-4 py-3" style={{ border: '1px solid hsl(var(--destructive) / 0.5)' }}>
-          <p className="text-[13px] font-semibold text-destructive">This event is cancelled.</p>
+        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${CANCELLED_COLOR}80` }}>
+          <p className="text-[13px] font-semibold" style={{ color: CANCELLED_COLOR }}>This event is cancelled.</p>
           {e.cancelReason && <p className="text-[13px] text-white/70 mt-1">{e.cancelReason}</p>}
         </div>
       )}

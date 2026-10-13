@@ -8,7 +8,7 @@ import { cleanup, screen } from '@testing-library/react'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc } from '../../../../tests/msw/supabase'
+import { table, rpc, rpcRows } from '../../../../tests/msw/supabase'
 
 const PLAYER = { id: 'player-greeting' }
 
@@ -17,7 +17,7 @@ beforeEach(() => {
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Greta Synthetic' }]),
     table('matches', []), table('player_details', []), table('squad_players', []),
     table('coach_assessments', []), table('coach_shared_feedback', []),
-    table('coach_calendar_events', []), table('recognition_awards', []),
+    rpcRows('child_events', []), table('recognition_awards', []),
     rpc('get_player_invites_for_current_user', () => []),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
   )
