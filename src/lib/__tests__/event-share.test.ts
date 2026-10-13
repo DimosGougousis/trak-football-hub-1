@@ -18,67 +18,83 @@ const training: ShareableEvent = {
   status: 'scheduled',
   cancelReason: null,
 }
-const opts = { today: '2026-10-08', childNames: [] as string[] }
+const opts = { childNames: [] as string[] }
 
-describe('whatsAppShareText', () => {
-  it('writes a training: squad and type, day and time, venue, and the Trak line', () => {
+// TRAK-168 part 2: Tarek's templates (13 Oct), for the founders to agree.
+// The first line is bold (WhatsApp *...*) so it reads in the chat preview.
+describe('whatsAppShareText: the team-group templates', () => {
+  const link = 'https://trakfootball.com/event/ev-13'
+
+  it('writes a training', () => {
     expect(whatsAppShareText(training, opts)).toBe([
-      '*U15 Training*',
-      'Tue 13 Oct, 18:00',
-      'Venue: Main pitch',
-      '',
-      'Open in Trak: https://trakfootball.com/event/ev-13',
+      '*⚽ TRAINING | U15 Training*',
+      '📅 When: Tue, 13 Oct @ 6:00 PM',
+      '🏟️ Venue: Main pitch',
+      `🔗 Event details & Availability: ${link}`,
     ].join('\n'))
   })
 
-  it('writes a match with opponent, home or away, meet time and kit', () => {
+  it('writes a match with meet time, kick-off and kit', () => {
     const text = whatsAppShareText({
       ...training, kind: 'match', opponent: 'Rivals FC', homeAway: 'away',
       venue: 'Rivals Sports Park', meetTime: '17:15', kit: 'White',
     }, opts)
     expect(text).toBe([
-      '*U15 Match vs Rivals FC (away)*',
-      'Tue 13 Oct, 18:00',
-      'Venue: Rivals Sports Park',
-      'Meet: 17:15',
-      'Kit: White',
-      '',
-      'Open in Trak: https://trakfootball.com/event/ev-13',
+      '*⚔️ MATCH | U15 Match vs Rivals FC (Away)*',
+      '📅 When: Tue, 13 Oct',
+      '⏰ Meet Time: 5:15 PM | Kick-off: 6:00 PM',
+      '🏟️ Venue: Rivals Sports Park',
+      '👕 Kit: White',
+      `🔗 Confirm availability: ${link}`,
     ].join('\n'))
   })
 
-  it('says the time is not confirmed yet instead of showing midnight', () => {
-    expect(whatsAppShareText({ ...training, startTime: null }, opts)).toContain('Tue 13 Oct, time to be confirmed')
+  it('a match with no meet time gives the kick-off alone', () => {
+    const text = whatsAppShareText({ ...training, kind: 'match', opponent: 'Rivals FC', homeAway: 'home' }, opts)
+    expect(text).toContain('⏰ Kick-off: 6:00 PM')
+    expect(text).not.toContain('Meet Time')
   })
 
-  it('writes "Training cancelled today" with the reason for a cancellation today', () => {
-    const text = whatsAppShareText({ ...training, status: 'cancelled', cancelReason: 'Pitch closed' }, { today: '2026-10-13', childNames: [] })
-    expect(text.split('\n').slice(0, 3)).toEqual([
-      '*U15 Training cancelled today*',
-      'Tue 13 Oct, 18:00',
-      'Reason: Pitch closed',
-    ])
+  it('writes a cancellation with its reason', () => {
+    expect(whatsAppShareText({ ...training, status: 'cancelled', cancelReason: 'Pitch waterlogged' }, opts)).toBe([
+      '*❌ CANCELLED | U15 Training*',
+      '📅 Date: Tue, 13 Oct',
+      '🏟️ Venue: Main pitch',
+      '📌 Reason: Pitch waterlogged',
+      'Please note this session will not go ahead as scheduled.',
+      `🔗 Updated event info: ${link}`,
+    ].join('\n'))
   })
 
-  it('names the day of a cancellation on another day', () => {
-    const text = whatsAppShareText({ ...training, kind: 'match', opponent: 'Rivals FC', status: 'cancelled' }, opts)
-    expect(text.split('\n')[0]).toBe('*U15 Match vs Rivals FC cancelled*')
+  it('a cancelled match names the opponent, and a cancellation without a reason has no reason line', () => {
+    const text = whatsAppShareText({ ...training, kind: 'match', opponent: 'Rivals FC', homeAway: 'away', status: 'cancelled' }, opts)
+    expect(text.split('\n')[0]).toBe('*❌ CANCELLED | U15 Match vs Rivals FC*')
     expect(text).not.toContain('Reason:')
   })
 
-  it('titles a tournament and an other event by squad and type', () => {
-    expect(whatsAppShareText({ ...training, kind: 'tournament' }, opts).split('\n')[0]).toBe('*U15 Tournament*')
-    expect(whatsAppShareText({ ...training, kind: 'other' }, opts).split('\n')[0]).toBe('*U15 Event*')
+  it('writes times on a 12-hour clock', () => {
+    expect(whatsAppShareText({ ...training, startTime: '00:30' }, opts)).toContain('@ 12:30 AM')
+    expect(whatsAppShareText({ ...training, startTime: '12:00' }, opts)).toContain('@ 12:00 PM')
   })
 
-  it('leaves out lines with nothing to say', () => {
-    const text = whatsAppShareText({ ...training, venue: '  ', kit: '' }, opts)
-    expect(text).not.toContain('Venue:')
-    expect(text).not.toContain('Kit:')
+  it('never shows midnight for an event with no time yet', () => {
+    expect(whatsAppShareText({ ...training, startTime: null }, opts)).toContain('📅 When: Tue, 13 Oct @ time to be confirmed')
+  })
+
+  it('leaves out lines with nothing to say, in every layout', () => {
+    for (const shape of [{}, { kind: 'match' as const }, { status: 'cancelled' as const }, { kind: 'match' as const, status: 'cancelled' as const }]) {
+      const text = whatsAppShareText({ ...training, ...shape, venue: '  ', kit: '' }, opts)
+      expect(text).not.toContain('Venue:')
+      expect(text).not.toContain('Kit:')
+    }
+  })
+
+  it('names an opponent only on a match, even one left over from before the coach changed the type', () => {
+    expect(whatsAppShareText({ ...training, opponent: 'Rivals FC' }, opts).split('\n')[0]).toBe('*⚽ TRAINING | U15 Training*')
   })
 
   it('crosses a month end and names the weekday correctly', () => {
-    expect(whatsAppShareText({ ...training, date: '2026-11-01' }, opts)).toContain('Sun 1 Nov, 18:00')
+    expect(whatsAppShareText({ ...training, date: '2026-11-01' }, opts)).toContain('Sun, 1 Nov')
   })
 
   it('carries no child names: an event has no field for one, and no absence list is added', () => {
@@ -122,7 +138,7 @@ describe('whatsAppShareText: no child names in coach-typed text', () => {
       ...training, kind: 'match', opponent: 'Haddad Select', homeAway: 'home', venue: "Omar's garden", kit: 'Lucas kit',
     }, squad)
     expect(text).not.toMatch(/Omar|Haddad|Lucas/)
-    expect(text.split('\n')[0]).toBe('*U15 Match (home)*')
+    expect(text.split('\n')[0]).toBe('*⚔️ MATCH | U15 Match (Home)*')
   })
 
   it('reads a name as a whole word only, at either end', () => {
@@ -131,7 +147,7 @@ describe('whatsAppShareText: no child names in coach-typed text', () => {
   })
 
   it('never reads a particle such as "Abu" or "Bin" as a name', () => {
-    const text = whatsAppShareText({ ...training, venue: 'Abu Dhabi Sports City', kit: 'Bin Hendi blue' },
+    const text = whatsAppShareText({ ...training, kind: 'match', venue: 'Abu Dhabi Sports City', kit: 'Bin Hendi blue' },
       { ...opts, childNames: ['Zaid Abu Example', 'Rashid Bin Example'] })
     expect(text).toContain('Venue: Abu Dhabi Sports City')
     expect(text).toContain('Kit: Bin Hendi blue')
