@@ -466,6 +466,24 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          event_reminders: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          event_reminders?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          event_reminders?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           age_group: string
