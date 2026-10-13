@@ -19,6 +19,11 @@ export default function EventLink() {
   const [parentReady, setParentReady] = useState(false)
   const isParent = profile?.role === 'parent'
 
+  // Signed out: remember the event, so sign-in comes back to it.
+  useEffect(() => {
+    if (!loading && !user) rememberReturnTo(`/event/${id}`)
+  }, [loading, user, id])
+
   useEffect(() => {
     // The linked children load after sign-in; choosing before they arrive
     // would pick none.
@@ -41,10 +46,7 @@ export default function EventLink() {
   }, [isParent, id, childrenLoading, children.map(c => c.id).join(',')])
 
   if (loading) return <div className="min-h-screen bg-[#0A0A0B]" />
-  if (!user) {
-    rememberReturnTo(`/event/${id}`)
-    return <Navigate to="/" replace />
-  }
+  if (!user) return <Navigate to="/" replace />
   if (profile?.role === 'player') return <Navigate to={`/player/event/${id}`} replace />
   if (profile?.role === 'coach') return <Navigate to="/coach/schedule" replace />
   if (isParent) {

@@ -84,7 +84,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     expect(text).toContain('⏰ Meet Time: 5:45 PM | Kick-off: 6:30 PM')
     expect(text).toContain('Kit: White')
     // TRAK-168: the link opens this event, not Home.
-    expect(text).toContain('🔗 Confirm availability: https://trakfootball.com/event/live-1')
+    expect(text).toContain('🔗 Event details: https://trakfootball.com/event/live-1')
     expect(link).toHaveAttribute('target', '_blank')
   })
 

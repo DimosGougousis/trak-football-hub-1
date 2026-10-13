@@ -30,7 +30,7 @@ describe('whatsAppShareText: the team-group templates', () => {
       '*⚽ TRAINING | U15 Training*',
       '📅 When: Tue, 13 Oct @ 6:00 PM',
       '🏟️ Venue: Main pitch',
-      `🔗 Event details & Availability: ${link}`,
+      `🔗 Event details: ${link}`,
     ].join('\n'))
   })
 
@@ -45,7 +45,7 @@ describe('whatsAppShareText: the team-group templates', () => {
       '⏰ Meet Time: 5:15 PM | Kick-off: 6:00 PM',
       '🏟️ Venue: Rivals Sports Park',
       '👕 Kit: White',
-      `🔗 Confirm availability: ${link}`,
+      `🔗 Event details: ${link}`,
     ].join('\n'))
   })
 
