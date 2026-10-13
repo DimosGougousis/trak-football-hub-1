@@ -24,7 +24,8 @@ export default function PlayerEvent() {
     let cancelled = false
     setResult(null)
     if (!id || !user) return
-    supabase.from('coach_calendar_events').select('*').eq('id', id).eq('published', true).maybeSingle()
+    // Through child_events (TRAK-164), the family read path with the reason rule.
+    supabase.rpc('child_events', { p_child: user.id }).eq('id', id).maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return
         const event = data ? toPlayerEvent(data as Record<string, unknown>) : null
