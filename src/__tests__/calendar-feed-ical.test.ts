@@ -154,9 +154,32 @@ describe('buildCalendarFeed: titles and details', () => {
     const [event] = events(buildCalendarFeed([{ ...base, kind: 'match', opponent: 'Rivals FC', meetTime: '17:15', kit: 'White' }]))
     expect(prop(event, 'LOCATION')).toBe('LOCATION:Main pitch')
     const description = prop(event, 'DESCRIPTION')!
-    expect(description).toContain('Meet: 17:15')
+    expect(description).toContain('Meet 45 min before kick-off (17:15 Dubai time)')
     expect(description).toContain('Kit: White')
     expect(description).toContain('Full schedule in Trak: https://trakfootball.com')
+  })
+
+  // TRAK-169 (live run 2, S10): calendars convert DTSTART to the phone's zone
+  // but never text, so a bare "Meet: 12:30" read as New York time beside a
+  // converted kickoff. The meet is said relative to the start, which holds in
+  // any zone, and the clock time is labelled as Dubai's.
+  it('says the meet relative to kick-off, with its clock time labelled as Dubai time', () => {
+    const [match] = events(buildCalendarFeed([{ ...base, kind: 'match', opponent: 'Rivals FC', startTime: '14:00', endTime: '15:30', meetTime: '12:30' }]))
+    expect(prop(match, 'DESCRIPTION')).toContain('Meet 1 h 30 min before kick-off (12:30 Dubai time)')
+    const [training] = events(buildCalendarFeed([{ ...base, meetTime: '17:00' }]))
+    expect(prop(training, 'DESCRIPTION')).toContain('Meet 1 h before the start (17:00 Dubai time)')
+  })
+
+  it('never writes an unlabelled clock time for the meet', () => {
+    for (const event of [
+      { ...base, meetTime: '17:15' },
+      { ...base, startTime: null, endTime: null, meetTime: '17:15' },
+      { ...base, meetTime: '18:30' },
+    ]) {
+      const description = prop(events(buildCalendarFeed([event]))[0], 'DESCRIPTION')!
+      expect(description).not.toMatch(/Meet:? \d{1,2}:\d{2}/)
+      expect(description).toContain('Dubai time')
+    }
   })
 
   it('marks a cancelled event cancelled and keeps it, so phones show it rather than silently dropping it', () => {

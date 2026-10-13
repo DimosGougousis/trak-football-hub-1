@@ -89,7 +89,7 @@ INSERT INTO public.squad_players (id, coach_user_id, player_name, age_group) VAL
 INSERT INTO public.roster_children (id, organization_id, squad_player_id, date_of_birth, child_email, player_user_id, loaded_by) VALUES
   (pg_temp.ec(70), pg_temp.ec(50), pg_temp.ec(60), '2013-03-04', 'ana@email-fix.test', NULL,           'fixture'),
   (pg_temp.ec(71), pg_temp.ec(50), pg_temp.ec(61), '2013-05-06', 'ben@email-fix.test', pg_temp.ec(11), 'fixture'),
-  (pg_temp.ec(72), pg_temp.ec(50), pg_temp.ec(62), '2018-01-02', NULL,                 NULL,           'fixture'),
+  (pg_temp.ec(72), pg_temp.ec(50), pg_temp.ec(62), '2012-01-02', NULL,                 NULL,           'fixture'),
   (pg_temp.ec(73), pg_temp.ec(50), pg_temp.ec(63), '2013-07-08', 'dee@email-fix.test', NULL,           'fixture');
 INSERT INTO public.roster_guardians (id, roster_child_id, email, parent_user_id, loaded_by) VALUES
   (pg_temp.ec(80), pg_temp.ec(70), 'g1@email-fix.test',    NULL,           'fixture'),
