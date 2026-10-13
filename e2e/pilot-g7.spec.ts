@@ -40,7 +40,9 @@ for (const role of ['player', 'coach', 'club'] as const) {
       if (url.pathname === '/rest/v1/rpc/feature_on') return json(false)
       // TRAK-85: the parked screens render for real, so their reads (GET only) are answered.
       if (request.method() === 'GET' && ['/rest/v1/organizations', '/rest/v1/coach_details', '/rest/v1/matches', '/rest/v1/player_details',
-        '/rest/v1/recognition_awards', '/rest/v1/coach_calendar_events'].includes(url.pathname)) return json([])
+        '/rest/v1/recognition_awards', '/rest/v1/coach_calendar_events',
+        // TRAK-136: Settings reads the reminder switch; no row means on.
+        '/rest/v1/notification_settings'].includes(url.pathname)) return json([])
       unexpected.push(request.method() + ' ' + url.pathname)
       return json({ message: 'Unmocked request blocked' }, 500)
     })

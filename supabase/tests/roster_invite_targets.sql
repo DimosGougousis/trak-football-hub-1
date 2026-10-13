@@ -134,7 +134,7 @@ INSERT INTO public.squad_players (id, coach_user_id, player_name, age_group) VAL
   (pg_temp.ri(63), pg_temp.ri(2), 'Eve Synthetic', 'U11'),
   (pg_temp.ri(64), pg_temp.ri(2), 'Finn Synthetic', 'Senior');
 INSERT INTO public.roster_children (id, organization_id, squad_player_id, date_of_birth, child_email, loaded_by) VALUES
-  (pg_temp.ri(73), pg_temp.ri(50), pg_temp.ri(63), '2016-02-03', NULL, 'fixture'),
+  (pg_temp.ri(73), pg_temp.ri(50), pg_temp.ri(63), '2012-02-03', NULL, 'fixture'),
   (pg_temp.ri(74), pg_temp.ri(50), pg_temp.ri(64), '2000-02-03', NULL, 'fixture');
 INSERT INTO public.roster_guardians (roster_child_id, email, parent_user_id, loaded_by) VALUES
   (pg_temp.ri(73), 'g1@roster-invite.test', pg_temp.ri(20), 'fixture'),

@@ -130,7 +130,7 @@
   <div class="body">
     <h3>Load the academy-supplied roster</h3>
     <p>Use the operator loader dry run, review it, then apply only the agreed synthetic rows. Verify the coach sees each child’s correct waiting/approved state. Repeat the load and check that it does not create duplicates.</p>
-    <p class="look"><b>Record:</b> Exact roster IDs, expected membership, repeat result and any partial-load failure. A coach cannot add a child or link one by a TRK code.</p>
+    <p class="look"><b>Record:</b> Exact roster IDs, expected membership, repeat result and any partial-load failure. A coach cannot add a child or link one by a TRK code. A row for a child younger than the academy's minimum age (13 for UAE academies) by date of birth is refused by the loader's dry run and by the database (TRAK-165); check one on the synthetic roster, and that an academy admin can't lower the minimum.</p>
   </div>
 </div>
 
@@ -181,7 +181,7 @@
   <div class="body">
     <h3>Log and edit sessions</h3>
     <p>As the assigned coach, log training with attendance and a match with distinct per-player minutes, goals and assists. Check saved values and edit a saved session. Run the agreed check on the synthetic squad of at least 25 players.</p>
-    <p class="look"><b>Record:</b> No invented match defaults, duplicate writes or unexplained errors; attendance and edits persist. An impossible score (two scorers in a 1–0 win) is refused with a reason the coach can act on (TRAK-149, TRAK-151). Saving a match again with another score, or adding a scorer whose goal would pass the saved score, saves nothing and says which: no second session or attendance appears in history (TRAK-153). The same opponent on another day saves as a new match. Use the routed session flow, not an old Quick Match Log component.</p>
+    <p class="look"><b>Record:</b> No invented match defaults, duplicate writes or unexplained errors; attendance and edits persist. An impossible score (two scorers in a 1–0 win) is refused with a reason the coach can act on (TRAK-149, TRAK-151), and so are more assists than goals (two assists in a 1–0: "2 assists entered, but the team scored 1", TRAK-167). Saving a match again with another score, or adding a scorer whose goal would pass the saved score, saves nothing and says which: no second session or attendance appears in history (TRAK-153). The same opponent on another day saves as a new match. Use the routed session flow, not an old Quick Match Log component.</p>
   </div>
 </div>
 
@@ -222,7 +222,7 @@
   <div class="body">
     <h3>Withdraw with sessions open</h3>
     <p>Keep a coach form, child app and a second guardian session open. Withdraw the last active approval for one child and retry the coach save. Check readback and return to the other open tabs. Separately withdraw approval before a child finishes setup.</p>
-    <p class="look"><b>Record:</b> Server write refusal and withdrawn content behavior, including timing and offline limitations. With multiple guardians, distinguish one withdrawn approval from withdrawal of the last active approval.</p>
+    <p class="look"><b>Record:</b> Server write refusal and withdrawn content behavior, including timing and offline limitations. With multiple guardians, distinguish one withdrawn approval from withdrawal of the last active approval. A guardian who deletes their account: the confirmation says it withdraws their approvals, and afterwards their child's approval reads as withdrawn, with the evidence row kept (TRAK-155).</p>
   </div>
 </div>
 
@@ -331,14 +331,15 @@
 <h3>Exercise the specified operating cases as their slices are delivered</h3>
 <p class="small">These support the nine checks; they do not create a tenth acceptance check or claim that a pending feature is available.</p>
 <ul class="plain">
+<li><b>Change and cancellation emails (TRAK-135):</b> the subject is generic (e.g. “Training cancelled: Wed 14 Oct”), not the coach’s event title; a cancel reason is shown only when it names no squad child and holds no link; a link in the venue reads “(link in the Trak app)”; the footer says who to ask, and there is no Reply-To.</li>
 <li><b>Import and kit (TRAK-129):</b> preview 12 CSV fixtures, correct a bad row, confirm 12 matches and re-import with zero duplicates. Verify date, kickoff, meet time, opponent, home/away, venue and kit. No writes occur before confirmation, and the “Added N” count equals the rows actually saved. CSV only (PDF reading is out for now); no AI parsing.</li>
 <li><b>Family event lists (TRAK-130, TRAK-131):</b> as the guardian of two children, open each child’s upcoming events and one event page; as the player, check Next up and the list. A guardian whose child has no consent sees no events for that child.</li>
 <li><b>Absence (TRAK-137):</b> the linked guardian reports Can't make it for one child, optionally adds a reason, then undoes before start. The coach sees it after one reload; the sibling is unaffected. Guardians of another child, withdrawn consent and players cannot submit it; families cannot see others’ absences.</li>
-<li><b>Reminders (TRAK-136):</b> check a two-day-ahead reminder, one email per guardian/day across their children, Settings → Notifications opt-out, and safe rerun without duplicate mail. Omit cancelled events and withdrawn children; email contains no unsubscribe action link.</li>
+<li><b>Reminders (TRAK-136):</b> check a two-day-ahead reminder, one email per guardian/day across their children, Settings → Notifications opt-out, and safe rerun without duplicate mail. Omit cancelled events and withdrawn children; email contains no unsubscribe action link and no “Can’t make it” line until its screen ships. Before merge the operator has enabled pg_cron and pg_net and set the scheduler token; after merge <code>cron.job</code> lists the three jobs and a run shows <code>succeeded</code>.</li>
 <li><b>Manual WhatsApp share (TRAK-139):</b> on iPhone and Android, inspect training, match and cancellation text, including kit where applicable. No child names or absence lists; a cancellation reason that names a child or holds a link is left out, as in the email. The coach must choose a destination and send; opening the share control must not send.</li>
 <li><b>Home header (TRAK-163):</b> on coach, player and parent Home, the calendar button (top left) opens Schedule for the coach and Matches for the player and parent; the name is in the centre, and a parent with two children switches child from it; the bell (top right) is on parent and player Home. The coach's Home has no "Smart Calendar" button.
   <ul>
-    <li><b>This week:</b> the strip runs Monday to Sunday (M T W T F S S) with today selected; each event is a dot (training blue, match red, other orange, cancelled hollow). On a Wednesday, Monday's session is still listed under M. Tapping a day lists its events; each opens to venue with (Home)/(Away), meet time and kit, and Open goes to the event page. The coach also sees drafts, marked Draft. Coach B (events switched off) sees no strip. In airplane mode, reloading Home shows an error with Retry, never "Nothing planned" for every day.</li>
+    <li><b>This week:</b> the strip runs Monday to Sunday (M T W T F S S) with today selected; each event is a dot (training blue, match green, other orange, cancelled red; the same colours as the coach calendar and the family lists, TRAK-159). On a Wednesday, Monday's session is still listed under M. Tapping a day lists its events; each opens to venue with (Home)/(Away), meet time and kit, and Open goes to the event page. The coach also sees drafts, marked Draft. Coach B (events switched off) sees no strip. In airplane mode, reloading Home shows an error with Retry, never "Nothing planned" for every day.</li>
     <li><b>Bell (Arc notification center):</b> a new, changed or cancelled event raises the count by one on the next load, for the parent and for the player. Closing the bell keeps the count; the Unread tab lists what's new; Mark read (one alert) or Mark all read clears it; a row opens to its details, and Open event goes to the event page. The alert's time reads "1h" or "Yesterday", never a second event date (TRAK-160).</li>
     <li><b>Dismiss:</b> a dismissed alert stays gone after a reload, and comes back as "Changed" when the coach edits that event.</li>
     <li><b>Siblings:</b> with both children on the same squad, Mark all read for one child leaves the same event unread for the other.</li>

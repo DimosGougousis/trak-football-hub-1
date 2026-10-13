@@ -4,17 +4,9 @@ import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { Accordion } from '@/components/arc/accordion/accordion'
 import { LoadError } from '@/components/trak/LoadError'
-import { eventHeading, toPlayerEvent, type EventKind, type PlayerEvent } from '@/lib/player-events'
-
-/** Agreed in the J8 live run, 11 Oct: training blue, match red, other orange; the same
- *  shades as the coach calendar in #276 (TRAK-159).
- *  ponytail: copied until #276 merges, then import its constant from lib/coach-events. */
-const EVENT_KIND_COLOR: Record<EventKind, string> = {
-  training: '#60a5fa',
-  match: '#f87171',
-  tournament: '#c084fc',
-  other: '#fb923c',
-}
+import { eventHeading, toPlayerEvent, type PlayerEvent } from '@/lib/player-events'
+// The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
+import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 
 export interface StripEvent extends PlayerEvent {
   /** Coach only: a draft families can't see yet. */
@@ -54,7 +46,7 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
             label: format(date, 'EEEEE'),
             accessory: <><span className="sr-only">{format(date, 'EEEE d MMMM')}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
               {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[5px] h-[5px] rounded-full"
-                style={{ background: event.status === 'cancelled' ? 'transparent' : EVENT_KIND_COLOR[event.kind], boxShadow: event.status === 'cancelled' ? 'inset 0 0 0 1px #a1a1aa' : undefined }} />)}
+                style={{ background: event.status === 'cancelled' ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />)}
             </span>}</>,
           }
         })} />
@@ -65,7 +57,7 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
         <Accordion key={day} defaultOpen={chosen.length === 1 ? 0 : -1} items={chosen.map(event => ({
           title: `${event.time ?? 'Time to be confirmed'} · ${eventHeading(event)}${event.status === 'cancelled' ? ' · Cancelled' : ''}${event.draft ? ' · Draft' : ''}`,
           content: <div className="space-y-1 text-[13px] text-white/70">
-            {event.status === 'cancelled' && <p className="text-[#a1a1aa]">Cancelled{event.cancelReason ? `: ${event.cancelReason}` : ''}</p>}
+            {event.status === 'cancelled' && <p style={{ color: CANCELLED_COLOR }}>Cancelled{event.cancelReason ? `: ${event.cancelReason}` : ''}</p>}
             {event.venue && <p>{event.venue}{event.homeAway ? ` (${event.homeAway === 'home' ? 'Home' : 'Away'})` : ''}</p>}
             {event.meetTime && <p>Meet {event.meetTime}</p>}
             {event.kit && <p>Kit: {event.kit}</p>}

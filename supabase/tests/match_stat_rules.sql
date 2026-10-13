@@ -283,9 +283,42 @@ SELECT pg_temp.ms_assert(pg_temp.ms_clash('MS-One-Nil', 2, 0) = 'none',
   'MS29: only the coach who saved the match gets an answer');
 RESET ROLE;
 SELECT pg_temp.ms_assert(
-  NOT has_function_privilege('anon', 'public.coach_match_score_clash(date, text, integer, integer, integer)', 'EXECUTE')
-  AND has_function_privilege('authenticated', 'public.coach_match_score_clash(date, text, integer, integer, integer)', 'EXECUTE'),
+  NOT has_function_privilege('anon', 'public.coach_match_score_clash(date, text, integer, integer, integer, integer)', 'EXECUTE')
+  AND has_function_privilege('authenticated', 'public.coach_match_score_clash(date, text, integer, integer, integer, integer)', 'EXECUTE'),
   'MS30: signed-out visitors cannot call it; signed-in users can');
+
+-- ── 4d. Assists add up too (TRAK-167) ───────────────────────
+-- J8 live run 2: a 1-0 saved with 5 assists for one player. Each goal has at
+-- most one assist, so the match's assists can't pass the team's score. Fewer
+-- is fine (a goal with no assist, or one set up by an unrostered player).
+CREATE FUNCTION pg_temp.ms_log_assists(player integer, goals integer, assists integer, opponent text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $test$
+  SELECT format(
+    'SELECT public.log_match_for_player(%L::uuid, %L, 1, 0, %L, %L, %L, %L, 90, %s, %s, %L, %L, %L, 6.5, current_date - 5)',
+    '96000000-0000-0000-0000-' || lpad(player::text, 12, '0'), opponent,
+    'League', 'Home', 'ST', 'U12', goals, assists, 'None', 'Fresh', 'Good');
+$test$;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"96000000-0000-0000-0000-000000000001"}', true);
+SELECT pg_temp.ms_expect_ok(pg_temp.ms_log_assists(2, 1, 0, 'MS-ASSISTS'),
+  'MS34: 1-0, the scorer is stored');
+SELECT pg_temp.ms_expect_rpc_refusal(pg_temp.ms_log_assists(3, 0, 5, 'MS-ASSISTS'),
+  '5 assists entered, but the team scored 1',
+  'MS35: five assists in a 1-0 are refused (J8 live run 2, S11)');
+SELECT pg_temp.ms_expect_ok(pg_temp.ms_log_assists(3, 0, 1, 'MS-ASSISTS'),
+  'MS36: one assist in a 1-0 is stored');
+SELECT pg_temp.ms_expect_rpc_refusal(pg_temp.ms_log_assists(4, 0, 1, ' ms-assists '),
+  '2 assists entered, but the team scored 1',
+  'MS37: a second assist in a 1-0, saved later, is refused, whatever the opponent''s case or spacing');
+SELECT pg_temp.ms_assert(
+  (SELECT string_agg(c.team_score || '-' || c.opponent_score || '/' || c.saved_goals || '/' || c.saved_assists, ',')
+     FROM public.coach_match_score_clash(current_date - 5, 'MS-Assists', 1, 0, 0, 1) c) = '1-0/1/1',
+  'MS38: the app is told before saving that one more assist takes the saved 1-0 past its score, with the saved assists');
+SELECT pg_temp.ms_assert(
+  NOT EXISTS (SELECT 1 FROM public.coach_match_score_clash(current_date - 5, 'MS-Assists', 1, 0, 0, 0)),
+  'MS39: a player with no assist can still join a 1-0 whose assist is saved');
+RESET ROLE;
 
 
 -- ── 5. What this migration must not have broken ──────────────
@@ -311,8 +344,8 @@ BEGIN
   IF failed > 0 THEN
     RAISE EXCEPTION 'Match stat rules: % failing assertions', failed USING DETAIL = details;
   END IF;
-  IF (SELECT count(*) FROM pg_temp.ms_results) <> 33 THEN
-    RAISE EXCEPTION 'Match stat rules: % assertions ran; expected exactly 33', (SELECT count(*) FROM pg_temp.ms_results);
+  IF (SELECT count(*) FROM pg_temp.ms_results) <> 39 THEN
+    RAISE EXCEPTION 'Match stat rules: % assertions ran; expected exactly 39', (SELECT count(*) FROM pg_temp.ms_results);
   END IF;
 END;
 $test$;
