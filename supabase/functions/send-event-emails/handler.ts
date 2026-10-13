@@ -22,6 +22,8 @@ export type NoticeOutcome = 'sent' | 'failed' | 'nothing_to_send';
 export interface EventEmailDependencies {
   /** Every value of SUPABASE_SECRET_KEYS: the operator's key is one of them. */
   secretKeys: string[];
+  /** TRAK_CRON_TOKEN: the scheduler's own token; '' when unset. */
+  cronToken: string;
   getCaller(jwt: string): Promise<{ data: { id: string } | null; error: unknown }>;
   isCoach(userId: string): Promise<boolean>;
   /** Seconds until the last pending notice is due; null when none is pending. */
@@ -44,7 +46,7 @@ export const WAIT_BUDGET_MS = 45_000;
 
 const retryable = (result: SendResult) =>
   !result.sent && result.reason === 'delivery_failed' && (result.status === undefined || result.status === 429 || result.status >= 500);
-const reasonCode = (result: SendResult) =>
+export const reasonCode = (result: SendResult) =>
   result.sent ? null : result.status ? `${result.reason}:${result.status}` : result.reason;
 
 /**
@@ -57,8 +59,9 @@ export async function idempotencyKey(noticeIds: string[], userId: string): Promi
   return `trak-event-${Array.from(digest, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
-/** Sends one person's email, paced and retried. */
-async function sendPaced(message: PlainEmail, deps: EventEmailDependencies, pace: { last: number }): Promise<SendResult> {
+/** Sends one person's email, paced and retried (also J8.13's reminders). */
+export async function sendPaced(message: PlainEmail, deps: Pick<EventEmailDependencies, 'send' | 'sleep' | 'now'>,
+  pace: { last: number }): Promise<SendResult> {
   let result: SendResult = { sent: false, reason: 'delivery_failed' };
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     if (attempt > 0) await deps.sleep(RETRY_DELAYS_MS[attempt - 1]);
@@ -142,7 +145,20 @@ export async function sweep(deps: EventEmailDependencies): Promise<SweepReport> 
   return report;
 }
 
-/** A coach (their session) or the operator (a secret key) starts a sweep; nobody else. */
+/**
+ * The scheduler (TRAK-136) proves itself with its own token on x-trak-cron,
+ * never a project key: pg_net keeps each request's headers in a queue that any
+ * database login, read-only included, can read. A leaked token can only start
+ * a run, which sends nothing that isn't due (Imad, #271). Unset or shorter
+ * than 32 characters means no scheduler.
+ */
+export const SCHEDULER_HEADER = 'x-trak-cron';
+export function isScheduler(req: Request, cronToken: string): boolean {
+  const sent = req.headers.get(SCHEDULER_HEADER)?.trim() ?? '';
+  return cronToken.length >= 32 && sameSecret(sent, cronToken);
+}
+
+/** A coach (their session), the scheduler or the operator (a secret key) starts a sweep; nobody else. */
 export async function handleEventEmailRequest(
   req: Request, deps: EventEmailDependencies,
 ): Promise<{ response: Response; work: Promise<SweepReport> | null }> {
@@ -154,7 +170,7 @@ export async function handleEventEmailRequest(
   // verify_jwt is off and this checks the key, or a session Auth verifies.
   const apikey = req.headers.get('apikey')?.trim() ?? '';
   const isOperator = apikey.length > 0 && deps.secretKeys.some(key => sameSecret(apikey, key));
-  if (!isOperator) {
+  if (!isOperator && !isScheduler(req, deps.cronToken)) {
     const token = req.headers.get('Authorization')?.match(/^Bearer\s+(\S+)$/i)?.[1];
     if (!token) return done(json({ accepted: false, error: 'Not authenticated' }, 401));
     const { data: caller, error } = await deps.getCaller(token);

@@ -11,7 +11,7 @@ import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { table, rpc, SUPABASE_URL, rpcRows } from '../../../../tests/msw/supabase'
 import { trackEvent } from '@/lib/telemetry'
 
 vi.mock('@/lib/telemetry', async importOriginal => ({ ...(await importOriginal<typeof import('@/lib/telemetry')>()), trackEvent: vi.fn() }))
@@ -30,7 +30,7 @@ function setup({ shared = HttpResponse.json({ body: WORDS }), invites = [invite(
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),
     table('coach_assessments', [ASSESSMENT]),
     http.get(`${SUPABASE_URL}/rest/v1/coach_shared_feedback`, () => shared),
-    table('coach_calendar_events', []), table('recognition_awards', []),
+    rpcRows('child_events', []), table('recognition_awards', []),
     rpc('get_player_invites_for_current_user', () => invites),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
   )

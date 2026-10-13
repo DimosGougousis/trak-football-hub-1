@@ -1,12 +1,7 @@
 import { Link } from 'react-router-dom'
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
-
-const TYPE_COLOR: Record<PlayerEvent['kind'], string> = {
-  match: '#fbbf24',
-  training: '#C8F25A',
-  tournament: '#c084fc',
-  other: 'rgba(255,255,255,0.4)',
-}
+// The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
+import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 
 /**
  * One upcoming event (TRAK-130). `nextUp` is the home card; otherwise a row
@@ -27,19 +22,19 @@ export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '
       to={`${linkBase}/${event.id}`}
       aria-label={nextUp ? `Next up: ${heading}` : undefined}
       className="flex items-stretch gap-3 rounded-[14px] p-3.5"
-      style={{ background: '#101012', border: `1px solid ${cancelled ? 'hsl(var(--destructive) / 0.5)' : 'rgba(255,255,255,0.06)'}` }}
+      style={{ background: '#101012', border: `1px solid ${cancelled ? `${CANCELLED_COLOR}80` : 'rgba(255,255,255,0.06)'}` }}
     >
-      <div className="w-1 rounded-full flex-shrink-0" style={{ background: cancelled ? 'hsl(var(--destructive))' : TYPE_COLOR[event.kind] }} />
+      <div className="w-1 rounded-full flex-shrink-0" style={{ background: cancelled ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          {cancelled && <span className="text-[10px] font-semibold text-destructive">Cancelled</span>}
+          {cancelled && <span className="text-[10px] font-semibold" style={{ color: CANCELLED_COLOR }}>Cancelled</span>}
           {changed && <span className="text-[10px] font-semibold text-[#C8F25A]">Changed</span>}
         </div>
         <p className={`text-[13px] font-medium truncate ${cancelled ? 'line-through text-white/50' : 'text-white/88'}`}>{heading}</p>
         <p className="text-[11px] mt-0.5 text-white/55">{eventDay(event)} · {eventTime(event)}</p>
         {where && <p className="text-[11px] text-white/40 truncate">{where}</p>}
         {event.kind === 'match' && event.kit && <p className="text-[11px] text-white/40">Kit: {event.kit}</p>}
-        {cancelled && event.cancelReason && <p className="text-[11px] text-destructive">{event.cancelReason}</p>}
+        {cancelled && event.cancelReason && <p className="text-[11px]" style={{ color: CANCELLED_COLOR }}>{event.cancelReason}</p>}
       </div>
     </Link>
   )

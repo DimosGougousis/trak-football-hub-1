@@ -9,7 +9,7 @@ import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc } from '../../../../tests/msw/supabase'
+import { table, rpc, rpcRows } from '../../../../tests/msw/supabase'
 
 const reload = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/reload-page', () => ({ reloadPage: reload }))
@@ -25,7 +25,7 @@ beforeEach(() => {
   const account = `open-session-player-${++sequence}`
   signInAs({ id: account })
   server.use(
-    table('coach_calendar_events', []), // TRAK-130: the Sessions tab also reads upcoming events
+    rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [{ id: 'p', user_id: account, role: 'player', full_name: 'Open Session Player' }]),
     table('matches', []),
     rpc('family_training_history', () => []),

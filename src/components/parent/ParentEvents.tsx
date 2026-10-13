@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { MetadataLabel } from '@/components/trak'
 import { ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
+import { SeeMoreList } from '@/components/trak/SeeMoreList'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useParentEvents } from '@/hooks/useParentData'
 import { isChanged, noteEventsShown, readSeenSequences } from '@/lib/player-events'
@@ -43,7 +44,7 @@ export function ParentUpcomingEvents({ nextUpOnly = false }: { nextUpOnly?: bool
         {query.isError ? <ParentLoadError message="Couldn't load upcoming events." onRetry={() => { void query.refetch() }} />
           : query.isPending ? <ParentLoading />
             : events.length === 0 ? <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
-              : events.map(e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} linkBase="/parent/event" />)}
+              : <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} linkBase="/parent/event" />} />}
       </div>
     </section>
   )
