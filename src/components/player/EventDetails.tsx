@@ -4,17 +4,21 @@ import { CANCELLED_COLOR } from '@/lib/coach-events'
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
  * parent's event pages (TRAK-131) so both show exactly the same thing.
- * Cancelled stays visible, with the coach's reason.
+ * Cancelled stays visible, with the coach's reason. Kit and the family note
+ * show on every kind of event (TRAK-161).
  */
 export function EventDetails({ event: e }: { event: PlayerEvent }) {
   const cancelled = e.status === 'cancelled'
+  // TRAK-161: home or away sits on the venue line, "Olympiacos Stadium (Away)".
+  const side = e.kind === 'match' && e.homeAway ? (e.homeAway === 'home' ? 'Home' : 'Away') : null
+  const venue = e.venue && side ? `${e.venue} (${side})` : e.venue ?? side
   const rows: [string, string][] = [
     ['Date', eventDay(e)],
     ['Time', eventTime(e)],
     ...(e.meetTime ? [['Meet', e.meetTime] as [string, string]] : []),
-    ...(e.venue ? [['Venue', e.venue] as [string, string]] : []),
-    ...(e.kind === 'match' && e.homeAway ? [['Home or away', e.homeAway === 'home' ? 'Home' : 'Away'] as [string, string]] : []),
-    ...(e.kind === 'match' && e.kit ? [['Kit', e.kit] as [string, string]] : []),
+    ...(venue ? [['Venue', venue] as [string, string]] : []),
+    ...(e.kit ? [['Kit', e.kit] as [string, string]] : []),
+    ...(e.familyNote ? [['Notes', e.familyNote] as [string, string]] : []),
   ]
   return (
     <div className="space-y-4">

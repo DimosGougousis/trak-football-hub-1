@@ -133,6 +133,43 @@ SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Ali is away')='(none)','5 a squad 
 SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Alison is coaching')='Alison is coaching','5 a longer word containing a name is kept (whole words only)',pg_temp.ce_reason_for('Alison is coaching'));
 SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Al Ain trip cancelled')='Al Ain trip cancelled','5 a name particle (Al) is not a name',pg_temp.ce_reason_for('Al Ain trip cancelled'));
 SELECT pg_temp.cecheck(pg_temp.ce_reason_for('Sibling squad training clash')='Sibling squad training clash','5 a name from another coach''s squad is kept',pg_temp.ce_reason_for('Sibling squad training clash'));
+-- TRAK-161 (J8.8): a short note families can read ("Bring extra water"), under
+-- Kit. Its own column, family_note: the coach's notes column stays coach-only.
+-- The same rule as the cancel reason: a note naming a squad child or holding a
+-- link reaches no family.
+CREATE FUNCTION pg_temp.ce_note_for(note text) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE r text;
+BEGIN
+ RESET ROLE;
+ UPDATE public.coach_calendar_events SET family_note=note WHERE id=pg_temp.ceid(602);
+ SET LOCAL ROLE authenticated;
+ PERFORM pg_temp.ceactor(30);
+ SELECT e.family_note INTO r FROM public.child_events(pg_temp.ceid(22)) e WHERE e.id=pg_temp.ceid(602);
+ RESET ROLE;
+ RETURN coalesce(r,'(none)');
+EXCEPTION WHEN OTHERS THEN RESET ROLE; RETURN SQLSTATE || ': ' || SQLERRM;
+END $$;
+SELECT pg_temp.cecheck(pg_temp.ce_note_for('Bring extra water, it''s a hot day')='Bring extra water, it''s a hot day','6 a family note reaches the family as typed',pg_temp.ce_note_for('Bring extra water, it''s a hot day'));
+SELECT pg_temp.cecheck(pg_temp.ce_note_for('Child C brings the bibs')='(none)','6 a family note naming a squad child is left out',pg_temp.ce_note_for('Child C brings the bibs'));
+SELECT pg_temp.cecheck(pg_temp.ce_note_for('Directions: maps.app.goo.gl/abc')='(none)','6 a family note holding a link is left out',pg_temp.ce_note_for('Directions: maps.app.goo.gl/abc'));
+SELECT pg_temp.cecheck(pg_temp.ce_note_for('   ')='(none)','6 a blank family note is no note',pg_temp.ce_note_for('   '));
+-- Short: one line on a phone. The form stops at 200; so does the database.
+SELECT pg_temp.cecheck(pg_temp.ce_note_for(repeat('x',200))=repeat('x',200),'6 a 200-character note saves');
+SELECT pg_temp.cecheck(pg_temp.ce_note_for(repeat('x',201)) LIKE '23514:%','6 a longer one is refused',left(pg_temp.ce_note_for(repeat('x',201)),60));
+-- The coach writes it like any other field of their own event (with events on for their academy).
+INSERT INTO public.academy_features(organization_id,feature) VALUES (pg_temp.ceid(100),'events');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ceactor(10);
+UPDATE public.coach_calendar_events SET family_note='Shin guards on' WHERE id=pg_temp.ceid(600);
+RESET ROLE;
+SELECT pg_temp.cecheck((SELECT family_note FROM public.coach_calendar_events WHERE id=pg_temp.ceid(600))='Shin guards on','6 the coach saves a family note on their own event');
+-- The coach-only notes column still reaches no family, even on an event with a family note.
+UPDATE public.coach_calendar_events SET notes='SECRET coach note', family_note='Bring water' WHERE id=pg_temp.ceid(602);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ceactor(30);
+SELECT pg_temp.cecheck((SELECT count(*) FROM public.child_events(pg_temp.ceid(22)) e WHERE e.id=pg_temp.ceid(602) AND e.family_note='Bring water' AND e::text NOT LIKE '%SECRET%')=1,
+  '6 the family reads the family note and never the coach''s own notes');
+RESET ROLE;
 SELECT pg_temp.cecheck(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.proname='child_events' AND p.pronamespace='public'::regnamespace
   AND (pg_get_function_result(p.oid) ILIKE '%notes%' OR pg_get_function_result(p.oid) ILIKE '%SETOF%')),
   '3 the function returns named columns, never the coach''s notes');
@@ -141,7 +178,7 @@ SELECT pg_temp.cecheck(NOT has_function_privilege('anon','public.child_events(uu
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.ce_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.ce_results;
- IF n <> 23 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 23', n; END IF;
+ IF n <> 31 THEN RAISE EXCEPTION 'Child events: % checks ran; expected exactly 31', n; END IF;
  IF failures IS NOT NULL THEN RAISE EXCEPTION USING MESSAGE='Child events failed',DETAIL=failures; END IF;
  RAISE NOTICE 'Child events: % checks passed',n;
 END $$;

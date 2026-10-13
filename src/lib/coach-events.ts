@@ -26,6 +26,8 @@ export const CANCELLED_COLOR = '#f87171'
 /** "No time set" on a card: a warning, unlike every type colour. */
 export const NO_TIME_COLOR = '#facc15'
 export const DURATIONS = [60, 75, 90, 120] as const
+/** The family note fits one line on a phone; the database holds the same limit. */
+export const FAMILY_NOTE_MAX = 200
 
 export type EventForm = {
   kind: EventKind
@@ -38,6 +40,8 @@ export type EventForm = {
   opponent: string
   homeAway: '' | 'home' | 'away'
   kit: string
+  /** TRAK-161: what families read under Kit; '' for none. Not the coach-only notes. */
+  familyNote: string
 }
 
 export type EventRow = {
@@ -54,6 +58,7 @@ export type EventRow = {
   published: boolean
   meet_time?: string | null
   kit?: string | null
+  family_note?: string | null
   home_away?: string | null
   status?: string | null
   cancel_reason?: string | null
@@ -61,7 +66,7 @@ export type EventRow = {
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -76,6 +81,7 @@ export function formProblem(form: EventForm): string | null {
   if (form.kind === 'other' && !form.title.trim()) return 'Say what the event is'
   if (form.meetTime && !form.time) return 'Add the start time before the meet time'
   if (form.meetTime && form.time && minutes(form.meetTime) > minutes(form.time)) return 'Meet time must be before the start'
+  if (form.familyNote.trim().length > FAMILY_NOTE_MAX) return `Keep the note to ${FAMILY_NOTE_MAX} characters`
   return null
 }
 
@@ -113,7 +119,9 @@ export function formToRow(form: EventForm) {
     meet_time: form.meetTime ? `${form.meetTime}:00` : null,
     opponent: isMatch ? form.opponent.trim() : null,
     home_away: isMatch && form.homeAway ? form.homeAway : null,
-    kit: isMatch ? form.kit.trim() || null : null,
+    // TRAK-161: kit and the family note on every kind of event.
+    kit: form.kit.trim() || null,
+    family_note: form.familyNote.trim() || null,
   }
 }
 
@@ -136,6 +144,7 @@ export function rowToForm(row: EventRow): EventForm {
     opponent: row.opponent ?? '',
     homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : '',
     kit: row.kit ?? '',
+    familyNote: row.family_note ?? '',
   }
 }
 

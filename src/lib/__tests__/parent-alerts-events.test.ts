@@ -9,7 +9,7 @@ import type { PlayerEvent } from '../player-events'
 const event = (over: Partial<PlayerEvent> = {}): PlayerEvent => ({
   id: 'ev-1', kind: 'training', title: 'Training', date: '2099-11-16', time: '18:00', meetTime: null,
   venue: 'Main pitch', kit: null, opponent: null, homeAway: null, status: 'scheduled', cancelReason: null,
-  sequence: 2, updatedAt: '2026-10-10T08:00:00Z', ...over,
+  sequence: 2, updatedAt: '2026-10-10T08:00:00Z', familyNote: null, ...over,
 })
 const alertsFor = (events: PlayerEvent[], eventsFirstSeen: Record<string, number> = {}) =>
   parentAlerts([], undefined, { awards: false, events, eventsFirstSeen })

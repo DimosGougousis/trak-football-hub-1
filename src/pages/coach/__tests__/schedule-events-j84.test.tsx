@@ -123,6 +123,27 @@ describe('J8.4: the coach creates, edits and cancels events', () => {
     expect(emailNudges).toBe(0)
   })
 
+  // TRAK-161 (J8.8): training kit matters too, and families get a short note
+  // under it. Dora had typed "Shin guards are optional" into Kit.
+  it('gives a training Kit and a note for families', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await userEvent.type(within(sheet).getByLabelText('Start'), '17:00')
+    await userEvent.type(within(sheet).getByLabelText('Kit'), 'Green kits')
+    const note = within(sheet).getByLabelText('Note for families')
+    expect(note).toHaveAttribute('maxlength', '200')
+    expect(within(sheet).getByText(/players and parents see this/i)).toBeInTheDocument()
+    await userEvent.type(note, 'Bring extra water, it is a hot day')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+
+    await waitFor(() => expect(writes).toHaveLength(1))
+    const [inserted] = writes[0].body as Record<string, unknown>[]
+    expect(inserted).toMatchObject({ event_type: 'training', kit: 'Green kits', family_note: 'Bring extra water, it is a hot day' })
+    // The coach-only notes column is never written from here.
+    expect(inserted).not.toHaveProperty('notes')
+  })
+
   it('picks a venue the coach has used before', async () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))

@@ -39,7 +39,29 @@ describe('coach event form', () => {
 
   it('keeps a typed title and drops match-only fields from a training', () => {
     const row = formToRow({ ...match, kind: 'training', title: 'Finishing' })
-    expect(row).toMatchObject({ title: 'Finishing', event_type: 'training', opponent: null, home_away: null, kit: null })
+    expect(row).toMatchObject({ title: 'Finishing', event_type: 'training', opponent: null, home_away: null })
+  })
+
+  // TRAK-161 (J8.8): training kit matters too, and families get a short note
+  // under it ("Bring extra water"). Dora had typed one into Kit.
+  it.each(['training', 'match', 'other'] as const)('keeps Kit and the family note on a %s', kind => {
+    const row = formToRow({ ...match, kind, title: 'Team photo', kit: ' Green kits ', familyNote: ' Bring extra water ' })
+    expect(row).toMatchObject({ kit: 'Green kits', family_note: 'Bring extra water' })
+  })
+
+  it('saves no note, rather than an empty one', () => {
+    expect(formToRow({ ...match, familyNote: '   ' }).family_note).toBeNull()
+  })
+
+  it('reads the family note back for editing, and never the coach-only notes', () => {
+    const row = { id: 'e', published: true, status: 'scheduled', ...formToRow({ ...match, familyNote: 'Shin guards on' }) }
+    expect(rowToForm(row).familyNote).toBe('Shin guards on')
+    expect(rowToForm({ ...row, family_note: null, notes: 'Coach only' }).familyNote).toBe('')
+  })
+
+  it('stops a note longer than one phone line', () => {
+    expect(formProblem({ ...match, familyNote: 'x'.repeat(200) })).toBeNull()
+    expect(formProblem({ ...match, familyNote: 'x'.repeat(201) })).toBe('Keep the note to 200 characters')
   })
 
   it('leaves the end blank without a start, and the wall-clock end blank past midnight', () => {
