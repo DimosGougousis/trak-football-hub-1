@@ -174,6 +174,7 @@ function deps(over: Partial<EventEmailDependencies> = {}) {
   const calls = { sent: [] as PlainEmail[], sentAt: [] as number[], delivered: [] as [string[], string][], finished: [] as unknown[][] };
   const d: EventEmailDependencies = {
     secretKeys: ['sb_secret_operator-test-key'],
+    cronToken: 'cron-test-token-0123456789abcdef0123456789abcdef',
     getCaller: vi.fn(async jwt => ({ data: jwt === 'coach-jwt' ? { id: 'coach-1' } : jwt === 'parent-jwt' ? { id: 'parent-1' } : null, error: null })),
     isCoach: vi.fn(async id => id === 'coach-1'),
     waitSeconds: vi.fn(async () => null),
@@ -338,14 +339,24 @@ describe('who may start it', () => {
     expect(response.status).toBe(202);
   });
 
-  it('nobody else: no session, a bad session, or a parent', async () => {
+  it('the scheduler\'s own token starts one (TRAK-136\'s sweep), with no project key', async () => {
     const { d } = deps();
-    for (const [headers, status] of [[{}, 401], [{ Authorization: 'Bearer forged' }, 401], [{ Authorization: 'Bearer parent-jwt' }, 403]] as const) {
+    const { response } = await handleEventEmailRequest(post({ 'x-trak-cron': 'cron-test-token-0123456789abcdef0123456789abcdef' }), d);
+    expect(response.status).toBe(202);
+  });
+
+  it('nobody else: no session, a bad session, a parent, or a wrong or unset scheduler token', async () => {
+    const { d } = deps();
+    for (const [headers, status] of [[{}, 401], [{ Authorization: 'Bearer forged' }, 401], [{ Authorization: 'Bearer parent-jwt' }, 403],
+      [{ 'x-trak-cron': 'cron-test-token-0123456789abcdef0123456789abcdeX' }, 401]] as const) {
       const { response, work } = await handleEventEmailRequest(post(headers), d);
       expect(response.status).toBe(status);
       expect(work).toBeNull();
     }
+    const { d: unset } = deps({ cronToken: '' });
+    expect((await handleEventEmailRequest(post({ 'x-trak-cron': '' }), unset)).response.status).toBe(401);
     expect(d.claim).not.toHaveBeenCalled();
+    expect(unset.claim).not.toHaveBeenCalled();
   });
 
   it('a caller can\'t choose events or recipients', async () => {
