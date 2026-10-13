@@ -854,6 +854,7 @@ export type Database = {
       }
       coach_match_score_clash: {
         Args: {
+          p_assists?: number
           p_goals?: number
           p_match_date: string
           p_opponent: string
@@ -861,6 +862,7 @@ export type Database = {
           p_opponent_score: number
         }
         Returns: {
+          saved_assists: number
           saved_goals: number
           team_score: number
           opponent_score: number
