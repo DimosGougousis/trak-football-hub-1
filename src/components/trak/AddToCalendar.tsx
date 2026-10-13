@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarPlus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { isGuardianCreatedChild } from '@/lib/child-login'
 import { relativeLabel } from '@/lib/alert-read-state'
 import {
   CALENDAR_APP_LABEL, calendarApps, createCalendarLink, feedLinks, fetchCalendarLink, openCalendarLink,
@@ -14,7 +15,11 @@ import {
    screen opens, and one link serves every app tapped in this visit. */
 
 const font = { fontFamily: "'DM Sans', sans-serif" }
-const HOW_IT_WORKS = 'Changes reach your calendar automatically. Some calendars take a few hours, so for same-day changes we also email you.'
+// A guardian-created child login has no mailbox, and change emails skip it
+// (TRAK-135), so it's never promised one (Kostas, #286).
+const howItWorks = (childLogin: boolean) => childLogin
+  ? 'Changes reach your calendar automatically. Some calendars take a few hours, so check Trak for same-day changes.'
+  : 'Changes reach your calendar automatically. Some calendars take a few hours, so for same-day changes we also email you.'
 const LINK_FAILED = "Couldn't make your calendar link. Check your connection and try again."
 
 const statusKey = (userId: string | undefined) => ['calendar-link', userId]
@@ -30,13 +35,15 @@ function useCalendarLinkStatus(wanted = true) {
 }
 
 /** The buttons, the device's own calendar first. Makes the link on the first tap only. */
-function AddToCalendarButtons({ onAdded }: { onAdded?: () => void }) {
+function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => void, compact?: boolean }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const links = useRef<FeedLinks | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // Compact (the Home card): the device's own calendar, the rest on request.
+  const [showOthers, setShowOthers] = useState(!compact)
   const [first, ...others] = calendarApps(typeof navigator === 'undefined' ? '' : navigator.userAgent)
 
   async function linksForThisVisit(): Promise<FeedLinks | null> {
@@ -89,6 +96,10 @@ function AddToCalendarButtons({ onAdded }: { onAdded?: () => void }) {
   return (
     <div className="space-y-2">
       {button(first, true)}
+      {!showOthers ? (
+        <button type="button" onClick={() => setShowOthers(true)}
+          className="w-full py-2 text-[13px] text-white/60" style={font}>Other calendar</button>
+      ) : <>
       <p className="pt-1 text-[11px] text-white/45" style={font}>Other calendar</p>
       {others.map(app => button(app))}
       <button type="button" disabled={busy} onClick={() => void add(l => l.outlookWork)}
@@ -100,6 +111,7 @@ function AddToCalendarButtons({ onAdded }: { onAdded?: () => void }) {
         className="w-full py-2.5 text-[13px] text-white/60 disabled:opacity-60" style={font}>
         {copied ? 'Link copied' : 'Copy calendar link'}
       </button>
+      </>}
       {error && <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{error}</p>}
     </div>
   )
@@ -146,7 +158,7 @@ export function CalendarSettings() {
           : status.isError ? "Couldn't check your calendar link."
             : status.data ? syncedText(status.data.lastFetchedAt) : 'Not added yet'}
       </p>
-      <p className="text-[12px] text-white/50 leading-relaxed" style={font}>{HOW_IT_WORKS}</p>
+      <p className="text-[12px] text-white/50 leading-relaxed" style={font}>{howItWorks(isGuardianCreatedChild(user))}</p>
       {status.data && !revoked && (
         <p className="text-[12px] text-white/50 leading-relaxed" style={font}>
           Adding Trak again gives you a new link: calendars you added before stop updating until you add them again.
@@ -192,8 +204,8 @@ export function CalendarHomePrompt({ hasEvents }: { hasEvents: boolean }) {
         <CalendarPlus size={16} color="#C8F25A" aria-hidden="true" />
         <p className="text-[14px] font-medium text-white/90" style={font}>Add Trak to your calendar</p>
       </div>
-      <p className="text-[12px] text-white/55 leading-relaxed" style={font}>{HOW_IT_WORKS}</p>
-      <AddToCalendarButtons onAdded={hide} />
+      <p className="text-[12px] text-white/55 leading-relaxed" style={font}>{howItWorks(isGuardianCreatedChild(user))}</p>
+      <AddToCalendarButtons onAdded={hide} compact />
       <button type="button" onClick={hide} className="w-full py-2 text-[13px] text-white/50" style={font}>Not now</button>
     </section>
   )

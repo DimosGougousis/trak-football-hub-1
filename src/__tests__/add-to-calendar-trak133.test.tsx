@@ -20,9 +20,13 @@ vi.mock('@/lib/calendar-link', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/calendar-link')>()),
   openCalendarLink: (url: string) => { nav.opened.push(url) },
 }))
+const auth = vi.hoisted(() => ({ user: { id: 'parent-cal', email: 'p@example.test', app_metadata: {} } as Record<string, unknown> }))
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'parent-cal', email: 'p@example.test' }, profile: { role: 'parent' } }),
+  useAuth: () => ({ user: auth.user, profile: { role: 'parent' } }),
 }))
+const PARENT = { id: 'parent-cal', email: 'p@example.test', app_metadata: {} }
+// A guardian-created child login (TRAK-73): no mailbox, so never promised an email.
+const CHILD_LOGIN = { id: 'child-cal', email: 'striker7@child.trakfootball.com', app_metadata: { trak_child_login: true } }
 
 let created: number
 let revoked: number
@@ -36,6 +40,7 @@ beforeEach(() => {
   link = null
   createFails = false
   localStorage.clear()
+  auth.user = PARENT
   server.use(
     rpc('my_calendar_link', () => (link ? [link] : [])),
     rpc('create_my_calendar_link', () => {
@@ -99,6 +104,9 @@ describe('J8.10 the Home card after setup', () => {
   it('shows when the person has events and no calendar link yet', async () => {
     mount(<CalendarHomePrompt hasEvents />)
     const card = await screen.findByRole('region', { name: 'Add Trak to your calendar' })
+    // Short on a phone (Kostas, #286): the device's own calendar, then the rest on request.
+    expect(within(card).getAllByRole('button', { name: /^Add to / })).toHaveLength(1)
+    await userEvent.click(within(card).getByRole('button', { name: 'Other calendar' }))
     for (const app of ['Apple Calendar', 'Google Calendar', 'Outlook']) {
       expect(within(card).getByRole('button', { name: `Add to ${app}` })).toBeInTheDocument()
     }
@@ -126,5 +134,19 @@ describe('J8.10 the Home card after setup', () => {
     await new Promise(r => setTimeout(r, 50))
     expect(screen.queryByRole('region', { name: 'Add Trak to your calendar' })).toBeNull()
     expect(created).toBe(0)
+  })
+})
+
+describe('J8.10 a child login is never promised an email (Kostas, #286)', () => {
+  it('Settings and the Home card say to check Trak for same-day changes', async () => {
+    auth.user = CHILD_LOGIN
+    const settings = mount(<CalendarSettings />)
+    expect(await screen.findByText(/check Trak for same-day changes/i)).toBeInTheDocument()
+    expect(screen.queryByText(/email you/i)).toBeNull()
+    settings.unmount()
+    mount(<CalendarHomePrompt hasEvents />)
+    const card = await screen.findByRole('region', { name: 'Add Trak to your calendar' })
+    expect(within(card).getByText(/check Trak for same-day changes/i)).toBeInTheDocument()
+    expect(within(card).queryByText(/email you/i)).toBeNull()
   })
 })
