@@ -17,6 +17,8 @@ import { FixtureImport } from '@/components/coach/FixtureImport'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
+import { hasStarted, registerProblem } from '@/lib/event-register'
+import { TakeRegister } from '@/components/coach/TakeRegister'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -25,7 +27,10 @@ import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-
    "Read Schedule" import is gone (G7): fixtures come in by CSV (J8.6).
    TRAK-128 (J8.5): a training repeats weekly until an end date, one row per
    date under one series_id. Editing, cancelling, publishing or deleting a
-   week of a series asks: only this week, or this and following weeks. */
+   week of a series asks: only this week, or this and following weeks.
+   TRAK-138 (J8.15): once a training or "other" event has started, the coach
+   takes its register here and it becomes the completed session; a match that
+   has kicked off opens the J4 match log with its date and opponent. */
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -138,6 +143,7 @@ type Sheet =
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
   | { kind: 'import' }
+  | { kind: 'register'; row: EventRow }
 
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
   !!row?.series_id && !!row.event_date
@@ -179,7 +185,7 @@ export default function CoachSchedule() {
         .select('*').eq('coach_user_id', user.id).order('starts_at'),
       supabase.from('coach_sessions')
         // coach_sessions has no opponent column; naming one failed the whole read.
-        .select('id, title, session_type, session_date, competition, venue, notes')
+        .select('id, title, session_type, session_date, competition, venue, notes, event_id')
         .eq('coach_user_id', user.id).order('session_date'),
     ])
     // A failed read is not an empty calendar (the J4 standard).
@@ -228,6 +234,8 @@ export default function CoachSchedule() {
       })
     }
     for (const s of sessions) {
+      // A register's session is shown on its event, not as a second entry.
+      if (s.event_id && calEvents.some(e => e.id === s.event_id)) continue
       ev.push({
         id:       s.id,
         title:    s.title || (s.session_type === 'match' ? 'Match' : 'Training'),
@@ -239,6 +247,10 @@ export default function CoachSchedule() {
     }
     return ev.filter(e => e.date)
   }, [calEvents, sessions])
+
+  // TRAK-138: the completed session each event's register made, by event.
+  const registerSession = useMemo(() => new Map<string, string>(
+    sessions.filter(s => s.event_id).map(s => [s.event_id as string, s.id as string])), [sessions])
 
   const venues = useMemo(() => savedVenues(calEvents), [calEvents])
   // TRAK-129 (J8.6): fixtures already on the schedule are skipped on import.
@@ -629,6 +641,22 @@ export default function CoachSchedule() {
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-0.5 text-white/45" style={font}>{row.cancel_reason}</p>
                       )}
+                      {row && !registerProblem(row) && (
+                        <button onClick={parked ? comingSoon : () => setSheet({ kind: 'register', row })}
+                          aria-label={`${registerSession.has(row.id) ? 'Edit register' : 'Take register'} for ${row.title}`}
+                          className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-[#C8F25A]" style={mono}>
+                          {registerSession.has(row.id) ? 'Register taken · Edit' : 'Take register'}
+                        </button>
+                      )}
+                      {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && (
+                        <button aria-label={`Log match for ${row.title}`}
+                          onClick={parked ? comingSoon : () => navigate('/coach/sessions/quick', {
+                            state: { fromEvent: { date: row.event_date, opponent: row.opponent, homeAway: row.home_away } },
+                          })}
+                          className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-[#4ade80]" style={mono}>
+                          Log match
+                        </button>
+                      )}
                     </div>
                     {row && !cancelled && (
                       <div className="flex items-center gap-3 flex-shrink-0">
@@ -880,6 +908,31 @@ export default function CoachSchedule() {
               Fixtures arrive as drafts. Families see each one once you publish it.
             </p>
             <FixtureImport existingKeys={fixtureKeys} onConfirm={importFixtures} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Register sheet (TRAK-138, J8.15) ──────────────────────────────── */}
+      {sheet.kind === 'register' && user && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
+          <div role="dialog" aria-label="Take register"
+            className="w-full max-w-[430px] max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', marginBottom: 64 }}>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[16px] font-medium text-white/88" style={font}>
+                {`Register: ${sheet.row.title}, ${formatEventDay(displayEventTime(sheet.row).date)}`}
+              </span>
+              <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
+                <X size={18} className="text-white/50" />
+              </button>
+            </div>
+            <p className="text-[12px] text-white/50" style={font}>
+              Tap anyone who didn't come. Saving makes this the completed session; saving again updates it.
+            </p>
+            <TakeRegister eventId={sheet.row.id} coachId={user.id} sessionId={registerSession.get(sheet.row.id) ?? null}
+              onSaved={() => { setSheet({ kind: 'closed' }); loadData() }} />
           </div>
         </div>
       )}
