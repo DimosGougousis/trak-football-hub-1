@@ -10,13 +10,14 @@ import Settings from '../Settings'
 type Role = 'player' | 'coach' | 'parent' | 'club'
 const state = vi.hoisted(() => ({
   role: 'player' as Role,
+  email: 'settings@example.test',
   success: vi.fn(),
   error: vi.fn(),
   signOut: vi.fn(),
 }))
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 'settings-user', email: 'settings@example.test' },
+    user: { id: 'settings-user', email: state.email },
     profile: { role: state.role, full_name: 'Settings User' },
     signOut: state.signOut,
     refreshProfile: vi.fn(),
@@ -37,7 +38,10 @@ vi.mock('sonner', () => ({ toast: { success: state.success, error: state.error }
 beforeEach(() => {
   vi.clearAllMocks()
   state.role = 'player'
+  state.email = 'settings@example.test'
   server.use(
+    // TRAK-136: no row means reminders are on.
+    table('notification_settings', []),
     table('player_details', [{ position: 'Midfielder', shirt_number: 8 }]),
     table('coach_details', [{ team: 'U15', coach_role: 'Head Coach', organization_id: 'org-test' }]),
     table('organizations', [{ name: 'Test Academy' }]),
@@ -62,8 +66,15 @@ describe('settings controls reflect supported behavior', () => {
     const legacy = JSON.stringify({ notifyMatchUpdates: false, passportVisibility: 'link' })
     localStorage.setItem('trak.settings.v1', legacy)
     mount()
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
-    expect(screen.queryByText('Notifications')).not.toBeInTheDocument()
+    // The only switch is J8.13's reminder setting, read from the database for
+    // a parent or a player (TRAK-136); old browser values never set it.
+    if (role === 'parent' || role === 'player') {
+      expect(await screen.findByRole('switch', { name: 'Event reminders' })).toBeChecked()
+      expect(screen.getAllByRole('switch')).toHaveLength(1)
+    } else {
+      expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+      expect(screen.queryByText('Notifications')).not.toBeInTheDocument()
+    }
     expect(screen.queryByText('Who can see my passport')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Anyone with link' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Send reset email' })).toBeEnabled()
@@ -124,6 +135,21 @@ describe('settings controls reflect supported behavior', () => {
     }
   })
 
+  // TRAK-155: deleting a guardian account withdraws the approvals they gave, so
+  // the parent is told before confirming. Other roles have no approvals.
+  it.each<[Role, boolean]>([['parent', true], ['player', false], ['coach', false]])('says deletion withdraws approvals only to a parent (%s)', async (role, warned) => {
+    state.role = role
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    try {
+      mount()
+      fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }))
+      const text = String(confirm.mock.calls[0]?.[0] ?? '')
+      expect(text.includes('withdraws the approvals you gave')).toBe(warned)
+    } finally {
+      confirm.mockRestore()
+    }
+  })
+
   it('keeps a failed name save editable and persists only the valid retry to this account', async () => {
     state.role = 'parent'
     const requests: unknown[] = []
@@ -169,5 +195,61 @@ describe('settings controls reflect supported behavior', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Settings User' }))
     expect(screen.getByDisplayValue('Settings User')).toBeInTheDocument()
     expect(screen.queryByText('Your academy sets your name.')).toBeNull()
+  })
+})
+
+// TRAK-136 (J8.13): the reminder 2 days before each event is turned off here,
+// never by a link in the email (Microsoft's scanner clicks links, TRAK-107).
+describe('Settings → Notifications: event reminders', () => {
+  const saves: Record<string, unknown>[] = []
+  const saveHandler = (fail = false) => http.post(`${SUPABASE_URL}/rest/v1/notification_settings`, async ({ request }) => {
+    saves.push(await request.json() as Record<string, unknown>)
+    return fail
+      ? HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })
+      : HttpResponse.json({ event_reminders: false }, { status: 201 })
+  })
+  beforeEach(() => { saves.length = 0; state.role = 'parent' })
+
+  it('is on until the parent turns it off, and saves exactly that for this account', async () => {
+    server.use(saveHandler())
+    mount()
+    const reminders = await screen.findByRole('switch', { name: 'Event reminders' })
+    expect(reminders).toBeChecked()
+    expect(screen.getByText(/an email 2 days before each event/i)).toBeInTheDocument()
+    fireEvent.click(reminders)
+    await waitFor(() => expect(reminders).not.toBeChecked())
+    expect(saves).toEqual([{ user_id: 'settings-user', event_reminders: false }])
+    expect(state.success).toHaveBeenCalledWith('Event reminders off')
+  })
+
+  it('shows a saved "off" as off', async () => {
+    server.use(table('notification_settings', [{ event_reminders: false }]))
+    mount()
+    expect(await screen.findByRole('switch', { name: 'Event reminders' })).not.toBeChecked()
+  })
+
+  it('a failed save stays as it was and says so', async () => {
+    server.use(saveHandler(true))
+    mount()
+    const reminders = await screen.findByRole('switch', { name: 'Event reminders' })
+    fireEvent.click(reminders)
+    await waitFor(() => expect(state.error).toHaveBeenCalledWith("Couldn't save your reminder setting. Try again."))
+    expect(reminders).toBeChecked()
+  })
+
+  it('a failed read offers a retry instead of showing a switch that may be wrong', async () => {
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/notification_settings`, () =>
+      HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
+    mount()
+    expect(await screen.findByText("Couldn't load your reminder setting.")).toBeInTheDocument()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+  })
+
+  it('a child who signs in with a username gets no reminders, so sees no switch', async () => {
+    state.role = 'player'
+    state.email = 'striker7@child.trakfootball.com'
+    mount()
+    await screen.findByRole('button', { name: 'Ask your guardian' })
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
   })
 })

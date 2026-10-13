@@ -24,6 +24,26 @@ describe('load-roster validation', () => {
     expect(rows[1].child_name).toBe('Sib, Two')
   })
 
+  // TRAK-165: Trak serves only children aged 13 and over (UAE Child Digital
+  // Safety Law, founders 12 Oct). The dry run names the row before anything loads.
+  it('refuses a child under 13 by date of birth, and accepts a 13th birthday today', () => {
+    const { rows, errors } = validateRoster(file(
+      'Day Short,2013-09-25,U13,short@roster.test,g@roster.test,c@roster.test',
+      'Birthday Today,2013-09-24,U14,today@roster.test,g@roster.test,c@roster.test',
+    ), TODAY)
+    expect(errors).toEqual(['Line 2: the child is under 13 (this academy serves children aged 13 and over)'])
+    expect(rows.map(r => r.child_name)).toEqual(['Birthday Today'])
+  })
+
+  it('uses the academy\'s own minimum age when the operator set it lower (e.g. Athens)', () => {
+    const { rows, errors } = validateRoster(file(
+      'Eleven,2015-09-24,U12,eleven@roster.test,g@roster.test,c@roster.test',
+      'Nine,2017-09-25,U10,nine@roster.test,g@roster.test,c@roster.test',
+    ), { ...TODAY, minAge: 10 })
+    expect(errors).toEqual(['Line 3: the child is under 10 (this academy serves children aged 10 and over)'])
+    expect(rows.map(r => r.child_name)).toEqual(['Eleven'])
+  })
+
   it('refuses a missing column', () => {
     const { errors } = validateRoster('child_name,date_of_birth\nA,2011-01-01', TODAY)
     expect(errors[0]).toMatch(/Missing column\(s\): age_group, child_email, guardian_emails, coach_email/)
@@ -103,8 +123,8 @@ describe('load-roster validation', () => {
 describe('load-roster children without email', () => {
   it('accepts a blank child email as none, still checking everything else', () => {
     const { rows, errors } = validateRoster(file(
-      'Young One,2016-02-03,U11,,g1@roster.test,coach@roster.test',
-      'Young Two,2016-04-05,U11,  ,g1@roster.test,coach@roster.test',
+      'Young One,2012-02-03,U11,,g1@roster.test,coach@roster.test',
+      'Young Two,2012-04-05,U11,  ,g1@roster.test,coach@roster.test',
     ), TODAY)
     expect(errors).toEqual([])
     expect(rows.map(r => r.child_email)).toEqual([null, null])
@@ -112,16 +132,16 @@ describe('load-roster children without email', () => {
 
   it('refuses the same email-less child twice in one file (name and date of birth)', () => {
     const { errors } = validateRoster(file(
-      'Young One,2016-02-03,U11,,g1@roster.test,coach@roster.test',
-      ' young one ,2016-02-03,U11,,g2@roster.test,coach@roster.test',
+      'Young One,2012-02-03,U11,,g1@roster.test,coach@roster.test',
+      ' young one ,2012-02-03,U11,,g2@roster.test,coach@roster.test',
     ), TODAY)
     expect(errors).toEqual(['Line 3: same child (name and date of birth, no email) as line 2'])
   })
 
   it('always tries an email-less child, and a re-run skips one the academy already has', async () => {
     const rows = validateRoster(file(
-      'Young One,2016-02-03,U11,,g1@roster.test,coach@roster.test',
-      'Young Two,2016-04-05,U11,,g2@roster.test,coach@roster.test',
+      'Young One,2012-02-03,U11,,g1@roster.test,coach@roster.test',
+      'Young Two,2012-04-05,U11,,g2@roster.test,coach@roster.test',
     ), TODAY).rows
     const { toLoad } = planLoad(rows, [], 'org')
     expect(toLoad).toHaveLength(2)
@@ -200,7 +220,7 @@ describe('load-roster --reinvite', () => {
     'Two Kid,2013-05-06,U13,kid2@roster.test,g2@roster.test;g2b@roster.test,coach@roster.test',
     'Three Kid,2013-07-08,U13,kid3@roster.test,g3@roster.test,coach@roster.test',
     'Four Kid,2013-09-10,U13,kid4@roster.test,g4@roster.test,coach@roster.test',
-    'Young One,2016-02-03,U11,,g5@roster.test,coach@roster.test',
+    'Young One,2012-02-03,U11,,g5@roster.test,coach@roster.test',
   ), TODAY).rows
   const guardian = (invited_at: string | null, parent_user_id: string | null = null) => ({ invited_at, parent_user_id })
   const onRoster = [
@@ -211,7 +231,7 @@ describe('load-roster --reinvite', () => {
     // Line 4: invited. Line 5 is not on the roster at all.
     { id: 'roster-4', child_email: 'kid3@roster.test', date_of_birth: '2013-07-08', player_name: 'Three Kid', guardians: [guardian('2026-09-28T10:00:00Z')] },
     // Line 6: an email-less child, found by name and date of birth.
-    { id: 'roster-6', child_email: null, date_of_birth: '2016-02-03', player_name: ' young one ', guardians: [guardian(null)] },
+    { id: 'roster-6', child_email: null, date_of_birth: '2012-02-03', player_name: ' young one ', guardians: [guardian(null)] },
   ]
 
   it('re-invites only children with a guardian never invited and not signed up', () => {
