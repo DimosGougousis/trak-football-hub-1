@@ -5,6 +5,7 @@ import { shareableFromRow, squadLabelFrom, whatsAppShareText, whatsAppShareUrl, 
 // group. The coach picks the chat and taps send; nothing is sent by Trak.
 
 const training: ShareableEvent = {
+  id: 'ev-13',
   kind: 'training',
   squadLabel: 'U15',
   date: '2026-10-13',
@@ -26,7 +27,7 @@ describe('whatsAppShareText', () => {
       'Tue 13 Oct, 18:00',
       'Venue: Main pitch',
       '',
-      'Full schedule in Trak: https://trakfootball.com',
+      'Open in Trak: https://trakfootball.com/event/ev-13',
     ].join('\n'))
   })
 
@@ -42,7 +43,7 @@ describe('whatsAppShareText', () => {
       'Meet: 17:15',
       'Kit: White',
       '',
-      'Full schedule in Trak: https://trakfootball.com',
+      'Open in Trak: https://trakfootball.com/event/ev-13',
     ].join('\n'))
   })
 
@@ -158,7 +159,7 @@ describe('shareableFromRow: a saved event on the coach schedule', () => {
 
   it('reads the wall clock the coach typed and every match detail', () => {
     expect(shareableFromRow(row, 'U15')).toEqual({
-      kind: 'match', squadLabel: 'U15', date: '2026-10-13', startTime: '18:00', meetTime: '17:15',
+      id: 'ev-1', kind: 'match', squadLabel: 'U15', date: '2026-10-13', startTime: '18:00', meetTime: '17:15',
       opponent: 'Rivals FC', homeAway: 'away', venue: 'Rivals Park', kit: 'White', status: 'scheduled', cancelReason: null,
     })
   })

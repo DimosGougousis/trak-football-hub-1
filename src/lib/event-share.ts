@@ -17,6 +17,8 @@ import type { EventRow } from './coach-events'
  * the squad's names are unknown.
  */
 export interface ShareableEvent {
+  /** coach_calendar_events.id: the message links to this event (TRAK-168). */
+  id: string
   kind: 'training' | 'match' | 'tournament' | 'other'
   /** The squad, e.g. "U15". */
   squadLabel: string
@@ -64,7 +66,9 @@ const LINK = new RegExp([
   String.raw`\b(?:[a-z0-9-]+\.)+(?:${BARE_TLDS})(?![\w-]|\.[\w-])`,
 ].join('|'), 'i')
 
-const TRAK_LINE = 'Full schedule in Trak: https://trakfootball.com'
+// TRAK-168: the link opens this event (/event/:id routes each family to it),
+// not Home. The wording is a placeholder until the founders agree the copy.
+const trakLine = (id: string) => `Open in Trak: https://trakfootball.com/event/${id}`
 const KIND_LABEL: Record<ShareableEvent['kind'], string> = {
   training: 'Training',
   match: 'Match',
@@ -106,7 +110,7 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
     if (text(event.meetTime)) lines.push(`Meet: ${text(event.meetTime)}`)
     if (clean(event.kit)) lines.push(`Kit: ${clean(event.kit)}`)
   }
-  lines.push('', TRAK_LINE)
+  lines.push('', trakLine(event.id))
   return lines.join('\n')
 }
 
@@ -120,6 +124,7 @@ export function shareableFromRow(row: EventRow, squadLabel: string): ShareableEv
   const shown = displayEventTime(row)
   const kind = (['training', 'match', 'tournament', 'other'] as const).find(k => k === row.event_type) ?? 'other'
   return {
+    id: row.id,
     kind,
     squadLabel,
     date: shown.date,
