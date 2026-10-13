@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { MetadataLabel, LoadError } from '@/components/trak'
 import { isChanged, noteEventsShown, readSeenSequences, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { UpcomingEventCard } from './UpcomingEventCard'
+import { SeeMoreList } from '@/components/trak/SeeMoreList'
 
 /**
  * The Sessions tab's "Upcoming" list (TRAK-130). The database returns only
@@ -17,8 +18,8 @@ export function UpcomingEvents({ playerUserId }: { playerUserId: string }) {
   useEffect(() => {
     let cancelled = false
     setFailed(false)
-    supabase.from('coach_calendar_events').select('*')
-      .eq('published', true)
+    // Through child_events (TRAK-164), the family read path with the reason rule.
+    supabase.rpc('child_events', { p_child: playerUserId })
       .or(upcomingEventsFilter())
       .order('event_date', { ascending: true, nullsFirst: false })
       .order('starts_at', { ascending: true })
@@ -46,7 +47,7 @@ export function UpcomingEvents({ playerUserId }: { playerUserId: string }) {
         ) : events.length === 0 ? (
           <p className="text-[12px] text-white/45">Nothing scheduled yet.</p>
         ) : (
-          events.map(e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} />)
+          <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} />} />
         )}
       </div>
     </section>

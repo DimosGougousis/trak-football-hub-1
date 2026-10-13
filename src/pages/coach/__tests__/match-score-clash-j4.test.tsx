@@ -47,7 +47,7 @@ function fixtures(clash: () => unknown) {
   )
 }
 
-async function saveOneZeroWin(opponent = 'Olympiakos U16', goals = 0) {
+async function fillOneZeroWin(opponent = 'Olympiakos U16', goals = 0, assists = 0) {
   const user = userEvent.setup()
   renderApp('/coach/sessions/quick')
   await user.type(await screen.findByPlaceholderText('Opponent name'), opponent)
@@ -57,7 +57,13 @@ async function saveOneZeroWin(opponent = 'Olympiakos U16', goals = 0) {
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
   await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${PLAYER.player_name}` }), '70')
   await user.click(screen.getByRole('button', { name: goals > 0 ? `One more goals for ${PLAYER.player_name}` : `One fewer goals for ${PLAYER.player_name}` }))
-  await user.click(screen.getByRole('button', { name: `One fewer assists for ${PLAYER.player_name}` }))
+  if (assists === 0) await user.click(screen.getByRole('button', { name: `One fewer assists for ${PLAYER.player_name}` }))
+  for (let i = 0; i < assists; i++) await user.click(screen.getByRole('button', { name: `One more assists for ${PLAYER.player_name}` }))
+  return user
+}
+
+async function saveOneZeroWin(opponent = 'Olympiakos U16', goals = 0, assists = 0) {
+  const user = await fillOneZeroWin(opponent, goals, assists)
   await user.click(screen.getByRole('button', { name: 'Save match' }))
 }
 
@@ -80,7 +86,7 @@ describe('J4: a match already saved with another score saves nothing', () => {
     await saveOneZeroWin('  Olympiakos U16 ')
     await waitFor(() => expect(writes).toContain('match row'))
     expect(clashArgs).toHaveLength(1)
-    expect(clashArgs[0]).toMatchObject({ p_opponent: 'Olympiakos U16', p_team_score: 1, p_opponent_score: 0, p_goals: 0 })
+    expect(clashArgs[0]).toMatchObject({ p_opponent: 'Olympiakos U16', p_team_score: 1, p_opponent_score: 0, p_goals: 0, p_assists: 0 })
     expect(clashArgs[0].p_match_date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     // No clash: the save goes ahead as before.
     expect(writes).toEqual(['session', 'attendance', 'match row'])
@@ -129,11 +135,39 @@ describe('J4: a match already saved with another score saves nothing', () => {
     expect(clashArgs.map(a => a.p_goals)).toEqual([2, 1])
   }, 30_000)
 
+  it('refuses a later save whose assists take a saved match past its score, before writing anything (TRAK-167)', async () => {
+    // The coach saved 1-0 with its goal and one assist; now Ade is added with another assist.
+    fixtures(() => [{ team_score: 1, opponent_score: 0, saved_goals: 1, saved_assists: 1 }])
+    await saveOneZeroWin('Olympiakos U16', 0, 1)
+    await waitFor(() => expect(toastText()).toMatch(/Nothing was saved/))
+    expect(clashArgs[0]).toMatchObject({ p_goals: 0, p_assists: 1 })
+    expect(toastText()).toContain('vs Olympiakos U16 already has 1 assist saved; with these it would be 2, but the team scored 1.')
+    expect(writes).toEqual([])
+  }, 20_000)
+
   it('saves nothing when the question itself fails, and says to try again', async () => {
     fixtures(() => ({ status: 503, body: { message: 'upstream timeout' } }))
     await saveOneZeroWin()
     await waitFor(() => expect(toastText()).toMatch(/Couldn't check this match/))
     expect(toastText()).toMatch(/Nothing was saved/)
     expect(writes).toEqual([])
+  }, 20_000)
+})
+
+describe("J4: a match's assists cannot pass its score (TRAK-167)", () => {
+  beforeEach(() => signInAs(COACH))
+
+  it('says so on the form and keeps Save off when one player has 2 assists in a 1-0', async () => {
+    fixtures(() => [])
+    await fillOneZeroWin('Olympiakos U16', 1, 2)
+    expect(await screen.findByText('2 assists entered, but the team scored 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save match' })).toBeDisabled()
+    expect(writes).toEqual([])
+  }, 20_000)
+
+  it('saves a 1-0 with its goal and one assist', async () => {
+    fixtures(() => [])
+    await saveOneZeroWin('Olympiakos U16', 1, 1)
+    await waitFor(() => expect(writes).toEqual(['session', 'attendance', 'match row']))
   }, 20_000)
 })

@@ -250,11 +250,11 @@ export default function PlayerHome() {
         // Published upcoming calendar events from coach
         if (!coachIds.length) setUpcomingEvents([])
         else {
+          // Through child_events (TRAK-164), like the parent's screens: it
+          // applies the child's consent and drops a cancel reason naming a
+          // squad-mate or holding a link.
           const { data: evs, error: evsError } = await supabase
-            .from('coach_calendar_events')
-            .select('*')
-            .in('coach_user_id', coachIds)
-            .eq('published', true)
+            .rpc('child_events', { p_child: user.id })
             // An untimed session is stored at midnight, so `starts_at >= now()`
             // dropped it from its own day the moment the clock passed 00:00 —
             // the session a player most needs to see disappears on the morning

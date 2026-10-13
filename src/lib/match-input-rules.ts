@@ -140,14 +140,23 @@ export function validateMatchInput(input: MatchInput): Violation[] {
  * (TRAK-66). Fewer is allowed: own goals and unrostered scorers exist. Like
  * the per-player rule, an unknown score is not a violation.
  *
- * ponytail: client-side only. The RPC logs one player at a time, so the
- * database cannot see the other scorers; a match-level check needs a match
- * row that owns its players' records.
+ * The database holds the same total across saves (TRAK-149).
  */
 export function teamGoalsViolation(playerGoals: number[], teamScore: number | undefined): string | null {
   if (teamScore === undefined || !Number.isInteger(teamScore)) return null
   const total = playerGoals.reduce((sum, goals) => sum + goals, 0)
   return total > teamScore ? `${total} goals entered, but the team scored ${teamScore}` : null
+}
+
+/**
+ * Each goal has at most one assist, so our players' assists cannot pass our
+ * team's score either (TRAK-167). Fewer is allowed: a goal with no assist, or
+ * one set up by an unrostered player. The database holds the same total.
+ */
+export function teamAssistsViolation(playerAssists: number[], teamScore: number | undefined): string | null {
+  if (teamScore === undefined || !Number.isInteger(teamScore)) return null
+  const total = playerAssists.reduce((sum, assists) => sum + assists, 0)
+  return total > teamScore ? `${total} assist${total === 1 ? '' : 's'} entered, but the team scored ${teamScore}` : null
 }
 
 /** Convenience for call sites that only need the verdict. */

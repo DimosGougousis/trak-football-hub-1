@@ -8,7 +8,7 @@ import { MobileShell, MetadataLabel } from '@/components/trak'
 import { computeMatchScore } from '@/lib/rating-engine'
 import { goalsKey, assistsKey } from '@/lib/match-input-keys'
 import { trackEvent } from '@/lib/telemetry'
-import { validateMatchInput, teamGoalsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
+import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
 import { localTodayISO } from '@/lib/event-time'
 import { TRAINING_FOCUS, trainingTypeFrom } from '@/lib/training-focus'
 import { trainingNotes, trainingTitle } from '@/lib/session-form'
@@ -286,13 +286,18 @@ export default function CoachAddSession() {
       .map(p => details[p.id].goals as number),
     scoreUs === '' ? undefined : Number(scoreUs),
   )
+  const teamAssistsError = !isMatch ? null : teamAssistsViolation(
+    squad.filter(p => details[p.id]?.played && typeof details[p.id].assists === 'number')
+      .map(p => details[p.id].assists as number),
+    scoreUs === '' ? undefined : Number(scoreUs),
+  )
 
   // J4 records what happened; planning ahead is the parked calendar (TRAK-67, TRAK-25).
   const futureDate = date > localTodayISO()
 
   // A failed roster is not an empty one: saving now would drop the players
   // the coach took (Tarek's #126 re-review).
-  const canSave = !saving && !rosterLoading && !rosterFailed && !futureDate && incompleteRecords.length === 0 && impossibleRecords.length === 0 && !teamGoalsError && (
+  const canSave = !saving && !rosterLoading && !rosterFailed && !futureDate && incompleteRecords.length === 0 && impossibleRecords.length === 0 && !teamGoalsError && !teamAssistsError && (
     isMatch    ? opponent.trim().length > 0 && scoreUs !== '' && scoreThem !== ''
     : type === 'training' ? trainingFocus.size > 0
     : title.trim().length > 0
@@ -321,22 +326,23 @@ export default function CoachAddSession() {
     })
 
     // TRAK-153: a match already saved with another score, or whose saved goals
-    // plus these would pass the team's score, is refused by the database player
+    // (or assists, TRAK-167) plus these would pass the team's score, is refused by the database player
     // by player (TRAK-149), but only after the session and attendance below are
     // in, and a coach can't delete those. Ask first, and save nothing if the
     // answer is a clash or no answer came.
     if (isMatch) {
       // Only the rows this save will write count: a player already written on
-      // an earlier attempt is in the saved goals already.
-      const newGoals = linkedPlayers
-        .filter(p => !loggedPlayerIds.has(p.linked_player_id!))
-        .reduce((sum, p) => sum + (details[p.id].goals ?? 0), 0)
+      // an earlier attempt is in the saved goals and assists already.
+      const toWrite = linkedPlayers.filter(p => !loggedPlayerIds.has(p.linked_player_id!))
+      const newGoals = toWrite.reduce((sum, p) => sum + (details[p.id].goals ?? 0), 0)
+      const newAssists = toWrite.reduce((sum, p) => sum + (details[p.id].assists ?? 0), 0)
       const { data: clash, error: clashErr } = await supabase.rpc('coach_match_score_clash', {
         p_match_date: date,
         p_opponent: opponent.trim(),
         p_team_score: Number(scoreUs) || 0,
         p_opponent_score: Number(scoreThem) || 0,
         p_goals: newGoals,
+        p_assists: newAssists,
       })
       if (clashErr) {
         console.error('Match score check failed:', clashErr)
@@ -347,9 +353,13 @@ export default function CoachAddSession() {
       const saved = clash?.[0]
       if (saved) {
         const sameScore = saved.team_score === (Number(scoreUs) || 0) && saved.opponent_score === (Number(scoreThem) || 0)
-        toast.error(sameScore
-          ? `${sessionTitle} already has ${saved.saved_goals} goal${saved.saved_goals === 1 ? '' : 's'} saved; with these it would be ${saved.saved_goals + newGoals}, but the team scored ${saved.team_score}. Nothing was saved.`
-          : `${sessionTitle} is already saved as ${saved.team_score}-${saved.opponent_score}; every player in it needs the same score. Nothing was saved.`,
+        const tooMany = (count: number, added: number, noun: string) =>
+          `${sessionTitle} already has ${count} ${noun}${count === 1 ? '' : 's'} saved; with these it would be ${count + added}, but the team scored ${saved.team_score}. Nothing was saved.`
+        toast.error(!sameScore
+          ? `${sessionTitle} is already saved as ${saved.team_score}-${saved.opponent_score}; every player in it needs the same score. Nothing was saved.`
+          : saved.saved_goals + newGoals > saved.team_score
+            ? tooMany(saved.saved_goals, newGoals, 'goal')
+            : tooMany(saved.saved_assists, newAssists, 'assist'),
           { duration: 12000 })
         setSaving(false)
         return
@@ -1141,6 +1151,12 @@ export default function CoachAddSession() {
           <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {teamGoalsError}
+          </p>
+        )}
+        {teamAssistsError && (
+          <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
+            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {teamAssistsError}
           </p>
         )}
         {incompleteRecords.length > 0 && (
