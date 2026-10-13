@@ -130,7 +130,7 @@
   <div class="body">
     <h3>Load the academy-supplied roster</h3>
     <p>Use the operator loader dry run, review it, then apply only the agreed synthetic rows. Verify the coach sees each child’s correct waiting/approved state. Repeat the load and check that it does not create duplicates.</p>
-    <p class="look"><b>Record:</b> Exact roster IDs, expected membership, repeat result and any partial-load failure. A coach cannot add a child or link one by a TRK code.</p>
+    <p class="look"><b>Record:</b> Exact roster IDs, expected membership, repeat result and any partial-load failure. A coach cannot add a child or link one by a TRK code. A row for a child younger than the academy's minimum age (13 for UAE academies) by date of birth is refused by the loader's dry run and by the database (TRAK-165); check one on the synthetic roster, and that an academy admin can't lower the minimum.</p>
   </div>
 </div>
 
@@ -222,7 +222,7 @@
   <div class="body">
     <h3>Withdraw with sessions open</h3>
     <p>Keep a coach form, child app and a second guardian session open. Withdraw the last active approval for one child and retry the coach save. Check readback and return to the other open tabs. Separately withdraw approval before a child finishes setup.</p>
-    <p class="look"><b>Record:</b> Server write refusal and withdrawn content behavior, including timing and offline limitations. With multiple guardians, distinguish one withdrawn approval from withdrawal of the last active approval.</p>
+    <p class="look"><b>Record:</b> Server write refusal and withdrawn content behavior, including timing and offline limitations. With multiple guardians, distinguish one withdrawn approval from withdrawal of the last active approval. A guardian who deletes their account: the confirmation says it withdraws their approvals, and afterwards their child's approval reads as withdrawn, with the evidence row kept (TRAK-155).</p>
   </div>
 </div>
 
@@ -254,7 +254,7 @@
   <div class="body">
     <h3>Changes and cancellations reach families</h3>
     <p>Change and cancel events; check every affected player and guardian on next app load, including the selected child’s parent bell and the player’s Next up marker. Test changes for today and tomorrow in Dubai time, including venue and meet time. Cancel a published match five days out: it is emailed too, while moving it (not today or tomorrow) is not. Make three quick edits and check that only the final change is emailed. Cancel one with the coach’s phone put in airplane mode straight after Save: the email must still arrive, sent by the scheduler’s sweep rather than the app (TRAK-136). Open an event and save without changing anything. Save an event as a draft without publishing it.</p>
-    <p class="look"><b>Record:</b> Correct, consented guardian recipients only; the email arrives in Gmail and in the Microsoft 365 inbox within 60 seconds, in the Inbox (not Junk, spam or Other), with SPF, DKIM and DMARC = pass in the headers. Microsoft's link scanner opening it changes nothing. Record send time and inbox receipt metadata. No child name in the subject, coach notes or state-changing link. Record failed-delivery visibility/retry. The edit-collapse window is 15 seconds (live run 11 Oct; accepted for the pilot, Imad 12 Oct): two saves more than 15 s apart send two emails, the second one correct. A move or a cancellation shows once in the parent bell, unread until marked read (one by one or Mark all read; closing the bell keeps the count; the Unread tab lists what's new; Dismiss removes one until the coach changes it again), and a row's Open event opens the event page; siblings are counted per child. A player's bell does the same for their squad (TRAK-163). An unchanged save shows no “Changed”, updates no calendar and sends no email (TRAK-152). A draft reaches no one: app, bell, calendar, email or share text.</p>
+    <p class="look"><b>Record:</b> Correct, consented guardian recipients only; the email arrives in Gmail and in the Microsoft 365 inbox within 60 seconds, in the Inbox (not Junk, spam or Other), with SPF, DKIM and DMARC = pass in the headers. Microsoft's link scanner opening it changes nothing. Record send time and inbox receipt metadata. No child name in the subject, coach notes or state-changing link. Record failed-delivery visibility/retry. The edit-collapse window is 15 seconds (live run 11 Oct; accepted for the pilot, Imad 12 Oct): two saves more than 15 s apart send two emails, the second one correct. A move or a cancellation shows once in the parent bell, unread until marked read (one by one or Mark all read; closing the bell keeps the count; the Unread tab lists what's new; Dismiss removes one until the coach changes it again), and a row's Open event opens the event page; siblings are counted per child. A player's bell does the same for their squad (TRAK-163). An unchanged save shows no “Changed”, updates no calendar and sends no email (TRAK-152). A cancellation reason that names a squad child or holds a link shows nowhere a family looks: event page, parent bell, player bell, email, calendar or WhatsApp text (TRAK-164); the coach's own schedule still shows it. A draft reaches no one: app, bell, calendar, email or share text.</p>
   </div>
 </div>
 
