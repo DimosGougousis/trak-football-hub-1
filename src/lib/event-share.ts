@@ -70,6 +70,18 @@ const LINK = new RegExp([
 // say "Event details" until families can answer "Can't make it" (TRAK-137);
 // Tarek's availability wording comes back with it (Imad, 13 Oct, #292).
 const eventLink = (id: string) => `https://trakfootball.com/event/${id}`
+
+/**
+ * TRAK-161 (Kostas, #293): why families won't see a family note, so the coach
+ * is told as they type. The same two checks child_events() applies through
+ * family_safe_reason(). With the squad's names unknown, only a link can be
+ * judged here; the database still applies the name rule.
+ */
+export function familyNoteProblem(note: string, childNames: string[] | null): 'link' | 'name' | null {
+  const value = note.trim()
+  if (LINK.test(value)) return 'link'
+  return namePatterns(childNames ?? []).some(p => p.test(value)) ? 'name' : null
+}
 const KIND_LABEL: Record<ShareableEvent['kind'], string> = {
   training: 'Training',
   match: 'Match',
