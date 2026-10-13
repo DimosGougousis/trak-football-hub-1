@@ -466,6 +466,24 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          event_reminders: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          event_reminders?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          event_reminders?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           age_group: string
@@ -836,6 +854,7 @@ export type Database = {
       }
       coach_match_score_clash: {
         Args: {
+          p_assists?: number
           p_goals?: number
           p_match_date: string
           p_opponent: string
@@ -843,6 +862,7 @@ export type Database = {
           p_opponent_score: number
         }
         Returns: {
+          saved_assists: number
           saved_goals: number
           team_score: number
           opponent_score: number

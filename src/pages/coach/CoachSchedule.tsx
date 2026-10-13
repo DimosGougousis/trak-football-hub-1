@@ -535,7 +535,7 @@ export default function CoachSchedule() {
                   <div className="flex items-center gap-[3px] mt-1.5 h-[5px]">
                     {dots.map((ev, di) => (
                       <div key={di} className="w-[5px] h-[5px] rounded-full flex-shrink-0"
-                        style={{ background: ev.row && isCancelled(ev.row) ? 'rgba(255,255,255,0.15)' : TYPE_COLOR[ev.type] }} />
+                        style={{ background: ev.row && isCancelled(ev.row) ? CANCELLED_COLOR : TYPE_COLOR[ev.type] }} />
                     ))}
                   </div>
                 </button>
@@ -586,7 +586,7 @@ export default function CoachSchedule() {
                     className="rounded-[14px] px-4 py-3 flex items-start gap-3"
                     style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.06)', opacity: cancelled ? 0.7 : 1 }}>
                     <div className="w-1 self-stretch rounded-full flex-shrink-0"
-                      style={{ background: cancelled ? 'rgba(255,255,255,0.15)' : TYPE_COLOR[ev.type], minHeight: 28 }} />
+                      style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium truncate"
                         style={{ color: 'rgba(255,255,255,0.88)', ...font, textDecoration: cancelled ? 'line-through' : undefined }}>
