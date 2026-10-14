@@ -3,6 +3,8 @@
 //
 //   node scripts/load-roster.mjs --file roster.csv --org <academy uuid> --loaded-by <your name> [--min-age <n>]
 //   --min-age defaults to 13 (UAE); pass the academy's own minimum if Trak set it lower (TRAK-165).
+//   --consent-age defaults to 18; pass the academy's organizations.consent_age (15 in Greece, TRAK-177):
+//   from it, a child with their own email needs no guardian on the roster.
 //   node scripts/load-roster.mjs ... --apply        (writes; see "Applying" below)
 //
 // The CSV has a header row with these columns, in any order:
@@ -102,7 +104,7 @@ function isRealDate(s) {
 // Validates the whole file. Returns the rows ready to load and every problem
 // found, each naming its CSV line (the header is line 1) and never the data.
 // "Today" is the Dubai date (UTC+4 all year), like the database's age checks.
-export function validateRoster(text, { today = new Date(Date.now() + 4 * 3600_000).toISOString().slice(0, 10), minAge = 13 } = {}) {
+export function validateRoster(text, { today = new Date(Date.now() + 4 * 3600_000).toISOString().slice(0, 10), minAge = 13, consentAge = 18 } = {}) {
   const table = parseCsv(text.replace(/^﻿/, ''));
   const errors = [];
   if (table.length === 0) return { rows: [], errors: ['The file is empty'] };
@@ -136,7 +138,11 @@ export function validateRoster(text, { today = new Date(Date.now() + 4 * 3600_00
     else if (minAge > 0 && date_of_birth > `${Number(today.slice(0, 4)) - minAge}${today.slice(4)}`) problems.push(`the child is under ${minAge} (this academy serves children aged ${minAge} and over)`);
     if (child_email && !EMAIL.test(child_email)) problems.push('child_email is not an email address');
     if (!EMAIL.test(coach_email)) problems.push('coach_email is not an email address');
-    if (guardian_emails.length === 0) problems.push('no guardian email');
+    // TRAK-177: from the academy's consent age the child consents for themselves,
+    // so one with their own email needs no guardian (the database repeats this).
+    const reachedConsentAge = isRealDate(date_of_birth) && date_of_birth <= `${Number(today.slice(0, 4)) - consentAge}${today.slice(4)}`;
+    if (guardian_emails.length === 0 && !reachedConsentAge) problems.push(`no guardian email (a child under ${consentAge} needs one)`);
+    else if (guardian_emails.length === 0 && !child_email) problems.push('no guardian email (a child without their own email needs one)');
     if (guardian_emails.some(g => !EMAIL.test(g))) problems.push('a guardian email is not an email address');
     if (child_email && guardian_emails.includes(child_email)) problems.push('the child\'s email is also listed as a guardian\'s');
     // TRAK-93: YOURNAME@gmail.com and the like belong to strangers at real providers.
@@ -308,7 +314,7 @@ export function parseArgs(argv) {
     else if (a === '--send-invites') out['send-invites'] = true;
     else if (a === '--no-invites') noInvites = true;
     else if (a === '--reinvite') out.reinvite = true;
-    else if (['--file', '--org', '--loaded-by', '--min-age'].includes(a)) out[a.slice(2)] = argv[++i];
+    else if (['--file', '--org', '--loaded-by', '--min-age', '--consent-age'].includes(a)) out[a.slice(2)] = argv[++i];
     else throw new Error(`Unknown argument: ${a}`);
   }
   if (noInvites && out['send-invites']) throw new Error('Use either --send-invites or --no-invites, not both');
@@ -383,12 +389,15 @@ async function reinvite(admin, args, rows, sendInvite) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.file || !args['loaded-by'] || !UUID.test(args.org ?? '')) {
-    throw new Error('Usage: --file <roster.csv> --org <academy uuid> --loaded-by <name> [--min-age <n>] [--apply] [--send-invites | --reinvite]');
+    throw new Error('Usage: --file <roster.csv> --org <academy uuid> --loaded-by <name> [--min-age <n>] [--consent-age <n>] [--apply] [--send-invites | --reinvite]');
   }
   // TRAK-165: must match the academy's organizations.min_player_age (13 unless Trak set it lower).
   const minAge = args['min-age'] === undefined ? 13 : Number(args['min-age']);
   if (!Number.isInteger(minAge) || minAge < 0 || minAge > 17) throw new Error('--min-age must be a whole number from 0 to 17');
-  const { rows, errors } = validateRoster(await readFile(args.file, 'utf8'), { minAge });
+  // TRAK-177: must match the academy's organizations.consent_age (18 unless Trak set it lower).
+  const consentAge = args['consent-age'] === undefined ? 18 : Number(args['consent-age']);
+  if (!Number.isInteger(consentAge) || consentAge < 13 || consentAge > 18) throw new Error('--consent-age must be a whole number from 13 to 18');
+  const { rows, errors } = validateRoster(await readFile(args.file, 'utf8'), { minAge, consentAge });
   const guardians = rows.reduce((n, r) => n + r.guardian_emails.length, 0);
   console.log(`[load-roster] ${rows.length} valid row(s), ${guardians} guardian address(es), ${errors.length} problem(s).`);
   for (const e of errors) console.log(`[load-roster] ${e}`);

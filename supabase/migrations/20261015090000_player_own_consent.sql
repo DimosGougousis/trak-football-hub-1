@@ -314,3 +314,86 @@ BEGIN
 END;
 $fn$;
 REVOKE ALL ON FUNCTION public.roster_email_invite_targets(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
+
+-- ── 8. Roster: no guardian needed from the consent age ────────
+-- Body as in 20260928120000, with the guardian check changed. Grants unchanged.
+CREATE OR REPLACE FUNCTION public.admit_roster_child(
+  p_organization_id uuid,
+  p_coach_user_id   uuid,
+  p_child_name      text,
+  p_age_group       text,
+  p_date_of_birth   date,
+  p_child_email     text,
+  p_guardian_emails text[],
+  p_loaded_by       text,
+  p_source_file     text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $fn$
+DECLARE
+  -- TRAK-84: a blank email means the child has none (stored as NULL, never '').
+  v_child_email text := NULLIF(lower(btrim(COALESCE(p_child_email, ''))), '');
+  v_guardians   text[];
+  v_squad_id    uuid;
+  v_roster_id   uuid;
+BEGIN
+  IF btrim(COALESCE(p_child_name, '')) = '' THEN
+    RAISE EXCEPTION 'The child''s name is required' USING ERRCODE = '22023';
+  END IF;
+  IF p_date_of_birth IS NULL THEN
+    RAISE EXCEPTION 'The child''s date of birth is required' USING ERRCODE = '22023';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.coach_details cd
+    WHERE cd.user_id = p_coach_user_id AND cd.organization_id = p_organization_id
+  ) THEN
+    RAISE EXCEPTION 'The coach does not work for this academy' USING ERRCODE = '23514';
+  END IF;
+
+  SELECT COALESCE(array_agg(DISTINCT e), '{}') INTO v_guardians
+  FROM (SELECT lower(btrim(g)) AS e FROM unnest(COALESCE(p_guardian_emails, '{}')) g) s
+  WHERE e <> '';
+  -- TRAK-177: from the academy's consent age, a child with their own email
+  -- needs no guardian on the roster (they consent for themselves).
+  IF cardinality(v_guardians) = 0 AND NOT (
+    v_child_email IS NOT NULL
+    AND date_part('year', age(current_date, p_date_of_birth)) >= COALESCE(
+      (SELECT o.consent_age FROM public.organizations o WHERE o.id = p_organization_id),
+      public.consent_threshold_age())
+  ) THEN
+    RAISE EXCEPTION 'At least one guardian email is required' USING ERRCODE = '22023';
+  END IF;
+  IF v_child_email = ANY (v_guardians) THEN
+    RAISE EXCEPTION 'A child''s email cannot also be a guardian''s email on the roster'
+      USING ERRCODE = '23514';
+  END IF;
+
+  -- Without an email, the academy, name and date of birth identify the child,
+  -- so a re-run of the same file refuses the second copy (the loader skips it).
+  IF v_child_email IS NULL AND EXISTS (
+    SELECT 1 FROM public.roster_children rc
+    JOIN public.squad_players sp ON sp.id = rc.squad_player_id
+    WHERE rc.organization_id = p_organization_id AND rc.child_email IS NULL
+      AND rc.date_of_birth = p_date_of_birth
+      AND lower(btrim(sp.player_name)) = lower(btrim(p_child_name))
+  ) THEN
+    RAISE EXCEPTION 'This child is already on the academy''s roster' USING ERRCODE = '23505';
+  END IF;
+
+  INSERT INTO public.squad_players (coach_user_id, player_name, age_group)
+  VALUES (p_coach_user_id, btrim(p_child_name), NULLIF(btrim(COALESCE(p_age_group, '')), ''))
+  RETURNING id INTO v_squad_id;
+
+  INSERT INTO public.roster_children
+    (organization_id, squad_player_id, date_of_birth, child_email, loaded_by, source_file)
+  VALUES (p_organization_id, v_squad_id, p_date_of_birth, v_child_email, p_loaded_by, p_source_file)
+  RETURNING id INTO v_roster_id;
+
+  INSERT INTO public.roster_guardians (roster_child_id, email, loaded_by)
+  SELECT v_roster_id, e, p_loaded_by FROM unnest(v_guardians) e;
+
+  RETURN v_roster_id;
+END;
+$fn$;
+

@@ -163,6 +163,21 @@ RESET ROLE;
 SELECT pg_temp.oc_assert(EXISTS (SELECT 1 FROM public.parental_consents WHERE roster_child_id = pg_temp.oc(51) AND withdrawn_at IS NULL),
   'a guardian still approves a Greek 14-year-old');
 
+-- Loading the roster: from the consent age a child with their own email needs no guardian.
+SELECT pg_temp.oc_assert(public.admit_roster_child(pg_temp.oc(101), pg_temp.oc(4), 'Solo Greek Sixteen', 'U16',
+  (current_date - interval '16 years 1 month')::date, 'solo16@own-consent.test', ARRAY[]::text[], 'fixture') IS NOT NULL,
+  'a Greek 16-year-old with their own email loads with no guardian');
+CREATE FUNCTION pg_temp.oc_needs_guardian(p_org integer, p_years text, p_email text, p_name text) RETURNS boolean LANGUAGE plpgsql AS $f$
+BEGIN
+  PERFORM public.admit_roster_child(pg_temp.oc(p_org), CASE p_org WHEN 101 THEN pg_temp.oc(4) ELSE pg_temp.oc(3) END, p_name, 'U',
+    (current_date - (p_years || ' years 1 month')::interval)::date, p_email, ARRAY[]::text[], 'fixture');
+  RETURN false;
+EXCEPTION WHEN SQLSTATE '22023' THEN RETURN true;
+END $f$;
+SELECT pg_temp.oc_assert(pg_temp.oc_needs_guardian(101, '14', 'solo14@own-consent.test', 'Solo Greek Fourteen'), 'a Greek 14-year-old still needs a guardian on the roster');
+SELECT pg_temp.oc_assert(pg_temp.oc_needs_guardian(101, '16', NULL, 'Solo Greek No Email'), 'a Greek 16-year-old with no email of their own needs a guardian');
+SELECT pg_temp.oc_assert(pg_temp.oc_needs_guardian(100, '16', 'soloae16@own-consent.test', 'Solo UAE Sixteen'), 'a UAE 16-year-old still needs a guardian');
+
 DO $$ DECLARE failures text;
 BEGIN SELECT string_agg(description || ': ' || coalesce(detail, 'false'), E'\n') INTO failures FROM pg_temp.oc_results WHERE NOT passed;
   IF failures IS NOT NULL THEN RAISE EXCEPTION 'Own-consent checks failed:%', E'\n' || failures; END IF;
