@@ -503,6 +503,7 @@ export type Database = {
           opponent_score: number
           position: string
           self_rating: string | null
+          session_id: string | null
           team_score: number
           user_id: string
           venue: string
@@ -525,6 +526,7 @@ export type Database = {
           opponent_score?: number
           position: string
           self_rating?: string | null
+          session_id?: string | null
           team_score?: number
           user_id: string
           venue: string
@@ -547,11 +549,20 @@ export type Database = {
           opponent_score?: number
           position?: string
           self_rating?: string | null
+          session_id?: string | null
           team_score?: number
           user_id?: string
           venue?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "matches_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coach_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meeting_requests: {
         Row: {
@@ -969,6 +980,7 @@ export type Database = {
           p_opponent_score: number
           p_position: string
           p_self_rating: string
+          p_session_id?: string
           p_team_score: number
           p_user_id: string
           p_venue: string

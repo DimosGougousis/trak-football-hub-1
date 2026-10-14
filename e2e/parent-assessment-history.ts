@@ -44,7 +44,20 @@ test.describe('TRAK-172 parent assessment history', () => {
         const child = req.postDataJSON().p_player_user_id
         return json([{ session_id: `${child}-session-3`, session_date: '2026-10-10', focus: ['Set pieces'], attendance: 'present' }])
       }
-      if (['matches', 'player_details', 'recognition_awards'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+      // TRAK-174: a saved explicit link and a legacy row, for each child.
+      if (url.pathname === '/rest/v1/matches') {
+        const child = params.get('user_id')?.slice(3) ?? alex
+        const id = params.get('id')?.slice(3)
+        const label = child === alex ? 'Alex' : 'Zara'
+        return json([true, false].map(linked => ({
+          id: `${child}-${linked ? 'linked' : 'legacy'}-match`, user_id: child,
+          session_id: linked ? `${child}-session-3` : null,
+          opponent: `${label} ${linked ? 'linked' : 'legacy'} match`, match_date: '2026-10-10',
+          created_at: '2026-10-10T10:00:00Z', competition: 'League', venue: 'Home',
+          team_score: 1, opponent_score: 0, computed_rating: 8, position: 'ST', age_group: 'U19', minutes_played: 90, goals: 0, assists: 0,
+        })).filter(row => !id || row.id === id))
+      }
+      if (['player_details', 'recognition_awards'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
       if (['child_events', 'get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])
       if (url.pathname === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
       unexpected.push(`${req.method()} ${url.pathname}`)
@@ -85,6 +98,21 @@ test.describe('TRAK-172 parent assessment history', () => {
     await page.getByRole('button', { name: 'Load more' }).click()
     await expect(page.getByRole('link', { name: /Alex Coach 24/ })).toBeVisible()
     await page.getByRole('button', { name: 'Matches', exact: true }).click()
+    await expect(page.getByRole('link', { name: /Alex legacy match/ })).toHaveAttribute('href', `/parent/match/${alex}-legacy-match`)
+    await page.getByRole('link', { name: /Alex linked match/ }).click()
+    await expect(page.getByRole('heading', { name: 'Coach assessment' })).toBeVisible()
+    await expect(page.getByText('Alex Coach 3', { exact: true })).toBeVisible()
+    await expect(page.getByText('Alex Coach 1', { exact: true })).toHaveCount(0)
+    await page.screenshot({ path: testInfo.outputPath(`match-bands-${width}.png`), fullPage: true })
+    await page.getByRole('link', { name: 'Match details', exact: true }).click()
+    await expect(page.getByText('vs Alex linked match', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Matches', exact: true }).click()
+    await page.getByRole('link', { name: /Alex legacy match/ }).click()
+    await expect(page.getByText('No assessment link is available for this match.')).toBeVisible()
+    await page.getByRole('button', { name: 'Matches', exact: true }).click()
+    await page.getByRole('link', { name: /Alex linked match/ }).click()
+    await page.getByRole('link', { name: 'All assessments', exact: true }).click()
+    await page.getByRole('button', { name: 'Matches', exact: true }).click()
     await page.getByRole('link', { name: /Set pieces/ }).click()
     await expect(page.getByRole('heading', { name: 'Coach assessment' })).toBeVisible()
     await expect(page.getByText('Alex Coach 3', { exact: true })).toBeVisible()
@@ -95,7 +123,9 @@ test.describe('TRAK-172 parent assessment history', () => {
     await expect(page.getByRole('link', { name: /Zara Coach 1/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Alex Coach/ })).toHaveCount(0)
     await page.getByRole('button', { name: 'Matches', exact: true }).click()
-    await page.getByRole('link', { name: /Set pieces/ }).click()
+    await expect(page.getByRole('link', { name: /Alex linked match/ })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /Zara legacy match/ })).toHaveAttribute('href', `/parent/match/${zara}-legacy-match`)
+    await page.getByRole('link', { name: /Zara linked match/ }).click()
     await expect(page.getByRole('heading', { name: 'Coach assessment' })).toBeVisible()
     await expect(page.getByText('Zara Coach 3', { exact: true })).toHaveCount(0)
     // Zara has only two records: the third session truthfully has no available assessment.
