@@ -2,6 +2,8 @@ import { supabase } from '@/integrations/supabase/client'
 import { scoreToBand } from '@/lib/rating-engine'
 import type { Tables } from '@/integrations/supabase/types'
 import { eventDay, eventHeading, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
+import { fetchCoachNames, PARENT_ASSESSMENT_COLUMNS, type ParentAssessment } from './parent-assessments'
+export type { ParentAssessment } from './parent-assessments'
 
 export interface ParentChild {
   id: string
@@ -10,9 +12,6 @@ export interface ParentChild {
 
 // Explicit projections keep private assessment fields out of the parent client.
 // Coach deletion retains history with a null author; generated types predate this.
-export type ParentAssessment = Pick<Tables<'coach_assessments'>,
-  'id' | 'created_at' | 'coach_rating' | 'work_rate' |
-  'tactical' | 'attitude' | 'technical' | 'physical' | 'coachability'> & { coach_user_id: string | null }
 export type ParentAward = Pick<Tables<'recognition_awards'>,
   'id' | 'created_at' | 'award_type' | 'awarded_for' | 'note'> & { coach_user_id: string | null }
 export type ParentDetails = Pick<Tables<'player_details'>, 'position' | 'current_club' | 'age_group'>
@@ -100,8 +99,9 @@ export async function fetchParentDevelopment(childId: string, signal: AbortSigna
 
   const [assessmentResult, awardResult] = await Promise.all([
     supabase.from('coach_assessments')
-      .select('id, created_at, coach_user_id, coach_rating, work_rate, tactical, attitude, technical, physical, coachability')
-      .in('squad_player_id', ids).order('created_at', { ascending: false }).limit(10).abortSignal(signal).retry(false),
+      .select(PARENT_ASSESSMENT_COLUMNS)
+      .in('squad_player_id', ids).order('created_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false }).limit(10).abortSignal(signal).retry(false),
     supabase.from('recognition_awards').select('id, created_at, coach_user_id, award_type, awarded_for, note')
       .in('squad_player_id', ids).order('created_at', { ascending: false }).limit(10).abortSignal(signal).retry(false),
   ])
@@ -112,13 +112,7 @@ export async function fetchParentDevelopment(childId: string, signal: AbortSigna
   // Filter only the optional name lookup, never the retained history records.
   const coachIds = [...new Set([...assessments, ...awards].map(row => row.coach_user_id)
     .filter((coachId): coachId is string => coachId !== null))]
-  let coachNames: Record<string, string> = {}
-  if (coachIds.length) {
-    const { data, error } = await supabase.from('profiles').select('user_id, full_name')
-      .in('user_id', coachIds).abortSignal(signal).retry(false)
-    if (error) throw error
-    coachNames = Object.fromEntries((data ?? []).map(profile => [profile.user_id, profile.full_name]))
-  }
+  const coachNames = await fetchCoachNames(coachIds, signal)
   return { details: detailsResult.data, assessments, awards, coachNames }
 }
 

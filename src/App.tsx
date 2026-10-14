@@ -59,6 +59,8 @@ const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfi
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
 const ParentEventsPage = lazy(() => import("./pages/parent/ParentEventsPage"));
+const ParentAssessments = lazy(() => import("./pages/parent/ParentAssessments"));
+const ParentAssessment = lazy(() => import("./pages/parent/ParentAssessment"));
 const ParentMatchDetail = lazy(() => import("./pages/parent/ParentMatchDetail"));
 const ParentEvent = lazy(() => import("./pages/parent/ParentEvent"));
 const ParentProfilePage = lazy(() => import("./pages/parent/ParentProfilePage"));
@@ -163,6 +165,9 @@ const App = () => (
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
             <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
             <Route path="/parent/events" element={<RouteGuard allowedRole="parent"><ParentEventsPage /></RouteGuard>} />
+            <Route path="/parent/assessments" element={<RouteGuard allowedRole="parent"><ParentAssessments /></RouteGuard>} />
+            <Route path="/parent/assessment/:id" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
+            <Route path="/parent/session/:sessionId/assessment" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
             <Route path="/parent/match/:id" element={<RouteGuard allowedRole="parent"><ParentMatchDetail /></RouteGuard>} />
             <Route path="/parent/event/:id" element={<RouteGuard allowedRole="parent"><ParentEvent /></RouteGuard>} />
             <Route path="/parent/alerts" element={<RouteGuard allowedRole="parent"><ParkedScreen><ParentAlerts /></ParkedScreen></RouteGuard>} />
