@@ -30,6 +30,14 @@ suite exercises a production build at 390 and 768 pixels with synthetic,
 intercepted replies: real mobile touch, desktop keyboard, full-width cards,
 history pagination, training bands and unavailable sibling records.
 
-This branch builds on TRAK-171 (#295). No database, match logging or production
+Final local verification passes 1,748 source tests and all 20 Chromium journeys,
+plus lint, typecheck, harness, use cases, database/native/convergence checks,
+build and bundle credential checks. Nine inherited skips and 24 pending use
+cases without tests remain coverage debt. Six repeated viewport runs pass;
+touch gestures use a paced duration and exact physical card-position checks.
+A fresh review found no actionable findings and independently passed 18
+targeted tests. That review does not satisfy independent human approval.
+
+This branch builds on TRAK-171 (#295), refreshed with main 005b662. No database, match logging or production
 write is included. Independent human review and approval are required before
 merge. Real-phone J6 checks in the rehearsal script remain owed after deployment.
