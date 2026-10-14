@@ -71,10 +71,13 @@ describe('coach event form', () => {
     expect(late.ends_at).toBe(new Date(new Date(toAcademyInstant('2026-10-20', '23:00')!).getTime() + 90 * 60_000).toISOString())
   })
 
-  it('refuses an impossible date, a meet time with no start, and an untitled "other"', () => {
+  it('refuses an impossible date, a missing start time, and an untitled "other"', () => {
     expect(formProblem({ ...match, date: '2026-02-31' })).toBe('Pick a real date and time')
-    expect(formProblem({ ...match, time: '' })).toBe('Add the start time before the meet time')
-    expect(formProblem({ ...blankForm('2026-10-20'), kind: 'other' })).toBe('Say what the event is')
+    // TRAK-157: every event needs a start time, with or without a meet time.
+    expect(formProblem({ ...match, time: '' })).toBe('Pick a start time')
+    expect(formProblem({ ...match, time: '', meetTime: '' })).toBe('Pick a start time')
+    expect(formProblem({ ...blankForm('2026-10-20'), title: 'Training' })).toBe('Pick a start time')
+    expect(formProblem({ ...blankForm('2026-10-20'), kind: 'other', time: '18:00' })).toBe('Say what the event is')
     expect(formProblem(match)).toBeNull()
   })
 

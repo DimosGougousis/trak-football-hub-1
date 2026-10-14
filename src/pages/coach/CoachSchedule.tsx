@@ -14,6 +14,8 @@ import {
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
+import { DatePicker } from '@/components/arc/date-picker/date-picker'
+import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
@@ -131,6 +133,28 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   )
+}
+
+// TRAK-157: Arc's date picker speaks Date; the form keeps YYYY-MM-DD (the
+// academy's calendar day), so convert at local midnight both ways.
+const dayAsDate = (day: string) => {
+  const [y, m, d] = day.split('-').map(Number)
+  return day ? new Date(y, m - 1, d) : undefined
+}
+const dateAsDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+/** The meet-time list opens half an hour before the start: the usual gap. */
+function halfHourBefore(time: string) {
+  if (!time) return '17:00'
+  const [h, m] = time.split(':').map(Number)
+  const t = Math.max(0, h * 60 + m - 30)
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+}
+
+/** Arc's tokens for a picker in this form; the picker takes className="arc-trak-field" for Trak's label (TRAK-157). */
+function ArcField({ children }: { children: React.ReactNode }) {
+  return <div className="arc" style={font}>{children}</div>
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -760,21 +784,19 @@ export default function CoachSchedule() {
                 className={inputClass} style={font} />
             </Field>
 
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Field label={sheet.repeat.on ? 'First date' : 'Date'}>
-                  <input type="date" value={sheet.form.date} onChange={e => setForm({ date: e.target.value })}
-                    disabled={sheet.scope === 'following'}
-                    className={inputClass} style={{ ...font, colorScheme: 'dark', opacity: sheet.scope === 'following' ? 0.5 : 1 }} />
-                </Field>
-              </div>
-              <div className="w-[120px]">
-                <Field label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'}>
-                  <input type="time" value={sheet.form.time} onChange={e => setForm({ time: e.target.value })}
-                    className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
-                </Field>
-              </div>
-            </div>
+            {/* TRAK-157: Arc's date and time pickers (founders, 12 Oct). A start
+                time is picked whole from the list; there is no "no time". */}
+            <ArcField>
+              <DatePicker label={sheet.repeat.on ? 'First date' : 'Date'} className="arc-trak-field"
+                value={dayAsDate(sheet.form.date)} onChange={date => { if (date) setForm({ date: dateAsDay(date) }) }}
+                disabled={sheet.scope === 'following'} clearable={false} placeholder="Pick a date"
+                format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
+            </ArcField>
+            <ArcField>
+              <TimePicker label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'} className="arc-trak-field"
+                value={sheet.form.time} onChange={time => setForm({ time })}
+                minuteStep={5} format="12h" placeholder="Pick a start time" emptyAt="17:00" />
+            </ArcField>
 
             {sheet.scope === 'following' && (
               <p className="text-[11px] text-white/40" style={font}>Each week keeps its own date; everything else changes.</p>
@@ -790,10 +812,12 @@ export default function CoachSchedule() {
                         <Chip key={label} on={sheet.repeat.days.includes(day)} onClick={() => toggleDay(day)}>{label}</Chip>
                       ))}
                     </div>
-                    <Field label="Ends on">
-                      <input type="date" value={sheet.repeat.until} onChange={e => setRepeat({ until: e.target.value })}
-                        className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
-                    </Field>
+                    <ArcField>
+                      <DatePicker label="Ends on" className="arc-trak-field"
+                        value={dayAsDate(sheet.repeat.until)} onChange={date => { if (date) setRepeat({ until: dateAsDay(date) }) }}
+                        clearable={false} placeholder="Pick the last date"
+                        format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
+                    </ArcField>
                     {!repeatProblem(sheet.form, sheet.repeat) && (
                       <p className="text-[11px] text-white/50" style={font}>
                         {seriesDates(sheet.form.date, sheet.repeat.until, sheet.repeat.days).length} events, last one {formatEventDay(sheet.repeat.until)}
@@ -821,10 +845,19 @@ export default function CoachSchedule() {
               </datalist>
             </Field>
 
-            <Field label="Meet time (if earlier)">
-              <input type="time" value={sheet.form.meetTime} onChange={e => setForm({ meetTime: e.target.value })}
-                className={inputClass} style={{ ...font, colorScheme: 'dark' }} />
-            </Field>
+            {/* Optional: empty means meet at the start time. */}
+            <ArcField>
+              <TimePicker label="Meet time (if earlier)" className="arc-trak-field"
+                value={sheet.form.meetTime} onChange={meetTime => setForm({ meetTime })}
+                minuteStep={5} format="12h" placeholder="Same as the start" emptyAt={halfHourBefore(sheet.form.time)}
+                disabled={!sheet.form.time} />
+              {sheet.form.meetTime && (
+                <button type="button" onClick={() => setForm({ meetTime: '' })}
+                  className="mt-1 text-[12px] text-white/50" style={font}>
+                  No separate meet time
+                </button>
+              )}
+            </ArcField>
 
             {/* TRAK-161: kit and a family note on every kind of event. */}
             <Field label="Kit">

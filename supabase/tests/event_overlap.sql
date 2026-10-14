@@ -86,7 +86,14 @@ SELECT pg_temp.o158clash(pg_temp.o158event(702,'Fitness','training','18:00','19:
 SELECT pg_temp.o158ok(pg_temp.o158event(709,'vs Late Rovers','match','17:00','18:30',true,7),'2 another day: a match to 18:30');
 SELECT pg_temp.o158ok(pg_temp.o158event(710,'Recovery','training','18:30','19:30',true,7),'2 back-to-back is fine (18:30 after a match ending 18:30)');
 SELECT pg_temp.o158ok(pg_temp.o158event(714,'Warm-up','training','16:00','17:00',true,7),'2 and the other way (a session ending 17:00 as the match starts)');
-SELECT pg_temp.o158ok(pg_temp.o158event(711,'Team photo','other',NULL,NULL,true),'2 an event with no start time is not checked (Time not set yet)');
+-- TRAK-157 refuses new untimed events; prod still has old ones (12 live on
+-- 13 Oct), made before it. Seed one as they were made, then check it isn't
+-- held to the overlap rule.
+RESET ROLE;
+ALTER TABLE public.coach_calendar_events DISABLE TRIGGER trg_refuse_event_without_start_time;
+SELECT pg_temp.o158ok(pg_temp.o158event(711,'Team photo','other',NULL,NULL,true),'2 an old event with no start time (from before TRAK-157) is not checked');
+ALTER TABLE public.coach_calendar_events ENABLE TRIGGER trg_refuse_event_without_start_time;
+SET LOCAL ROLE authenticated;
 SELECT pg_temp.o158ok(pg_temp.o158event(712,'Technical','training','18:00','19:30',true,6),'2 the same time on another day is fine');
 SELECT pg_temp.o158actor(11);
 SELECT pg_temp.o158ok(replace(pg_temp.o158event(713,'B training','training','17:00','18:30',true), pg_temp.o158id(10)::text, pg_temp.o158id(11)::text),
