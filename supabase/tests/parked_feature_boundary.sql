@@ -221,12 +221,13 @@ SELECT pg_temp.p47actor(20);
 SELECT pg_temp.p47writes('Player');
 SELECT pg_temp.p47probe(format('SELECT public.remove_coach_from_org(%L)',pg_temp.p47id(12)),'Player removal RPC denied',NULL,'42501');
 SELECT pg_temp.p47check((SELECT count(*) FROM public.recognition_awards WHERE id=pg_temp.p47id(600))=1,'Player retained award read');
-SELECT pg_temp.p47check((SELECT count(*) FROM public.coach_calendar_events WHERE id=pg_temp.p47id(500))=1,'Player published event read');
+-- Families read events through child_events() (TRAK-164), never the table.
+SELECT pg_temp.p47check((SELECT count(*) FROM public.child_events(auth.uid()) WHERE id=pg_temp.p47id(500))=1,'Player published event read');
 SELECT pg_temp.p47actor(30);
 SELECT pg_temp.p47writes('Parent');
 SELECT pg_temp.p47probe(format('SELECT public.remove_coach_from_org(%L)',pg_temp.p47id(12)),'Parent removal RPC denied',NULL,'42501');
 SELECT pg_temp.p47check((SELECT count(*) FROM public.recognition_awards WHERE id=pg_temp.p47id(600))=1,'Parent retained award read');
-SELECT pg_temp.p47check((SELECT count(*) FROM public.coach_calendar_events WHERE id=pg_temp.p47id(500))=1,'Parent published event read');
+SELECT pg_temp.p47check((SELECT count(*) FROM public.child_events(pg_temp.p47id(20)) WHERE id=pg_temp.p47id(500))=1,'Parent published event read');
 SELECT pg_temp.p47actor(2);
 SELECT pg_temp.p47writes('Foreign club admin');
 SELECT pg_temp.p47probe(format('SELECT public.remove_coach_from_org(%L)',pg_temp.p47id(12)),'Foreign club admin removal RPC denied',NULL,'42501');

@@ -48,9 +48,9 @@ export function registerStart(squad: RegisterPlayer[], absentSquadPlayerIds: Ite
 export interface RegisterEvent {
   event_type: string
   published: boolean
-  status: string
-  event_date: string | null
-  start_time: string | null
+  status?: string | null
+  event_date?: string | null
+  start_time?: string | null
   starts_at: string
 }
 
@@ -65,6 +65,11 @@ function startsAt(event: RegisterEvent): number {
   return Date.UTC(y, m - 1, d, hh, mm) - DUBAI_MS
 }
 
+/** Whether the event has started on the Dubai clock: a register or match log can be taken. */
+export function hasStarted(event: RegisterEvent, now: Date = new Date()): boolean {
+  return startsAt(event) <= now.getTime()
+}
+
 /** Why this event has no register now, or null: the same words take_event_register() uses. */
 export function registerProblem(event: RegisterEvent, now: Date = new Date()): string | null {
   if (!event.published) return 'Only a published event has a register'
@@ -72,6 +77,14 @@ export function registerProblem(event: RegisterEvent, now: Date = new Date()): s
   if (event.event_type !== 'training' && event.event_type !== 'other') {
     return 'A match is recorded in the match log, with its score and minutes'
   }
-  if (startsAt(event) > now.getTime()) return 'The register opens once the event has started'
+  if (!hasStarted(event, now)) return 'The register opens once the event has started'
   return null
+}
+
+/** A database refusal names squad rows by id; the coach knows names (as TRAK-151). */
+export function refusalWithNames(message: string, names: Map<string, string>): string {
+  let text = message
+  // "about player <id>" reads "about Cal Moss".
+  for (const [id, name] of names) text = text.split(`player ${id}`).join(name).split(id).join(name)
+  return text
 }

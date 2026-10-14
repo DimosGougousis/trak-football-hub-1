@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../tests/support/render-app'
@@ -179,7 +179,9 @@ describe('player readback through authenticated routes', () => {
       server.use(rpcRows('child_events', [event]))
       renderApp('/player/home')
       await screen.findByText(WORDS, { exact: false })
-      await screen.findByText('Team training')
+      await userEvent.click(await screen.findByRole('button', { name: /^Alerts/ }))
+      expect(await within(await screen.findByRole('dialog', { name: 'Alerts' })).findByText('New: Team training')).toBeInTheDocument()
+      await userEvent.keyboard('{Escape}')
       expect(screen.getByText('Coach Audit')).toBeInTheDocument()
       let checked = false
       server.use(http.get(endpoint(name), () => { checked = true; return HttpResponse.json([]) }))
@@ -189,8 +191,10 @@ describe('player readback through authenticated routes', () => {
       await waitFor(() => expect(screen.queryByText(WORDS, { exact: false })).toBeNull())
       expect(screen.queryByText('LATEST COACH ASSESSMENT')).toBeNull()
       expect(screen.queryByText('Coach Audit')).toBeNull()
-      if (name === 'squad_players') expect(screen.queryByText('Team training')).toBeNull()
-      else expect(await screen.findByText('Team training')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
+      const alerts = within(await screen.findByRole('dialog', { name: 'Alerts' }))
+      if (name === 'squad_players') expect(alerts.queryByText('New: Team training')).toBeNull()
+      else expect(await alerts.findByText('New: Team training')).toBeInTheDocument()
     },
   )
 
@@ -382,7 +386,9 @@ describe('player readback through authenticated routes', () => {
         expect(screen.queryByText('Stale Coach')).toBeNull()
         expect(screen.queryByText('LATEST COACH ASSESSMENT')).toBeNull()
         expect(screen.queryByText(WORDS, { exact: false })).toBeNull()
-        expect(screen.queryByText('Team training')).toBeNull()
+        await userEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
+        expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).queryByText('New: Team training')).toBeNull()
+        await userEvent.keyboard('{Escape}')
         expect(screen.queryByText('YOUR CARD HAS BEEN UPDATED')).toBeNull()
         expect(localStorage.getItem(`trak_last_match_count_${account}`)).toBe('1')
       } finally { pending.resolve() }
@@ -411,7 +417,8 @@ describe('player readback through authenticated routes', () => {
     server.use(http.get(endpoint('coach_shared_feedback'), failure), rpcRows('child_events', [event]))
     renderApp('/player/home')
     expect(await screen.findByText(/Couldn't load your (feedback|coach's message)/)).toBeInTheDocument()
-    expect(await screen.findByText('Team training')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: /^Alerts/ }))
+    expect(await within(await screen.findByRole('dialog', { name: 'Alerts' })).findByText('New: Team training')).toBeInTheDocument()
     expect(screen.queryByText(WORDS, { exact: false })).toBeNull()
   })
 

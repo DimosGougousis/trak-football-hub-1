@@ -154,6 +154,18 @@ RESET ROLE;
 SELECT pg_temp.g138check(pg_temp.g138present(800) = '20,21','3 readback: a refused save changed nothing',pg_temp.g138present(800));
 SELECT pg_temp.g138refused(format('INSERT INTO public.coach_sessions(coach_user_id,title,session_type,session_date,event_id) VALUES (%L,''Twin'',''training'',%L,%L)',
   pg_temp.g138id(10), pg_temp.g138day(-2), pg_temp.g138id(800)),'3 the table itself holds one session per event','23505','');
+-- Tarek's #272 note: FK checks skip RLS, so without a rule of its own a coach
+-- who knew another coach's event id could hang a session on it, and that
+-- coach's register would find a session that isn't theirs.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.g138actor(10);
+SELECT pg_temp.g138refused(format('INSERT INTO public.coach_sessions(coach_user_id,title,session_type,session_date,event_id) VALUES (%L,''Borrowed'',''training'',%L,%L)',
+  pg_temp.g138id(10), pg_temp.g138day(-2), pg_temp.g138id(810)),'3 a coach cannot attach a session to another coach''s event','42501','row-level security');
+SELECT pg_temp.g138refused(format('UPDATE public.coach_sessions SET event_id = %L WHERE event_id = %L', pg_temp.g138id(810), pg_temp.g138id(801)),
+ '3 nor move one of their sessions onto it','42501','row-level security');
+SELECT pg_temp.g138refused(format('INSERT INTO public.coach_sessions(coach_user_id,title,session_type,session_date) VALUES (%L,''Logged by hand'',''training'',%L)',
+  pg_temp.g138id(10), pg_temp.g138day(-3)),'3 a session with no event still saves as before (J4)',NULL,'');
+RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.g138actor(30);
 SELECT pg_temp.g138refused(pg_temp.g138register(800, ARRAY[20]),'3 a parent who can read the event still cannot take its register','P0001','not on your schedule');
@@ -167,8 +179,8 @@ SELECT pg_temp.g138check(
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.g138_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.g138_results;
- IF n <> 21 THEN
-  RAISE EXCEPTION 'Event register: % checks ran; expected exactly 21', n;
+ IF n <> 24 THEN
+  RAISE EXCEPTION 'Event register: % checks ran; expected exactly 24', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event register failed',DETAIL=failures;

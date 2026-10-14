@@ -102,3 +102,115 @@ await context.route('**/*',async route=>{
  expect(unexpected).toEqual([]);
  expect(writes.every(write => ['/rest/v1/telemetry_events', '/rest/v1/rpc/get_children_awaiting_consent', '/rest/v1/rpc/get_roster_children_awaiting_consent', '/rest/v1/rpc/get_my_child_logins', '/rest/v1/rpc/get_my_child_credentials', '/rest/v1/rpc/get_my_approved_children_awaiting_signup', '/rest/v1/rpc/family_training_history', '/rest/v1/rpc/child_events', '/auth/v1/logout'].includes(write.path))).toBe(true);
 });
+
+// TRAK-171: exercise the production build with synthetic, intercepted family
+// and coach replies. This verifies UI behavior, not deployed phone acceptance.
+test.describe('TRAK-171 Home follow-ups', () => {
+  test.use({ timezoneId: 'Asia/Dubai' })
+  for (const role of ['parent', 'player', 'coach'] as const) {
+    test(`${role} Home calendar and records`, async ({ page, context }, testInfo) => {
+      const ids = { parent: '97171000-0000-4000-8000-000000000001', player: '97171000-0000-4000-8000-000000000002',
+        coach: '97171000-0000-4000-8000-000000000003', sibling: '97171000-0000-4000-8000-000000000004' }
+      const id = ids[role]
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+      const user = { id, email: `${role}@home171.test`, email_confirmed_at: '2026-10-01T00:00:00Z',
+        created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
+      const exp = Math.floor(Date.now() / 1000) + 3600
+      const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: id, exp, role: 'authenticated' }]
+        .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
+      await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
+        { access_token: token, refresh_token: 'synthetic-home171-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+      const event = (child: string) => ({ id: `event-${child}`, title: child === ids.sibling ? 'Sibling training' : 'Technical training',
+        event_type: 'training', event_date: day, start_time: '18:00:00', starts_at: `${day}T14:00:00Z`,
+        status: 'scheduled', published: true, venue: 'Synthetic pitch', sequence: 0, coach_user_id: ids.coach })
+      const assessment = { id: 'training-assessment', squad_player_id: 'squad-171', coach_user_id: ids.coach,
+        created_at: `${day}T08:00:00Z`, coach_rating: 8, work_rate: 8, tactical: 8, attitude: 8, technical: 8, physical: 8, coachability: 8 }
+      const unexpected: string[] = [], errors: string[] = [], writes: string[] = []
+      page.on('pageerror', error => errors.push(error.message))
+      page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()) })
+      await context.route('**/*', async route => {
+        const req = route.request(), url = new URL(req.url())
+        if (url.origin === 'http://127.0.0.1:4189') return route.continue()
+        if (url.hostname === 'fonts.googleapis.com') return route.fulfill({ contentType: 'text/css', body: '' })
+        const json = (rows: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows), headers: { 'content-range': '0-0/1' } })
+        if (url.hostname !== 'xbykbqolvqyqmipikuae.supabase.co') { unexpected.push(req.url()); return route.abort() }
+        if (req.method() !== 'GET') writes.push(url.pathname)
+        if (url.pathname === '/auth/v1/user') return json(user)
+        if (url.pathname === '/rest/v1/profiles') {
+          const filter = url.searchParams.get('user_id') ?? ''
+          const people = [ { user_id: id, id, role, full_name: `Synthetic ${role}` },
+            { user_id: ids.player, id: ids.player, role: 'player', full_name: 'Alex Example' },
+            { user_id: ids.sibling, id: ids.sibling, role: 'player', full_name: 'Zara Example' } ]
+          return json(people.filter(person => filter.includes(person.user_id)).filter((person, i, all) => all.findIndex(p => p.user_id === person.user_id) === i))
+        }
+        if (url.pathname === '/rest/v1/player_parent_links') return json([{ player_user_id: ids.player }, { player_user_id: ids.sibling }])
+        if (url.pathname === '/rest/v1/squad_players') return json(role === 'coach' ? [] : [{ id: 'squad-171', coach_user_id: ids.coach }])
+        if (url.pathname === '/rest/v1/coach_assessments') return json(role === 'player' ? [assessment] : [])
+        if (url.pathname === '/rest/v1/coach_shared_feedback') return json([{ body: 'Keep pressing after losing the ball.', published_at: `${day}T09:00:00Z` }])
+        if (url.pathname === '/rest/v1/coach_calendar_events') return json([event(ids.player)])
+        if (url.pathname === '/rest/v1/coach_sessions') return json([{ id: 'saved-session', title: 'Logged set pieces', session_type: 'training', session_date: day, event_id: null, venue: 'Synthetic pitch' }])
+        if (url.pathname === '/rest/v1/rpc/child_events') {
+          const child = req.postDataJSON().p_child
+          const filter = url.searchParams.get('id')
+          return json(filter && filter !== `eq.event-${child}` ? [] : [event(child)])
+        }
+        if (url.pathname === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
+        if (url.pathname === '/rest/v1/rpc/my_session_is_live' || url.pathname === '/rest/v1/rpc/feature_on') return json(true)
+        if (['get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup', 'get_player_invites_for_current_user', 'family_training_history'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])
+        if (url.pathname === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
+        if (['matches', 'player_details', 'coach_details', 'recognition_awards', 'session_attendance'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+        unexpected.push(`${req.method()} ${url.pathname}`)
+        return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
+      })
+      await page.goto(`/${role}/home`)
+      const week = page.getByRole('region', { name: 'This week' })
+      await expect(week).toBeVisible()
+      if (role === 'player') await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
+      await page.screenshot({ path: testInfo.outputPath(`${role}-home.png`), fullPage: true })
+      await expect(page.getByText('NEXT UP', { exact: true })).toHaveCount(0)
+      if (role === 'parent') {
+        await page.getByRole('link', { name: 'Calendar' }).focus()
+        await page.keyboard.press('Enter')
+        await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
+        await expect(page.getByRole('link', { name: /Technical training/ })).toBeVisible()
+        await page.getByLabel('Following').selectOption(ids.sibling)
+        await expect(page.getByRole('link', { name: /Sibling training/ })).toBeVisible()
+        await expect(page.getByRole('link', { name: /Technical training/ })).toHaveCount(0)
+        await page.screenshot({ path: testInfo.outputPath('parent-events.png'), fullPage: true })
+        await page.getByRole('link', { name: /Sibling training/ }).click()
+        await expect(page.getByRole('heading', { name: 'Sibling training' })).toBeVisible()
+        await page.getByRole('button', { name: 'Events', exact: true }).click()
+        await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
+      } else if (role === 'player') {
+        await expect(page.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/matches')
+        await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
+        await page.getByRole('button', { name: /Alerts/ }).click()
+        const panel = page.getByRole('dialog', { name: 'Alerts' })
+        await panel.getByRole('button', { name: /New coach assessment/ }).click()
+        await expect(panel.getByRole('button', { name: 'Open assessment' })).toBeVisible()
+        await expect.poll(() => panel.getByRole('button', { name: 'Open assessment' }).evaluate(button => {
+          const frame = button.parentElement?.parentElement
+          return !!frame && frame.clientHeight >= frame.scrollHeight - 2
+        })).toBe(true)
+        await panel.evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(animation => animation.finished)))
+        await page.screenshot({ path: testInfo.outputPath('player-assessment-bell.png'), fullPage: true })
+        await panel.getByRole('button', { name: 'Open assessment' }).click()
+        await expect(page.getByRole('heading', { name: 'Coach feedback' })).toBeVisible()
+        await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
+      } else {
+        const logged = week.getByRole('button', { name: /Logged.*Logged set pieces/ })
+        await expect(logged).toBeVisible()
+        await expect(week.getByRole('button', { name: /Technical training/ })).toBeVisible()
+        await logged.click()
+        const saved = week.getByRole('region', { name: /Logged set pieces/ })
+        await expect(saved.getByRole('link', { name: 'Open' })).toBeVisible()
+        await expect.poll(() => saved.evaluate(el => el.clientHeight >= el.scrollHeight - 2)).toBe(true)
+        await expect(saved.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/coach/sessions/saved-session')
+        await page.screenshot({ path: testInfo.outputPath('coach-logged-week.png'), fullPage: true })
+      }
+      expect(errors).toEqual([])
+      expect(unexpected).toEqual([])
+      expect(writes.every(path => path === '/rest/v1/telemetry_events' || path.startsWith('/rest/v1/rpc/'))).toBe(true)
+    })
+  }
+})

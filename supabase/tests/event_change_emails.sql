@@ -98,11 +98,14 @@ UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.e135id(
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e135id(100),'events');
 -- Coach A's events. 600 published in 5 days; 601 published in 5 days;
 -- 602 published tomorrow; 603 a draft today; 604 published today;
--- 605 published in 5 days; 606 a draft in 3 days.
+-- 605 published in 5 days; 606 a draft in 3 days. The three in 5 days have
+-- their own times: a coach's live events can't overlap (TRAK-158).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,venue,published)
  SELECT pg_temp.e135id(600+i), pg_temp.e135id(10), 'Training '||i, 'training',
-  pg_temp.e135at(d, '17:00'), pg_temp.e135day(d), '17:00', '18:30', 'Pitch 2', p
- FROM (VALUES (0,5,true),(1,5,true),(2,1,true),(3,0,false),(4,0,true),(5,5,true),(6,3,false)) v(i,d,p);
+  pg_temp.e135at(d, t0), pg_temp.e135day(d), t0, t1, 'Pitch 2', p
+ FROM (VALUES (0,5,true,time '17:00',time '18:30'),(1,5,true,time '19:00',time '20:30'),(2,1,true,time '17:00',time '18:30'),
+              (3,0,false,time '17:00',time '18:30'),(4,0,true,time '17:00',time '18:30'),(5,5,true,time '15:00',time '16:30'),
+              (6,3,false,time '17:00',time '18:30')) v(i,d,p,t0,t1);
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published)
  VALUES (pg_temp.e135id(610),pg_temp.e135id(11),'B training','training',pg_temp.e135at(0,'17:00'),pg_temp.e135day(0),'17:00',true);
 
@@ -133,7 +136,7 @@ SELECT pg_temp.e135allowed(format('UPDATE public.coach_calendar_events SET venue
 SELECT pg_temp.e135allowed(format('UPDATE public.coach_calendar_events SET status=''cancelled'' WHERE id=%L',pg_temp.e135id(603)),'1 coach A cancels a draft for today',1);
 SELECT pg_temp.e135allowed(format('UPDATE public.coach_calendar_events SET title=''Renamed'' WHERE id=%L',pg_temp.e135id(604)),'1 coach A renames today''s event',1);
 SELECT pg_temp.e135allowed(format('UPDATE public.coach_calendar_events SET event_date=%L, starts_at=%L WHERE id=%L',
- pg_temp.e135day(1),pg_temp.e135at(1,'17:00'),pg_temp.e135id(605)),'1 coach A moves an event from 5 days out to tomorrow',1);
+ pg_temp.e135day(1),pg_temp.e135at(1,'15:00'),pg_temp.e135id(605)),'1 coach A moves an event from 5 days out to tomorrow',1);
 SELECT pg_temp.e135allowed(format('UPDATE public.coach_calendar_events SET published=true WHERE id=%L',pg_temp.e135id(606)),'1 coach A publishes a draft',1);
 RESET ROLE;
 SELECT pg_temp.e135check(pg_temp.e135notices(600)='cancelled/pending','1 a cancellation 5 days out queues one notice',pg_temp.e135notices(600));
@@ -229,7 +232,7 @@ SELECT pg_temp.e135check(pg_temp.e135notices(602)='changed/pending,changed/sendi
 -- publishes in Y and then cancels emails nobody: no X family reads it.
 UPDATE public.coach_details SET organization_id=pg_temp.e135id(101) WHERE user_id=pg_temp.e135id(10);
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published,organization_id)
- VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(0,'17:00'),pg_temp.e135day(0),'17:00',true,pg_temp.e135id(101));
+ VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(0,'20:00'),pg_temp.e135day(0),'20:00',true,pg_temp.e135id(101));
 SELECT pg_temp.e135check((SELECT organization_id = pg_temp.e135id(101) FROM public.coach_calendar_events WHERE id = pg_temp.e135id(620))
   AND pg_temp.e135to(620) = 'none' AND pg_temp.e135to(600) = '020,024,026,030,031',
  '5 coach A''s event in academy Y emails none of their academy X families',pg_temp.e135to(620));
