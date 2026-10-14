@@ -397,3 +397,52 @@ BEGIN
 END;
 $fn$;
 
+
+-- ── 9. The coach's reason: waiting for the player, not a parent ──
+-- From the academy's consent age the player agrees for themselves, so the
+-- coach is told 'player' rather than sent to chase a parent. Body as in
+-- 20261001150000 with that one branch added; grants and comment unchanged.
+CREATE OR REPLACE FUNCTION public.coach_squad_player_wait_reason(p_squad_player_id uuid)
+RETURNS text
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = ''
+AS $fn$
+BEGIN
+  IF auth.uid() IS NULL
+     OR NOT public.is_coach()
+     OR NOT public.squad_player_is_mine(p_squad_player_id) THEN
+    RAISE EXCEPTION 'Not authorized for this squad player' USING ERRCODE = '42501';
+  END IF;
+  IF NOT public.squad_player_consent_required(p_squad_player_id) THEN
+    RETURN 'ready';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.squad_players sp
+    LEFT JOIN public.roster_children rc ON rc.squad_player_id = sp.id AND sp.linked_player_id IS NULL
+    LEFT JOIN public.organizations o ON o.id = rc.organization_id
+    WHERE sp.id = p_squad_player_id
+      AND CASE WHEN sp.linked_player_id IS NOT NULL
+            THEN public.player_age_years(sp.linked_player_id) >= public.player_consent_age(sp.linked_player_id)
+             AND public.player_age_years(sp.linked_player_id) < public.consent_threshold_age()
+            ELSE date_part('year', age(current_date, rc.date_of_birth)) >= o.consent_age
+             AND date_part('year', age(current_date, rc.date_of_birth)) < public.consent_threshold_age()
+          END
+  ) THEN
+    RETURN 'player';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM public.squad_players sp
+    JOIN public.roster_children rc ON rc.squad_player_id = sp.id
+    JOIN public.parental_consents c ON c.roster_child_id = rc.id
+    WHERE sp.id = p_squad_player_id
+      AND sp.linked_player_id IS NULL
+      AND c.withdrawn_at IS NULL
+      AND c.superseded_by IS NULL
+      AND c.purposes->'coaching_records' = 'true'::jsonb
+  ) THEN
+    RETURN 'signup';
+  END IF;
+  RETURN 'parent';
+END;
+$fn$;

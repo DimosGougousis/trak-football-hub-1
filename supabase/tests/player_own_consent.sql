@@ -178,6 +178,17 @@ SELECT pg_temp.oc_assert(pg_temp.oc_needs_guardian(101, '14', 'solo14@own-consen
 SELECT pg_temp.oc_assert(pg_temp.oc_needs_guardian(101, '16', NULL, 'Solo Greek No Email'), 'a Greek 16-year-old with no email of their own needs a guardian');
 SELECT pg_temp.oc_assert(pg_temp.oc_needs_guardian(100, '16', 'soloae16@own-consent.test', 'Solo UAE Sixteen'), 'a UAE 16-year-old still needs a guardian');
 
+-- The coach is told who they're waiting for.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.oc_as(4);
+SELECT pg_temp.oc_assert(public.coach_squad_player_wait_reason(pg_temp.oc(35)) = 'player'
+  AND public.coach_squad_player_wait_reason(pg_temp.oc(40)) = 'player',
+  'the coach waits for a Greek 16-year-old themselves, with or without an account');
+SELECT pg_temp.oc_assert(public.coach_squad_player_wait_reason(pg_temp.oc(31)) = 'parent',
+  'the coach still waits for a parent of a Greek 14-year-old');
+SELECT pg_temp.oc_assert(public.coach_squad_player_wait_reason(pg_temp.oc(30)) = 'ready', 'a consenting player is ready');
+RESET ROLE;
+
 DO $$ DECLARE failures text;
 BEGIN SELECT string_agg(description || ': ' || coalesce(detail, 'false'), E'\n') INTO failures FROM pg_temp.oc_results WHERE NOT passed;
   IF failures IS NOT NULL THEN RAISE EXCEPTION 'Own-consent checks failed:%', E'\n' || failures; END IF;
