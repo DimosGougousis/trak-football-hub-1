@@ -58,9 +58,16 @@ BEGIN
 END $$;
 -- The suite's events the caller can read, by the last three digits of the id.
 SET LOCAL check_function_bodies = off;
+-- Families read only through child_events() (their own, and each linked
+-- child's); coaches read their own rows from the table. Since the family
+-- table policy was dropped, the table returns nothing to a family.
 CREATE FUNCTION pg_temp.e82seen() RETURNS text LANGUAGE sql AS $$
- SELECT coalesce(string_agg(right(id::text,3), ',' ORDER BY id),'none')
- FROM public.coach_calendar_events WHERE id::text LIKE '98200000-%'
+ SELECT coalesce(string_agg(right(id::text,3), ',' ORDER BY id),'none') FROM (
+   SELECT e.id FROM public.coach_calendar_events e
+   UNION SELECT c.id FROM public.child_events(auth.uid()) c
+   UNION SELECT c.id FROM public.player_parent_links l, LATERAL public.child_events(l.player_user_id) c
+         WHERE l.parent_user_id = auth.uid()
+ ) seen WHERE id::text LIKE '98200000-%'
 $$;
 GRANT EXECUTE ON FUNCTION pg_temp.e82seen() TO authenticated;
 
@@ -212,11 +219,20 @@ SELECT pg_temp.e82is('SELECT NOT has_function_privilege(''anon'',''trak_private.
 SELECT pg_temp.e82allowed(format('DELETE FROM public.organizations WHERE id=%L',pg_temp.e82id(101)),'5 academy Y can be deleted while it has events',1);
 SELECT pg_temp.e82is(format('SELECT organization_id IS NULL FROM public.coach_calendar_events WHERE id=%L',pg_temp.e82id(503)),'5 readback: Y''s event lost its academy, so no family reads it');
 
+-- ── 6. Families read events only through child_events() (TRAK-164) ───────
+-- The table itself gives a family nothing, so the coach-only notes and the raw
+-- cancel reason can't be read around the function.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.e82actor(31); SELECT pg_temp.e82check((SELECT count(*) FROM public.coach_calendar_events)=0,'6 a parent reads nothing from the events table directly');
+SELECT pg_temp.e82actor(21); SELECT pg_temp.e82check((SELECT count(*) FROM public.coach_calendar_events)=0,'6 a child reads nothing from the events table directly');
+SELECT pg_temp.e82actor(31); SELECT pg_temp.e82check(pg_temp.e82seen()='502','6 control: the same parent still sees their child''s event through child_events',pg_temp.e82seen());
+RESET ROLE;
+
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.e82_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.e82_results;
- IF n <> 34 THEN
-  RAISE EXCEPTION 'Events reads: % checks ran; expected exactly 34', n;
+ IF n <> 37 THEN
+  RAISE EXCEPTION 'Events reads: % checks ran; expected exactly 37', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Events reads failed',DETAIL=failures;

@@ -6,7 +6,6 @@ import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { supabase } from '@/integrations/supabase/client'
 import { ParentAssessmentBands, ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
-import { ParentUpcomingEvents } from '@/components/parent/ParentEvents'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useChildrenAwaitingConsent, useParentDevelopment, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
@@ -46,7 +45,7 @@ export default function ParentHome() {
     <MobileShell>
       <div className="pt-3 pb-4">
         {/* TRAK-163: calendar, the child (switcher), the bell (TRAK-74: alerts are a bell, not a tab). */}
-        <HomeHeader calendarTo="/parent/matches" center={<ParentChildSwitcher />} right={<ParentAlertsBell />} />
+        <HomeHeader calendarTo="/parent/events" center={<ParentChildSwitcher />} right={<ParentAlertsBell />} />
         {consentQuery.isError || rosterConsentQuery.isError ? (
           <ParentLoadError message="Couldn't check pending approvals." onRetry={() => { void consentQuery.refetch(); void rosterConsentQuery.refetch() }} />
         ) : waitingNames.length > 0 && (
@@ -75,11 +74,9 @@ export default function ParentHome() {
                   {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
                 </p>}
                 {/* TRAK-163: the selected child's week, Monday to Sunday, under the header. */}
-                {selectedChild && <LoadedWeekStrip loadKey={selectedChild.id} eventHref={event => `/parent/event/${event.id}`}
+                {selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} eventHref={event => `/parent/event/${event.id}`}
                   load={(from, to) => supabase.rpc('child_events', { p_child: selectedChild.id })
                     .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
-                {/* J8.8 (TRAK-131): what's next for the selected child. */}
-                <ParentUpcomingEvents nextUpOnly />
                 {matches.length > 0 && (
                   <section className="rounded-xl p-5 mb-4 bg-card border border-border" aria-label="Recorded matches summary">
                     <div className="flex items-start justify-between gap-3">
