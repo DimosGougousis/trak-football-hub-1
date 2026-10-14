@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { MobileShell, NavBar } from '@/components/trak'
 import { ParentFamilyContent, ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { EventDetails } from '@/components/player/EventDetails'
+import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { fetchParentEvent } from '@/lib/parent-data'
 import { markEventOpened } from '@/lib/player-events'
@@ -38,7 +39,10 @@ export default function ParentEvent() {
         <ParentFamilyContent>
           {query.isError ? <ParentLoadError message="Couldn't load this event." onRetry={() => { void query.refetch() }} />
             : query.isPending ? <ParentLoading />
-              : query.data ? <EventDetails event={query.data} />
+              : query.data ? <>
+                <EventDetails event={query.data} />
+                {selectedChild && <CantMakeIt key={selectedChild.id} event={query.data} child={selectedChild} />}
+              </>
                 : <p className="text-sm text-muted-foreground">This event isn't available for {selectedChild?.name}.</p>}
         </ParentFamilyContent>
       </div>
