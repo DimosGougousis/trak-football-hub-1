@@ -7,9 +7,8 @@ import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { bandForScore, scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
-import { isChanged, noteEventsShown, readSeenSequences, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
-import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
-import { PlayerAlertsBell } from '@/components/player/PlayerAlertsBell'
+import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
+import { PlayerAlertsBell, type PublishedAssessmentAlert } from '@/components/player/PlayerAlertsBell'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
@@ -90,6 +89,7 @@ export default function PlayerHome() {
   const [showReveal, setShowReveal] = useState(false)
   const [newMatchCount, setNewMatchCount] = useState(0)
   const [coachAssessmentNote, setCoachAssessmentNote] = useState<string | null>(null)
+  const [assessmentAlert, setAssessmentAlert] = useState<PublishedAssessmentAlert | null>(null)
   // A failed feedback read must not look like "no feedback yet".
   const [feedbackLoadFailed, setFeedbackLoadFailed] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -131,6 +131,7 @@ export default function PlayerHome() {
       setCoachAssessment(null)
       setCoachName('')
       setCoachAssessmentNote(null)
+      setAssessmentAlert(null)
       setFeedbackLoadFailed(false)
     }
     if (!background) {
@@ -212,7 +213,7 @@ export default function PlayerHome() {
           // console — X9 by a third route. Gone with the query that fed it.
           const { data: sharedRow, error: sharedError } = await supabase
             .from('coach_shared_feedback' as any)
-            .select('body')
+            .select('body, published_at')
             .eq('assessment_id', latest.id)
             .not('published_at', 'is', null)
             .maybeSingle()
@@ -241,10 +242,14 @@ export default function PlayerHome() {
             console.error('[Trak] shared feedback fetch failed', sharedError.message)
             setFeedbackLoadFailed(true)
             setCoachAssessmentNote(null)
+            setAssessmentAlert(null)
           } else {
             setFeedbackLoadFailed(false)
-            const body = (sharedRow as { body?: string } | null)?.body?.trim()
+            const published = sharedRow as { body?: string; published_at?: string } | null
+            const body = published?.body?.trim()
             setCoachAssessmentNote(body || null)
+            setAssessmentAlert(body && published?.published_at && Number.isFinite(Date.parse(published.published_at))
+              ? { id: latest.id, userId: user.id, publishedAt: published.published_at } : null)
           }
         }
 
@@ -296,13 +301,6 @@ export default function PlayerHome() {
 
     return () => { cancelled = true }
   }, [user, reloadKey])
-
-  // TRAK-130: the next event, and what this player had seen of it before this
-  // render. Recording happens after render, so an event seen for the first time
-  // is its own baseline and never reads as "Changed".
-  const nextUp = upcomingEvents[0] ?? null
-  const seenEvents = user ? readSeenSequences(user.id) : {}
-  useEffect(() => { if (user && nextUp) noteEventsShown(user.id, [nextUp]) }, [user, nextUp])
 
   const getBandDistribution = () => {
     const dist: Record<string, number> = {}
@@ -410,8 +408,11 @@ export default function PlayerHome() {
       <div className="pt-3 pb-4">
         {/* TRAK-163: calendar, the player's name, the bell; then the next seven days. */}
         <HomeHeader calendarTo="/player/matches" center={<HomeTitle>{profile?.full_name || 'Player'}</HomeTitle>}
-          right={user && <PlayerAlertsBell userId={user.id} events={upcomingEvents} />} />
-        {user && <LoadedWeekStrip loadKey={user.id} eventHref={event => `/player/event/${event.id}`}
+          right={user && <PlayerAlertsBell key={user.id} userId={user.id}
+            events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
+            assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
+            onRetry={() => setReloadKey(k => k + 1)} />} />
+        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} eventHref={event => `/player/event/${event.id}`}
           load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
             .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
         {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
@@ -710,17 +711,6 @@ export default function PlayerHome() {
                   </div>
                 ) : null}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Next up (TRAK-130): one card, below the coach's message so it never
-            pushes the message off the first screen. The full list is in Sessions. */}
-        {nextUp && user && (
-          <div className="mt-5">
-            <MetadataLabel text="NEXT UP" />
-            <div className="mt-2.5">
-              <UpcomingEventCard event={nextUp} changed={isChanged(nextUp, seenEvents)} nextUp />
             </div>
           </div>
         )}
