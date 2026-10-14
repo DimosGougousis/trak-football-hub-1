@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { LoadError } from '@/components/trak'
 import { formatParentDate } from '@/lib/parent-data'
@@ -19,9 +20,9 @@ type State =
 const ATTENDANCE: Record<string, string> = { present: 'Present', late: 'Late', absent: 'Absent' }
 
 export function TrainingHistory({
-  playerUserId, reloadOn,
+  playerUserId, reloadOn, assessmentHref,
   waitingText = 'Your training history appears once your parent approves.',
-}: { playerUserId: string; reloadOn?: unknown; waitingText?: string }) {
+}: { playerUserId: string; reloadOn?: unknown; waitingText?: string; assessmentHref?: (sessionId: string) => string }) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [retrying, setRetrying] = useState(false)
   // Only the newest request may write: a slow earlier one must not replace it.
@@ -66,17 +67,25 @@ export function TrainingHistory({
         <ul className="space-y-2">
           {state.rows.map(row => (
             <li key={row.session_id}
-              className="flex items-center justify-between rounded-[12px] border border-white/[0.07] px-4 py-3"
+              className="rounded-[12px] border border-white/[0.07]"
               style={{ background: '#101012' }}>
-              <div>
-                <div className="text-[13px] text-white/85">{row.focus?.length ? row.focus.join(' · ') : 'Training'}</div>
-                <div className="text-[11px] text-white/40" style={{ fontFamily: "'DM Mono', monospace" }}>{formatParentDate(row.session_date)}</div>
-              </div>
-              <span className="text-[11px] text-white/60">{ATTENDANCE[row.attendance] ?? row.attendance}</span>
+              {assessmentHref ? <Link to={assessmentHref(row.session_id)} className="flex items-center justify-between gap-3 min-h-11 px-4 py-3 rounded-[12px] focus-visible:ring-2 focus-visible:ring-primary">
+                <TrainingRow row={row} />
+              </Link> : <div className="flex items-center justify-between px-4 py-3"><TrainingRow row={row} /></div>}
             </li>
           ))}
         </ul>
       )}
     </section>
   )
+}
+
+function TrainingRow({ row }: { row: Row }) {
+  return <>
+    <div className="min-w-0">
+      <div className="text-[13px] text-white/85">{row.focus?.length ? row.focus.join(' · ') : 'Training'}</div>
+      <div className="text-[11px] text-white/40" style={{ fontFamily: "'DM Mono', monospace" }}>{formatParentDate(row.session_date)}</div>
+    </div>
+    <span className="text-[11px] text-white/60 shrink-0">{ATTENDANCE[row.attendance] ?? row.attendance}</span>
+  </>
 }

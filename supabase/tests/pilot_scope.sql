@@ -80,12 +80,12 @@ INSERT INTO public.squad_players (id, coach_user_id, player_name, linked_player_
 -- nobody logged. That is a real correction — 66.3% -> 77.4% on the pilot data —
 -- and it made D0 report zero rows here, because these fixtures were drafts.
 -- Publishing them is the fix; it is inert against a view without the filter.
-INSERT INTO public.coach_calendar_events (id, coach_user_id, title, event_type, starts_at, opponent, published) VALUES
-  (pg_temp.sid(301), pg_temp.sid(1), 'Pilot fixture', 'match', now() - interval '2 days', 'Rivals A', true),
-  (pg_temp.sid(302), pg_temp.sid(2), 'Other fixture', 'match', now() - interval '2 days', 'Rivals B', true),
+INSERT INTO public.coach_calendar_events (id, coach_user_id, title, event_type, starts_at, start_time, opponent, published) VALUES
+  (pg_temp.sid(301), pg_temp.sid(1), 'Pilot fixture', 'match', now() - interval '2 days', '18:00', 'Rivals A', true),
+  (pg_temp.sid(302), pg_temp.sid(2), 'Other fixture', 'match', now() - interval '2 days', '18:00', 'Rivals B', true),
   -- The decoy. Publishing the two above would satisfy D0 whether or not the
   -- filter does anything, so this unpublished fixture keeps it falsifiable.
-  (pg_temp.sid(303), pg_temp.sid(1), 'Unpublished decoy', 'match', now() - interval '2 days', 'Rivals C', false);
+  (pg_temp.sid(303), pg_temp.sid(1), 'Unpublished decoy', 'match', now() - interval '2 days', '18:00', 'Rivals C', false);
 
 
 -- ── A. Unscoped: the behaviour the migration describes ──────

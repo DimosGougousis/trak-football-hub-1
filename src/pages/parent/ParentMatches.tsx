@@ -40,7 +40,8 @@ export default function ParentMatches() {
                   </Link>)}
                 </div>}
           {/* J6 (TRAK-77): the training the coach logged for this child. */}
-          {selectedChild && <TrainingHistory playerUserId={selectedChild.id}
+          {selectedChild && <TrainingHistory key={selectedChild.id} playerUserId={selectedChild.id}
+            assessmentHref={sessionId => `/parent/session/${encodeURIComponent(sessionId)}/assessment`}
             waitingText="Training appears once you approve this child." />}
         </ParentFamilyContent>
       </div>
