@@ -31,9 +31,9 @@ export default function ParentEvent() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4 space-y-5">
-        <button type="button" onClick={() => navigate('/parent/matches')}
+        <button type="button" onClick={() => navigate('/parent/events')}
           className="flex items-center gap-1 min-h-11 text-sm text-muted-foreground">
-          <ChevronLeft size={16} /> Matches
+          <ChevronLeft size={16} /> Events
         </button>
         <ParentFamilyContent>
           {query.isError ? <ParentLoadError message="Couldn't load this event." onRetry={() => { void query.refetch() }} />

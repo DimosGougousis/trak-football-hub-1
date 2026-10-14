@@ -16,6 +16,7 @@ import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
 import ParentMatches from '../ParentMatches'
 import ParentHome from '../ParentHome'
 import ParentEvent from '../ParentEvent'
+import ParentEventsPage from '../ParentEventsPage'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 
@@ -92,6 +93,7 @@ function renderAt(path: string) {
         <Routes>
           <Route path="/parent/home" element={<ParentHome />} />
           <Route path="/parent/matches" element={<ParentMatches />} />
+          <Route path="/parent/events" element={<ParentEventsPage />} />
           <Route path="/parent/event/:id" element={<ParentEvent />} />
         </Routes>
       </ParentChildrenProvider>
@@ -161,23 +163,36 @@ describe('TRAK-131: the parent\'s Upcoming list', () => {
   })
 })
 
-describe('TRAK-131: the parent\'s home "Next up"', () => {
-  it('shows the selected child\'s next event only', async () => {
-    EVENTS.Alex = [ALEX_EVENT, event('ev-later', { title: 'Later training', event_date: '2099-11-20', starts_at: '2099-11-20T06:00:00Z' })]
+describe('TRAK-171: parent Home calendar', () => {
+  it('opens events and avoids a duplicate Next up card', async () => {
     renderAt('/parent/home')
-    const card = await screen.findByRole('link', { name: /next up/i })
-    expect(card).toHaveTextContent('Alex training')
-    expect(card).toHaveAttribute('href', '/parent/event/ev-alex')
-    expect(screen.queryByText('Later training')).not.toBeInTheDocument()
+    await screen.findByRole('region', { name: 'This week' })
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/parent/events')
+    expect(screen.queryByRole('region', { name: 'Next up' })).not.toBeInTheDocument()
   })
 
-  // Tarek's #259 review: without this, replacing the error branch with
-  // `return null` kept every test green (UC-X02: never a false empty state).
-  it('says a failed read failed on home too, instead of silently showing no "Next up"', async () => {
+  it('the calendar page follows siblings and opens only their own events', async () => {
+    renderAt('/parent/home')
+    await screen.findByRole('region', { name: 'This week' })
+    await userEvent.click(screen.getByRole('link', { name: 'Calendar' }))
+    expect(await screen.findByRole('heading', { name: 'Events' })).toBeInTheDocument()
+    const list = await screen.findByRole('region', { name: 'Upcoming' })
+    expect(await within(list).findByText('Alex training')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByLabelText('Following'), 'Zara')
+    expect(await within(list).findByText('Match vs Rivals FC (away)')).toBeInTheDocument()
+    expect(within(list).queryByText('Alex training')).not.toBeInTheDocument()
+    await userEvent.click(within(list).getByRole('link', { name: /Rivals FC/ }))
+    expect(await screen.findByText('Kit')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
+    expect(await screen.findByRole('heading', { name: 'Events' })).toBeInTheDocument()
+    expect(await screen.findByText('Match vs Rivals FC (away)')).toBeInTheDocument()
+  })
+
+  it('says the week read failed instead of showing an empty week', async () => {
     EVENTS.Alex = 'fail'
     renderAt('/parent/home')
-    expect(await screen.findByText("Couldn't load upcoming events.")).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /next up/i })).not.toBeInTheDocument()
+    expect(await screen.findByText(/couldn't load this week/i)).toBeInTheDocument()
+    expect(screen.queryByText('Nothing planned.')).not.toBeInTheDocument()
   })
 })
 

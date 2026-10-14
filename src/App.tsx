@@ -58,6 +58,7 @@ const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfi
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
+const ParentEventsPage = lazy(() => import("./pages/parent/ParentEventsPage"));
 const ParentMatchDetail = lazy(() => import("./pages/parent/ParentMatchDetail"));
 const ParentEvent = lazy(() => import("./pages/parent/ParentEvent"));
 const ParentProfilePage = lazy(() => import("./pages/parent/ParentProfilePage"));
@@ -161,6 +162,7 @@ const App = () => (
             {/* Parent routes */}
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
             <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
+            <Route path="/parent/events" element={<RouteGuard allowedRole="parent"><ParentEventsPage /></RouteGuard>} />
             <Route path="/parent/match/:id" element={<RouteGuard allowedRole="parent"><ParentMatchDetail /></RouteGuard>} />
             <Route path="/parent/event/:id" element={<RouteGuard allowedRole="parent"><ParentEvent /></RouteGuard>} />
             <Route path="/parent/alerts" element={<RouteGuard allowedRole="parent"><ParkedScreen><ParentAlerts /></ParkedScreen></RouteGuard>} />
