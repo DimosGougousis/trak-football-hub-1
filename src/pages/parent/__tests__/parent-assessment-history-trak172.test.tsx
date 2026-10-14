@@ -71,6 +71,9 @@ beforeEach(() => {
         return (!squad || squad.includes(row.squad_player_id)) && (!id || id === `eq.${row.id}`)
           && (!session || session === `eq.${row.session_id}`)
       })
+      if (params.get('order')?.startsWith('created_at.desc')) {
+        rows.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id))
+      }
       const range = request.headers.get('range')?.split('-').map(Number)
       const offset = Number(params.get('offset') ?? range?.[0] ?? 0)
       const limit = Number(params.get('limit') ?? (range ? range[1] - range[0] + 1 : rows.length))
@@ -224,6 +227,15 @@ describe('TRAK-172 parent assessment history', () => {
     expect(screen.getAllByText('Work Rate')).toHaveLength(1)
     expect(screen.queryByText('Coach Alex-assessment-1')).not.toBeInTheDocument()
     expect(assessmentRequests.every(params => params.get(field) === filter)).toBe(true)
+    expectBandsOnlyReads()
+  })
+
+  it('opens the newest assessment when one training has two, instead of failing to load', async () => {
+    assessments.push({ ...makeAssessment('Alex', 12), id: 'Alex-assessment-12b', coach_user_id: 'Alex-coach-12b',
+      created_at: '2026-10-14T12:00:00.000Z' })
+    renderAt('/parent/session/Alex-session-12/assessment')
+    expect(await screen.findByText('Coach Alex-assessment-12b')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expectBandsOnlyReads()
   })
 

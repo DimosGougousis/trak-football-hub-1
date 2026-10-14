@@ -53,6 +53,8 @@ export async function fetchParentAssessment(childId: string, target: AssessmentT
   if (!ids.length) return { assessment: null, coachName: 'Coach' }
   const { data, error } = await supabase.from('coach_assessments').select(PARENT_ASSESSMENT_COLUMNS)
     .in('squad_player_id', ids).eq(target.kind === 'assessment' ? 'id' : 'session_id', target.id)
+    // Nothing stops two assessments on one session; show the newest instead of erroring.
+    .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(1)
     .abortSignal(signal).retry(false).maybeSingle()
   if (error) throw error
   if (!data) return { assessment: null, coachName: 'Coach' }
