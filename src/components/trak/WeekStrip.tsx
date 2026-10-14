@@ -11,6 +11,8 @@ import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 export interface StripEvent extends PlayerEvent {
   /** Coach only: a draft families can't see yet. */
   draft?: boolean
+  /** A completed coach session, rather than a planned calendar entry. */
+  sessionId?: string
 }
 
 /** Monday to Sunday of the week `today` is in, as YYYY-MM-DD (Imad, 12 Oct). */
@@ -55,13 +57,13 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
       </p>
       {chosen.length === 0 ? <p className="text-[13px] text-white/45 py-2">Nothing planned.</p> : (
         <Accordion key={day} defaultOpen={chosen.length === 1 ? 0 : -1} items={chosen.map(event => ({
-          title: `${event.time ?? 'Time to be confirmed'} · ${eventHeading(event)}${event.status === 'cancelled' ? ' · Cancelled' : ''}${event.draft ? ' · Draft' : ''}`,
+          title: `${event.sessionId ? 'Logged' : event.time ?? 'Time to be confirmed'} · ${eventHeading(event)}${event.status === 'cancelled' ? ' · Cancelled' : ''}${event.draft ? ' · Draft' : ''}`,
           content: <div className="space-y-1 text-[13px] text-white/70">
             {event.status === 'cancelled' && <p style={{ color: CANCELLED_COLOR }}>Cancelled{event.cancelReason ? `: ${event.cancelReason}` : ''}</p>}
             {event.venue && <p>{event.venue}{event.homeAway ? ` (${event.homeAway === 'home' ? 'Home' : 'Away'})` : ''}</p>}
             {event.meetTime && <p>Meet {event.meetTime}</p>}
             {event.kit && <p>Kit: {event.kit}</p>}
-            <Link to={eventHref(event)} className="inline-block pt-1 text-primary">Open</Link>
+            <Link to={eventHref(event)} className="inline-flex min-h-11 items-center text-primary focus-visible:ring-2 focus-visible:ring-primary">Open</Link>
           </div>,
         }))} />
       )}
@@ -97,7 +99,8 @@ export function LoadedWeekStrip({ load, loadKey, eventHref }: {
       if (error) { setFailed(true); return }
       setEvents((data ?? []).flatMap(row => {
         const event = toPlayerEvent(row as Record<string, unknown>)
-        return event ? [{ ...event, draft: (row as { published?: boolean }).published === false }] : []
+        const source = row as { published?: boolean; sessionId?: string }
+        return event ? [{ ...event, draft: source.published === false, sessionId: source.sessionId }] : []
       }))
     }, () => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
