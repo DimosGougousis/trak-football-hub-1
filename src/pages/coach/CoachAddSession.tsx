@@ -118,6 +118,17 @@ export default function CoachAddSession() {
   const [competition, setCompetition] = useState<Competition>('League')
   const [venue,       setVenue]       = useState<Venue>('Home')
 
+  // TRAK-138 (J8.15): "Log match" on a schedule event that has kicked off
+  // opens here with its date, opponent and home or away.
+  useEffect(() => {
+    const event = (location.state as { fromEvent?: { date?: string | null, opponent?: string | null, homeAway?: string | null } } | null)?.fromEvent
+    if (!event) return
+    setType('match')
+    if (event.date) setDate(event.date)
+    if (event.opponent) setOpponent(event.opponent)
+    if (event.homeAway) setVenue(event.homeAway === 'away' ? 'Away' : 'Home')
+  }, [])
+
   // Squad
   const [squad,       setSquad]       = useState<SquadPlayer[]>([])
   const [notReady,    setNotReady]    = useState<string[]>([])
