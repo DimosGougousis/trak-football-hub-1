@@ -122,9 +122,16 @@ VALUES
   (pg_temp.cf(501), pg_temp.cf(10), 'Draft', 'training', now() + interval '31 days', current_date + 31, '17:00', NULL, NULL, NULL, NULL, NULL, 'Main pitch', NULL, false),
   (pg_temp.cf(502), pg_temp.cf(11), 'B training', 'training', now() + interval '30 days', current_date + 30, '16:00', NULL, NULL, NULL, NULL, NULL, 'Pitch 2', NULL, true),
   (pg_temp.cf(503), pg_temp.cf(12), 'Y training', 'training', now() + interval '30 days', current_date + 30, '16:00', NULL, NULL, NULL, NULL, NULL, 'Y ground', NULL, true),
-  (pg_temp.cf(504), pg_temp.cf(10), 'Training', 'training', now() + interval '32 days', current_date + 32, NULL, NULL, NULL, NULL, NULL, NULL, 'Main pitch', NULL, true),
   (pg_temp.cf(505), pg_temp.cf(10), 'Old', 'training', now() - interval '120 days', current_date - 120, '17:00', NULL, NULL, NULL, NULL, NULL, 'Main pitch', NULL, true),
   (pg_temp.cf(506), pg_temp.cf(10), 'Recent', 'training', now() - interval '30 days', current_date - 30, '17:00', NULL, NULL, NULL, NULL, NULL, 'Main pitch', NULL, true);
+-- 504 has no start time: an event from before TRAK-157 (prod still has some),
+-- so it goes in past the start-time rule. The feed must still show it.
+ALTER TABLE public.coach_calendar_events DISABLE TRIGGER trg_refuse_event_without_start_time;
+INSERT INTO public.coach_calendar_events
+  (id, coach_user_id, title, event_type, starts_at, event_date, start_time, venue, published)
+VALUES
+  (pg_temp.cf(504), pg_temp.cf(10), 'Training', 'training', now() + interval '32 days', current_date + 32, NULL, 'Main pitch', true);
+ALTER TABLE public.coach_calendar_events ENABLE TRIGGER trg_refuse_event_without_start_time;
 UPDATE public.coach_calendar_events SET status = 'cancelled', cancel_reason = 'Omar is ill' WHERE id = pg_temp.cf(504);
 
 -- Consent and links, the way the app records them.

@@ -1,3 +1,4 @@
+import './parent-assessment-history'
 import { test, expect } from '@playwright/test';
 
 // Real browser, app router/AuthProvider and Supabase SDK. Every backend request

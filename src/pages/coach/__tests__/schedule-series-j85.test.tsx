@@ -7,6 +7,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { pickDate, pickTime } from '../../../../tests/support/arc-pickers'
 
 /**
  * TRAK-128 (J8.5). The coach enters a weekly training once, with an end date,
@@ -20,6 +21,10 @@ const today = localTodayISO()
 const shift = (date: string, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
 const EVENTS = `${SUPABASE_URL}/rest/v1/coach_calendar_events`
+// A Monday two to three weeks out, and the Wednesday eight weeks on: near
+// enough that the date picker reaches it in a tap or two (TRAK-157).
+const MONDAY = shift(today, 14 + ((8 - new Date(`${today}T00:00:00Z`).getUTCDay()) % 7))
+const LAST_WEDNESDAY = shift(MONDAY, 51)
 
 const week = (id: string, offset: number, over: Record<string, unknown> = {}) => {
   const date = shift(today, offset)
@@ -69,7 +74,8 @@ async function open() {
   await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
 }
 
-describe('J8.5: a weekly training series', () => {
+// Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
+describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
   afterEach(() => { server.events.removeAllListeners() })
   beforeEach(() => {
     signInAs(COACH)
@@ -80,18 +86,17 @@ describe('J8.5: a weekly training series', () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
-    // 7 Jan 2030 is a Monday; 27 Feb 2030 the Wednesday eight weeks on.
-    const date = within(sheet).getByLabelText('Date')
-    await userEvent.clear(date)
-    await userEvent.type(date, '2030-01-07')
-    await userEvent.type(within(sheet).getByLabelText('Start'), '18:00')
+    await pickDate(userEvent, 'Date', MONDAY)
+    await pickTime(userEvent, 'Start', '18:00')
     await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 2')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
     const days = within(sheet).getByRole('group', { name: 'Repeat on' })
     expect(within(days).getByRole('button', { name: 'Mon' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(days).getByRole('button', { name: 'Wed' }))
-    await userEvent.type(within(sheet).getByLabelText('Ends on'), '2030-02-27')
-    expect(within(sheet).getByText(/^16 events, last one Wednesday 27 February/)).toBeInTheDocument()
+    await pickDate(userEvent, 'Ends on', LAST_WEDNESDAY)
+    const lastDay = new Date(`${LAST_WEDNESDAY}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+    expect(lastDay).toMatch(/^Wednesday /)
+    expect(within(sheet).getByText(`16 events, last one ${lastDay}`)).toBeInTheDocument()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save 16 drafts' }))
 
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -100,8 +105,8 @@ describe('J8.5: a weekly training series', () => {
     expect(inserted).toHaveLength(16)
     expect(new Set(inserted.map(r => r.series_id)).size).toBe(1)
     expect(inserted[0].series_id).toMatch(/^[0-9a-f-]{36}$/)
-    expect(inserted.map(r => r.event_date).slice(0, 3)).toEqual(['2030-01-07', '2030-01-09', '2030-01-14'])
-    expect(inserted.at(-1)).toMatchObject({ event_date: '2030-02-27', starts_at: toAcademyInstant('2030-02-27', '18:00') })
+    expect(inserted.map(r => r.event_date).slice(0, 3)).toEqual([MONDAY, shift(MONDAY, 2), shift(MONDAY, 7)])
+    expect(inserted.at(-1)).toMatchObject({ event_date: LAST_WEDNESDAY, starts_at: toAcademyInstant(LAST_WEDNESDAY, '18:00') })
     expect(inserted.every(r => r.published === false && r.start_time === '18:00:00' && r.venue === 'Academy Pitch 2')).toBe(true)
     expect(await screen.findByText(/Saved 16 events as drafts/)).toBeInTheDocument()
   })
@@ -112,12 +117,10 @@ describe('J8.5: a weekly training series', () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
-    const date = within(sheet).getByLabelText('Date')
-    await userEvent.clear(date)
-    await userEvent.type(date, '2030-01-07')
-    await userEvent.type(within(sheet).getByLabelText('Start'), '18:00')
+    await pickDate(userEvent, 'Date', MONDAY)
+    await pickTime(userEvent, 'Start', '18:00')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
-    await userEvent.type(within(sheet).getByLabelText('Ends on'), '2030-02-27')
+    await pickDate(userEvent, 'Ends on', LAST_WEDNESDAY)
     await userEvent.click(within(within(sheet).getByRole('group', { name: 'Event type' })).getByRole('button', { name: 'Match' }))
     await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic Rovers')
     expect(within(sheet).queryByRole('button', { name: /^Save \d+ drafts$/ })).toBeNull()
@@ -126,7 +129,7 @@ describe('J8.5: a weekly training series', () => {
     await waitFor(() => expect(writes).toHaveLength(1))
     const inserted = writes[0].body as Record<string, unknown>[]
     expect(inserted).toHaveLength(1)
-    expect(inserted[0]).toMatchObject({ event_type: 'match', event_date: '2030-01-07', opponent: 'Synthetic Rovers' })
+    expect(inserted[0]).toMatchObject({ event_type: 'match', event_date: MONDAY, opponent: 'Synthetic Rovers' })
     expect(inserted[0].series_id ?? null).toBeNull()
   })
 
@@ -134,9 +137,9 @@ describe('J8.5: a weekly training series', () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
-    await userEvent.type(within(sheet).getByLabelText('Start'), '18:00')
+    await pickTime(userEvent, 'Start', '18:00')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
-    await userEvent.type(within(sheet).getByLabelText('Ends on'), shift(today, -1))
+    await pickDate(userEvent, 'Ends on', shift(today, -1))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
     expect(within(sheet).getByRole('alert')).toHaveTextContent('The series has to end on or after its first date')
     expect(writes).toEqual([])
@@ -147,10 +150,8 @@ describe('J8.5: a weekly training series', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit Training' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
-    expect(within(sheet).getByLabelText('Date')).toBeDisabled()
-    const start = within(sheet).getByLabelText('Start')
-    await userEvent.clear(start)
-    await userEvent.type(start, '18:30')
+    expect(within(sheet).getByRole('button', { name: /^Date\b/ })).toBeDisabled()
+    await pickTime(userEvent, 'Start', '18:30')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => expect(writes).toHaveLength(2))
@@ -174,9 +175,7 @@ describe('J8.5: a weekly training series', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit Training' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
-    const start = within(sheet).getByLabelText('Start')
-    await userEvent.clear(start)
-    await userEvent.type(start, '18:30')
+    await pickTime(userEvent, 'Start', '18:30')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
 
     expect(await within(sheet).findByText(/Saved 1 of 2 weeks/)).toBeInTheDocument()

@@ -126,7 +126,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     }
     mount()
     await screen.findByText('Alex opposition')
-    expect(within(screen.getByRole('region', { name: 'Latest coach assessment' })).getByText('Coach')).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).getByText('Coach')).toBeInTheDocument()
     expect(screen.getByText('Alex recognition 1')).toBeInTheDocument()
     expectPreserved(alex)
     expect(nameFilters).toEqual(mode === 'all-null' ? [] : [`in.(${coachA})`])
@@ -152,7 +152,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
   it.each([false, true])('retains live-coach records when names are hidden by RLS: %s', async hidden => {
     hiddenNames = hidden
     mount(); await screen.findByText('Alex opposition')
-    expect(within(screen.getByRole('region', { name: 'Latest coach assessment' })).getByText(hidden ? 'Coach' : 'Synthetic Alex Coach')).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).getByText(hidden ? 'Coach' : 'Synthetic Alex Coach')).toBeInTheDocument()
     expect(nameFilters).toEqual([`in.(${coachA})`])
     expectPreserved(alex)
     cleanup(); mount('/parent/alerts')
@@ -202,7 +202,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     await waitFor(() => expect(started).toBe(true))
     await followChild('Zara')
     await screen.findByText('Zara opposition')
-    expect(screen.getByText('Synthetic Zara Coach')).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).getByText('Synthetic Zara Coach')).toBeInTheDocument()
     await act(async () => { release(); await delayed; await new Promise(resolve => setTimeout(resolve, 20)) })
     expect(screen.queryByText('Late Alex Coach')).not.toBeInTheDocument()
     expect(screen.queryByText('Alex opposition')).not.toBeInTheDocument()

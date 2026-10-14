@@ -1,17 +1,16 @@
-import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { HomeHeader } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { supabase } from '@/integrations/supabase/client'
-import { ParentAssessmentBands, ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
+import { ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
 import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
-import { trackEvent } from '@/lib/telemetry'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
+import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 
 export default function ParentHome() {
   const navigate = useNavigate()
@@ -30,19 +29,10 @@ export default function ParentHome() {
     ...(rosterConsentQuery.data ?? []).map(child => child.first_name)]
   const matches = matchQuery.data ?? []
   const development = developmentQuery.data
-  const assessment = development?.assessments[0]
   const award = development?.awards[0]
   const details = development?.details
   const hasError = matchQuery.isError || developmentQuery.isError
   const loading = matchQuery.isPending || developmentQuery.isPending
-
-  // J7 (TRAK-10): parents never see the coach's message (TRAK-63), so a parent
-  // open is the child's latest assessment reaching this screen. The pilot view
-  // counts each parent and assessment once and checks the parent's link.
-  const shownAssessmentId = selectedChild && !loading && !hasError ? assessment?.id : undefined
-  useEffect(() => {
-    if (shownAssessmentId) void trackEvent('assessment_viewed', { assessment_id: shownAssessmentId })
-  }, [shownAssessmentId])
 
   return (
     <MobileShell>
@@ -98,21 +88,10 @@ export default function ParentHome() {
                     </div>
                   </section>
                 )}
-                <section className="mt-5" aria-label="Latest coach assessment">
-                  <MetadataLabel text="LATEST COACH ASSESSMENT" />
-                  {assessment ? (
-                    <div className="rounded-xl p-5 mt-2 bg-card border border-border">
-                      <div className="flex items-center justify-between gap-2 mb-4">
-                        <div>
-                          <p className="text-sm text-foreground">{(assessment.coach_user_id && development?.coachNames[assessment.coach_user_id]) || 'Coach'}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{formatParentDate(assessment.created_at)}</p>
-                        </div>
-                        <ParentRating rating={assessment.coach_rating} missing="Not assessed" />
-                      </div>
-                      <ParentAssessmentBands assessment={assessment} />
-                    </div>
-                  ) : <p className="py-4 text-sm text-muted-foreground">No coach assessments yet.</p>}
-                </section>
+                {development && <ParentAssessmentCarousel
+                  key={`${selectedChild?.id}:${development.assessments.slice(0, 5).map(row => row.id).join(',')}`}
+                  assessments={development.assessments} coachNames={development.coachNames} />}
+
                 {award && <section className="mt-5" aria-label="Recognition">
                   <MetadataLabel text="RECOGNITION" />
                   <div className="rounded-xl p-4 mt-2 bg-card border border-border">
