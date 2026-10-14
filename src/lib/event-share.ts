@@ -1,4 +1,4 @@
-import { displayEventTime, localTodayISO } from './event-time'
+import { displayEventTime } from './event-time'
 import type { EventRow } from './coach-events'
 
 /**
@@ -17,6 +17,8 @@ import type { EventRow } from './coach-events'
  * the squad's names are unknown.
  */
 export interface ShareableEvent {
+  /** coach_calendar_events.id: the message links to this event (TRAK-168). */
+  id: string
   kind: 'training' | 'match' | 'tournament' | 'other'
   /** The squad, e.g. "U15". */
   squadLabel: string
@@ -34,8 +36,6 @@ export interface ShareableEvent {
 }
 
 export interface ShareOptions {
-  /** Today as YYYY-MM-DD on the coach's device; defaults to localTodayISO(). */
-  today?: string
   /** Every child on the coach's squad rows, departed too; null while unknown. */
   childNames: string[] | null
 }
@@ -64,50 +64,88 @@ const LINK = new RegExp([
   String.raw`\b(?:[a-z0-9-]+\.)+(?:${BARE_TLDS})(?![\w-]|\.[\w-])`,
 ].join('|'), 'i')
 
-const TRAK_LINE = 'Full schedule in Trak: https://trakfootball.com'
+// TRAK-168: Tarek's team-group templates (13 Oct), for the founders to agree.
+// The first line is bold so it reads in WhatsApp's chat preview. The link
+// opens this event; /event/:id routes each family to it. Training and match
+// say "Event details" until families can answer "Can't make it" (TRAK-137);
+// Tarek's availability wording comes back with it (Imad, 13 Oct, #292).
+const eventLink = (id: string) => `https://trakfootball.com/event/${id}`
 const KIND_LABEL: Record<ShareableEvent['kind'], string> = {
   training: 'Training',
   match: 'Match',
   tournament: 'Tournament',
   other: 'Event',
 }
+const KIND_HEAD: Record<ShareableEvent['kind'], string> = {
+  training: '⚽ TRAINING',
+  match: '⚔️ MATCH',
+  tournament: '🏆 TOURNAMENT',
+  other: '📣 EVENT',
+}
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/** "Tue 13 Oct", from the calendar date itself, so no time zone can move the day. */
+/** "Tue, 13 Oct", from the calendar date itself, so no time zone can move the day. */
 function dayLabel(date: string): string {
   const [y, m, d] = date.split('-').map(Number)
   const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
-  return `${WEEKDAYS[weekday]} ${d} ${MONTHS[m - 1]}`
+  return `${WEEKDAYS[weekday]}, ${d} ${MONTHS[m - 1]}`
 }
+
+/** "17:15:00" as "17:15": 24-hour, as the app shows times (Imad, 14 Oct). */
+const clock = (hhmm: string) => hhmm.slice(0, 5)
 
 const text = (value: string | null) => (value ?? '').trim()
 
 export function whatsAppShareText(event: ShareableEvent, options: ShareOptions): string {
-  const today = options.today ?? localTodayISO()
-  const cancelled = event.status === 'cancelled'
   const names = namePatterns(options.childNames ?? [])
   const clean = (value: string | null) => (names.some(p => p.test(text(value))) ? '' : text(value))
   const reason = options.childNames && !LINK.test(text(event.cancelReason)) ? clean(event.cancelReason) : ''
   const opponent = clean(event.opponent)
+  const venue = clean(event.venue)
+  const isMatch = event.kind === 'match'
 
-  let title = `${event.squadLabel} ${KIND_LABEL[event.kind]}`
-  if (event.kind === 'match' && opponent) title += ` vs ${opponent}`
-  if (cancelled) title += event.date === today ? ' cancelled today' : ' cancelled'
-  else if (event.kind === 'match' && event.homeAway) title += ` (${event.homeAway})`
+  let what = `${event.squadLabel} ${KIND_LABEL[event.kind]}`
+  if (isMatch && opponent) what += ` vs ${opponent}`
+  const day = dayLabel(event.date)
+  const start = event.startTime ? clock(event.startTime) : 'time to be confirmed'
 
-  const lines = [
-    `*${title}*`,
-    `${dayLabel(event.date)}, ${event.startTime ?? 'time to be confirmed'}`,
-  ]
-  if (cancelled && reason) lines.push(`Reason: ${reason}`)
-  if (!cancelled) {
-    if (clean(event.venue)) lines.push(`Venue: ${clean(event.venue)}`)
-    if (text(event.meetTime)) lines.push(`Meet: ${text(event.meetTime)}`)
-    if (clean(event.kit)) lines.push(`Kit: ${clean(event.kit)}`)
+  if (event.status === 'cancelled') {
+    return [
+      `*❌ CANCELLED | ${what}*`,
+      `📅 Date: ${day}`,
+      venue && `🏟️ Venue: ${venue}`,
+      reason && `📌 Reason: ${reason}`,
+      'Please note this session will not go ahead as scheduled.',
+      `🔗 Updated event info: ${eventLink(event.id)}`,
+    ].filter(Boolean).join('\n')
   }
-  lines.push('', TRAK_LINE)
-  return lines.join('\n')
+
+  if (isMatch) {
+    const side = event.homeAway === 'home' ? ' (Home)' : event.homeAway === 'away' ? ' (Away)' : ''
+    const meet = text(event.meetTime)
+    const kit = clean(event.kit)
+    return [
+      `*${KIND_HEAD.match} | ${what}${side}*`,
+      `📅 When: ${day}`,
+      meet ? `⏰ Meet Time: ${clock(meet)} | Kick-off: ${start}` : `⏰ Kick-off: ${start}`,
+      venue && `🏟️ Venue: ${venue}`,
+      kit && `👕 Kit: ${kit}`,
+      `🔗 Event details: ${eventLink(event.id)}`,
+    ].filter(Boolean).join('\n')
+  }
+
+  // An earlier meet time goes with the start, in the match template's own
+  // pattern (Imad, 14 Oct); otherwise one line, as Tarek's template has it.
+  const meetAt = text(event.meetTime) ? clock(text(event.meetTime)) : ''
+  const meet = event.startTime && meetAt !== start ? meetAt : ''
+  return [
+    `*${KIND_HEAD[event.kind]} | ${what}*`,
+    meet ? `📅 When: ${day}` : `📅 When: ${day} @ ${start}`,
+    meet && `⏰ Meet Time: ${meet} | Start: ${start}`,
+    venue && `🏟️ Venue: ${venue}`,
+    `🔗 Event details: ${eventLink(event.id)}`,
+  ].filter(Boolean).join('\n')
 }
 
 /** WhatsApp's standard share link: no phone number, so WhatsApp asks which chat. */
@@ -120,6 +158,7 @@ export function shareableFromRow(row: EventRow, squadLabel: string): ShareableEv
   const shown = displayEventTime(row)
   const kind = (['training', 'match', 'tournament', 'other'] as const).find(k => k === row.event_type) ?? 'other'
   return {
+    id: row.id,
     kind,
     squadLabel,
     date: shown.date,
