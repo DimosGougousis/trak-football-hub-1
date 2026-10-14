@@ -163,7 +163,7 @@ SELECT pg_temp.cf_check(pg_temp.cf_ids(pg_temp.cf_feed('player')) = '500,504,506
   pg_temp.cf_ids(pg_temp.cf_feed('player')));
 SELECT pg_temp.cf_check(
   (SELECT bool_and((SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(e) k) =
-     ARRAY['date','endTime','homeAway','id','kind','kit','meetTime','opponent','sequence','squadLabel','startTime','status','updatedAt','venue'])
+     ARRAY['date','endTime','homeAway','id','kind','kit','meetTime','opponent','sequence','squadLabel','startTime','status','timeZone','updatedAt','venue']) -- timeZone: TRAK-175
    FROM jsonb_array_elements(pg_temp.cf_feed('player')->'events') e),
   'every event has exactly the fields the endpoint validates: no cancel reason, no coach note, no title');
 SELECT pg_temp.cf_check(
