@@ -28,7 +28,7 @@ describe('whatsAppShareText: the team-group templates', () => {
   it('writes a training', () => {
     expect(whatsAppShareText(training, opts)).toBe([
       '*⚽ TRAINING | U15 Training*',
-      '📅 When: Tue, 13 Oct @ 6:00 PM',
+      '📅 When: Tue, 13 Oct @ 18:00',
       '🏟️ Venue: Main pitch',
       `🔗 Event details: ${link}`,
     ].join('\n'))
@@ -42,7 +42,7 @@ describe('whatsAppShareText: the team-group templates', () => {
     expect(text).toBe([
       '*⚔️ MATCH | U15 Match vs Rivals FC (Away)*',
       '📅 When: Tue, 13 Oct',
-      '⏰ Meet Time: 5:15 PM | Kick-off: 6:00 PM',
+      '⏰ Meet Time: 17:15 | Kick-off: 18:00',
       '🏟️ Venue: Rivals Sports Park',
       '👕 Kit: White',
       `🔗 Event details: ${link}`,
@@ -51,7 +51,7 @@ describe('whatsAppShareText: the team-group templates', () => {
 
   it('a match with no meet time gives the kick-off alone', () => {
     const text = whatsAppShareText({ ...training, kind: 'match', opponent: 'Rivals FC', homeAway: 'home' }, opts)
-    expect(text).toContain('⏰ Kick-off: 6:00 PM')
+    expect(text).toContain('⏰ Kick-off: 18:00')
     expect(text).not.toContain('Meet Time')
   })
 
@@ -72,9 +72,29 @@ describe('whatsAppShareText: the team-group templates', () => {
     expect(text).not.toContain('Reason:')
   })
 
-  it('writes times on a 12-hour clock', () => {
-    expect(whatsAppShareText({ ...training, startTime: '00:30' }, opts)).toContain('@ 12:30 AM')
-    expect(whatsAppShareText({ ...training, startTime: '12:00' }, opts)).toContain('@ 12:00 PM')
+  // Imad, 14 Oct (#292): 24-hour times, as the app shows them.
+  it('writes times on a 24-hour clock', () => {
+    expect(whatsAppShareText({ ...training, startTime: '00:30' }, opts)).toContain('@ 00:30')
+    expect(whatsAppShareText({ ...training, startTime: '12:00' }, opts)).toContain('@ 12:00')
+    expect(whatsAppShareText({ ...training, startTime: '18:05:00' }, opts).split('\n')[1]).toBe('📅 When: Tue, 13 Oct @ 18:05')
+  })
+
+  // Imad, 14 Oct (#292): a training's earlier meet time goes with its start,
+  // in the match template's own pattern.
+  it('gives a training its meet time alongside the start', () => {
+    expect(whatsAppShareText({ ...training, meetTime: '17:45' }, opts)).toBe([
+      '*⚽ TRAINING | U15 Training*',
+      '📅 When: Tue, 13 Oct',
+      '⏰ Meet Time: 17:45 | Start: 18:00',
+      '🏟️ Venue: Main pitch',
+      '🔗 Event details: https://trakfootball.com/event/ev-13',
+    ].join('\n'))
+  })
+
+  it('keeps the one-line When for a training whose meet time is its start, or that has none', () => {
+    expect(whatsAppShareText({ ...training, meetTime: '18:00' }, opts)).toContain('📅 When: Tue, 13 Oct @ 18:00')
+    expect(whatsAppShareText({ ...training, meetTime: '18:00' }, opts)).not.toContain('Meet Time')
+    expect(whatsAppShareText({ ...training, meetTime: '  ' }, opts)).not.toContain('Meet Time')
   })
 
   it('never shows midnight for an event with no time yet', () => {

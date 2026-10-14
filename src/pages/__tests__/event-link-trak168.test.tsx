@@ -1,8 +1,10 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../../tests/msw/server'
-import { rpc } from '../../../tests/msw/supabase'
+import { rpc, SUPABASE_URL } from '../../../tests/msw/supabase'
 import EventLink from '../EventLink'
 import LandingPage from '../LandingPage'
 import { rememberReturnTo, takeReturnTo } from '@/lib/return-to'
@@ -32,6 +34,20 @@ vi.mock('@/contexts/ParentChildrenContext', () => ({
   }),
 }))
 
+
+// child_events() as PostgREST answers the event page's one-row lookup: the
+// row, or none; a child mapped to 'fail' gets a server error.
+let owns: Record<string, boolean | 'fail'> = {}
+const childEvents = http.post(`${SUPABASE_URL}/rest/v1/rpc/child_events`, async ({ request }) => {
+  const { p_child } = await request.json() as { p_child: string }
+  if (owns[p_child] === 'fail') return HttpResponse.json({ code: 'XX000', message: 'Synthetic failure' }, { status: 500 })
+  const row = owns[p_child] ? { id: EVENT, event_type: 'training', event_date: '2099-11-14', start_time: '10:00:00', starts_at: '2099-11-14T06:00:00Z' } : null
+  if ((request.headers.get('Accept') ?? '').includes('vnd.pgrst.object')) {
+    return row ? HttpResponse.json(row) : HttpResponse.json({ code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: 'Results contain 0 rows', hint: null }, { status: 406 })
+  }
+  return HttpResponse.json(row ? [row] : [])
+})
+
 const Where = ({ label }: { label: string }) => <p>{label} {useParams().id ?? ''}</p>
 function open() {
   return render(<MemoryRouter initialEntries={[`/event/${EVENT}`]}>
@@ -53,6 +69,7 @@ beforeEach(() => {
   state.selected = []
   state.childrenLoading = false
   sessionStorage.clear()
+  owns = {}
 })
 afterEach(cleanup)
 
@@ -65,7 +82,7 @@ describe('TRAK-168 /event/:id opens that event for whoever signs in', () => {
   it('a parent of two lands on the event with the child it belongs to selected', async () => {
     state.role = 'parent'
     state.children = [{ id: 'hugo', name: 'Hugo' }, { id: 'joshua', name: 'Joshua' }]
-    server.use(rpc('child_events', args => (args.p_child === 'joshua' ? [{ id: EVENT }] : [])))
+    owns = { joshua: true }; server.use(childEvents)
     open()
     expect(await screen.findByText(`Parent event ${EVENT}`)).toBeInTheDocument()
     expect(state.selected).toEqual(['joshua'])
@@ -74,7 +91,7 @@ describe('TRAK-168 /event/:id opens that event for whoever signs in', () => {
   it('a parent whose children can\'t see it still lands on the event page, which says so', async () => {
     state.role = 'parent'
     state.children = [{ id: 'hugo', name: 'Hugo' }]
-    server.use(rpc('child_events', () => []))
+    server.use(childEvents)
     open()
     expect(await screen.findByText(`Parent event ${EVENT}`)).toBeInTheDocument()
     expect(state.selected).toEqual([])
@@ -83,13 +100,41 @@ describe('TRAK-168 /event/:id opens that event for whoever signs in', () => {
   it('waits for the parent\'s children to load before choosing one', async () => {
     state.role = 'parent'
     state.childrenLoading = true
-    server.use(rpc('child_events', args => (args.p_child === 'joshua' ? [{ id: EVENT }] : [])))
+    owns = { joshua: true }; server.use(childEvents)
     const view = open()
     await new Promise(r => setTimeout(r, 50))
     expect(screen.queryByText(`Parent event ${EVENT}`)).toBeNull()
     state.childrenLoading = false
     state.children = [{ id: 'hugo', name: 'Hugo' }, { id: 'joshua', name: 'Joshua' }]
     view.rerender(<MemoryRouter initialEntries={[`/event/${EVENT}`]}><Routes><Route path="/event/:id" element={<EventLink />} /><Route path="/parent/event/:id" element={<Where label="Parent event" />} /></Routes></MemoryRouter>)
+    expect(await screen.findByText(`Parent event ${EVENT}`)).toBeInTheDocument()
+    expect(state.selected).toEqual(['joshua'])
+  })
+
+  // Imad's #292 review: a failed lookup isn't "not this child's event". Going on
+  // would land the parent on the event still following the other child, where
+  // Retry can't fix the selection.
+  it('says so with Retry when a child\'s lookup fails, and goes nowhere until it works', async () => {
+    state.role = 'parent'
+    state.children = [{ id: 'hugo', name: 'Hugo' }, { id: 'joshua', name: 'Joshua' }]
+    owns = { joshua: 'fail' }
+    server.use(childEvents)
+    open()
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't open this event.")
+    expect(screen.queryByText(`Parent event ${EVENT}`)).toBeNull()
+    expect(state.selected).toEqual([])
+    owns = { joshua: true }
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await screen.findByText(`Parent event ${EVENT}`)).toBeInTheDocument()
+    expect(state.selected).toEqual(['joshua'])
+  })
+
+  it('still opens the event when one child\'s lookup fails but another child has it', async () => {
+    state.role = 'parent'
+    state.children = [{ id: 'hugo', name: 'Hugo' }, { id: 'joshua', name: 'Joshua' }]
+    owns = { hugo: 'fail', joshua: true }
+    server.use(childEvents)
+    open()
     expect(await screen.findByText(`Parent event ${EVENT}`)).toBeInTheDocument()
     expect(state.selected).toEqual(['joshua'])
   })

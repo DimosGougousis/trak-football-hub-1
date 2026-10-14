@@ -81,7 +81,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 Match vs Synthetic Rovers \(Away\)\*/))
     const text = sharedText(link)
         expect(text).toContain('Venue: Rovers Park')
-    expect(text).toContain('⏰ Meet Time: 5:45 PM | Kick-off: 6:30 PM')
+    expect(text).toContain('⏰ Meet Time: 17:45 | Kick-off: 18:30')
     expect(text).toContain('Kit: White')
     // TRAK-168: the link opens this event, not Home.
     expect(text).toContain('🔗 Event details: https://trakfootball.com/event/live-1')

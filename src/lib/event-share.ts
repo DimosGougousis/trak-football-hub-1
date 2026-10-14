@@ -92,11 +92,8 @@ function dayLabel(date: string): string {
   return `${WEEKDAYS[weekday]}, ${d} ${MONTHS[m - 1]}`
 }
 
-/** "17:15" as "5:15 PM". */
-function clock12(hhmm: string): string {
-  const [h, m] = hhmm.slice(0, 5).split(':').map(Number)
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
-}
+/** "17:15:00" as "17:15": 24-hour, as the app shows times (Imad, 14 Oct). */
+const clock = (hhmm: string) => hhmm.slice(0, 5)
 
 const text = (value: string | null) => (value ?? '').trim()
 
@@ -111,7 +108,7 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
   let what = `${event.squadLabel} ${KIND_LABEL[event.kind]}`
   if (isMatch && opponent) what += ` vs ${opponent}`
   const day = dayLabel(event.date)
-  const start = event.startTime ? clock12(event.startTime) : 'time to be confirmed'
+  const start = event.startTime ? clock(event.startTime) : 'time to be confirmed'
 
   if (event.status === 'cancelled') {
     return [
@@ -131,16 +128,21 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
     return [
       `*${KIND_HEAD.match} | ${what}${side}*`,
       `📅 When: ${day}`,
-      meet ? `⏰ Meet Time: ${clock12(meet)} | Kick-off: ${start}` : `⏰ Kick-off: ${start}`,
+      meet ? `⏰ Meet Time: ${clock(meet)} | Kick-off: ${start}` : `⏰ Kick-off: ${start}`,
       venue && `🏟️ Venue: ${venue}`,
       kit && `👕 Kit: ${kit}`,
       `🔗 Event details: ${eventLink(event.id)}`,
     ].filter(Boolean).join('\n')
   }
 
+  // An earlier meet time goes with the start, in the match template's own
+  // pattern (Imad, 14 Oct); otherwise one line, as Tarek's template has it.
+  const meetAt = text(event.meetTime) ? clock(text(event.meetTime)) : ''
+  const meet = event.startTime && meetAt !== start ? meetAt : ''
   return [
     `*${KIND_HEAD[event.kind]} | ${what}*`,
-    `📅 When: ${day} @ ${start}`,
+    meet ? `📅 When: ${day}` : `📅 When: ${day} @ ${start}`,
+    meet && `⏰ Meet Time: ${meet} | Start: ${start}`,
     venue && `🏟️ Venue: ${venue}`,
     `🔗 Event details: ${eventLink(event.id)}`,
   ].filter(Boolean).join('\n')
