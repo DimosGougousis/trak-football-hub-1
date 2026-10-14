@@ -78,13 +78,13 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     fixtures()
     renderApp('/coach/schedule')
     const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers to WhatsApp' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*U15 Match vs Synthetic Rovers \(away\)\*/))
+    await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 Match vs Synthetic Rovers \(Away\)\*/))
     const text = sharedText(link)
-    expect(text).toContain('18:30')
-    expect(text).toContain('Venue: Rovers Park')
-    expect(text).toContain('Meet: 17:45')
+        expect(text).toContain('Venue: Rovers Park')
+    expect(text).toContain('⏰ Meet Time: 17:45 | Kick-off: 18:30')
     expect(text).toContain('Kit: White')
-    expect(text).toContain('Full schedule in Trak: https://trakfootball.com')
+    // TRAK-168: the link opens this event, not Home.
+    expect(text).toContain('🔗 Event details: https://trakfootball.com/event/live-1')
     expect(link).toHaveAttribute('target', '_blank')
   })
 
@@ -94,7 +94,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     const link = await screen.findByRole('link', { name: 'Share Training to WhatsApp' })
     // The reason waits for the squad's names (the child-name check).
     await waitFor(() => expect(sharedText(link)).toContain('Reason: Pitch closed'))
-    expect(sharedText(link)).toMatch(/^\*U15 Training cancelled today\*/)
+    expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/)
   })
 
   it('offers nothing to share for a draft only the coach can see', async () => {
@@ -108,7 +108,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     fixtures()
     renderApp('/coach/schedule')
     const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers to WhatsApp' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*U15/))
+    await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 /))
     for (const l of screen.getAllByRole('link', { name: /to WhatsApp$/ })) {
       expect(sharedText(l)).not.toMatch(/Omar|Lucas|Zara|bench/)
     }
@@ -118,7 +118,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     fixtures()
     renderApp('/coach/schedule')
     const link = await screen.findByRole('link', { name: 'Share Recovery to WhatsApp' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*U15 Training cancelled today\*/))
+    await waitFor(() => expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/))
     expect(sharedText(link)).not.toMatch(/Reason:|Lucas/)
   })
 
@@ -127,7 +127,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
     renderApp('/coach/schedule')
     const link = await screen.findByRole('link', { name: 'Share Training to WhatsApp' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*Squad Training cancelled today\*/))
+    await waitFor(() => expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| Squad Training\*/))
     expect(sharedText(link)).not.toContain('Reason:')
   })
 

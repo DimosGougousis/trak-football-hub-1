@@ -24,6 +24,7 @@ const ParentInfoPage = lazy(() => import("./pages/ParentInfoPage"));
 const ParentOnboarding = lazy(() => import("./pages/ParentOnboarding"));
 const AuthConfirm = lazy(() => import("./pages/AuthConfirm"));
 const AuthCode = lazy(() => import("./pages/AuthCode"));
+const EventLink = lazy(() => import("./pages/EventLink"));
 const Settings = lazy(() => import("./pages/Settings"));
 // The import itself is conditional, not just the route. A bare
 // lazy(() => import(...)) is a static reference Rollup always emits, so the
@@ -59,6 +60,8 @@ const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfi
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
 const ParentEventsPage = lazy(() => import("./pages/parent/ParentEventsPage"));
+const ParentAssessments = lazy(() => import("./pages/parent/ParentAssessments"));
+const ParentAssessment = lazy(() => import("./pages/parent/ParentAssessment"));
 const ParentMatchDetail = lazy(() => import("./pages/parent/ParentMatchDetail"));
 const ParentEvent = lazy(() => import("./pages/parent/ParentEvent"));
 const ParentProfilePage = lazy(() => import("./pages/parent/ParentProfilePage"));
@@ -115,6 +118,8 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
             <Route path="/auth/code" element={<AuthCode />} />
+            {/* TRAK-168: a shared event link; routes each person to that event. */}
+            <Route path="/event/:id" element={<EventLink />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
@@ -163,6 +168,9 @@ const App = () => (
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
             <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
             <Route path="/parent/events" element={<RouteGuard allowedRole="parent"><ParentEventsPage /></RouteGuard>} />
+            <Route path="/parent/assessments" element={<RouteGuard allowedRole="parent"><ParentAssessments /></RouteGuard>} />
+            <Route path="/parent/assessment/:id" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
+            <Route path="/parent/session/:sessionId/assessment" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
             <Route path="/parent/match/:id" element={<RouteGuard allowedRole="parent"><ParentMatchDetail /></RouteGuard>} />
             <Route path="/parent/event/:id" element={<RouteGuard allowedRole="parent"><ParentEvent /></RouteGuard>} />
             <Route path="/parent/alerts" element={<RouteGuard allowedRole="parent"><ParkedScreen><ParentAlerts /></ParkedScreen></RouteGuard>} />
