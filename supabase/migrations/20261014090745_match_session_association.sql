@@ -174,3 +174,11 @@ $$;
 
 REVOKE ALL ON FUNCTION public.log_match_for_player(uuid,text,integer,integer,text,text,text,text,integer,integer,integer,text,text,text,numeric,date,uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.log_match_for_player(uuid,text,integer,integer,text,text,text,text,integer,integer,integer,text,text,text,numeric,date,uuid) TO authenticated;
+-- DROP FUNCTION above removed the comment; restore it with the session link noted.
+COMMENT ON FUNCTION public.log_match_for_player(uuid,text,integer,integer,text,text,text,text,integer,integer,integer,text,text,text,numeric,date,uuid) IS
+  'Coach-side match logging. Verifies the caller is a coach who currently holds '
+  'the player (20260917000005), then refuses records that describe something '
+  'that could not have happened (20260920150000). The CHECK constraints on '
+  'public.matches are the barrier; these messages exist so a coach is told what '
+  'is wrong rather than reading a constraint name. An optional p_session_id links '
+  'the row to the caller''s own match session the player attended (20261014090745).';

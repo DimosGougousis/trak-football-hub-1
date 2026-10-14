@@ -43,6 +43,8 @@ INSERT INTO public.coach_sessions(id,coach_user_id,title,session_type,session_da
 INSERT INTO public.session_attendance(session_id,squad_player_id,status) VALUES
  (pg_temp.ml(30),pg_temp.ml(20),'present'),(pg_temp.ml(30),pg_temp.ml(21),'absent'),
  (pg_temp.ml(31),pg_temp.ml(20),'present'),(pg_temp.ml(32),pg_temp.ml(22),'present'),
+ -- Player A also attended Coach B's match, so only the session-owner check can refuse it.
+ (pg_temp.ml(32),pg_temp.ml(20),'present'),
  (pg_temp.ml(33),pg_temp.ml(20),'present');
 CREATE FUNCTION pg_temp.ml_call(player integer, session integer) RETURNS text LANGUAGE sql AS $$
  SELECT format('SELECT public.log_match_for_player(%L::uuid,%L,1,0,%L,%L,%L,%L,90,0,0,%L,NULL,NULL,6.5,current_date-1,%L::uuid)',
@@ -79,6 +81,8 @@ RESET ROLE;
 SELECT pg_temp.ml_assert(NOT has_table_privilege('authenticated','public.matches','INSERT')
  AND NOT has_table_privilege('authenticated','public.matches','UPDATE'),
  'direct writes cannot bypass RPC link checks');
+SELECT pg_temp.ml_assert(obj_description('public.log_match_for_player(uuid,text,integer,integer,text,text,text,text,integer,integer,integer,text,text,text,numeric,date,uuid)'::regprocedure,'pg_proc') LIKE 'Coach-side match logging.%',
+ 'the function keeps its documentation comment');
 DELETE FROM public.coach_sessions WHERE id=pg_temp.ml(30);
 SELECT pg_temp.ml_assert((SELECT session_id IS NULL FROM public.matches WHERE user_id=pg_temp.ml(3)),
  'session deletion preserves the match facts');
