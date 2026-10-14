@@ -106,7 +106,12 @@ AS $fn$
     CASE
       WHEN public.player_age_years(p_user_id) >= public.consent_threshold_age() THEN true
       WHEN public.player_age_years(p_user_id) >= public.player_consent_age(p_user_id)
-        THEN COALESCE(public.player_own_consent_choice(p_user_id), public.player_has_parental_consent(p_user_id))
+        THEN COALESCE(public.player_own_consent_choice(p_user_id), EXISTS (
+          -- Only a guardian approval given below the consent age carries over.
+          SELECT 1 FROM public.parental_consents c
+          WHERE c.player_user_id = p_user_id AND c.withdrawn_at IS NULL AND c.superseded_by IS NULL
+            AND c.purposes->'coaching_records' = 'true'::jsonb
+            AND c.player_age_at_consent < public.player_consent_age(p_user_id)))
       ELSE public.player_has_parental_consent(p_user_id)
     END,
     false
@@ -197,3 +202,115 @@ AS $fn$
                         ORDER BY created_at DESC LIMIT 1)
   );
 $fn$;
+
+-- ── 6. No guardian approval at or above the consent age ───────
+-- One guard for both paths (record_parental_consent and record_roster_consent):
+-- from the academy's consent age the young person decides, not a guardian.
+CREATE FUNCTION trak_private.guardian_consent_below_consent_age()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $fn$
+DECLARE
+  v_consent_age int := CASE
+    WHEN NEW.player_user_id IS NOT NULL THEN public.player_consent_age(NEW.player_user_id)
+    ELSE (SELECT o.consent_age FROM public.roster_children rc
+          JOIN public.organizations o ON o.id = rc.organization_id
+          WHERE rc.id = NEW.roster_child_id)
+  END;
+BEGIN
+  IF NEW.player_age_at_consent >= COALESCE(v_consent_age, public.consent_threshold_age()) THEN
+    RAISE EXCEPTION 'At this age the player gives their own consent in Trak' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION trak_private.guardian_consent_below_consent_age() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_guardian_consent_below_consent_age
+  BEFORE INSERT ON public.parental_consents
+  FOR EACH ROW EXECUTE FUNCTION trak_private.guardian_consent_below_consent_age();
+
+-- ── 7. Roster path: the academy's consent age, not the global 18 ──
+-- A guardian is asked to approve only children below the academy's consent age.
+CREATE OR REPLACE FUNCTION public.get_roster_children_awaiting_consent()
+RETURNS TABLE (roster_child_id uuid, first_name text, age_years int)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = '' SET TimeZone = 'UTC'
+AS $fn$
+  SELECT rc.id,
+         split_part(btrim(sp.player_name), ' ', 1),
+         date_part('year', age(current_date, rc.date_of_birth))::int
+  FROM public.roster_guardians rg
+  JOIN public.roster_children rc ON rc.id = rg.roster_child_id
+  JOIN public.squad_players sp   ON sp.id = rc.squad_player_id
+  JOIN public.organizations o    ON o.id = rc.organization_id
+  WHERE rg.parent_user_id = auth.uid()
+    AND rc.player_user_id IS NULL
+    AND date_part('year', age(current_date, rc.date_of_birth)) < o.consent_age
+    AND NOT EXISTS (
+      SELECT 1 FROM public.parental_consents c
+      WHERE c.roster_child_id = rc.id
+        AND c.withdrawn_at IS NULL
+        AND c.superseded_by IS NULL
+        AND c.purposes->'coaching_records' = 'true'::jsonb
+    )
+  ORDER BY 2, 1;
+$fn$;
+
+-- The child is invited directly from the academy's consent age (they consent
+-- at their own first sign-in); below it, only after a guardian approves.
+-- Body as in 20260928120000 (renamed by 20260930090127), with the age line changed.
+CREATE OR REPLACE FUNCTION public.roster_email_invite_targets(p_roster_child_id uuid, p_guardian_user_id uuid DEFAULT NULL)
+RETURNS TABLE (kind text, email text, first_name text, academy text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = '' SET TimeZone = 'UTC'
+AS $fn$
+DECLARE
+  v_child   public.roster_children%ROWTYPE;
+  v_first   text;
+  v_academy text;
+  v_self    boolean;
+BEGIN
+  SELECT rc.* INTO v_child FROM public.roster_children rc WHERE rc.id = p_roster_child_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'no_roster_child' USING ERRCODE = 'P0002';
+  END IF;
+  SELECT split_part(btrim(sp.player_name), ' ', 1) INTO v_first
+  FROM public.squad_players sp WHERE sp.id = v_child.squad_player_id;
+  SELECT o.name INTO v_academy FROM public.organizations o WHERE o.id = v_child.organization_id;
+  v_self := date_part('year', age(current_date, v_child.date_of_birth)) >= COALESCE(
+    (SELECT o.consent_age FROM public.organizations o WHERE o.id = v_child.organization_id),
+    public.consent_threshold_age());
+
+  IF p_guardian_user_id IS NULL THEN
+    RETURN QUERY
+      SELECT 'guardian'::text, rg.email, v_first, v_academy
+      FROM public.roster_guardians rg
+      WHERE rg.roster_child_id = v_child.id AND rg.parent_user_id IS NULL
+      UNION ALL
+      SELECT 'child'::text, v_child.child_email, v_first, v_academy
+      WHERE v_self AND v_child.player_user_id IS NULL AND v_child.child_email IS NOT NULL;
+    RETURN;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.roster_guardians rg
+                 WHERE rg.roster_child_id = v_child.id AND rg.parent_user_id = p_guardian_user_id) THEN
+    RAISE EXCEPTION 'not_guardian' USING ERRCODE = '42501';
+  END IF;
+  IF NOT v_self AND NOT EXISTS (
+    SELECT 1 FROM public.parental_consents c
+    WHERE c.roster_child_id = v_child.id
+      AND c.parent_user_id = p_guardian_user_id
+      AND c.withdrawn_at IS NULL
+      AND c.superseded_by IS NULL
+      AND c.purposes->'coaching_records' = 'true'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'consent_required' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN QUERY
+    SELECT 'child'::text, v_child.child_email, v_first, v_academy
+    WHERE v_child.player_user_id IS NULL AND v_child.child_email IS NOT NULL;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.roster_email_invite_targets(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;

@@ -117,6 +117,52 @@ SELECT pg_temp.oc_assert((SELECT count(*) FROM public.player_own_consents WHERE 
 SELECT pg_temp.oc_assert(public.squad_player_consent_required(pg_temp.oc(30)) = false
   AND public.squad_player_consent_required(pg_temp.oc(31)) = true, 'the coach''s roster check follows the same rule');
 
+-- An approval recorded at 16, before this rule (legacy data), never counts.
+SELECT set_config('request.jwt.claims', '', true); -- fixtures as the operator, not the last signed-in player
+INSERT INTO auth.users(id, email) VALUES (pg_temp.oc(15), 'own-consent-15@synthetic.test');
+INSERT INTO public.profiles(user_id, full_name, role) VALUES (pg_temp.oc(15), 'Greek Legacy Sixteen', 'player');
+INSERT INTO public.player_details(user_id, date_of_birth) VALUES (pg_temp.oc(15), (current_date - interval '16 years 1 month')::date);
+INSERT INTO public.squad_players(id, coach_user_id, player_name, linked_player_id, status) VALUES (pg_temp.oc(35), pg_temp.oc(4), 'Greek Legacy Sixteen', pg_temp.oc(15), 'active');
+ALTER TABLE public.parental_consents DISABLE TRIGGER trg_guardian_consent_below_consent_age;
+INSERT INTO public.parental_consents(player_user_id, parent_user_id, relationship_declared, verification_method,
+  purposes, notice_version, consent_text, threshold_age, player_age_at_consent)
+VALUES (pg_temp.oc(15), pg_temp.oc(20), 'parent', 'email_confirmed', '{"coaching_records": true}', 'legacy', 'Legacy', 18, 16);
+ALTER TABLE public.parental_consents ENABLE TRIGGER trg_guardian_consent_below_consent_age;
+SELECT pg_temp.oc_assert(pg_temp.oc_required(15), 'a guardian approval given at 16 does not stand in for the young person''s own');
+
+-- A guardian can't approve at or above the consent age, on either path.
+SELECT pg_temp.oc_refused($q$INSERT INTO public.parental_consents(player_user_id, parent_user_id, relationship_declared, verification_method,
+  purposes, notice_version, consent_text, threshold_age, player_age_at_consent)
+  VALUES (pg_temp.oc(10), pg_temp.oc(20), 'parent', 'email_confirmed', '{"coaching_records": true}', 'v', 't', 18, 15)$q$,
+  'a guardian approval for a Greek 15-year-old is refused: they decide themselves');
+
+-- Roster, before any account: a Greek 16 (50), a Greek 14 (51), a UAE 16 (52); guardian 20 has claimed all three.
+INSERT INTO public.squad_players(id, coach_user_id, player_name, status) VALUES
+ (pg_temp.oc(40), pg_temp.oc(4), 'Roster Greek Sixteen', 'active'),
+ (pg_temp.oc(41), pg_temp.oc(4), 'Roster Greek Fourteen', 'active'),
+ (pg_temp.oc(42), pg_temp.oc(3), 'Roster UAE Sixteen', 'active');
+INSERT INTO public.roster_children(id, organization_id, squad_player_id, date_of_birth, child_email, loaded_by) VALUES
+ (pg_temp.oc(50), pg_temp.oc(101), pg_temp.oc(40), (current_date - interval '16 years 1 month')::date, 'gr16@own-consent.test', 'fixture'),
+ (pg_temp.oc(51), pg_temp.oc(101), pg_temp.oc(41), (current_date - interval '14 years 1 month')::date, 'gr14@own-consent.test', 'fixture'),
+ (pg_temp.oc(52), pg_temp.oc(100), pg_temp.oc(42), (current_date - interval '16 years 1 month')::date, 'uae16@own-consent.test', 'fixture');
+INSERT INTO public.roster_guardians(roster_child_id, email, parent_user_id, loaded_by)
+SELECT id, 'guardian@own-consent.test', pg_temp.oc(20), 'fixture' FROM public.roster_children WHERE id IN (pg_temp.oc(50), pg_temp.oc(51), pg_temp.oc(52));
+SELECT pg_temp.oc_assert(EXISTS (SELECT 1 FROM public.roster_invite_targets(pg_temp.oc(50)) t WHERE t.kind = 'child'),
+  'a Greek 16-year-old on the roster is invited directly');
+SELECT pg_temp.oc_assert(NOT EXISTS (SELECT 1 FROM public.roster_invite_targets(pg_temp.oc(51)) t WHERE t.kind = 'child')
+  AND NOT EXISTS (SELECT 1 FROM public.roster_invite_targets(pg_temp.oc(52)) t WHERE t.kind = 'child'),
+  'a Greek 14-year-old and a UAE 16-year-old wait for a guardian first');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.oc_as(20);
+SELECT pg_temp.oc_assert((SELECT array_agg(roster_child_id ORDER BY roster_child_id) FROM public.get_roster_children_awaiting_consent())
+  = ARRAY[pg_temp.oc(51), pg_temp.oc(52)], 'the guardian is asked about the Greek 14 and the UAE 16 only');
+SELECT pg_temp.oc_refused(format($q$SELECT public.record_roster_consent(%L, 'parent', '{"coaching_records": true}', 'v', 't')$q$, pg_temp.oc(50)),
+  'a guardian approval for a Greek 16-year-old on the roster is refused');
+SELECT public.record_roster_consent(pg_temp.oc(51), 'parent', '{"coaching_records": true}', 'v', 't');
+RESET ROLE;
+SELECT pg_temp.oc_assert(EXISTS (SELECT 1 FROM public.parental_consents WHERE roster_child_id = pg_temp.oc(51) AND withdrawn_at IS NULL),
+  'a guardian still approves a Greek 14-year-old');
+
 DO $$ DECLARE failures text;
 BEGIN SELECT string_agg(description || ': ' || coalesce(detail, 'false'), E'\n') INTO failures FROM pg_temp.oc_results WHERE NOT passed;
   IF failures IS NOT NULL THEN RAISE EXCEPTION 'Own-consent checks failed:%', E'\n' || failures; END IF;
