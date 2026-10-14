@@ -49,41 +49,30 @@ const seenKey = `trak:player-events-seen:${PLAYER.id}`
 beforeEach(() => { signInAs(PLAYER); localStorage.removeItem(seenKey) })
 afterEach(() => cleanup())
 
-describe('TRAK-130: player home "Next up"', () => {
-  it('shows only the next event, with time, meet time, venue and kit', async () => {
+describe('TRAK-171: player Home uses the week strip', () => {
+  it('keeps the coach message and week strip without a duplicate Next up card', async () => {
     setup()
     renderApp('/player/home')
-    const card = await screen.findByRole('link', { name: /next up/i })
-    expect(within(card).getByText('Match vs Rivals FC (away)')).toBeInTheDocument()
-    expect(card).toHaveTextContent('Sat 14 Nov')
-    expect(card).toHaveTextContent('10:00')
-    expect(card).toHaveTextContent('Meet 09:15')
-    expect(card).toHaveTextContent('Rivals Park')
-    expect(card).toHaveTextContent('Kit: White')
-    expect(screen.queryByText('Fitness')).toBeNull()
+    await screen.findByText('Keep scanning before you receive.')
+    expect(await screen.findByRole('region', { name: 'This week' })).toBeInTheDocument()
+    expect(screen.queryByText('NEXT UP')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /next up/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/matches')
   })
 
-  it("sits below the coach's message, so it never pushes the message off the first screen", async () => {
-    setup()
-    renderApp('/player/home')
-    const card = await screen.findByRole('link', { name: /next up/i })
-    const message = screen.getByText('Keep scanning before you receive.')
-    expect(message.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
-
-  it('shows a cancelled next event as Cancelled, with the reason', async () => {
+  it('keeps cancellation details in Sessions', async () => {
     setup([event('ev-9', { status: 'cancelled', cancel_reason: 'Pitch closed' })])
-    renderApp('/player/home')
-    const card = await screen.findByRole('link', { name: /next up/i })
+    renderApp('/player/matches')
+    const card = await within(await screen.findByRole('region', { name: 'Upcoming' })).findByRole('link', { name: /Cancelled/ })
     expect(card).toHaveTextContent('Cancelled')
     expect(card).toHaveTextContent('Pitch closed')
   })
 
-  it('marks an event the coach changed after the player saw it, and opening it clears the mark', async () => {
+  it('keeps the changed marker in Sessions until the event opens', async () => {
     localStorage.setItem(seenKey, JSON.stringify({ 'ev-1': 0 }))
     setup([{ ...MATCH_EVENT, start_time: '11:00:00', sequence: 1 }])
-    renderApp('/player/home')
-    const card = await screen.findByRole('link', { name: /next up/i })
+    renderApp('/player/matches')
+    const card = await within(await screen.findByRole('region', { name: 'Upcoming' })).findByRole('link', { name: /Rivals FC|Cancelled/ })
     expect(card).toHaveTextContent('Changed')
     expect(card).toHaveTextContent('11:00')
 
