@@ -128,8 +128,9 @@ test.describe('TRAK-172 parent assessment history', () => {
     await page.getByRole('link', { name: /Zara linked match/ }).click()
     await expect(page.getByRole('heading', { name: 'Coach assessment' })).toBeVisible()
     await expect(page.getByText('Zara Coach 3', { exact: true })).toHaveCount(0)
-    // Zara has only two records: the third session truthfully has no available assessment.
-    await expect(page.getByText("This assessment isn't available for Zara Example.")).toBeVisible()
+    // Zara has only two records: her linked match is not assessed yet, which must not read as an error.
+    await expect(page.getByText("Zara Example hasn't been assessed for this match yet.")).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Match details' })).toBeVisible()
     expect(unexpected).toEqual([]); expect(errors).toEqual([])
   })
 })

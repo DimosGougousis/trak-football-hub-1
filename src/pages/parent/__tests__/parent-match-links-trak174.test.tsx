@@ -78,7 +78,7 @@ describe('TRAK-174 parent match links', () => {
     await userEvent.click(screen.getByRole('link', { name: /Alex linked match/ }))
     expect(await screen.findByText('Work Rate')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText('Following'), 'Zara')
-    expect(await screen.findByText("This assessment isn't available for Zara Example.")).toBeInTheDocument()
+    expect(await screen.findByText("Zara Example hasn't been assessed for this session yet.")).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Match details' })).not.toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText('Following'), 'Alex')
     await screen.findByText('Work Rate')

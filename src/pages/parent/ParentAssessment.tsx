@@ -30,7 +30,9 @@ export default function ParentAssessment() {
         {query.isError ? <ParentLoadError message="Couldn't load this assessment." onRetry={() => { void query.refetch() }} />
           : query.isPending ? <ParentLoading />
             : assessment ? <ParentAssessmentCard assessment={assessment} coachName={query.data?.coachName || 'Coach'} showOpenLink={false} />
-              : <p className="py-6 text-sm text-muted-foreground">This assessment isn't available for {selectedChild?.name}.</p>}
+              : <p className="py-6 text-sm text-muted-foreground">{sessionId
+                ? `${selectedChild?.name} hasn't been assessed for this ${matchId ? 'match' : 'session'} yet.`
+                : `This assessment isn't available for ${selectedChild?.name}.`}</p>}
         {matchId && <Link to={`/parent/match/${encodeURIComponent(matchId)}`} className="inline-flex min-h-11 items-center mt-3 text-sm text-primary focus-visible:ring-2 focus-visible:ring-primary">Match details</Link>}
       </ParentFamilyContent>
     </div>
