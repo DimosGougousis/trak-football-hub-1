@@ -91,12 +91,17 @@ UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.eaid(44
 -- hour ago; 704 A untimed today; 705 B future; 706 Y future (academy off).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,event_date,start_time,published) VALUES
  (pg_temp.eaid(700),pg_temp.eaid(10),'A training',now() + interval '2 days',(now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date,(now() AT TIME ZONE 'Asia/Dubai')::time,true),
- (pg_temp.eaid(701),pg_temp.eaid(10),'A draft',now() + interval '2 days',NULL,NULL,false),
- (pg_temp.eaid(702),pg_temp.eaid(10),'A cancelled',now() + interval '3 days',NULL,NULL,true),
+ (pg_temp.eaid(701),pg_temp.eaid(10),'A draft',now() + interval '2 days',(now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date,(now() AT TIME ZONE 'Asia/Dubai')::time,false),
+ (pg_temp.eaid(702),pg_temp.eaid(10),'A cancelled',now() + interval '3 days',(now() AT TIME ZONE 'Asia/Dubai' + interval '3 days')::date,(now() AT TIME ZONE 'Asia/Dubai')::time,true),
  (pg_temp.eaid(703),pg_temp.eaid(10),'A started',now() - interval '1 hour',(now() AT TIME ZONE 'Asia/Dubai' - interval '1 hour')::date,(now() AT TIME ZONE 'Asia/Dubai' - interval '1 hour')::time,true),
- (pg_temp.eaid(704),pg_temp.eaid(10),'A untimed today',date_trunc('day', now()),(now() AT TIME ZONE 'Asia/Dubai')::date,NULL,true),
- (pg_temp.eaid(705),pg_temp.eaid(11),'B training',now() + interval '2 days',NULL,NULL,true),
- (pg_temp.eaid(706),pg_temp.eaid(12),'Y training',now() + interval '2 days',NULL,NULL,true);
+ (pg_temp.eaid(705),pg_temp.eaid(11),'B training',now() + interval '2 days',(now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date,(now() AT TIME ZONE 'Asia/Dubai')::time,true),
+ (pg_temp.eaid(706),pg_temp.eaid(12),'Y training',now() + interval '2 days',(now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date,(now() AT TIME ZONE 'Asia/Dubai')::time,true);
+-- 704 has no start time: an event from before TRAK-157 (prod still has some),
+-- so it goes in past the start-time rule.
+ALTER TABLE public.coach_calendar_events DISABLE TRIGGER trg_refuse_event_without_start_time;
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,event_date,start_time,published) VALUES
+ (pg_temp.eaid(704),pg_temp.eaid(10),'A untimed today',date_trunc('day', now()),(now() AT TIME ZONE 'Asia/Dubai')::date,NULL,true);
+ALTER TABLE public.coach_calendar_events ENABLE TRIGGER trg_refuse_event_without_start_time;
 UPDATE public.coach_calendar_events SET status='cancelled' WHERE id=pg_temp.eaid(702);
 
 SET LOCAL ROLE authenticated;

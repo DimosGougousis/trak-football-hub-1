@@ -72,7 +72,7 @@ BEGIN
 END $$;
 CREATE FUNCTION pg_temp.p47writes(label text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
- PERFORM pg_temp.p47denied(format('INSERT INTO public.coach_calendar_events(coach_user_id,title,starts_at) VALUES(%L,%L,%L)',pg_temp.p47id(10),'Blocked event','2026-10-02'),label||': calendar INSERT');
+ PERFORM pg_temp.p47denied(format('INSERT INTO public.coach_calendar_events(coach_user_id,title,starts_at,start_time) VALUES(%L,%L,%L,%L)',pg_temp.p47id(10),'Blocked event','2026-10-02','18:00'),label||': calendar INSERT');
  PERFORM pg_temp.p47denied(format('UPDATE public.coach_calendar_events SET title=%L WHERE id=%L','Blocked edit',pg_temp.p47id(500)),label||': calendar UPDATE');
  PERFORM pg_temp.p47denied(format('DELETE FROM public.coach_calendar_events WHERE id=%L',pg_temp.p47id(502)),label||': calendar DELETE');
  PERFORM pg_temp.p47denied(format('INSERT INTO public.recognition_awards(coach_user_id,squad_player_id,award_type) VALUES(%L,%L,%L)',pg_temp.p47id(10),pg_temp.p47id(200),'player_of_week'),label||': award INSERT');
@@ -131,10 +131,10 @@ INSERT INTO public.roster_children(organization_id,squad_player_id,date_of_birth
 INSERT INTO public.staff_compliance(organization_id,coach_user_id,dbs_status) VALUES
  (pg_temp.p47id(100),pg_temp.p47id(12),'valid'),
  (pg_temp.p47id(101),pg_temp.p47id(11),'valid');
-INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published) VALUES
- (pg_temp.p47id(500),pg_temp.p47id(10),'Retained own event','2026-10-01',true),
- (pg_temp.p47id(502),pg_temp.p47id(10),'Own deletable event','2026-10-01',false),
- (pg_temp.p47id(510),pg_temp.p47id(11),'Foreign event','2026-10-01',true);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published) VALUES
+ (pg_temp.p47id(500),pg_temp.p47id(10),'Retained own event','2026-10-01','18:00',true),
+ (pg_temp.p47id(502),pg_temp.p47id(10),'Own deletable event','2026-10-01','18:00',false),
+ (pg_temp.p47id(510),pg_temp.p47id(11),'Foreign event','2026-10-01','18:00',true);
 INSERT INTO public.recognition_awards(id,coach_user_id,squad_player_id,award_type,note) VALUES
  (pg_temp.p47id(600),pg_temp.p47id(10),pg_temp.p47id(200),'player_of_week','Retained own award'),
  (pg_temp.p47id(610),pg_temp.p47id(11),pg_temp.p47id(205),'player_of_week','Foreign award'),
@@ -186,7 +186,7 @@ SELECT pg_temp.p47check(current_user='authenticated' AND auth.uid()=pg_temp.p47i
 SELECT pg_temp.p47check(public.squad_player_is_mine(pg_temp.p47id(200)) AND NOT public.coach_squad_player_consent_required(pg_temp.p47id(200)),'Owned adult roster is authorized and needs no parental consent');
 SELECT pg_temp.p47writes('Owning coach');
 -- Foreign academy and same-academy colleague controls use valid target rows.
-SELECT pg_temp.p47denied(format('INSERT INTO public.coach_calendar_events(coach_user_id,title,starts_at) VALUES(%L,%L,%L)',pg_temp.p47id(11),'Spoofed event','2026-10-02'),'Schedule foreign-owner INSERT denied');
+SELECT pg_temp.p47denied(format('INSERT INTO public.coach_calendar_events(coach_user_id,title,starts_at,start_time) VALUES(%L,%L,%L,%L)',pg_temp.p47id(11),'Spoofed event','2026-10-02','18:00'),'Schedule foreign-owner INSERT denied');
 SELECT pg_temp.p47denied(format('UPDATE public.coach_calendar_events SET title=%L WHERE id=%L','Bad foreign edit',pg_temp.p47id(510)),'Schedule foreign UPDATE denied');
 SELECT pg_temp.p47denied(format('DELETE FROM public.coach_calendar_events WHERE id=%L',pg_temp.p47id(510)),'Schedule foreign DELETE denied');
 SELECT pg_temp.p47denied(format('INSERT INTO public.recognition_awards(coach_user_id,squad_player_id,award_type) VALUES(%L,%L,%L)',pg_temp.p47id(10),pg_temp.p47id(205),'player_of_week'),'Recognition foreign-roster INSERT denied');
@@ -221,12 +221,13 @@ SELECT pg_temp.p47actor(20);
 SELECT pg_temp.p47writes('Player');
 SELECT pg_temp.p47probe(format('SELECT public.remove_coach_from_org(%L)',pg_temp.p47id(12)),'Player removal RPC denied',NULL,'42501');
 SELECT pg_temp.p47check((SELECT count(*) FROM public.recognition_awards WHERE id=pg_temp.p47id(600))=1,'Player retained award read');
-SELECT pg_temp.p47check((SELECT count(*) FROM public.coach_calendar_events WHERE id=pg_temp.p47id(500))=1,'Player published event read');
+-- Families read events through child_events() (TRAK-164), never the table.
+SELECT pg_temp.p47check((SELECT count(*) FROM public.child_events(auth.uid()) WHERE id=pg_temp.p47id(500))=1,'Player published event read');
 SELECT pg_temp.p47actor(30);
 SELECT pg_temp.p47writes('Parent');
 SELECT pg_temp.p47probe(format('SELECT public.remove_coach_from_org(%L)',pg_temp.p47id(12)),'Parent removal RPC denied',NULL,'42501');
 SELECT pg_temp.p47check((SELECT count(*) FROM public.recognition_awards WHERE id=pg_temp.p47id(600))=1,'Parent retained award read');
-SELECT pg_temp.p47check((SELECT count(*) FROM public.coach_calendar_events WHERE id=pg_temp.p47id(500))=1,'Parent published event read');
+SELECT pg_temp.p47check((SELECT count(*) FROM public.child_events(pg_temp.p47id(20)) WHERE id=pg_temp.p47id(500))=1,'Parent published event read');
 SELECT pg_temp.p47actor(2);
 SELECT pg_temp.p47writes('Foreign club admin');
 SELECT pg_temp.p47probe(format('SELECT public.remove_coach_from_org(%L)',pg_temp.p47id(12)),'Foreign club admin removal RPC denied',NULL,'42501');
@@ -269,7 +270,7 @@ SELECT pg_temp.p47check((SELECT count(*)=3 FROM public.coach_details WHERE user_
 SELECT pg_temp.p47check((SELECT count(*)=4 FROM public.squad_players WHERE id IN(pg_temp.p47id(200),pg_temp.p47id(201),pg_temp.p47id(204),pg_temp.p47id(205)) AND status='active'),'Service removal preserves other rosters');
 SELECT pg_temp.p47check(EXISTS(SELECT 1 FROM public.staff_compliance WHERE organization_id=pg_temp.p47id(101) AND coach_user_id=pg_temp.p47id(11)),'Service removal preserves foreign compliance');
 -- Real service DML, not only catalog grants, is the maintenance control.
-SELECT pg_temp.p47probe(format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at) VALUES(%L,%L,%L,%L)',pg_temp.p47id(550),pg_temp.p47id(10),'Service event','2026-10-02'),'Service event insert',1);
+SELECT pg_temp.p47probe(format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time) VALUES(%L,%L,%L,%L,%L)',pg_temp.p47id(550),pg_temp.p47id(10),'Service event','2026-10-02','18:00'),'Service event insert',1);
 SELECT pg_temp.p47probe(format('UPDATE public.coach_calendar_events SET title=%L WHERE id=%L','Service edit',pg_temp.p47id(550)),'Service event update',1);
 SELECT pg_temp.p47check((SELECT title='Service edit' FROM public.coach_calendar_events WHERE id=pg_temp.p47id(550)),'Service event edit persisted');
 SELECT pg_temp.p47probe(format('DELETE FROM public.coach_calendar_events WHERE id=%L',pg_temp.p47id(550)),'Service event delete',1);

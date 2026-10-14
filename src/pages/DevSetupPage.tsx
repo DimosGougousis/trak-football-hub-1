@@ -209,7 +209,8 @@ export default function DevSetupPage() {
           published: true,
           source: 'ai_text',
         },
-      ])
+      // TRAK-157: every event needs its day and start time (the database refuses one without).
+      ].map(e => ({ ...e, event_date: new Date(e.starts_at).toLocaleDateString('en-CA'), start_time: new Date(e.starts_at).toTimeString().slice(0, 5) })))
       update('Seed calendar events', 'done')
       }
 

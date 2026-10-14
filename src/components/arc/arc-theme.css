@@ -116,6 +116,16 @@
   --font-body: inherit;
 }
 
+/* TRAK-157: an Arc picker in a Trak form carries Trak's small field label. */
+.arc-trak-field > :first-child {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: hsl(0 0% 100% / .4);
+}
+
 /* TRAK-163: the Home week strip spans the screen, seven equal days (the Therabody strip). */
 .arc-week { width: 100%; }
 .arc-week > * { flex: 1 1 auto; }
