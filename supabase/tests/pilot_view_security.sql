@@ -94,14 +94,14 @@ VALUES (pg_temp.pilot_id(401), pg_temp.pilot_id(1), pg_temp.pilot_id(201), curre
 -- cannot under-log a match nobody has been told about. Left unpublished this
 -- fixture makes pilot_match_coverage empty, and the suite's own "nonempty owner
 -- fixture" rule correctly refuses that.
-INSERT INTO public.coach_calendar_events (coach_user_id, title, event_type, starts_at, published)
-VALUES (pg_temp.pilot_id(1), 'Synthetic report fixture', 'match', current_date + interval '12 hours', true);
+INSERT INTO public.coach_calendar_events (coach_user_id, title, event_type, starts_at, start_time, published)
+VALUES (pg_temp.pilot_id(1), 'Synthetic report fixture', 'match', current_date + interval '12 hours', '12:00', true);
 -- A DRAFT of a future fixture, deliberately unpublished. Before 20260919160000
 -- this inflated the denominator and dragged reported coverage down the moment a
 -- coach typed next month's fixtures — week 7 read 0% for this reason. Kept as a
 -- decoy so the exclusion is falsifiable rather than assumed.
-INSERT INTO public.coach_calendar_events (coach_user_id, title, event_type, starts_at, published)
-VALUES (pg_temp.pilot_id(1), 'Unpublished draft fixture', 'match', current_date + interval '36 hours', false);
+INSERT INTO public.coach_calendar_events (coach_user_id, title, event_type, starts_at, start_time, published)
+VALUES (pg_temp.pilot_id(1), 'Unpublished draft fixture', 'match', current_date + interval '36 hours', '12:00', false);
 INSERT INTO public.telemetry_events (id, user_id, role, event_type, metadata) VALUES
   (pg_temp.pilot_id(501), pg_temp.pilot_id(1), 'coach', 'assessment_submitted', '{"duration_ms":30000,"players":1,"mode":"full"}'),
   (pg_temp.pilot_id(502), pg_temp.pilot_id(1), 'coach', 'blind_rating_captured', '{"position":"CM","gut_band":"good","computed_band":"steady"}');
