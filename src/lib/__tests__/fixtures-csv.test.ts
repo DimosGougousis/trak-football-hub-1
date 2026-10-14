@@ -69,10 +69,12 @@ describe('readFixturesCsv: a league file becomes fixtures', () => {
     expect(rows[0].fixture).toMatchObject({ kickoff: '18:30', meetTime: '17:00' })
   })
 
-  it('allows a fixture whose kick-off is not known yet', () => {
+  // TRAK-157: every event has a start time, so a row without a kick-off is a
+  // problem in the preview, never a fixture saved with no time.
+  it('rejects a fixture with no kick-off', () => {
     const { rows } = read('2026-11-07,,,Rivals FC,home,,')
-    expect(rows[0].problems).toEqual([])
-    expect(rows[0].fixture).toMatchObject({ kickoff: null, meetTime: null })
+    expect(rows[0].fixture).toBeNull()
+    expect(rows[0].problems).toEqual(['Kick-off is missing. Add it: every match needs a start time.'])
   })
 
   it('skips blank lines without counting them as fixtures', () => {
@@ -118,7 +120,7 @@ describe('readFixturesCsv: bad rows are caught in the preview, never saved', () 
   it('rejects a meet time with no kick-off, which the schedule cannot save', () => {
     const { rows } = read('2026-11-09,,17:15,Rivals FC,,,')
     expect(rows[0].fixture).toBeNull()
-    expect(rows[0].problems.join(' ')).toMatch(/kick-off.*meet time/i)
+    expect(rows[0].problems.join(' ')).toMatch(/kick-off is missing/i)
   })
 
   it('rejects home or away values it cannot read', () => {

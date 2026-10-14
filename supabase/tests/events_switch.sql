@@ -45,8 +45,8 @@ BEGIN
  INSERT INTO pg_temp.e81_results VALUES(label, coalesce(st = '42501', st IS NULL AND n = 0), coalesce(st||': '||msg,'affected rows='||n));
 END $$;
 CREATE FUNCTION pg_temp.e81insert(coach integer, event integer) RETURNS text LANGUAGE sql AS $$
- SELECT format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at) VALUES(%L,%L,%L,%L)',
-  pg_temp.e81id(event),pg_temp.e81id(coach),'Synthetic training','2026-11-02 16:00+00')
+ SELECT format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time) VALUES(%L,%L,%L,%L,%L)',
+  pg_temp.e81id(event),pg_temp.e81id(coach),'Synthetic training','2026-11-02 16:00+00','20:00')
 $$;
 
 -- Two academies: On (100) and Off (101). Coach A and colleague A2 are in On,
@@ -66,10 +66,10 @@ INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.e81id(10),pg_temp.e81id(100)),(pg_temp.e81id(11),pg_temp.e81id(100)),
  (pg_temp.e81id(12),pg_temp.e81id(101)),(pg_temp.e81id(13),NULL);
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES(pg_temp.e81id(20),'2000-01-01');
-INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,published) VALUES
- (pg_temp.e81id(500),pg_temp.e81id(10),'A own event','2026-11-01',true),
- (pg_temp.e81id(501),pg_temp.e81id(11),'A2 event','2026-11-01',true),
- (pg_temp.e81id(510),pg_temp.e81id(12),'B own event','2026-11-01',true);
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published) VALUES
+ (pg_temp.e81id(500),pg_temp.e81id(10),'A own event','2026-11-01','18:00',true),
+ (pg_temp.e81id(501),pg_temp.e81id(11),'A2 event','2026-11-01','18:00',true),
+ (pg_temp.e81id(510),pg_temp.e81id(12),'B own event','2026-11-01','18:00',true);
 
 -- The operator switches the On academy on: one INSERT, no deploy.
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e81id(100),'events');
