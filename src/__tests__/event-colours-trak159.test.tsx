@@ -12,7 +12,7 @@ import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 const event = (over: Partial<StripEvent> = {}): StripEvent => ({
   id: 'e1', kind: 'training', title: 'Technical', date: '2026-10-12', time: '18:00', meetTime: null,
   venue: null, kit: null, opponent: null, homeAway: null, status: 'scheduled', cancelReason: null,
-  sequence: 1, updatedAt: '2026-10-11T19:00:00Z', ...over,
+  sequence: 1, updatedAt: '2026-10-11T19:00:00Z', familyNote: null, ...over,
 })
 const rgb = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16))
