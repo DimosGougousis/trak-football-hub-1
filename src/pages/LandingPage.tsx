@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { takeReturnTo } from '@/lib/return-to';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,7 +47,10 @@ export default function LandingPage() {
       // else is a parent invited by a player: the parent invitation page.
       const invitedAs = user.user_metadata?.invited_as;
       const setup = !profile && (invitedAs === 'player' || invitedAs === 'parent') ? `/onboarding/${invitedAs}` : null;
-      navigate(setup ?? homeMap[profile?.role ?? ''] ?? (isGuardianCreatedChild(user) ? '/onboarding/player' : '/parent-invite'), { replace: true });
+      // TRAK-168: someone who opened a shared event link signed out goes to it
+      // now (only an /event/<id> path is ever remembered).
+      const back = profile ? takeReturnTo() : null;
+      navigate(setup ?? back ?? homeMap[profile?.role ?? ''] ?? (isGuardianCreatedChild(user) ? '/onboarding/player' : '/parent-invite'), { replace: true });
     }
   }, [loading, user, profile, navigate]);
 

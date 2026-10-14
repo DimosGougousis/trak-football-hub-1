@@ -8,6 +8,7 @@ import { RouteGuard } from '@/components/layout/RouteGuard'
 import { assertSettingsAccount, getSettingsAccount } from '@/lib/settings-account'
 import { supabase } from '@/integrations/supabase/client'
 import { isTechnicalChildAddress, childUsername } from '@/lib/child-login'
+import { CalendarSettings } from '@/components/trak/AddToCalendar'
 
 const nameSchema = z
   .string()
@@ -251,6 +252,11 @@ function AccountSettings({ userId }: { userId: string }) {
           <p>Could not load your profile details.</p>
           <button onClick={() => setLoadAttempt(value => value + 1)} className="mt-2 text-primary">Retry</button>
         </div>}
+
+        {/* TRAK-133 (J8.10): add Trak to a phone calendar, see when it last synced, get a new link. */}
+        {(role === 'player' || role === 'parent') && (
+          <Section label="Calendar"><CalendarSettings /></Section>
+        )}
 
         {/* Coach profile */}
         {role === 'coach' && roleData === 'ready' && (
