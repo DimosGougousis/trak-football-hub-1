@@ -33,7 +33,9 @@ export function ParentChildrenProvider({ children }: { children: ReactNode }) {
   // An existing parent can accept another invite without a full page reload.
   // Refresh membership on navigation so that new or removed links are reconciled.
   useEffect(() => { if (parentId) void refetch() }, [parentId, location.key, refetch])
-  useEffect(() => { setSelection(null) }, [parentId])
+  // No effect clears the selection when the account changes: it ran after the
+  // commit, so a child switch made in that moment was undone (CI, 12-13 Oct).
+  // The selection carries its parentId and is ignored for any other account.
   // Never expose a previous parent's data, or cached links after a failed refresh.
   const linkedChildren = parentId && !query.isError ? query.data ?? [] : []
   const selectedChild = linkedChildren.find(child =>
