@@ -207,6 +207,20 @@ describe('TRAK-131: the parent\'s event page', () => {
     expect(JSON.parse(localStorage.getItem(seenKey) ?? '{}')['ev-alex']).toBe(4)
   })
 
+  // TRAK-161 (J8.8): read through child_events() as the server sends it. Even
+  // if a coach-only note slipped into the row, the page shows only family_note.
+  it('shows the venue with (Away), Kit and the family note, never the coach-only notes', async () => {
+    EVENTS.Alex = [event('ev-alex', { event_type: 'match', title: 'League', opponent: 'Rivals FC', home_away: 'away',
+      venue: 'Olympiacos Stadium', kit: 'Green kits', family_note: 'Bring extra water, it\'s a hot day', notes: 'SECRET coach note' })]
+    renderAt('/parent/event/ev-alex')
+    const details = await screen.findByRole('list', { name: 'Event details' })
+    expect(details).toHaveTextContent('Olympiacos Stadium (Away)')
+    expect(details).toHaveTextContent('Green kits')
+    expect(details).toHaveTextContent('Bring extra water, it\'s a hot day')
+    expect(document.body).not.toHaveTextContent('SECRET')
+    expect(screen.queryByText('Home or away')).toBeNull()
+  })
+
   it('says an event isn\'t available when the selected child can\'t see it', async () => {
     renderAt('/parent/event/ev-zara')
     expect(await screen.findByText("This event isn't available for Alex.")).toBeInTheDocument()

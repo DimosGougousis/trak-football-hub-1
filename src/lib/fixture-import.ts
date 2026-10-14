@@ -31,6 +31,7 @@ export function fixtureToForm(fixture: Fixture): EventForm {
     opponent: fixture.opponent ?? '',
     homeAway: fixture.homeAway ?? '',
     kit: fixture.kit ?? '',
+    familyNote: '',
   }
 }
 

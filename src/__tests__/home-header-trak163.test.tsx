@@ -13,7 +13,7 @@ import type { PlayerEvent } from '@/lib/player-events'
 const event = (over: Partial<StripEvent> = {}): StripEvent => ({
   id: 'e1', kind: 'training', title: 'Technical', date: '2026-10-12', time: '18:00', meetTime: '17:30',
   venue: 'Main pitch', kit: 'Blue bibs', opponent: null, homeAway: null, status: 'scheduled', cancelReason: null,
-  sequence: 1, updatedAt: '2026-10-11T19:00:00Z', ...over,
+  sequence: 1, updatedAt: '2026-10-11T19:00:00Z', familyNote: null, ...over,
 })
 
 function EventPage() { return <p>Event page {useParams().id}</p> }

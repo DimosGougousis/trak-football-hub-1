@@ -302,6 +302,7 @@ export type Database = {
           home_away: string | null
           id: string
           kit: string | null
+          family_note: string | null
           meet_time: string | null
           notes: string | null
           opponent: string | null
@@ -328,6 +329,7 @@ export type Database = {
           home_away?: string | null
           id?: string
           kit?: string | null
+          family_note?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -354,6 +356,7 @@ export type Database = {
           home_away?: string | null
           id?: string
           kit?: string | null
+          family_note?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -861,6 +864,7 @@ export type Database = {
           cancel_reason: string | null
           sequence: number
           updated_at: string
+          family_note: string | null
         }[]
       }
       coach_match_score_clash: {

@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, EVENT_COLOR, EVENT_KINDS, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
+  CANCELLED_COLOR, DURATIONS, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
@@ -859,12 +859,22 @@ export default function CoachSchedule() {
               )}
             </ArcField>
 
-            {sheet.form.kind === 'match' && (
-              <Field label="Kit">
-                <input value={sheet.form.kit} onChange={e => setForm({ kit: e.target.value })}
-                  placeholder="e.g. Red shirts, black shorts" className={inputClass} style={font} />
+            {/* TRAK-161: kit and a family note on every kind of event. */}
+            <Field label="Kit">
+              <input value={sheet.form.kit} onChange={e => setForm({ kit: e.target.value })}
+                placeholder={sheet.form.kind === 'match' ? 'e.g. Red shirts, black shorts' : 'e.g. Green bibs, shin guards'} className={inputClass} style={font} />
+            </Field>
+
+            <div className="space-y-1">
+              <Field label="Note for families">
+                <input value={sheet.form.familyNote} onChange={e => setForm({ familyNote: e.target.value })}
+                  maxLength={FAMILY_NOTE_MAX} aria-describedby="family-note-hint"
+                  placeholder="e.g. Bring extra water, it's a hot day" className={inputClass} style={font} />
               </Field>
-            )}
+              <p id="family-note-hint" className="text-[11px] text-white/40" style={font}>
+                Players and parents see this. A note with a player's name or a link isn't shown to them.
+              </p>
+            </div>
 
             {sheet.error && (
               <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{sheet.error}</p>

@@ -7,8 +7,9 @@ import { ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoadin
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
-import { useChildrenAwaitingConsent, useParentDevelopment, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
+import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
 import { averageRecordedRating, formatParentAward, formatParentDate, parentMatchHref, matchResult } from '@/lib/parent-data'
+import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 
 export default function ParentHome() {
@@ -17,6 +18,8 @@ export default function ParentHome() {
   const { selectedChild } = useParentChildren()
   const matchQuery = useParentMatches()
   const developmentQuery = useParentDevelopment()
+  // TRAK-133: the same query Next up reads (no extra request).
+  const eventsQuery = useParentEvents()
   const consentQuery = useChildrenAwaitingConsent()
   const rosterConsentQuery = useRosterChildrenAwaitingConsent()
   const loginQuery = useChildLogins()
@@ -67,6 +70,8 @@ export default function ParentHome() {
                 {selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} eventHref={event => `/parent/event/${event.id}`}
                   load={(from, to) => supabase.rpc('child_events', { p_child: selectedChild.id })
                     .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
+                {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
+                <CalendarHomePrompt hasEvents={(eventsQuery.data?.length ?? 0) > 0} />
                 {matches.length > 0 && (
                   <section className="rounded-xl p-5 mb-4 bg-card border border-border" aria-label="Recorded matches summary">
                     <div className="flex items-start justify-between gap-3">

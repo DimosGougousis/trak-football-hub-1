@@ -17,6 +17,7 @@ export const EVENT_COLUMNS = {
   status: 'status',
   cancelReason: 'cancel_reason',
   sequence: 'sequence',
+  familyNote: 'family_note',
 } as const
 
 export type EventKind = 'training' | 'match' | 'tournament' | 'other'
@@ -40,6 +41,8 @@ export interface PlayerEvent {
   sequence: number
   /** When the coach last changed it, or null where the read doesn't say (TRAK-134). */
   updatedAt: string | null
+  /** What the coach wrote for families (TRAK-161), already scrubbed by child_events(); never the coach-only notes. */
+  familyNote: string | null
 }
 
 export const EVENT_KIND_LABEL: Record<EventKind, string> = {
@@ -78,6 +81,7 @@ export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null 
     cancelReason: text(row[EVENT_COLUMNS.cancelReason]),
     sequence: Number.isInteger(sequence) && sequence > 0 ? sequence : 0,
     updatedAt: text(row.updated_at),
+    familyNote: text(row[EVENT_COLUMNS.familyNote]),
   }
 }
 
