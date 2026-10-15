@@ -62,6 +62,10 @@ const ACADEMY_UTC_OFFSET_MS = 4 * 60 * 60 * 1000
  * feed's TZID, the emails); this keeps starts_at agreeing with them, so
  * ordering, J8.12's "today/tomorrow" and J8.13's "2 days before" don't move
  * for a coach whose phone is set to Athens or New York.
+ *
+ * TRAK-175: only a first value now. The database sets starts_at from
+ * event_date + start_time on the academy's own clock (stamp_calendar_event),
+ * so an Athens academy's events are right even from this Dubai guess.
  */
 export function toAcademyInstant(date: string, time?: string | null): string | null {
   if (!toInstant(date, time)) return null

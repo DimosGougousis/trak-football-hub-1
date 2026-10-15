@@ -47,11 +47,22 @@ describe('which events have a register', () => {
     expect(registerProblem(event({ event_date: '2026-10-01' }), now)).toBeNull()
   })
 
+  // The database sets starts_at from event_date + start_time on the academy's
+  // clock (TRAK-175), so each row here carries the instant it would store.
   it('not before it starts, in Dubai time, whatever the phone says (TRAK-67)', () => {
-    expect(registerProblem(event({ start_time: '19:00:00' }), now)).toBe('The register opens once the event has started')
-    expect(registerProblem(event({ event_date: '2026-10-15' }), now)).toBe('The register opens once the event has started')
-    // No time yet: it opens at the start of its day.
-    expect(registerProblem(event({ start_time: null }), now)).toBeNull()
+    expect(registerProblem(event({ start_time: '19:00:00', starts_at: '2026-10-14T15:00:00Z' }), now)).toBe('The register opens once the event has started')
+    expect(registerProblem(event({ event_date: '2026-10-15', starts_at: '2026-10-15T13:00:00Z' }), now)).toBe('The register opens once the event has started')
+    // No time yet: it opens at the start of its day (Dubai midnight).
+    expect(registerProblem(event({ start_time: null, starts_at: '2026-10-13T20:00:00Z' }), now)).toBeNull()
+  })
+
+  it('on the academy\'s own clock: an Athens 17:30 has not started at 17:00 Athens (TRAK-175)', () => {
+    // 14:00Z is 17:00 in Athens (summer, UTC+3) and 18:00 in Dubai. Athens
+    // 17:30 is 14:30Z; read as Dubai it would be 13:30Z and wrongly open.
+    expect(registerProblem(event({ start_time: '17:30:00', starts_at: '2026-10-14T14:30:00Z' }), now))
+      .toBe('The register opens once the event has started')
+    expect(registerProblem(event({ start_time: '17:30:00', starts_at: '2026-10-14T14:30:00Z' }), new Date('2026-10-14T14:30:00Z')))
+      .toBeNull()
   })
 
   it('never for a draft, a cancelled event or a match', () => {
