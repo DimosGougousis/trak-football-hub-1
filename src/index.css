@@ -227,3 +227,15 @@
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* TRAK-178: iPhone Safari zooms the whole page in when a text box under 16px
+   gets focus, and it stays zoomed. On a touch screen a box sized smaller by a
+   class is lifted to 16px. Bigger boxes (the match score) keep their size, and
+   a desktop keeps the design's smaller boxes. A box's size goes in a class,
+   not an inline style, which this can't override. */
+@media (pointer: coarse) {
+  :is(input, textarea, select):is(.text-xs, .text-sm, [class~="md:text-sm"], [class~="text-[10px]"], [class~="text-[11px]"],
+    [class~="text-[12px]"], [class~="text-[13px]"], [class~="text-[14px]"], [class~="text-[15px]"]) {
+    font-size: 16px;
+  }
+}

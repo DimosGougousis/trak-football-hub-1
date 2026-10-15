@@ -14,6 +14,7 @@ import { localTodayISO } from '@/lib/event-time'
 import { trackEvent } from '@/lib/telemetry'
 import { openable } from '@/lib/openable'
 import { timeOfDayGreeting } from '@/lib/greeting'
+import { remember, remembered } from '@/lib/screen-memory'
 
 // Derived from BANDS rather than restated. CLAUDE.md says colours never live
 // outside the BANDS config, and this file had a seventh-hand copy of them: the
@@ -36,24 +37,31 @@ const FLAG_COLORS = { attention: '#fb923c', missed: '#facc15', improved: '#4ade8
 const countText = (n: number | null, failed: boolean) => (failed ? '—' : n !== null ? n : '…')
 
 const NO_FAILURES = { squad: false, assessments: false, recent: false, sessions: false }
+type HomeMemory = {
+  playerCount: number | null; assessments: any[]; allAssessments: any[] | null; sessionCount: number | null
+  coachDetails: any; squadAnalytics: SquadAnalytics | null; missed: { playerId: string; name: string }[]; missedFailed: boolean
+}
 
 export default function CoachHomePage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  // TRAK-180: a revisit starts from what Home last showed this coach; every
+  // read below still runs and replaces it, and a failure clears its value.
+  const [seed] = useState(() => remembered<HomeMemory>('coach-home', user?.id))
   // null = not answered yet (TRAK-92). Starting these at 0 told a coach with a
   // full season "0 players · 0 total · 0 sessions" until the reads came back.
-  const [playerCount, setPlayerCount] = useState<number | null>(null)
-  const [assessments, setAssessments] = useState<any[]>([])
-  const [allAssessments, setAllAssessments] = useState<any[] | null>(null)
+  const [playerCount, setPlayerCount] = useState<number | null>(seed?.playerCount ?? null)
+  const [assessments, setAssessments] = useState<any[]>(seed?.assessments ?? [])
+  const [allAssessments, setAllAssessments] = useState<any[] | null>(seed?.allAssessments ?? null)
   // One flag per read (TRAK-92, Imad's #203 review). A single shared flag was
   // cleared by whichever read succeeded next, so a failed session count lost
   // its banner and sat on "…" for good.
   const [failed, setFailed] = useState(NO_FAILURES)
   const loadFailed = Object.values(failed).some(Boolean)
-  const [sessionCount, setSessionCount] = useState<number | null>(null)
-  const [coachDetails, setCoachDetails] = useState<any>(null)
-  const [squadAnalytics, setSquadAnalytics] = useState<SquadAnalytics | null>(null)
+  const [sessionCount, setSessionCount] = useState<number | null>(seed?.sessionCount ?? null)
+  const [coachDetails, setCoachDetails] = useState<any>(seed?.coachDetails ?? null)
+  const [squadAnalytics, setSquadAnalytics] = useState<SquadAnalytics | null>(seed?.squadAnalytics ?? null)
   // A failed read's value from an earlier run is no longer an answer, so it
   // goes with the failure. Otherwise the next run, which clears the flags,
   // prints that old 0 again while its own reads are still out (Imad's third
@@ -64,6 +72,8 @@ export default function CoachHomePage() {
     if (read === 'squad') setPlayerCount(null)
     if (read === 'squad' || read === 'assessments') { setAllAssessments(null); setSquadAnalytics(null) }
     if (read === 'sessions') setSessionCount(null)
+    // TRAK-180: a list remembered from the last visit goes with its failure too.
+    if (read === 'recent') setAssessments([])
   }
   // Distinguishes "nothing to show" from "we could not find out". Without it
   // the band strip and the distribution chart render their empty state on a
@@ -71,8 +81,8 @@ export default function CoachHomePage() {
   const analyticsFailed = failed.squad || failed.assessments
   // Who missed the last training (TRAK-72 item 4). A failed check is shown as
   // such, never as "everyone was there".
-  const [missed, setMissed] = useState<{ playerId: string; name: string }[]>([])
-  const [missedFailed, setMissedFailed] = useState(false)
+  const [missed, setMissed] = useState<{ playerId: string; name: string }[]>(seed?.missed ?? [])
+  const [missedFailed, setMissedFailed] = useState(seed?.missedFailed ?? false)
 
   useEffect(() => {
     if (!user) return
@@ -98,7 +108,8 @@ export default function CoachHomePage() {
         .lte('session_date', localTodayISO())
         .order('session_date', { ascending: false }).limit(1).maybeSingle()
       if (cancelled) return
-      if (lastError) { setMissedFailed(true); return }
+      // Never flag the last visit's names beside "couldn't check" (TRAK-180).
+      if (lastError) { setMissed([]); setMissedFailed(true); return }
       if (!last) { setMissed([]); setMissedFailed(false); return }
       const [attendance, ...consent] = await Promise.all([
         supabase.from('session_attendance').select('squad_player_id')
@@ -109,6 +120,7 @@ export default function CoachHomePage() {
       if (cancelled) return
       // Any unknown answer means the flag could be wrong, so none are shown.
       if (attendance.error || consent.some(c => c.error || typeof c.data !== 'boolean')) {
+        setMissed([])
         setMissedFailed(true)
         return
       }
@@ -177,6 +189,13 @@ export default function CoachHomePage() {
 
     return () => { cancelled = true }
   }, [user])
+
+  // Only answered, unfailed values are kept for the next visit.
+  useEffect(() => {
+    if (!user || loadFailed || playerCount === null) return
+    remember<HomeMemory>('coach-home', user.id,
+      { playerCount, assessments, allAssessments, sessionCount, coachDetails, squadAnalytics, missed, missedFailed })
+  }, [user, loadFailed, playerCount, assessments, allAssessments, sessionCount, coachDetails, squadAnalytics, missed, missedFailed])
 
   const greeting = timeOfDayGreeting()
   const overviewRows = squadAnalytics ? playerOverview(squadAnalytics, missed) : []

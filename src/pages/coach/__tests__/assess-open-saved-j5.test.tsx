@@ -166,6 +166,34 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
   })
 
+  // TRAK-179 (Kostas, 15 Oct): Back returns to the screen the coach came from.
+  it("Back from an assessment opened in the player's history returns to that player", async () => {
+    const user = userEvent.setup()
+    renderApp('/coach/player/player-a')
+    await user.click(await screen.findByRole('button', { name: /Open assessment .*vs Olympiacos Academy/ }))
+    expect(await screen.findByText(/Editing your assessment for vs Olympiacos Academy/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
+    expect(await screen.findByRole('button', { name: /Open latest assessment/ })).toBeInTheDocument()
+  })
+
+  it('Back from an assessment opened on coach home returns home', async () => {
+    const user = userEvent.setup()
+    renderApp('/coach/home')
+    await user.click(await screen.findByRole('button', { name: /Open assessment .*Manos Synthetic, 21 Sep/ }))
+    expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/home'))
+  })
+
+  it('Back from an assessment opened directly, with nothing before it in Trak, goes home', async () => {
+    const user = userEvent.setup()
+    renderApp('/coach/assess?assessment=assess-new')
+    expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/home'))
+  })
+
   it('opens and saves in place an assessment made before sessions were required', async () => {
     const user = userEvent.setup()
     renderApp('/coach/assess?assessment=assess-legacy')
