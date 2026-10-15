@@ -8,7 +8,7 @@ import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
-import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
+import { averageRecordedRating, formatParentAward, formatParentDate, parentMatchHref, matchResult } from '@/lib/parent-data'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 
@@ -104,7 +104,7 @@ export default function ParentHome() {
                 <section className="mt-5" aria-label="Recent matches">
                   <MetadataLabel text="RECENT MATCHES" />
                   {matches.length ? <div className="rounded-xl mt-2 bg-card border border-border divide-y divide-border">
-                    {matches.slice(0, 5).map(match => <Link key={match.id} to={`/parent/match/${match.id}`} className="flex items-center gap-3 p-4">
+                    {matches.slice(0, 5).map(match => <Link key={match.id} to={parentMatchHref(match)} state={{ matchId: match.id, childId: selectedChild?.id }} className="flex items-center gap-3 p-4">
                       <span className="w-5 text-xs text-muted-foreground">{matchResult(match) ?? '—'}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground truncate">{match.opponent || match.competition || 'Match'}</p>
