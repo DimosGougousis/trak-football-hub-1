@@ -173,13 +173,12 @@ function FloatingInput({
         onBlur={() => setFocused(false)}
         required
         autoComplete="new-password"
-        className="w-full outline-none transition-all"
+        className="w-full outline-none transition-all text-[15px]"
         style={{
           background: 'rgba(255,255,255,0.04)',
           border: `1px solid ${focused ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.07)'}`,
           borderRadius: 14,
           padding: value || focused ? '24px 16px 10px' : '16px',
-          fontSize: 15,
           color: 'rgba(255,255,255,0.88)',
           fontFamily: "'DM Sans', sans-serif",
           caretColor: '#C8F25A',

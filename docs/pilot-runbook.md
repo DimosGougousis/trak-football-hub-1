@@ -84,6 +84,19 @@ LEFT JOIN public.organizations o
 WHERE p.user_id = (SELECT id FROM auth.users WHERE email = lower('<email>'));
 ```
 
+**Set the academy's clock before its first event (TRAK-175).** Every academy
+starts on `Asia/Dubai`. Events, emails, reminders, the calendar feed and the
+age check all read `event_date` + `start_time` on this clock, so set it right
+after admitting the admin; once the academy has an event it can't change.
+An academy in Greece is `Europe/Athens`:
+
+```sql
+UPDATE public.organizations SET time_zone = 'Europe/Athens' WHERE id = '<academy UUID>'::uuid;
+SELECT name, time_zone, min_player_age FROM public.organizations WHERE id = '<academy UUID>'::uuid;
+```
+
+Pass the same zone to the roster loader with `--time-zone`.
+
 The staff member uses **Forgot password?** with their email, opens the email's
 code-entry page, types the code and sets a password. Their profile is already
 provisioned. Stored legacy invite codes are not an admission mechanism.
@@ -94,6 +107,9 @@ The academy supplies the child and guardian roster. Use
 ```bash
 node scripts/load-roster.mjs --file '<roster.csv>' --org '<academy UUID>' --loaded-by '<operator name>'
 ```
+
+For an academy not on Dubai time, add `--time-zone '<zone>'` (for example
+`Europe/Athens`), matching `organizations.time_zone`.
 
 The CSV fields are `child_name,date_of_birth,age_group,child_email,guardian_emails,coach_email`.
 Date of birth uses `YYYY-MM-DD`; multiple guardian addresses are separated with
