@@ -18,17 +18,31 @@ The 19 September review decision remains in force. A non-author's review:
 2. Lists findings and their fixes or explicit acceptance.
 3. Ends with **MERGE**, **MERGE AFTER <fix>**, or **DO NOT MERGE**.
 
-A human non-author must also approve in GitHub after the latest push, with
-required checks green and conversations resolved. An author's self-review or
-an agent reviewing its own human's PR is not independent approval. Updating
-the branch may invalidate approval; finish branch updates before requesting it.
+A human non-author must also approve in GitHub, with required checks green and
+conversations resolved. An author's self-review or an agent reviewing its own
+human's PR is not independent approval.
+
+**Approvals survive main merges** (founders, 15 October). GitHub's "dismiss
+stale approvals" is off, because merging main in, or a PR underneath merging,
+cost a re-approval of code nobody had changed (about ten on 15 October). In its
+place the coordinator's merge queue checks, before every merge, that the head
+is exactly the approved commit with main merged in. It stops, and a reviewer
+approves again, when any of these is true:
+
+- new code was added after the approval, including code inside a main merge;
+- the approved commit was force-pushed away;
+- the approved commit no longer merges cleanly with main (a conflict
+  resolution is new code).
+
+Authors don't stack PRs on each other's unmerged branches. Each PR starts from
+main; work that needs another unmerged PR goes in that PR, or waits for it.
 
 The 8 October API check reported main as protected and named the required
 checks `test` and `Base branch still reaches main`. The full protection endpoint
 was not accessible to the audit account, so this does not verify every admin
 setting. The reviewed target configuration is
 [main-branch-protection.json](main-branch-protection.json): one independent
-approval after the last push, current-base checks, resolved conversations and
+approval (kept through main merges; the merge queue checks it), current-base checks, resolved conversations and
 admin enforcement. `Supabase` and `Deploy` run after merge, not as PR checks.
 An administrator should compare the live settings with that file before
 changing protection; committing the JSON does not apply it.
