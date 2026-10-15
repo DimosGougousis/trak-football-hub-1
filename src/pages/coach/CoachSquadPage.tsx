@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Avatar } from '@/components/arc/avatar/avatar'
+import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
+import { SearchField } from '@/components/arc/search-field/search-field'
+import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
+import { LayoutGroup } from 'motion/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -7,8 +11,13 @@ import { MobileShell, NavBar, BandPill } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 import { Users, WifiOff } from 'lucide-react'
 import { fetchWaitReason } from '@/lib/wait-reason'
+import type { Tables } from '@/integrations/supabase/types'
 
-const POSITIONS = ['All', 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as const
+// Short labels so five fit one row on a phone; the value is the stored position.
+const POSITIONS = [
+  { value: 'All', label: 'All' }, { value: 'Goalkeeper', label: 'GK' }, { value: 'Defender', label: 'DEF' },
+  { value: 'Midfielder', label: 'MID' }, { value: 'Attacker', label: 'ATT' },
+]
 
 /* J5: the squad marks each player "Ready to assess" or why they aren't yet:
    no parent approval ('waiting'), or approved but not signed up ('signup',
@@ -43,6 +52,7 @@ export default function CoachSquadPage() {
   const [consent, setConsent] = useState<Record<string, ConsentStatus>>({})
   const [posFilter, setPosFilter] = useState<string>('All')
   const [ageFilter, setAgeFilter] = useState<string>('All')
+  const [query, setQuery] = useState('')
   const [loadFailed, setLoadFailed] = useState(false)
   const [retry, setRetry] = useState(0)
   // The account and Retry count of the last squad read that finished. A run
@@ -126,65 +136,41 @@ export default function CoachSquadPage() {
     return () => { cancelled = true }
   }, [user, retry])
 
+  const search = query.trim().toLowerCase().replace(/^#/, '')
   const filtered = players.filter(p => {
     const posMatch = posFilter === 'All' || p.position?.toLowerCase() === posFilter.toLowerCase()
     const ageMatch = ageFilter === 'All' || ageLabel(p) === ageFilter
-    return posMatch && ageMatch
+    const searchMatch = !search || String(p.player_name ?? '').toLowerCase().includes(search) || String(p.shirt_number ?? '') === search
+    return posMatch && ageMatch && searchMatch
   })
+  const clearFilters = () => { setPosFilter('All'); setAgeFilter('All'); setQuery('') }
 
 
   return (
     <MobileShell>
-      {/* Topbar */}
-      <div className="flex items-center justify-between px-5 py-[10px] border-b border-white/[0.07] shrink-0">
-        <h1 className="text-[15px] font-semibold text-white/90">Squad</h1>
+      {/* TRAK-182 (Imad's 6d/6g): a squad directory built from Arc's free parts:
+          search, filters, avatar rows, and a player panel in a bottom sheet. */}
+      <div className="flex items-baseline justify-between px-5 pt-4 pb-1 shrink-0">
+        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-white/95">Squad</h1>
+        {players.length > 0 && <p className="text-[13px] text-white/45">{players.length} {players.length === 1 ? 'player' : 'players'}</p>}
       </div>
 
-      {/* Filters */}
-      <div className="px-5 pt-3 pb-2 space-y-2 shrink-0">
-        {/* Age group row — only shown when coach has 2+ groups */}
-        {ageGroups.length >= 2 && (
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            {['All', ...ageGroups].map(age => {
-              const active = ageFilter === age
-              return (
-                <button
-                  key={age}
-                  onClick={() => setAgeFilter(age)}
-                  className="inline-flex items-center h-6 px-2.5 rounded-[6px] text-[10px] font-semibold whitespace-nowrap transition-colors flex-shrink-0"
-                  style={{
-                    background: active ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.05)',
-                    color: active ? '#C8F25A' : 'rgba(255,255,255,0.4)',
-                    border: `1px solid ${active ? 'rgba(200,242,90,0.25)' : 'transparent'}`,
-                  }}
-                >
-                  {age}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Position row */}
-        <div className="flex items-center gap-2">
-          {POSITIONS.map((pos) => {
-            const active = posFilter === pos
-            return (
-              <button
-                key={pos}
-                onClick={() => setPosFilter(pos)}
-                className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] transition-colors"
-                style={{
-                  background: active ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)',
-                  color: active ? 'rgb(251,191,36)' : 'rgba(255,255,255,0.45)',
-                }}
-              >
-                {pos}
-              </button>
-            )
-          })}
+      {players.length > 0 && (
+        <div className="arc px-5 pt-2 pb-3 space-y-3 shrink-0 [&_label]:sr-only">
+          <SearchField label="Search players" placeholder="Name or shirt number" value={query} onValueChange={setQuery} />
+          {/* Age groups only when the coach has two or more (U14 and U16, TRAK-176). */}
+          {ageGroups.length >= 2 && (
+            <LayoutGroup id="age">
+              <SegmentedControl label="Age group" value={ageFilter} onValueChange={setAgeFilter}
+                options={['All', ...ageGroups].map(age => ({ value: age, label: age }))} />
+            </LayoutGroup>
+          )}
+          {/* Each control's highlight shares Arc's layoutId; a group keeps the two from swapping it. */}
+          <LayoutGroup id="position">
+            <SegmentedControl label="Position" value={posFilter} onValueChange={setPosFilter} options={POSITIONS} />
+          </LayoutGroup>
         </div>
-      </div>
+      )}
 
       {/* Squad list */}
       <div className="flex-1 overflow-y-auto px-5 pb-24">
@@ -226,9 +212,9 @@ export default function CoachSquadPage() {
             </div>
           ) : (
             <div className="pt-8 text-center">
-              <p className="text-[13px] text-white/45 mb-2">No players match that filter.</p>
+              <p className="text-[13px] text-white/45 mb-2">{search ? 'No players match that search.' : 'No players match that filter.'}</p>
               <button
-                onClick={() => { setPosFilter('All'); setAgeFilter('All') }}
+                onClick={clearFilters}
                 className="text-[11px] text-[#C8F25A]"
               >
                 Clear filters
@@ -236,54 +222,72 @@ export default function CoachSquadPage() {
             </div>
           )
         ) : (
-          <div className="space-y-0">
-            {filtered.map((p, idx) => {
-              const score =
-                assessments[p.id] ?? p.overall_score ?? null
+          <ul>
+            {filtered.map(p => {
+              const score = assessments[p.id] ?? p.overall_score ?? null
               return (
-                <button
-                  key={p.id}
-                  onClick={() => navigate(`/coach/player/${p.id}`)}
-                  className="w-full flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03] transition-colors"
-                >
-                  {/* Avatar */}
-                  <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
-
-                  {/* Name + metadata */}
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-[13px] font-medium text-white/[0.88] truncate">
-                      {p.player_name}
-                    </p>
-                    <p
-                      className="text-[9px] text-white/[0.22] mt-0.5 truncate"
-                      style={{ fontFamily: "'DM Mono', monospace" }}
-                    >
-                      {p.position || 'N/A'}
-                      {p.shirt_number ? ` · #${p.shirt_number}` : ''}
-                      {ageLabel(p) ? ` · ${ageLabel(p)}` : ''}
-                    </p>
-                    {consent[p.id] ? (
-                      <span
-                        className="inline-flex items-center h-[18px] px-1.5 mt-1 rounded-[5px] text-[9px] font-semibold"
-                        style={{ color: CONSENT_CHIP[consent[p.id]].color, background: CONSENT_CHIP[consent[p.id]].bg }}
-                      >
-                        {CONSENT_CHIP[consent[p.id]].label}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* Band pill */}
-                  {score !== null && (
-                    <BandPill band={scoreToBand(score)} />
-                  )}
-                </button>
+                <li key={p.id}>
+                  <PlayerPanel player={p} age={ageLabel(p)} score={score} status={consent[p.id]} trigger={
+                    <button type="button"
+                      className="w-full flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03] transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
+                      <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-white/[0.9] truncate">{p.player_name}</p>
+                        <p className="text-[12px] text-white/45 mt-0.5 truncate">{metaLine(p, ageLabel(p))}</p>
+                        {consent[p.id] && <StatusChip status={consent[p.id]} />}
+                      </div>
+                      {score !== null && <BandPill band={scoreToBand(score)} />}
+                    </button>
+                  } />
+                </li>
               )
             })}
-          </div>
+          </ul>
         )}
       </div>
 
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
+  )
+}
+
+type SquadRow = Tables<'squad_players'>
+
+const metaLine = (p: SquadRow, age: string | null) =>
+  [p.position || 'Position not set', p.shirt_number ? `#${p.shirt_number}` : null, age].filter(Boolean).join(' · ')
+
+function StatusChip({ status }: { status: ConsentStatus }) {
+  const chip = CONSENT_CHIP[status]
+  return <span className="inline-flex items-center h-[20px] px-2 mt-1 rounded-[6px] text-[11px] font-medium"
+    style={{ color: chip.color, background: chip.bg }}>{chip.label}</span>
+}
+
+/** The player panel: who they are, whether they can be assessed and why not, their band, and where to go next. */
+function PlayerPanel({ player, age, score, status, trigger }: {
+  player: SquadRow; age: string | null; score: number | null; status: ConsentStatus | undefined; trigger: JSX.Element
+}) {
+  const navigate = useNavigate()
+  const name = player.player_name || 'Player'
+  const button = 'inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-5 text-[14px] font-medium focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50'
+  return (
+    <BottomSheet trigger={trigger} title={name} description={metaLine(player, age)} detents={[0.5, 0.92]} className="arc">
+      <div className="space-y-5 pb-4">
+        <div className="flex items-center gap-4">
+          <Avatar name={name} size="lg" className="arc" aria-hidden />
+          <div className="space-y-1">
+            {status ? <StatusChip status={status} /> : <p className="text-[13px] text-white/50">Checking status…</p>}
+            <div className="flex items-center gap-2 text-[13px] text-white/60">
+              {score !== null ? <>Latest band <BandPill band={scoreToBand(score)} /></> : 'Not assessed yet'}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" disabled={status !== 'ready'} className={`${button} bg-white text-black`}
+            onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}>Assess</button>
+          <button type="button" className={`${button} border border-white/15 text-white/85`}
+            onClick={() => navigate(`/coach/player/${player.id}`)}>Open profile</button>
+        </div>
+      </div>
+    </BottomSheet>
   )
 }
