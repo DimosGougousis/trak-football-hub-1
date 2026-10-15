@@ -143,10 +143,10 @@ describe('TRAK-182: the consent bar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Details' }))
     expect(await screen.findByText('Coaching records')).toBeInTheDocument()
     expect(screen.getByText('Always on with approval')).toBeInTheDocument()
-    expect(screen.getByText('Their coach records their progress, logs their matches and can write feedback. You see their bands and history.')).toBeInTheDocument()
+    expect(screen.getByText('Their coach records their progress, logs their matches and can write feedback. You see their bands and history. Their coach can also keep private notes, which are never shared.')).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: /Recognition awards/ })).not.toBeChecked()
     expect(screen.getByText('Things like player of the week, seen by you and Ana.')).toBeInTheDocument()
-    expect(screen.getByText("By approving, you confirm you're Ana's parent or legal guardian. You can withdraw any time in settings, which stops new records.")).toBeInTheDocument()
+    expect(screen.getByText("By approving, you confirm you're Ana's parent or legal guardian and agree to the choices above. You can withdraw any time in settings, which stops new records.")).toBeInTheDocument()
     // Escape steps back to the bar without saving anything.
     await userEvent.keyboard('{Escape}')
     expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
