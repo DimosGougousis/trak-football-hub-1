@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { setSlider, sliderValue, sliderDisabled } from '../../tests/support/slider'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -136,8 +137,8 @@ describe('full assessment player boundaries', () => {
     await selectPlayer('player-b')
     await waitFor(() => expect(feedbackBox()).toHaveValue(''))
     expect(noteBox()).toHaveValue('')
-    for (const slider of screen.getAllByRole('slider')) expect(slider).toHaveValue('5')
-    fireEvent.change(screen.getAllByRole('slider')[0], { target: { value: '6' } })
+    for (const slider of screen.getAllByRole('slider')) expect(sliderValue(slider)).toBe(5)
+    setSlider(screen.getAllByRole('slider')[0], 6)
     await userEvent.click(save())
     await screen.findByText('Coach home')
     expect(writes).toHaveLength(1)

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,12 +19,13 @@ const POSITIONS = ['All', 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as
    TRAK-99). 'notReady' when the gate says no but the reason couldn't be read;
    'unknown' when the gate check itself failed. The screen never claims a
    player is ready on a guess. The database still refuses the write either way. */
-type ConsentStatus = 'ready' | 'waiting' | 'signup' | 'notReady' | 'unknown'
+type ConsentStatus = 'ready' | 'waiting' | 'signup' | 'player' | 'notReady' | 'unknown'
 
 const CONSENT_CHIP: Record<ConsentStatus, { label: string; color: string; bg: string }> = {
   ready:    { label: 'Ready to assess',               color: '#C8F25A',             bg: 'rgba(200,242,90,0.10)' },
   waiting:  { label: 'Waiting for parent',            color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
   signup:   { label: 'Waiting for player to sign up', color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
+  player:   { label: 'Waiting for player to agree',   color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
   notReady: { label: 'Not ready to assess',           color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
   unknown:  { label: 'Status unknown',                color: 'rgba(255,255,255,0.45)', bg: 'rgba(255,255,255,0.06)' },
 }
@@ -34,7 +36,7 @@ async function squadStatus(squadPlayerId: string): Promise<ConsentStatus> {
   if (error || typeof required !== 'boolean') return 'unknown'
   if (!required) return 'ready'
   const reason = await fetchWaitReason(squadPlayerId)
-  return reason === 'parent' ? 'waiting' : reason === 'signup' ? 'signup' : 'notReady'
+  return reason === 'parent' ? 'waiting' : reason === 'signup' ? 'signup' : reason === 'player' ? 'player' : 'notReady'
 }
 
 export default function CoachSquadPage() {
@@ -145,13 +147,6 @@ export default function CoachSquadPage() {
     return posMatch && ageMatch
   })
 
-  const initials = (name: string) =>
-    name
-      .split(' ')
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
 
   return (
     <MobileShell>
@@ -269,16 +264,7 @@ export default function CoachSquadPage() {
                   className="w-full flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03] transition-colors"
                 >
                   {/* Avatar */}
-                  <div
-                    className="w-9 h-9 rounded-[11px] bg-[#202024] flex items-center justify-center shrink-0"
-                    style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-                  >
-                    <span
-                      className="text-[11px] font-semibold text-white/45"
-                    >
-                      {initials(p.player_name || '??')}
-                    </span>
-                  </div>
+                  <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
 
                   {/* Name + metadata */}
                   <div className="flex-1 min-w-0 text-left">

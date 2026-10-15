@@ -1,4 +1,5 @@
-import { forwardRef } from 'react'
+import { forwardRef, type CSSProperties } from 'react'
+import { ElasticSlider } from '@/components/arc/elastic-slider/elastic-slider'
 import { BANDS } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 
@@ -6,6 +7,8 @@ interface SliderInputProps {
   label: string
   value: number
   onChange: (value: number) => void
+  /** Arc's slider isn't a native input, so a locked fieldset can't disable it: pass the lock here. */
+  disabled?: boolean
 }
 
 function bandConfig(value: number) {
@@ -13,55 +16,19 @@ function bandConfig(value: number) {
   return BANDS.find(b => b.word.toLowerCase() === band) ?? BANDS[BANDS.length - 1]
 }
 
+// TRAK-182 (Imad, 15 Oct): Arc's elastic slider. The thumb clicks into each
+// band's lower edge (2, 4, 6, 7, 8, 9), the fill takes the band's colour, and
+// the readout says the score and its band, e.g. "7 · Good".
+const BAND_EDGES = [...new Set(BANDS.map(b => b.minScore).filter(score => score > 0))].sort((a, b) => a - b)
+
 export const SliderInput = forwardRef<HTMLDivElement, SliderInputProps>(
-  function SliderInput({ label, value, onChange }, ref) {
+  function SliderInput({ label, value, onChange, disabled }, ref) {
     const cfg = bandConfig(value)
-    // 0..10 scale — 5 sits exactly at the centre of the track.
-    const pct = (value / 10) * 100
-
-    // The real input is invisible, so a disabled slider (e.g. inside a locked
-    // fieldset) must be greyed out from here, or it looks usable.
     return (
-      <div ref={ref} className="space-y-2 has-[:disabled]:opacity-40 has-[:disabled]:grayscale">
-      {/* label row: category left, band word right */}
-      <div className="flex justify-between items-center">
-        <span className="text-[12px] font-medium text-white/[0.88]">
-          {label}
-        </span>
-        <span className="text-[12px] font-medium" style={{ color: cfg.color }}>
-          {cfg.word}
-        </span>
-      </div>
-
-      {/* custom track + thumb */}
-      <div className="relative h-[5px] bg-white/[0.07] rounded-[3px]">
-        {/* filled portion */}
-        <div
-          className="absolute inset-y-0 left-0 rounded-[3px]"
-          style={{ width: `${pct}%`, background: cfg.color }}
-        />
-
-        {/* thumb circle */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-[16px] h-[16px] rounded-full bg-white border-[2.5px]"
-          style={{
-            left: `calc(${pct}% - 8px)`,
-            borderColor: cfg.color,
-          }}
-        />
-
-        {/* invisible range input for interaction */}
-        <input
-          type="range"
-          min={0}
-          max={10}
-          step={1}
-          value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer"
-          style={{ height: 20, top: -7 }}
-        />
-      </div>
+      <div ref={ref} className={`arc${disabled ? ' opacity-40 grayscale' : ''}`}
+        style={{ '--control-fill': cfg.color } as CSSProperties}>
+        <ElasticSlider label={label} value={value} onValueChange={onChange} min={0} max={10} step={1}
+          marks={BAND_EDGES} format={score => `${score} · ${bandConfig(score).word}`} disabled={disabled} />
       </div>
     )
   },
