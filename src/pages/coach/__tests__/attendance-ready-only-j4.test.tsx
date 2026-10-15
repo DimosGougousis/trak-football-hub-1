@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { matchAt, saveLog, trainingAt } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -50,15 +51,16 @@ describe('J4 attendance offers only consent-confirmed players', () => {
 
     // The file's first render loads the session screen cold; on a busy CI
     // runner that took over the default 1 s (run 36270474713).
+    await screen.findByRole('button', { name: /^Technical/ }, { timeout: 5000 })
+    await trainingAt('Attendance')
     await screen.findByRole('button', { name: /Rea Ready/ }, { timeout: 5000 })
     expect(screen.queryByRole('button', { name: /Wes Waiting/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /Uma Unchecked/ })).toBeNull()
     expect(screen.getByText(/Wes Waiting \(waiting for a parent\)/)).toBeInTheDocument()
     expect(screen.getByText(/Uma Unchecked \(consent couldn't be checked\)/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Technical/ }))
     await user.click(screen.getByRole('button', { name: 'ALL' }))
-    await user.click(screen.getByRole('button', { name: 'Save session' }))
+    await saveLog('Save session')
 
     await waitFor(() => expect(inserted).toHaveLength(1))
     expect(inserted[0]).toMatchObject({ squad_player_id: 'ready' })
@@ -75,6 +77,7 @@ describe('J4 attendance offers only consent-confirmed players', () => {
     }))
     const user = userEvent.setup()
     renderApp('/coach/sessions/add')
+    await trainingAt('Attendance')
 
     expect(await screen.findByText(/Couldn't load your squad/)).toBeInTheDocument()
     expect(screen.queryByText(/No squad yet/)).toBeNull()
@@ -98,6 +101,7 @@ describe('J4 attendance offers only consent-confirmed players', () => {
       return HttpResponse.json([])
     }))
     renderApp('/coach/sessions/quick')
+    await matchAt('Squad')
 
     await waitFor(() => expect(asked).toBe(true), { timeout: 5000 })
     expect(screen.getByText('Loading your squad…')).toBeInTheDocument()
@@ -112,6 +116,7 @@ describe('J4 attendance offers only consent-confirmed players', () => {
   it('match: only the confirmed player can be marked as played', async () => {
     roster([])
     renderApp('/coach/sessions/quick')
+    await matchAt('Squad')
 
     await screen.findByText('Rea Ready')
     expect(screen.getAllByRole('button', { name: 'Mark played' })).toHaveLength(1)

@@ -3,6 +3,7 @@ import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { trainingAt } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { server } from '../../../../tests/msw/server'
@@ -41,13 +42,14 @@ describe('#126 re-review: a failed roster reload',()=>{
    }),
   )
   const user=userEvent.setup(); renderApp('/coach/sessions/add')
+  await trainingAt('Attendance')
   await screen.findByRole('button',{name:/Rea Ready/})
-  await user.click(screen.getByRole('button',{name:/Technical/}))
   await user.click(screen.getByRole('button',{name:'ALL'}))
   fail=true
   await act(async()=>{const {error}=await supabase.auth.refreshSession();expect(error).toBeNull()})
   await screen.findByText(/Couldn't load your squad/)
-  await user.click(screen.getByRole('button',{name:'Save session'}))
+  // TRAK-182: in steps, a failed roster keeps Next shut on Attendance, so the save is never reached.
+  expect(screen.getByRole('button',{name:'Next'})).toBeDisabled()
   await act(async()=>{await new Promise(r=>setTimeout(r,100))})
   // Either Save waits for a successful retry, or it at least does not claim a
   // session the coach took attendance for was saved with nobody present.

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { logStep, saveLog } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -43,11 +44,12 @@ async function saveOneZeroWin() {
   const [scoreUs, scoreThem] = screen.getAllByPlaceholderText('0')
   await user.type(scoreUs, '1')
   await user.type(scoreThem, '0')
+  await logStep('Squad')
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
   await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${PLAYER.player_name}` }), '70')
   await user.click(screen.getByRole('button', { name: `One fewer goals for ${PLAYER.player_name}` }))
   await user.click(screen.getByRole('button', { name: `One fewer assists for ${PLAYER.player_name}` }))
-  await user.click(screen.getByRole('button', { name: 'Save match' }))
+  await saveLog('Save match')
 }
 
 describe('J4: a refused match save says why', () => {

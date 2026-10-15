@@ -13,6 +13,8 @@ import { localTodayISO } from '@/lib/event-time'
 import { TRAINING_FOCUS, trainingTypeFrom } from '@/lib/training-focus'
 import { trainingNotes, trainingTitle } from '@/lib/session-form'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
+import { Stepper } from '@/components/arc/stepper/stepper'
+import { Button } from '@/components/arc/button/button'
 
 type SquadPlayer = {
   id: string
@@ -53,6 +55,16 @@ const DEFAULT_DETAIL: PlayerDetail = {
 }
 
 const MATCH_POSITIONS = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as const
+
+/* TRAK-182 (Imad's 7c): one step per screen, related fields together, then
+   Review and the save. A logged session or match has no draft in the database,
+   so Review ends in one Save. */
+const LOG_STEPS = {
+  match:    ['Match', 'Squad', 'Notes', 'Review'],
+  training: ['Session', 'Load', 'Attendance', 'Notes', 'Review'],
+  other:    ['Event', 'Attendance', 'Notes', 'Review'],
+} as const
+const RESULT_WORD = { W: 'Won', D: 'Drew', L: 'Lost' } as const
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
 
@@ -95,6 +107,7 @@ export default function CoachAddSession() {
   const [title, setTitle] = useState('')
   const [date,  setDate]  = useState(localTodayISO)
   const [notes, setNotes] = useState('')
+  const [step,  setStep]  = useState(0)
 
   // Training-specific
   const [trainingFocus,     setTrainingFocus]     = useState<Set<string>>(new Set())
@@ -302,6 +315,48 @@ export default function CoachAddSession() {
     : type === 'training' ? trainingFocus.size > 0
     : title.trim().length > 0
   )
+
+  // ── steps (TRAK-182) ─────────────────────────────────────────────────────────
+  const labels = LOG_STEPS[type]
+  const steps = labels.map(label => ({ id: label.toLowerCase(), label }))
+  const review = labels.length - 1
+  const stepName = labels[step]
+  // What the first step still needs, said under Next rather than left to guess.
+  const firstStepMissing = isMatch
+    ? (!opponent.trim() || scoreUs === '' || scoreThem === '' ? 'Add the opponent and the score.' : null)
+    : type === 'training' ? (trainingFocus.size === 0 ? 'Pick a session focus.' : null)
+    : (!title.trim() ? 'Add a title.' : null)
+  const rosterReady = !rosterLoading && !rosterFailed
+  // Each step's share of canSave: Next stays shut until that part is right.
+  const stepBlocked = step === 0 ? !!firstStepMissing || futureDate
+    : stepName === 'Squad' ? !rosterReady || incompleteRecords.length > 0 || impossibleRecords.length > 0 || !!teamGoalsError || !!teamAssistsError
+    : stepName === 'Attendance' ? !rosterReady
+    : false
+  const shownDate = new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  const firstNames = (players: SquadPlayer[]) => players.map(p => p.player_name.split(' ')[0]).join(', ')
+  const played = squad.filter(p => details[p.id]?.played)
+  const summary: [string, string][] = isMatch ? [
+    ['Opponent', opponent.trim()],
+    ['Score', result ? `${RESULT_WORD[result]} ${scoreUs}–${scoreThem}` : ''],
+    ['Competition', competition],
+    ['Venue', venue],
+    ['Date', shownDate],
+    ['Played', played.length ? `${played.length} · ${firstNames(played)}` : 'Nobody marked as played'],
+    ['Notes', notes.trim() || 'None'],
+  ] : type === 'training' ? [
+    ['Focus', [...trainingFocus].join(', ')],
+    ['Theme', title.trim() || 'None'],
+    ['Date', shownDate],
+    ['Length', `${trainingDuration} min`],
+    ['Intensity', trainingIntensity || 'Not set'],
+    ['Attended', `${present.length} of ${squad.length}`],
+    ['Notes', notes.trim() || 'None'],
+  ] : [
+    ['Title', title.trim()],
+    ['Date', shownDate],
+    ['Attended', `${present.length} of ${squad.length}`],
+    ['Notes', notes.trim() || 'None'],
+  ]
 
   // ── save ─────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -576,7 +631,7 @@ export default function CoachAddSession() {
     <MobileShell>
       {/* Topbar */}
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
-        <button onClick={() => navigate(-1)}
+        <button onClick={() => navigate(-1)} aria-label="Back"
           className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center">
           <ChevronLeft size={14} className="text-white/88" />
         </button>
@@ -589,8 +644,12 @@ export default function CoachAddSession() {
 
       <div className="pt-5 pb-32 space-y-5">
 
+        <div className="arc">
+          <Stepper label="Log steps" steps={steps} current={step} onStepSelect={setStep} />
+        </div>
+
         {/* Session type */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
           <MetadataLabel text="TYPE" />
           <div className="flex gap-2 mt-3">
             {(['training', 'match', 'other'] as const).map(t => (
@@ -599,11 +658,12 @@ export default function CoachAddSession() {
               </Chip>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* ── MATCH TYPE ─────────────────────────────────────────────────────── */}
         {isMatch ? (
           <>
+            {step === 0 && <>
             {/* Match header */}
             <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="OPPONENT" />
@@ -673,8 +733,10 @@ export default function CoachAddSession() {
                 style={{ fontFamily: "'DM Sans', sans-serif", colorScheme: 'dark' }} />
             </div>
 
+            </>}
+
             {/* ── Per-player section ─────────────────────────────────────────── */}
-            <div className="rounded-[18px] border border-white/[0.07] bg-[#101012] overflow-hidden">
+            {step === 1 && <div className="rounded-[18px] border border-white/[0.07] bg-[#101012] overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-4 pt-4 pb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
@@ -913,22 +975,22 @@ export default function CoachAddSession() {
                 </div>
               )}
               {rosterNote}
-            </div>
+            </div>}
 
             {/* Match notes */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="MATCH NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="How did the match go? Key moments, things to work on…"
                 className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
-            </div>
+            </div>}
           </>
         ) : type === 'training' ? (
           /* ── TRAINING ──────────────────────────────────────────────────────── */
           <>
             {/* Session focus — required */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -957,10 +1019,10 @@ export default function CoachAddSession() {
                   )
                 })}
               </div>
-            </div>
+            </div>}
 
             {/* Duration + Intensity on same card */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
+            {step === 1 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -1001,27 +1063,27 @@ export default function CoachAddSession() {
                   ))}
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* Optional theme / title */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
                 className="w-full bg-transparent text-[15px] text-white/88 placeholder-white/20 outline-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
-            </div>
+            </div>}
 
             {/* Date */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="DATE" />
               <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
                 className="w-full bg-transparent text-[15px] text-white/88 outline-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif", colorScheme: 'dark' }} />
-            </div>
+            </div>}
 
             {/* Attendance */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
                   style={{ fontFamily: "'DM Mono', monospace" }}>
@@ -1059,36 +1121,36 @@ export default function CoachAddSession() {
                 </div>
               )}
               {rosterNote}
-            </div>
+            </div>}
 
             {/* Notes */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 3 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="SESSION NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="What went well? What needs more work next session?"
                 className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
-            </div>
+            </div>}
           </>
         ) : (
           /* ── OTHER ─────────────────────────────────────────────────────────── */
           <>
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="TITLE" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Gym, Video Analysis, Team Talk…"
                 className="w-full bg-transparent text-[16px] text-white/88 placeholder-white/20 outline-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
-            </div>
+            </div>}
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="DATE" />
               <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
                 className="w-full bg-transparent text-[15px] text-white/88 outline-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif", colorScheme: 'dark' }} />
-            </div>
+            </div>}
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 1 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
                   style={{ fontFamily: "'DM Mono', monospace" }}>
@@ -1126,41 +1188,54 @@ export default function CoachAddSession() {
                 </div>
               )}
               {rosterNote}
-            </div>
+            </div>}
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
               <MetadataLabel text="NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="Optional…"
                 className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2"
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
-            </div>
+            </div>}
           </>
+        )}
+
+        {/* Review: everything the save writes, before it is written. */}
+        {step === review && (
+          <dl className="rounded-[18px] border border-white/[0.07] bg-[#101012] divide-y divide-white/[0.06] text-[13px]"
+            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {summary.map(([term, value]) => (
+              <div key={term} className="flex gap-3 px-4 py-3">
+                <dt className="w-24 shrink-0 text-white/45">{term}</dt>
+                <dd className="flex-1 min-w-0 text-white/85 break-words">{value}</dd>
+              </div>
+            ))}
+          </dl>
         )}
       </div>
 
       {/* Sticky save */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
         style={{ background: 'linear-gradient(180deg,rgba(10,10,11,0) 0%,#0A0A0B 35%)' }}>
-        {futureDate && (
+        {(step === 0 || step === review) && futureDate && (
           <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             A session can't be dated in the future. Log it once it has happened.
           </p>
         )}
-        {teamGoalsError && (
+        {(stepName === 'Squad' || step === review) && teamGoalsError && (
           <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {teamGoalsError}
           </p>
         )}
-        {teamAssistsError && (
+        {(stepName === 'Squad' || step === review) && teamAssistsError && (
           <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {teamAssistsError}
           </p>
         )}
-        {incompleteRecords.length > 0 && (
+        {(stepName === 'Squad' || step === review) && incompleteRecords.length > 0 && (
           <p role="status" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {incompleteRecords.length === 1
@@ -1168,15 +1243,29 @@ export default function CoachAddSession() {
               : `${incompleteRecords.length} players still need their match details.`}
           </p>
         )}
-        <button onClick={handleSave} disabled={!canSave}
-          className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
-          style={{
-            background: canSave ? '#C8F25A' : 'rgba(255,255,255,0.06)',
-            color: canSave ? '#000' : 'rgba(255,255,255,0.3)',
-            opacity: saving ? 0.6 : 1,
-          }}>
-          {saving ? 'Saving…' : isMatch ? 'Save match' : 'Save session'}
-        </button>
+        {step === 0 && firstStepMissing && (
+          <p role="status" className="text-[11px] text-center text-white/45 mb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {firstStepMissing}
+          </p>
+        )}
+        <div className="arc flex gap-2">
+          {step === review ? <>
+            {/* Review: the save sits where the thumb is; Back shrinks to an icon. */}
+            <Button size="lg" variant="secondary" aria-label={`Back to ${labels[review - 1]}`} onClick={() => setStep(review - 1)}>
+              <ChevronLeft size={18} aria-hidden="true" />
+            </Button>
+            <Button size="lg" className="flex-1" loading={saving} disabled={!canSave} onClick={() => void handleSave()}>
+              {isMatch ? 'Save match' : 'Save session'}
+            </Button>
+          </> : <>
+            {/* Named for its step: the header's button leaves the screen. */}
+            {step > 0 && (
+              <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${labels[step - 1]}`}
+                onClick={() => setStep(step - 1)}>Back</Button>
+            )}
+            <Button size="lg" className="flex-1" disabled={stepBlocked} onClick={() => setStep(step + 1)}>Next</Button>
+          </>}
+        </div>
       </div>
     </MobileShell>
   )
