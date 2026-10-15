@@ -139,6 +139,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
       .toBe(note.className.replace(/(bg|border)-(sky|amber)-\S+/g, ''))
   })
 
+  // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…
   it('Publish sends a new message to the player', async () => {
     showForm()
     await choose('player-b')
@@ -223,6 +224,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
   })
 
+  // …and Save draft keeps it unpublished (published_at empty).
   it('Save draft saves the message unpublished, so the family sees nothing', async () => {
     showForm()
     await choose('player-b')
