@@ -41,10 +41,13 @@ beforeEach(() => {
       eventRow = { ...eventRow, published: true }
       return HttpResponse.json([{ id: 'ev-1' }])
     }),
-    http.get(endpoint('coach_sessions'), () => HttpResponse.json({ code: 'PGRST116', details: 'Results contain 0 rows', message: 'none' }, { status: 406 })),
+    // No register yet: zero rows, as PostgREST answers maybeSingle().
+    http.get(endpoint('coach_sessions'), () => HttpResponse.json([])),
+    // Everyone's consent is active unless a test says otherwise (as the register checks).
+    http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, () => HttpResponse.json(false)),
     http.get(endpoint('squad_players'), () => HttpResponse.json([
-      { id: 'sp-1', player_name: 'Ade Okafor', age_group: 'U14', status: 'active' }, { id: 'sp-2', player_name: 'Bea Lin', age_group: 'U14', status: 'active' },
-      { id: 'sp-3', player_name: 'Cal Moss', age_group: 'U14', status: 'active' }, { id: 'sp-4', player_name: 'Dan Former', age_group: 'U14', status: 'coach_departed' }])),
+      { id: 'sp-1', player_name: 'Bukayo Saka', age_group: 'U14', status: 'active' }, { id: 'sp-2', player_name: 'Beth Mead', age_group: 'U14', status: 'active' },
+      { id: 'sp-3', player_name: 'Cole Palmer', age_group: 'U14', status: 'active' }, { id: 'sp-4', player_name: 'Declan Rice', age_group: 'U14', status: 'coach_departed' }])),
     http.get(endpoint('session_attendance'), () => HttpResponse.json([{ squad_player_id: 'sp-1', status: 'present' }, { squad_player_id: 'sp-3', status: 'absent' }])),
     http.get(endpoint('event_absences'), () => HttpResponse.json([{ squad_player_id: 'sp-2', reason: 'School trip' }])),
   )
@@ -119,7 +122,7 @@ describe('TRAK-182: the event sheet', () => {
     expect(await within(sheet).findByText('Coming · 2')).toBeInTheDocument()
     expect(within(sheet).queryByText(/Dan/)).toBeNull()
     expect(within(sheet).getByText("Can't make it · 1")).toBeInTheDocument()
-    expect(within(sheet).getByText('Bea Lin')).toBeInTheDocument()
+    expect(within(sheet).getByText('Beth Mead')).toBeInTheDocument()
     expect(within(sheet).getByText('School trip')).toBeInTheDocument()
     await user.click(within(sheet).getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/coach/schedule?edit=ev-1')
@@ -143,7 +146,7 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Finishing/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
     expect(await within(sheet).findByText('Came · 1')).toBeInTheDocument()
-    expect(within(sheet).getByText(/^Ade$/)).toBeInTheDocument()
+    expect(within(sheet).getByText(/^Bukayo$/)).toBeInTheDocument()
     expect(within(sheet).getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
   })
@@ -156,6 +159,30 @@ describe('TRAK-182: the event sheet', () => {
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+  })
+
+  // Kostas's #310 review: counted as the register counts, and no guessing on a failed read.
+  it('counts only children whose consent is active, as the register does', async () => {
+    eventRow = row({ published: true })
+    server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, async ({ request }) =>
+      HttpResponse.json((await request.json() as { p_squad_player_id: string }).p_squad_player_id === 'sp-3')))
+    const user = userEvent.setup()
+    renderStrip([event({})], 'coach')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(await within(sheet).findByText('Coming · 1')).toBeInTheDocument()
+    expect(within(sheet).getByText('Not counted until consent is active · 1: Cole')).toBeInTheDocument()
+  })
+
+  it('shows an error, not Take register, when the register lookup fails', async () => {
+    eventRow = row({ published: true, event_type: 'training', title: 'Finishing', starts_at: '2020-01-01T13:00:00Z', event_date: '2020-01-01' })
+    server.use(http.get(endpoint('coach_sessions'), () => HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
+    const user = userEvent.setup()
+    renderStrip([event({ kind: 'training', title: 'Finishing', opponent: null, homeAway: null })], 'coach')
+    await user.click(screen.getByRole('button', { name: /Finishing/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
+    expect(await within(sheet).findByRole('alert')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Take register' })).toBeNull()
   })
 
   it('says so when the squad is empty', async () => {
@@ -178,7 +205,9 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).queryByRole('button', { name: /Publish|Edit|Cancel/ })).not.toBeInTheDocument()
     expect(within(sheet).queryByRole('link', { name: /WhatsApp/ })).not.toBeInTheDocument()
     expect(within(sheet).queryByText('Attending')).not.toBeInTheDocument()
-    expect(within(sheet).queryByText('Bea Lin')).not.toBeInTheDocument()
+    expect(within(sheet).queryByText('Beth Mead')).not.toBeInTheDocument()
+    // The full page (Add to calendar, details) stays one tap away (Kostas, #310).
+    expect(within(sheet).getByRole('link', { name: 'Open event page' })).toHaveAttribute('href', '/parent/event/ev-1')
   })
 
   it('says Training ground for a training and shows a cancellation', async () => {
