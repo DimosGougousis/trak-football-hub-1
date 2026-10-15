@@ -16,6 +16,17 @@ export const CONSENT_THRESHOLD_AGE = 18
  */
 export const CONSENT_NOTICE_VERSION = '2026-10-09.1'
 
+/**
+ * TRAK-177: a 15–17 player's own consent, where the academy's consent age is
+ * 15 (Greece). Provisional wording from the Greek legal pack, until a Greek
+ * lawyer signs off. Bump the version whenever the text changes.
+ */
+export const OWN_CONSENT_NOTICE_VERSION = '2026-10-15.1-own'
+export const OWN_CONSENT_TEXT =
+  'I understand how Trak works and agree that my academy may keep my coaching records in Trak: ' +
+  'my coach\'s ratings and assessments, my sessions and matches, and messages my coach publishes for me. ' +
+  'I can change my mind and withdraw at any time in Settings. If I do not agree, I still get the same coaching.'
+
 /** Whole years from a valid YYYY-MM-DD, using the database's UTC calendar day. */
 export const ageFromDateOfBirth = (dob: string): number | null => {
   if (dob.length !== 10) return null

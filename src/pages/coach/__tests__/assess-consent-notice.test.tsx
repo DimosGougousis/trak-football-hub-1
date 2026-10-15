@@ -11,6 +11,7 @@
  * chosen, says why, and disables Save. A refusal at save time (consent
  * withdrawn mid-form) is translated rather than shown raw.
  */
+import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
 import { it, expect, describe } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -155,7 +156,7 @@ describe('CoachQuickAssess and parental consent', () => {
     await waitFor(() => expect(calls.consentChecks.length).toBeGreaterThan(0))
     // First assessment for this player: a slider must move before Next enables.
     const [first] = screen.getAllByRole('slider')
-    fireEvent.change(first, { target: { value: '8' } })
+    setSlider(first, 8)
     await waitFor(() => expect(nextButton()).toBeEnabled())
     await user.click(nextButton())
     await waitFor(() => expect(calls.inserts).toBe(1))

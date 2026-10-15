@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -229,13 +230,6 @@ export default function CoachHomePage() {
     const r = Number(a.coach_rating)
     return Math.max(20, Math.min(100, ((r - 2) / 8) * 100))
   })
-
-  // Initials helper
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/)
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    return (parts[0]?.[0] || '?').toUpperCase()
-  }
 
   // Max band count for bar chart scaling
   const maxBandCount = squadAnalytics
@@ -546,7 +540,6 @@ export default function CoachHomePage() {
             <div className="mt-2.5">
               {assessments.map(a => {
                 const playerName = a.squad_players?.player_name || 'Player'
-                const initials = getInitials(playerName)
                 const formattedDate = new Date(a.created_at).toLocaleDateString('en-GB', {
                   day: 'numeric',
                   month: 'short',
@@ -559,13 +552,7 @@ export default function CoachHomePage() {
                     {...openable(`Open assessment for ${playerName}, ${formattedDate}`,
                       () => navigate(`/coach/assess?assessment=${a.id}`))}
                   >
-                    {/* Initials avatar */}
-                    <div
-                      className="w-9 h-9 rounded-[11px] border border-white/[0.07] flex items-center justify-center text-xs font-semibold flex-shrink-0"
-                      style={{ background: '#202024', color: 'rgba(255,255,255,0.45)' }}
-                    >
-                      {initials}
-                    </div>
+                    <Avatar name={playerName} size="md" className="arc" aria-hidden />
                     {/* Name + metadata */}
                     <div className="flex-1 min-w-0">
                       <p

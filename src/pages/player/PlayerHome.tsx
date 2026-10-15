@@ -17,6 +17,7 @@ import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
+import { OwnConsentCard } from '@/components/player/OwnConsentCard'
 import { timeOfDayGreeting } from '@/lib/greeting'
 
 const QUOTES = [
@@ -70,7 +71,14 @@ export default function PlayerHome() {
   const [coachAssessment, setCoachAssessment] = useState<any>(null)
   const [coachName, setCoachName] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PlayerEvent[]>([])
-  const [consent, setConsent] = useState<{ required: boolean; invited_parent: string | null } | null>(null)
+  type ConsentStatus = { required: boolean; invited_parent: string | null; age?: number | null
+    consent_age?: number; threshold?: number; own_choice?: boolean | null }
+  const [consent, setConsent] = useState<ConsentStatus | null>(null)
+  const [consentReload, setConsentReload] = useState(0)
+  const [choseHere, setChoseHere] = useState(false)
+  // TRAK-177: from the academy's consent age (15 in Greece) until 18 the player decides.
+  const decidesForSelf = consent?.age != null && consent.consent_age != null
+    && consent.age >= consent.consent_age && consent.age < (consent.threshold ?? 18)
 
   // Under the digital-consent age nothing can be recorded about this player
   // until a parent approves. Without this they would sign in to a dashboard
@@ -82,10 +90,10 @@ export default function PlayerHome() {
     // `as any`: generated types predate the consent migration.
     ;(supabase.rpc as any)('my_consent_status').then(({ data }: { data: unknown }) => {
       if (cancelled) return
-      setConsent(data as { required: boolean; invited_parent: string | null } | null)
+      setConsent(data as ConsentStatus | null)
     })
     return () => { cancelled = true }
-  }, [user])
+  }, [user, consentReload])
 
   const [showReveal, setShowReveal] = useState(false)
   const [newMatchCount, setNewMatchCount] = useState(0)
@@ -433,7 +441,12 @@ export default function PlayerHome() {
           </div>
         )}
 
-        {consent?.required && (
+        {/* Shown until the player agrees (a refusal can be changed here); kept for this visit to confirm the choice. */}
+        {decidesForSelf && (choseHere || consent?.own_choice !== true) && (
+          <OwnConsentCard turned={!consent?.required && consent?.own_choice == null}
+            onChange={() => { setChoseHere(true); setConsentReload(n => n + 1) }} />
+        )}
+        {consent?.required && !decidesForSelf && (
           <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 my-4">
             <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               Waiting for your parent
