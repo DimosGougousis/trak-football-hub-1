@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, BandPill, LoadError} from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { Zap } from 'lucide-react'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
@@ -706,6 +707,7 @@ export default function CoachHomePage() {
           </section>
         )}
       </div>
+      <QuickAdd />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
