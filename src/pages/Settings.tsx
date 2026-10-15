@@ -208,12 +208,12 @@ function AccountSettings({ userId }: { userId: string }) {
                     disabled={saving}
                     onChange={e => setNameDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    className="text-[13px]"
                     style={{
                       background: '#202024',
                       border: '1px solid rgba(255,255,255,0.08)',
                       borderRadius: 8,
                       padding: '6px 10px',
-                      fontSize: 13,
                       color: 'rgba(255,255,255,0.88)',
                       width: 160,
                     }}
