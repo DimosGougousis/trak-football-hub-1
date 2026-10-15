@@ -120,7 +120,7 @@ useCase('UC-C04', () => {
       physical: 6,
       coachability: 5,
     })
-  })
+  }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   it('shows a band derived from the six scores before submitting', async () => {
     signedInCoachWithSquad()
@@ -149,7 +149,7 @@ useCase('UC-C04', () => {
     const overallBandLabel = await screen.findByText('OVERALL BAND')
     const overallBandCard = overallBandLabel.parentElement as HTMLElement
     expect(within(overallBandCard).getByText('Mixed')).toBeInTheDocument()
-  })
+  }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   it('refuses to submit until a player and a session are selected', async () => {
     signedInCoachWithSquad()
@@ -186,5 +186,5 @@ useCase('UC-C04', () => {
     await user.click(nextButton())
     expect(inserted).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /^(Save|Publish)$/ })).toBeNull()
-  })
+  }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 })

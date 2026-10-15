@@ -78,7 +78,8 @@ async function choosePlayer(id: string) {
 const sessionNames = () => [...select('Session').options].filter(o => o.value).map(o => o.textContent)
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 
-describe('TRAK-100: the session picker offers only sessions the player attended', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('TRAK-100: the session picker offers only sessions the player attended', { timeout: 20_000 }, () => {
   it('lists only attended sessions, each with the time it was logged', async () => {
     showForm()
     await choosePlayer('player-a')

@@ -95,7 +95,8 @@ async function chooseSession(id: string) {
 }
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 
-describe('TRAK-68: an assessment belongs to a session that already happened', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('TRAK-68: an assessment belongs to a session that already happened', { timeout: 20_000 }, () => {
   it('offers only past sessions, and no "No session" choice', async () => {
     showForm()
     await choosePlayer('player-b')

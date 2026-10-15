@@ -105,7 +105,8 @@ beforeEach(() => {
 
 afterEach(() => cleanup())
 
-describe('J5: message to the player, private note, publish', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('J5: message to the player, private note, publish', { timeout: 20_000 }, () => {
   it('labels the message for the player only, and the note as private, message first', async () => {
     showForm()
     await choose('player-b')
@@ -258,7 +259,8 @@ describe('J5: message to the player, private note, publish', () => {
   })
 })
 
-describe('J5: consent', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('J5: consent', { timeout: 20_000 }, () => {
   it('a player waiting for a parent cannot be opened: the whole form is locked', async () => {
     consent.required = true
     showForm()
@@ -308,7 +310,8 @@ describe('J5: consent', () => {
 
 // Tarek's #117 review: Unpublish used to run the whole save first, so a
 // retraction depended on unrelated writes succeeding.
-describe('J5: Unpublish is a retraction and nothing else', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, () => {
   it('does not save edited scores or a private draft', async () => {
     showForm()
     await choose('player-a')

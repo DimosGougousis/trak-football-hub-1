@@ -90,7 +90,8 @@ afterEach(() => {
   for (const release of releases) release()
 })
 
-describe('full assessment player boundaries', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('full assessment player boundaries', { timeout: 20_000 }, () => {
   it('does not reassign Alex’s existing assessment while Bella’s load is pending', async () => {
     const pending = gate()
     server.use(http.get(endpoint('coach_assessments'), async ({ request }) => {

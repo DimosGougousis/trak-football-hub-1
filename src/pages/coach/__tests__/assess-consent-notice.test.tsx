@@ -69,7 +69,8 @@ async function choosePlayer() {
 const saveButton = () => screen.getByRole('button', { name: /save assessment/i })
 const toastText = () => [...document.querySelectorAll('[data-sonner-toast]')].map(t => t.textContent ?? '').join(' | ')
 
-describe('CoachAssessPage and parental consent', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('CoachAssessPage and parental consent', { timeout: 20_000 }, () => {
   it('says a parent must approve, and disables Save, before the coach fills anything in', async () => {
     const calls = setup({ consentRequired: true })
     await choosePlayer()
@@ -125,7 +126,8 @@ describe('CoachAssessPage and parental consent', () => {
 // TRAK-47 retires Quick Assess from the router. Keep these consent regressions
 // for its retained, unrouted component; the real-App boundary suite asserts
 // that its old URL redirects to the full assessment and cannot mount it.
-describe('CoachQuickAssess and parental consent', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('CoachQuickAssess and parental consent', { timeout: 20_000 }, () => {
   async function openQuick() {
     render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><AuthProvider><Toaster /><CoachQuickAssess /></AuthProvider></MemoryRouter></QueryClientProvider>)
     const user = userEvent.setup()

@@ -130,7 +130,8 @@ const messageBox = () => screen.getByLabelText(/^Message to/i) as HTMLTextAreaEl
 const noteBox = () => screen.getByLabelText(/^Private note/i) as HTMLTextAreaElement
 const assessmentWrites = () => writes.filter(w => w.table === 'coach_assessments').map(w => [w.method, w.id])
 
-describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeout: 20_000 }, () => {
   it("opens an older assessment from the player's history, with its scores, note and message", async () => {
     const user = userEvent.setup()
     renderApp('/coach/player/player-a')

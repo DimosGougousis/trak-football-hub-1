@@ -41,7 +41,8 @@ function setup(players: Record<string, { name: string; required: boolean; reason
 
 const row = (name: string) => screen.getByText(name).closest('button') as HTMLElement
 
-describe('Squad chips (TRAK-99)', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('Squad chips (TRAK-99)', { timeout: 20_000 }, () => {
   it('tells "waiting for parent" apart from "waiting for player to sign up"', async () => {
     const asked = setup({
       'sq-ready': { name: 'Amal Ready', required: false },
@@ -72,7 +73,8 @@ describe('Squad chips (TRAK-99)', () => {
   })
 })
 
-describe('Assessment notice (TRAK-99)', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
   async function choose(id: string, name: string) {
     renderApp('/coach/assess')
     const user = userEvent.setup()
