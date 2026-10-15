@@ -54,18 +54,16 @@ export interface RegisterEvent {
   starts_at: string
 }
 
-// Dubai is UTC+4 all year: the coach's wall clock, whatever the phone says.
-const DUBAI_MS = 4 * 60 * 60 * 1000
-
-/** When the event starts, as an instant: its Dubai date and time, or the stored instant. */
+/**
+ * When the event starts, as an instant. The database sets starts_at from
+ * event_date + start_time on the academy's own clock (TRAK-175: Dubai, or
+ * Athens with its clock changes), so the stored instant is the start.
+ */
 function startsAt(event: RegisterEvent): number {
-  if (!event.event_date) return Date.parse(event.starts_at)
-  const [y, m, d] = event.event_date.split('-').map(Number)
-  const [hh, mm] = (event.start_time ?? '00:00').split(':').map(Number)
-  return Date.UTC(y, m - 1, d, hh, mm) - DUBAI_MS
+  return Date.parse(event.starts_at)
 }
 
-/** Whether the event has started on the Dubai clock: a register or match log can be taken. */
+/** Whether the event has started on the academy's clock: a register or match log can be taken. */
 export function hasStarted(event: RegisterEvent, now: Date = new Date()): boolean {
   return startsAt(event) <= now.getTime()
 }
