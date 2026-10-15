@@ -696,12 +696,12 @@ function CoachAssessmentForm() {
 
         {/* ---- 5. sliders in dark container ---- */}
         <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
-          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} />
-          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} />
-          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} />
-          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} />
-          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} />
-          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} />
+          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} disabled={!formReady || saving || consentWait} />
         </div>
 
         {/* ---- 6. overall band card (amber glow) ---- */}
