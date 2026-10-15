@@ -19,7 +19,9 @@ async function fetchAbsence(childId: string, eventId: string, signal: AbortSigna
   return data
 }
 
-export function CantMakeIt({ event, child }: { event: PlayerEvent; child: { id: string; name: string } }) {
+/** `self`: the player reporting for themselves, at or above their academy's
+ *  consent age (TRAK-183). The words say "you"; the database decides. */
+export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent; child: { id: string; name: string }; self?: boolean }) {
   const reasonId = useId()
   const client = useQueryClient()
   const [writing, setWriting] = useState(false)
@@ -43,11 +45,11 @@ export function CantMakeIt({ event, child }: { event: PlayerEvent; child: { id: 
   return (
     <section aria-label="Attendance" className="rounded-xl border border-border bg-card p-4">
       {absence.isError ? <>
-        <p className="text-sm text-foreground">Couldn't check whether {child.name} is coming.</p>
+        <p className="text-sm text-foreground">Couldn't check whether {self ? "you're" : `${child.name} is`} coming.</p>
         <button type="button" onClick={() => { void absence.refetch() }} className={`${button} mt-3`}>Retry</button>
       </> : absence.isPending ? <p role="status" className="text-sm text-muted-foreground">Loading…</p>
         : absence.data ? <>
-          <p className="text-sm text-foreground">You told the coach {child.name} can't make it.</p>
+          <p className="text-sm text-foreground">You told the coach {self ? 'you' : child.name} can't make it.</p>
           {absence.data.reason && <p className="text-sm text-muted-foreground mt-1">{absence.data.reason}</p>}
           <button type="button" disabled={change.isPending} onClick={() => change.mutate(false)} className={`${button} mt-3`}>Undo</button>
           {refusal}
@@ -61,7 +63,7 @@ export function CantMakeIt({ event, child }: { event: PlayerEvent; child: { id: 
           </div>
           {refusal}
         </> : <>
-          <p className="text-sm text-muted-foreground mb-3">Everyone counts as coming. Only say if {child.name} can't.</p>
+          <p className="text-sm text-muted-foreground mb-3">Everyone counts as coming. Only say if {self ? 'you' : child.name} can't.</p>
           <button type="button" onClick={() => setWriting(true)} className={button}>Can't make it</button>
         </>}
     </section>
