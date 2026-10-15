@@ -15,6 +15,7 @@ import {
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
+import { Calendar } from '@/components/arc/calendar/calendar'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
@@ -71,21 +72,6 @@ function toDateStr(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-function buildMonthGrid(year: number, month: number): (Date | null)[] {
-  const first = new Date(year, month, 1)
-  const last  = new Date(year, month + 1, 0)
-  const startDow = (first.getDay() + 6) % 7   // Mon = 0
-  const cells: (Date | null)[] = Array(startDow).fill(null)
-  for (let d = 1; d <= last.getDate(); d++) cells.push(new Date(year, month, d))
-  // Pad to full row
-  while (cells.length % 7 !== 0) cells.push(null)
-  return cells
-}
-
-function formatMonthYear(year: number, month: number) {
-  return new Date(year, month, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' })
 }
 
 function formatEventDay(date: string) {
@@ -285,18 +271,6 @@ export default function CoachSchedule() {
     return map
   }, [allEvents])
 
-  // Month navigation
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
-    else setViewMonth(m => m - 1)
-  }
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
-    else setViewMonth(m => m + 1)
-  }
-
-  const cells   = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth])
-  const todayStr = toDateStr(today)
 
   const selectedEvents = byDate[selected] ?? []
 
@@ -529,76 +503,14 @@ export default function CoachSchedule() {
 
         {loadFailed && <LoadError what="your calendar" onRetry={retry} retrying={retrying} />}
 
-        {/* ── Month grid ───────────────────────────────────────────────────── */}
-        <div className="rounded-[18px] border border-white/[0.07] overflow-hidden"
-          style={{ background: '#101012' }}>
-
-          {/* Month nav */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
-            <button onClick={prevMonth} aria-label="Previous month" className="w-7 h-7 flex items-center justify-center rounded-full"
-              style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <ChevronLeft size={14} color="rgba(255,255,255,0.6)" />
-            </button>
-            <span className="text-[13px] font-medium text-white/88" style={font}>
-              {formatMonthYear(viewYear, viewMonth)}
-            </span>
-            <button onClick={nextMonth} aria-label="Next month" className="w-7 h-7 flex items-center justify-center rounded-full"
-              style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <ChevronRight size={14} color="rgba(255,255,255,0.6)" />
-            </button>
-          </div>
-
-          {/* Day-of-week labels */}
-          <div className="grid grid-cols-7 px-1 pt-2 pb-1">
-            {DAY_LABELS.map(l => (
-              <div key={l} className="text-center text-[9px] font-medium tracking-[0.08em] uppercase"
-                style={{ ...mono, color: 'rgba(255,255,255,0.25)' }}>
-                {l}
-              </div>
-            ))}
-          </div>
-
-          {/* Day cells */}
-          <div className="grid grid-cols-7 px-1 pb-3 gap-y-1">
-            {cells.map((date, i) => {
-              if (!date) return <div key={i} />
-
-              const dateStr  = toDateStr(date)
-              const isToday  = dateStr === todayStr
-              const isSel    = dateStr === selected
-              const dayEvs   = byDate[dateStr] ?? []
-              const isPast   = date < today && !isToday
-              const dots     = dayEvs.slice(0, 3)
-
-              return (
-                <button key={i}
-                  onClick={() => setSelected(dateStr)}
-                  className="flex flex-col items-center py-1.5 rounded-[10px] transition-colors"
-                  style={{
-                    background: isSel ? 'rgba(200,242,90,0.14)' : 'transparent',
-                    border: isToday ? '1px solid rgba(200,242,90,0.4)' : '1px solid transparent',
-                  }}>
-                  <span className="text-[12px] leading-none"
-                    style={{
-                      ...font,
-                      color: isSel ? '#C8F25A'
-                        : isToday ? '#C8F25A'
-                        : isPast  ? 'rgba(255,255,255,0.3)'
-                        : 'rgba(255,255,255,0.78)',
-                      fontWeight: isToday || isSel ? 600 : 400,
-                    }}>
-                    {date.getDate()}
-                  </span>
-                  {/* Event dots */}
-                  <div className="flex items-center gap-[3px] mt-1.5 h-[5px]">
-                    {dots.map((ev, di) => (
-                      <div key={di} className="w-[5px] h-[5px] rounded-full flex-shrink-0"
-                        style={{ background: ev.row && isCancelled(ev.row) ? CANCELLED_COLOR : TYPE_COLOR[ev.type] }} />
-                    ))}
-                  </div>
-                </button>
-              )
-            })}
+        {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
+        <div className="arc rounded-[18px] border border-white/[0.07] overflow-hidden" style={{ background: '#101012' }}>
+          <div className="flex justify-center px-2 pt-2">
+            <Calendar locale="en-GB" showToday
+              value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
+              month={new Date(viewYear, viewMonth, 1)}
+              onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
+              marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? CANCELLED_COLOR : TYPE_COLOR[ev.type])} />
           </div>
 
           {/* Legend */}
