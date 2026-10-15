@@ -74,14 +74,22 @@ const minutes = (hhmm: string) => {
   return h * 60 + m
 }
 
+/** What the event is: a match's opponent, an "other" event's name. The Schedule
+ *  form's first step checks only this (TRAK-182); formProblem() checks it too. */
+export function whatProblem(form: EventForm): string | null {
+  if (form.kind === 'match' && !form.opponent.trim()) return 'Add the opponent'
+  if (form.kind === 'other' && !form.title.trim()) return 'Say what the event is'
+  return null
+}
+
 /** What's wrong with the form in words the coach can act on, or null. */
 export function formProblem(form: EventForm): string | null {
   if (!form.date || !toInstant(form.date, form.time || null)) return 'Pick a real date and time'
   // TRAK-157: every event has a start time (Imad, 12 Oct). The 11 Oct live run
   // saved 8 published trainings with none; the database refuses it too.
   if (!form.time) return 'Pick a start time'
-  if (form.kind === 'match' && !form.opponent.trim()) return 'Add the opponent'
-  if (form.kind === 'other' && !form.title.trim()) return 'Say what the event is'
+  const what = whatProblem(form)
+  if (what) return what
   if (form.meetTime && minutes(form.meetTime) > minutes(form.time)) return 'Meet time must be before the start'
   if (form.familyNote.trim().length > FAMILY_NOTE_MAX) return `Keep the note to ${FAMILY_NOTE_MAX} characters`
   return null

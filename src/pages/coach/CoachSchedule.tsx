@@ -9,14 +9,16 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
-  isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
+  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, eventTitle, formProblem, formToRow,
+  isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { Calendar } from '@/components/arc/calendar/calendar'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
+import { Stepper } from '@/components/arc/stepper/stepper'
+import { Button } from '@/components/arc/button/button'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
 import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
@@ -144,11 +146,71 @@ type Scope = 'one' | 'following'
 
 type Sheet =
   | { kind: 'closed' }
-  | { kind: 'edit'; row: EventRow | null; form: EventForm; repeat: Repeat; scope: Scope; error: string | null }
+  | { kind: 'edit'; row: EventRow | null; form: EventForm; repeat: Repeat; scope: Scope; step: number; error: string | null }
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
   | { kind: 'import' }
   | { kind: 'register'; row: EventRow }
+
+/* TRAK-182 (Imad's 7c): the event form one step per screen, related fields
+   together, then Review with Publish or Save draft. An edit opens on Review,
+   where each step can be reopened from the stepper. */
+const EVENT_STEPS = [
+  { id: 'what', label: 'What' },
+  { id: 'when', label: 'When' },
+  { id: 'families', label: 'For families' },
+  { id: 'review', label: 'Review' },
+]
+const REVIEW = EVENT_STEPS.length - 1
+
+/** What stops Next on a step: only what that step can fix. */
+function stepProblem(step: number, form: EventForm, repeat: Repeat, editing: boolean) {
+  if (step === 0) return whatProblem(form)
+  if (step === 1) return formProblem(form) ?? (editing ? null : repeatProblem(form, repeat))
+  return null
+}
+
+/** How many events Review's save makes: a new weekly series is several. */
+function seriesCount(sheet: { row: EventRow | null; form: EventForm; repeat: Repeat }) {
+  const { row, form, repeat } = sheet
+  return !row && repeat.on && form.kind !== 'match' && !repeatProblem(form, repeat)
+    ? seriesDates(form.date, repeat.until, repeat.days).length : 1
+}
+
+/** Review: everything the save writes, in the order the steps asked for it. */
+function EventSummary({ form, repeat, noteProblem }: {
+  form: EventForm; repeat: Repeat | null; noteProblem: 'link' | 'name' | null
+}) {
+  const rows: [string, string][] = [
+    ['Type', TYPE_LABEL[form.kind]],
+    ...(form.kind === 'match' ? [['Opponent', form.opponent.trim() + (form.homeAway ? ` (${form.homeAway === 'home' ? 'Home' : 'Away'})` : '')] as [string, string]] : []),
+    ['Title', eventTitle(form)],
+    ['Venue', form.venue.trim() || 'Not set'],
+    [repeat?.on ? 'First date' : 'Date', form.date ? formatEventDay(form.date) : 'Not set'],
+    [form.kind === 'match' ? 'Kickoff' : 'Start', form.time || 'Not set'],
+    ['Meet', form.meetTime || 'At the start'],
+    ['Length', `${form.duration} min`],
+    ...(repeat?.on && form.kind !== 'match' && !repeatProblem(form, repeat)
+      ? [['Repeats', `${repeat.days.map(d => WEEKDAYS[d]).join(', ')} until ${formatEventDay(repeat.until)}`] as [string, string]] : []),
+    ['Kit', form.kit.trim() || 'None'],
+    ['Note for families', form.familyNote.trim() || 'None'],
+  ]
+  return <>
+    <dl className="rounded-[14px] border border-white/[0.07] divide-y divide-white/[0.05]" style={font}>
+      {rows.map(([term, value]) => (
+        <div key={term} className="flex gap-3 px-3 py-2.5 text-[13px]">
+          <dt className="w-[38%] shrink-0 text-white/45">{term}</dt>
+          <dd className="flex-1 min-w-0 text-white/85 break-words">{value}</dd>
+        </div>
+      ))}
+    </dl>
+    {noteProblem && (
+      <p role="status" className="text-[11px] text-[#fbbf24]" style={font}>
+        Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
+      </p>
+    )}
+  </>
+}
 
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
   !!row?.series_id && !!row.event_date
@@ -277,9 +339,9 @@ export default function CoachSchedule() {
   const selectedEvents = byDate[selected] ?? []
 
   const openNew = (date: string) =>
-    setSheet({ kind: 'edit', row: null, form: blankForm(date), repeat: blankRepeat(date), scope: 'one', error: null })
+    setSheet({ kind: 'edit', row: null, form: blankForm(date), repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
   const openEdit = (row: EventRow) =>
-    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', error: null })
+    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', step: REVIEW, error: null })
   const setForm = (patch: Partial<EventForm>) =>
     setSheet(s => {
       if (s.kind !== 'edit') return s
@@ -299,7 +361,7 @@ export default function CoachSchedule() {
       return { ...s, repeat: { ...s.repeat, days }, error: null }
     })
 
-  const saveEvent = async () => {
+  const saveEvent = async (publishNow = false) => {
     if (parked) return comingSoon()
     if (!user || sheet.kind !== 'edit') return
     const { row: editing, form, repeat, scope } = sheet
@@ -330,6 +392,7 @@ export default function CoachSchedule() {
         return
       }
       setSheet({ kind: 'closed' })
+      if (publishNow) return publishSaved(targets.filter(t => !t.published && t.status === 'scheduled').map(t => t.id))
       toast.success(`Saved ${saved} weeks.${targets.some(t => t.published) ? ' Families see the change.' : ''}`)
       return
     }
@@ -351,12 +414,34 @@ export default function CoachSchedule() {
     if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? SAVE_FAILED }); return }
     setSheet({ kind: 'closed' })
     setSelected(form.date)
+    if (publishNow && !editing?.published) return publishSaved(editing ? [editing.id] : data!.map(r => r.id))
     loadData()
     if (editing?.published) askToEmailFamilies()
     toast.success(editing
       ? editing.published ? 'Saved. Families see the change.' : 'Draft saved'
       : series ? `Saved ${rows.length} events as drafts. Tap Publish when they’re ready.`
         : 'Saved as a draft. Tap Publish when it’s ready.')
+  }
+
+  /** Review's Publish: what was just saved goes out, as the list's Publish does.
+      The save stands either way; a refused publish (a clash, TRAK-158) leaves
+      drafts, published later from the list. */
+  const publishSaved = async (ids: string[]) => {
+    const { data, error } = await supabase.from('coach_calendar_events').update({ published: true }).in('id', ids).select('id')
+    loadData()
+    if (failed(error, data)) {
+      toast.error(`Saved as ${ids.length > 1 ? 'drafts' : 'a draft'}, not published. ${clashMessage(error) ?? 'Tap Publish on the event to try again.'}`)
+      return
+    }
+    toast.success(ids.length > 1 ? `Published ${ids.length} events to the squad` : 'Published to the squad')
+  }
+
+  const toStep = (step: number) => setSheet(s => s.kind === 'edit' ? { ...s, step, error: null } : s)
+  const nextStep = () => {
+    if (sheet.kind !== 'edit') return
+    const problem = stepProblem(sheet.step, sheet.form, sheet.repeat, !!sheet.row)
+    if (problem) setSheet({ ...sheet, error: problem })
+    else toStep(sheet.step + 1)
   }
 
   const publish = async (row: EventRow) => {
@@ -663,13 +748,13 @@ export default function CoachSchedule() {
         </div>
       </div>
 
-      {/* ── Event sheet: new or edit ──────────────────────────────────────── */}
+      {/* ── Event sheet: new or edit, one step per screen (TRAK-182) ──────── */}
       {sheet.kind === 'edit' && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgba(0,0,0,0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.row ? 'Edit event' : 'New event'}
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3 overflow-y-auto"
+            className="w-full max-w-[430px] rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
             style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', maxHeight: '85vh', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-white/88" style={font}>
@@ -680,153 +765,180 @@ export default function CoachSchedule() {
               </button>
             </div>
 
-            {inSeries(sheet.row) && (
-              <ScopeChoice scope={sheet.scope}
-                onChange={scope => setSheet(s => s.kind === 'edit' ? { ...s, scope, error: null } : s)} />
-            )}
-
-            <div className="flex gap-2 flex-wrap" role="group" aria-label="Event type">
-              {EVENT_KINDS.map(t => (
-                <Chip key={t} on={sheet.form.kind === t} color={TYPE_COLOR[t]} onClick={() => setForm({ kind: t })}>
-                  {TYPE_LABEL[t]}
-                </Chip>
-              ))}
+            <div className="arc">
+              <Stepper label="Event steps" steps={EVENT_STEPS} current={sheet.step} onStepSelect={toStep} />
             </div>
 
-            {sheet.form.kind === 'match' && (
-              <>
-                <Field label="Opponent">
-                  <input value={sheet.form.opponent} onChange={e => setForm({ opponent: e.target.value })}
-                    placeholder="e.g. Al Wasl U15" className={inputClass} style={font} />
-                </Field>
-                <div className="flex gap-2" role="group" aria-label="Home or away">
-                  <Chip on={sheet.form.homeAway === 'home'} onClick={() => setForm({ homeAway: sheet.form.homeAway === 'home' ? '' : 'home' })}>Home</Chip>
-                  <Chip on={sheet.form.homeAway === 'away'} onClick={() => setForm({ homeAway: sheet.form.homeAway === 'away' ? '' : 'away' })}>Away</Chip>
-                </div>
-              </>
-            )}
-
-            <Field label={sheet.form.kind === 'other' ? 'What is it' : 'Title (optional)'}>
-              <input value={sheet.form.title} onChange={e => setForm({ title: e.target.value })}
-                placeholder={sheet.form.kind === 'match' ? `vs ${sheet.form.opponent || 'Opponent'}` : sheet.form.kind === 'training' ? 'Training' : 'e.g. Team photo'}
-                className={inputClass} style={font} />
-            </Field>
-
-            {/* TRAK-157: Arc's date and time pickers (founders, 12 Oct). A start
-                time is picked whole from the list; there is no "no time". */}
-            <ArcField>
-              <DatePicker label={sheet.repeat.on ? 'First date' : 'Date'} className="arc-trak-field"
-                value={dayAsDate(sheet.form.date)} onChange={date => { if (date) setForm({ date: dateAsDay(date) }) }}
-                disabled={sheet.scope === 'following'} clearable={false} placeholder="Pick a date"
-                format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
-            </ArcField>
-            <ArcField>
-              <TimePicker label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'} className="arc-trak-field"
-                value={sheet.form.time} onChange={time => setForm({ time })}
-                minuteStep={5} format="12h" placeholder="Pick a start time" emptyAt="17:00" />
-            </ArcField>
-
-            {sheet.scope === 'following' && (
-              <p className="text-[11px] text-white/40" style={font}>Each week keeps its own date; everything else changes.</p>
-            )}
-
-            {!sheet.row && sheet.form.kind !== 'match' && (
-              <div className="space-y-2">
-                <Chip on={sheet.repeat.on} onClick={() => setRepeat({ on: !sheet.repeat.on })}>Repeats weekly</Chip>
-                {sheet.repeat.on && (
-                  <>
-                    <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Repeat on">
-                      {WEEKDAYS.map((label, day) => (
-                        <Chip key={label} on={sheet.repeat.days.includes(day)} onClick={() => toggleDay(day)}>{label}</Chip>
-                      ))}
-                    </div>
-                    <ArcField>
-                      <DatePicker label="Ends on" className="arc-trak-field"
-                        value={dayAsDate(sheet.repeat.until)} onChange={date => { if (date) setRepeat({ until: dateAsDay(date) }) }}
-                        clearable={false} placeholder="Pick the last date"
-                        format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
-                    </ArcField>
-                    {!repeatProblem(sheet.form, sheet.repeat) && (
-                      <p className="text-[11px] text-white/50" style={font}>
-                        {seriesDates(sheet.form.date, sheet.repeat.until, sheet.repeat.days).length} events, last one {formatEventDay(sheet.repeat.until)}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <span className="text-[9px] tracking-[0.1em] uppercase text-white/40" style={mono}>Length</span>
-              <div className="flex gap-2 flex-wrap" role="group" aria-label="Length">
-                {DURATIONS.map(d => (
-                  <Chip key={d} on={sheet.form.duration === d} onClick={() => setForm({ duration: d })}>{d} min</Chip>
+            {sheet.step === 0 && <>
+              <div className="flex gap-2 flex-wrap" role="group" aria-label="Event type">
+                {EVENT_KINDS.map(t => (
+                  <Chip key={t} on={sheet.form.kind === t} color={TYPE_COLOR[t]} onClick={() => setForm({ kind: t })}>
+                    {TYPE_LABEL[t]}
+                  </Chip>
                 ))}
               </div>
-            </div>
 
-            <Field label="Venue">
-              <input value={sheet.form.venue} onChange={e => setForm({ venue: e.target.value })}
-                list="saved-venues" placeholder="Pick a saved venue or type a new one" className={inputClass} style={font} />
-              <datalist id="saved-venues">
-                {venues.map(v => <option key={v} value={v} />)}
-              </datalist>
-            </Field>
-
-            {/* Optional: empty means meet at the start time. */}
-            <ArcField>
-              <TimePicker label="Meet time (if earlier)" className="arc-trak-field"
-                value={sheet.form.meetTime} onChange={meetTime => setForm({ meetTime })}
-                minuteStep={5} format="12h" placeholder="Same as the start" emptyAt={halfHourBefore(sheet.form.time)}
-                disabled={!sheet.form.time} />
-              {sheet.form.meetTime && (
-                <button type="button" onClick={() => setForm({ meetTime: '' })}
-                  className="mt-1 text-[12px] text-white/50" style={font}>
-                  No separate meet time
-                </button>
+              {sheet.form.kind === 'match' && (
+                <>
+                  <Field label="Opponent">
+                    <input value={sheet.form.opponent} onChange={e => setForm({ opponent: e.target.value })}
+                      placeholder="e.g. Al Wasl U15" className={inputClass} style={font} />
+                  </Field>
+                  <div className="flex gap-2" role="group" aria-label="Home or away">
+                    <Chip on={sheet.form.homeAway === 'home'} onClick={() => setForm({ homeAway: sheet.form.homeAway === 'home' ? '' : 'home' })}>Home</Chip>
+                    <Chip on={sheet.form.homeAway === 'away'} onClick={() => setForm({ homeAway: sheet.form.homeAway === 'away' ? '' : 'away' })}>Away</Chip>
+                  </div>
+                </>
               )}
-            </ArcField>
 
-            {/* TRAK-161: kit and a family note on every kind of event. */}
-            <Field label="Kit">
-              <input value={sheet.form.kit} onChange={e => setForm({ kit: e.target.value })}
-                placeholder={sheet.form.kind === 'match' ? 'e.g. Red shirts, black shorts' : 'e.g. Green bibs, shin guards'} className={inputClass} style={font} />
-            </Field>
-
-            <div className="space-y-1">
-              <Field label="Note for families">
-                <input value={sheet.form.familyNote} onChange={e => setForm({ familyNote: e.target.value })}
-                  maxLength={FAMILY_NOTE_MAX} aria-describedby={noteProblem ? "family-note-hint family-note-problem" : "family-note-hint"}
-                  placeholder="e.g. Bring extra water, it's a hot day" className={inputClass} style={font} />
+              <Field label={sheet.form.kind === 'other' ? 'What is it' : 'Title (optional)'}>
+                <input value={sheet.form.title} onChange={e => setForm({ title: e.target.value })}
+                  placeholder={sheet.form.kind === 'match' ? `vs ${sheet.form.opponent || 'Opponent'}` : sheet.form.kind === 'training' ? 'Training' : 'e.g. Team photo'}
+                  className={inputClass} style={font} />
               </Field>
-              <p id="family-note-hint" className="text-[11px] text-white/40" style={font}>
-                Players and parents see this. A note with a player's name or a link isn't shown to them.
-              </p>
-              {noteProblem && (
-                <p id="family-note-problem" role="status" className="text-[11px] text-[#fbbf24]" style={font}>
-                  Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
-                </p>
+
+              <Field label="Venue">
+                <input value={sheet.form.venue} onChange={e => setForm({ venue: e.target.value })}
+                  list="saved-venues" placeholder="Pick a saved venue or type a new one" className={inputClass} style={font} />
+                <datalist id="saved-venues">
+                  {venues.map(v => <option key={v} value={v} />)}
+                </datalist>
+              </Field>
+            </>}
+
+            {sheet.step === 1 && <>
+              {/* TRAK-157: Arc's date and time pickers (founders, 12 Oct). A start
+                  time is picked whole from the list; there is no "no time". */}
+              <ArcField>
+                <DatePicker label={sheet.repeat.on ? 'First date' : 'Date'} className="arc-trak-field"
+                  value={dayAsDate(sheet.form.date)} onChange={date => { if (date) setForm({ date: dateAsDay(date) }) }}
+                  disabled={sheet.scope === 'following'} clearable={false} placeholder="Pick a date"
+                  format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
+              </ArcField>
+              <ArcField>
+                <TimePicker label={sheet.form.kind === 'match' ? 'Kickoff' : 'Start'} className="arc-trak-field"
+                  value={sheet.form.time} onChange={time => setForm({ time })}
+                  minuteStep={5} format="12h" placeholder="Pick a start time" emptyAt="17:00" />
+              </ArcField>
+
+              {sheet.scope === 'following' && (
+                <p className="text-[11px] text-white/40" style={font}>Each week keeps its own date; everything else changes.</p>
               )}
-            </div>
+
+              {/* Optional: empty means meet at the start time. */}
+              <ArcField>
+                <TimePicker label="Meet time (if earlier)" className="arc-trak-field"
+                  value={sheet.form.meetTime} onChange={meetTime => setForm({ meetTime })}
+                  minuteStep={5} format="12h" placeholder="Same as the start" emptyAt={halfHourBefore(sheet.form.time)}
+                  disabled={!sheet.form.time} />
+                {sheet.form.meetTime && (
+                  <button type="button" onClick={() => setForm({ meetTime: '' })}
+                    className="mt-1 text-[12px] text-white/50" style={font}>
+                    No separate meet time
+                  </button>
+                )}
+              </ArcField>
+
+              <div className="space-y-1">
+                <span className="text-[9px] tracking-[0.1em] uppercase text-white/40" style={mono}>Length</span>
+                <div className="flex gap-2 flex-wrap" role="group" aria-label="Length">
+                  {DURATIONS.map(d => (
+                    <Chip key={d} on={sheet.form.duration === d} onClick={() => setForm({ duration: d })}>{d} min</Chip>
+                  ))}
+                </div>
+              </div>
+
+              {!sheet.row && sheet.form.kind !== 'match' && (
+                <div className="space-y-2">
+                  <Chip on={sheet.repeat.on} onClick={() => setRepeat({ on: !sheet.repeat.on })}>Repeats weekly</Chip>
+                  {sheet.repeat.on && (
+                    <>
+                      <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Repeat on">
+                        {WEEKDAYS.map((label, day) => (
+                          <Chip key={label} on={sheet.repeat.days.includes(day)} onClick={() => toggleDay(day)}>{label}</Chip>
+                        ))}
+                      </div>
+                      <ArcField>
+                        <DatePicker label="Ends on" className="arc-trak-field"
+                          value={dayAsDate(sheet.repeat.until)} onChange={date => { if (date) setRepeat({ until: dateAsDay(date) }) }}
+                          clearable={false} placeholder="Pick the last date"
+                          format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
+                      </ArcField>
+                      {!repeatProblem(sheet.form, sheet.repeat) && (
+                        <p className="text-[11px] text-white/50" style={font}>
+                          {seriesDates(sheet.form.date, sheet.repeat.until, sheet.repeat.days).length} events, last one {formatEventDay(sheet.repeat.until)}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </>}
+
+            {sheet.step === 2 && <>
+              {/* TRAK-161: kit and a family note on every kind of event. */}
+              <Field label="Kit">
+                <input value={sheet.form.kit} onChange={e => setForm({ kit: e.target.value })}
+                  placeholder={sheet.form.kind === 'match' ? 'e.g. Red shirts, black shorts' : 'e.g. Green bibs, shin guards'} className={inputClass} style={font} />
+              </Field>
+
+              <div className="space-y-1">
+                <Field label="Note for families">
+                  <input value={sheet.form.familyNote} onChange={e => setForm({ familyNote: e.target.value })}
+                    maxLength={FAMILY_NOTE_MAX} aria-describedby={noteProblem ? "family-note-hint family-note-problem" : "family-note-hint"}
+                    placeholder="e.g. Bring extra water, it's a hot day" className={inputClass} style={font} />
+                </Field>
+                <p id="family-note-hint" className="text-[11px] text-white/40" style={font}>
+                  Players and parents see this. A note with a player's name or a link isn't shown to them.
+                </p>
+                {noteProblem && (
+                  <p id="family-note-problem" role="status" className="text-[11px] text-[#fbbf24]" style={font}>
+                    Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
+                  </p>
+                )}
+              </div>
+            </>}
+
+            {sheet.step === REVIEW && <>
+              {inSeries(sheet.row) && (
+                <ScopeChoice scope={sheet.scope}
+                  onChange={scope => setSheet(s => s.kind === 'edit' ? { ...s, scope, error: null } : s)} />
+              )}
+              <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem} />
+            </>}
 
             {sheet.error && (
               <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{sheet.error}</p>
             )}
 
-            <button
-              onClick={saveEvent}
-              disabled={saving}
-              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
-              style={{ background: '#C8F25A', color: '#000', opacity: saving ? 0.6 : 1 }}>
-              {saving ? 'Saving…'
-                : sheet.row?.published ? 'Save changes'
-                : !sheet.row && sheet.repeat.on && !repeatProblem(sheet.form, sheet.repeat)
-                  ? `Save ${seriesDates(sheet.form.date, sheet.repeat.until, sheet.repeat.days).length} drafts`
-                : 'Save draft'}
-            </button>
-            {sheet.row?.published && (
-              <p className="text-[11px] text-white/40 text-center" style={font}>Families see the change as soon as you save.</p>
+            {sheet.step === REVIEW && sheet.row?.published && (
+              <p className="text-[11px] text-white/40" style={font}>Families see the change as soon as you save.</p>
             )}
+
+            {/* The decision sits where the thumb is, as on the assessment. */}
+            <div className="arc sticky bottom-0 -mx-5 px-5 pt-3 pb-5 flex gap-2 bg-[#17171A] border-t border-white/[0.06]">
+              {sheet.step === REVIEW ? <>
+                <Button size="lg" variant="secondary" aria-label={`Back to ${EVENT_STEPS[REVIEW - 1].label}`} onClick={() => toStep(REVIEW - 1)}>
+                  <ChevronLeft size={18} aria-hidden="true" />
+                </Button>
+                {sheet.row?.published ? (
+                  <Button size="lg" className="flex-1" loading={saving} onClick={() => void saveEvent()}>Save changes</Button>
+                ) : <>
+                  <Button size="lg" variant="secondary" className="flex-1" loading={saving} onClick={() => void saveEvent()}>
+                    {seriesCount(sheet) > 1 ? `Save ${seriesCount(sheet)} drafts` : 'Save draft'}
+                  </Button>
+                  <Button size="lg" className="flex-1" loading={saving} onClick={() => void saveEvent(true)}>
+                    {seriesCount(sheet) > 1 ? `Publish ${seriesCount(sheet)}` : 'Publish'}
+                  </Button>
+                </>}
+              </> : <>
+                {sheet.step > 0 && (
+                  <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${EVENT_STEPS[sheet.step - 1].label}`}
+                    onClick={() => toStep(sheet.step - 1)}>Back</Button>
+                )}
+                <Button size="lg" className="flex-1" onClick={nextStep}>Next</Button>
+              </>}
+            </div>
           </div>
         </div>
       )}
