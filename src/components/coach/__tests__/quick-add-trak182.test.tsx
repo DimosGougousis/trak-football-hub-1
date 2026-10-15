@@ -20,14 +20,18 @@ const COACH = { id: 'coach-quick' }
 const EVENTS = `${SUPABASE_URL}/rest/v1/coach_calendar_events`
 let inserted: Record<string, unknown>[]
 let rows: Record<string, unknown>[]
+let eventReads: number
+let eventsOn: boolean
 
 beforeEach(() => {
   signInAs(COACH)
   inserted = []
   rows = []
+  eventReads = 0
+  eventsOn = true
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
-    http.get(EVENTS, () => HttpResponse.json(rows)),
+    http.get(EVENTS, () => { eventReads++; return HttpResponse.json(rows) }),
     http.post(EVENTS, async ({ request }) => {
       inserted.push(...await request.json() as Record<string, unknown>[])
       return HttpResponse.json([{ id: 'new-1' }], { status: 201 })
@@ -36,7 +40,7 @@ beforeEach(() => {
     table('squad_players', []),
     table('session_attendance', []),
     table('event_absences', []),
-    rpc('feature_on', () => true),
+    rpc('feature_on', () => eventsOn),
   )
 })
 afterEach(() => { server.events.removeAllListeners() })
@@ -101,8 +105,13 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Match' }))
     await userEvent.type(within(form).getByLabelText('Opponent'), 'Synthetic Rovers')
     await userEvent.click(within(form).getByRole('button', { name: 'More details' }))
-    const sheet = await screen.findByRole('dialog', { name: 'New event' }, { timeout: 3000 })
-    await waitFor(() => expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers'))
+    // Tarek's #319 probe: already on Schedule, the hand-over must still open
+    // Schedule's stepped form, and the quick-add must close (both are "New event").
+    await waitFor(() => expect(document.querySelector('[aria-label="Event steps"]')).not.toBeNull())
+    await waitFor(() => expect(screen.getAllByRole('dialog', { name: 'New event' })).toHaveLength(1))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers')
+    expect(screen.getByRole('button', { name: 'Quick add' })).toBeInTheDocument()
     expect(inserted).toEqual([])
   })
 
@@ -113,9 +122,12 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Continue' }))
     expect(within(form).getByRole('alert')).toHaveTextContent('Add the opponent and the score.')
     await userEvent.type(within(form).getByLabelText('Opponent'), 'Synthetic United')
-    await userEvent.click(within(form).getByRole('button', { name: 'Away' }))
     await userEvent.type(within(form).getByLabelText('Our score'), '2')
     await userEvent.type(within(form).getByLabelText('Their score'), '1')
+    await userEvent.click(within(form).getByRole('button', { name: 'Continue' }))
+    expect(within(form).getByRole('alert')).toHaveTextContent('Say whether it was home or away.')
+    await userEvent.click(within(form).getByRole('button', { name: 'Away' }))
+    expect(within(form).getByRole('button', { name: 'Away' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(form).getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(document.querySelector('[aria-current="step"]')?.textContent).toContain('Squad'))
     await userEvent.click(screen.getByRole('button', { name: 'Back to Match' }))
@@ -123,6 +135,40 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     const [us, them] = screen.getAllByPlaceholderText('0')
     expect(us).toHaveValue('2')
     expect(them).toHaveValue('1')
+    // Read once, then cleared: a reload or Back can't reopen it prefilled.
+    expect(window.history.state?.usr ?? null).toBeNull()
+  })
+
+  // Tarek's #319 review: Home/Away starts unanswered, as on Schedule.
+  it('a match draft nobody marked home or away is not saved as Home', async () => {
+    const menu = await openMenu()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
+    const form = await screen.findByRole('dialog', { name: 'New event' })
+    await userEvent.click(within(form).getByRole('button', { name: 'Match' }))
+    expect(within(form).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-pressed', 'false')
+    expect(within(form).getByRole('button', { name: 'Away' })).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.type(within(form).getByLabelText('Opponent'), 'Synthetic Rovers')
+    await pickTime(userEvent, 'Kickoff', '16:00')
+    const before = eventReads
+    await userEvent.click(within(form).getByRole('button', { name: 'Save draft' }))
+    await waitFor(() => expect(inserted).toHaveLength(1))
+    expect(inserted[0].home_away ?? null).toBeNull()
+    // Schedule reloads its events, so the draft is there to publish.
+    await waitFor(() => expect(eventReads).toBeGreaterThan(before))
+  })
+
+  it('with events switched off, New event says Coming soon and saves nothing', async () => {
+    eventsOn = false
+    // Its own coach: the app's query cache is shared, and the switch is cached per account.
+    signInAs({ id: 'coach-quick-events-off' })
+    const menu = await openMenu()
+    // The menu is drawn once the events switch has answered (no Take register asked for).
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
+    // "Coming soon" is a toast (useParked); the form never opens and nothing is written.
+    await new Promise(resolve => setTimeout(resolve, 100))
+    expect(screen.queryByRole('dialog', { name: 'New event' })).toBeNull()
+    expect(screen.getByRole('menu', { name: 'Quick add' })).toBeInTheDocument()
+    expect(inserted).toEqual([])
   })
 
   it("offers today's started training's register, which opens on Schedule", async () => {
@@ -136,5 +182,7 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     const register = await within(menu).findByRole('menuitem', { name: 'Take register · Finishing' })
     await userEvent.click(register)
     expect(await screen.findByRole('dialog', { name: 'Take register' }, { timeout: 3000 })).toBeInTheDocument()
+    // Nothing of the quick-add stays open under the register.
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Quick add' })).toBeNull())
   })
 })

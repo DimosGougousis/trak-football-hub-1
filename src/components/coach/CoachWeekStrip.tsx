@@ -10,10 +10,11 @@ import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
  * saved record; planned events open in a bottom sheet (TRAK-182) with Publish,
  * Copy WhatsApp link, Edit and Attending. Only where events are on.
  */
-export function CoachWeekStrip({ coachId }: { coachId: string }) {
+export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; version?: number }) {
   if (!useFeature('events')) return null
   return (
-    <LoadedWeekStrip key={coachId} loadKey={coachId}
+    // A new `version` (the quick-add saved a draft) reloads the week in place.
+    <LoadedWeekStrip key={coachId} loadKey={`${coachId}:${version}`}
       sessionHref={event => `/coach/sessions/${event.sessionId}`}
       renderSheet={(event, trigger, refresh) => (
         <EventSheet event={event} role="coach" trigger={trigger}>

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, type NavigateOptions } from 'react-router-dom'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { Check, ClipboardCheck, Plus, Swords, CalendarPlus, Dumbbell } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { localTodayISO } from '@/lib/event-time'
-import { blankForm, clashMessage, formProblem, formToRow, type EventForm, type EventRow } from '@/lib/coach-events'
+import { blankForm, clashMessage, dateAsDay, dayAsDate, formProblem, formToRow, newDraftFields, type EventForm, type EventRow } from '@/lib/coach-events'
+import { useFeature, useParked } from '@/components/trak/parked'
 import { registerProblem } from '@/lib/event-register'
 import { Button } from '@/components/arc/button/button'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
@@ -27,9 +28,19 @@ const SPRING = { type: 'spring', bounce: 0, visualDuration: 0.35 } as const
 const CHECK_SPRING = { type: 'spring', bounce: 0.3, visualDuration: 0.35 } as const
 const field = 'w-full rounded-[12px] border border-white/[0.08] bg-[#0A0A0B] px-3 py-2.5 text-[16px] text-white/90 placeholder-white/25 outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
-const dayAsDate = (day: string) => { const [y, m, d] = day.split('-').map(Number); return new Date(y, m - 1, d) }
-const dateAsDay = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+/** Home or away as two pressed buttons: it starts unanswered, as on Schedule,
+ *  so a fixture is never saved as Home because nobody chose (Tarek, #319). */
+function HomeAway({ value, onChange }: { value: '' | 'home' | 'away'; onChange: (v: 'home' | 'away') => void }) {
+  return (
+    <div role="group" aria-label="Home or away" className="grid grid-cols-2 gap-2">
+      {(['home', 'away'] as const).map(v => (
+        <Button key={v} size="sm" variant={value === v ? 'primary' : 'secondary'} aria-pressed={value === v} onClick={() => onChange(v)}>
+          {v === 'home' ? 'Home' : 'Away'}
+        </Button>
+      ))}
+    </div>
+  )
+}
 
 /** Keeps the surface above the on-screen keyboard (8g): the visual viewport shrinks when it opens. */
 function useKeyboardInset() {
@@ -50,6 +61,10 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const keyboard = useKeyboardInset()
+  // Events switched off for the academy (TRAK-124): New event and the register
+  // say "Coming soon", as Schedule does; logging is not an events feature.
+  const eventsOn = useFeature('events')
+  const { comingSoon } = useParked()
   const [face, setFace] = useState<Face>('closed')
   const [register, setRegister] = useState<EventRow | null>(null)
   const surface = useRef<HTMLDivElement>(null)
@@ -60,7 +75,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   const [date, setDate] = useState(localTodayISO)
   const [time, setTime] = useState('')
   const [opponent, setOpponent] = useState('')
-  const [homeAway, setHomeAway] = useState<'home' | 'away'>('home')
+  const [homeAway, setHomeAway] = useState<'' | 'home' | 'away'>('')
   const [scoreUs, setScoreUs] = useState('')
   const [scoreThem, setScoreThem] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -92,14 +107,14 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
 
   // Today's training whose register can open now: the menu offers it first.
   useEffect(() => {
-    if (face !== 'menu' || !user) return
+    if (face !== 'menu' || !user || !eventsOn) return
     let cancelled = false
     supabase.from('coach_calendar_events').select('*').eq('coach_user_id', user.id).eq('event_date', localTodayISO())
       .eq('published', true).then(({ data }) => {
         if (!cancelled) setRegister(((data ?? []) as EventRow[]).find(row => !registerProblem(row)) ?? null)
       })
     return () => { cancelled = true }
-  }, [face, user])
+  }, [face, user, eventsOn])
 
   const [doneText, setDoneText] = useState('')
   const done = (text: string) => {
@@ -117,18 +132,22 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
     setSaving(true)
     // As Schedule's Save draft: a new event starts unpublished; families never see a draft.
     const { data, error: failed } = await supabase.from('coach_calendar_events')
-      .insert([{ ...formToRow(form), coach_user_id: user.id, published: false, source: 'manual' }]).select('id')
+      .insert([{ ...formToRow(form), ...newDraftFields(user.id) }]).select('id')
     setSaving(false)
     if (failed || !data?.length) { setError(clashMessage(failed) ?? "Couldn't save the draft. Check your connection and try again."); return }
-    setTime(''); setOpponent('')
+    setTime(''); setOpponent(''); setHomeAway('')
     onSaved?.()
     done('Draft saved. Publish it from Schedule.')
   }
-  const moreDetails = () => navigate('/coach/schedule', { state: { quickEvent: eventForm() } })
+  // Leaving closes the surface first: on Schedule itself nothing remounts, so it
+  // would otherwise stay open over the sheet it hands to (Tarek, #319).
+  const go = (to: string, options?: NavigateOptions) => { close(); navigate(to, options) }
+  const moreDetails = () => go('/coach/schedule', { state: { quickEvent: eventForm() } })
   const continueMatch = () => {
     if (!opponent.trim() || scoreUs === '' || scoreThem === '') { setError('Add the opponent and the score.'); return }
+    if (!homeAway) { setError('Say whether it was home or away.'); return }
     if (date > localTodayISO()) { setError("A match can't be logged before it's played."); return }
-    navigate('/coach/sessions/add', { state: { quickMatch: { opponent: opponent.trim(), venue: homeAway === 'home' ? 'Home' : 'Away', scoreUs, scoreThem, date } } })
+    go('/coach/sessions/add', { state: { quickMatch: { opponent: opponent.trim(), venue: homeAway === 'home' ? 'Home' : 'Away', scoreUs, scoreThem, date } } })
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -154,7 +173,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   return <>
     {/* Room under the last row, so the "+" never covers it. */}
     <div aria-hidden="true" className="h-16" />
-    <div className="fixed z-[60] pointer-events-none"
+    <div className="fixed z-40 pointer-events-none"
       style={{
         right: 'max(16px, calc((100vw - 430px) / 2 + 16px))',
         bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))`,
@@ -197,18 +216,18 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                 <div role="menu" aria-label="Quick add" className="space-y-0.5">
                   {register && (
                     <button type="button" role="menuitem" className={item}
-                      onClick={() => navigate(`/coach/schedule?register=${register.id}`)}>
+                      onClick={() => go(`/coach/schedule?register=${register.id}`)}>
                       <ClipboardCheck size={18} aria-hidden="true" className="text-primary" />
                       <span className="flex-1 min-w-0 truncate">Take register · {register.title}</span>
                     </button>
                   )}
-                  <button type="button" role="menuitem" className={item} onClick={() => navigate('/coach/sessions/add')}>
+                  <button type="button" role="menuitem" className={item} onClick={() => go('/coach/sessions/add')}>
                     <Dumbbell size={18} aria-hidden="true" className="text-white/60" />Log training
                   </button>
                   <button type="button" role="menuitem" className={item} onClick={() => { setError(null); setFace('match') }}>
                     <Swords size={18} aria-hidden="true" className="text-white/60" />Log match
                   </button>
-                  <button type="button" role="menuitem" className={item} onClick={() => { setError(null); setFace('event') }}>
+                  <button type="button" role="menuitem" className={item} onClick={() => { if (!eventsOn) { comingSoon(); return } setError(null); setFace('event') }}>
                     <CalendarPlus size={18} aria-hidden="true" className="text-white/60" />New event
                   </button>
                 </div>
@@ -222,8 +241,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                   {kind === 'match' && <>
                     <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
                       placeholder="Opponent" className={field} />
-                    <SegmentedControl label="Home or away" value={homeAway} onValueChange={v => setHomeAway(v as 'home' | 'away')}
-                      options={[{ value: 'home', label: 'Home' }, { value: 'away', label: 'Away' }]} />
+                    <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
                   </>}
                   <div className="grid grid-cols-2 gap-2">
                     <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
@@ -245,8 +263,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                   <p className="text-[15px] font-medium text-white/90">Log a match</p>
                   <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
                     placeholder="Opponent" className={field} />
-                  <SegmentedControl label="Home or away" value={homeAway} onValueChange={v => setHomeAway(v as 'home' | 'away')}
-                    options={[{ value: 'home', label: 'Home' }, { value: 'away', label: 'Away' }]} />
+                  <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                     <input aria-label="Our score" inputMode="numeric" value={scoreUs} placeholder="Us"
                       onChange={e => { setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />

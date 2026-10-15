@@ -101,6 +101,10 @@ export default function CoachAddSession() {
   const [quick] = useState(() => (location.state as { quickMatch?: {
     opponent: string; venue: 'Home' | 'Away'; scoreUs: string; scoreThem: string; date: string
   } } | null)?.quickMatch ?? null)
+  // Read once, then cleared: a reload or Back must not reopen it prefilled (Tarek, #319).
+  useEffect(() => {
+    if (quick) navigate(location.pathname, { replace: true, state: null })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
 
   // Common
   /* Reached via /coach/sessions/quick? That entry point is the match one, so

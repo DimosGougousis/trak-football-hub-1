@@ -49,6 +49,8 @@ export default function CoachHomePage() {
   const location = useLocation()
   // TRAK-180: a revisit starts from what Home last showed this coach; every
   // read below still runs and replaces it, and a failure clears its value.
+  // TRAK-182 part 8: a quick-add draft shows in the week at once.
+  const [weekVersion, setWeekVersion] = useState(0)
   const [seed] = useState(() => remembered<HomeMemory>('coach-home', user?.id))
   // null = not answered yet (TRAK-92). Starting these at 0 told a coach with a
   // full season "0 players · 0 total · 0 sessions" until the reads came back.
@@ -242,7 +244,7 @@ export default function CoachHomePage() {
       <div className="pt-3 pb-4">
         {/* TRAK-163: the calendar is top left (it replaces the "Smart Calendar" button), then the next seven days. */}
         <HomeHeader calendarTo="/coach/schedule" center={<HomeTitle>{profile?.full_name || 'Coach'}</HomeTitle>} />
-        {user && <CoachWeekStrip coachId={user.id} />}
+        {user && <CoachWeekStrip coachId={user.id} version={weekVersion} />}
 
         {/* A failed load must not be reported as a season with nothing in it.
             Shown above the stats rather than replacing them, so anything that
@@ -707,7 +709,7 @@ export default function CoachHomePage() {
           </section>
         )}
       </div>
-      <QuickAdd />
+      <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
