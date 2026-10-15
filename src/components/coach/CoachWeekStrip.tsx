@@ -1,17 +1,25 @@
 import { supabase } from '@/integrations/supabase/client'
 import { useFeature } from '@/components/trak/parked'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
+import { EventSheet } from '@/components/trak/EventSheet'
+import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
 
 /**
  * TRAK-163: the coach's week on Home, drafts included (marked), so the
  * schedule is visible without hunting for it. Logged sessions open their
- * saved record; planned events open Schedule. Only where events are on.
+ * saved record; planned events open in a bottom sheet (TRAK-182) with Publish,
+ * Copy WhatsApp link, Edit and Attending. Only where events are on.
  */
 export function CoachWeekStrip({ coachId }: { coachId: string }) {
   if (!useFeature('events')) return null
   return (
     <LoadedWeekStrip key={coachId} loadKey={coachId}
-      eventHref={event => event.sessionId ? `/coach/sessions/${event.sessionId}` : '/coach/schedule'}
+      sessionHref={event => `/coach/sessions/${event.sessionId}`}
+      renderSheet={(event, trigger, refresh) => (
+        <EventSheet event={event} role="coach" trigger={trigger}>
+          <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />
+        </EventSheet>
+      )}
       load={async (from, to) => {
         const events = await supabase.from('coach_calendar_events').select('*')
           .eq('coach_user_id', coachId).gte('event_date', from).lte('event_date', to)

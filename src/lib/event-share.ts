@@ -69,7 +69,7 @@ const LINK = new RegExp([
 // opens this event; /event/:id routes each family to it. Training and match
 // say "Event details" until families can answer "Can't make it" (TRAK-137);
 // Tarek's availability wording comes back with it (Imad, 13 Oct, #292).
-const eventLink = (id: string) => `https://trakfootball.com/event/${id}`
+export const eventLink = (id: string) => `https://trakfootball.com/event/${id}`
 const KIND_LABEL: Record<ShareableEvent['kind'], string> = {
   training: 'Training',
   match: 'Match',

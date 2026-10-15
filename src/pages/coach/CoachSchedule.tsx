@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
+  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, formProblem, formToRow,
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
@@ -101,12 +101,6 @@ function failed(error: unknown, data: unknown[] | null) {
 
 const SAVE_FAILED = "Couldn't save the event. Check your connection and try again; your details are still here."
 
-/** TRAK-158: the database refuses an overlapping live event with a sentence
-    for the coach, naming the clash; saving again won't help, so show it. */
-function clashMessage(error: unknown): string | null {
-  const e = error as { code?: string, message?: string } | null
-  return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
-}
 
 const inputClass = 'w-full bg-[#0A0A0B] border border-white/[0.07] rounded-[12px] px-3 py-2.5 text-[14px] text-white/88 placeholder-white/20 outline-none'
 const font = { fontFamily: "'DM Sans', sans-serif" }
@@ -398,6 +392,23 @@ export default function CoachSchedule() {
     loadData()
     toast.success('Published to the squad')
   }
+
+  // TRAK-182: the event sheet on Home sends Edit here (?edit=<id>), and a
+  // weekly series' Publish (?publish=<id>), which asks this week or following.
+  const [params, setParams] = useSearchParams()
+  useEffect(() => {
+    const id = params.get('edit') ?? params.get('publish')
+    const row = id ? calEvents.find(r => r.id === id) : undefined
+    if (!row) return
+    const editing = params.has('edit')
+    setParams({}, { replace: true })
+    if (row.event_date) {
+      const [y, m] = row.event_date.split('-').map(Number)
+      setViewYear(y); setViewMonth(m - 1); setSelected(row.event_date)
+    }
+    if (editing) openEdit(row)
+    else void publish(row)
+  }, [calEvents]) // eslint-disable-line react-hooks/exhaustive-deps -- runs once the rows load
 
   const confirmCancel = async () => {
     if (parked) return comingSoon()
