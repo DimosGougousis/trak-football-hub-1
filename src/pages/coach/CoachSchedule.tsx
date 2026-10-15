@@ -21,6 +21,7 @@ import type { Fixture } from '@/lib/fixtures-csv'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
+import { EventAbsences } from '@/components/coach/EventAbsences'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -662,6 +663,7 @@ export default function CoachSchedule() {
                           {cancelled ? 'Cancelled' : row.published ? 'Published' : 'Draft · only you see this'}
                         </span>
                       )}
+                      {row?.published && !cancelled && user && <EventAbsences coachId={user.id} eventId={row.id} />}
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-0.5 text-white/45" style={font}>{row.cancel_reason}</p>
                       )}

@@ -159,7 +159,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         if (url.pathname === '/rest/v1/rpc/my_session_is_live' || url.pathname === '/rest/v1/rpc/feature_on') return json(true)
         if (['get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup', 'get_player_invites_for_current_user', 'family_training_history', 'my_calendar_link'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])
         if (url.pathname === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
-        if (['matches', 'player_details', 'coach_details', 'recognition_awards', 'session_attendance'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+        if (['matches', 'player_details', 'coach_details', 'recognition_awards', 'session_attendance', 'event_absences'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
         unexpected.push(`${req.method()} ${url.pathname}`)
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
       })
