@@ -6,10 +6,10 @@ import { test, expect, type BrowserContext } from '@playwright/test'
 const ids = { coach: '97182000-0000-4000-8000-000000000001' }
 const players = [
   { id: 'sq-1', player_name: 'Hugo Lloris', position: 'Goalkeeper', age_group: 'U16', shirt_number: 1 },
-  { id: 'sq-2', player_name: 'Ade Okafor', position: 'Defender', age_group: 'U16', shirt_number: 4 },
-  { id: 'sq-3', player_name: 'Bea Lin', position: 'Midfielder', age_group: 'U16', shirt_number: 8 },
-  { id: 'sq-4', player_name: 'Cal Moss', position: 'Forward', age_group: 'U16', shirt_number: 9 },
-  { id: 'sq-5', player_name: 'Zane Older', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
+  { id: 'sq-2', player_name: 'Bukayo Saka', position: 'Defender', age_group: 'U16', shirt_number: 4 },
+  { id: 'sq-3', player_name: 'Beth Mead', position: 'Midfielder', age_group: 'U16', shirt_number: 8 },
+  { id: 'sq-4', player_name: 'Cole Palmer', position: 'Forward', age_group: 'U16', shirt_number: 9 },
+  { id: 'sq-5', player_name: 'Thiago Silva', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
 ].map(p => ({ ...p, coach_user_id: ids.coach, status: 'active', linked_player_id: `${p.id}-user`, created_at: '2026-10-01T08:00:00Z' }))
 
 async function coachBackend(context: BrowserContext, unexpected: string[]) {
@@ -55,9 +55,9 @@ test.describe('TRAK-182 coach screens', () => {
   test.use({ timezoneId: 'Asia/Dubai' })
   for (const [name, path, ready] of [
     ['home', '/coach/home', 'Hugo Lloris'],
-    ['squad', '/coach/squad', 'Ade Okafor'],
+    ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
-    ['player', '/coach/player/sq-2', 'Ade Okafor'],
+    ['player', '/coach/player/sq-2', 'Bukayo Saka'],
   ] as const) {
     test(`coach ${name}`, async ({ page, context }, testInfo) => {
       const unexpected: string[] = [], errors: string[] = []
