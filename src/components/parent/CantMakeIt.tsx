@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client'
 import type { PlayerEvent } from '@/lib/player-events'
 
 /* TRAK-137 (J8.14, Imad 8 Oct): like a school register, everyone counts as
-   coming; a guardian reports the exception. The database decides who may and
+   coming; a guardian reports the exception (or, since TRAK-183, a player at or
+   above their academy's consent age, for themselves). The database decides who may and
    until when (report_cant_make_it / undo_cant_make_it, kickoff), so this page
    only shows its answer. Hidden on cancelled and past days, like the lists. */
 async function fetchAbsence(childId: string, eventId: string, signal: AbortSignal) {
