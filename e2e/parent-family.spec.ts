@@ -236,6 +236,12 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await expect(page).toHaveURL(/\/coach\/home$/)
         await sheetAtRest(sheet)
         await page.screenshot({ path: testInfo.outputPath('coach-event-sheet.png') })
+        // TRAK-182: Schedule's month is Arc's calendar, with today's two entries counted.
+        await page.keyboard.press('Escape')
+        await expect(sheet).toHaveCount(0)
+        await page.getByRole('link', { name: 'Calendar' }).click()
+        await expect(page.getByRole('gridcell', { name: /, 2 events$/ })).toHaveAttribute('aria-selected', 'true')
+        await page.screenshot({ path: testInfo.outputPath('coach-schedule-month.png'), fullPage: true })
       }
       expect(errors).toEqual([])
       expect(unexpected).toEqual([])

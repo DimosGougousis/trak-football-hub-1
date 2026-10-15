@@ -23,6 +23,8 @@ export interface CalendarProps {
   className?: string;
   /** Adds a Today button that slides back to the current month and selects today when it is available. */
   showToday?: boolean;
+  /** Trak (TRAK-182): one dot per colour under a day, e.g. its events. The day's label gains the count. */
+  marks?: (date: Date) => string[];
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -36,9 +38,11 @@ const shiftMonths = (date: Date, amount: number) => new Date(date.getFullYear(),
 const isBefore = (a: Date, b?: Date) => Boolean(b && startOfDay(a).getTime() < startOfDay(b).getTime());
 const isAfter = (a: Date, b?: Date) => Boolean(b && startOfDay(a).getTime() > startOfDay(b).getTime());
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+/** Trak: weeks start on Monday, as Schedule and the Home week strip do (TRAK-163). */
+const weekday = (date: Date) => (date.getDay() + 6) % 7;
 /** Every month shows six weeks, so the grid keeps one height and never jumps while months change. */
 const makeWeeks = (month: Date) => {
-  const start = addDays(month, -month.getDay());
+  const start = addDays(month, -weekday(month));
   return Array.from({ length: 6 }, (_, week) => Array.from({ length: 7 }, (_, day) => addDays(start, week * 7 + day)));
 };
 
@@ -116,6 +120,7 @@ export function Calendar({
   locale = "en-US",
   className,
   showToday = false,
+  marks,
 }: CalendarProps) {
   const titleId = useId();
   const today = useToday();
@@ -164,7 +169,7 @@ export function Calendar({
   const paneIndexes = Array.from(new Set([span[0], span[1], target])).sort((a, b) => a - b);
   const formatter = useMemo(() => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }), [locale]);
   const weekdayFormatter = useMemo(() => new Intl.DateTimeFormat(locale, { weekday: "short" }), [locale]);
-  const weekdays = useMemo(() => Array.from({ length: 7 }, (_, index) => weekdayFormatter.format(new Date(2024, 0, 7 + index))), [weekdayFormatter]);
+  const weekdays = useMemo(() => Array.from({ length: 7 }, (_, index) => weekdayFormatter.format(new Date(2024, 0, 8 + index))), [weekdayFormatter]);
   const monthLabel = month ? formatter.format(month) : "";
   // The selected disc glides between days, so each number flips color as the disc actually passes it:
   // the day it leaves waits longer on short hops, the day it lands on waits longer on long ones.
@@ -173,7 +178,7 @@ export function Calendar({
   const [handoff, setHandoff] = useState({ from: "", to: "", distance: 0 });
   if (last.key !== valueKey) {
     const days = last.date && value ? Math.round((startOfDay(value).getTime() - startOfDay(last.date).getTime()) / 864e5) : 0;
-    const columns = last.date && value ? value.getDay() - last.date.getDay() : 0;
+    const columns = last.date && value ? weekday(value) - weekday(last.date) : 0;
     setLast({ key: valueKey, date: value });
     setHandoff({ from: last.key, to: valueKey, distance: Math.hypot(columns, (days - columns) / 7) });
   }
@@ -232,8 +237,8 @@ export function Calendar({
       ArrowRight: [addDays(date, 1), 1],
       ArrowUp: [addDays(date, -7), -1],
       ArrowDown: [addDays(date, 7), 1],
-      Home: [addDays(date, -date.getDay()), 1],
-      End: [addDays(date, 6 - date.getDay()), -1],
+      Home: [addDays(date, -weekday(date)), 1],
+      End: [addDays(date, 6 - weekday(date)), -1],
       PageUp: [shiftMonths(date, event.shiftKey ? -12 : -1), -1],
       PageDown: [shiftMonths(date, event.shiftKey ? 12 : 1), 1],
     };
@@ -254,7 +259,7 @@ export function Calendar({
   // Six fixed weeks per month, so a day's cell is its distance from the first day on the grid.
   const cellOf = (paneMonth: Date) => {
     if (!value) return -1;
-    const first = addDays(paneMonth, -paneMonth.getDay());
+    const first = addDays(paneMonth, -weekday(paneMonth));
     const index = Math.round((startOfDay(value).getTime() - first.getTime()) / 864e5);
     return index >= 0 && index < 42 ? index : -1;
   };
@@ -267,12 +272,14 @@ export function Calendar({
         const key = dateKey(date);
         const selected = sameDay(date, value);
         const isToday = sameDay(date, today);
+        const dots = marks?.(date) ?? [];
+        const label = date.toLocaleDateString(locale, { dateStyle: "full" });
         return <button
           key={key}
           type="button"
           role="gridcell"
           data-date={key}
-          aria-label={date.toLocaleDateString(locale, { dateStyle: "full" })}
+          aria-label={dots.length ? `${label}, ${dots.length} ${dots.length === 1 ? "event" : "events"}` : label}
           aria-selected={selected}
           aria-current={isToday ? "date" : undefined}
           tabIndex={present && key === tabbableKey ? 0 : -1}
@@ -282,7 +289,9 @@ export function Calendar({
           onFocus={() => setFocusedDate(date)}
           onKeyDown={(event) => onDayKeyDown(event, date)}
           onClick={() => onChange?.(date)}
-        ><span className={styles.dayNumber}>{date.getDate()}</span></button>;
+        ><span className={styles.dayNumber}>{date.getDate()}</span>
+          {dots.length > 0 && <span className={styles.marks} aria-hidden="true">{dots.slice(0, 3).map((color, i) => <span key={i} style={{ background: color }} />)}</span>}
+        </button>;
       })}
     </div>)}
     </div>
