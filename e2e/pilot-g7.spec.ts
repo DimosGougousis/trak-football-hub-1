@@ -77,6 +77,11 @@ for (const role of ['player', 'coach', 'club'] as const) {
       await expect(page).toHaveURL(/\/coach\/assess$/)
       await expect(page.getByRole('heading', { name: 'Assessment' })).toBeVisible()
       await page.goto('/coach/sessions/quick')
+      // TRAK-182: the match log is in steps; the squad is on the second.
+      await page.getByPlaceholder('Opponent name').fill('Synthetic Rovers')
+      await page.getByPlaceholder('0').first().fill('1')
+      await page.getByPlaceholder('0').last().fill('0')
+      await page.getByRole('button', { name: 'Next' }).click()
       await expect(page.getByText(/No squad yet\./)).toBeVisible()
     }
 
