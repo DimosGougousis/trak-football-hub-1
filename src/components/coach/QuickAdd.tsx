@@ -173,7 +173,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   return <>
     {/* Room under the last row, so the "+" never covers it. */}
     <div aria-hidden="true" className="h-16" />
-    <div className="fixed z-40 pointer-events-none"
+    <div data-quick-add className="fixed z-40 pointer-events-none"
       style={{
         right: 'max(16px, calc((100vw - 430px) / 2 + 16px))',
         bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))`,

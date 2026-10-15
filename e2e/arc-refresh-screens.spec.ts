@@ -91,7 +91,7 @@ test.describe('TRAK-182 coach screens', () => {
       // motion's springs run in JavaScript: wait until the surface stops moving.
       let last = ''
       for (let i = 0; i < 20; i++) {
-        const box = JSON.stringify(await page.locator('.fixed.z-\\[60\\] > div').first().boundingBox())
+        const box = JSON.stringify(await page.locator('[data-quick-add] > div').first().boundingBox())
         if (box === last) return
         last = box; await page.waitForTimeout(80)
       }
