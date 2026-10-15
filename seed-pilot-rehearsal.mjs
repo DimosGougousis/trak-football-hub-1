@@ -57,12 +57,14 @@ if (!PW || PW.length < 16) {
 const ORG_NAME = 'Rehearsal FC'
 const JOIN_CODE = 'REHRS'
 
-// Mirrors src/lib/consent.ts (CONSENT_NOTICE_VERSION, CONSENT_STATEMENT) — a
-// .mjs cannot import the TS module. Change both together, as the app does.
-const CONSENT_NOTICE_VERSION = '2026-10-09.1'
-const CONSENT_STATEMENT =
-  'I confirm I hold parental responsibility for this child and I authorise the processing I have selected above. ' +
-  'I understand I can withdraw at any time from my profile, and that withdrawing stops future processing.'
+// Mirrors src/lib/consent.ts (CONSENT_NOTICE_VERSION, CONSENT_STATEMENT_TEMPLATE)
+// — a .mjs cannot import the TS module. Change both together, as the app does.
+// The app stores the statement with the first name of the child filled in.
+const CONSENT_NOTICE_VERSION = '2026-10-15.2'
+const CONSENT_STATEMENT_TEMPLATE =
+  "By approving, you confirm you're {child}'s parent or legal guardian and agree to the choices above. " +
+  'You can withdraw any time in settings, which stops new records.'
+const consentStatement = firstName => CONSENT_STATEMENT_TEMPLATE.split('{child}').join(firstName)
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -581,7 +583,7 @@ async function seed() {
         p_relationship: 'parent',
         p_purposes: { coaching_records: true, recognition: true },
         p_notice_version: CONSENT_NOTICE_VERSION,
-        p_consent_text: CONSENT_STATEMENT,
+        p_consent_text: consentStatement(r.player_name.trim().split(/\s+/)[0]),
       })
       if (error) log(`consent for ${r.player_name}: ${error.message}`)
       else created.consents++

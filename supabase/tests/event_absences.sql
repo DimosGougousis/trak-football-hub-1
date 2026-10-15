@@ -134,7 +134,7 @@ SELECT pg_temp.earefused(pg_temp.eareport(700,20,repeat('x',141)),'2 a reason ov
 SELECT pg_temp.eaactor(32);
 SELECT pg_temp.earefused(pg_temp.eareport(706,23),'2 an academy with events switched off is refused','42501','switched off');
 SELECT pg_temp.eaactor(20);
-SELECT pg_temp.earefused(pg_temp.eareport(700,20),'2 the child cannot report themselves (players don''t answer in v1)','42501','guardian');
+SELECT pg_temp.earefused(pg_temp.eareport(700,20),'2 a 10-year-old cannot report themselves: a guardian does (TRAK-183 is for players who consent for themselves)','42501','guardian');
 SELECT pg_temp.earefused(format('INSERT INTO public.event_absences(event_id,squad_player_id,reported_by) VALUES(%L,%L,%L)',
   pg_temp.eaid(705),pg_temp.eaid(42),pg_temp.eaid(20)),'2 nobody writes the table directly','42501','');
 
@@ -148,7 +148,7 @@ SELECT pg_temp.eacheck(pg_temp.easeen()='700:20','3 coach A sees their own event
 SELECT pg_temp.eaactor(11);
 SELECT pg_temp.eacheck(pg_temp.easeen()='705:22','3 coach B sees only their own',pg_temp.easeen());
 SELECT pg_temp.eaactor(20);
-SELECT pg_temp.eacheck(pg_temp.easeen()='none','3 a child reads no absences (players don''t answer in v1)',pg_temp.easeen());
+SELECT pg_temp.eacheck(pg_temp.easeen()='none','3 a 10-year-old reads no absences (their guardian does)',pg_temp.easeen());
 
 -- ── 4. Withdrawal: no more reports, and the guardian's view hides ─────────
 SELECT pg_temp.eaactor(30);
