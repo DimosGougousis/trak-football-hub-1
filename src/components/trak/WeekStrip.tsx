@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
-import { Accordion } from '@/components/arc/accordion/accordion'
+import { ChevronRight } from 'lucide-react'
 import { LoadError } from '@/components/trak/LoadError'
 import { eventHeading, toPlayerEvent, type PlayerEvent } from '@/lib/player-events'
 // The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
@@ -21,14 +21,20 @@ export function weekDays(today: Date): string[] {
   return Array.from({ length: 7 }, (_, i) => format(addDays(monday, i), 'yyyy-MM-dd'))
 }
 
+/** How a role opens an event: a sheet around the row's trigger (TRAK-182), given a refresh for after a change. */
+export type RenderEventSheet = (event: StripEvent, trigger: ReactElement, refresh: () => void) => ReactNode
+
 /**
  * TRAK-163: this week, Monday to Sunday, under the Home header (the Therabody
  * strip). Today is selected; a day with events shows a dot per event; tapping
- * a day lists its events, each opening to its details.
+ * a day lists its events. TRAK-182: each event opens in a bottom sheet where
+ * it is (not the calendar); a coach's logged session opens its saved record.
  */
-export function WeekStrip({ events, eventHref, today = new Date() }: {
+export function WeekStrip({ events, renderSheet, sessionHref, refresh = () => {}, today = new Date() }: {
   events: StripEvent[]
-  eventHref: (event: StripEvent) => string
+  renderSheet: RenderEventSheet
+  sessionHref?: (event: StripEvent) => string
+  refresh?: () => void
   today?: Date
 }) {
   const [day, setDay] = useState(format(today, 'yyyy-MM-dd'))
@@ -56,16 +62,25 @@ export function WeekStrip({ events, eventHref, today = new Date() }: {
         {format(parseISO(day), 'EEEE d MMMM')}
       </p>
       {chosen.length === 0 ? <p className="text-[13px] text-white/45 py-2">Nothing planned.</p> : (
-        <Accordion key={day} defaultOpen={chosen.length === 1 ? 0 : -1} items={chosen.map(event => ({
-          title: `${event.sessionId ? 'Logged' : event.time ?? 'Time to be confirmed'} · ${eventHeading(event)}${event.status === 'cancelled' ? ' · Cancelled' : ''}${event.draft ? ' · Draft' : ''}`,
-          content: <div className="space-y-1 text-[13px] text-white/70">
-            {event.status === 'cancelled' && <p style={{ color: CANCELLED_COLOR }}>Cancelled{event.cancelReason ? `: ${event.cancelReason}` : ''}</p>}
-            {event.venue && <p>{event.venue}{event.homeAway ? ` (${event.homeAway === 'home' ? 'Home' : 'Away'})` : ''}</p>}
-            {event.meetTime && <p>Meet {event.meetTime}</p>}
-            {event.kit && <p>Kit: {event.kit}</p>}
-            <Link to={eventHref(event)} className="inline-flex min-h-11 items-center text-primary focus-visible:ring-2 focus-visible:ring-primary">Open</Link>
-          </div>,
-        }))} />
+        <ul className="divide-y divide-white/[0.07] border-y border-white/[0.07]">
+          {chosen.map(event => {
+            const label = <>
+              <span aria-hidden="true" className="w-[7px] h-[7px] rounded-full shrink-0"
+                style={{ background: event.status === 'cancelled' ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />
+              <span className="w-12 shrink-0 text-[13px] text-white/60">{event.sessionId ? 'Logged' : event.time ?? 'TBC'}</span>
+              <span className="flex-1 min-w-0 truncate text-[14px] text-white/90">{eventHeading(event)}</span>
+              {event.status === 'cancelled' && <span className="text-[12px]" style={{ color: CANCELLED_COLOR }}>Cancelled</span>}
+              {event.draft && <span className="text-[12px] text-white/45">Draft</span>}
+              <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-white/40" />
+            </>
+            const row = 'w-full flex items-center gap-3 min-h-12 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md'
+            return <li key={event.id}>
+              {event.sessionId && sessionHref
+                ? <Link to={sessionHref(event)} className={row}>{label}</Link>
+                : renderSheet(event, <button type="button" className={row}>{label}</button>, refresh)}
+            </li>
+          })}
+        </ul>
       )}
     </section>
   )
@@ -78,10 +93,11 @@ type WeekRows = PromiseLike<{ data: unknown[] | null; error: unknown }>
  * only load from today). `loadKey` names whose week it is. A failed read is
  * an error with Retry, never an empty week (the J4 standard).
  */
-export function LoadedWeekStrip({ load, loadKey, eventHref }: {
+export function LoadedWeekStrip({ load, loadKey, renderSheet, sessionHref }: {
   load: (from: string, to: string) => WeekRows
   loadKey: string
-  eventHref: (event: StripEvent) => string
+  renderSheet: RenderEventSheet
+  sessionHref?: (event: StripEvent) => string
 }) {
   const [events, setEvents] = useState<StripEvent[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -93,7 +109,8 @@ export function LoadedWeekStrip({ load, loadKey, eventHref }: {
     let cancelled = false
     const days = weekDays(new Date())
     setFailed(false)
-    setEvents(null)
+    // A reload (after Publish in the sheet) keeps the week on screen, so an open
+    // sheet stays open. Another person's week remounts: callers key by loadKey.
     loadRef.current(days[0], days[6]).then(({ data, error }) => {
       if (cancelled) return
       if (error) { setFailed(true); return }
@@ -108,5 +125,5 @@ export function LoadedWeekStrip({ load, loadKey, eventHref }: {
 
   if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
   if (!events) return null
-  return <WeekStrip events={events} eventHref={eventHref} />
+  return <WeekStrip events={events} renderSheet={renderSheet} sessionHref={sessionHref} refresh={() => setAttempt(n => n + 1)} />
 }

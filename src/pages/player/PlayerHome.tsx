@@ -11,6 +11,7 @@ import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/pla
 import { PlayerAlertsBell, type PublishedAssessmentAlert } from '@/components/player/PlayerAlertsBell'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
+import { EventSheet } from '@/components/trak/EventSheet'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
@@ -420,7 +421,7 @@ export default function PlayerHome() {
             events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
             assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
             onRetry={() => setReloadKey(k => k + 1)} />} />
-        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} eventHref={event => `/player/event/${event.id}`}
+        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger} />}
           load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
             .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
         {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
