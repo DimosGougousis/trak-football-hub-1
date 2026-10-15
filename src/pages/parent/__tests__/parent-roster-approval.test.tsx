@@ -12,7 +12,7 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '@/App'
 import { supabase } from '@/integrations/supabase/client'
-import { CONSENT_NOTICE_VERSION, CONSENT_STATEMENT } from '@/lib/consent'
+import { CONSENT_NOTICE_VERSION, consentStatement } from '@/lib/consent'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 
@@ -50,10 +50,12 @@ async function open(path: string) {
   render(<App />)
 }
 
+// TRAK-182: the consent bar's Approve opens the panel; the panel's Approve saves.
 async function approveAna() {
-  await screen.findByRole('heading', { name: "Approve Ana's account" })
-  await userEvent.click(screen.getByRole('checkbox', { name: CONSENT_STATEMENT }))
-  await userEvent.click(screen.getByRole('button', { name: "Approve Ana's account" }))
+  await screen.findByRole('heading', { name: 'Ana is waiting for your approval' })
+  await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+  await screen.findByText(consentStatement('Ana'))
+  await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
 }
 
 beforeEach(() => {
@@ -105,7 +107,7 @@ describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
       p_relationship: 'parent',
       p_purposes: { coaching_records: true, recognition: false },
       p_notice_version: CONSENT_NOTICE_VERSION,
-      p_consent_text: CONSENT_STATEMENT,
+      p_consent_text: consentStatement('Ana'),
     }]))
     expect(await screen.findByText("We've emailed Ana an invitation to join.")).toBeInTheDocument()
     expect(invites).toEqual([{ roster_child_id: ana.roster_child_id }])
@@ -130,4 +132,43 @@ describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load pending approvals")
     expect(screen.queryByText('Nothing to approve')).not.toBeInTheDocument()
   })
+})
+
+// TRAK-182 (Imad's 6a wording, 15 Oct): the consent bar.
+describe('TRAK-182: the consent bar', () => {
+  it("asks in the bar, and the panel carries Imad's wording and the statement it stores", async () => {
+    await open('/parent/consent')
+    expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
+    expect(screen.getByText('Their coach records how they train and play, and you see their progress.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Details' }))
+    expect(await screen.findByText('Coaching records')).toBeInTheDocument()
+    expect(screen.getByText('Always on with approval')).toBeInTheDocument()
+    expect(screen.getByText('Their coach records their progress, logs their matches and can write feedback. You see their bands and history. Their coach can also keep private notes, which are never shared.')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: /Recognition awards/ })).not.toBeChecked()
+    expect(screen.getByText('Things like player of the week, seen by you and Ana.')).toBeInTheDocument()
+    expect(screen.getByText("By approving, you confirm you're Ana's parent or legal guardian and agree to the choices above. You can withdraw any time in settings, which stops new records.")).toBeInTheDocument()
+    // Escape steps back to the bar without saving anything.
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
+    expect(grants).toEqual([])
+  })
+
+  it('Reject records nothing and says the child stays waiting', async () => {
+    await open('/parent/consent')
+    await userEvent.click(await screen.findByRole('button', { name: 'Reject' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Not approved. Ana stays waiting, and nothing about them is recorded.')
+    expect(grants).toEqual([])
+    expect(invites).toEqual([])
+    await userEvent.click(screen.getByRole('button', { name: 'Review again' }))
+    expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
+  })
+})
+
+it('TRAK-182: toggling the awards switch keeps focus on the switch', async () => {
+  await open('/parent/consent')
+  await userEvent.click(await screen.findByRole('button', { name: 'Details' }))
+  const awards = await screen.findByRole('switch', { name: /Recognition awards/ })
+  await userEvent.click(awards)
+  expect(awards).toBeChecked()
+  expect(awards).toHaveFocus()
 })

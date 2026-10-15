@@ -1,5 +1,5 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
-import { CONSENT_NOTICE_VERSION, CONSENT_STATEMENT } from '../src/lib/consent'
+import { CONSENT_NOTICE_VERSION, consentStatement } from '../src/lib/consent'
 
 // Production bundle, real router/AuthProvider/Supabase SDK, mobile viewport.
 // Only local assets may reach the network. Every backend request is synthetic;
@@ -14,13 +14,13 @@ const consentId = '99000000-0000-4000-8000-000000000003'
 interface Reply { data: unknown; status?: number }
 interface ObservedRequest { method: string; path: string; authorization: string | undefined; body: unknown }
 
-function expectedGrant(childId: string) {
+function expectedGrant(childId: string, first = childId === childB.player_user_id ? 'Blair' : 'Alex') {
   return {
     p_player_user_id: childId,
     p_relationship: 'parent',
     p_purposes: { coaching_records: true, recognition: false },
     p_notice_version: CONSENT_NOTICE_VERSION,
-    p_consent_text: CONSENT_STATEMENT,
+    p_consent_text: consentStatement(first),
   }
 }
 
@@ -128,15 +128,26 @@ test('saved approval survives a failed refresh, then retries to a fresh child be
   ], true)
   try {
     await page.goto('/parent/consent')
-    await expect(page.getByRole('heading', { name: "Approve Alex Synthetic's account" })).toBeVisible()
+    // TRAK-182: the consent bar. Its Approve opens the panel, where the choices and the statement are.
+    await expect(page.getByRole('heading', { name: 'Alex Synthetic is waiting for your approval' })).toBeVisible()
+    await page.getByRole('button', { name: 'Approve', exact: true }).click()
+    await expect(page.getByText(consentStatement('Alex'))).toBeVisible()
+    // The surface springs into the panel; screenshot it at rest.
+    const surface = page.getByRole('region', { name: "Approve Alex's Trak account" })
+    await expect.poll(async () => {
+      const before = (await surface.boundingBox())?.height
+      await page.waitForTimeout(150)
+      return before !== undefined && before === (await surface.boundingBox())?.height
+    }).toBe(true)
+    await page.waitForTimeout(250)
+    await page.screenshot({ path: testInfo.outputPath('consent-panel-mobile.png'), fullPage: true })
     await page.getByRole('button', { name: 'Legal guardian', exact: true }).click()
-    await page.getByRole('checkbox', { name: /recognition awards/i }).check()
-    await page.getByRole('checkbox', { name: CONSENT_STATEMENT }).check()
-    await page.getByRole('button', { name: "Approve Alex Synthetic's account" }).click()
+    await page.getByRole('switch', { name: /Recognition awards/ }).click()
+    await page.getByRole('button', { name: 'Approve', exact: true }).click()
     await expect.poll(() => fixture.grants.length).toBe(1)
-    const saving = page.getByRole('button', { name: 'Saving…', exact: true })
-    await expect(saving).toBeDisabled()
-    for (const checkbox of await page.getByRole('checkbox').all()) await expect(checkbox).toBeDisabled()
+    const saving = page.getByRole('button', { name: 'Approve', exact: true })
+    await expect(saving).toHaveAttribute('aria-busy', 'true')
+    await expect(page.getByRole('switch', { name: /Recognition awards/ })).toBeDisabled()
     const bounds = await saving.boundingBox()
     expect(bounds).not.toBeNull()
     if (!bounds) throw new Error('Saving button must be visible for duplicate-click control')
@@ -154,18 +165,19 @@ test('saved approval survives a failed refresh, then retries to a fresh child be
     await page.screenshot({ path: testInfo.outputPath('consent-saved-refresh-error-mobile.png'), fullPage: true })
 
     await page.getByRole('button', { name: 'Retry', exact: true }).click()
-    await expect(page.getByRole('heading', { name: "Approve Blair Synthetic's account" })).toBeVisible()
-    await expect(page.getByRole('checkbox', { name: /recognition awards/i })).not.toBeChecked()
+    await expect(page.getByRole('heading', { name: 'Blair Synthetic is waiting for your approval' })).toBeVisible()
+    // Blair starts at the bar, with nothing carried over from Alex.
+    await expect(page.getByText("Approve Blair's Trak account?")).toBeVisible()
+    await page.getByRole('button', { name: 'Details', exact: true }).click()
+    await expect(page.getByRole('switch', { name: /Recognition awards/ })).not.toBeChecked()
+    await expect(page.getByRole('button', { name: 'Parent', exact: true })).toHaveAttribute('aria-pressed', 'true')
     // TRAK-145: the progress choice is gone; parent viewing is part of the required consent.
-    await expect(page.getByRole('checkbox', { name: /I can see their progress/i })).toHaveCount(0)
-    await expect(page.getByRole('checkbox', { name: CONSENT_STATEMENT })).not.toBeChecked()
-    await expect(page.getByRole('button', { name: "Approve Blair Synthetic's account" })).toBeDisabled()
+    await expect(page.getByText(/I can see their progress/i)).toHaveCount(0)
     expect(fixture.pending).toHaveLength(3)
     expect(fixture.grants).toHaveLength(1)
     await page.screenshot({ path: testInfo.outputPath('consent-next-child-mobile.png'), fullPage: true })
 
-    await page.getByRole('checkbox', { name: CONSENT_STATEMENT }).check()
-    await page.getByRole('button', { name: "Approve Blair Synthetic's account" }).click()
+    await page.getByRole('button', { name: 'Approve', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible()
     await expect(page).toHaveURL(`${appOrigin}/parent/home`)
     // The fifth list request is Home's own pending-approval read.

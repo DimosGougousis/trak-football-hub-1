@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client'
 import { createOnboardingSession } from './onboarding-session'
-import { CONSENT_NOTICE_VERSION, CONSENT_STATEMENT, type ConsentPurposeKey } from './consent'
+import { CONSENT_NOTICE_VERSION, type ConsentPurposeKey } from './consent'
 import { ChildPasswordError, childPasswordFailure, parseChildLogins, type ChildLoginState } from './child-login'
 
 export interface AwaitingConsentChild {
@@ -20,6 +20,8 @@ export interface ParentApproval {
   playerUserId: string
   relationship: 'parent' | 'legal_guardian'
   purposes: Record<ConsentPurposeKey, boolean>
+  /** consentStatement(first name): exactly what was shown beside Approve. */
+  statement: string
 }
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -138,7 +140,7 @@ export async function recordParentApproval(
     p_relationship: approval.relationship,
     p_purposes: approval.purposes,
     p_notice_version: CONSENT_NOTICE_VERSION,
-    p_consent_text: CONSENT_STATEMENT,
+    p_consent_text: approval.statement,
   }).abortSignal(signal).retry(false)
   if (error) throw error
   if (typeof data !== 'string' || !uuid.test(data)) throw new Error('Unconfirmed approval response')
@@ -149,6 +151,8 @@ export interface RosterApproval {
   rosterChildId: string
   relationship: 'parent' | 'legal_guardian'
   purposes: Record<ConsentPurposeKey, boolean>
+  /** consentStatement(first name): exactly what was shown beside Approve. */
+  statement: string
 }
 
 /** TRAK-11 phase 1: consent for a rostered child who has no account yet. */
@@ -163,7 +167,7 @@ export async function recordRosterApproval(
     p_relationship: approval.relationship,
     p_purposes: approval.purposes,
     p_notice_version: CONSENT_NOTICE_VERSION,
-    p_consent_text: CONSENT_STATEMENT,
+    p_consent_text: approval.statement,
   } as never).abortSignal(signal).retry(false)
   if (error) throw error
   if (typeof data !== 'string' || !uuid.test(data)) throw new Error('Unconfirmed approval response')

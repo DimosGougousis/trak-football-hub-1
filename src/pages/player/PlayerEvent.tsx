@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
@@ -6,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { markEventOpened, toPlayerEvent, type PlayerEvent as Event } from '@/lib/player-events'
 import { EventDetails } from '@/components/player/EventDetails'
+import { CantMakeIt } from '@/components/parent/CantMakeIt'
 
 /**
  * The event page (TRAK-130, J8.7): every detail of one of the squad's events.
@@ -35,6 +37,19 @@ export default function PlayerEvent() {
     return () => { cancelled = true }
   }, [id, user, reloadKey])
 
+  // TRAK-183: at or above their academy's consent age, a player says "Can't
+  // make it" for themselves, as a guardian does. A failed check shows nothing.
+  const consent = useQuery({
+    queryKey: ['player', 'consent-status', user?.id],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_consent_status' as never)
+      if (error) throw error
+      return data as { age?: number | null; consent_age?: number | null } | null
+    },
+  })
+  const forThemselves = consent.data?.age != null && consent.data.consent_age != null && consent.data.age >= consent.data.consent_age
+
   const current = result && result.id === id && result.reloadKey === reloadKey ? result : null
   const back = (
     <button type="button" onClick={() => navigate('/player/matches')}
@@ -55,7 +70,10 @@ export default function PlayerEvent() {
   } else if (!current.event) {
     body = <p className="text-[13px] text-white/60">This event isn't available. Your coach may have removed it.</p>
   } else {
-    body = <EventDetails event={current.event} />
+    body = <>
+      <EventDetails event={current.event} />
+      {forThemselves && user && <CantMakeIt event={current.event} child={{ id: user.id, name: 'you' }} self />}
+    </>
   }
 
   return (
