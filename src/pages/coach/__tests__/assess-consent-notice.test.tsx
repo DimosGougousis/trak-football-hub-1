@@ -12,6 +12,7 @@
  * withdrawn mid-form) is translated rather than shown raw.
  */
 import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
+import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import { it, expect, describe } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -68,13 +69,14 @@ async function choosePlayer() {
 const saveButton = () => screen.getByRole('button', { name: /save assessment/i })
 const toastText = () => [...document.querySelectorAll('[data-sonner-toast]')].map(t => t.textContent ?? '').join(' | ')
 
-describe('CoachAssessPage and parental consent', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('CoachAssessPage and parental consent', { timeout: 20_000 }, () => {
   it('says a parent must approve, and disables Save, before the coach fills anything in', async () => {
     const calls = setup({ consentRequired: true })
     await choosePlayer()
     expect(await screen.findByText(/waiting for a parent/i)).toBeInTheDocument()
     expect(screen.getByText(/Omar Synthetic.*parent has approved/i)).toBeInTheDocument()
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     expect(calls.consentChecks).toContainEqual({ p_squad_player_id: 'squad-1' })
   })
 
@@ -84,8 +86,7 @@ describe('CoachAssessPage and parental consent', () => {
     const user = await choosePlayer()
     await waitFor(() => expect(calls.consentChecks.length).toBeGreaterThan(0))
     expect(screen.queryByText(/waiting for a parent/i)).not.toBeInTheDocument()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await saveAssessment()
     await waitFor(() => expect(calls.inserts).toBe(1))
   })
 
@@ -94,20 +95,20 @@ describe('CoachAssessPage and parental consent', () => {
   it('does not block when the consent check itself fails', async () => {
     setup({ consentRequired: 'error' })
     await choosePlayer()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
+    await waitFor(() => expect(nextButton()).toBeEnabled())
     expect(screen.queryByText(/waiting for a parent/i)).not.toBeInTheDocument()
   })
 
   it('translates a refusal at save time instead of showing the database error', async () => {
     const calls = setup({ consentRequired: false, insertRefused: true })
     const user = await choosePlayer()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await saveAssessment()
     await waitFor(() => expect(calls.inserts).toBe(1))
     await waitFor(() => expect(toastText()).toMatch(/parent/i))
     expect(toastText()).not.toMatch(/row-level security/i)
     expect(await screen.findByText(/waiting for a parent/i)).toBeInTheDocument()
-    expect(saveButton()).toBeDisabled()
+    // TRAK-182: the refusal lands on Review, where Save is now locked.
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
   // If the re-check after a refusal fails too, the screen cannot know why and
@@ -115,8 +116,7 @@ describe('CoachAssessPage and parental consent', () => {
   it('does not claim a reason when the re-check after a refusal also fails', async () => {
     const calls = setup({ consentRequired: 'error', insertRefused: true })
     const user = await choosePlayer()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await saveAssessment()
     await waitFor(() => expect(calls.inserts).toBe(1))
     await waitFor(() => expect(toastText()).toMatch(/could not be confirmed/i))
     expect(toastText()).not.toMatch(/no longer have access|row-level security/i)
@@ -126,7 +126,8 @@ describe('CoachAssessPage and parental consent', () => {
 // TRAK-47 retires Quick Assess from the router. Keep these consent regressions
 // for its retained, unrouted component; the real-App boundary suite asserts
 // that its old URL redirects to the full assessment and cannot mount it.
-describe('CoachQuickAssess and parental consent', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('CoachQuickAssess and parental consent', { timeout: 20_000 }, () => {
   async function openQuick() {
     render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><AuthProvider><Toaster /><CoachQuickAssess /></AuthProvider></MemoryRouter></QueryClientProvider>)
     const user = userEvent.setup()

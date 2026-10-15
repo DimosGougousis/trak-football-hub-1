@@ -6,6 +6,7 @@
  * the chosen player was marked present at, and shows when each was logged.
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -77,7 +78,8 @@ async function choosePlayer(id: string) {
 const sessionNames = () => [...select('Session').options].filter(o => o.value).map(o => o.textContent)
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 
-describe('TRAK-100: the session picker offers only sessions the player attended', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('TRAK-100: the session picker offers only sessions the player attended', { timeout: 20_000 }, () => {
   it('lists only attended sessions, each with the time it was logged', async () => {
     showForm()
     await choosePlayer('player-a')
@@ -95,8 +97,7 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
     await choosePlayer('player-a')
     await screen.findByRole('option', { name: /Set Pieces Training/ })
     await userEvent.selectOptions(select('Session'), 'session-late')
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await userEvent.click(saveButton())
+    await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes.map(w => w.session_id)).toEqual(['session-late'])
   })
@@ -106,7 +107,7 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
     await choosePlayer('player-b')
     expect(await screen.findByText(/Bella isn't marked present at any past session/)).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Session' })).toBeNull()
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
   })
 
   it('switching player drops a session the new player did not attend', async () => {
@@ -118,7 +119,7 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
     await userEvent.selectOptions(select('Player'), 'player-b')
     await waitFor(() => expect(sessionNames()).toEqual([`Set Pieces Training · 2026-10-01 · logged ${at('2026-10-01T13:09:57Z')}`]))
     expect(select('Session').value).toBe('')
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
   })
 
   it('a failed attendance read offers no sessions and a Retry, never every session', async () => {
@@ -127,7 +128,7 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
     await choosePlayer('player-a')
     expect(await screen.findByText(/Couldn't load which sessions Alex was at/)).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: /Finishing Training/ })).toBeNull()
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     attendanceFails = false
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
     await screen.findByRole('option', { name: /Set Pieces Training/ })

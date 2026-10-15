@@ -8,6 +8,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -40,7 +41,8 @@ function setup(players: Record<string, { name: string; required: boolean; reason
 
 const row = (name: string) => screen.getByText(name).closest('button') as HTMLElement
 
-describe('Squad chips (TRAK-99)', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('Squad chips (TRAK-99)', { timeout: 20_000 }, () => {
   it('tells "waiting for parent" apart from "waiting for player to sign up"', async () => {
     const asked = setup({
       'sq-ready': { name: 'Amal Ready', required: false },
@@ -71,7 +73,8 @@ describe('Squad chips (TRAK-99)', () => {
   })
 })
 
-describe('Assessment notice (TRAK-99)', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
   async function choose(id: string, name: string) {
     renderApp('/coach/assess')
     const user = userEvent.setup()
@@ -89,7 +92,7 @@ describe('Assessment notice (TRAK-99)', () => {
     await waitFor(() => expect(notice).toHaveTextContent('Waiting for the player to sign up'))
     expect(notice).toHaveTextContent("A parent has approved. You can assess Dana Signup once they've set up their Trak account.")
     expect(notice).not.toHaveTextContent('Waiting for a parent')
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
   })
 
   it('CONTROL no approval: still "Waiting for a parent"', async () => {
@@ -98,7 +101,7 @@ describe('Assessment notice (TRAK-99)', () => {
     const notice = await findNotice()
     await waitFor(() => expect(notice).toHaveTextContent('Waiting for a parent'))
     expect(notice).toHaveTextContent('You can assess Bilal Parent once a parent has approved their account.')
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
   })
 
   it('a failed reason read still locks Save and names no single cause', async () => {
@@ -107,6 +110,6 @@ describe('Assessment notice (TRAK-99)', () => {
     const notice = await findNotice()
     await waitFor(() => expect(notice).toHaveTextContent('Not ready to assess yet'))
     expect(notice).not.toHaveTextContent(/Waiting for (a parent|the player)/)
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
   })
 })
