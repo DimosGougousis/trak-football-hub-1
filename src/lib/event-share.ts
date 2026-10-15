@@ -66,9 +66,9 @@ const LINK = new RegExp([
 
 // TRAK-168: Tarek's team-group templates (13 Oct), for the founders to agree.
 // The first line is bold so it reads in WhatsApp's chat preview. The link
-// opens this event; /event/:id routes each family to it. Training and match
-// say "Event details" until families can answer "Can't make it" (TRAK-137);
-// Tarek's availability wording comes back with it (Imad, 13 Oct, #292).
+// opens this event; /event/:id routes each family to it. Tarek's availability
+// wording is back now families can answer "Can't make it" (TRAK-137, #299;
+// Imad, 15 Oct).
 export const eventLink = (id: string) => `https://trakfootball.com/event/${id}`
 const KIND_LABEL: Record<ShareableEvent['kind'], string> = {
   training: 'Training',
@@ -131,7 +131,7 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
       meet ? `⏰ Meet Time: ${clock(meet)} | Kick-off: ${start}` : `⏰ Kick-off: ${start}`,
       venue && `🏟️ Venue: ${venue}`,
       kit && `👕 Kit: ${kit}`,
-      `🔗 Event details: ${eventLink(event.id)}`,
+      `🔗 Confirm availability: ${eventLink(event.id)}`,
     ].filter(Boolean).join('\n')
   }
 
@@ -144,7 +144,7 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
     meet ? `📅 When: ${day}` : `📅 When: ${day} @ ${start}`,
     meet && `⏰ Meet Time: ${meet} | Start: ${start}`,
     venue && `🏟️ Venue: ${venue}`,
-    `🔗 Event details: ${eventLink(event.id)}`,
+    `🔗 Event details & Availability: ${eventLink(event.id)}`,
   ].filter(Boolean).join('\n')
 }
 
