@@ -7,6 +7,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { logStep } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -35,19 +36,23 @@ describe('J4: our scorers cannot outnumber our goals', () => {
     const [us, them] = screen.getAllByPlaceholderText('0')
     await user.type(us, '1')
     await user.type(them, '0')
+    await logStep('Squad')
     for (const name of ['Alexis Georgiou', 'Marios Rizos']) {
       await user.click((await screen.findAllByRole('button', { name: 'Mark played' }))[0])
       await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${name}` }), '90')
       await user.click(screen.getByRole('button', { name: `One more goals for ${name}` }))
       await user.click(screen.getByRole('button', { name: `One fewer assists for ${name}` }))
     }
-    const save = screen.getByRole('button', { name: 'Save match' })
+    // TRAK-182: the log is in steps; Next stays shut on Squad until the score allows the goals.
     expect(await screen.findByText('2 goals entered, but the team scored 1')).toBeInTheDocument()
-    expect(save).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
 
-    await user.clear(us)
-    await user.type(us, '2')
-    await waitFor(() => expect(save).toBeEnabled())
+    await logStep('Match')
+    const [score] = screen.getAllByPlaceholderText('0')
+    await user.clear(score)
+    await user.type(score, '2')
+    await logStep('Squad')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
     expect(screen.queryByText(/goals entered, but the team scored/)).toBeNull()
   })
 })
