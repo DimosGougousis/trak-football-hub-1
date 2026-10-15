@@ -119,6 +119,13 @@ async function logMatch(
 }
 
 describe('what the coach records reaches the database and the rating', () => {
+  it('retains the session created for this match and its attendance', async () => {
+    signInAs(COACH)
+    const calls = captureMatchRpc()
+    const saved = await logMatch(calls, { goals: 0, assists: 0 })
+    expect(saved.p_session_id).toBe('session-1')
+  }, 20_000)
+
   // Several full render-type-save passes; typing minutes (J4) makes each one longer.
   beforeEach(() => signInAs(COACH))
 

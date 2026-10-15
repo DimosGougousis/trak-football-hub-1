@@ -5,7 +5,7 @@ import { useParentMatches } from '@/hooks/useParentData'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { TrainingHistory } from '@/components/player/TrainingHistory'
 import { ParentUpcomingEvents } from '@/components/parent/ParentEvents'
-import { formatParentDate, matchResult } from '@/lib/parent-data'
+import { formatParentDate, parentMatchHref, matchResult } from '@/lib/parent-data'
 
 export default function ParentMatches() {
   const navigate = useNavigate()
@@ -25,7 +25,7 @@ export default function ParentMatches() {
             : query.isPending ? <ParentLoading />
               : matches.length === 0 ? <p className="text-sm text-muted-foreground text-center py-12">No matches yet.</p>
                 : <div className="divide-y divide-border">
-                  {matches.map(match => <Link key={match.id} to={`/parent/match/${match.id}`} className="flex items-center gap-3 py-4">
+                  {matches.map(match => <Link key={match.id} to={parentMatchHref(match)} state={{ matchId: match.id, childId: selectedChild?.id }} className="flex items-center gap-3 py-4">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground truncate">{match.opponent || match.competition || 'Match'}</p>
                       <p className="text-xs text-muted-foreground mt-1">

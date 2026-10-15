@@ -239,10 +239,13 @@ describe('TRAK-172 parent assessment history', () => {
     expectBandsOnlyReads()
   })
 
-  it.each(['/parent/assessment/Zara-assessment-1', '/parent/session/Zara-session-1/assessment'])(
-    'does not disclose sibling bands through a direct URL at %s', async path => {
+  it.each([
+    ['/parent/assessment/Zara-assessment-1', "This assessment isn't available for Alex."],
+    ['/parent/session/Zara-session-1/assessment', "Alex hasn't been assessed for this session yet."],
+  ])(
+    'does not disclose sibling bands through a direct URL at %s', async (path, message) => {
       renderAt(path)
-      expect(await screen.findByText(/isn't available for Alex/)).toBeInTheDocument()
+      expect(await screen.findByText(message)).toBeInTheDocument()
       expect(screen.queryByText('Coach Zara-assessment-1')).not.toBeInTheDocument()
       expect(screen.queryByText('Work Rate')).not.toBeInTheDocument()
       expect(assessmentRequests.every(params => params.get('squad_player_id') === 'in.(Alex-squad)')).toBe(true)
