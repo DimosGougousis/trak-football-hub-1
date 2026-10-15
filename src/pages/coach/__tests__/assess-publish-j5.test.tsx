@@ -5,6 +5,7 @@
  * family until the coach presses Publish. A waiting-for-parent player cannot be
  * opened, and a consent withdrawal mid-edit fails the save and keeps the values.
  */
+import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -231,7 +232,7 @@ describe('J5: consent', () => {
     await choose('player-b')
     expect(await screen.findByText(/waiting for a parent/i)).toBeInTheDocument()
     await waitFor(() => expect(messageBox()).toBeDisabled())
-    for (const slider of screen.getAllByRole('slider')) expect(slider).toBeDisabled()
+    for (const slider of screen.getAllByRole('slider')) expect(sliderDisabled(slider)).toBe(true)
     expect(noteBox()).toBeDisabled()
     expect(screen.getByRole('button', { name: /save assessment/i })).toBeDisabled()
   })
@@ -241,7 +242,7 @@ describe('J5: consent', () => {
     showForm()
     await choose('player-b')
     await waitFor(() => expect(messageBox()).toBeEnabled())
-    for (const slider of screen.getAllByRole('slider')) expect(slider).toBeEnabled()
+    for (const slider of screen.getAllByRole('slider')) expect(sliderDisabled(slider)).toBe(false)
   })
 
   it('withdrawal while the form is open fails the save and keeps what the coach entered', async () => {
@@ -250,7 +251,7 @@ describe('J5: consent', () => {
     showForm()
     await choose('player-b')
     await waitFor(() => expect(messageBox()).toBeEnabled())
-    fireEvent.change(screen.getAllByRole('slider')[0], { target: { value: '9' } })
+    setSlider(screen.getAllByRole('slider')[0], 9)
     await userEvent.type(messageBox(), 'Great week')
     await userEvent.type(noteBox(), 'Watch the left foot')
     await userEvent.click(screen.getByRole('button', { name: /save assessment/i }))
@@ -260,7 +261,7 @@ describe('J5: consent', () => {
     expect(writes).toEqual([])
     expect(messageBox()).toHaveValue('Great week')
     expect(noteBox()).toHaveValue('Watch the left foot')
-    expect(screen.getAllByRole('slider')[0]).toHaveValue('9')
+    expect(sliderValue(screen.getAllByRole('slider')[0])).toBe(9)
     expect(messageBox()).toBeDisabled()
   })
 })
@@ -273,13 +274,13 @@ describe('J5: Unpublish is a retraction and nothing else', () => {
     await choose('player-a')
     await screen.findByDisplayValue('Published feedback for Alex')
     await waitFor(() => expect(noteBox()).toBeEnabled())
-    fireEvent.change(screen.getAllByRole('slider')[0], { target: { value: '3' } })
+    setSlider(screen.getAllByRole('slider')[0], 3)
     await userEvent.type(noteBox(), 'Private draft')
     await userEvent.click(screen.getByRole('button', { name: 'Unpublish message' }))
     await screen.findByText(/Not sent yet\. Saving sends it to Alex/)
     expect(writes.map(w => w.table)).toEqual(['coach_shared_feedback'])
     // The unsaved edits are still on screen, still unsaved.
-    expect(screen.getAllByRole('slider')[0]).toHaveValue('3')
+    expect(sliderValue(screen.getAllByRole('slider')[0])).toBe(3)
     expect(noteBox()).toHaveValue('Private draft')
   })
 

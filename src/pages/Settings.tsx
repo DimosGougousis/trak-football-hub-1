@@ -9,6 +9,7 @@ import { assertSettingsAccount, getSettingsAccount } from '@/lib/settings-accoun
 import { supabase } from '@/integrations/supabase/client'
 import { isTechnicalChildAddress, childUsername } from '@/lib/child-login'
 import { CalendarSettings } from '@/components/trak/AddToCalendar'
+import { OwnConsentSettings } from '@/components/player/OwnConsentCard'
 
 const nameSchema = z
   .string()
@@ -257,6 +258,8 @@ function AccountSettings({ userId }: { userId: string }) {
         {(role === 'player' || role === 'parent') && (
           <Section label="Calendar"><CalendarSettings /></Section>
         )}
+        {/* TRAK-177: a 15–17 player at a consent-age-15 academy withdraws here. */}
+        {role === 'player' && <OwnConsentSettings Section={Section} />}
 
         {/* Coach profile */}
         {role === 'coach' && roleData === 'ready' && (
