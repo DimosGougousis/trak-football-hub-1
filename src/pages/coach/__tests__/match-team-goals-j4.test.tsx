@@ -28,7 +28,8 @@ beforeEach(() => {
   )
 })
 
-describe('J4: our scorers cannot outnumber our goals', () => {
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('J4: our scorers cannot outnumber our goals', { timeout: 20_000 }, () => {
   it('refuses a 1–0 with two scorers, and accepts it once the score says 2', async () => {
     const user = userEvent.setup()
     renderApp('/coach/sessions/quick')

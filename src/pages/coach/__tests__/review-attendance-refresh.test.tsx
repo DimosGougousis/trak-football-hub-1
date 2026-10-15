@@ -36,7 +36,8 @@ function setup(players=[READY,WITHDRAWN]) {
 async function refresh(){await act(async()=>{const {error}=await supabase.auth.refreshSession();expect(error).toBeNull()})}
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}
 
-describe('independent #126 consent refresh review',()=>{
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('independent #126 consent refresh review', { timeout: 20_000 }, () =>{
  beforeEach(()=>signInAs(COACH))
  it('excludes a selected child from the outgoing batch after a fresh check marks them waiting',async()=>{
   const inserted=setup();let withdrawn=false

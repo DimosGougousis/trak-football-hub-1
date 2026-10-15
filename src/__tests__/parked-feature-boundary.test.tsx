@@ -124,7 +124,7 @@ describe('TRAK-47 parked feature boundary', () => {
     expect(await screen.findByText(/No squad yet\./)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Coming soon' })).toBeNull()
     expect(reads).toContain('squad_players')
-  })
+  }, 20_000) // walks the match log to its Squad step (TRAK-182)
 })
 
 
