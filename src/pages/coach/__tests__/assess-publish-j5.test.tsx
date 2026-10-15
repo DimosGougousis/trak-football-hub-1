@@ -234,15 +234,31 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(shared()).toEqual([expect.objectContaining({ body: 'Good pressing today', published_at: null })])
   })
 
-  it('Save draft takes back an already-published message', async () => {
+  // Kostas's #313 review: "Save draft" on a message the player has read would
+  // un-send it. A published message gets one Save, which leaves it published;
+  // taking it back stays Unpublish's job.
+  it('a published message survives the save: one Save, no Save draft', async () => {
     showForm()
     await choose('player-a')
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     await assessStep('Review')
-    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByText('Coach home')
-    expect(shared()).toEqual([expect.objectContaining({ published_at: null })])
+    expect(shared()).toEqual([])
+  })
+
+  it('an edited published message gets one Publish, no Save draft', async () => {
+    showForm()
+    await choose('player-a')
+    await userEvent.type(await toMessage(), ' and more')
+    await assessStep('Review')
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeInTheDocument()
+    // The private note is marked as the coach's own on Review too.
+    expect(screen.getByText('Only you see this.')).toBeInTheDocument()
   })
 
   it('Unpublish retracts a published message at once, and writes nothing else', async () => {
