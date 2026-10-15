@@ -109,7 +109,8 @@ export function LoadedWeekStrip({ load, loadKey, renderSheet, sessionHref }: {
     let cancelled = false
     const days = weekDays(new Date())
     setFailed(false)
-    setEvents(null)
+    // A reload (after Publish in the sheet) keeps the week on screen, so an open
+    // sheet stays open. Another person's week remounts: callers key by loadKey.
     loadRef.current(days[0], days[6]).then(({ data, error }) => {
       if (cancelled) return
       if (error) { setFailed(true); return }

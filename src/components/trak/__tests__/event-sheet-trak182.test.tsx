@@ -12,7 +12,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
-import { WeekStrip, weekDays, type StripEvent } from '@/components/trak/WeekStrip'
+import { LoadedWeekStrip, WeekStrip, weekDays, type StripEvent } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
 import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
 
@@ -78,6 +78,24 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText('White')).toBeInTheDocument()
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(patched).toEqual([{ published: true }]))
+  })
+
+  it('stays open while the week reloads after Publish', async () => {
+    const user = userEvent.setup()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    // A real reload takes a network round trip; an instant one hides a blanked week.
+    const load = vi.fn(async () => { await new Promise(r => setTimeout(r, 50)); return { data: [{ ...eventRow, start_time: '17:00:00', opponent: 'Rivals FC', home_away: 'away', event_type: 'match' }], error: null } })
+    render(<QueryClientProvider client={client}><MemoryRouter>
+      <LoadedWeekStrip load={load} loadKey="coach-1" renderSheet={(e, trigger, refresh) => (
+        <EventSheet event={e} role="coach" trigger={trigger}><EventSheetCoach event={e} coachId="coach-1" onChanged={refresh} /></EventSheet>
+      )} />
+    </MemoryRouter></QueryClientProvider>)
+    await user.click(await screen.findByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
+    await waitFor(() => expect(load).toHaveBeenCalledTimes(2))
+    expect(await screen.findByRole('dialog', { name: 'vs Rivals FC' })).toBeInTheDocument()
+    expect(await within(screen.getByRole('dialog')).findByRole('button', { name: 'Published' })).toBeDisabled()
   })
 
   it('shows a published event\'s link, Edit and who is coming', async () => {
