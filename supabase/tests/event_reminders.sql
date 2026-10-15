@@ -138,8 +138,9 @@ SELECT pg_temp.r136check(pg_temp.r136due(3) = '020:704,026:704,030:704','2 anoth
 CREATE TEMP TABLE r136_claim(n integer, claimed jsonb);
 GRANT SELECT, INSERT ON r136_claim TO service_role;
 SET LOCAL ROLE service_role;
--- No day given, as send-event-reminders calls it: 2 days ahead in Dubai.
-INSERT INTO r136_claim SELECT 1, public.claim_event_reminders();
+-- No day given, as send-event-reminders calls it: 2 days ahead on the
+-- academy's clock (Dubai here), at noon so the sending hours are open (TRAK-175).
+INSERT INTO r136_claim SELECT 1, public.claim_event_reminders(NULL, pg_temp.r136at(0, '12:00'));
 SELECT pg_temp.r136check((SELECT pg_temp.r136people(claimed) = '020:2,023:1,026:2,027:1,030:3,033:1' FROM r136_claim WHERE n = 1),
  '3 the claim hands out one email per person, grouped',(SELECT pg_temp.r136people(claimed) FROM r136_claim WHERE n = 1));
 SELECT pg_temp.r136check((SELECT x->>'email' = 'synthetic-30@reminders136.invalid'
