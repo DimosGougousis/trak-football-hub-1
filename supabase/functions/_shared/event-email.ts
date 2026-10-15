@@ -64,7 +64,9 @@ function cancelReason(e: EventFields, names: RegExp[]): string | null {
 }
 
 // Dubai is UTC+4 all year (no daylight saving), so an instant's Dubai date
-// and time are a fixed shift. Only the oldest rows lack event_date/start_time.
+// and time are a fixed shift. Only the oldest rows lack event_date/start_time,
+// and they all predate any non-Dubai academy (TRAK-175): every event since has
+// event_date + start_time on its academy's clock, which the email prints as is.
 const DUBAI_MS = 4 * 60 * 60 * 1000;
 function dubaiParts(startsAt: string | null): { date: string | null; time: string | null } {
   const at = startsAt ? Date.parse(startsAt) : NaN;

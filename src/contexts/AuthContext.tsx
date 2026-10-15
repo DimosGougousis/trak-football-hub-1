@@ -4,8 +4,15 @@ import { toast } from 'sonner';
 import type { Session, User } from '@supabase/supabase-js';
 import { setTelemetryRole, trackSessionOpen } from '@/lib/telemetry';
 import { createOnboardingSession, type OnboardingSession } from '@/lib/onboarding-session';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { signInAddress, isTechnicalChildAddress } from '@/lib/child-login';
+import { forgetScreens } from '@/lib/screen-memory';
+
+// An account's cached reads and its screens' memory (TRAK-180) go together.
+function clearAccountData(queryClient: QueryClient) {
+  queryClient.clear();
+  forgetScreens();
+}
 
 // provision_my_profile's refusal for an email the academy roster does not name.
 const ACADEMY_HAS_NOT_ADDED = "Your academy hasn't added this email yet";
@@ -276,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Token refresh, tab refocus and metadata changes must not unmount a
       // coach's unfinished form or start duplicate provisioning operations.
       if (sameAccount) return;
-      if (previousUserId && previousUserId !== session?.user.id) queryClient.clear();
+      if (previousUserId && previousUserId !== session?.user.id) clearAccountData(queryClient);
       const version = ++generation.current;
       hydration.current = null;
       setProfile(null);
@@ -291,7 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (window.location.pathname === '/reset-password') {
         acceptSession(session);
         if (event === 'SIGNED_OUT') {
-          queryClient.clear();
+          clearAccountData(queryClient);
           discardLegacyPendingProfile();
         }
         return;
@@ -304,7 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (event === 'SIGNED_OUT') {
         acceptSession(null);
-        queryClient.clear();
+        clearAccountData(queryClient);
         discardLegacyPendingProfile();
         // Explicit callers own navigation. A hard reload here would discard
         // a queued sign-in and strip the current parent invitation URL.
@@ -393,7 +400,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setProfile(null);
         setLoading(false);
-        queryClient.clear();
+        clearAccountData(queryClient);
       }
       return { error: null };
     } catch (cause) {

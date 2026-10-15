@@ -548,9 +548,14 @@ function CoachAssessmentForm() {
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button
           onClick={() => {
+            // TRAK-179: back to the screen the coach came from (Squad, the
+            // player, their history, Home). Opened directly, with nothing
+            // before it in Trak, fall back to the player or Home.
+            if (location.key !== 'default') { navigate(-1); return }
             const fromPlayer = (location.state as any)?.preselectedPlayerId
             navigate(fromPlayer ? `/coach/player/${fromPlayer}` : '/coach/home')
           }}
+          aria-label="Back"
           className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
         >
           <ChevronLeft size={16} className="text-white/70" />
