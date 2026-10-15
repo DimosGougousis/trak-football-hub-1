@@ -39,6 +39,8 @@ export interface FeedEvent {
   sequence: number
   /** ISO instant of the last change; becomes DTSTAMP and LAST-MODIFIED. */
   updatedAt: string
+  /** TRAK-175: the academy's clock the times are on. Dubai when absent. */
+  timeZone?: FeedTimeZone
 }
 
 export interface FeedOptions {
@@ -46,7 +48,58 @@ export interface FeedOptions {
   childNames?: string[]
 }
 
-export const FEED_TZID = 'Asia/Dubai'
+/**
+ * TRAK-175: the academies' clocks, and how each one keeps time (RFC 5545
+ * VTIMEZONE). The same closed list as organizations.time_zone: a zone the
+ * feed can't describe would leave phones guessing.
+ */
+export type FeedTimeZone = 'Asia/Dubai' | 'Europe/Athens'
+export const FEED_TZID: FeedTimeZone = 'Asia/Dubai'
+export const FEED_TIME_ZONES: readonly FeedTimeZone[] = ['Asia/Dubai', 'Europe/Athens']
+
+/** What a family reads after a clock time, e.g. "18:30 Athens time". */
+const ZONE_LABEL: Record<FeedTimeZone, string> = {
+  'Asia/Dubai': 'Dubai time',
+  'Europe/Athens': 'Athens time',
+}
+
+const VTIMEZONE: Record<FeedTimeZone, string[]> = {
+  // Dubai has had no daylight saving since 1970, so one fixed offset is exact.
+  'Asia/Dubai': [
+    'BEGIN:VTIMEZONE',
+    'TZID:Asia/Dubai',
+    'BEGIN:STANDARD',
+    'DTSTART:19700101T000000',
+    'TZOFFSETFROM:+0400',
+    'TZOFFSETTO:+0400',
+    'TZNAME:+04',
+    'END:STANDARD',
+    'END:VTIMEZONE',
+  ],
+  // EU rules: summer time from 03:00 on the last Sunday of March, back to
+  // winter time at 04:00 on the last Sunday of October (local clock).
+  'Europe/Athens': [
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/Athens',
+    'BEGIN:DAYLIGHT',
+    'DTSTART:19810329T030000',
+    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU',
+    'TZOFFSETFROM:+0200',
+    'TZOFFSETTO:+0300',
+    'TZNAME:EEST',
+    'END:DAYLIGHT',
+    'BEGIN:STANDARD',
+    'DTSTART:19961027T040000',
+    'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU',
+    'TZOFFSETFROM:+0300',
+    'TZOFFSETTO:+0200',
+    'TZNAME:EET',
+    'END:STANDARD',
+    'END:VTIMEZONE',
+  ],
+}
+
+const zoneOf = (event: FeedEvent): FeedTimeZone => event.timeZone ?? FEED_TZID
 const UID_DOMAIN = 'trakfootball.com'
 const TRAK_LINK = 'https://trakfootball.com'
 
@@ -139,10 +192,10 @@ function lead(minutes: number): string {
  * TRAK-169: calendars move DTSTART to the phone's time zone but never touch
  * text, so a bare "Meet: 12:30" read as local time beside a converted
  * kickoff. Say the meet relative to the start, which holds in any zone, and
- * label the clock time as Dubai's.
+ * label the clock time with the academy's zone (TRAK-175).
  */
-function meetLine(meet: string, start: string | null, kind: FeedEventKind): string {
-  const clock = `${meet.slice(0, 5)} Dubai time`
+function meetLine(meet: string, start: string | null, kind: FeedEventKind, zone: FeedTimeZone): string {
+  const clock = `${meet.slice(0, 5)} ${ZONE_LABEL[zone]}`
   if (!start) return `Meet at ${clock}`
   const before = minutesOf(start) - minutesOf(meet)
   if (before <= 0) return `Meet at ${clock}`
@@ -162,7 +215,7 @@ function eventLines(event: FeedEvent, patterns: RegExp[]): string[] {
 
   const details: string[] = []
   if (cancelled) details.push('This event is cancelled.')
-  if (event.meetTime) details.push(meetLine(event.meetTime, event.startTime, event.kind))
+  if (event.meetTime) details.push(meetLine(event.meetTime, event.startTime, event.kind, zoneOf(event)))
   if (kit) details.push(`Kit: ${kit}`)
   details.push(`Full schedule in Trak: ${TRAK_LINK}`)
 
@@ -176,10 +229,11 @@ function eventLines(event: FeedEvent, patterns: RegExp[]): string[] {
     `STATUS:${cancelled ? 'CANCELLED' : 'CONFIRMED'}`,
   ]
   if (event.startTime) {
-    out.push(`DTSTART;TZID=${FEED_TZID}:${compactDate(event.date)}T${compactTime(event.startTime)}`)
+    const zone = zoneOf(event)
+    out.push(`DTSTART;TZID=${zone}:${compactDate(event.date)}T${compactTime(event.startTime)}`)
     if (event.endTime) {
       const endDate = event.endTime < event.startTime ? nextDay(event.date) : event.date
-      out.push(`DTEND;TZID=${FEED_TZID}:${compactDate(endDate)}T${compactTime(event.endTime)}`)
+      out.push(`DTEND;TZID=${zone}:${compactDate(endDate)}T${compactTime(event.endTime)}`)
     }
   } else {
     // Time not known yet: an all-day entry on the coach's day, never midnight.
@@ -204,6 +258,13 @@ export function buildCalendarFeed(events: FeedEvent[], options: FeedOptions = {}
     || (a.startTime ?? '').localeCompare(b.startTime ?? '')
     || a.id.localeCompare(b.id))
 
+  // The calendar's own zone is the one most of its events use (a family is
+  // normally in one academy); every zone an event uses is described.
+  const counts = new Map<FeedTimeZone, number>()
+  for (const e of unique) counts.set(zoneOf(e), (counts.get(zoneOf(e)) ?? 0) + 1)
+  const calendarZone = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? FEED_TZID
+  const zones = [calendarZone, ...FEED_TIME_ZONES.filter(z => z !== calendarZone && counts.has(z))]
+
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -211,20 +272,11 @@ export function buildCalendarFeed(events: FeedEvent[], options: FeedOptions = {}
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:Trak Football',
-    `X-WR-TIMEZONE:${FEED_TZID}`,
+    `X-WR-TIMEZONE:${calendarZone}`,
     // Hints only: each app decides how often it really refetches.
     'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
     'X-PUBLISHED-TTL:PT1H',
-    // Dubai has had no daylight saving since 1970, so one fixed offset is exact.
-    'BEGIN:VTIMEZONE',
-    `TZID:${FEED_TZID}`,
-    'BEGIN:STANDARD',
-    'DTSTART:19700101T000000',
-    'TZOFFSETFROM:+0400',
-    'TZOFFSETTO:+0400',
-    'TZNAME:+04',
-    'END:STANDARD',
-    'END:VTIMEZONE',
+    ...zones.flatMap(z => VTIMEZONE[z]),
     ...unique.flatMap(e => eventLines(e, patterns)),
     'END:VCALENDAR',
   ]
