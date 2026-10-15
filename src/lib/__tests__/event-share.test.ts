@@ -30,7 +30,7 @@ describe('whatsAppShareText: the team-group templates', () => {
       '*⚽ TRAINING | U15 Training*',
       '📅 When: Tue, 13 Oct @ 18:00',
       '🏟️ Venue: Main pitch',
-      `🔗 Event details: ${link}`,
+      `🔗 Event details & Availability: ${link}`,
     ].join('\n'))
   })
 
@@ -45,7 +45,7 @@ describe('whatsAppShareText: the team-group templates', () => {
       '⏰ Meet Time: 17:15 | Kick-off: 18:00',
       '🏟️ Venue: Rivals Sports Park',
       '👕 Kit: White',
-      `🔗 Event details: ${link}`,
+      `🔗 Confirm availability: ${link}`,
     ].join('\n'))
   })
 
@@ -87,7 +87,7 @@ describe('whatsAppShareText: the team-group templates', () => {
       '📅 When: Tue, 13 Oct',
       '⏰ Meet Time: 17:45 | Start: 18:00',
       '🏟️ Venue: Main pitch',
-      '🔗 Event details: https://trakfootball.com/event/ev-13',
+      '🔗 Event details & Availability: https://trakfootball.com/event/ev-13',
     ].join('\n'))
   })
 

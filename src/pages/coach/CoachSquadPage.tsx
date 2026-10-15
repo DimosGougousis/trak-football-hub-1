@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -146,13 +147,6 @@ export default function CoachSquadPage() {
     return posMatch && ageMatch
   })
 
-  const initials = (name: string) =>
-    name
-      .split(' ')
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
 
   return (
     <MobileShell>
@@ -270,16 +264,7 @@ export default function CoachSquadPage() {
                   className="w-full flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03] transition-colors"
                 >
                   {/* Avatar */}
-                  <div
-                    className="w-9 h-9 rounded-[11px] bg-[#202024] flex items-center justify-center shrink-0"
-                    style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-                  >
-                    <span
-                      className="text-[11px] font-semibold text-white/45"
-                    >
-                      {initials(p.player_name || '??')}
-                    </span>
-                  </div>
+                  <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
 
                   {/* Name + metadata */}
                   <div className="flex-1 min-w-0 text-left">

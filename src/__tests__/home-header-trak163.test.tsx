@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
-import { LoadedWeekStrip, WeekStrip, weekDays, type StripEvent } from '@/components/trak/WeekStrip'
+import { LoadedWeekStrip, WeekStrip, weekDays, type RenderEventSheet, type StripEvent } from '@/components/trak/WeekStrip'
+import { EventSheet } from '@/components/trak/EventSheet'
 import { PlayerAlertsBell } from '@/components/player/PlayerAlertsBell'
 import type { PlayerEvent } from '@/lib/player-events'
 
@@ -35,10 +36,13 @@ describe('home header', () => {
   })
 })
 
+// TRAK-182: a row opens its event in the bottom sheet (here as a player sees it).
+const sheet: RenderEventSheet = (e, trigger) => <EventSheet event={e} role="player" trigger={trigger} />
+
 describe('week strip', () => {
   const today = new Date('2026-10-12T09:00:00')
   it("shows today's events, opens one, and says when a day has nothing", async () => {
-    at(<WeekStrip today={today} eventHref={e => `/player/event/${e.id}`} events={[
+    at(<WeekStrip today={today} renderSheet={sheet} events={[
       event(),
       event({ id: 'e2', kind: 'match', title: null, opponent: 'Palm United', homeAway: 'away', date: '2026-10-16', time: '17:00' }),
     ]} />)
@@ -47,34 +51,33 @@ describe('week strip', () => {
     expect(within(days).getByRole('button', { name: /Monday 12 October/, pressed: true })).toBeInTheDocument()
     expect(within(within(days).getByRole('button', { name: /Friday 16 October/ })).getByLabelText('1 event')).toBeInTheDocument()
     expect(within(within(days).getByRole('button', { name: /Wednesday 14 October/ })).queryByLabelText(/event/)).toBeNull()
-    // One event today: it opens straight away with its details.
-    expect(screen.getByText('18:00 · Technical')).toBeInTheDocument()
-    expect(screen.getByText('Main pitch')).toBeInTheDocument()
-    expect(screen.getByText('Kit: Blue bibs')).toBeInTheDocument()
+    // Today's event is listed; its details open in the sheet (TRAK-182).
+    expect(screen.getByRole('button', { name: /18:00\s*Technical/ })).toBeInTheDocument()
 
     await userEvent.click(within(days).getByRole('button', { name: /Friday 16 October/ }))
     expect(screen.getByText('Friday 16 October', { selector: 'p' })).toBeInTheDocument()
-    expect(screen.getByText('17:00 · Match vs Palm United (away)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /17:00\s*Match vs Palm United \(away\)/ })).toBeInTheDocument()
 
     await userEvent.click(within(days).getByRole('button', { name: /Wednesday 14 October/ }))
     expect(screen.getByText('Nothing planned.')).toBeInTheDocument()
 
     await userEvent.click(within(days).getByRole('button', { name: /Friday 16 October/ }))
-    await userEvent.click(screen.getByRole('link', { name: 'Open' }))
-    expect(await screen.findByText('Event page e2')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Palm United/ }))
+    const opened = await screen.findByRole('dialog', { name: 'vs Palm United' })
+    expect(within(opened).getByText('Confirmed.')).toBeInTheDocument()
   })
 
   it('runs Monday to Sunday with today selected, and keeps the past days of the week (Imad, 12 Oct)', async () => {
     const wednesday = new Date('2026-10-14T09:00:00')
     expect(weekDays(wednesday)).toEqual(['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'])
     expect(weekDays(new Date('2026-10-18T22:00:00'))[0]).toBe('2026-10-12')
-    at(<WeekStrip today={wednesday} eventHref={() => '/calendar'} events={[event()]} />)
+    at(<WeekStrip today={wednesday} renderSheet={sheet} events={[event()]} />)
     const days = within(screen.getByRole('group', { name: 'This week' })).getAllByRole('button')
     expect(days.map(day => day.textContent?.[0])).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S'])
     expect(days[2]).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Nothing planned.')).toBeInTheDocument()
     await userEvent.click(days[0])
-    expect(screen.getByText('18:00 · Technical')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /18:00\s*Technical/ })).toBeInTheDocument()
   })
 
   it("loads this week's events itself, and a failed read is an error with Retry", async () => {
@@ -82,22 +85,22 @@ describe('week strip', () => {
     const load = vi.fn()
       .mockResolvedValueOnce({ data: null, error: { message: 'offline' } })
       .mockResolvedValueOnce({ data: [{ id: 'e9', event_type: 'match', title: null, opponent: 'Rivals', event_date: days[0], start_time: '10:00:00', published: false }], error: null })
-    at(<LoadedWeekStrip loadKey="dora" load={load} eventHref={() => '/calendar'} />)
+    at(<LoadedWeekStrip loadKey="dora" load={load} renderSheet={sheet} />)
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.queryByText('Nothing planned.')).toBeNull()
     expect(load).toHaveBeenCalledWith(days[0], days[6])
     await userEvent.click(screen.getByRole('button', { name: /retry/i }))
     await userEvent.click(within(await screen.findByRole('group', { name: 'This week' })).getAllByRole('button')[0])
-    expect(screen.getByText('10:00 · Match vs Rivals · Draft')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /10:00\s*Match vs Rivals\s*Draft/ })).toBeInTheDocument()
   })
 
   it('marks a cancelled event, a draft and a missing time', () => {
-    at(<WeekStrip today={today} eventHref={() => '/calendar'} events={[
+    at(<WeekStrip today={today} renderSheet={sheet} events={[
       event({ status: 'cancelled', cancelReason: 'Pitch closed' }),
       event({ id: 'e3', time: null, draft: true, title: 'Fitness' }),
     ]} />)
-    expect(screen.getByText('18:00 · Technical · Cancelled')).toBeInTheDocument()
-    expect(screen.getByText('Time to be confirmed · Fitness · Draft')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /18:00\s*Technical\s*Cancelled/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /TBC\s*Fitness\s*Draft/ })).toBeInTheDocument()
     expect(screen.getByLabelText('2 events')).toBeInTheDocument()
   })
 })

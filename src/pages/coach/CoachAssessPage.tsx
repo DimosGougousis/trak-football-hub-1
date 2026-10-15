@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { fetchWaitReason, WAIT_TITLE, waitText, type WaitReason } from '@/lib/wait-reason'
@@ -21,14 +22,6 @@ function bandConfig(band: BandType) {
   return BANDS.find(b => b.word.toLowerCase() === band) ?? BANDS[BANDS.length - 1]
 }
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
 
 /* ---------- option pill ---------- */
 
@@ -571,12 +564,7 @@ function CoachAssessmentForm() {
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
           <div className="flex items-center gap-3 p-3 rounded-[12px] bg-[#141416] border border-white/[0.06]">
-            <div
-              className="flex items-center justify-center w-[38px] h-[38px] rounded-full text-[13px] font-bold shrink-0"
-              style={{ background: 'rgba(200,242,90,0.14)', color: '#C8F25A' }}
-            >
-              {initials(selectedPlayer.player_name)}
-            </div>
+            <Avatar name={selectedPlayer.player_name} size="md" className="arc" aria-hidden />
             <div className="min-w-0">
               <p className="text-[15px] font-medium text-white/90 truncate">
                 {selectedPlayer.player_name}
@@ -708,12 +696,12 @@ function CoachAssessmentForm() {
 
         {/* ---- 5. sliders in dark container ---- */}
         <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
-          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} />
-          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} />
-          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} />
-          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} />
-          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} />
-          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} />
+          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} disabled={!formReady || saving || consentWait} />
         </div>
 
         {/* ---- 6. overall band card (amber glow) ---- */}

@@ -21,7 +21,7 @@ const rgb = (hex: string) => {
 
 describe('Home week strip colours', () => {
   it('a dot per event in its type colour, and red for a cancelled one', () => {
-    render(<MemoryRouter><WeekStrip today={new Date('2026-10-12T09:00:00')} eventHref={e => `/e/${e.id}`} events={[
+    render(<MemoryRouter><WeekStrip today={new Date('2026-10-12T09:00:00')} renderSheet={(_, trigger) => trigger} events={[
       event({ id: 't', kind: 'training', time: '17:00' }),
       event({ id: 'm', kind: 'match', time: '18:00', opponent: 'Olympiakos' }),
       event({ id: 'c', kind: 'training', time: '19:00', status: 'cancelled' }),

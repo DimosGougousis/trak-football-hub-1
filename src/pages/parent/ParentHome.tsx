@@ -2,6 +2,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { HomeHeader } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
+import { EventSheet } from '@/components/trak/EventSheet'
+import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { supabase } from '@/integrations/supabase/client'
 import { ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
@@ -67,7 +69,9 @@ export default function ParentHome() {
                   {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
                 </p>}
                 {/* TRAK-163: the selected child's week, Monday to Sunday, under the header. */}
-                {selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} eventHref={event => `/parent/event/${event.id}`}
+                {selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} renderSheet={(event, trigger) => <EventSheet event={event} role="parent" trigger={trigger}>
+                    <CantMakeIt key={selectedChild.id} event={event} child={selectedChild} />
+                  </EventSheet>}
                   load={(from, to) => supabase.rpc('child_events', { p_child: selectedChild.id })
                     .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
                 {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
