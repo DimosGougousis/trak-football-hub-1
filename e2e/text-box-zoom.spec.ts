@@ -63,8 +63,16 @@ test.describe('TRAK-178 on a phone', () => {
     const unexpected = await signedInCoach(page)
     await page.goto('/coach/schedule')
     await page.getByRole('button', { name: 'Add event' }).click()
-    await expect(page.getByRole('dialog', { name: 'New event' })).toBeVisible()
+    const sheet = page.getByRole('dialog', { name: 'New event' })
+    await expect(sheet).toBeVisible()
+    // TRAK-182: one step per screen, so each step's boxes are measured on it.
     const eventForm = await boxSizes(page)
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await sheet.getByRole('button', { name: /^Start\b/ }).click()
+    await page.getByRole('listbox').getByRole('option', { name: '5:00 PM' }).click()
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await expect(sheet.getByLabel('Kit')).toBeVisible()
+    eventForm.push(...await boxSizes(page))
     expect(eventForm.map(b => b.box)).toEqual(expect.arrayContaining(['Venue', 'Kit', 'Note for families']))
     for (const { box, px } of eventForm) expect(px, `event form: ${box}`).toBeGreaterThanOrEqual(16)
 

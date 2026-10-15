@@ -48,6 +48,11 @@ describe('TRAK-182: Schedule month on Arc\'s calendar', () => {
     expect(screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` })).toBeInTheDocument()
     const firstRow = within(screen.getAllByRole('row')[0]).getAllByRole('gridcell')
     expect(firstRow[0].getAttribute('aria-label')).toMatch(/^Monday/)
+    // Tarek's #311 review: the day names over the columns start on Monday too,
+    // or "Su" would sit over the Monday column with every other test green.
+    const header = [...document.querySelectorAll('[aria-hidden="true"]')]
+      .find(el => el.children.length === 7 && [...el.children].every(c => c.tagName === 'SPAN' && c.textContent?.length === 2))
+    expect([...header!.children].map(c => c.textContent)).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])
 
     await userEvent.click(screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` }))
     expect(await screen.findByText('Recovery')).toBeInTheDocument()
