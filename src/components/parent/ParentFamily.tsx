@@ -1,4 +1,5 @@
-import { useId, type ReactNode } from 'react'
+import { useId, type ChangeEventHandler, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { BandPill } from '@/components/trak'
 import { HomeTitle } from '@/components/trak/HomeHeader'
@@ -26,6 +27,29 @@ export function ParentLoading() {
   return <p role="status" className="py-6 text-sm text-muted-foreground">Loading…</p>
 }
 
+/* TRAK-181: a family's child picker. A native select (on iPhone a tap opens
+   iOS's own picker), drawn by Trak: Safari otherwise keeps its own small grey
+   bar and ignores the height and padding Chrome honours. Same pattern as the
+   coach's selects. */
+export function FamilySelect({ id, value, onChange, disabled, children }: {
+  id: string
+  value: string
+  onChange: ChangeEventHandler<HTMLSelectElement>
+  disabled?: boolean
+  children: ReactNode
+}) {
+  return (
+    <div className="relative">
+      <select id={id} value={value} onChange={onChange} disabled={disabled}
+        className="w-full min-h-11 appearance-none rounded-xl border border-border bg-card pl-3 pr-10 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary">
+        {children}
+      </select>
+      <ChevronDown size={16} aria-hidden data-testid="family-select-chevron"
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    </div>
+  )
+}
+
 export function ParentChildSelector() {
   const { children, selectedChild, selectChild } = useParentChildren()
   const id = useId()
@@ -33,10 +57,9 @@ export function ParentChildSelector() {
   return (
     <div className="mb-4">
       <label htmlFor={id} className="block text-xs text-muted-foreground mb-2">Following</label>
-      <select id={id} value={selectedChild.id} onChange={event => selectChild(event.target.value)}
-        className="w-full min-h-11 rounded-xl border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary">
+      <FamilySelect id={id} value={selectedChild.id} onChange={event => selectChild(event.target.value)}>
         {children.map(child => <option key={child.id} value={child.id}>{child.name}</option>)}
-      </select>
+      </FamilySelect>
     </div>
   )
 }
