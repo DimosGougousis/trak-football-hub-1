@@ -84,6 +84,33 @@ LEFT JOIN public.organizations o
 WHERE p.user_id = (SELECT id FROM auth.users WHERE email = lower('<email>'));
 ```
 
+**Set the academy's clock before its first event (TRAK-175).** Every academy
+starts on `Asia/Dubai`. Events, emails, reminders, the calendar feed and the
+age check all read `event_date` + `start_time` on this clock, so set it right
+after admitting the admin; once the academy has an event it can't change.
+An academy in Greece is `Europe/Athens`:
+
+```sql
+UPDATE public.organizations SET time_zone = 'Europe/Athens' WHERE id = '<academy UUID>'::uuid;
+SELECT name, time_zone, min_player_age FROM public.organizations WHERE id = '<academy UUID>'::uuid;
+```
+
+Pass the same zone to the roster loader with `--time-zone`.
+
+**Set the academy's consent age before its roster is loaded (TRAK-177).** Every
+academy starts at 18: a guardian approves every under-18. Where the country's
+digital-consent age is lower (Greece: 15), set it in the same step as the
+clock, **before** loading the roster. Loaded at 18 and changed later, guardians
+of 15–17s would be invited and approve, and those approvals stop counting at
+the change, so the children wait for their own consent overnight.
+
+```sql
+UPDATE public.organizations SET consent_age = 15 WHERE id = '<academy UUID>'::uuid;
+SELECT name, time_zone, consent_age, min_player_age FROM public.organizations WHERE id = '<academy UUID>'::uuid;
+```
+
+Pass the same age to the roster loader with `--consent-age`.
+
 The staff member uses **Forgot password?** with their email, opens the email's
 code-entry page, types the code and sets a password. Their profile is already
 provisioned. Stored legacy invite codes are not an admission mechanism.
@@ -94,6 +121,12 @@ The academy supplies the child and guardian roster. Use
 ```bash
 node scripts/load-roster.mjs --file '<roster.csv>' --org '<academy UUID>' --loaded-by '<operator name>'
 ```
+
+For an academy not on Dubai time, add `--time-zone '<zone>'` (for example
+`Europe/Athens`), matching `organizations.time_zone`. For an academy whose
+consent age is below 18, add `--consent-age <n>` (for example `15`), matching
+`organizations.consent_age`: a 15–17 child with their own email may then have
+no guardian on the roster.
 
 The CSV fields are `child_name,date_of_birth,age_group,child_email,guardian_emails,coach_email`.
 Date of birth uses `YYYY-MM-DD`; multiple guardian addresses are separated with

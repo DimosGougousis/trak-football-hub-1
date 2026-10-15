@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { reinviteExitCode, describeInviteFailure, inviteRequest, loadRows, operatorKey, parseArgs, parseCsv, pendingGuardianNote, planLoad, planReinvite, reinviteRows, syntheticInviteLines, validateRoster } from '../../scripts/load-roster.mjs'
+import { academyToday, reinviteExitCode, describeInviteFailure, inviteRequest, loadRows, operatorKey, parseArgs, parseCsv, pendingGuardianNote, planLoad, planReinvite, reinviteRows, syntheticInviteLines, validateRoster } from '../../scripts/load-roster.mjs'
 import { handleRosterInviteRequest } from '../../supabase/functions/send-roster-invites/handler'
 
 // TRAK-49 [J1]: the concierge roster file is checked before anything is
@@ -588,5 +588,18 @@ describe('load-roster --reinvite exits non-zero when a line needs the operator (
     ['CONTROL everything re-sent', plan({ toInvite: [{ line: 2, rosterChildId: 'rc-1' }] }), 0, 0],
   ] as const)('%s', (_what, p, failedCount, expected) => {
     expect(reinviteExitCode(p, failedCount)).toBe(expected)
+  })
+})
+
+// TRAK-175: the age check uses the academy's own date, like the database.
+describe('academyToday', () => {
+  it('is the academy\'s date: 21:30Z on 27 Oct is still the 27th in Athens, the 28th in Dubai', () => {
+    const at = new Date('2026-10-27T21:30:00Z')
+    expect(academyToday('Europe/Athens', at)).toBe('2026-10-27')
+    expect(academyToday('Asia/Dubai', at)).toBe('2026-10-28')
+  })
+
+  it('takes the loader\'s --time-zone', () => {
+    expect(parseArgs(['--file', 'r.csv', '--time-zone', 'Europe/Athens'])['time-zone']).toBe('Europe/Athens')
   })
 })

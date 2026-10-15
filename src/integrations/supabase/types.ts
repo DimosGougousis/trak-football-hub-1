@@ -883,6 +883,10 @@ export type Database = {
       }
       create_my_calendar_link: { Args: never; Returns: string }
       delete_my_account: { Args: never; Returns: undefined }
+      give_my_consent: {
+        Args: { p_notice_version: string; p_consent_text: string }
+        Returns: undefined
+      }
       my_calendar_link: {
         Args: never
         Returns: { created_at: string; last_fetched_at: string | null }[]
@@ -982,6 +986,10 @@ export type Database = {
       take_event_register: {
         Args: { p_event_id: string; p_present: string[] }
         Returns: string
+      }
+      withdraw_my_consent: {
+        Args: never
+        Returns: undefined
       }
     }
     Enums: {

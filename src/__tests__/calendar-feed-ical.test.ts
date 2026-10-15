@@ -279,3 +279,50 @@ describe('foldLine', () => {
     for (const physical of feed.split('\r\n')) expect(octets(physical)).toBeLessThanOrEqual(75)
   })
 })
+
+// TRAK-175: an academy runs on its own clock. The pilot academy is Athens,
+// which changes its clocks; Dubai never does.
+describe('buildCalendarFeed: each academy\'s own time zone', () => {
+  const athens: FeedEvent = { ...base, timeZone: 'Europe/Athens' }
+
+  it('writes an Athens academy\'s 18:00 as Athens time', () => {
+    const [event] = events(buildCalendarFeed([athens]))
+    expect(prop(event, 'DTSTART')).toBe('DTSTART;TZID=Europe/Athens:20261113T180000')
+    expect(prop(event, 'DTEND')).toBe('DTEND;TZID=Europe/Athens:20261113T193000')
+  })
+
+  it('describes Athens with its summer and winter clocks, so phones convert across 25 Oct', () => {
+    const all = lines(buildCalendarFeed([athens]))
+    expect(all).toContain('X-WR-TIMEZONE:Europe/Athens')
+    const zone = all.slice(all.indexOf('TZID:Europe/Athens'), all.indexOf('END:VTIMEZONE') + 1)
+    expect(zone).toEqual(expect.arrayContaining([
+      'BEGIN:DAYLIGHT', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0300',
+      'BEGIN:STANDARD', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'TZOFFSETFROM:+0300', 'TZOFFSETTO:+0200',
+    ]))
+    expect(all).not.toContain('TZID:Asia/Dubai')
+  })
+
+  it('labels the meet clock as Athens time', () => {
+    const [event] = events(buildCalendarFeed([{ ...athens, kind: 'match', meetTime: '17:15', opponent: 'AEK' }]))
+    expect(prop(event, 'DESCRIPTION')).toContain('Meet 45 min before kick-off (17:15 Athens time)')
+    expect(prop(event, 'DESCRIPTION')).not.toContain('Dubai')
+  })
+
+  it('describes every zone a mixed feed uses, each event on its own', () => {
+    const feed = buildCalendarFeed([athens, { ...base, id: '0f8a1c2e-0000-4000-8000-000000000002', date: '2026-11-14' }])
+    const all = lines(feed)
+    expect(all.filter(l => l === 'BEGIN:VTIMEZONE')).toHaveLength(2)
+    expect(all).toContain('TZID:Europe/Athens')
+    expect(all).toContain('TZID:Asia/Dubai')
+    const [first, second] = events(feed)
+    expect(prop(first, 'DTSTART')).toBe('DTSTART;TZID=Europe/Athens:20261113T180000')
+    expect(prop(second, 'DTSTART')).toBe('DTSTART;TZID=Asia/Dubai:20261114T180000')
+  })
+
+  it('keeps an event with no zone on Dubai, as every feed was before', () => {
+    const all = lines(buildCalendarFeed([base]))
+    expect(all).toContain('X-WR-TIMEZONE:Asia/Dubai')
+    expect(all).not.toContain('TZID:Europe/Athens')
+  })
+})
+

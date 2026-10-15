@@ -16,8 +16,8 @@ export function OwnConsentCard({ turned, onChange }: { turned: boolean; onChange
   async function choose(agree: boolean) {
     setBusy(true); setError(null)
     const { error } = agree
-      ? await supabase.rpc('give_my_consent' as never, { p_notice_version: OWN_CONSENT_NOTICE_VERSION, p_consent_text: OWN_CONSENT_TEXT } as never)
-      : await supabase.rpc('withdraw_my_consent' as never)
+      ? await supabase.rpc('give_my_consent', { p_notice_version: OWN_CONSENT_NOTICE_VERSION, p_consent_text: OWN_CONSENT_TEXT })
+      : await supabase.rpc('withdraw_my_consent')
     setBusy(false)
     if (error) { setError(error.message); return }
     setDone(agree ? 'agreed' : 'declined')
@@ -71,7 +71,7 @@ export function OwnConsentSettings({ Section }: { Section: (props: { label: stri
 
   async function withdraw() {
     setError(null)
-    const { error } = await supabase.rpc('withdraw_my_consent' as never)
+    const { error } = await supabase.rpc('withdraw_my_consent')
     if (error) { setError(error.message); return }
     setWithdrawn(true)
   }

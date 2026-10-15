@@ -12,9 +12,11 @@ export interface RosterRow {
 }
 export declare const COLUMNS: readonly string[]
 export declare function parseCsv(text: string): string[][]
+export declare const TIME_ZONES: readonly string[]
+export declare function academyToday(timeZone?: string, at?: Date): string
 export declare function validateRoster(
   text: string,
-  options?: { today?: string; minAge?: number; consentAge?: number },
+  options?: { timeZone?: string; today?: string; minAge?: number; consentAge?: number },
 ): { rows: RosterRow[]; errors: string[] }
 export declare function planLoad(
   rows: RosterRow[],
@@ -63,4 +65,6 @@ export declare function parseArgs(argv: string[]): {
   file?: string
   org?: string
   'loaded-by'?: string
+  'min-age'?: string
+  'time-zone'?: string
 }

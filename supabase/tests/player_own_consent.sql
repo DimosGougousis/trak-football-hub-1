@@ -58,7 +58,9 @@ INSERT INTO public.squad_players(id, coach_user_id, player_name, linked_player_i
  (pg_temp.oc(31), pg_temp.oc(4), 'Greek Fourteen', pg_temp.oc(11), 'active'),
  (pg_temp.oc(32), pg_temp.oc(4), 'Greek Sixteen',  pg_temp.oc(12), 'active'),
  (pg_temp.oc(33), pg_temp.oc(3), 'UAE Sixteen',    pg_temp.oc(13), 'active'),
- (pg_temp.oc(34), pg_temp.oc(4), 'Greek Eighteen', pg_temp.oc(14), 'active');
+ (pg_temp.oc(34), pg_temp.oc(4), 'Greek Eighteen', pg_temp.oc(14), 'active'),
+ -- Player 13 also trains with the Greek academy: the stricter age (18) still decides (Tarek, #300).
+ (pg_temp.oc(77), pg_temp.oc(4), 'UAE Sixteen',    pg_temp.oc(13), 'active');
 -- A guardian approved player 12 at 14, before the consent age applied to them.
 INSERT INTO public.parental_consents(player_user_id, parent_user_id, relationship_declared, verification_method,
   purposes, notice_version, consent_text, threshold_age, player_age_at_consent, granted_at)
@@ -85,6 +87,11 @@ SELECT pg_temp.oc_assert((public.my_consent_status()->>'consent_age')::int = 15
 SELECT pg_temp.oc_refused($q$INSERT INTO public.player_own_consents(player_user_id, notice_version, consent_text, consent_age, player_age_at_consent, granted_at)
   VALUES (pg_temp.oc(11), 'x', 'x', 15, 14, now())$q$, 'nobody writes consent records directly');
 SELECT pg_temp.oc_assert((SELECT count(*) FROM public.player_own_consents) = 1, 'a player reads only their own choices');
+DO $$ DECLARE ok boolean := false;
+BEGIN
+  BEGIN PERFORM public.give_my_consent('2026-10-15.1', '  '); EXCEPTION WHEN SQLSTATE '22023' THEN ok := true; END;
+  PERFORM pg_temp.oc_assert(ok, 'a consent without the text the player agreed to is refused');
+END $$;
 SELECT pg_temp.oc_as(11);
 SELECT pg_temp.oc_refused($q$SELECT public.give_my_consent('2026-10-15.1', 'x')$q$, 'a 14-year-old''s own tick is refused: a guardian consents');
 SELECT pg_temp.oc_as(13);
@@ -114,6 +121,11 @@ RESET ROLE;
 SELECT pg_temp.oc_assert(NOT pg_temp.oc_required(10), 'consenting again admits them again');
 SELECT pg_temp.oc_assert((SELECT count(*) FROM public.player_own_consents WHERE player_user_id = pg_temp.oc(10)) = 3,
   'every choice is kept as evidence');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.oc_as(10);
+SELECT pg_temp.oc_assert(jsonb_array_length(public.export_my_account()->'own_consents') = 3,
+  'the player''s data export lists their own choices');
+RESET ROLE;
 SELECT pg_temp.oc_assert(public.squad_player_consent_required(pg_temp.oc(30)) = false
   AND public.squad_player_consent_required(pg_temp.oc(31)) = true, 'the coach''s roster check follows the same rule');
 

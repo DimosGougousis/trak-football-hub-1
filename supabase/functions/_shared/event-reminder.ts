@@ -24,7 +24,7 @@ export interface ReminderEvent extends EventFields {
 export interface ClaimedReminder {
   user_id: string;
   email: string;
-  /** YYYY-MM-DD in Dubai. */
+  /** YYYY-MM-DD on the academy's clock (TRAK-175). */
   day: string;
   events: ReminderEvent[];
 }
