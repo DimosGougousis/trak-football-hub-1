@@ -16,7 +16,7 @@ export declare const TIME_ZONES: readonly string[]
 export declare function academyToday(timeZone?: string, at?: Date): string
 export declare function validateRoster(
   text: string,
-  options?: { timeZone?: string; today?: string; minAge?: number },
+  options?: { timeZone?: string; today?: string; minAge?: number; consentAge?: number },
 ): { rows: RosterRow[]; errors: string[] }
 export declare function planLoad(
   rows: RosterRow[],
