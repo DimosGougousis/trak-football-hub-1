@@ -44,6 +44,26 @@ describe('load-roster validation', () => {
     expect(rows.map(r => r.child_name)).toEqual(['Eleven'])
   })
 
+  // TRAK-177: at an academy whose consent age is 15, a child of 15+ with their
+  // own email consents for themselves, so no guardian is needed on the roster.
+  it('needs no guardian for a child at the academy\'s consent age who has their own email', () => {
+    const { rows, errors } = validateRoster(file(
+      'Fifteen Solo,2011-09-24,U16,fifteen@roster.test,,c@roster.test',
+      'Fourteen Solo,2011-09-25,U15,fourteen@roster.test,,c@roster.test',
+      'Fifteen No Email,2011-09-24,U16,,,c@roster.test',
+    ), { ...TODAY, consentAge: 15 })
+    expect(rows.map(r => r.child_name)).toEqual(['Fifteen Solo'])
+    expect(errors).toEqual([
+      'Line 3: no guardian email (a child under 15 needs one)',
+      'Line 4: no guardian email (a child without their own email needs one)',
+    ])
+  })
+
+  it('keeps needing a guardian for every child at an academy at 18 (the default)', () => {
+    const { errors } = validateRoster(file('Sixteen Solo,2010-01-01,U17,sixteen@roster.test,,c@roster.test'), TODAY)
+    expect(errors).toEqual(['Line 2: no guardian email (a child under 18 needs one)'])
+  })
+
   it('refuses a missing column', () => {
     const { errors } = validateRoster('child_name,date_of_birth\nA,2011-01-01', TODAY)
     expect(errors[0]).toMatch(/Missing column\(s\): age_group, child_email, guardian_emails, coach_email/)
@@ -69,7 +89,7 @@ describe('load-roster validation', () => {
       'B,2011-01-01,U15,b@roster.test,B@roster.test,c@roster.test',
     ), TODAY)
     expect(errors).toEqual([
-      'Line 2: no guardian email',
+      'Line 2: no guardian email (a child under 18 needs one)',
       "Line 3: the child's email is also listed as a guardian's",
     ])
   })
