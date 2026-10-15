@@ -1212,6 +1212,15 @@ export default function CoachAddSession() {
             ))}
           </dl>
         )}
+        {/* Why Save is off when the roster is the reason, with its Retry, here
+            too: it used to show only on the step that lists the players (Tarek, #317). */}
+        {step === review && (rosterFailed || rosterLoading) && (
+          <div className="rounded-[18px] border border-white/[0.07] bg-[#101012]">
+            {rosterFailed ? rosterNote : (
+              <p role="status" className="text-[12px] text-white/55 px-4 py-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>Loading your squad…</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Sticky save */}
