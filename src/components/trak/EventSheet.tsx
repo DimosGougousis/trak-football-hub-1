@@ -1,8 +1,9 @@
 import type { ReactElement, ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Ban, CircleCheck, CircleDashed } from 'lucide-react'
+import { Ban, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
+import { relativeLabel } from '@/lib/alert-read-state'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 
 /* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet, laid out like
@@ -39,6 +40,15 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
   return { text: 'Confirmed.', tone: 'ok' }
 }
 
+/** "Updated 5h ago", "Updated yesterday": the coach changed it after publishing (TRAK-152 counts each change). */
+function updatedNote(event: StripEvent): string | null {
+  if (!event.sequence || !event.updatedAt || event.status === 'cancelled') return null
+  const when = relativeLabel(event.updatedAt)
+  if (!when) return null
+  const lower = when === 'Just now' || when === 'Yesterday' ? when.toLowerCase() : when
+  return `Updated ${/^\d+[mh]$/.test(when) ? `${when} ago` : lower}.`
+}
+
 function TimeRow({ event }: { event: StripEvent }) {
   const startLabel = event.kind === 'match' ? 'Kick-off' : 'Starts'
   if (!event.time) return <p className="text-[15px] text-white/80">Time to be confirmed</p>
@@ -72,6 +82,7 @@ export function EventSheet({ event, role, trigger, children }: {
   const place = sheetPlace(event)
   const date = format(parseISO(event.date), 'EEE d MMM')
   const status = sheetStatus(event, role)
+  const updated = updatedNote(event)
   const Icon = status.tone === 'cancelled' ? Ban : status.tone === 'draft' ? CircleDashed : CircleCheck
   const color = status.tone === 'cancelled' ? CANCELLED_COLOR : status.tone === 'draft' ? 'rgba(255,255,255,0.55)' : '#4ade80'
   const details = [
@@ -85,9 +96,15 @@ export function EventSheet({ event, role, trigger, children }: {
       detents={[0.62, 0.92]} className="arc">
       <div className="space-y-4 pb-4">
         <TimeRow event={event} />
+        {event.venue && event.status !== 'cancelled' && (
+          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`} target="_blank" rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 text-[14px] text-primary focus-visible:ring-2 focus-visible:ring-primary rounded-md">
+            <MapPin size={16} aria-hidden="true" />Open in Maps
+          </a>
+        )}
         <p className="flex items-center gap-2 text-[14px] text-white/80">
           <Icon size={16} aria-hidden="true" style={{ color }} />
-          <span><span className="font-medium text-white/95">{status.text}</span>{event.time && event.meetTime && status.tone === 'ok' ? ` Meet ${event.meetTime}.` : ''}</span>
+          <span><span className="font-medium text-white/95">{status.text}</span>{updated ? ` ${updated}` : ''}</span>
         </p>
         {details.length > 0 && (
           <dl className="divide-y divide-white/[0.07] border-y border-white/[0.07]">

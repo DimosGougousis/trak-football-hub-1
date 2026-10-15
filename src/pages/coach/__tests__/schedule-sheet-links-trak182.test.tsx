@@ -47,6 +47,11 @@ describe('TRAK-182: Schedule opens what the event sheet asked for', () => {
     expect(await screen.findByRole('dialog', { name: 'Publish event' })).toBeInTheDocument()
   })
 
+  it('opens the cancel sheet for ?cancel=<id>', async () => {
+    renderApp('/coach/schedule?cancel=one-1')
+    expect(await screen.findByRole('dialog', { name: 'Cancel event' })).toBeInTheDocument()
+  })
+
   it('opens nothing for an id that is not on the schedule', async () => {
     renderApp('/coach/schedule?edit=gone')
     await screen.findByText('Finishing')

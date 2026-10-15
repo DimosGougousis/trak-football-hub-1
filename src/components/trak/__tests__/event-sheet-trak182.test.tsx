@@ -26,7 +26,7 @@ const event = (over: Partial<StripEvent>): StripEvent => ({
 })
 const row = (over: Record<string, unknown>) => ({
   id: 'ev-1', coach_user_id: 'coach-1', event_type: 'match', title: 'League', event_date: day, start_time: '17:00:00',
-  starts_at: `${day}T13:00:00Z`, published: false, status: 'scheduled', series_id: null, ...over,
+  starts_at: '2099-01-01T13:00:00Z', published: false, status: 'scheduled', series_id: null, ...over,
 })
 
 let eventRow: Record<string, unknown>
@@ -43,7 +43,9 @@ beforeEach(() => {
     }),
     http.get(endpoint('coach_sessions'), () => HttpResponse.json({ code: 'PGRST116', details: 'Results contain 0 rows', message: 'none' }, { status: 406 })),
     http.get(endpoint('squad_players'), () => HttpResponse.json([
-      { id: 'sp-1', player_name: 'Ade Okafor' }, { id: 'sp-2', player_name: 'Bea Lin' }, { id: 'sp-3', player_name: 'Cal Moss' }])),
+      { id: 'sp-1', player_name: 'Ade Okafor', age_group: 'U14', status: 'active' }, { id: 'sp-2', player_name: 'Bea Lin', age_group: 'U14', status: 'active' },
+      { id: 'sp-3', player_name: 'Cal Moss', age_group: 'U14', status: 'active' }, { id: 'sp-4', player_name: 'Dan Former', age_group: 'U14', status: 'coach_departed' }])),
+    http.get(endpoint('session_attendance'), () => HttpResponse.json([{ squad_player_id: 'sp-1', status: 'present' }, { squad_player_id: 'sp-3', status: 'absent' }])),
     http.get(endpoint('event_absences'), () => HttpResponse.json([{ squad_player_id: 'sp-2', reason: 'School trip' }])),
   )
 })
@@ -76,6 +78,9 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
+    expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(patched).toEqual([{ published: true }]))
   })
@@ -99,23 +104,68 @@ describe('TRAK-182: the event sheet', () => {
   })
 
   it('shows a published event\'s link, Edit and who is coming', async () => {
-    eventRow = row({ published: true })
-    const user = userEvent.setup() // installs its own clipboard; replace it after
-    const writeText = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    eventRow = row({ published: true, venue: 'Rivals Park', opponent: 'Rivals FC', home_away: 'away' })
+    const user = userEvent.setup()
     renderStrip([event({})], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(within(sheet).getByText('Published.')).toBeInTheDocument()
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
-    await user.click(within(sheet).getByRole('button', { name: 'Copy WhatsApp link' }))
-    expect(writeText).toHaveBeenCalledWith('https://trakfootball.com/event/ev-1')
+    // J8.16's pre-written message, with the event's own link, not a bare link to paste.
+    const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
+    const text = decodeURIComponent(share.getAttribute('href')!.replace('https://wa.me/?text=', ''))
+    expect(text).toContain('U14 Match vs Rivals FC')
+    expect(text).toContain('https://trakfootball.com/event/ev-1')
     expect(await within(sheet).findByText('Coming · 2')).toBeInTheDocument()
+    expect(within(sheet).queryByText(/Dan/)).toBeNull()
     expect(within(sheet).getByText("Can't make it · 1")).toBeInTheDocument()
     expect(within(sheet).getByText('Bea Lin')).toBeInTheDocument()
     expect(within(sheet).getByText('School trip')).toBeInTheDocument()
     await user.click(within(sheet).getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/coach/schedule?edit=ev-1')
+  })
+
+  it('cancels a published event through Schedule\'s cancel sheet', async () => {
+    eventRow = row({ published: true })
+    const user = userEvent.setup()
+    renderStrip([event({})], 'coach')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Cancel event' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/coach/schedule?cancel=ev-1')
+  })
+
+  it('shows who came once the register is taken, and no Cancel after the start', async () => {
+    eventRow = row({ published: true, event_type: 'training', title: 'Finishing', starts_at: '2020-01-01T13:00:00Z', event_date: '2020-01-01' })
+    server.use(http.get(endpoint('coach_sessions'), () => HttpResponse.json({ id: 'session-1' })))
+    const user = userEvent.setup()
+    renderStrip([event({ kind: 'training', title: 'Finishing', opponent: null, homeAway: null })], 'coach')
+    await user.click(screen.getByRole('button', { name: /Finishing/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
+    expect(await within(sheet).findByText('Came · 1')).toBeInTheDocument()
+    expect(within(sheet).getByText(/^Ade$/)).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+  })
+
+  it('offers no Cancel once a match has started (a match has no register)', async () => {
+    eventRow = row({ published: true, starts_at: '2020-01-01T13:00:00Z', event_date: '2020-01-01' })
+    const user = userEvent.setup()
+    renderStrip([event({})], 'coach')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
+    expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+  })
+
+  it('says so when the squad is empty', async () => {
+    eventRow = row({ published: true })
+    server.use(http.get(endpoint('squad_players'), () => HttpResponse.json([])))
+    const user = userEvent.setup()
+    renderStrip([event({})], 'coach')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(await within(sheet).findByText('No players in your squad yet.')).toBeInTheDocument()
   })
 
   it('tells a family "Confirmed." with no coach actions and no other children', async () => {
@@ -124,7 +174,9 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(within(sheet).getByText('Confirmed.')).toBeInTheDocument()
-    expect(within(sheet).queryByRole('button', { name: /Publish|Edit|WhatsApp/ })).not.toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Rivals%20Park')
+    expect(within(sheet).queryByRole('button', { name: /Publish|Edit|Cancel/ })).not.toBeInTheDocument()
+    expect(within(sheet).queryByRole('link', { name: /WhatsApp/ })).not.toBeInTheDocument()
     expect(within(sheet).queryByText('Attending')).not.toBeInTheDocument()
     expect(within(sheet).queryByText('Bea Lin')).not.toBeInTheDocument()
   })
@@ -137,5 +189,14 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText(/· Training ground$/)).toBeInTheDocument()
     expect(within(sheet).getByText('Cancelled.')).toBeInTheDocument()
     expect(within(sheet).getByText('Pitch flooded')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('link', { name: 'Open in Maps' })).toBeNull()
+  })
+
+  it('tells families when the coach changed the event after publishing', async () => {
+    const user = userEvent.setup()
+    renderStrip([event({ sequence: 2, updatedAt: new Date(Date.now() - 5 * 60_000).toISOString() })], 'parent')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(within(sheet).getByText(/Updated 5m ago\./)).toBeInTheDocument()
   })
 })

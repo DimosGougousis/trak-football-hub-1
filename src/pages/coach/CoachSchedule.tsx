@@ -393,20 +393,21 @@ export default function CoachSchedule() {
     toast.success('Published to the squad')
   }
 
-  // TRAK-182: the event sheet on Home sends Edit here (?edit=<id>), and a
-  // weekly series' Publish (?publish=<id>), which asks this week or following.
+  // TRAK-182: the event sheet on Home sends Edit (?edit=<id>), Cancel
+  // (?cancel=<id>) and a weekly series' Publish (?publish=<id>, which asks
+  // this week or following) here, to Schedule's own sheets.
   const [params, setParams] = useSearchParams()
   useEffect(() => {
-    const id = params.get('edit') ?? params.get('publish')
-    const row = id ? calEvents.find(r => r.id === id) : undefined
+    const action = (['edit', 'publish', 'cancel'] as const).find(a => params.has(a))
+    const row = action ? calEvents.find(r => r.id === params.get(action)) : undefined
     if (!row) return
-    const editing = params.has('edit')
     setParams({}, { replace: true })
     if (row.event_date) {
       const [y, m] = row.event_date.split('-').map(Number)
       setViewYear(y); setViewMonth(m - 1); setSelected(row.event_date)
     }
-    if (editing) openEdit(row)
+    if (action === 'edit') openEdit(row)
+    else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     else void publish(row)
   }, [calEvents]) // eslint-disable-line react-hooks/exhaustive-deps -- runs once the rows load
 
