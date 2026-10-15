@@ -68,6 +68,9 @@ await context.route('**/*',async route=>{
  await expect(page.getByText('Alex Opposition',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Matches',exact:true}).click();
  await expect(page.getByRole('combobox')).toHaveValue(zara);
+ // TRAK-181: Trak draws the picker and its chevron, so Safari can't swap in its own grey bar.
+ await expect(page.getByRole('combobox')).toHaveCSS('appearance','none');
+ await expect(page.getByTestId('family-select-chevron')).toBeVisible();
  await expect(page.getByText('D 0–0',{exact:true})).toBeVisible();
  await expect(page.getByText('Difficult',{exact:true})).toBeVisible();
  await expect(page.getByText('1 Sept · Synthetic League · Test Pitch',{exact:true})).toBeVisible();
