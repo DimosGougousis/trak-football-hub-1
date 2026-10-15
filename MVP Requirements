@@ -106,10 +106,13 @@ the profile is the academy's own record of the child, and assessing or rating
 is what needs consent. Assessment and development writes remain consent-gated. If consent is
 withdrawn while a form is open, saving is refused and the entered values remain.
 
-The assessment screen has six sliders, the resulting band, a message visible
-only to the child, and an optional private note visible only to its coach. One
-Save publishes the message; nothing reaches the player before saving. A partial
-failure states what saved and what did not.
+The assessment screen runs one step per screen (Player, Ratings, Message, Note,
+Review; Imad, 15 Oct, TRAK-182). It has six sliders, the resulting band, a
+message visible only to the child, and an optional private note visible only to
+its coach. On Review, Publish saves and sends the message; Save draft saves it
+unpublished, so nothing reaches the player. A message the player already has
+gets one Save that keeps it published; Unpublish takes it back. Nothing reaches
+the player before Publish. A partial failure states what saved and what did not.
 
 Assessments require a completed session attended by the player, with one
 assessment per player per session. `/coach/assess` is the pilot assessment

@@ -39,9 +39,13 @@ describe('TRAK-177: a 15–17 player\'s own consent', () => {
   it('asks the player themselves, and agreeing records it with the notice version', async () => {
     setup('player-own-15', { age: 15, consent_age: 15 })
     renderApp('/player/home')
-    expect(await screen.findByRole('heading', { name: 'Your consent' })).toBeInTheDocument()
+    // TRAK-182: a bar first; Approve opens the panel with the stored text.
+    expect(await screen.findByText('Your coach would like to record your progress in Trak.')).toBeInTheDocument()
     expect(screen.queryByText('Waiting for your parent')).not.toBeInTheDocument()
-    const agree = screen.getByRole('button', { name: 'I agree' })
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(await screen.findByRole('heading', { name: 'Your consent' })).toBeInTheDocument()
+    expect(calls).toHaveLength(0)
+    const agree = screen.getByRole('button', { name: 'Approve' })
     expect(agree).toBeDisabled()
     await userEvent.click(screen.getByRole('checkbox', { name: /I understand/ }))
     await userEvent.click(agree)
@@ -55,7 +59,7 @@ describe('TRAK-177: a 15–17 player\'s own consent', () => {
   it('lets the player decline, and says what that means', async () => {
     setup('player-own-16', { age: 16, consent_age: 15 })
     renderApp('/player/home')
-    await userEvent.click(await screen.findByRole('button', { name: "I don't agree" }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Reject' }))
     expect(await screen.findByText(/won't record your progress in Trak/)).toBeInTheDocument()
     expect(calls.map(c => c.fn)).toEqual(['withdraw'])
   })
@@ -96,7 +100,7 @@ describe('TRAK-177: a 15–17 player\'s own consent', () => {
   it('asks a player who turned 15 under a parent\'s approval to make their own choice', async () => {
     setup('player-own-turned', { age: 15, consent_age: 15, required: false, own_choice: null })
     renderApp('/player/home')
-    expect(await screen.findByRole('heading', { name: 'Your consent' })).toBeInTheDocument()
+    expect(await screen.findByText('Your coach would like to record your progress in Trak.')).toBeInTheDocument()
     expect(screen.getByText(/You're 15 or over now/)).toBeInTheDocument()
   })
 })
