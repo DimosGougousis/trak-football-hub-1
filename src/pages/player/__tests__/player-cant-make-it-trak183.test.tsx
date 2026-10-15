@@ -22,6 +22,9 @@ const EVENT = {
   venue: 'Main pitch', opponent: null, meet_time: null, kit: null, home_away: null,
   status: 'scheduled', cancel_reason: null, sequence: 0,
 }
+// Today, late enough not to have started: it sits in the Home week strip.
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' })
+const TODAY_EVENT = { ...EVENT, id: 'ev-today', title: 'Finishing', event_date: today, start_time: '23:55:00', starts_at: `${today}T19:55:00Z` }
 let reported: Record<string, unknown>[]
 let absent: boolean
 let statusAsked: boolean
@@ -33,6 +36,10 @@ function setup(age: number, consentAge: number) {
   server.use(
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('player_details', []),
+    // Home's other reads, answered empty.
+    table('matches', []), table('coach_assessments', []), table('recognition_awards', []),
+    rpc('get_player_invites_for_current_user', () => []),
+    rpc('family_training_history', () => []),
     rpcRows('child_events', [EVENT]),
     rpc('my_consent_status', () => {
       statusAsked = true
@@ -74,5 +81,18 @@ describe('TRAK-183: a player who consents for themselves says Can\'t make it', (
     await new Promise(resolve => setTimeout(resolve, 50))
     expect(screen.queryByRole('region', { name: 'Attendance' })).toBeNull()
     expect(screen.queryByRole('button', { name: "Can't make it" })).toBeNull()
+  })
+
+  // TRAK-183 follow-up: the same button in the Home event sheet (#310).
+  it('the Home event sheet offers it too, for themselves', async () => {
+    setup(16, 15)
+    // The mock ignores the page's id filter, so Home gets its own list.
+    server.use(rpcRows('child_events', [TODAY_EVENT]))
+    const user = userEvent.setup()
+    renderApp('/player/home')
+    await user.click(await screen.findByRole('button', { name: /Finishing/ }, { timeout: 5000 }))
+    const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
+    const attendance = await within(sheet).findByRole('region', { name: 'Attendance' })
+    expect(await within(attendance).findByText("Everyone counts as coming. Only say if you can't.")).toBeInTheDocument()
   })
 })
