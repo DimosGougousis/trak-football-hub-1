@@ -849,7 +849,7 @@ function CoachAssessmentForm() {
               ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
               [`Message to ${firstName}`, message || 'None'],
-              ['Private note', note.trim() || 'None'],
+              ['Private note', <>{note.trim() || 'None'}<span className="block mt-0.5 text-[11px] text-white/40">Only you see this.</span></>],
             ] as const).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
                 <dt className="w-28 shrink-0 text-white/45">{term}</dt>
@@ -880,14 +880,18 @@ function CoachAssessmentForm() {
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
           <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
-          {message ? <>
+          {/* Save draft only for a message the player hasn't got: on a published
+              one it would take it back (Kostas, #313). That stays Unpublish's job. */}
+          {message && !sharedPublished ? <>
             <Button size="lg" variant="secondary" className="flex-1" loading={saving}
               disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave(true)}>Save draft</Button>
             <Button size="lg" className="flex-1" loading={saving}
               disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>Publish</Button>
           </> : (
             <Button size="lg" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>Save</Button>
+              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>
+              {message && !liveUnchanged ? 'Publish' : 'Save'}
+            </Button>
           )}
         </> : <>
           {/* Named for its step: the header's Back leaves the screen (TRAK-179). */}
