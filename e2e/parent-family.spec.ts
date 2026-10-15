@@ -1,5 +1,5 @@
 import './parent-assessment-history'
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 
 // Real browser, app router/AuthProvider and Supabase SDK. Every backend request
 // is intercepted with synthetic data; unknown external calls fail the test.
@@ -107,6 +107,16 @@ await context.route('**/*',async route=>{
  expect(writes.every(write => ['/rest/v1/telemetry_events', '/rest/v1/rpc/get_children_awaiting_consent', '/rest/v1/rpc/get_roster_children_awaiting_consent', '/rest/v1/rpc/get_my_child_logins', '/rest/v1/rpc/get_my_child_credentials', '/rest/v1/rpc/get_my_approved_children_awaiting_signup', '/rest/v1/rpc/family_training_history', '/rest/v1/rpc/child_events', '/auth/v1/logout'].includes(write.path))).toBe(true);
 });
 
+// TRAK-182: Arc's sheet springs in from JavaScript, so getAnimations() doesn't
+// see it. Wait until it stops moving before a screenshot.
+async function sheetAtRest(sheet: Locator) {
+  await expect.poll(async () => {
+    const before = (await sheet.boundingBox())?.y
+    await new Promise(resolve => setTimeout(resolve, 150))
+    return before !== undefined && before === (await sheet.boundingBox())?.y
+  }).toBe(true)
+}
+
 // TRAK-171: exercise the production build with synthetic, intercepted family
 // and coach replies. This verifies UI behavior, not deployed phone acceptance.
 test.describe('TRAK-171 Home follow-ups', () => {
@@ -152,6 +162,8 @@ test.describe('TRAK-171 Home follow-ups', () => {
         if (url.pathname === '/rest/v1/coach_assessments') return json(role === 'player' ? [assessment] : [])
         if (url.pathname === '/rest/v1/coach_shared_feedback') return json([{ body: 'Keep pressing after losing the ball.', published_at: `${day}T09:00:00Z` }])
         if (url.pathname === '/rest/v1/coach_calendar_events') return json([event(ids.player)])
+        // The event sheet asks for this event's own session (none); Schedule and Home read them all.
+        if (url.pathname === '/rest/v1/coach_sessions' && url.searchParams.has('event_id')) return json([])
         if (url.pathname === '/rest/v1/coach_sessions') return json([{ id: 'saved-session', title: 'Logged set pieces', session_type: 'training', session_date: day, event_id: null, venue: 'Synthetic pitch' }])
         if (url.pathname === '/rest/v1/rpc/child_events') {
           const child = req.postDataJSON().p_child
@@ -173,6 +185,17 @@ test.describe('TRAK-171 Home follow-ups', () => {
       await page.screenshot({ path: testInfo.outputPath(`${role}-home.png`), fullPage: true })
       await expect(page.getByText('NEXT UP', { exact: true })).toHaveCount(0)
       if (role === 'parent') {
+        // TRAK-182: the event opens where it is, with the family's status and Can't make it.
+        await week.getByRole('button', { name: /Technical training/ }).click()
+        const sheet = page.getByRole('dialog', { name: 'Technical training' })
+        await expect(sheet.getByText('Confirmed.')).toBeVisible()
+        await expect(sheet.getByRole('link', { name: 'Open in Maps' })).toBeVisible()
+        await expect(sheet.getByRole('button', { name: "Can't make it" })).toBeVisible()
+        await expect(sheet.getByRole('button', { name: /Publish|Edit/ })).toHaveCount(0)
+        await sheetAtRest(sheet)
+        await page.screenshot({ path: testInfo.outputPath('parent-event-sheet.png') })
+        await page.keyboard.press('Escape')
+        await expect(sheet).toHaveCount(0)
         await page.getByRole('link', { name: 'Calendar' }).focus()
         await page.keyboard.press('Enter')
         await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
@@ -202,15 +225,23 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await expect(page.getByRole('heading', { name: 'Coach feedback' })).toBeVisible()
         await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
       } else {
-        const logged = week.getByRole('button', { name: /Logged.*Logged set pieces/ })
-        await expect(logged).toBeVisible()
-        await expect(week.getByRole('button', { name: /Technical training/ })).toBeVisible()
-        await logged.click()
-        const saved = week.getByRole('region', { name: /Logged set pieces/ })
-        await expect(saved.getByRole('link', { name: 'Open' })).toBeVisible()
-        await expect.poll(() => saved.evaluate(el => el.clientHeight >= el.scrollHeight - 2)).toBe(true)
-        await expect(saved.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/coach/sessions/saved-session')
-        await page.screenshot({ path: testInfo.outputPath('coach-logged-week.png'), fullPage: true })
+        // TRAK-182: a logged session links straight to it; an event opens in the sheet, not the calendar.
+        await expect(week.getByRole('link', { name: /Logged.*Logged set pieces/ })).toHaveAttribute('href', '/coach/sessions/saved-session')
+        await week.getByRole('button', { name: /Technical training/ }).click()
+        const sheet = page.getByRole('dialog', { name: 'Technical training' })
+        await expect(sheet.getByText('Published.')).toBeVisible()
+        await expect(sheet.getByRole('link', { name: 'Share to WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
+        await expect(sheet.getByRole('button', { name: 'Edit' })).toBeVisible()
+        await expect(sheet.getByText('No players in your squad yet.')).toBeVisible()
+        await expect(page).toHaveURL(/\/coach\/home$/)
+        await sheetAtRest(sheet)
+        await page.screenshot({ path: testInfo.outputPath('coach-event-sheet.png') })
+        // TRAK-182: Schedule's month is Arc's calendar, with today's two entries counted.
+        await page.keyboard.press('Escape')
+        await expect(sheet).toHaveCount(0)
+        await page.getByRole('link', { name: 'Calendar' }).click()
+        await expect(page.getByRole('gridcell', { name: /, 2 events$/ })).toHaveAttribute('aria-selected', 'true')
+        await page.screenshot({ path: testInfo.outputPath('coach-schedule-month.png'), fullPage: true })
       }
       expect(errors).toEqual([])
       expect(unexpected).toEqual([])

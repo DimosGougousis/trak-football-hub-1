@@ -1,4 +1,5 @@
 import { it, expect } from 'vitest'
+import { setSlider, sliderValue, sliderDisabled } from '../../support/slider'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCase } from '../../support/use-case'
@@ -79,19 +80,19 @@ useCase('UC-C04', () => {
 
     // All six sliders default to 5 — an implementation that hardcoded 5 into
     // every column, or wired all six sliders to one shared value, would pass
-    // a test that only ever submits the defaults. Drive each slider (native
-    // <input type="range">, one per SliderInput in
+    // a test that only ever submits the defaults. Drive each slider (Arc's
+    // elastic slider, by keyboard; one per SliderInput in
     // src/pages/coach/CoachAssessPage.tsx, in the DOM order Work Rate,
     // Tactical, Attitude, Technical, Physical, Coachability — the same order
     // the payload asserts below) to six *distinct* values instead.
     const [workRate, tactical, attitude, technical, physical, coachability] =
       screen.getAllByRole('slider')
-    fireEvent.change(workRate, { target: { value: '10' } })
-    fireEvent.change(tactical, { target: { value: '9' } })
-    fireEvent.change(attitude, { target: { value: '8' } })
-    fireEvent.change(technical, { target: { value: '7' } })
-    fireEvent.change(physical, { target: { value: '6' } })
-    fireEvent.change(coachability, { target: { value: '5' } })
+    setSlider(workRate, 10)
+    setSlider(tactical, 9)
+    setSlider(attitude, 8)
+    setSlider(technical, 7)
+    setSlider(physical, 6)
+    setSlider(coachability, 5)
 
     // avg = (10+9+8+7+6+5)/6 = 7.5 -> scoreToBand clears the ">= 7" branch,
     // i.e. 'good' / "Good" — distinct from the default avg-5 "Mixed" band,

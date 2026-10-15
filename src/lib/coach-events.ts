@@ -235,3 +235,10 @@ export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): stri
   }
   return [...seen.values()].sort((a, b) => b.at.localeCompare(a.at)).map(v => v.name)
 }
+
+/** TRAK-158: the database refuses an overlapping live event with a sentence
+    for the coach, naming the clash; saving again won't help, so show it. */
+export function clashMessage(error: unknown): string | null {
+  const e = error as { code?: string, message?: string } | null
+  return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
+}
