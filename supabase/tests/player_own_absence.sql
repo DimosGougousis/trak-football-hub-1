@@ -113,6 +113,8 @@ SELECT pg_temp.oa_as(13);
 SELECT pg_temp.oa_refused(pg_temp.oa_report(800,10), '2 one player cannot report another', 'guardian');
 SELECT pg_temp.oa_refused(pg_temp.oa_undo(800,10), '2 nor undo another''s', 'guardian');
 SELECT pg_temp.oa_check(pg_temp.oa_seen() = 'none', '2 nor read another player''s absence', pg_temp.oa_seen());
+-- Counted on event_absences alone: oa_seen() joins the roster, whose RLS would hide a leaked row (Tarek, #318).
+SELECT pg_temp.oa_check((SELECT count(*) FROM public.event_absences) = 0, '2 not even as a bare row', (SELECT count(*) FROM public.event_absences)::text);
 SELECT pg_temp.oa_as(14);
 SELECT pg_temp.oa_refused(pg_temp.oa_report(800,14), '2 old enough but not yet consented: nothing is recorded', 'consent');
 SELECT pg_temp.oa_as(10);
@@ -132,7 +134,7 @@ SELECT pg_temp.oa_check((SELECT reported_by = pg_temp.oa(10) AND reason = 'Exams
 DO $$ DECLARE failures text; n integer; BEGIN
   SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.oa_results WHERE ok IS DISTINCT FROM true;
   SELECT count(*) INTO n FROM pg_temp.oa_results;
-  IF n <> 16 THEN RAISE EXCEPTION 'Own absences: % checks ran; expected exactly 16', n; END IF;
+  IF n <> 17 THEN RAISE EXCEPTION 'Own absences: % checks ran; expected exactly 17', n; END IF;
   IF failures IS NOT NULL THEN RAISE EXCEPTION USING MESSAGE='Own absences failed',DETAIL=failures; END IF;
   RAISE NOTICE 'Own absences: % checks passed', n;
 END $$;
