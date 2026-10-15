@@ -27,6 +27,8 @@ type Squad = {
   away: (Person & { reason: string | null })[]
   /** Who the register marked present, once it is taken. */
   came: Person[] | null
+  /** Not counted: consent not active (or not confirmed), as on the register. */
+  waiting: Person[]
 }
 
 async function fetchEvent(id: string, signal: AbortSignal): Promise<{ row: EventRow; sessionId: string | null }> {
@@ -36,7 +38,10 @@ async function fetchEvent(id: string, signal: AbortSignal): Promise<{ row: Event
   ])
   if (event.error) throw event.error
   if (!event.data) throw new Error('This event is no longer on your schedule.')
-  return { row: event.data as EventRow, sessionId: session.error ? null : (session.data?.id ?? null) }
+  // A failed read is an error, not "no register yet" (Kostas, #310): guessing
+  // would offer Take register on an event whose register exists.
+  if (session.error) throw session.error
+  return { row: event.data as EventRow, sessionId: session.data?.id ?? null }
 }
 
 async function fetchSquad(coachId: string, eventId: string, sessionId: string | null, signal: AbortSignal): Promise<Squad> {
@@ -53,7 +58,15 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   if (attendance.error) throw attendance.error
   const rows = roster.data ?? []
   const reasons = new Map((absences.data ?? []).map(a => [a.squad_player_id, a.reason as string | null]))
-  const players = rows.filter(p => p.status !== 'coach_departed').map(p => ({ id: p.id, name: p.player_name || 'Player' }))
+  const current = rows.filter(p => p.status !== 'coach_departed')
+  // As the register (TakeRegister): only a child whose consent is active counts
+  // (Kostas, #310). A failed check counts as not confirmed.
+  // ponytail: one check per player, as the register does; a batch RPC if squads grow past ~40.
+  const required = await Promise.all(current.map(p =>
+    supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
+      .abortSignal(signal).then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))))
+  const players = current.filter((_, i) => required[i] === false).map(p => ({ id: p.id, name: p.player_name || 'Player' }))
+  const waiting = current.filter((_, i) => required[i] !== false).map(p => ({ id: p.id, name: p.player_name || 'Player' }))
   const present = attendance.data
     ? new Set((attendance.data as { squad_player_id: string; status: string }[]).filter(a => a.status === 'present').map(a => a.squad_player_id))
     : null
@@ -64,6 +77,7 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
     coming: players.filter(p => !reasons.has(p.id)),
     away: players.filter(p => reasons.has(p.id)).map(p => ({ ...p, reason: reasons.get(p.id) ?? null })),
     came: present && players.filter(p => present.has(p.id)),
+    waiting,
   }
 }
 
@@ -162,7 +176,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             <p role="alert" className="text-[13px] text-white/70">Couldn't load who's coming.{' '}
               <button type="button" className="underline" onClick={() => { void squad.refetch() }}>Retry</button></p>
           ) : !squad.data ? <p role="status" className="text-[13px] text-white/50">Loading…</p>
-          : squad.data.coming.length + squad.data.away.length === 0 ? (
+          : squad.data.coming.length + squad.data.away.length + squad.data.waiting.length === 0 ? (
             <p className="text-[13px] text-white/60">No players in your squad yet.</p>
           ) : squad.data.came ? (
             <People heading="Came" people={squad.data.came} />
@@ -181,6 +195,11 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               </ul>
             </>}
           </>}
+          {squad.data && squad.data.waiting.length > 0 && (
+            <p className="text-[12px] text-white/45 mt-4">
+              Not counted until consent is active · {squad.data.waiting.length}: {squad.data.waiting.map(p => p.name.split(' ')[0]).join(', ')}
+            </p>
+          )}
         </section>
       )}
     </div>

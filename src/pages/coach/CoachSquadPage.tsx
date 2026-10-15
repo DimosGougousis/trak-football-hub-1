@@ -277,7 +277,7 @@ function StatusChip({ status }: { status: ConsentStatus }) {
     style={{ color: chip.color, background: chip.bg }}>{chip.label}</span>
 }
 
-/** The player panel: who they are, whether they can be assessed and why not, their band, and where to go next. */
+/** The player panel: who they are, the status chip (whether they can be assessed), their band, and where to go next. */
 function PlayerPanel({ player, age, score, status, trigger }: {
   player: SquadRow; age: string | null; score: number | null; status: ConsentStatus | undefined; trigger: JSX.Element
 }) {
