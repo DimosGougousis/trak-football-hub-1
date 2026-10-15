@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Ban, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { relativeLabel } from '@/lib/alert-read-state'
@@ -115,6 +116,13 @@ export function EventSheet({ event, role, trigger, children }: {
               </div>
             ))}
           </dl>
+        )}
+        {/* Kostas's #310 review: the full page (Add to calendar, every detail) stays one tap away. */}
+        {role !== 'coach' && (
+          <Link to={`/${role}/event/${event.id}`}
+            className="inline-flex min-h-11 items-center gap-2 text-[14px] text-primary focus-visible:ring-2 focus-visible:ring-primary rounded-md">
+            <CalendarPlus size={16} aria-hidden="true" />Open event page
+          </Link>
         )}
         {children}
       </div>
