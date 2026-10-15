@@ -15,6 +15,19 @@ import { localTodayISO } from '@/lib/event-time'
 import { trackEvent, startTimer } from '@/lib/telemetry'
 import { ChevronLeft, ChevronDown } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
+import { Stepper } from '@/components/arc/stepper/stepper'
+import { Button } from '@/components/arc/button/button'
+
+/** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
+    and the private note get their own steps, so player-visible words never sit
+    beside private ones. */
+const STEPS = [
+  { id: 'who', label: 'Player' },
+  { id: 'ratings', label: 'Ratings' },
+  { id: 'message', label: 'Message' },
+  { id: 'note', label: 'Note' },
+  { id: 'review', label: 'Review' },
+]
 
 /* ---------- helpers ---------- */
 
@@ -235,6 +248,7 @@ function CoachAssessmentForm() {
     if (rosterAccount.current !== userId) {
       rosterAccount.current = userId
       setPlayerId('')
+      setStep(0)
     }
     if (userId) {
       void (async () => {
@@ -312,6 +326,8 @@ function CoachAssessmentForm() {
      from a raw row-level-security error after. The database stays the gate:
      if this check fails we do not block on a guess. */
   const [consentWait, setConsentWait] = useState(false)
+  // TRAK-182 (Imad, 15 Oct): one step per screen; the review step saves.
+  const [step, setStep] = useState(0)
   useEffect(() => {
     setConsentWait(false)
     if (!playerId) return
@@ -331,15 +347,18 @@ function CoachAssessmentForm() {
   }, [playerId, consentWait])
 
   /* --- save ---
-     TRAK-64 (Imad, 25 Sep): one button. Saving stores the sliders and the
-     private note and sends the message to the player; an edited message is
-     sent again, and an emptied box takes a published one back.
+     TRAK-64 (Imad, 25 Sep): saving stores the sliders and the private note and
+     sends the message to the player; an edited message is sent again, and an
+     emptied box takes a published one back. TRAK-182 (Imad, 15 Oct): the
+     review step also offers Save draft, which keeps the message unpublished
+     (published_at NULL, as Unpublish), so only the coach sees it.
      Unpublish is not a save: see handleUnpublish below. */
-  const handleSave = async () => {
+  const handleSave = async (draft = false) => {
     if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
     // Rewriting an unchanged, still-published message would re-stamp it and
-    // mark it "new" for the player again. Leave it alone.
-    const writeShared = (message.length > 0 || sharedExists) && !liveUnchanged
+    // mark it "new" for the player again. Leave it alone, unless it's being
+    // taken back to a draft.
+    const writeShared = (message.length > 0 || sharedExists) && !(liveUnchanged && !draft)
     const controller = new AbortController()
     saveRequest.current = controller
     const isCurrent = () => !controller.signal.aborted && currentScope.current === scope
@@ -441,7 +460,7 @@ function CoachAssessmentForm() {
           coach_user_id: user.id,
           body:          message,
           // NULL retracts: the child stops seeing it immediately.
-          published_at:  message ? new Date().toISOString() : null,
+          published_at:  message && !draft ? new Date().toISOString() : null,
         }, { onConflict: 'assessment_id' }).abortSignal(controller.signal)
         if (!isCurrent()) return
         if (sharedError) {
@@ -462,10 +481,12 @@ function CoachAssessmentForm() {
           return
         }
         setSharedExists(true)
-        setSharedPublished(message.length > 0)
-        setPublishedBody(message || null)
+        setSharedPublished(message.length > 0 && !draft)
+        setPublishedBody(message && !draft ? message : null)
       }
-      toast.success(writeShared && message ? `Saved. ${firstName} can read your message now.` : 'Assessment saved.')
+      toast.success(writeShared && message
+        ? draft ? `Saved. Your message is a draft; ${firstName} can't see it yet.` : `Saved. ${firstName} can read your message now.`
+        : 'Assessment saved.')
       trackEvent('assessment_submitted', {
         mode: 'full',
         players: 1,
@@ -554,8 +575,22 @@ function CoachAssessmentForm() {
       </div>
 
       {/* ---- scrollable content ---- */}
-      <div className="flex-1 overflow-y-auto px-5 pb-24 space-y-5 pt-4">
+      <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-5 pt-4">
+        <div className="arc">
+          <Stepper label="Assessment steps" steps={STEPS} current={step} onStepSelect={setStep} />
+        </div>
 
+        {/* Shown on every step: a refused save (consent withdrawn mid-edit) says why where the coach is. */}
+        {selectedPlayer && consentWait ? (
+          <div role="status" className="p-3 rounded-[12px] border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.06)]">
+            <p className="text-[13px] font-medium text-white/85">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
+            <p className="text-[12px] text-white/55 leading-relaxed mt-0.5">
+              {waitText(waitReason, selectedPlayer.player_name)}{' '}
+              The form stays locked until then, and nothing about them is recorded.
+            </p>
+          </div>
+        ) : null}
+        {step === 0 && <>
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
           <div className="flex items-center gap-3 p-3 rounded-[12px] bg-[#141416] border border-white/[0.06]">
@@ -574,15 +609,6 @@ function CoachAssessmentForm() {
           </div>
         ) : null}
 
-        {selectedPlayer && consentWait ? (
-          <div role="status" className="p-3 rounded-[12px] border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.06)]">
-            <p className="text-[13px] font-medium text-white/85">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
-            <p className="text-[12px] text-white/55 leading-relaxed mt-0.5">
-              {waitText(waitReason, selectedPlayer.player_name)}{' '}
-              The form stays locked until then, and nothing about them is recorded.
-            </p>
-          </div>
-        ) : null}
 
         {/* player selector dropdown */}
         <div className="space-y-1.5">
@@ -673,10 +699,12 @@ function CoachAssessmentForm() {
             </div>
           ) : <p role="status" className="text-sm text-white/50">Loading assessment…</p>
         )}
+        </>}
         {/* J5: a player waiting for a parent cannot be opened. If consent is
             withdrawn mid-edit, the refused save sets consentWait: the form
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
+        {step === 0 && <>
         {/* ---- 4. appearance selector ---- */}
         <div className="space-y-1.5">
           <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
@@ -689,6 +717,8 @@ function CoachAssessmentForm() {
           </div>
         </div>
 
+        </>}
+        {step === 1 && <>
         {/* ---- 5. sliders in dark container ---- */}
         <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
@@ -727,6 +757,8 @@ function CoachAssessmentForm() {
           </span>
         </div>
 
+        </>}
+        {step === 2 && <>
         {/* ---- 7. message to the player (K9, J5) ----
             Two boxes rather than one, because the schema has two tables and the
             coach needs to see which words the player will read. Nothing copies
@@ -762,13 +794,15 @@ function CoachAssessmentForm() {
             {liveUnchanged
               ? `Published. ${firstName} can read it now.`
               : sharedPublished
-                ? `Edited. Saving sends ${firstName} the new version.`
+                ? `Edited. Publish sends ${firstName} the new version.`
                 : message
-                  ? `Not sent yet. Saving sends it to ${firstName}.`
+                  ? `Not sent yet. Publish sends it to ${firstName}.`
                   : 'Optional.'}
           </p>
         </div>
 
+        </>}
+        {step === 3 && <>
         {/* ---- 8. private note ----
             The label used to read "AI will expand these into personalised
             feedback for the player". K9 made that false: the note is private
@@ -799,21 +833,32 @@ function CoachAssessmentForm() {
           />
         </div>
 
-        {/* ---- 9. actions ---- */}
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={!playerId || saving || !formReady || consentWait}
-            className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-40 transition-opacity"
-          >
-            {saving ? 'Saving...' : 'Save Assessment \u2192'}
-          </button>
-        </div>
+        </>}
+        {/* ---- 9. review and save (TRAK-182) ---- */}
+        {step === 4 && <>
+          <dl className="rounded-[14px] border border-white/[0.07] divide-y divide-white/[0.06] text-[13px]">
+            {([
+              ['Player', selectedPlayer?.player_name ?? ''],
+              ['Session', selectedSession ? sessionLabel(selectedSession) : opened ? 'No session recorded' : ''],
+              ['Appearance', appearance === 'started' ? 'Started' : appearance === 'sub' ? 'Sub' : 'Training'],
+              ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
+              ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
+              [`Message to ${firstName}`, message || 'None'],
+              ['Private note', note.trim() || 'None'],
+            ] as const).map(([term, value]) => (
+              <div key={term} className="flex gap-3 px-4 py-3">
+                <dt className="w-28 shrink-0 text-white/45">{term}</dt>
+                <dd className="text-white/85 break-words min-w-0">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </>}
         </fieldset>
         {/* Outside the consent-locked fieldset: retracting what the family can
-            already read is always allowed, even while the form is locked. */}
-        {sharedPublished && existingId ? (
+            already read is always allowed, even while the form is locked. It
+            sits with the message, and on the first step when consent locks the
+            rest of the steps away (TRAK-182). */}
+        {(step === 2 || (step === 0 && consentWait)) && sharedPublished && existingId ? (
           <button
             type="button"
             onClick={() => void handleUnpublish()}
@@ -823,6 +868,28 @@ function CoachAssessmentForm() {
             Unpublish message
           </button>
         ) : null}
+      </div>
+
+      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it. */}
+      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-white/[0.06]">
+        {step === STEPS.length - 1 ? <>
+          {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
+          <Button size="lg" variant="secondary" aria-label="Back" onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
+          {message ? <>
+            <Button size="lg" variant="secondary" className="flex-1" loading={saving}
+              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave(true)}>Save draft</Button>
+            <Button size="lg" className="flex-1" loading={saving}
+              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>Publish</Button>
+          </> : (
+            <Button size="lg" className="flex-1" loading={saving}
+              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>Save</Button>
+          )}
+        </> : <>
+          {step > 0 && <Button size="lg" variant="secondary" className="flex-1" onClick={() => setStep(step - 1)}>Back</Button>}
+          {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
+          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait)}
+            onClick={() => setStep(step + 1)}>Next</Button>
+        </>}
       </div>
 
       {/* ---- 10. bottom nav ---- */}

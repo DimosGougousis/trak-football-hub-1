@@ -10,6 +10,7 @@
  * database would have returned, not whatever a handler happened to hand back.
  */
 import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
+import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -122,10 +123,11 @@ beforeEach(() => {
 })
 afterEach(() => cleanup())
 
+// TRAK-182: one step per screen.
+const toStep = assessStep
 const sliderValues = () => screen.getAllByRole('slider').map(sliderValue)
 const messageBox = () => screen.getByLabelText(/^Message to/i) as HTMLTextAreaElement
 const noteBox = () => screen.getByLabelText(/^Private note/i) as HTMLTextAreaElement
-const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 const assessmentWrites = () => writes.filter(w => w.table === 'coach_assessments').map(w => [w.method, w.id])
 
 describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
@@ -134,8 +136,11 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
     renderApp('/coach/player/player-a')
     await user.click(await screen.findByRole('button', { name: /Open assessment .*vs Olympiacos Academy/ }))
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Academy/)).toBeInTheDocument()
-    await waitFor(() => expect(sliderValues()).toEqual([3, 4, 5, 6, 7, 2]))
+    await toStep('Ratings')
+    expect(sliderValues()).toEqual([3, 4, 5, 6, 7, 2])
+    await toStep('Message')
     expect(messageBox().value).toBe('Great pressing, keep it up.')
+    await toStep('Note')
     expect(noteBox().value).toBe('Talk to his dad about boots')
   })
 
@@ -143,10 +148,10 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
     const user = userEvent.setup()
     renderApp('/coach/player/player-a')
     await user.click(await screen.findByRole('button', { name: /Open assessment .*vs Olympiacos Academy/ }))
-    await waitFor(() => expect(sliderValues()).toEqual([3, 4, 5, 6, 7, 2]))
+    await toStep('Ratings')
+    expect(sliderValues()).toEqual([3, 4, 5, 6, 7, 2])
     setSlider(screen.getAllByRole('slider')[0], 9)
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await saveAssessment()
     await waitFor(() => expect(assessmentWrites()).toEqual([['patch', 'assess-old']]))
     expect(writes.find(w => w.table === 'coach_assessments')!.body).toMatchObject({ work_rate: 9, session_id: 'session-a' })
   })
@@ -156,7 +161,8 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
     renderApp('/coach/player/player-a')
     await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
-    await waitFor(() => expect(noteBox().value).toBe('Assistant: strong first touch'))
+    await toStep('Note')
+    expect(noteBox().value).toBe('Assistant: strong first touch')
   })
 
   it('opens a recent assessment from coach home', async () => {
@@ -171,8 +177,7 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
     const user = userEvent.setup()
     renderApp('/coach/assess?assessment=assess-legacy')
     expect(await screen.findByText(/Editing your assessment from 10 Sep/)).toBeInTheDocument()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await saveAssessment()
     await waitFor(() => expect(assessmentWrites()).toEqual([['patch', 'assess-legacy']]))
     expect(writes.find(w => w.table === 'coach_assessments')!.body.session_id).toBeNull()
   })
@@ -180,14 +185,15 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
   it("opens an assessment whose session is older than the picker's list", async () => {
     renderApp('/coach/assess?assessment=assess-preseason')
     expect(await screen.findByText(/Editing your assessment for Preseason friendly/)).toBeInTheDocument()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
+    await waitFor(() => expect(nextButton()).toBeEnabled())
   })
 
   it("does not open another coach's assessment", async () => {
     renderApp('/coach/assess?assessment=assess-foreign')
     expect(await screen.findByText(/couldn't open that assessment/i)).toBeInTheDocument()
     expect(screen.queryByText(/Editing your assessment/)).toBeNull()
-    expect(sliderValues().every(v => v === 5)).toBe(true)
+    // Nothing opened: the steps past the player stay shut.
+    expect(nextButton()).toBeDisabled()
   })
 
   it('history shows session, band and whether a message was sent; the note is labelled private', async () => {
