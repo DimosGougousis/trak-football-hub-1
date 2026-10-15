@@ -12,6 +12,7 @@ import { PlayerAlertsBell, type PublishedAssessmentAlert } from '@/components/pl
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
+import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
@@ -79,6 +80,10 @@ export default function PlayerHome() {
   // TRAK-177: from the academy's consent age (15 in Greece) until 18 the player decides.
   const decidesForSelf = consent?.age != null && consent.consent_age != null
     && consent.age >= consent.consent_age && consent.age < (consent.threshold ?? 18)
+  // TRAK-183: from the consent age (18 included) a player says Can't make it
+  // themselves, once their consent is in place (no button that can only fail).
+  const reportsForSelf = consent?.required === false && consent.age != null && consent.consent_age != null
+    && consent.age >= consent.consent_age
 
   // Under the digital-consent age nothing can be recorded about this player
   // until a parent approves. Without this they would sign in to a dashboard
@@ -421,7 +426,9 @@ export default function PlayerHome() {
             events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
             assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
             onRetry={() => setReloadKey(k => k + 1)} />} />
-        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger} />}
+        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger}>
+          {reportsForSelf && <CantMakeIt event={event} child={{ id: user.id, name: 'you' }} self />}
+        </EventSheet>}
           load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
             .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
         {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}

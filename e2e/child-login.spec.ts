@@ -1,5 +1,4 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
-import { CONSENT_STATEMENT } from '../src/lib/consent'
 
 // Real Chromium, production bundle and SDK. All backend replies are synthetic
 // and intercepted; this is local UI proof, never deployed-family acceptance.
@@ -70,8 +69,10 @@ async function loginFixture(page: Page, context: BrowserContext, role: 'parent' 
 test('parent approves and creates child credentials without an email request', async ({ page, context }, testInfo) => {
   const fixture = await loginFixture(page, context, 'parent')
   await page.goto('/parent/consent')
-  await page.getByRole('checkbox', { name: CONSENT_STATEMENT }).check()
-  await page.getByRole('button', { name: "Approve Ana's account" }).click()
+  // TRAK-182: the bar's Approve opens the panel; the panel's Approve saves.
+  await page.getByRole('button', { name: 'Approve', exact: true }).click()
+  await page.getByRole('switch', { name: /Recognition awards/ }).waitFor()
+  await page.getByRole('button', { name: 'Approve', exact: true }).click()
   await expect(page.getByRole('heading', { name: "Create Ana's login" })).toBeVisible()
   await page.getByLabel("Child's username").fill('striker7')
   await page.getByLabel("Child's password", { exact: true }).fill('Synthetic-Pass7!')
