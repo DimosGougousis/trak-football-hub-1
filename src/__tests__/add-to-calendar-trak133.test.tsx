@@ -51,7 +51,7 @@ beforeEach(() => {
     rpc('revoke_my_calendar_link', () => { revoked += 1; link = null; return true }),
   )
 })
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.useRealTimers() })
 
 function mount(ui: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -88,7 +88,11 @@ describe('J8.10 Settings → Calendar', () => {
   })
 
   it('with a link: when it last synced, a warning before replacing it, and "Get a new link" stops the old one', async () => {
-    link = { created_at: '2026-10-11T08:00:00Z', last_fetched_at: new Date(Date.now() - 2 * 3600_000).toISOString() }
+    // A fixed midday, so "2 hours ago" is today on any runner's clock: from 00:00
+    // to 02:00 it is yesterday, and the label rightly says so (Imad, 15 Oct).
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-14T12:00:00'))
+    link = { created_at: '2026-10-11T08:00:00Z', last_fetched_at: new Date('2026-10-14T10:00:00').toISOString() }
     mount(<CalendarSettings />)
     expect(await screen.findByText(/Last synced 2h ago/)).toBeInTheDocument()
     expect(screen.getByText(/stop updating/i)).toBeInTheDocument()

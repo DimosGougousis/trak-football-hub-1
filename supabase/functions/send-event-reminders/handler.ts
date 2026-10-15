@@ -1,4 +1,5 @@
-// TRAK-136 (J8.13): sends the reminders due 2 days from today (Dubai). Only
+// TRAK-136 (J8.13): sends the reminders due 2 days from today, on each
+// academy's own clock and within its 09:00–20:00 (TRAK-175). Only
 // the scheduler calls it (pg_cron through pg_net, with its own token from
 // Vault, never a project key), or the operator by hand; nobody else. It takes no input: the
 // database decides the day and who is due, and hands each person out once.

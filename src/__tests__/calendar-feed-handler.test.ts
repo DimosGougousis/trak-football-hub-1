@@ -60,6 +60,17 @@ describe('lookupFromRpc: what calendar_feed_for_token returns', () => {
     expect(lookupFromRpc({ events: [], child_names: [] })).toEqual({ found: true, events: [], childNames: [] })
   })
 
+  it('reads each event\'s academy time zone (TRAK-175)', () => {
+    const athens = { ...event, timeZone: 'Europe/Athens' as const }
+    expect(lookupFromRpc({ events: [athens], child_names: [] })).toEqual({ found: true, events: [athens], childNames: [] })
+  })
+
+  it('refuses a zone the feed can\'t describe, rather than guessing (TRAK-175)', () => {
+    for (const timeZone of ['Europe/London', null, 4]) {
+      expect(() => lookupFromRpc({ events: [{ ...event, timeZone }], child_names: [] })).toThrow()
+    }
+  })
+
   it('throws on anything else, so the request gets 503 rather than an empty calendar', () => {
     for (const bad of [undefined, 'x', [], {}, { events: 'x', child_names: [] }, { events: [], child_names: [1] }, { events: [{ id: 'e1' }], child_names: [] }]) {
       expect(() => lookupFromRpc(bad)).toThrow()
