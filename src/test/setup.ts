@@ -1,5 +1,10 @@
 import "@testing-library/jest-dom";
 import { configure } from "@testing-library/react";
+import { afterEach } from "vitest";
+import { forgetScreens } from "@/lib/screen-memory";
+
+// TRAK-180: no test starts from the screens another test left in memory.
+afterEach(() => forgetScreens());
 
 // TRAK-114: findBy/waitFor wait 1 s by default, and GitHub's runners can take longer than
 // that for a full-provider render (main went red on 5 Oct). 4 s is what 45 calls already pass.

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js'
 import { AuthProvider, useAuth } from '../AuthContext'
+import { forgetScreens, remember, remembered } from '@/lib/screen-memory'
 
 const api = vi.hoisted(() => ({
   session: null as Session | null,
@@ -122,7 +123,7 @@ beforeEach(() => {
     return new Response('{}', { status: 200 })
   }))
 })
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState(null, '', '/') })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); forgetScreens(); window.history.replaceState(null, '', '/') })
 
 describe('account-bound onboarding and auth lifecycle', () => {
   it('hydrates a recovery session on the reset route and tracks a later account change', async () => {
@@ -287,11 +288,31 @@ describe('account-bound onboarding and auth lifecycle', () => {
     mount()
     await waitFor(() => expect(screen.getByTestId('identity')).toHaveTextContent('a:a'))
     queryClient.setQueryData(['private-account-data'], { owner: 'a' })
+    remember('coach-home', 'a', { owner: 'a' })
     fireEvent.click(screen.getByText('Sign out'))
     await waitFor(() => expect(api.error).toHaveBeenCalledWith(expect.stringContaining('still signed in')))
     expect(api.logoutResult).toHaveBeenCalledWith({ error: failure })
     expect(screen.getByTestId('identity')).toHaveTextContent('a:a')
     expect(queryClient.getQueryData(['private-account-data'])).toEqual({ owner: 'a' })
+    expect(remembered('coach-home', 'a')).toEqual({ owner: 'a' })
+  })
+
+  // TRAK-180: what a coach's screens last showed goes with the account.
+  it("forgets the screens' memory on sign-out and on a switch to another account", async () => {
+    api.session = session('a')
+    mount()
+    await waitFor(() => expect(screen.getByTestId('identity')).toHaveTextContent('a:a'))
+    remember('coach-home', 'a', { owner: 'a' })
+    fireEvent.click(screen.getByText('Sign out'))
+    await waitFor(() => expect(api.logoutResult).toHaveBeenCalledWith({ error: null }))
+    expect(remembered('coach-home', 'a')).toBeUndefined()
+
+    await emit('SIGNED_IN', session('a'))
+    await waitFor(() => expect(screen.getByTestId('identity')).toHaveTextContent('a:a'))
+    remember('coach-squad', 'a', { owner: 'a' })
+    await emit('SIGNED_IN', session('b'))
+    await waitFor(() => expect(screen.getByTestId('identity')).toHaveTextContent('b:b'))
+    expect(remembered('coach-squad', 'a')).toBeUndefined()
   })
 
   it('does not restore an initial cached session after sign-out starts', async () => {

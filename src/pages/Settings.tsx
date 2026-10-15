@@ -9,6 +9,7 @@ import { assertSettingsAccount, getSettingsAccount } from '@/lib/settings-accoun
 import { supabase } from '@/integrations/supabase/client'
 import { isTechnicalChildAddress, childUsername } from '@/lib/child-login'
 import { CalendarSettings } from '@/components/trak/AddToCalendar'
+import { OwnConsentSettings } from '@/components/player/OwnConsentCard'
 
 const nameSchema = z
   .string()
@@ -207,12 +208,12 @@ function AccountSettings({ userId }: { userId: string }) {
                     disabled={saving}
                     onChange={e => setNameDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    className="text-[13px]"
                     style={{
                       background: '#202024',
                       border: '1px solid rgba(255,255,255,0.08)',
                       borderRadius: 8,
                       padding: '6px 10px',
-                      fontSize: 13,
                       color: 'rgba(255,255,255,0.88)',
                       width: 160,
                     }}
@@ -257,6 +258,8 @@ function AccountSettings({ userId }: { userId: string }) {
         {(role === 'player' || role === 'parent') && (
           <Section label="Calendar"><CalendarSettings /></Section>
         )}
+        {/* TRAK-177: a 15–17 player at a consent-age-15 academy withdraws here. */}
+        {role === 'player' && <OwnConsentSettings Section={Section} />}
 
         {/* Coach profile */}
         {role === 'coach' && roleData === 'ready' && (

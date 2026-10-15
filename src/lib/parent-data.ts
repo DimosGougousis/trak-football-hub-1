@@ -17,6 +17,7 @@ export type ParentAward = Pick<Tables<'recognition_awards'>,
 export type ParentDetails = Pick<Tables<'player_details'>, 'position' | 'current_club' | 'age_group'>
 export interface ParentMatch {
   id: string
+  session_id?: string | null
   created_at: string | null
   match_date: string | null
   opponent: string | null
@@ -25,6 +26,13 @@ export interface ParentMatch {
   computed_rating: number | null
   team_score: number | null
   opponent_score: number | null
+}
+
+/** New coach records use an explicit session; legacy rows retain match facts. */
+export function parentMatchHref(match: Pick<ParentMatch, 'id' | 'session_id'>): string {
+  return match.session_id
+    ? `/parent/session/${encodeURIComponent(match.session_id)}/assessment`
+    : `/parent/match/${encodeURIComponent(match.id)}`
 }
 
 export interface ParentDevelopment {
@@ -55,7 +63,7 @@ export async function fetchParentChildren(parentId: string, signal: AbortSignal)
 
 export async function fetchParentMatches(childId: string, signal: AbortSignal): Promise<ParentMatch[]> {
   const { data, error } = await supabase.from('matches')
-    .select('id, team_score, opponent_score, competition, venue, match_date, created_at, opponent, computed_rating')
+    .select('id, session_id, team_score, opponent_score, competition, venue, match_date, created_at, opponent, computed_rating')
     .eq('user_id', childId)
     .order('match_date', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false }).abortSignal(signal).retry(false)

@@ -6,6 +6,10 @@ import { MobileShell, NavBar, BandPill } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 import { Users, WifiOff } from 'lucide-react'
 import { fetchWaitReason } from '@/lib/wait-reason'
+import { remember, remembered } from '@/lib/screen-memory'
+
+// TRAK-180: what Squad last showed a coach (see screen-memory).
+type SquadMemory = { players: any[]; assessments: Record<string, number>; consent: Record<string, ConsentStatus> }
 
 const POSITIONS = ['All', 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as const
 
@@ -14,12 +18,13 @@ const POSITIONS = ['All', 'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as
    TRAK-99). 'notReady' when the gate says no but the reason couldn't be read;
    'unknown' when the gate check itself failed. The screen never claims a
    player is ready on a guess. The database still refuses the write either way. */
-type ConsentStatus = 'ready' | 'waiting' | 'signup' | 'notReady' | 'unknown'
+type ConsentStatus = 'ready' | 'waiting' | 'signup' | 'player' | 'notReady' | 'unknown'
 
 const CONSENT_CHIP: Record<ConsentStatus, { label: string; color: string; bg: string }> = {
   ready:    { label: 'Ready to assess',               color: '#C8F25A',             bg: 'rgba(200,242,90,0.10)' },
   waiting:  { label: 'Waiting for parent',            color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
   signup:   { label: 'Waiting for player to sign up', color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
+  player:   { label: 'Waiting for player to agree',   color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
   notReady: { label: 'Not ready to assess',           color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
   unknown:  { label: 'Status unknown',                color: 'rgba(255,255,255,0.45)', bg: 'rgba(255,255,255,0.06)' },
 }
@@ -30,23 +35,28 @@ async function squadStatus(squadPlayerId: string): Promise<ConsentStatus> {
   if (error || typeof required !== 'boolean') return 'unknown'
   if (!required) return 'ready'
   const reason = await fetchWaitReason(squadPlayerId)
-  return reason === 'parent' ? 'waiting' : reason === 'signup' ? 'signup' : 'notReady'
+  return reason === 'parent' ? 'waiting' : reason === 'signup' ? 'signup' : reason === 'player' ? 'player' : 'notReady'
 }
 
 export default function CoachSquadPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [players, setPlayers] = useState<any[]>([])
-  const [assessments, setAssessments] = useState<Record<string, number>>({})
-  const [consent, setConsent] = useState<Record<string, ConsentStatus>>({})
+  // TRAK-180: a revisit starts from what this screen last showed this coach,
+  // and the reads below refresh it as a background run (TRAK-79).
+  const [seed] = useState(() => remembered<SquadMemory>('coach-squad', user?.id))
+  const [players, setPlayers] = useState<any[]>(seed?.players ?? [])
+  const [assessments, setAssessments] = useState<Record<string, number>>(seed?.assessments ?? {})
+  const [consent, setConsent] = useState<Record<string, ConsentStatus>>(seed?.consent ?? {})
+  // Whether the squad has answered at all: until then it is loading, not empty.
+  const [loaded, setLoaded] = useState(Boolean(seed))
   const [posFilter, setPosFilter] = useState<string>('All')
   const [ageFilter, setAgeFilter] = useState<string>('All')
   const [loadFailed, setLoadFailed] = useState(false)
   const [retry, setRetry] = useState(0)
   // The account and Retry count of the last squad read that finished. A run
   // for the same pair is a background refresh (see the load below).
-  const loadedFor = useRef<{ userId: string; retry: number } | null>(null)
+  const loadedFor = useRef<{ userId: string; retry: number } | null>(seed && user ? { userId: user.id, retry: 0 } : null)
 
   // Age group label: prefer the age_group text column ('U12'), fall back to legacy integer age
   const ageLabel = (p: any): string | null => p.age_group ?? (p.age != null ? String(p.age) : null)
@@ -88,6 +98,7 @@ export default function CoachSquadPage() {
         }
         setLoadFailed(false)
         setPlayers(data || [])
+        setLoaded(true)
         // One check per player, the same predicate the RLS policy evaluates. A
         // pilot squad is about 25 players, so this stays a handful of requests.
         void Promise.all((data || []).map(p =>
@@ -124,6 +135,10 @@ export default function CoachSquadPage() {
 
     return () => { cancelled = true }
   }, [user, retry])
+
+  useEffect(() => {
+    if (user && loaded && !loadFailed) remember<SquadMemory>('coach-squad', user.id, { players, assessments, consent })
+  }, [user, loaded, loadFailed, players, assessments, consent])
 
   const filtered = players.filter(p => {
     const posMatch = posFilter === 'All' || p.position?.toLowerCase() === posFilter.toLowerCase()
@@ -216,6 +231,8 @@ export default function CoachSquadPage() {
               Try again
             </button>
           </div>
+        ) : !loaded ? (
+          <p role="status" className="pt-14 text-center text-[13px] text-white/45">Loading your squad…</p>
         ) : filtered.length === 0 ? (
           players.length === 0 ? (
             <div className="flex flex-col items-center text-center pt-14 px-6">

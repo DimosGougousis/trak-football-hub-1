@@ -506,6 +506,7 @@ export type Database = {
           opponent_score: number
           position: string
           self_rating: string | null
+          session_id: string | null
           team_score: number
           user_id: string
           venue: string
@@ -528,6 +529,7 @@ export type Database = {
           opponent_score?: number
           position: string
           self_rating?: string | null
+          session_id?: string | null
           team_score?: number
           user_id: string
           venue: string
@@ -550,11 +552,20 @@ export type Database = {
           opponent_score?: number
           position?: string
           self_rating?: string | null
+          session_id?: string | null
           team_score?: number
           user_id?: string
           venue?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "matches_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "coach_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meeting_requests: {
         Row: {
@@ -883,6 +894,10 @@ export type Database = {
       }
       create_my_calendar_link: { Args: never; Returns: string }
       delete_my_account: { Args: never; Returns: undefined }
+      give_my_consent: {
+        Args: { p_notice_version: string; p_consent_text: string }
+        Returns: undefined
+      }
       my_calendar_link: {
         Args: never
         Returns: { created_at: string; last_fetched_at: string | null }[]
@@ -973,6 +988,7 @@ export type Database = {
           p_opponent_score: number
           p_position: string
           p_self_rating: string
+          p_session_id?: string
           p_team_score: number
           p_user_id: string
           p_venue: string
@@ -982,6 +998,10 @@ export type Database = {
       take_event_register: {
         Args: { p_event_id: string; p_present: string[] }
         Returns: string
+      }
+      withdraw_my_consent: {
+        Args: never
+        Returns: undefined
       }
     }
     Enums: {
