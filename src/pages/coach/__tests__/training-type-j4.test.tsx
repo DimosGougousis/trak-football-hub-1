@@ -42,7 +42,8 @@ async function saveSession(pick: (user: ReturnType<typeof userEvent.setup>) => P
   return inserted[0]
 }
 
-describe('J4: a training stores its focus as structured training_type', () => {
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('J4: a training stores its focus as structured training_type', { timeout: 20_000 }, () => {
   it('stores the chosen focus labels in a fixed order, apart from the free-text theme', async () => {
     const row = await saveSession(async user => {
       // Tapped out of display order, on purpose.
@@ -67,7 +68,7 @@ describe('J4: a training stores its focus as structured training_type', () => {
   })
 })
 
-describe('training focus helpers', () => {
+describe('training focus helpers', { timeout: 20_000 }, () => {
   it('keeps only known labels, in the fixed order, and stores nothing for none', () => {
     expect(trainingTypeFrom(['Game Based', 'Tactical', 'Tactical'])).toBe('Tactical,Game Based')
     expect(trainingTypeFrom(['Tactical', 'free text from somewhere'])).toBe('Tactical')
@@ -83,7 +84,7 @@ describe('training focus helpers', () => {
   })
 })
 
-describe('the app and the database agree on the focus vocabulary', () => {
+describe('the app and the database agree on the focus vocabulary', { timeout: 20_000 }, () => {
   it('the newest migration defining the constraint lists exactly the app\'s labels', () => {
     const dir = join(process.cwd(), 'supabase', 'migrations')
     const latest = readdirSync(dir).sort().reverse()

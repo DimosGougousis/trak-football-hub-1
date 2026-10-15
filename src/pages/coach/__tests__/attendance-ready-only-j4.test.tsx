@@ -40,7 +40,8 @@ function roster(inserted: unknown[]) {
   )
 }
 
-describe('J4 attendance offers only consent-confirmed players', () => {
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('J4 attendance offers only consent-confirmed players', { timeout: 20_000 }, () => {
   beforeEach(() => signInAs(COACH))
 
   it('training: saves attendance for the confirmed player alone and names the others', async () => {

@@ -31,7 +31,8 @@ beforeEach(() => {
 const next = () => screen.getByRole('button', { name: 'Next' })
 const reviewed = (term: string) => screen.getByText(term, { selector: 'dt' }).nextElementSibling
 
-describe('TRAK-182: the session log in steps', () => {
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('TRAK-182: the session log in steps', { timeout: 20_000 }, () => {
   it('a training: Next waits for a focus and says so, then Review lists the session', async () => {
     const user = userEvent.setup()
     renderApp('/coach/sessions/add')

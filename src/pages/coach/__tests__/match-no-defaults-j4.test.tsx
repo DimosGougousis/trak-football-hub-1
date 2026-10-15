@@ -54,7 +54,8 @@ async function startMatch() {
 // TRAK-182: the match log is in steps; Next leaves Squad only once every played row is right.
 const nextButton = () => screen.getByRole('button', { name: 'Next' })
 
-describe('J4: no invented match defaults', () => {
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('J4: no invented match defaults', { timeout: 20_000 }, () => {
   beforeEach(() => signInAs(COACH))
 
   it('ticking "played" alone cannot save: minutes, goals and assists start empty', async () => {

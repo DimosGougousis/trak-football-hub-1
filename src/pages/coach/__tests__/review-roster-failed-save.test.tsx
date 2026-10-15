@@ -17,7 +17,8 @@ const COACH={id:'coach-1'}
 const READY={id:'ready',coach_user_id:COACH.id,player_name:'Rea Ready',
  linked_player_id:'player-ready',position:'Defender',age_group:'U15',age:15}
 
-describe('#126 re-review: a failed roster reload',()=>{
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('#126 re-review: a failed roster reload', { timeout: 20_000 }, () =>{
  beforeEach(()=>signInAs(COACH))
  it('does not save a session with the players the coach selected silently dropped',async()=>{
   let fail=false; const sessions: unknown[]=[]; const attendance: unknown[]=[]
