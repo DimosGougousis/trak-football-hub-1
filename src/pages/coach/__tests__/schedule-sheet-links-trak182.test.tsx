@@ -39,7 +39,8 @@ describe('TRAK-182: Schedule opens what the event sheet asked for', () => {
   it('opens the edit sheet for ?edit=<id>', async () => {
     renderApp('/coach/schedule?edit=one-1')
     const sheet = await screen.findByRole('dialog', { name: 'Edit event' })
-    expect(within(sheet).getByDisplayValue('Finishing')).toBeInTheDocument()
+    // An edit opens on Review (the stepped form, TRAK-182 part 7).
+    expect(within(sheet).getByText('Title').nextElementSibling).toHaveTextContent('Finishing')
   })
 
   it('asks this week or the following for a series\' ?publish=<id>', async () => {

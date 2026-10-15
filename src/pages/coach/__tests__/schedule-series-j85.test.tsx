@@ -8,6 +8,7 @@ import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toAcademyInstant, toInstant } from '@/lib/event-time'
 import { pickDate, pickTime } from '../../../../tests/support/arc-pickers'
+import { eventStep, saveEventWith } from '../../../../tests/support/event-steps'
 
 /**
  * TRAK-128 (J8.5). The coach enters a weekly training once, with an end date,
@@ -86,9 +87,10 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 2')
+    await eventStep(sheet, 'When')
     await pickDate(userEvent, 'Date', MONDAY)
     await pickTime(userEvent, 'Start', '18:00')
-    await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 2')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
     const days = within(sheet).getByRole('group', { name: 'Repeat on' })
     expect(within(days).getByRole('button', { name: 'Mon' })).toHaveAttribute('aria-pressed', 'true')
@@ -97,7 +99,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     const lastDay = new Date(`${LAST_WEDNESDAY}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
     expect(lastDay).toMatch(/^Wednesday /)
     expect(within(sheet).getByText(`16 events, last one ${lastDay}`)).toBeInTheDocument()
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save 16 drafts' }))
+    await saveEventWith(sheet, 'Save 16 drafts')
 
     await waitFor(() => expect(writes).toHaveLength(1))
     const inserted = writes[0].body as Record<string, unknown>[]
@@ -111,20 +113,45 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     expect(await screen.findByText(/Saved 16 events as drafts/)).toBeInTheDocument()
   })
 
+  // TRAK-182: Review's Publish puts the whole new series out: one insert, one publish.
+  it('publishes a new series from Review', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
+    await pickDate(userEvent, 'Date', MONDAY)
+    await pickTime(userEvent, 'Start', '18:00')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
+    await pickDate(userEvent, 'Ends on', LAST_WEDNESDAY)
+    await eventStep(sheet, 'Review')
+    expect(within(sheet).getByText('Repeats').nextElementSibling).toHaveTextContent(/^Mon until /)
+    await saveEventWith(sheet, 'Publish 8')
+
+    await waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[0].method).toBe('post')
+    expect(writes[0].body).toHaveLength(8)
+    expect(writes[1]).toMatchObject({ method: 'patch', body: { published: true } })
+    expect(writes[1].query).toMatch(/^\?id=in\.\(written-0,written-1,/)
+  })
+
   // Imad's #263 review: the repeat controls hide for a match, but hiding them
   // didn't switch the repeat off, so Save wrote a series of identical matches.
   it('switching a repeating training to a match saves one match, never a series', async () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
     await pickDate(userEvent, 'Date', MONDAY)
     await pickTime(userEvent, 'Start', '18:00')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
     await pickDate(userEvent, 'Ends on', LAST_WEDNESDAY)
+    await eventStep(sheet, 'What')
     await userEvent.click(within(within(sheet).getByRole('group', { name: 'Event type' })).getByRole('button', { name: 'Match' }))
     await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic Rovers')
+    await eventStep(sheet, 'Review')
     expect(within(sheet).queryByRole('button', { name: /^Save \d+ drafts$/ })).toBeNull()
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+    expect(within(sheet).queryByText('Repeats')).toBeNull()
+    await saveEventWith(sheet, 'Save draft')
 
     await waitFor(() => expect(writes).toHaveLength(1))
     const inserted = writes[0].body as Record<string, unknown>[]
@@ -137,11 +164,14 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '18:00')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Repeats weekly' }))
     await pickDate(userEvent, 'Ends on', shift(today, -1))
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+    // TRAK-182: Next stops on When, where the end date can be fixed.
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Next' }))
     expect(within(sheet).getByRole('alert')).toHaveTextContent('The series has to end on or after its first date')
+    expect(within(sheet).getByRole('button', { name: 'Repeats weekly' })).toBeInTheDocument()
     expect(writes).toEqual([])
   })
 
@@ -150,9 +180,10 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit Training' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
+    await eventStep(sheet, 'When')
     expect(within(sheet).getByRole('button', { name: /^Date\b/ })).toBeDisabled()
     await pickTime(userEvent, 'Start', '18:30')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+    await saveEventWith(sheet, 'Save changes')
 
     await waitFor(() => expect(writes).toHaveLength(2))
     const byId = Object.fromEntries(writes.map(w => [w.query.match(/id=eq\.(\w+)/)![1], w.body as Record<string, unknown>]))
@@ -175,8 +206,9 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit Training' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
+    await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '18:30')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+    await saveEventWith(sheet, 'Save changes')
 
     expect(await within(sheet).findByText(/Saved 1 of 2 weeks/)).toBeInTheDocument()
     expect(screen.queryByText(/Saved 2 weeks/)).not.toBeInTheDocument()

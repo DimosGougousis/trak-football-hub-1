@@ -75,6 +75,36 @@ test.describe('TRAK-182 coach screens', () => {
     })
   }
 
+  // TRAK-182 part 7: Schedule's event form one step per screen, ending in Review.
+  test('coach schedule, through the steps', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/schedule')
+    await page.getByRole('button', { name: 'Add event' }).click()
+    const sheet = page.getByRole('dialog', { name: 'New event' })
+    await sheet.getByRole('button', { name: 'Match' }).click()
+    await sheet.getByLabel('Opponent').fill('Synthetic Rovers')
+    await sheet.getByRole('button', { name: 'Away' }).click()
+    await sheet.getByLabel('Venue').fill('Rovers Park')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-schedule-what.png') })
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await sheet.getByRole('button', { name: /^Kickoff\b/ }).click()
+    await page.getByRole('listbox').getByRole('option', { name: '4:00 PM' }).click()
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await sheet.getByLabel('Kit').fill('Red shirts, black shorts')
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await expect(sheet.getByRole('button', { name: 'Publish' })).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Save draft' })).toBeVisible()
+    await expect(sheet.getByText('Synthetic Rovers (Away)')).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-schedule-review.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   // TRAK-182 part 7: the assessment one step per screen, ending in Review.
   test('coach assess, through the steps', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
