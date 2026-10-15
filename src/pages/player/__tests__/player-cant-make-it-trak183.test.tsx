@@ -4,7 +4,7 @@
  * as a guardian does. Younger players don't see it: their guardian reports.
  * The database decides (absence_target); the page shows its answer.
  */
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -22,6 +22,13 @@ const EVENT = {
   venue: 'Main pitch', opponent: null, meet_time: null, kit: null, home_away: null,
   status: 'scheduled', cancel_reason: null, sequence: 0,
 }
+// The Home test pins the clock to a Wednesday midday, and builds "today" from
+// that same clock, as the week strip does (Kostas, #320; the #306 pattern):
+// a date taken from Dubai while the strip used the runner's clock failed
+// every evening from 20:00 UTC.
+const NOW = new Date(2026, 9, 14, 12, 0)
+const today = `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, '0')}-${String(NOW.getDate()).padStart(2, '0')}`
+const TODAY_EVENT = { ...EVENT, id: 'ev-today', title: 'Finishing', event_date: today, start_time: '18:00:00', starts_at: new Date(2026, 9, 14, 18, 0).toISOString() }
 let reported: Record<string, unknown>[]
 let absent: boolean
 let statusAsked: boolean
@@ -33,6 +40,10 @@ function setup(age: number, consentAge: number) {
   server.use(
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('player_details', []),
+    // Home's other reads, answered empty.
+    table('matches', []), table('coach_assessments', []), table('recognition_awards', []),
+    rpc('get_player_invites_for_current_user', () => []),
+    rpc('family_training_history', () => []),
     rpcRows('child_events', [EVENT]),
     rpc('my_consent_status', () => {
       statusAsked = true
@@ -50,6 +61,7 @@ function setup(age: number, consentAge: number) {
 
 let n = 0
 beforeEach(() => { PLAYER = { id: `player-own-absence-${++n}` }; signInAs(PLAYER) })
+afterEach(() => { vi.useRealTimers() })
 
 describe('TRAK-183: a player who consents for themselves says Can\'t make it', () => {
   it('a 16-year-old at a consent-age-15 academy reports for themselves', async () => {
@@ -74,5 +86,20 @@ describe('TRAK-183: a player who consents for themselves says Can\'t make it', (
     await new Promise(resolve => setTimeout(resolve, 50))
     expect(screen.queryByRole('region', { name: 'Attendance' })).toBeNull()
     expect(screen.queryByRole('button', { name: "Can't make it" })).toBeNull()
+  })
+
+  // TRAK-183 follow-up: the same button in the Home event sheet (#310).
+  it('the Home event sheet offers it too, for themselves', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    setup(16, 15)
+    // The mock ignores the page's id filter, so Home gets its own list.
+    server.use(rpcRows('child_events', [TODAY_EVENT]))
+    const user = userEvent.setup()
+    renderApp('/player/home')
+    await user.click(await screen.findByRole('button', { name: /Finishing/ }, { timeout: 5000 }))
+    const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
+    const attendance = await within(sheet).findByRole('region', { name: 'Attendance' })
+    expect(await within(attendance).findByText("Everyone counts as coming. Only say if you can't.")).toBeInTheDocument()
   })
 })
