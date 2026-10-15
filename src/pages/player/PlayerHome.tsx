@@ -80,8 +80,10 @@ export default function PlayerHome() {
   // TRAK-177: from the academy's consent age (15 in Greece) until 18 the player decides.
   const decidesForSelf = consent?.age != null && consent.consent_age != null
     && consent.age >= consent.consent_age && consent.age < (consent.threshold ?? 18)
-  // TRAK-183: from the consent age (18 included) a player says Can't make it themselves.
-  const reportsForSelf = consent?.age != null && consent.consent_age != null && consent.age >= consent.consent_age
+  // TRAK-183: from the consent age (18 included) a player says Can't make it
+  // themselves, once their consent is in place (no button that can only fail).
+  const reportsForSelf = consent?.required === false && consent.age != null && consent.consent_age != null
+    && consent.age >= consent.consent_age
 
   // Under the digital-consent age nothing can be recorded about this player
   // until a parent approves. Without this they would sign in to a dashboard
