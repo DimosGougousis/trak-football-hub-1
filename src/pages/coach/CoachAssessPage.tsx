@@ -879,7 +879,7 @@ function CoachAssessmentForm() {
       <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-white/[0.06]">
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
-          <Button size="lg" variant="secondary" aria-label="Back" onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
+          <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
           {message ? <>
             <Button size="lg" variant="secondary" className="flex-1" loading={saving}
               disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave(true)}>Save draft</Button>
@@ -890,7 +890,9 @@ function CoachAssessmentForm() {
               disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>Save</Button>
           )}
         </> : <>
-          {step > 0 && <Button size="lg" variant="secondary" className="flex-1" onClick={() => setStep(step - 1)}>Back</Button>}
+          {/* Named for its step: the header's Back leaves the screen (TRAK-179). */}
+          {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
+            onClick={() => setStep(step - 1)}>Back</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
           <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait)}
             onClick={() => setStep(step + 1)}>Next</Button>

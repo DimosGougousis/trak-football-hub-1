@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 
 /**
  * TRAK-182: the assessment screen is one step per screen (Player, Ratings,
- * Message, Note, Review). Tests walk it the way a coach does: Next and Back.
+ * Message, Note, Review). Tests walk it the way a coach does: Next and
+ * "Back to <step>" (the header's plain Back leaves the screen).
  */
 const STEPS = ['Player', 'Ratings', 'Message', 'Note', 'Review'] as const
 export type AssessStep = typeof STEPS[number]
@@ -23,7 +24,7 @@ export async function assessStep(step: AssessStep) {
       await waitFor(() => expect(nextButton()).toBeEnabled())
       await userEvent.click(nextButton())
     } else {
-      await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+      await userEvent.click(screen.getByRole('button', { name: /^Back to / }))
     }
   }
   expect(current()).toBe(target)
