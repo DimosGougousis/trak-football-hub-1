@@ -9,6 +9,7 @@
  * that honours the filters the pages send, so "that exact row" is what the
  * database would have returned, not whatever a handler happened to hand back.
  */
+import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -121,7 +122,7 @@ beforeEach(() => {
 })
 afterEach(() => cleanup())
 
-const sliderValues = () => screen.getAllByRole('slider').map(s => Number((s as HTMLInputElement).value))
+const sliderValues = () => screen.getAllByRole('slider').map(sliderValue)
 const messageBox = () => screen.getByLabelText(/^Message to/i) as HTMLTextAreaElement
 const noteBox = () => screen.getByLabelText(/^Private note/i) as HTMLTextAreaElement
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
@@ -143,7 +144,7 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', () => {
     renderApp('/coach/player/player-a')
     await user.click(await screen.findByRole('button', { name: /Open assessment .*vs Olympiacos Academy/ }))
     await waitFor(() => expect(sliderValues()).toEqual([3, 4, 5, 6, 7, 2]))
-    fireEvent.change(screen.getAllByRole('slider')[0], { target: { value: '9' } })
+    setSlider(screen.getAllByRole('slider')[0], 9)
     await waitFor(() => expect(saveButton()).toBeEnabled())
     await user.click(saveButton())
     await waitFor(() => expect(assessmentWrites()).toEqual([['patch', 'assess-old']]))
