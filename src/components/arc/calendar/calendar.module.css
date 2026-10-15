@@ -49,3 +49,7 @@
   .navButton, .todayButton, .day, .day::before, .dayNumber, .highlightFill { transition: none; }
   .navButton:active, .todayButton:active, .day:active::before, .monthBody:has(.day.selected:active) .highlightFill, .day:active .dayNumber { scale: none; }
 }
+
+/* Trak (TRAK-182): event dots under the day number. */
+.marks { position: absolute; bottom: 14%; left: 50%; display: flex; gap: 2px; translate: -50% 0; pointer-events: none; }
+.marks > span { width: 4px; height: 4px; border-radius: 50%; }
