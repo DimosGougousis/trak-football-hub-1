@@ -19,7 +19,7 @@ import { Calendar } from '@/components/arc/calendar/calendar'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
-import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
+import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
@@ -217,6 +217,8 @@ export default function CoachSchedule() {
       })
     return () => { cancelled = true }
   }, [user])
+  // TRAK-161: tell the coach as they type when families won't see the note.
+  const noteProblem = sheet.kind === 'edit' ? familyNoteProblem(sheet.form.familyNote, squad.childNames) : null
 
   const retry = async () => { setRetrying(true); await loadData(); setRetrying(false) }
 
@@ -794,12 +796,17 @@ export default function CoachSchedule() {
             <div className="space-y-1">
               <Field label="Note for families">
                 <input value={sheet.form.familyNote} onChange={e => setForm({ familyNote: e.target.value })}
-                  maxLength={FAMILY_NOTE_MAX} aria-describedby="family-note-hint"
+                  maxLength={FAMILY_NOTE_MAX} aria-describedby={noteProblem ? "family-note-hint family-note-problem" : "family-note-hint"}
                   placeholder="e.g. Bring extra water, it's a hot day" className={inputClass} style={font} />
               </Field>
               <p id="family-note-hint" className="text-[11px] text-white/40" style={font}>
                 Players and parents see this. A note with a player's name or a link isn't shown to them.
               </p>
+              {noteProblem && (
+                <p id="family-note-problem" role="status" className="text-[11px] text-[#fbbf24]" style={font}>
+                  Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
+                </p>
+              )}
             </div>
 
             {sheet.error && (

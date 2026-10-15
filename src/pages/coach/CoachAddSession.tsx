@@ -505,6 +505,7 @@ export default function CoachAddSession() {
           p_self_rating:     null as unknown as string,
           p_computed_rating: computed_rating,
           p_match_date:      date,
+          p_session_id:      sessionId,
         })
 
         if (rpcErr) {
