@@ -7,7 +7,6 @@ import { http,HttpResponse } from 'msw'
 import { beforeEach,afterEach,expect,it,vi } from 'vitest'
 import App from '@/App'
 import { supabase } from '@/integrations/supabase/client'
-import { CONSENT_STATEMENT } from '@/lib/consent'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 
@@ -58,10 +57,12 @@ async function open(path='/parent/consent'){
 }
 it('approves first, creates a login without mail, then clears password fields',async()=>{
   await open()
-  await screen.findByRole('heading',{name:"Approve Ana's account"})
+  await screen.findByRole('heading',{name:'Ana is waiting for your approval'})
   expect(created).toEqual([])
-  await userEvent.click(screen.getByRole('checkbox',{name:CONSENT_STATEMENT}))
-  await userEvent.click(screen.getByRole('button',{name:"Approve Ana's account"}))
+  // TRAK-182: the bar's Approve opens the panel; the panel's Approve saves.
+  await userEvent.click(screen.getByRole('button',{name:'Approve'}))
+  await screen.findByRole('switch',{name:/Recognition awards/})
+  await userEvent.click(screen.getByRole('button',{name:'Approve'}))
   await screen.findByRole('heading',{name:"Create Ana's login"})
   await userEvent.type(screen.getByLabelText("Child's username"),'striker7')
   await userEvent.type(screen.getByLabelText("Child's password"),'Synthetic-Pass7!')
