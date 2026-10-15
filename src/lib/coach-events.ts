@@ -96,7 +96,8 @@ export function eventTitle(form: EventForm): string {
 
 /** The columns a save writes. Call only when formProblem() is null. */
 export function formToRow(form: EventForm) {
-  // Dubai, whatever the device says (Imad, 10 Oct): readers use event_date + start_time as Dubai.
+  // Dubai, whatever the device says (Imad, 10 Oct). The database then resets it
+  // to the academy's own clock (TRAK-175), so an Athens academy's 17:00 is Athens.
   const starts_at = toAcademyInstant(form.date, form.time || null)!
   const cal = calendarFields(form.date, form.time || null)!
   const isMatch = form.kind === 'match'

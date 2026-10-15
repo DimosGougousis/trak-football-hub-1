@@ -12,7 +12,7 @@
 //   wipe a family's schedule from their phone.
 // A token that never existed gets 404. No response ever contains the token,
 // and nothing may be cached between the app and us.
-import { buildCalendarFeed, type FeedEvent } from '../_shared/ical-feed.ts';
+import { buildCalendarFeed, FEED_TIME_ZONES, type FeedEvent } from '../_shared/ical-feed.ts';
 
 export type FeedLookup = { found: false } | { found: true; events: FeedEvent[]; childNames: string[] };
 
@@ -34,7 +34,9 @@ function isFeedEvent(v: unknown): v is FeedEvent {
     && isTextOrNull(e.opponent) && (e.homeAway === null || e.homeAway === 'home' || e.homeAway === 'away')
     && isTextOrNull(e.venue) && isTextOrNull(e.kit)
     && (e.status === 'scheduled' || e.status === 'cancelled')
-    && Number.isInteger(e.sequence) && isString(e.updatedAt);
+    && Number.isInteger(e.sequence) && isString(e.updatedAt)
+    // TRAK-175: the academy's clock; absent from a database not yet migrated.
+    && (e.timeZone === undefined || (FEED_TIME_ZONES as readonly unknown[]).includes(e.timeZone));
 }
 
 /**
