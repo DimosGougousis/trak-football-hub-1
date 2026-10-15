@@ -171,7 +171,9 @@ test('shared phone switches from player to existing parent on the invitation and
 
   await page.getByRole('button', { name: 'Link Zara Example', exact: true }).click();
   await expect(page).toHaveURL(appOrigin + '/parent/consent');
-  await expect(page.getByRole('heading', { name: "Approve Zara Example's account", exact: true })).toBeVisible();
+  // TRAK-182: the consent bar's page heading.
+  await expect(page.getByRole('heading', { name: 'Zara Example is waiting for your approval', exact: true })).toBeVisible();
+  await expect(page.getByText("Approve Zara's Trak account?", { exact: true })).toBeVisible();
   expect(observed.claims).toEqual([{
     path: '/rest/v1/rpc/accept_parent_invite', method: 'POST',
     authorization: `Bearer ${observed.parent.access_token}`, body: { p_invite_id: zaraInvite },

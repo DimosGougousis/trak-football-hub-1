@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Button as ArcButton } from '@/components/arc/button/button'
+import { Switch } from '@/components/arc/switch/switch'
+import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
+import { ConsentSurface } from '@/components/trak/ConsentSurface'
 import {
   fetchAwaitingConsent,
   fetchRosterAwaitingConsent,
@@ -17,8 +20,8 @@ import { FamilySelect } from '@/components/parent/ParentFamily'
 import type { ChildLoginState } from '@/lib/child-login'
 import {
   CONSENT_PURPOSES,
-  CONSENT_STATEMENT,
-  CONSENT_THRESHOLD_AGE,
+  consentStatement,
+  withChild,
   type ConsentPurposeKey,
 } from '@/lib/consent'
 
@@ -43,7 +46,6 @@ interface ApprovalDraft {
   childId: string
   relationship: 'parent' | 'legal_guardian'
   optional: Partial<Record<ConsentPurposeKey, boolean>>
-  confirmed: boolean
 }
 
 /**
@@ -119,8 +121,15 @@ function ParentConsentAccount({ parentId }: { parentId: string }) {
   const child = children.find(item => item.key === selectedChildId) ?? children[0] ?? null
   const currentDraft: ApprovalDraft = draft?.childId === child?.key && draft
     ? draft
-    : { childId: child?.key ?? '', relationship: 'parent', optional: {}, confirmed: false }
-  const { relationship, optional, confirmed } = currentDraft
+    : { childId: child?.key ?? '', relationship: 'parent', optional: {} }
+  const { relationship, optional } = currentDraft
+  // TRAK-182: the bar, its Details panel, or the note after Reject.
+  const [face, setFace] = useState<'bar' | 'details' | 'rejected'>('bar')
+  const panelHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { if (face === 'details') panelHeading.current?.focus({ preventScroll: true }) }, [face])
+  // The next child starts at the bar; the same child keeps its panel across a retry.
+  const faceFor = useRef(child?.key)
+  if (faceFor.current !== child?.key) { faceFor.current = child?.key; if (face !== 'bar') setFace('bar') }
   const updateDraft = (change: Partial<Omit<ApprovalDraft, 'childId'>>) => {
     setDraft({ ...currentDraft, ...change })
   }
@@ -132,21 +141,23 @@ function ParentConsentAccount({ parentId }: { parentId: string }) {
   }
 
   const handleSubmit = async () => {
-    if (!child || !confirmed || submittingNow.current) return
+    if (!child || submittingNow.current) return
     submittingNow.current = true
     const request = new AbortController()
     writing.current = request
     setSubmitting(true)
     setSavedFor(null)
     try {
+      // Exactly the sentence shown beside Approve (TRAK-182).
+      const statement = consentStatement(child.full_name.split(' ')[0])
       const purposes = CONSENT_PURPOSES.reduce<Record<ConsentPurposeKey, boolean>>((acc, purpose) => {
         acc[purpose.key] = purpose.required || Boolean(optional[purpose.key])
         return acc
       }, {} as Record<ConsentPurposeKey, boolean>)
       if (child.kind === 'account') {
-        await recordParentApproval(parentId, { playerUserId: child.id, relationship, purposes }, request.signal)
+        await recordParentApproval(parentId, { playerUserId: child.id, relationship, purposes, statement }, request.signal)
       } else {
-        await recordRosterApproval(parentId, { rosterChildId: child.id, relationship, purposes }, request.signal)
+        await recordRosterApproval(parentId, { rosterChildId: child.id, relationship, purposes, statement }, request.signal)
       }
       if (!mounted.current || request.signal.aborted) return
       setSavedFor(child.full_name)
@@ -258,6 +269,7 @@ function ParentConsentAccount({ parentId }: { parentId: string }) {
                 setSelectedChildId(event.target.value)
                 setDraft(null)
                 setSavedFor(null)
+                setFace('bar')
               }}>
               {children.map(item => (
                 <option key={item.key} value={item.key}>{item.full_name} · Age {item.age_years}</option>
@@ -266,82 +278,66 @@ function ParentConsentAccount({ parentId }: { parentId: string }) {
           </div>
         )}
         <div>
-          <h1 className="text-2xl text-foreground mb-1 break-words">Approve {child.full_name}'s account</h1>
-          <p className="text-sm text-muted-foreground">
-            {firstName} is {child.age_years}. Under {CONSENT_THRESHOLD_AGE}, a parent or guardian
-            has to approve before their coach can record anything about them.
-          </p>
+          <h1 className="text-2xl text-foreground mb-1 break-words">{child.full_name} is waiting for your approval</h1>
+          <p className="text-sm text-muted-foreground">Nothing about {firstName} is recorded until you approve.</p>
         </div>
-
-        <div className="flex flex-col gap-2">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Your relationship</p>
-          <div className="flex gap-2">
-            {([['parent', 'Parent'], ['legal_guardian', 'Legal guardian']] as const).map(([value, label]) => (
-              <Button
-                key={value}
-                type="button"
-                variant={relationship === value ? 'default' : 'outline'}
-                onClick={() => updateDraft({ relationship: value })}
-                disabled={submitting}
-                className="flex-1"
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">What you're approving</p>
-          {CONSENT_PURPOSES.map(purpose => (
-            <div key={purpose.key} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id={purpose.key}
-                  checked={purpose.required ? true : Boolean(optional[purpose.key])}
-                  disabled={purpose.required || submitting}
-                  onCheckedChange={checked =>
-                    updateDraft({ optional: { ...optional, [purpose.key]: checked === true } })
-                  }
-                  className="mt-0.5"
-                />
-                <label htmlFor={purpose.key} className="flex-1 cursor-pointer">
-                  <span className="block text-sm text-foreground">{purpose.label}</span>
-                  <span className="block text-xs text-muted-foreground mt-1">{purpose.detail}</span>
-                  {purpose.required && (
-                    <span className="block text-[10px] uppercase tracking-wider text-muted-foreground mt-2">
-                      Required — this is what the app does
-                    </span>
-                  )}
-                </label>
-              </div>
-            </div>
-          ))}
-          <p className="text-xs text-muted-foreground">
-            Saying no to the optional ones does not affect {firstName}'s place at the academy or
-            how their coach treats them.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="confirm"
-              checked={confirmed}
-              onCheckedChange={checked => updateDraft({ confirmed: checked === true })}
-              disabled={submitting}
-              className="mt-0.5"
-            />
-            <label htmlFor="confirm" className="text-xs text-muted-foreground cursor-pointer">
-              {CONSENT_STATEMENT}
-            </label>
-          </div>
-        </div>
-
-        <Button onClick={handleSubmit} disabled={submitting || !confirmed} className="w-full min-h-11 h-auto py-2 whitespace-normal break-words">
-          {submitting ? 'Saving…' : `Approve ${child.full_name}'s account`}
-        </Button>
       </div>
+
+      {/* TRAK-182 (Imad's 6a wording, 15 Oct). Approve and Details both open the
+          panel: the relationship is chosen and the statement read there, before
+          the approval that stores them. Reject records nothing; the child stays
+          waiting and the coach sees "waiting for a parent". */}
+      <ConsentSurface face={face} labelledBy="consent-title">
+        {face === 'bar' ? <>
+          <p id="consent-title" className="text-[16px] font-medium text-white/95">Approve {firstName}'s Trak account?</p>
+          <p className="text-[14px] text-white/65 mt-1">Their coach records how they train and play, and you see their progress.</p>
+          <div className="flex gap-2 mt-4">
+            <ArcButton size="lg" className="flex-1" onClick={() => setFace('details')}>Approve</ArcButton>
+            <ArcButton size="lg" variant="secondary" className="flex-1" onClick={() => setFace('rejected')}>Reject</ArcButton>
+            <ArcButton size="lg" variant="ghost" onClick={() => setFace('details')}>Details</ArcButton>
+          </div>
+        </> : face === 'details' ? <div onKeyDown={event => { if (event.key === 'Escape') setFace('bar') }}>
+          {/* Focus moves into the panel as it opens, so keyboards and screen readers follow it, and Escape works. */}
+          <h2 id="consent-title" tabIndex={-1} ref={panelHeading}
+            className="text-[17px] font-medium text-white/95 outline-none">Approve {firstName}'s Trak account</h2>
+          {/* Locked while the approval saves, so the stored choices are the ones on screen. */}
+          <fieldset disabled={submitting} className="contents">
+          <div className="mt-4">
+            <p className="text-[13px] text-white/55 mb-2">You are {firstName}'s</p>
+            <SegmentedControl label={`Your relationship to ${firstName}`} value={relationship}
+              onValueChange={value => updateDraft({ relationship: value as ApprovalDraft['relationship'] })}
+              options={[{ value: 'parent', label: 'Parent' }, { value: 'legal_guardian', label: 'Legal guardian' }]} />
+          </div>
+          <ul className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+            {CONSENT_PURPOSES.map(purpose => (
+              <li key={purpose.key} className="py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p id={`purpose-${purpose.key}`} className="text-[15px] text-white/90">{purpose.label}</p>
+                  {purpose.required
+                    ? <span className="text-[12px] text-white/50">Always on with approval</span>
+                    : <Switch aria-labelledby={`purpose-${purpose.key}`} checked={Boolean(optional[purpose.key])} disabled={submitting}
+                        onCheckedChange={checked => updateDraft({ optional: { ...optional, [purpose.key]: checked } })} />}
+                </div>
+                <p className="text-[13px] text-white/60 mt-1">{withChild(purpose.detail, firstName)}</p>
+              </li>
+            ))}
+          </ul>
+          </fieldset>
+          <p className="text-[12px] text-white/55 mt-3 leading-relaxed">{consentStatement(firstName)}</p>
+          <div className="flex gap-2 mt-4">
+            <ArcButton size="lg" className="flex-1" loading={submitting} onClick={() => { void handleSubmit() }}>Approve</ArcButton>
+            <ArcButton size="lg" variant="secondary" className="flex-1" disabled={submitting} onClick={() => setFace('rejected')}>Reject</ArcButton>
+          </div>
+        </div> : <>
+          <p id="consent-title" role="status" className="text-[15px] text-white/90">
+            Not approved. {firstName} stays waiting, and nothing about them is recorded. You can approve any time from Home.
+          </p>
+          <div className="flex gap-2 mt-4">
+            <ArcButton size="lg" className="flex-1" onClick={() => navigate('/parent/home')}>Go to home</ArcButton>
+            <ArcButton size="lg" variant="secondary" className="flex-1" onClick={() => setFace('bar')}>Review again</ArcButton>
+          </div>
+        </>}
+      </ConsentSurface>
     </MobileShell>
   )
 }

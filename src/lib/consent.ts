@@ -14,7 +14,7 @@ export const CONSENT_THRESHOLD_AGE = 18
  * Bump whenever the wording below changes. Stored on every consent record so
  * a past consent can be reconstructed against the text actually shown.
  */
-export const CONSENT_NOTICE_VERSION = '2026-10-09.1'
+export const CONSENT_NOTICE_VERSION = '2026-10-15.2'
 
 /**
  * TRAK-177: a 15–17 player's own consent, where the academy's consent age is
@@ -70,29 +70,37 @@ export type ConsentPurposeKey = 'coaching_records' | 'recognition'
 export const CONSENT_PURPOSES: {
   key: ConsentPurposeKey
   label: string
+  /** {child} is the child's first name. */
   detail: string
   required: boolean
 }[] = [
+  // TRAK-182 (Imad's wording, 15 Oct): the consent bar's Details panel.
   {
     key: 'coaching_records',
-    label: "Their coach can record assessments and matches",
-    detail:
-      "Six skill ratings after a session, the matches they play, and a written note from the coach that only they see. You see their bands and their match and training history. The coach's private notes are never shared with anyone. This is what the app is for.",
+    label: 'Coaching records',
+    detail: 'Their coach records their progress, logs their matches and can write feedback. You see their bands and history. Their coach can also keep private notes, which are never shared.',
     required: true,
   },
   {
     key: 'recognition',
-    label: 'Their coach can give them recognition awards',
-    detail: 'Things like player of the week, visible to you and to them.',
+    label: 'Recognition awards',
+    detail: 'Things like player of the week, seen by you and {child}.',
     required: false,
   },
 ]
 
 /**
- * The exact wording shown to the parent, stored verbatim on the record. Kept
- * here rather than inline in the component so the string that is displayed and
- * the string that is saved cannot drift apart.
+ * The exact wording shown to the parent beside Approve, stored verbatim on the
+ * record with the child's first name filled in. Kept here rather than inline
+ * in the component so the string that is displayed and the string that is
+ * saved cannot drift apart. TRAK-182 (Imad, 15 Oct): approving is the
+ * confirmation; there is no separate tick box. The server keeps this sentence
+ * as the record (it only checks it is not empty), so it says "agree" (Kostas,
+ * #314; Imad, 15 Oct).
  */
-export const CONSENT_STATEMENT =
-  'I confirm I hold parental responsibility for this child and I authorise the processing I have selected above. ' +
-  'I understand I can withdraw at any time from my profile, and that withdrawing stops future processing.'
+export const CONSENT_STATEMENT_TEMPLATE =
+  "By approving, you confirm you're {child}'s parent or legal guardian and agree to the choices above. " +
+  'You can withdraw any time in settings, which stops new records.'
+
+export const withChild = (text: string, firstName: string) => text.split('{child}').join(firstName)
+export const consentStatement = (firstName: string) => withChild(CONSENT_STATEMENT_TEMPLATE, firstName)
