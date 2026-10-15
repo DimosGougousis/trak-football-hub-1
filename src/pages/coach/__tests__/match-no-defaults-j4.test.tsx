@@ -10,6 +10,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { logStep, saveLog } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -45,20 +46,23 @@ async function startMatch() {
   const [us, them] = screen.getAllByPlaceholderText('0')
   await user.type(us, '2')
   await user.type(them, '1')
+  await logStep('Squad')
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
   return user
 }
 
-const saveButton = () => screen.getByRole('button', { name: 'Save match' })
+// TRAK-182: the match log is in steps; Next leaves Squad only once every played row is right.
+const nextButton = () => screen.getByRole('button', { name: 'Next' })
 
-describe('J4: no invented match defaults', () => {
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('J4: no invented match defaults', { timeout: 20_000 }, () => {
   beforeEach(() => signInAs(COACH))
 
   it('ticking "played" alone cannot save: minutes, goals and assists start empty', async () => {
     const calls = setup()
     await startMatch()
     expect(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' })).toHaveValue(null)
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     expect(screen.getAllByText(/still needs? .*minutes, goals, assists/i).length).toBeGreaterThan(0)
     expect(calls).toHaveLength(0)
   })
@@ -69,8 +73,8 @@ describe('J4: no invented match defaults', () => {
     await user.type(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' }), '55')
     await user.click(screen.getByRole('button', { name: 'One more goals for Ade Okafor' }))
     await user.click(screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }))
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await waitFor(() => expect(nextButton()).toBeEnabled())
+    await saveLog('Save match')
     await waitFor(() => expect(calls).toHaveLength(1))
     expect(calls[0]).toMatchObject({
       p_minutes_played: 55, p_goals: 1, p_assists: 0,
@@ -85,11 +89,11 @@ describe('J4: no invented match defaults', () => {
     await user.type(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' }), '30')
     await user.click(screen.getByRole('button', { name: 'One fewer goals for Ade Okafor' }))
     await user.click(screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }))
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     expect(screen.getAllByText(/position/i).length).toBeGreaterThan(0)
     await user.click(screen.getByRole('button', { name: 'Goalkeeper' }))
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await user.click(saveButton())
+    await waitFor(() => expect(nextButton()).toBeEnabled())
+    await saveLog('Save match')
     await waitFor(() => expect(calls).toHaveLength(1))
     expect(calls[0]).toMatchObject({ p_position: 'Goalkeeper' })
   })
@@ -100,7 +104,7 @@ describe('J4: no invented match defaults', () => {
     await user.type(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' }), '30')
     await user.click(screen.getByRole('button', { name: 'One fewer goals for Ade Okafor' }))
     await user.click(screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }))
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     expect(screen.getAllByText(/age group on the roster/i).length).toBeGreaterThan(0)
     expect(calls).toHaveLength(0)
   })

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { logStep, saveLog } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -54,6 +55,7 @@ async function fillOneZeroWin(opponent = 'Olympiakos U16', goals = 0, assists = 
   const [scoreUs, scoreThem] = screen.getAllByPlaceholderText('0')
   await user.type(scoreUs, '1')
   await user.type(scoreThem, '0')
+  await logStep('Squad')
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
   await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${PLAYER.player_name}` }), '70')
   await user.click(screen.getByRole('button', { name: goals > 0 ? `One more goals for ${PLAYER.player_name}` : `One fewer goals for ${PLAYER.player_name}` }))
@@ -64,7 +66,7 @@ async function fillOneZeroWin(opponent = 'Olympiakos U16', goals = 0, assists = 
 
 async function saveOneZeroWin(opponent = 'Olympiakos U16', goals = 0, assists = 0) {
   const user = await fillOneZeroWin(opponent, goals, assists)
-  await user.click(screen.getByRole('button', { name: 'Save match' }))
+  await saveLog('Save match')
 }
 
 describe('J4: a match already saved with another score saves nothing', () => {
@@ -78,6 +80,7 @@ describe('J4: a match already saved with another score saves nothing', () => {
     expect(toastText()).toMatch(/Nothing was saved/)
     expect(writes).toEqual([])
     // The coach keeps what they typed, to fix the score.
+    await logStep('Match')
     expect(screen.getByPlaceholderText('Opponent name')).toHaveValue('Olympiakos U16')
   }, 20_000)
 
@@ -122,15 +125,16 @@ describe('J4: a match already saved with another score saves nothing', () => {
     const [scoreUs, scoreThem] = screen.getAllByPlaceholderText('0')
     await user.type(scoreUs, '2')
     await user.type(scoreThem, '0')
+    await logStep('Squad')
     for (const p of [PLAYER, BEA]) {
       await user.click((await screen.findAllByRole('button', { name: 'Mark played' }))[0])
       await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${p.player_name}` }), '70')
       await user.click(screen.getByRole('button', { name: `One more goals for ${p.player_name}` }))
       await user.click(screen.getByRole('button', { name: `One fewer assists for ${p.player_name}` }))
     }
-    await user.click(screen.getByRole('button', { name: 'Save match' }))
+    await saveLog('Save match')
     await waitFor(() => expect(toastText()).toMatch(/Press save again/))
-    await user.click(screen.getByRole('button', { name: 'Save match' }))
+    await saveLog('Save match')
     await waitFor(() => expect(writes.filter(w => w === 'match row')).toHaveLength(2))
     expect(clashArgs.map(a => a.p_goals)).toEqual([2, 1])
   }, 30_000)
@@ -161,7 +165,8 @@ describe("J4: a match's assists cannot pass its score (TRAK-167)", () => {
     fixtures(() => [])
     await fillOneZeroWin('Olympiakos U16', 1, 2)
     expect(await screen.findByText('2 assists entered, but the team scored 1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save match' })).toBeDisabled()
+    // TRAK-182: the log is in steps; Next stays shut on Squad.
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
     expect(writes).toEqual([])
   }, 20_000)
 
