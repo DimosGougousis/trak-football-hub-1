@@ -6,6 +6,7 @@
  * to the second match.
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -94,7 +95,8 @@ async function chooseSession(id: string) {
 }
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 
-describe('TRAK-68: an assessment belongs to a session that already happened', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('TRAK-68: an assessment belongs to a session that already happened', { timeout: 20_000 }, () => {
   it('offers only past sessions, and no "No session" choice', async () => {
     showForm()
     await choosePlayer('player-b')
@@ -108,23 +110,22 @@ describe('TRAK-68: an assessment belongs to a session that already happened', ()
     showForm()
     await choosePlayer('player-b')
     await screen.findByRole('option', { name: /Finishing training/ })
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     await chooseSession('session-a')
-    await waitFor(() => expect(saveButton()).toBeEnabled())
+    await waitFor(() => expect(nextButton()).toBeEnabled())
   })
 
   it('two sessions on the same day give the same player two assessments', async () => {
     showForm()
     await choosePlayer('player-b'); await chooseSession('session-a')
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await userEvent.click(saveButton())
+    await saveAssessment()
     await screen.findByText('Coach home')
     cleanup()
     showForm()
     await choosePlayer('player-b'); await chooseSession('session-b')
-    await waitFor(() => expect(saveButton()).toBeEnabled())
+    await waitFor(() => expect(nextButton()).toBeEnabled())
     expect(screen.queryByText(/Editing your assessment/)).toBeNull()
-    await userEvent.click(saveButton())
+    await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes.map(w => [w.method, w.body.session_id])).toEqual([['post', 'session-a'], ['post', 'session-b']])
   })
@@ -135,8 +136,7 @@ describe('TRAK-68: an assessment belongs to a session that already happened', ()
     showForm()
     await choosePlayer('player-a'); await chooseSession('session-a')
     await screen.findByText(/Editing your assessment for vs Olympiacos Academy/)
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    await userEvent.click(saveButton())
+    await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes).toEqual([expect.objectContaining({ method: 'patch', id: 'assessment-x' })])
     expect(writes[0].body.session_id).toBe('session-a')
@@ -148,6 +148,6 @@ describe('TRAK-68: an assessment belongs to a session that already happened', ()
     await choosePlayer('player-b')
     expect(await screen.findByText(/Log the session first/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Log a session/ })).toHaveAttribute('href', '/coach/sessions')
-    expect(saveButton()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
   })
 })

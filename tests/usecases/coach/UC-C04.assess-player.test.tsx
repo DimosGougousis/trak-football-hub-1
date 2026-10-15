@@ -1,5 +1,6 @@
 import { it, expect } from 'vitest'
 import { setSlider, sliderValue, sliderDisabled } from '../../support/slider'
+import { assessStep, nextButton, saveAssessment } from '../../support/assess-steps'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCase } from '../../support/use-case'
@@ -85,6 +86,8 @@ useCase('UC-C04', () => {
     // src/pages/coach/CoachAssessPage.tsx, in the DOM order Work Rate,
     // Tactical, Attitude, Technical, Physical, Coachability — the same order
     // the payload asserts below) to six *distinct* values instead.
+    // TRAK-182: the sliders are the Ratings step.
+    await assessStep('Ratings')
     const [workRate, tactical, attitude, technical, physical, coachability] =
       screen.getAllByRole('slider')
     setSlider(workRate, 10)
@@ -102,8 +105,8 @@ useCase('UC-C04', () => {
     expect(within(overallBandCard).getByText('Good')).toBeInTheDocument()
     expect(within(overallBandCard).queryByText('Mixed')).not.toBeInTheDocument()
 
-    // The submit button now reads "Save Assessment →", not "Submit Assessment".
-    await user.click(screen.getByRole('button', { name: /save assessment/i }))
+    // TRAK-182: saving is the Review step's (Save, with no message).
+    await saveAssessment()
 
     await waitFor(() => expect(inserted).toHaveLength(1))
     expect(inserted[0]).toMatchObject({
@@ -117,11 +120,16 @@ useCase('UC-C04', () => {
       physical: 6,
       coachability: 5,
     })
-  })
+  }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   it('shows a band derived from the six scores before submitting', async () => {
     signedInCoachWithSquad()
+    server.use(table('coach_assessments', []))
     renderApp('/coach/assess')
+    const user = userEvent.setup()
+    await user.selectOptions(await findPlayerSelect(), 'squad-1')
+    await chooseSession(user)
+    await assessStep('Ratings')
 
     // All six sliders default to 5, so avg = 5. scoreToBand(5) in
     // src/lib/rating-engine.ts checks thresholds high-to-low (9/8/7/6/4/2)
@@ -141,7 +149,7 @@ useCase('UC-C04', () => {
     const overallBandLabel = await screen.findByText('OVERALL BAND')
     const overallBandCard = overallBandLabel.parentElement as HTMLElement
     expect(within(overallBandCard).getByText('Mixed')).toBeInTheDocument()
-  })
+  }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   it('refuses to submit until a player and a session are selected', async () => {
     signedInCoachWithSquad()
@@ -159,8 +167,9 @@ useCase('UC-C04', () => {
     // while a choice is available. Wait for the squad to load first, so the
     // disabled state is checked while a player genuinely could be chosen but
     // has not been.
+    // TRAK-182: the first step's Next is the way to the save; it stays shut.
     await findPlayerSelect()
-    const submit = screen.getByRole('button', { name: /save assessment/i })
+    const submit = nextButton()
     expect(submit).toBeDisabled()
 
     // Clicking a disabled button should be inert. Verifying nothing was
@@ -173,8 +182,9 @@ useCase('UC-C04', () => {
     // A player alone is not enough: the session is required too (v2).
     await user.selectOptions(await findPlayerSelect(), 'squad-1')
     await screen.findByRole('option', { name: /vs Synthetic FC/ })
-    expect(screen.getByRole('button', { name: /save assessment/i })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: /save assessment/i }))
+    expect(nextButton()).toBeDisabled()
+    await user.click(nextButton())
     expect(inserted).toHaveLength(0)
-  })
+    expect(screen.queryByRole('button', { name: /^(Save|Publish)$/ })).toBeNull()
+  }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 })

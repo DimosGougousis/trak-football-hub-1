@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { setSlider, sliderValue, sliderDisabled } from '../../tests/support/slider'
+import { assessStep, nextButton, saveAssessment } from '../../tests/support/assess-steps'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -37,7 +38,6 @@ function showForm() {
 const selector = () => screen.getAllByRole('combobox')[0]
 const noteBox = () => screen.getByPlaceholderText(/First touch under pressure/)
 const feedbackBox = () => screen.getByPlaceholderText(/Great week/)
-const save = () => screen.getByRole('button', { name: /Save Assessment/ })
 
 // TRAK-68: an assessment needs a past session. It stays chosen across players.
 async function chooseSessionIfNone() {
@@ -46,7 +46,9 @@ async function chooseSessionIfNone() {
   if (session.value === '') await userEvent.selectOptions(session, 'session-1')
 }
 
+// TRAK-182: the player is chosen on the first step; the message and note have their own.
 async function selectPlayer(player: string) {
+  if (!screen.queryByRole('combobox', { name: 'Player' })) await assessStep('Player')
   await screen.findByRole('option', { name: 'Alex Synthetic' })
   await userEvent.selectOptions(selector(), player)
   await chooseSessionIfNone()
@@ -88,7 +90,8 @@ afterEach(() => {
   for (const release of releases) release()
 })
 
-describe('full assessment player boundaries', () => {
+// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+describe('full assessment player boundaries', { timeout: 20_000 }, () => {
   it('does not reassign Alex’s existing assessment while Bella’s load is pending', async () => {
     const pending = gate()
     server.use(http.get(endpoint('coach_assessments'), async ({ request }) => {
@@ -99,11 +102,13 @@ describe('full assessment player boundaries', () => {
     }))
     showForm()
     await selectPlayer('player-a')
+    await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     await selectPlayer('player-b')
-    await userEvent.click(save())
+    // Bella's assessment is still loading: the way to the save stays shut.
+    expect(nextButton()).toBeDisabled()
+    await userEvent.click(nextButton())
     expect(writes).toEqual([])
-    expect(save()).toBeDisabled()
   })
 
   it('ignores Alex’s late shared-feedback response after selecting Bella', async () => {
@@ -119,11 +124,12 @@ describe('full assessment player boundaries', () => {
     await waitFor(() => expect(started).toBe(true))
     await selectPlayer('player-b')
     await act(async () => { pending.release(); await new Promise(resolve => setTimeout(resolve, 30)) })
+    await assessStep('Message')
     expect(feedbackBox()).toHaveValue('')
     // J5: with no message there is nothing to publish, so no Publish action is offered.
+    await assessStep('Review')
     expect(screen.queryByRole('button', { name: /^Publish/ })).toBeNull()
-    await waitFor(() => expect(save()).toBeEnabled())
-    await userEvent.click(save())
+    await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes).toHaveLength(1)
     expect(writes[0]).toMatchObject({ table: 'coach_assessments', method: 'post', body: { squad_player_id: 'player-b' } })
@@ -132,14 +138,19 @@ describe('full assessment player boundaries', () => {
   it('clears the previous player’s scores and private draft before saving a new assessment', async () => {
     showForm()
     await selectPlayer('player-a')
+    await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
+    await assessStep('Note')
     await userEvent.type(noteBox(), 'Private draft for Alex only')
     await selectPlayer('player-b')
+    await assessStep('Message')
     await waitFor(() => expect(feedbackBox()).toHaveValue(''))
+    await assessStep('Note')
     expect(noteBox()).toHaveValue('')
+    await assessStep('Ratings')
     for (const slider of screen.getAllByRole('slider')) expect(sliderValue(slider)).toBe(5)
     setSlider(screen.getAllByRole('slider')[0], 6)
-    await userEvent.click(save())
+    await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes).toHaveLength(1)
     expect(writes[0]).toMatchObject({ method: 'post', body: { squad_player_id: 'player-b', work_rate: 6, tactical: 5 } })
@@ -153,16 +164,18 @@ describe('full assessment player boundaries', () => {
     showForm()
     await selectPlayer('player-a')
     expect(await screen.findByRole('alert')).toHaveTextContent(/load/i)
-    expect(save()).toBeDisabled()
+    expect(nextButton()).toBeDisabled()
     fail = false
     await userEvent.click(screen.getByRole('button', { name: /retry/i }))
+    await waitFor(() => expect(nextButton()).toBeEnabled())
+    await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
-    await waitFor(() => expect(save()).toBeEnabled())
   })
 
   it('preserves an unsaved draft when the same account receives a refreshed user object', async () => {
     const view = showForm()
     await selectPlayer('player-a')
+    await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     await userEvent.clear(feedbackBox())
     await userEvent.type(feedbackBox(), 'Coach’s unfinished edit')
@@ -188,14 +201,14 @@ describe('full assessment player boundaries', () => {
     }))
     showForm()
     await selectPlayer('player-b')
-    await waitFor(() => expect(save()).toBeEnabled())
+    await assessStep('Note')
     await userEvent.type(noteBox(), 'Keep this private draft for Bella')
-    await userEvent.click(save())
+    await saveAssessment()
     await waitFor(() => expect(attempts).toBe(1))
     expect(screen.queryByText('Coach home')).not.toBeInTheDocument()
+    await assessStep('Note')
     expect(noteBox()).toHaveValue('Keep this private draft for Bella')
-    await waitFor(() => expect(save()).toBeEnabled())
-    await userEvent.click(save())
+    await saveAssessment()
     await screen.findByText('Coach home')
     const assessmentWrites = writes.filter(write => write.table === 'coach_assessments')
     expect(assessmentWrites.map(write => write.method)).toEqual(['post', 'patch'])
@@ -208,10 +221,12 @@ describe('full assessment player boundaries', () => {
     server.use(http.get(endpoint('coach_assessment_notes'), () => HttpResponse.json([{ note: 'Existing private note' }])))
     showForm()
     await selectPlayer('player-a')
+    await assessStep('Message')
+    expect(await screen.findByDisplayValue('Published feedback for Alex')).toBe(feedbackBox())
+    await assessStep('Note')
     await screen.findByDisplayValue('Existing private note')
-    expect(feedbackBox()).toHaveValue('Published feedback for Alex')
     await userEvent.clear(noteBox())
-    await userEvent.click(save())
+    await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes.find(write => write.table === 'coach_assessment_notes')?.body)
       .toMatchObject({ assessment_id: 'assessment-a', note: '' })
@@ -231,6 +246,7 @@ describe('full assessment player boundaries', () => {
     }))
     const view = showForm()
     await selectPlayer('player-a')
+    await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     auth.user = { id: 'coach-b' }
     view.rerender(<MemoryRouter><Routes>
@@ -239,8 +255,9 @@ describe('full assessment player boundaries', () => {
     </Routes></MemoryRouter>)
     expect(selector()).toHaveValue('')
     expect(screen.queryByRole('option', { name: 'Alex Synthetic' })).not.toBeInTheDocument()
-    expect(feedbackBox()).toHaveValue('')
-    expect(save()).toBeDisabled()
+    // Back on the first step, with Alex's message gone and no way forward.
+    expect(screen.queryByPlaceholderText(/Great week/)).toBeNull()
+    expect(nextButton()).toBeDisabled()
     expect(writes).toEqual([])
   })
 })
