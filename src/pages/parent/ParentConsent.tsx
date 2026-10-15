@@ -13,6 +13,7 @@ import {
   fetchMyChildLogins,
 } from '@/lib/parent-consent'
 import { ChildLoginCard } from '@/components/parent/ChildLoginCard'
+import { FamilySelect } from '@/components/parent/ParentFamily'
 import type { ChildLoginState } from '@/lib/child-login'
 import {
   CONSENT_PURPOSES,
@@ -251,18 +252,17 @@ function ParentConsentAccount({ parentId }: { parentId: string }) {
         {children.length > 1 && (
           <div>
             <label htmlFor="approval-child" className="block text-sm text-muted-foreground mb-2">Child to approve</label>
-            <select id="approval-child" value={child.key} disabled={submitting}
+            <FamilySelect id="approval-child" value={child.key} disabled={submitting}
               onChange={event => {
                 if (submittingNow.current) return
                 setSelectedChildId(event.target.value)
                 setDraft(null)
                 setSavedFor(null)
-              }}
-              className="w-full min-h-11 rounded-xl border border-border bg-card px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary">
+              }}>
               {children.map(item => (
                 <option key={item.key} value={item.key}>{item.full_name} · Age {item.age_years}</option>
               ))}
-            </select>
+            </FamilySelect>
           </div>
         )}
         <div>

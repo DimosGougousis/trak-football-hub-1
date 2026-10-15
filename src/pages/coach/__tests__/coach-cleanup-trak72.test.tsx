@@ -170,6 +170,19 @@ describe('TRAK-72 item 4: one Player overview', () => {
     expect(await screen.findByText(/Couldn't check the last session's attendance/)).toBeInTheDocument()
     expect(screen.queryByText('Missed the last session')).toBeNull()
   })
+
+  // TRAK-180: Home starts a revisit from what it last showed, so a check that
+  // fails this time must take the last visit's flag with it.
+  it("a revisit whose check fails shows no flag from the last visit", async () => {
+    withLastTraining(id => HttpResponse.json(id === 'sp-3'))
+    renderApp('/coach/home')
+    await waitFor(() => expect(screen.getAllByText('Missed the last session')).toHaveLength(1))
+    cleanup()
+    withLastTraining(() => HttpResponse.json({ message: 'unavailable' }, { status: 500 }))
+    renderApp('/coach/home')
+    expect(await screen.findByText(/Couldn't check the last session's attendance/)).toBeInTheDocument()
+    expect(screen.queryByText('Missed the last session')).toBeNull()
+  })
 })
 
 // Item 11: every staff account Trak sets up has current_club = NULL, so a chip

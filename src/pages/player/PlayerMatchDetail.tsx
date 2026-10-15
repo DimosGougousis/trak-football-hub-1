@@ -1,27 +1,31 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, BandPill, MetadataLabel, NavBar, LoadError } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
+import { parentMatchHref } from '@/lib/parent-data'
 import { ChevronLeft } from 'lucide-react'
 
 /* Also the parent's match detail (TRAK-73): `role` picks the nav and the way
    back, and `limitedFor` says whether a child's match shows only what the
    parent already saw on their list (score, opponent, competition, venue, band). */
-export default function PlayerMatchDetail({ role = 'player', limitedFor }: {
+export default function PlayerMatchDetail({ role = 'player', limitedFor, playerUserId }: {
   role?: 'player' | 'parent'
   limitedFor?: (childId: string) => boolean
+  playerUserId?: string
 }) {
   const matchesPath = `/${role}/matches`
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const ownerId = role === 'parent' ? playerUserId : user?.id
   const [reloadKey, setReloadKey] = useState(0)
   const [result, setResult] = useState<{
     id: string
     user: typeof user
     reloadKey: number
+    ownerId: string
     match: any
     failed: boolean
   } | null>(null)
@@ -29,18 +33,18 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor }: {
   useEffect(() => {
     let cancelled = false
     setResult(null)
-    if (!id || !user) return
-    supabase.from('matches').select('*').eq('id', id).maybeSingle()
+    if (!id || !user || !ownerId) return
+    supabase.from('matches').select('*').eq('id', id).eq('user_id', ownerId).maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return
-        setResult({ id, user, reloadKey, match: data, failed: Boolean(error) })
+        setResult({ id, user, reloadKey, ownerId, match: data, failed: Boolean(error) })
       })
     return () => { cancelled = true }
-  }, [id, user, reloadKey])
+  }, [id, user, reloadKey, ownerId])
 
   // Bind the displayed result to its request as well as cancelling old writes.
   // A new route or Auth refresh must hide the prior match before its effect runs.
-  const currentResult = result && result.id === id && result.user === user && result.reloadKey === reloadKey
+  const currentResult = result && result.id === id && result.user === user && result.reloadKey === reloadKey && result.ownerId === ownerId
     ? result : null
 
   if (!currentResult) return (
@@ -152,6 +156,11 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor }: {
             </div>
           ))}
         </div>}
+
+        {role === 'parent' && (match.session_id
+          ? <Link to={parentMatchHref(match)} state={{ matchId: match.id, childId: ownerId }}
+              className="inline-flex min-h-11 items-center text-sm text-primary focus-visible:ring-2 focus-visible:ring-primary">Coach assessment</Link>
+          : <p className="text-sm text-muted-foreground">No assessment link is available for this match.</p>)}
 
       </div>
       <NavBar role={role} activeTab={matchesPath} onNavigate={navigate} />
