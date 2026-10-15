@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -120,7 +121,6 @@ export default function CoachPlayerProfilePage() {
       {messageSentById[a.id] ? 'Message sent' : 'No message'}
     </span>
   )
-  const initials = player.player_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
     <div className="flex flex-col mx-auto max-w-[430px] bg-[#0A0A0B]" style={{ height: '100dvh' }}>
@@ -141,10 +141,7 @@ export default function CoachPlayerProfilePage() {
 
         {/* Player identity */}
         <div className="flex items-center gap-4 py-2">
-          <div className="flex items-center justify-center w-[52px] h-[52px] rounded-[16px] text-[18px] font-bold flex-shrink-0"
-            style={{ background: 'rgba(200,242,90,0.14)', color: '#C8F25A' }}>
-            {initials}
-          </div>
+          <Avatar name={player.player_name} size="lg" className="arc" aria-hidden />
           <div>
             <p className="text-[22px] font-light text-white/88 leading-tight"
               style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
