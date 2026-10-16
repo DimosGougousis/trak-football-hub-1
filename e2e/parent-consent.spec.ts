@@ -24,7 +24,7 @@ function expectedGrant(childId: string, first = childId === childB.player_user_i
   }
 }
 
-async function consentFixture(page: Page, context: BrowserContext, replies: Reply[], holdFirstGrant = false) {
+async function consentFixture(page: Page, context: BrowserContext, replies: Reply[], holdFirstGrant = false, clearAfterGrant = false) {
   const expiresAt = Math.floor(Date.now() / 1000) + 3600
   const user = {
     id: parentId, email: 'parent@consent.test.invalid', email_confirmed_at: '2026-09-18T08:00:00Z',
@@ -78,7 +78,8 @@ async function consentFixture(page: Page, context: BrowserContext, replies: Repl
     if (url.pathname === '/rest/v1/rpc/get_children_awaiting_consent' && observed.method === 'POST') {
       pending.push(observed)
       expect(observed.body).toEqual({})
-      const reply = replies[Math.min(pending.length - 1, replies.length - 1)]
+      // clearAfterGrant: once approved, nobody is waiting (the Home bar's journey).
+      const reply = clearAfterGrant && grants.length ? { data: [] } : replies[Math.min(pending.length - 1, replies.length - 1)]
       return json(reply.data, reply.status ?? 200)
     }
     if (url.pathname === '/rest/v1/rpc/record_parental_consent' && observed.method === 'POST') {
@@ -193,4 +194,40 @@ test('saved approval survives a failed refresh, then retries to a fresh child be
   } finally {
     fixture.releaseGrant()
   }
+})
+
+// TRAK-182 (Imad, 16 Oct): on Home, Arc's consent bar instead of a lime banner and a page of its own.
+test('Home asks with a bar: details close with X, Reject folds it, approval removes it', async ({ page, context }, testInfo) => {
+  const fixture = await consentFixture(page, context, [{ data: [childA] }], false, true)
+  const settle = () => page.waitForTimeout(500) // the surface springs between faces
+  await page.goto('/parent/home')
+  await expect(page.getByText("Approve Alex's Trak account?")).toBeVisible()
+  await expect(page.getByText(/waiting on your approval/)).toHaveCount(0)
+  await settle(); await page.screenshot({ path: testInfo.outputPath('home-consent-1-bar.png') })
+
+  await page.getByRole('button', { name: 'Details', exact: true }).click()
+  await expect(page.getByText(consentStatement('Alex'))).toBeVisible()
+  await settle(); await page.screenshot({ path: testInfo.outputPath('home-consent-2-details.png') })
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await expect(page.getByText("Approve Alex's Trak account?")).toBeVisible()
+
+  await page.getByRole('button', { name: 'Reject', exact: true }).click()
+  const reopen = page.getByRole('button', { name: "Review Alex's approval" })
+  await expect(reopen).toBeVisible()
+  await settle(); await page.screenshot({ path: testInfo.outputPath('home-consent-3-folded.png') })
+  expect(fixture.grants).toHaveLength(0)
+
+  await reopen.click()
+  await page.getByRole('button', { name: 'Approve', exact: true }).click()
+  await expect(page.getByText(consentStatement('Alex'))).toBeVisible()
+  await page.getByRole('button', { name: 'Approve', exact: true }).click()
+  await expect.poll(() => fixture.grants.length).toBe(1)
+  expect(fixture.grants[0].body).toEqual(expectedGrant(childA.player_user_id))
+  // Approved: gone, with no reopen button, and still on Home.
+  await expect(page.getByText("Approve Alex's Trak account?")).toHaveCount(0)
+  await expect(reopen).toHaveCount(0)
+  await expect(page).toHaveURL(`${appOrigin}/parent/home`)
+  await settle(); await page.screenshot({ path: testInfo.outputPath('home-consent-4-approved.png') })
+  expect(fixture.errors).toEqual([])
+  expect(fixture.unexpected).toEqual([])
 })

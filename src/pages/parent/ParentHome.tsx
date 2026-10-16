@@ -13,11 +13,12 @@ import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useP
 import { averageRecordedRating, formatParentAward, formatParentDate, parentMatchHref, matchResult } from '@/lib/parent-data'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
+import { ParentConsentBar } from '@/pages/parent/ParentConsent'
 
 export default function ParentHome() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { selectedChild } = useParentChildren()
+  const { selectedChild, parentId } = useParentChildren()
   const matchQuery = useParentMatches()
   const developmentQuery = useParentDevelopment()
   // TRAK-133: the same query Next up reads (no extra request).
@@ -43,14 +44,9 @@ export default function ParentHome() {
         <HomeHeader calendarTo="/parent/events" center={<ParentChildSwitcher />} right={<ParentAlertsBell />} />
         {consentQuery.isError || rosterConsentQuery.isError ? (
           <ParentLoadError message="Couldn't check pending approvals." onRetry={() => { void consentQuery.refetch(); void rosterConsentQuery.refetch() }} />
-        ) : waitingNames.length > 0 && (
-          <button onClick={() => navigate('/parent/consent')}
-            className="w-full text-left rounded-xl border border-primary/30 bg-primary/10 p-4 mb-4">
-            <p className="text-sm text-foreground">
-              {waitingNames.join(', ')} {waitingNames.length === 1 ? 'is' : 'are'} waiting on your approval
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Review your children's pending approvals.</p>
-          </button>
+        ) : waitingNames.length > 0 && parentId && (
+          // TRAK-182 (Imad, 16 Oct): Arc's consent bar at the bottom, not a banner and a page of its own.
+          <ParentConsentBar parentId={parentId} />
         )}
         {/* TRAK-98: approved children who haven't signed up aren't in the family list yet. */}
         <ApprovedAwaitingList />
