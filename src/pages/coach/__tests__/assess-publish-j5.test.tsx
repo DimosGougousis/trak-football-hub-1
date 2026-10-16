@@ -123,9 +123,10 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(message.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  // TRAK-72 item 7: the player's message is blue, the private note yellow, and
-  // both are the same size, so the two can't be mistaken for each other.
-  it('colour-codes the message (blue) and the private note (yellow) at the same size', async () => {
+  // TRAK-72 item 7: the player's message and the private note look different,
+  // at the same size. Since 16 Oct (Imad) the message is plain white and only
+  // the private note is coloured (yellow), so it stands out.
+  it('keeps the message white and the private note yellow, at the same size', async () => {
     showForm()
     await choose('player-b')
     const message = await toMessage() as HTMLTextAreaElement
@@ -133,11 +134,12 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     const note = await toNote() as HTMLTextAreaElement
     expect(message.dataset.tone).toBe('message')
     expect(note.dataset.tone).toBe('private')
-    expect(messageClass).toMatch(/border-sky-/)
+    expect(messageClass).toMatch(/border-white\//)
+    expect(messageClass).not.toMatch(/sky-|amber-/)
     expect(note.className).toMatch(/border-amber-/)
     expect(message.rows).toBe(note.rows)
-    expect(messageClass.replace(/(bg|border)-(sky|amber)-\S+/g, ''))
-      .toBe(note.className.replace(/(bg|border)-(sky|amber)-\S+/g, ''))
+    expect(messageClass.replace(/(bg|border)-(white|amber)\S+/g, ''))
+      .toBe(note.className.replace(/(bg|border)-(white|amber)\S+/g, ''))
   })
 
   // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…
