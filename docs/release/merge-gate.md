@@ -23,11 +23,12 @@ conversations resolved. An author's self-review or an agent reviewing its own
 human's PR is not independent approval.
 
 **Approvals survive main merges** (founders, 15 October). GitHub's "dismiss
-stale approvals" is off, because merging main in, or a PR underneath merging,
-cost a re-approval of code nobody had changed (about ten on 15 October). In its
-place the coordinator's merge queue checks, before every merge, that the head
-is exactly the approved commit with main merged in. It stops, and a reviewer
-approves again, when any of these is true:
+stale approvals" and "require approval of the most recent push" are both off:
+merging main in, or a PR underneath merging, cost a re-approval of code nobody
+had changed (about ten on 15 October). Instead, the coordinator's merge queue
+checks before every merge that the head is exactly the approved commit with
+main merged in. It stops, and a reviewer approves again, when any of these is
+true:
 
 - new code was added after the approval, including code inside a main merge;
 - the approved commit was force-pushed away;
@@ -42,10 +43,10 @@ checks `test` and `Base branch still reaches main`. The full protection endpoint
 was not accessible to the audit account, so this does not verify every admin
 setting. The reviewed target configuration is
 [main-branch-protection.json](main-branch-protection.json): one independent
-approval (kept through main merges; the merge queue checks it), current-base checks, resolved conversations and
-admin enforcement. `Supabase` and `Deploy` run after merge, not as PR checks.
-An administrator should compare the live settings with that file before
-changing protection; committing the JSON does not apply it.
+approval that survives main merges, current-base checks, resolved
+conversations and admin enforcement. `Supabase` and `Deploy` run after merge,
+not as PR checks. An administrator should compare the live settings with that
+file before changing protection; committing the JSON does not apply it.
 
 The old unprotected-branch Slack-verdict fallback no longer applies. On 28
 September Imad decided that non-code files (documentation, slides, notes) need
