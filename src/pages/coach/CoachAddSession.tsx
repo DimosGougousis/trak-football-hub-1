@@ -96,18 +96,27 @@ export default function CoachAddSession() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  // TRAK-182 part 8: the quick-add hands over a played match (opponent,
+  // venue, score, date) and the log opens on Squad.
+  const [quick] = useState(() => (location.state as { quickMatch?: {
+    opponent: string; venue: 'Home' | 'Away'; scoreUs: string; scoreThem: string; date: string
+  } } | null)?.quickMatch ?? null)
+  // Read once, then cleared: a reload or Back must not reopen it prefilled (Tarek, #319).
+  useEffect(() => {
+    if (quick) navigate(location.pathname, { replace: true, state: null })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
 
   // Common
   /* Reached via /coach/sessions/quick? That entry point is the match one, so
      open on Match — otherwise the redirect would cost the coach the extra tap
      the quick log used to save. */
   const [type,  setType]  = useState<'training' | 'match' | 'other'>(
-    () => (window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
+    () => (quick || window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
   )
   const [title, setTitle] = useState('')
-  const [date,  setDate]  = useState(localTodayISO)
+  const [date,  setDate]  = useState(() => quick?.date ?? localTodayISO())
   const [notes, setNotes] = useState('')
-  const [step,  setStep]  = useState(0)
+  const [step,  setStep]  = useState(quick ? 1 : 0)
 
   // Training-specific
   const [trainingFocus,     setTrainingFocus]     = useState<Set<string>>(new Set())
@@ -125,11 +134,11 @@ export default function CoachAddSession() {
   }, [])
 
   // Match-only header
-  const [opponent,    setOpponent]    = useState('')
-  const [scoreUs,     setScoreUs]     = useState('')
-  const [scoreThem,   setScoreThem]   = useState('')
+  const [opponent,    setOpponent]    = useState(quick?.opponent ?? '')
+  const [scoreUs,     setScoreUs]     = useState(quick?.scoreUs ?? '')
+  const [scoreThem,   setScoreThem]   = useState(quick?.scoreThem ?? '')
   const [competition, setCompetition] = useState<Competition>('League')
-  const [venue,       setVenue]       = useState<Venue>('Home')
+  const [venue,       setVenue]       = useState<Venue>(quick?.venue ?? 'Home')
 
   // TRAK-138 (J8.15): "Log match" on a schedule event that has kicked off
   // opens here with its date, opponent and home or away.

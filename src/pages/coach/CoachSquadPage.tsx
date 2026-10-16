@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { scoreToBand } from '@/lib/rating-engine'
 import { Users, WifiOff } from 'lucide-react'
 import { fetchWaitReason } from '@/lib/wait-reason'
@@ -187,7 +188,7 @@ export default function CoachSquadPage() {
       )}
 
       {/* Squad list */}
-      <div className="flex-1 overflow-y-auto px-5 pb-24">
+      <div className="flex-1 overflow-y-auto px-5 pb-40">
         {loadFailed ? (
           <div className="flex flex-col items-center text-center pt-14 px-6">
             <div
@@ -262,6 +263,7 @@ export default function CoachSquadPage() {
         )}
       </div>
 
+      <QuickAdd />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )

@@ -75,6 +75,46 @@ test.describe('TRAK-182 coach screens', () => {
     })
   }
 
+  // TRAK-182 part 8: the quick-add's four faces: "+", menu, form, check.
+  test('coach quick add, its four states', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    // The draft's insert answers like PostgREST.
+    await context.route(url => url.pathname === '/rest/v1/coach_calendar_events', route =>
+      route.request().method() === 'POST' ? route.fulfill({ status: 201, contentType: 'application/json', body: '[{"id":"new-1"}]' }) : route.fallback())
+    await page.goto('/coach/schedule')
+    const plus = page.getByRole('button', { name: 'Quick add' })
+    await expect(plus).toBeVisible()
+    const settle = async () => {
+      // motion's springs run in JavaScript: wait until the surface stops moving.
+      let last = ''
+      for (let i = 0; i < 20; i++) {
+        const box = JSON.stringify(await page.locator('[data-quick-add] > div').first().boundingBox())
+        if (box === last) return
+        last = box; await page.waitForTimeout(80)
+      }
+    }
+    await settle(); await page.screenshot({ path: testInfo.outputPath('quick-add-1-plus.png') })
+    await plus.click()
+    await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
+    await settle(); await page.screenshot({ path: testInfo.outputPath('quick-add-2-menu.png') })
+    await page.getByRole('menuitem', { name: 'New event' }).click()
+    const form = page.getByRole('dialog', { name: 'New event' })
+    await expect(form).toBeVisible()
+    await form.getByRole('button', { name: /^Start\b/ }).click()
+    await page.getByRole('listbox').getByRole('option', { name: '5:00 PM' }).click()
+    await settle(); await page.screenshot({ path: testInfo.outputPath('quick-add-3-form.png') })
+    await form.getByRole('button', { name: 'Save draft' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeAttached()
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath('quick-add-4-check.png') })
+    await expect(page.getByRole('button', { name: 'Quick add' })).toBeVisible({ timeout: 3000 })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   // TRAK-182 part 7: Schedule's event form one step per screen, ending in Review.
   test('coach schedule, through the steps', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []

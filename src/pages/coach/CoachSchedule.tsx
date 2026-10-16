@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
@@ -7,9 +7,10 @@ import { displayEventTime } from '@/lib/event-time'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, eventTitle, formProblem, formToRow,
+  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
   isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
@@ -117,15 +118,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   )
 }
-
-// TRAK-157: Arc's date picker speaks Date; the form keeps YYYY-MM-DD (the
-// academy's calendar day), so convert at local midnight both ways.
-const dayAsDate = (day: string) => {
-  const [y, m, d] = day.split('-').map(Number)
-  return day ? new Date(y, m - 1, d) : undefined
-}
-const dateAsDay = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 /** The meet-time list opens half an hour before the start: the usual gap. */
 function halfHourBefore(time: string) {
@@ -398,7 +390,7 @@ export default function CoachSchedule() {
     }
 
     setSaving(true)
-    const fresh = { coach_user_id: user.id, published: false, source: 'manual' }
+    const fresh = newDraftFields(user.id)
     const series = !editing && repeat.on && form.kind !== 'match'
     const rows = series
       ? seriesRows(form, repeat, crypto.randomUUID()).map(r => ({ ...r, ...fresh }))
@@ -454,12 +446,24 @@ export default function CoachSchedule() {
     toast.success('Published to the squad')
   }
 
+  // TRAK-182 part 8: the quick-add's "More details" opens a new event here
+  // with what the coach typed, on its first step.
+  const location = useLocation()
+  useEffect(() => {
+    const quick = (location.state as { quickEvent?: Partial<EventForm> } | null)?.quickEvent
+    if (!quick) return
+    const date = quick.date || toDateStr(new Date())
+    setSelected(date)
+    setSheet({ kind: 'edit', row: null, form: { ...blankForm(date), ...quick }, repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
+    navigate(location.pathname + location.search, { replace: true, state: null })
+  }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps -- on arrival, and on a new hand-over while here
+
   // TRAK-182: the event sheet on Home sends Edit (?edit=<id>), Cancel
   // (?cancel=<id>) and a weekly series' Publish (?publish=<id>, which asks
   // this week or following) here, to Schedule's own sheets.
   const [params, setParams] = useSearchParams()
   useEffect(() => {
-    const action = (['edit', 'publish', 'cancel'] as const).find(a => params.has(a))
+    const action = (['edit', 'publish', 'cancel', 'register'] as const).find(a => params.has(a))
     const row = action ? calEvents.find(r => r.id === params.get(action)) : undefined
     if (!row) return
     setParams({}, { replace: true })
@@ -469,8 +473,10 @@ export default function CoachSchedule() {
     }
     if (action === 'edit') openEdit(row)
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
+    // The quick-add's Take register (TRAK-182 part 8): only when it can open.
+    else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
     else void publish(row)
-  }, [calEvents]) // eslint-disable-line react-hooks/exhaustive-deps -- runs once the rows load
+  }, [calEvents, params]) // eslint-disable-line react-hooks/exhaustive-deps -- once the rows load, and on a new link while here
 
   const confirmCancel = async () => {
     if (parked) return comingSoon()
@@ -1060,6 +1066,7 @@ export default function CoachSchedule() {
         </div>
       )}
 
+      <QuickAdd onSaved={loadData} />
       <NavBar role="coach" activeTab="/coach/schedule" onNavigate={p => navigate(p)} />
     </MobileShell>
   )

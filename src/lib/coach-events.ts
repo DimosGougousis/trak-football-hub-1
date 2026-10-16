@@ -250,3 +250,16 @@ export function clashMessage(error: unknown): string | null {
   const e = error as { code?: string, message?: string } | null
   return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
 }
+
+// TRAK-157: Arc's date picker speaks Date; forms keep YYYY-MM-DD (the
+// academy's calendar day), so convert at local midnight both ways.
+export const dayAsDate = (day: string) => {
+  const [y, m, d] = day.split('-').map(Number)
+  return day ? new Date(y, m - 1, d) : undefined
+}
+export const dateAsDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+/** What a new event's insert adds to formToRow(): a draft only its coach sees,
+ *  until Publish (Imad, 9 Oct). Schedule's form and the quick-add share it. */
+export const newDraftFields = (coachId: string) => ({ coach_user_id: coachId, published: false, source: 'manual' })
