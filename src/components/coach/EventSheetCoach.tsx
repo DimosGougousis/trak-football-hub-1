@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check, MessageCircle, Pencil } from 'lucide-react'
+import { Ban, Check, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Avatar } from '@/components/arc/avatar/avatar'
@@ -11,6 +11,7 @@ import { clashMessage, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 import type { StripEvent } from '@/components/trak/WeekStrip'
+import { updatedNote } from '@/lib/alert-read-state'
 
 /* TRAK-182: the coach's part of the event sheet. Publish (a draft) or
    Published; after the event, Take register (J8.15). Share to WhatsApp (the
@@ -81,15 +82,22 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   }
 }
 
+/** Avatars only (Imad, 16 Oct); tapping them, "+N" included, lists the full names. */
 function People({ heading, people }: { heading: string; people: Person[] }) {
+  const [open, setOpen] = useState(false)
   return <>
     <p className="text-[13px] text-white/60 mb-2">{heading} · {people.length}</p>
-    {people.length > 0 && (
-      <div className="arc flex items-center gap-3">
+    {people.length > 0 && <>
+      <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} names: ${heading}`}
+        onClick={() => setOpen(o => !o)} className="arc rounded-full focus-visible:ring-2 focus-visible:ring-primary">
         <AvatarGroup members={people.map(p => ({ name: p.name }))} max={6} size="sm" label={heading} />
-        <p className="text-[12px] text-white/50 truncate">{people.map(p => p.name.split(' ')[0]).join(', ')}</p>
-      </div>
-    )}
+      </button>
+      {open && (
+        <ul aria-label={heading} className="mt-3 space-y-2">
+          {people.map(p => <li key={p.id} className="text-[14px] text-white/85">{p.name}</li>)}
+        </ul>
+      )}
+    </>}
   </>
 }
 
@@ -122,6 +130,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   const canRegister = row && registerProblem(row) === null
   const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60'
   const quiet = `${button} border border-white/15 text-white/85`
+  const updated = updatedNote(event)
 
   return (
     <div className="space-y-5">
@@ -145,7 +154,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           {row?.published && squad.data && (
             <a href={whatsAppShareUrl(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })}
               target="_blank" rel="noopener noreferrer" className={quiet}>
-              <MessageCircle size={16} aria-hidden="true" />Share to WhatsApp
+              <img src="/whatsapp.png" alt="" width={20} height={20} className="rounded-[5px]" />Share to WhatsApp
             </a>
           )}
           {!cancelled && <>
@@ -161,6 +170,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           </>}
         </div>
       )}
+
+      {updated && <p className="text-[13px] text-white/50">{updated}</p>}
 
       {registering && row && (
         <TakeRegister eventId={row.id} coachId={coachId} sessionId={sessionId}
@@ -196,9 +207,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             </>}
           </>}
           {squad.data && squad.data.waiting.length > 0 && (
-            <p className="text-[12px] text-white/45 mt-4">
-              Not counted until consent is active · {squad.data.waiting.length}: {squad.data.waiting.map(p => p.name.split(' ')[0]).join(', ')}
-            </p>
+            <p className="text-[12px] text-white/45 mt-4">Attendance excludes players who are not using Trak</p>
           )}
         </section>
       )}

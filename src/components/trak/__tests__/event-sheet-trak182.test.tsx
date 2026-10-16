@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { format, parseISO } from 'date-fns'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -76,10 +77,12 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(screen.getByTestId('where')).toHaveTextContent('/home')
-    expect(within(sheet).getByText(/· Away$/)).toBeInTheDocument()
-    // Imad, 16 Oct: the start is the headline; the meet time is a detail above Maps.
+    // Imad, 16 Oct: Away under the opponent, the date at top right, Kick-off over the time.
+    expect(within(sheet).getByText('Away')).toBeInTheDocument()
+    expect(within(sheet).getByText(format(parseISO(day), 'EEE MMM d'))).toBeInTheDocument()
+    expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
-    const meet = within(sheet).getByText('Meet at 16:15')
+    const meet = within(sheet).getByText('16:15')
     expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
@@ -114,7 +117,8 @@ describe('TRAK-182: the event sheet', () => {
     renderStrip([event({})], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
-    expect(within(sheet).getByText('Published.')).toBeInTheDocument()
+    // The Published button says it; no status line repeats it (Imad, 16 Oct).
+    expect(within(sheet).queryByText('Published.')).toBeNull()
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     // J8.16's pre-written message, with the event's own link, not a bare link to paste.
     const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
@@ -122,7 +126,11 @@ describe('TRAK-182: the event sheet', () => {
     expect(text).toContain('U14 Match vs Rivals FC')
     expect(text).toContain('https://trakfootball.com/event/ev-1')
     expect(await within(sheet).findByText('Coming · 2')).toBeInTheDocument()
-    expect(within(sheet).queryByText(/Dan/)).toBeNull()
+    // Avatars only; the names come when the coach taps them.
+    expect(within(sheet).queryByRole('list', { name: 'Coming' })).toBeNull()
+    await user.click(within(sheet).getByRole('button', { name: 'Show names: Coming' }))
+    expect(within(within(sheet).getByRole('list', { name: 'Coming' })).getAllByRole('listitem').map(li => li.textContent))
+      .toEqual(['Bukayo Saka', 'Cole Palmer'])
     expect(within(sheet).getByText("Can't make it · 1")).toBeInTheDocument()
     expect(within(sheet).getByText('Beth Mead')).toBeInTheDocument()
     expect(within(sheet).getByText('School trip')).toBeInTheDocument()
@@ -148,7 +156,8 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Finishing/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
     expect(await within(sheet).findByText('Came · 1')).toBeInTheDocument()
-    expect(within(sheet).getByText(/^Bukayo$/)).toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: 'Show names: Came' }))
+    expect(within(within(sheet).getByRole('list', { name: 'Came' })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Bukayo Saka'])
     expect(within(sheet).getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
   })
@@ -173,7 +182,8 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByText('Coming · 1')).toBeInTheDocument()
-    expect(within(sheet).getByText('Not counted until consent is active · 1: Cole')).toBeInTheDocument()
+    expect(within(sheet).getByText('Attendance excludes players who are not using Trak')).toBeInTheDocument()
+    expect(within(sheet).queryByText(/Cole/)).toBeNull()
   })
 
   it('shows an error, not Take register, when the register lookup fails', async () => {
@@ -197,12 +207,13 @@ describe('TRAK-182: the event sheet', () => {
     expect(await within(sheet).findByText('No players in your squad yet.')).toBeInTheDocument()
   })
 
-  it('tells a family "Confirmed." with no coach actions and no other children', async () => {
+  it('shows a family the event with no coach actions and no other children', async () => {
     const user = userEvent.setup()
     renderStrip([event({})], 'parent')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
-    expect(within(sheet).getByText('Confirmed.')).toBeInTheDocument()
+    expect(within(sheet).queryByText('Confirmed.')).toBeNull()
+    expect(within(sheet).getByText('Rivals Park')).toBeInTheDocument()
     expect(within(sheet).getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Rivals%20Park')
     expect(within(sheet).queryByRole('button', { name: /Publish|Edit|Cancel/ })).not.toBeInTheDocument()
     expect(within(sheet).queryByRole('link', { name: /WhatsApp/ })).not.toBeInTheDocument()
@@ -217,7 +228,8 @@ describe('TRAK-182: the event sheet', () => {
     renderStrip([event({ kind: 'training', title: 'Finishing', opponent: null, homeAway: null, meetTime: null, status: 'cancelled', cancelReason: 'Pitch flooded' })], 'parent')
     await user.click(screen.getByRole('button', { name: /Finishing/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
-    expect(within(sheet).getByText(/· Training ground$/)).toBeInTheDocument()
+    expect(within(sheet).getByText('Training ground')).toBeInTheDocument()
+    expect(within(sheet).getByText('Starts')).toBeInTheDocument()
     expect(within(sheet).getByText('Cancelled.')).toBeInTheDocument()
     expect(within(sheet).getByText('Pitch flooded')).toBeInTheDocument()
     expect(within(sheet).queryByRole('link', { name: 'Open in Maps' })).toBeNull()
@@ -229,5 +241,19 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(within(sheet).getByText(/Updated 5m ago\./)).toBeInTheDocument()
+  })
+  it('puts the coach\'s "Updated" line between the buttons and Attending', async () => {
+    eventRow = row({ published: true })
+    const user = userEvent.setup()
+    renderStrip([event({ sequence: 1, updatedAt: new Date(Date.now() - 3 * 3600_000).toISOString() })], 'coach')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    const updated = within(sheet).getByText('Updated 3h ago.')
+    const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
+    expect(share.querySelector('img[src="/whatsapp.png"]')).not.toBeNull()
+    const attending = await within(sheet).findByRole('heading', { name: 'Attending' })
+    expect(share.compareDocumentPosition(updated) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(updated.compareDocumentPosition(attending) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(sheet).getAllByText('Updated 3h ago.')).toHaveLength(1)
   })
 })
