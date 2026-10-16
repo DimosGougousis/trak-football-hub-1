@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check, MessageCircle, Pencil } from 'lucide-react'
+import { Ban, Check, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Avatar } from '@/components/arc/avatar/avatar'
@@ -11,6 +11,7 @@ import { clashMessage, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
 import type { StripEvent } from '@/components/trak/WeekStrip'
+import { updatedNote } from '@/lib/alert-read-state'
 
 /* TRAK-182: the coach's part of the event sheet. Publish (a draft) or
    Published; after the event, Take register (J8.15). Share to WhatsApp (the
@@ -81,15 +82,31 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   }
 }
 
+/** Iconly's Send (Imad, 16 Oct), for Share to WhatsApp. */
+function SendIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path transform="translate(3 3)" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+        d="M12.8324759,5.17463303 L7.10903824,10.9591851 L0.599436312,6.88767232 C-0.333249591,6.30414294 -0.139234755,4.88743509 0.915720913,4.57892564 L16.3712257,0.0527673159 C17.3372579,-0.230371288 18.2325555,0.67283071 17.9455752,1.6419969 L13.3730902,17.0867511 C13.059837,18.1431929 11.6512085,18.331952 11.073206,17.3952605 L7.10600676,10.9602" />
+    </svg>
+  )
+}
+
+/** Avatars only (Imad, 16 Oct); tapping them, "+N" included, lists the full names. */
 function People({ heading, people }: { heading: string; people: Person[] }) {
+  const [open, setOpen] = useState(false)
   return <>
-    <p className="text-[13px] text-white/60 mb-2">{heading} · {people.length}</p>
-    {people.length > 0 && (
-      <div className="arc flex items-center gap-3">
+    {people.length > 0 && <>
+      <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} names: ${heading}`}
+        onClick={() => setOpen(o => !o)} className="arc rounded-full focus-visible:ring-2 focus-visible:ring-primary">
         <AvatarGroup members={people.map(p => ({ name: p.name }))} max={6} size="sm" label={heading} />
-        <p className="text-[12px] text-white/50 truncate">{people.map(p => p.name.split(' ')[0]).join(', ')}</p>
-      </div>
-    )}
+      </button>
+      {open && (
+        <ul aria-label={heading} className="mt-3 space-y-2">
+          {people.map(p => <li key={p.id} className="text-[14px] text-white/85">{p.name}</li>)}
+        </ul>
+      )}
+    </>}
   </>
 }
 
@@ -122,6 +139,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   const canRegister = row && registerProblem(row) === null
   const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60'
   const quiet = `${button} border border-white/15 text-white/85`
+  const heading = 'text-[15px] font-medium text-white/95 mb-2'
+  const updated = updatedNote(event)
 
   return (
     <div className="space-y-5">
@@ -145,7 +164,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           {row?.published && squad.data && (
             <a href={whatsAppShareUrl(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })}
               target="_blank" rel="noopener noreferrer" className={quiet}>
-              <MessageCircle size={16} aria-hidden="true" />Share to WhatsApp
+              <SendIcon />Share to WhatsApp
             </a>
           )}
           {!cancelled && <>
@@ -162,6 +181,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
         </div>
       )}
 
+      {updated && <p className="text-[13px] text-white/50">{updated}</p>}
+
       {registering && row && (
         <TakeRegister eventId={row.id} coachId={coachId} sessionId={sessionId}
           onSaved={() => { setRegistering(false); void client.invalidateQueries({ queryKey: ['coach', 'event', event.id] }); onChanged() }} />
@@ -169,7 +190,10 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
 
       {!cancelled && row && (
         <section aria-labelledby={`attending-${event.id}`}>
-          <h3 id={`attending-${event.id}`} className="text-[15px] font-medium text-white/95 mb-2">Attending</h3>
+          {/* The heading carries the count; no separate "Coming" line (Imad, 16 Oct). */}
+          <h3 id={`attending-${event.id}`} className={heading}>
+            {squad.data?.came ? 'Came' : 'Attending'}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
+          </h3>
           {!row.published ? (
             <p className="text-[13px] text-white/60">Families see this once you publish.</p>
           ) : squad.isError ? (
@@ -181,9 +205,9 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           ) : squad.data.came ? (
             <People heading="Came" people={squad.data.came} />
           ) : <>
-            <People heading="Coming" people={squad.data.coming} />
+            <People heading="Attending" people={squad.data.coming} />
             {squad.data.away.length > 0 && <>
-              <p className="text-[13px] text-white/60 mt-4 mb-2">Can't make it · {squad.data.away.length}</p>
+              <h3 className={`${heading} mt-5`}>Can't make it · {squad.data.away.length}</h3>
               <ul className="space-y-2">
                 {squad.data.away.map(p => (
                   <li key={p.id} className="flex items-center gap-3">
@@ -196,9 +220,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             </>}
           </>}
           {squad.data && squad.data.waiting.length > 0 && (
-            <p className="text-[12px] text-white/45 mt-4">
-              Not counted until consent is active · {squad.data.waiting.length}: {squad.data.waiting.map(p => p.name.split(' ')[0]).join(', ')}
-            </p>
+            // Kostas, 16 Oct: they are on Trak, waiting for consent (a parent's, or their own from the academy's consent age). A count, never names.
+            <p className="text-[12px] text-white/45 mt-4">{squad.data.waiting.length} not counted yet: waiting for consent</p>
           )}
         </section>
       )}

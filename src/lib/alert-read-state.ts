@@ -71,3 +71,12 @@ export function relativeLabel(date: string | null, now: Date = new Date()): stri
   if (new Date(at).toDateString() === yesterday.toDateString()) return 'Yesterday'
   return format(at, 'd MMM')
 }
+
+/** "Updated 5h ago.", "Updated yesterday.": the coach changed an event after publishing (TRAK-152 counts each change). */
+export function updatedNote(event: { sequence?: number | null; updatedAt?: string | null; status?: string }): string | null {
+  if (!event.sequence || !event.updatedAt || event.status === 'cancelled') return null
+  const when = relativeLabel(event.updatedAt)
+  if (!when) return null
+  const lower = when === 'Just now' || when === 'Yesterday' ? when.toLowerCase() : when
+  return `Updated ${/^\d+[mh]$/.test(when) ? `${when} ago` : lower}.`
+}
