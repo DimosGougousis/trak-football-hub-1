@@ -691,10 +691,14 @@ export default function CoachSchedule() {
                           {registerSession.has(row.id) ? 'Register taken · Edit' : 'Take register'}
                         </button>
                       )}
-                      {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && (
+                      {/* TRAK-138: a logged match is its event, so it's logged once. */}
+                      {row && row.event_type === 'match' && registerSession.has(row.id) && (
+                        <p className="mt-2 text-[10px] tracking-[0.08em] uppercase text-white/45" style={mono}>Match logged</p>
+                      )}
+                      {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && !registerSession.has(row.id) && (
                         <button aria-label={`Log match for ${row.title}`}
                           onClick={parked ? comingSoon : () => navigate('/coach/sessions/quick', {
-                            state: { fromEvent: { date: row.event_date, opponent: row.opponent, homeAway: row.home_away } },
+                            state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away } },
                           })}
                           className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-[#4ade80]" style={mono}>
                           Log match
