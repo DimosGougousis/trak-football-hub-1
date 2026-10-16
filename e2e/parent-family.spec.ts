@@ -178,6 +178,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
         unexpected.push(`${req.method()} ${url.pathname}`)
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
       })
+      // The training starts at 18:00 Dubai today; after that the coach's sheet offers
+      // Take register, not Published. Hold the page's clock before the start (never ahead of now).
+      await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
       await page.goto(`/${role}/home`)
       const week = page.getByRole('region', { name: 'This week' })
       await expect(week).toBeVisible()
@@ -188,7 +191,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         // TRAK-182: the event opens where it is, with the family's status and Can't make it.
         await week.getByRole('button', { name: /Technical training/ }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
-        await expect(sheet.getByText('Confirmed.')).toBeVisible()
+        await expect(sheet.getByText('Starts', { exact: true })).toBeVisible()
         await expect(sheet.getByRole('link', { name: 'Open in Maps' })).toBeVisible()
         await expect(sheet.getByRole('button', { name: "Can't make it" })).toBeVisible()
         await expect(sheet.getByRole('button', { name: /Publish|Edit/ })).toHaveCount(0)
@@ -237,7 +240,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await expect(page).toHaveURL(/\/coach\/home$/)
         await week.getByRole('button', { name: /Technical training/ }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
-        await expect(sheet.getByText('Published.')).toBeVisible()
+        await expect(sheet.getByRole('button', { name: 'Published' })).toBeDisabled()
         await expect(sheet.getByRole('link', { name: 'Share to WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
         await expect(sheet.getByRole('button', { name: 'Edit' })).toBeVisible()
         await expect(sheet.getByText('No players in your squad yet.')).toBeVisible()
