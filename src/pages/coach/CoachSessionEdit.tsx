@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
@@ -51,6 +51,11 @@ export default function CoachSessionEdit() {
   const { user } = useAuth()
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Back, and Save, return to where the coach came from (Home's week, Schedule,
+  // the list); opened directly, with nothing before it in Trak, the list
+  // (Imad, 16 Oct; TRAK-179's pattern for the assessment).
+  const goBack = () => { if (location.key !== 'default') navigate(-1); else navigate('/coach/sessions/list') }
 
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'failed'>('loading')
   const [attempt, setAttempt] = useState(0)
@@ -213,12 +218,12 @@ export default function CoachSessionEdit() {
     }
     toast.success('Session updated')
     setSaving(false)
-    navigate('/coach/sessions/list')
+    goBack()
   }
 
   const header = (
     <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
-      <button onClick={() => navigate('/coach/sessions/list')} aria-label="Back to sessions"
+      <button onClick={goBack} aria-label="Back"
         className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center">
         <ChevronLeft size={14} className="text-white/88" />
       </button>
