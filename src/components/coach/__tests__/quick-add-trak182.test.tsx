@@ -69,6 +69,30 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   })
 
+  // Imad, 16 Oct: an X to leave from anywhere, and Back once inside an option.
+  it('X closes it from the menu and from a form; Back returns from a form to the menu', async () => {
+    let menu = await openMenu()
+    const surface = () => menu.closest('[data-quick-add]') as HTMLElement
+    expect(within(surface()).getByText('Create')).toBeInTheDocument()
+    await userEvent.click(within(surface()).getByRole('button', { name: 'Close quick add' }))
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    expect(await screen.findByRole('button', { name: 'Quick add' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+    menu = await screen.findByRole('menu', { name: 'Quick add' })
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log match' }))
+    const form = await screen.findByRole('dialog', { name: 'Log a match' })
+    await userEvent.click(within(form).getByRole('button', { name: 'Back to Create' }))
+    expect(await screen.findByRole('menu', { name: 'Quick add' })).toBeInTheDocument()
+    await userEvent.click(within(screen.getByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
+    const event = await screen.findByRole('dialog', { name: 'New event' })
+    // The menu fades out over 0.1 s inside the same surface, its header with it.
+    await waitFor(() => expect(within(event).getAllByRole('button', { name: 'Close quick add' })).toHaveLength(1))
+    await userEvent.click(within(event).getByRole('button', { name: 'Close quick add' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New event' })).toBeNull())
+    expect(screen.getByRole('button', { name: 'Quick add' })).toBeInTheDocument()
+  })
+
   it('New event saves a draft families never see, then shows the check', async () => {
     const menu = await openMenu()
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
