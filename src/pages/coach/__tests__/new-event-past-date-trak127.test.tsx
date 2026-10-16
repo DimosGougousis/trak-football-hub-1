@@ -56,6 +56,15 @@ beforeEach(() => {
 })
 afterEach(() => { server.events.removeAllListeners() })
 
+/** The training log's date: a date box today, Arc's picker once #336 (TRAK-157) lands. */
+async function expectTrainingDate(day: string) {
+  const field = await screen.findByLabelText('Session date', { selector: 'input, button' })
+  if (field instanceof HTMLInputElement) return waitFor(() => expect(field).toHaveValue(day))
+  await userEvent.click(field)
+  const dialog = await screen.findByRole('dialog', { name: 'Session date calendar' })
+  expect(dialog.querySelector('[data-present] [aria-selected="true"]')?.getAttribute('data-date')).toBe(day)
+}
+
 async function newEventOn(day: string) {
   renderApp('/coach/schedule')
   await userEvent.click(await screen.findByRole('button', { name: 'Add event' }))
@@ -83,7 +92,7 @@ describe('TRAK-127: New event is for what is coming', { timeout: 30_000 }, () =>
   it('Log training from there opens the training log on that date', async () => {
     const sheet = await newEventOn(yesterday)
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Log training' }))
-    await waitFor(() => expect(screen.getAllByLabelText('Session date')[0]).toHaveValue(yesterday))
+    await expectTrainingDate(yesterday)
     expect(screen.getByRole('button', { name: /^Technical/ })).toBeInTheDocument()
   })
 
