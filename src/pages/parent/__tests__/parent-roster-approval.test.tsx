@@ -79,8 +79,9 @@ beforeEach(() => {
       ? HttpResponse.json(rosterWaiting)
       : HttpResponse.json({ code: 'PGRST000', message: 'Synthetic roster read unavailable', details: null, hint: null }, { status: rosterReadStatus })),
     http.post(endpoint('rpc/record_roster_consent'), async ({ request }) => {
-      grants.push(await request.json())
-      rosterWaiting = []
+      const grant = await request.json() as { p_roster_child_id: string }
+      grants.push(grant)
+      rosterWaiting = rosterWaiting.filter(child => (child as typeof ana).roster_child_id !== grant.p_roster_child_id)
       return HttpResponse.json(consentId)
     }),
     http.post(inviteUrl, async ({ request }) => {
@@ -127,15 +128,37 @@ describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
     expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
   })
 
-  // Home lost its banner link to /parent/consent, so the bar is the only way in.
-  it('on Home, a second waiting child is reachable, even after Reject on the first', async () => {
-    rosterWaiting = [ana, { roster_child_id: '98b00000-0000-4000-8000-000000000071', first_name: 'Bea', age_years: 10 }]
+  // Kostas's and Tarek's #329 review: each sibling is asked on their own; refusing one never blocks the other.
+  it('with two children waiting, Reject on the first moves to the second, and only the second is approved', async () => {
+    const bo = { roster_child_id: '98b00000-0000-4000-8000-000000000071', first_name: 'Bo', age_years: 13 }
+    rosterWaiting = [ana, bo]
+    await open('/parent/home')
+    expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
+    expect(screen.getByText('1 of 2 waiting')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    expect(await screen.findByText("Approve Bo's Trak account?")).toBeInTheDocument()
+    expect(screen.getByText('2 of 2 waiting')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await screen.findByText(consentStatement('Bo'))
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await waitFor(() => expect(grants).toHaveLength(1))
+    expect(grants[0]).toMatchObject({ p_roster_child_id: bo.roster_child_id, p_consent_text: consentStatement('Bo') })
+    await userEvent.click(await screen.findByRole('button', { name: 'Done' }))
+    // Ana was put off this visit: the bar folds, and the button brings her back.
+    await userEvent.click(await screen.findByRole('button', { name: "Review Ana's approval" }))
+    expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
+    expect(grants).toHaveLength(1)
+  })
+
+  it('folds only after every waiting child is put off, and reopens at the first', async () => {
+    const bo = { roster_child_id: '98b00000-0000-4000-8000-000000000071', first_name: 'Bo', age_years: 13 }
+    rosterWaiting = [ana, bo]
     await open('/parent/home')
     await userEvent.click(await screen.findByRole('button', { name: 'Reject' }))
-    await userEvent.click(await screen.findByRole('button', { name: "Review Ana's approval" }))
-    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Child to approve' }), 'Bea · Age 10')
-    expect(await screen.findByText("Approve Bea's Trak account?")).toBeInTheDocument()
-    expect(window.location.pathname).toBe('/parent/home')
+    await screen.findByText("Approve Bo's Trak account?")
+    await userEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Review approvals' }))
+    expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
     expect(grants).toEqual([])
   })
 

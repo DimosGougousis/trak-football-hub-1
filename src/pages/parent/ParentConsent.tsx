@@ -145,15 +145,20 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
     }
   }, [load])
 
-  const child = children.find(item => item.key === selectedChildId) ?? children[0] ?? null
+  // On Home (Kostas's and Tarek's #329 review): Reject moves on to the next waiting
+  // child, so each sibling is asked on their own; the bar folds only once every
+  // child has been put off, and the folded button starts again from the first.
+  const [skipped, setSkipped] = useState<string[]>([])
+  const asking = embedded ? children.filter(item => !skipped.includes(item.key)) : children
+  const child = asking.find(item => item.key === selectedChildId) ?? asking[0] ?? children[0] ?? null
+  const folded = embedded && children.length > 0 && asking.length === 0
   const currentDraft: ApprovalDraft = draft?.childId === child?.key && draft
     ? draft
     : { childId: child?.key ?? '', relationship: 'parent', optional: {} }
   const { relationship, optional } = currentDraft
-  // TRAK-182: the bar, its Details panel, the note after Reject (the page), or
-  // the folded reopen button after Reject (Home).
-  const [face, setFace] = useState<'bar' | 'details' | 'rejected' | 'chip'>('bar')
-  const reject = () => setFace(embedded ? 'chip' : 'rejected')
+  // TRAK-182: the bar, its Details panel, or the note after Reject (the page).
+  const [face, setFace] = useState<'bar' | 'details' | 'rejected'>('bar')
+  const reject = () => { if (!embedded) setFace('rejected'); else if (child) setSkipped(keys => [...keys, child.key]) }
   // On Home, once the bar is finished, Home re-reads; with nothing waiting, its gate removes the bar.
   const settle = () => { if (embedded) void client.invalidateQueries({ queryKey: ['parent', parentId] }) }
   const panelHeading = useRef<HTMLHeadingElement>(null)
@@ -314,9 +319,10 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
   }
 
   const firstName = child.full_name.split(' ')[0]
-  if (face === 'chip') return (
+  if (folded) return (
     <ConsentSurface face="chip" chip aboveNav={embedded}>
-      <button type="button" aria-label={`Review ${firstName}'s approval`} aria-haspopup="dialog" onClick={() => setFace('bar')}
+      <button type="button" aria-label={children.length > 1 ? 'Review approvals' : `Review ${firstName}'s approval`} aria-haspopup="dialog"
+        onClick={() => { setSkipped([]); setFace('bar') }}
         className="grid size-full place-items-center text-white/85 focus-visible:ring-2 focus-visible:ring-primary rounded-full">
         <InfoIcon />
       </button>
@@ -349,8 +355,7 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
       <ConsentSurface face={face} labelledBy="consent-title" aboveNav={embedded}>
         {face === 'bar' ? <>
           {embedded && savedFor && <p role="status" className="text-[13px] text-white/60 mb-1">Approval saved for {savedFor}.</p>}
-          {/* Home has no other way to the next child: with two waiting, choose here. */}
-          {embedded && picker && <div className="mb-3">{picker}</div>}
+          {embedded && children.length > 1 && <p className="text-[13px] text-white/50 mb-1">{children.indexOf(child) + 1} of {children.length} waiting</p>}
           <p id="consent-title" className="text-[16px] font-medium text-white/95">Approve {firstName}'s Trak account?</p>
           <p className="text-[14px] text-white/65 mt-1">Their coach records how they train and play, and you see their progress.</p>
           <div className="flex gap-2 mt-4">
