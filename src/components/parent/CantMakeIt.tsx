@@ -41,10 +41,11 @@ export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent;
 
   if (event.status === 'cancelled' || event.date < new Date().toLocaleDateString('en-CA')) return null
   const refusal = change.error && <p role="alert" className="text-sm text-destructive mt-2">{change.error.message}</p>
-  const button = 'min-h-11 px-4 rounded-lg border border-border text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50'
+  const button = 'min-h-11 shrink-0 px-4 rounded-full border border-border text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50'
 
   return (
-    <section aria-label="Attendance" className="rounded-xl border border-border bg-card p-4">
+    // No box: one line and its button (Imad, 16 Oct: the box took space for nothing).
+    <section aria-label="Attendance">
       {absence.isError ? <>
         <p className="text-sm text-foreground">Couldn't check whether {self ? "you're" : `${child.name} is`} coming.</p>
         <button type="button" onClick={() => { void absence.refetch() }} className={`${button} mt-3`}>Retry</button>
@@ -64,8 +65,10 @@ export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent;
           </div>
           {refusal}
         </> : <>
-          <p className="text-sm text-muted-foreground mb-3">Everyone counts as coming. Only say if {self ? 'you' : child.name} can't.</p>
-          <button type="button" onClick={() => setWriting(true)} className={button}>Can't make it</button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">Everyone counts as coming. Only say if {self ? 'you' : child.name} can't.</p>
+            <button type="button" onClick={() => setWriting(true)} className={button}>Can't make it</button>
+          </div>
         </>}
     </section>
   )
