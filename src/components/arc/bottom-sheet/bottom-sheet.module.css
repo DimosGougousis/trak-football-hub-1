@@ -45,7 +45,8 @@
 .sheet[data-dragging] .grabberBar { background: var(--text-muted); }
 
 .headRow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
-.headText { min-width: 0; }
+.headText { min-width: 0; flex: 1; }
+.aside { flex: none; padding-top: 3px; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); white-space: nowrap; }
 .title { margin: 0; font-family: var(--font-body); font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); }
 .description { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
 

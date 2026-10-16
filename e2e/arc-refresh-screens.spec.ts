@@ -12,7 +12,7 @@ const players = [
   { id: 'sq-5', player_name: 'Thiago Silva', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
 ].map(p => ({ ...p, coach_user_id: ids.coach, status: 'active', linked_player_id: `${p.id}-user`, created_at: '2026-10-01T08:00:00Z' }))
 
-async function coachBackend(context: BrowserContext, unexpected: string[]) {
+async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false) {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
   const user = { id: ids.coach, email: 'coach@arc182.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
@@ -40,6 +40,15 @@ async function coachBackend(context: BrowserContext, unexpected: string[]) {
     }
     // A lookup for one player's session is a first assessment here; lists get the recent three.
     if (path === '/rest/v1/coach_assessments') return json(url.searchParams.has('session_id') ? [] : assessments)
+    // withMatch: a published away match tonight, changed 3 h ago; Beth can't make it, Thiago's consent isn't active.
+    const match = { id: 'ev-182', coach_user_id: ids.coach, event_type: 'match', title: 'League', event_date: day, start_time: '20:00:00',
+      meet_time: '19:15:00', starts_at: `${day}T16:00:00Z`, venue: 'Rivals Park', kit: 'White shirts, black shorts', opponent: 'Rivals FC',
+      home_away: 'away', status: 'scheduled', published: true, family_note: 'Bring water and shin pads', sequence: 1,
+      updated_at: new Date(Date.now() - 3 * 3600_000).toISOString() }
+    if (withMatch && path === '/rest/v1/coach_sessions' && url.searchParams.has('event_id')) return json([])
+    if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
+    if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'School trip' }])
+    if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(req.postDataJSON()?.p_squad_player_id === 'sq-5')
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
@@ -74,6 +83,30 @@ test.describe('TRAK-182 coach screens', () => {
       expect(errors).toEqual([])
     })
   }
+
+  // Imad, 16 Oct: the event sheet's layout, with the names folded behind the avatars and opened.
+  test('coach event sheet, a published away match', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected, true)
+    await page.goto('/coach/home')
+    await page.getByRole('button', { name: /Rivals FC/ }).click()
+    const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
+    await expect(sheet.getByRole('heading', { name: 'Attending · 3' })).toBeVisible()
+    await expect(sheet.getByText(/not counted yet: waiting for consent/)).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath('coach-event-sheet-1.png') })
+    await sheet.getByRole('button', { name: 'Expand sheet' }).click()
+    await sheet.getByRole('button', { name: 'Show names: Attending' }).click()
+    await expect(sheet.getByRole('list', { name: 'Attending' }).getByRole('listitem')).toHaveCount(3)
+    await page.mouse.move(0, 0) // a phone has no hover; keep the avatar tooltip out of the shot
+    await sheet.getByRole('heading', { name: 'Attending · 3' }).scrollIntoViewIfNeeded()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath('coach-event-sheet-2-names.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
 
   // TRAK-182 part 8: the quick-add's four faces: "+", menu, form, check.
   test('coach quick add, its four states', async ({ page, context }, testInfo) => {

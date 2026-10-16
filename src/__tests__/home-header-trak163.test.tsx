@@ -64,7 +64,8 @@ describe('week strip', () => {
     await userEvent.click(within(days).getByRole('button', { name: /Friday 16 October/ }))
     await userEvent.click(screen.getByRole('button', { name: /Palm United/ }))
     const opened = await screen.findByRole('dialog', { name: 'vs Palm United' })
-    expect(within(opened).getByText('Confirmed.')).toBeInTheDocument()
+    expect(within(opened).getByText('Away')).toBeInTheDocument()
+    expect(within(opened).getByText('Fri Oct 16')).toBeInTheDocument()
   })
 
   it('runs Monday to Sunday with today selected, and keeps the past days of the week (Imad, 12 Oct)', async () => {
