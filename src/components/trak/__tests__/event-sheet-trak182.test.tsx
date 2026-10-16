@@ -77,8 +77,10 @@ describe('TRAK-182: the event sheet', () => {
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(screen.getByTestId('where')).toHaveTextContent('/home')
     expect(within(sheet).getByText(/· Away$/)).toBeInTheDocument()
-    expect(within(sheet).getByText('16:15')).toBeInTheDocument()
+    // Imad, 16 Oct: the start is the headline; the meet time is a detail above Maps.
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
+    const meet = within(sheet).getByText('Meet at 16:15')
+    expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
     expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
