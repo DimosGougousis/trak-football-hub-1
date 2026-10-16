@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useNavigate, type NavigateOptions } from 'react-router-dom'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { Check, ClipboardCheck, Plus, Swords, CalendarPlus, Dumbbell } from 'lucide-react'
+import { ArrowLeft, Check, ClipboardCheck, Plus, Swords, CalendarPlus, Dumbbell, X } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { localTodayISO } from '@/lib/event-time'
@@ -27,6 +27,19 @@ type Face = 'closed' | 'menu' | 'event' | 'match' | 'done'
 const SPRING = { type: 'spring', bounce: 0, visualDuration: 0.35 } as const
 const CHECK_SPRING = { type: 'spring', bounce: 0.3, visualDuration: 0.35 } as const
 const field = 'w-full rounded-[12px] border border-white/[0.08] bg-[#0A0A0B] px-3 py-2.5 text-[16px] text-white/90 placeholder-white/25 outline-none focus-visible:ring-2 focus-visible:ring-primary'
+
+/** The top row of the open surface: Back (on a form), its title, and X, which
+ *  closes it from anywhere (Imad, 16 Oct, as Arc's action menu does). */
+function Header({ title, onBack, onClose }: { title: string; onBack?: () => void; onClose: () => void }) {
+  const icon = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 hover:bg-white/[0.06] active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  return (
+    <div className="-mx-1 -mt-1 mb-1 flex items-center gap-1">
+      {onBack && <button type="button" aria-label="Back to Create" onClick={onBack} className={icon}><ArrowLeft size={18} aria-hidden="true" /></button>}
+      <p className={`flex-1 text-[15px] font-medium text-white/90 ${onBack ? '' : 'pl-2'}`}>{title}</p>
+      <button type="button" aria-label="Close quick add" onClick={onClose} className={icon}><X size={18} aria-hidden="true" /></button>
+    </div>
+  )
+}
 
 /** Home or away as two pressed buttons: it starts unanswered, as on Schedule,
  *  so a fixture is never saved as Home because nobody chose (Tarek, #319). */
@@ -183,11 +196,17 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
           role={face === 'event' || face === 'match' ? 'dialog' : undefined}
           aria-label={face === 'event' ? 'New event' : face === 'match' ? 'Log a match' : undefined}
           transition={face === 'done' ? CHECK_SPRING : SPRING}
-          // overflow: clip, not hidden: a hidden box can still be scrolled when a picker takes focus.
+          // Clip (never "hidden", which focus can scroll) while the shape morphs; a
+          // form lets its pickers out, and they open upward: the surface sits at
+          // the bottom of the screen, so opening down ran off it (Imad, 16 Oct).
           style={{ borderRadius: round ? 28 : 22, originX: 1, originY: 1 }}
-          className={`arc pointer-events-auto overflow-clip border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]
+          className={`arc pointer-events-auto border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]
             bg-[#141416]/90 backdrop-blur-xl [@media(prefers-reduced-transparency:reduce)]:bg-[#141416] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none
-            ${round ? 'w-14 h-14' : 'w-[min(340px,calc(100vw-32px))]'}`}>
+            [&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
+            [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left
+            [&_[aria-label$=calendar]]:bg-[#1a1a1d] [&_[role=listbox]]:bg-[#1a1a1d]
+            ${face === 'event' || face === 'match' ? 'overflow-visible' : 'overflow-clip'}
+            ${round ? 'w-14 h-14' : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div key={face} initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}
@@ -213,6 +232,8 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
               )}
 
               {face === 'menu' && (
+                <>
+                <Header title="Create" onClose={close} />
                 <div role="menu" aria-label="Quick add" className="space-y-0.5">
                   {register && (
                     <button type="button" role="menuitem" className={item}
@@ -231,11 +252,12 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                     <CalendarPlus size={18} aria-hidden="true" className="text-white/60" />New event
                   </button>
                 </div>
+                </>
               )}
 
               {face === 'event' && (
                 <div className="space-y-3">
-                  <p className="text-[15px] font-medium text-white/90">New event</p>
+                  <Header title="New event" onBack={back} onClose={close} />
                   <SegmentedControl label="Event type" value={kind} onValueChange={v => { setKind(v as 'training' | 'match'); setError(null) }}
                     options={[{ value: 'training', label: 'Training' }, { value: 'match', label: 'Match' }]} />
                   {kind === 'match' && <>
@@ -243,7 +265,8 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                       placeholder="Opponent" className={field} />
                     <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
                   </>}
-                  <div className="grid grid-cols-2 gap-2">
+                  {/* One per row: each picker's panel opens across the surface's full width. */}
+                  <div className="space-y-3">
                     <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
                       onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
                       format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
@@ -260,7 +283,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
 
               {face === 'match' && (
                 <div className="space-y-3">
-                  <p className="text-[15px] font-medium text-white/90">Log a match</p>
+                  <Header title="Log a match" onBack={back} onClose={close} />
                   <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
                     placeholder="Opponent" className={field} />
                   <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
@@ -283,13 +306,6 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
           </AnimatePresence>
         </motion.div>
       </LayoutGroup>
-      {/* Open: a close control stays where the "+" was, so the way back is where the way in was. */}
-      {!round && (
-        <button type="button" onClick={close} aria-label="Close quick add"
-          className="pointer-events-auto sr-only focus:not-sr-only focus:absolute focus:-top-10 focus:right-0 focus:rounded-full focus:bg-[#141416] focus:px-3 focus:py-1.5 focus:text-[13px] focus:text-white/80">
-          Close
-        </button>
-      )}
     </div>
   </>
 }
