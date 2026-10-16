@@ -57,7 +57,7 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
   it('opens a menu that arrow keys move through, and Escape returns to the "+"', async () => {
     const menu = await openMenu()
     const items = within(menu).getAllByRole('menuitem').map(i => i.textContent)
-    expect(items).toEqual(['Log training', 'Log match', 'New event'])
+    expect(items).toEqual(['Log training', 'Log match', 'Assess player', 'New event'])
     await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log training' })).toHaveFocus())
     await userEvent.keyboard('{ArrowDown}')
     expect(within(menu).getByRole('menuitem', { name: 'Log match' })).toHaveFocus()
@@ -67,6 +67,13 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Quick add' })).toHaveFocus())
     // It fades out (0.1 s), then it's gone.
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+  })
+
+  // Imad, 16 Oct (Kostas's item 9): Assess player is a quick action too.
+  it('Assess player goes to the assessment', async () => {
+    const menu = await openMenu()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Assess player' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
   })
 
   // Imad, 16 Oct: an X to leave from anywhere, and Back once inside an option.
