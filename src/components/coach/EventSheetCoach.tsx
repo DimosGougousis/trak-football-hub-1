@@ -220,8 +220,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             </>}
           </>}
           {squad.data && squad.data.waiting.length > 0 && (
-            // Kostas, 16 Oct: they are on Trak, waiting for a parent's approval. A count, never names.
-            <p className="text-[12px] text-white/45 mt-4">{squad.data.waiting.length} not counted yet: waiting for a parent's approval</p>
+            // Kostas, 16 Oct: they are on Trak, waiting for consent (a parent's, or their own from the academy's consent age). A count, never names.
+            <p className="text-[12px] text-white/45 mt-4">{squad.data.waiting.length} not counted yet: waiting for consent</p>
           )}
         </section>
       )}

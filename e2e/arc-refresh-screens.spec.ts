@@ -94,7 +94,7 @@ test.describe('TRAK-182 coach screens', () => {
     await page.getByRole('button', { name: /Rivals FC/ }).click()
     const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
     await expect(sheet.getByRole('heading', { name: 'Attending · 3' })).toBeVisible()
-    await expect(sheet.getByText(/not counted yet: waiting for a parent's approval/)).toBeVisible()
+    await expect(sheet.getByText(/not counted yet: waiting for consent/)).toBeVisible()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath('coach-event-sheet-1.png') })
     await sheet.getByRole('button', { name: 'Expand sheet' }).click()

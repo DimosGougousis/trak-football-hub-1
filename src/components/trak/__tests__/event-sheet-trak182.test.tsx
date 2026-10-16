@@ -182,8 +182,8 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('heading', { name: 'Attending · 1' })).toBeInTheDocument()
-    // Kostas, 16 Oct: they are on Trak, waiting for a parent's approval. A count, never names.
-    expect(within(sheet).getByText("1 not counted yet: waiting for a parent's approval")).toBeInTheDocument()
+    // Kostas, 16 Oct: they are on Trak, waiting for consent (a parent's, or their own from the academy's consent age). A count, never names.
+    expect(within(sheet).getByText("1 not counted yet: waiting for consent")).toBeInTheDocument()
     expect(within(sheet).queryByText(/Cole/)).toBeNull()
   })
 
