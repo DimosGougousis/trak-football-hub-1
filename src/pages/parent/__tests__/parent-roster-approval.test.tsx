@@ -143,6 +143,8 @@ describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
     await waitFor(() => expect(grants).toHaveLength(1))
     expect(grants[0]).toMatchObject({ p_roster_child_id: bo.roster_child_id, p_consent_text: consentStatement('Bo') })
+    // Kostas's #329 note: the bar moves on or folds, so the saved approval is said in a toast.
+    expect(await screen.findByText('Approval saved for Bo.')).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Done' }))
     // Ana was put off this visit: the bar folds, and the button brings her back.
     await userEvent.click(await screen.findByRole('button', { name: "Review Ana's approval" }))
