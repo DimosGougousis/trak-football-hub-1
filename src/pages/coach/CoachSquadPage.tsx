@@ -176,13 +176,18 @@ export default function CoachSquadPage() {
           {/* Age groups only when the coach has two or more (U14 and U16, TRAK-176). */}
           {ageGroups.length >= 2 && (
             <LayoutGroup id="age">
-              <SegmentedControl label="Age group" value={ageFilter} onValueChange={setAgeFilter}
-                options={['All', ...ageGroups].map(age => ({ value: age, label: age }))} />
+              <div className="flex justify-center">
+                <SegmentedControl label="Age group" value={ageFilter} onValueChange={setAgeFilter}
+                  options={['All', ...ageGroups].map(age => ({ value: age, label: age }))} />
+              </div>
             </LayoutGroup>
           )}
-          {/* Each control's highlight shares Arc's layoutId; a group keeps the two from swapping it. */}
+          {/* Each control's highlight shares Arc's layoutId; a group keeps the two from swapping it.
+              Centred under the search (Imad, 16 Oct). */}
           <LayoutGroup id="position">
-            <SegmentedControl label="Position" value={posFilter} onValueChange={setPosFilter} options={POSITIONS} />
+            <div className="flex justify-center">
+              <SegmentedControl label="Position" value={posFilter} onValueChange={setPosFilter} options={POSITIONS} />
+            </div>
           </LayoutGroup>
         </div>
       )}
