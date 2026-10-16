@@ -127,6 +127,18 @@ describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
     expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()
   })
 
+  // Home lost its banner link to /parent/consent, so the bar is the only way in.
+  it('on Home, a second waiting child is reachable, even after Reject on the first', async () => {
+    rosterWaiting = [ana, { roster_child_id: '98b00000-0000-4000-8000-000000000071', first_name: 'Bea', age_years: 10 }]
+    await open('/parent/home')
+    await userEvent.click(await screen.findByRole('button', { name: 'Reject' }))
+    await userEvent.click(await screen.findByRole('button', { name: "Review Ana's approval" }))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Child to approve' }), 'Bea · Age 10')
+    expect(await screen.findByText("Approve Bea's Trak account?")).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/parent/home')
+    expect(grants).toEqual([])
+  })
+
   it('shows no bar on Home when no child is waiting', async () => {
     rosterWaiting = []
     await open('/parent/home')

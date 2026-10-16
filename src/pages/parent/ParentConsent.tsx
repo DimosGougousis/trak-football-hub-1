@@ -327,10 +327,30 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
      panel: the relationship is chosen and the statement read there, before
      the approval that stores them. Reject records nothing; the child stays
      waiting and the coach sees "waiting for a parent". */
+  const picker = children.length > 1 && (
+    <div>
+      <label htmlFor="approval-child" className="block text-sm text-muted-foreground mb-2">Child to approve</label>
+      <FamilySelect id="approval-child" value={child.key} disabled={submitting}
+        onChange={event => {
+          if (submittingNow.current) return
+          setSelectedChildId(event.target.value)
+          setDraft(null)
+          setSavedFor(null)
+          setFace('bar')
+        }}>
+        {children.map(item => (
+          <option key={item.key} value={item.key}>{item.full_name} · Age {item.age_years}</option>
+        ))}
+      </FamilySelect>
+    </div>
+  )
+
   const surface = (
       <ConsentSurface face={face} labelledBy="consent-title" aboveNav={embedded}>
         {face === 'bar' ? <>
           {embedded && savedFor && <p role="status" className="text-[13px] text-white/60 mb-1">Approval saved for {savedFor}.</p>}
+          {/* Home has no other way to the next child: with two waiting, choose here. */}
+          {embedded && picker && <div className="mb-3">{picker}</div>}
           <p id="consent-title" className="text-[16px] font-medium text-white/95">Approve {firstName}'s Trak account?</p>
           <p className="text-[14px] text-white/65 mt-1">Their coach records how they train and play, and you see their progress.</p>
           <div className="flex gap-2 mt-4">
@@ -394,23 +414,7 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
     <MobileShell>
       <div className="px-6 py-8 flex flex-col gap-5">
         {savedFor && <p role="status" className="text-sm text-muted-foreground">Approval saved for {savedFor}.</p>}
-        {children.length > 1 && (
-          <div>
-            <label htmlFor="approval-child" className="block text-sm text-muted-foreground mb-2">Child to approve</label>
-            <FamilySelect id="approval-child" value={child.key} disabled={submitting}
-              onChange={event => {
-                if (submittingNow.current) return
-                setSelectedChildId(event.target.value)
-                setDraft(null)
-                setSavedFor(null)
-                setFace('bar')
-              }}>
-              {children.map(item => (
-                <option key={item.key} value={item.key}>{item.full_name} · Age {item.age_years}</option>
-              ))}
-            </FamilySelect>
-          </div>
-        )}
+        {picker}
         <div>
           <h1 className="text-2xl text-foreground mb-1 break-words">{child.full_name} is waiting for your approval</h1>
           <p className="text-sm text-muted-foreground">Nothing about {firstName} is recorded until you approve.</p>
