@@ -74,14 +74,22 @@ const minutes = (hhmm: string) => {
   return h * 60 + m
 }
 
+/** What the event is: a match's opponent, an "other" event's name. The Schedule
+ *  form's first step checks only this (TRAK-182); formProblem() checks it too. */
+export function whatProblem(form: EventForm): string | null {
+  if (form.kind === 'match' && !form.opponent.trim()) return 'Add the opponent'
+  if (form.kind === 'other' && !form.title.trim()) return 'Say what the event is'
+  return null
+}
+
 /** What's wrong with the form in words the coach can act on, or null. */
 export function formProblem(form: EventForm): string | null {
   if (!form.date || !toInstant(form.date, form.time || null)) return 'Pick a real date and time'
   // TRAK-157: every event has a start time (Imad, 12 Oct). The 11 Oct live run
   // saved 8 published trainings with none; the database refuses it too.
   if (!form.time) return 'Pick a start time'
-  if (form.kind === 'match' && !form.opponent.trim()) return 'Add the opponent'
-  if (form.kind === 'other' && !form.title.trim()) return 'Say what the event is'
+  const what = whatProblem(form)
+  if (what) return what
   if (form.meetTime && minutes(form.meetTime) > minutes(form.time)) return 'Meet time must be before the start'
   if (form.familyNote.trim().length > FAMILY_NOTE_MAX) return `Keep the note to ${FAMILY_NOTE_MAX} characters`
   return null
@@ -242,3 +250,16 @@ export function clashMessage(error: unknown): string | null {
   const e = error as { code?: string, message?: string } | null
   return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
 }
+
+// TRAK-157: Arc's date picker speaks Date; forms keep YYYY-MM-DD (the
+// academy's calendar day), so convert at local midnight both ways.
+export const dayAsDate = (day: string) => {
+  const [y, m, d] = day.split('-').map(Number)
+  return day ? new Date(y, m - 1, d) : undefined
+}
+export const dateAsDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+/** What a new event's insert adds to formToRow(): a draft only its coach sees,
+ *  until Publish (Imad, 9 Oct). Schedule's form and the quick-add share it. */
+export const newDraftFields = (coachId: string) => ({ coach_user_id: coachId, published: false, source: 'manual' })

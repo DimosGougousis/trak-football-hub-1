@@ -75,6 +75,92 @@ test.describe('TRAK-182 coach screens', () => {
     })
   }
 
+  // TRAK-182 part 8: the quick-add's four faces: "+", menu, form, check.
+  test('coach quick add, its four states', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    // The draft's insert answers like PostgREST.
+    await context.route(url => url.pathname === '/rest/v1/coach_calendar_events', route =>
+      route.request().method() === 'POST' ? route.fulfill({ status: 201, contentType: 'application/json', body: '[{"id":"new-1"}]' }) : route.fallback())
+    await page.goto('/coach/schedule')
+    const plus = page.getByRole('button', { name: 'Quick add' })
+    await expect(plus).toBeVisible()
+    const settle = async () => {
+      // motion's springs run in JavaScript: wait until the surface stops moving.
+      let last = ''
+      for (let i = 0; i < 20; i++) {
+        const box = JSON.stringify(await page.locator('[data-quick-add] > div').first().boundingBox())
+        if (box === last) return
+        last = box; await page.waitForTimeout(80)
+      }
+    }
+    await settle(); await page.screenshot({ path: testInfo.outputPath('quick-add-1-plus.png') })
+    await plus.click()
+    await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
+    await settle(); await page.screenshot({ path: testInfo.outputPath('quick-add-2-menu.png') })
+    await page.getByRole('menuitem', { name: 'New event' }).click()
+    const form = page.getByRole('dialog', { name: 'New event' })
+    await expect(form).toBeVisible()
+    await settle(); await page.screenshot({ path: testInfo.outputPath('quick-add-3-form.png') })
+    // The pickers open upward, whole, inside the screen (Imad, 16 Oct).
+    await form.getByRole('button', { name: /^Date\b/ }).click()
+    const calendar = page.getByRole('dialog', { name: 'Date calendar' })
+    await expect(calendar).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('quick-add-3b-calendar.png') })
+    const box = await calendar.boundingBox()
+    expect(box!.y).toBeGreaterThanOrEqual(0)
+    expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height)
+    await page.keyboard.press('Escape')
+    await form.getByRole('button', { name: /^Start\b/ }).click()
+    const list = page.getByRole('listbox')
+    await expect(list).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('quick-add-3c-times.png') })
+    const listBox = await list.boundingBox()
+    expect(listBox!.y).toBeGreaterThanOrEqual(0)
+    await list.getByRole('option', { name: '5:00 PM' }).click()
+    await form.getByRole('button', { name: 'Save draft' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeAttached()
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath('quick-add-4-check.png') })
+    await expect(page.getByRole('button', { name: 'Quick add' })).toBeVisible({ timeout: 3000 })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  // TRAK-182 part 7: Schedule's event form one step per screen, ending in Review.
+  test('coach schedule, through the steps', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/schedule')
+    await page.getByRole('button', { name: 'Add event' }).click()
+    const sheet = page.getByRole('dialog', { name: 'New event' })
+    await sheet.getByRole('button', { name: 'Match' }).click()
+    await sheet.getByLabel('Opponent').fill('Synthetic Rovers')
+    await sheet.getByRole('button', { name: 'Away' }).click()
+    await sheet.getByLabel('Venue').fill('Rovers Park')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-schedule-what.png') })
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await sheet.getByRole('button', { name: /^Kickoff\b/ }).click()
+    await page.getByRole('listbox').getByRole('option', { name: '4:00 PM' }).click()
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await sheet.getByLabel('Kit').fill('Red shirts, black shorts')
+    await sheet.getByRole('button', { name: 'Next' }).click()
+    await expect(sheet.getByRole('button', { name: 'Publish' })).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Save draft' })).toBeVisible()
+    await expect(sheet.getByText('Synthetic Rovers (Away)')).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-schedule-review.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   // TRAK-182 part 7: the assessment one step per screen, ending in Review.
   test('coach assess, through the steps', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
@@ -92,7 +178,10 @@ test.describe('TRAK-182 coach screens', () => {
     await page.screenshot({ path: testInfo.outputPath('coach-assess-ratings.png'), fullPage: true })
     await page.getByRole('button', { name: 'Next' }).click()
     await page.getByLabel(/^Message to/).fill('Great pressing today.')
-    await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByLabel(/^Private note/).fill('Work on the first touch under pressure.')
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath('coach-assess-message.png'), fullPage: true })
+    // Message and private note share a step (Imad, 16 Oct); Next goes to Review.
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Save draft' })).toBeVisible()

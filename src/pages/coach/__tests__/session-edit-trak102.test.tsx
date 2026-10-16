@@ -109,6 +109,28 @@ describe('TRAK-102: a coach opens and corrects a saved training session', () => 
     expect(tile(/Anna Added/)).toHaveAttribute('aria-pressed', 'false')
   })
 
+  // Imad, 16 Oct: Back returns to where the coach came from (Home's week, via the
+  // sheet's "Open session"), not always to the list. Going back leaves the
+  // history as it was; the old Back pushed the list on top.
+  it('Back goes back to the screen it came from', async () => {
+    const user = userEvent.setup()
+    renderApp('/coach/sessions/list')
+    await user.click(await screen.findByRole('button', { name: /Finishing Training/ }, { timeout: 5000 }))
+    expect(await screen.findByText('Edit session')).toBeInTheDocument()
+    const depth = window.history.length
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/sessions/list'))
+    expect(window.history.length).toBe(depth)
+  })
+
+  it('opened directly, Back goes to the sessions list', async () => {
+    const user = userEvent.setup()
+    renderApp('/coach/sessions/session-1')
+    expect(await screen.findByText('Edit session')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/sessions/list'))
+  })
+
   it('saves the missed note, a new date and focus, without touching attendance', async () => {
     const user = userEvent.setup()
     await openSaved()

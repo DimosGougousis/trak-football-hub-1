@@ -3,6 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { saveLog, trainingAt } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { server } from '../../../../tests/msw/server'
@@ -35,7 +36,8 @@ function setup(players=[READY,WITHDRAWN]) {
 async function refresh(){await act(async()=>{const {error}=await supabase.auth.refreshSession();expect(error).toBeNull()})}
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}
 
-describe('independent #126 consent refresh review',()=>{
+// TRAK-182: walking the steps takes longer than 5 s on GitHub's runners.
+describe('independent #126 consent refresh review', { timeout: 20_000 }, () =>{
  beforeEach(()=>signInAs(COACH))
  it('excludes a selected child from the outgoing batch after a fresh check marks them waiting',async()=>{
   const inserted=setup();let withdrawn=false
@@ -44,13 +46,13 @@ describe('independent #126 consent refresh review',()=>{
    return HttpResponse.json(withdrawn&&p_squad_player_id==='withdrawn')
   }))
   const user=userEvent.setup();renderApp('/coach/sessions/add')
+  await trainingAt('Attendance')
   await screen.findByRole('button',{name:/Wes Withdrawn/})
-  await user.click(screen.getByRole('button',{name:/Technical/}))
   await user.click(screen.getByRole('button',{name:'ALL'}))
   withdrawn=true;await refresh()
   await screen.findByText(/Wes Withdrawn \(waiting for a parent\)/)
   expect(screen.queryByRole('button',{name:/Wes Withdrawn/})).toBeNull()
-  await user.click(screen.getByRole('button',{name:'Save session'}))
+  await saveLog('Save session')
   await waitFor(()=>expect(inserted.length).toBeGreaterThan(0))
   expect(inserted.map(p=>p.squad_player_id)).toEqual(['ready'])
  })
@@ -59,7 +61,7 @@ describe('independent #126 consent refresh review',()=>{
   server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`,()=> fail
    ? HttpResponse.json({message:'roster unavailable',code:'XX000'},{status:400}) : HttpResponse.json([READY])),
    http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`,()=>HttpResponse.json(false)))
-  renderApp('/coach/sessions/add');await screen.findByRole('button',{name:/Rea Ready/})
+  renderApp('/coach/sessions/add');await trainingAt('Attendance');await screen.findByRole('button',{name:/Rea Ready/})
   fail=true;await refresh();await screen.findByText(/Couldn't load your squad/)
   expect(screen.queryByRole('button',{name:/Rea Ready/})).toBeNull()
  })
@@ -70,7 +72,7 @@ describe('independent #126 consent refresh review',()=>{
    if(call===1){await held.promise;return HttpResponse.json(false)}
    return HttpResponse.json(true)
   }))
-  renderApp('/coach/sessions/add');await waitFor(()=>expect(checks).toBe(1))
+  renderApp('/coach/sessions/add');await waitFor(()=>expect(checks).toBe(1));await trainingAt('Attendance')
   await refresh();await screen.findByText(/Rea Ready \(waiting for a parent\)/)
   await act(async()=>{held.resolve();await held.promise;await new Promise(r=>setTimeout(r,50))})
   expect(screen.queryByRole('button',{name:/Rea Ready/})).toBeNull()

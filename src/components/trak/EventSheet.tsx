@@ -1,14 +1,15 @@
 import type { ReactElement, ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
+import { Ban, CalendarPlus, CircleCheck, CircleDashed, Clock, MapPin } from 'lucide-react'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { relativeLabel } from '@/lib/alert-read-state'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 
-/* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet, laid out like
-   a boarding pass. Title: the opponent ("vs Rivals FC") or the session's name.
+/* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet. Since 16 Oct
+   it reads less like a boarding pass: the start time is the headline, and the
+   meet time sits with the details above Open in Maps. Title: the opponent ("vs Rivals FC") or the session's name.
    Under it: the date and Home / Away / Training ground. The time row runs from
    the meet time to the start, with the venue under it. Then one status line:
    Published / Draft for the coach, Confirmed for families. Role-specific parts
@@ -28,15 +29,9 @@ function sheetPlace(event: StripEvent): string | null {
   return event.kind === 'training' ? 'Training ground' : null
 }
 
-const minutes = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3, 5))
-function gap(from: string, to: string): string | null {
-  const m = minutes(to) - minutes(from)
-  if (m <= 0) return null
-  return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`
-}
-
 function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 'ok' | 'draft' | 'cancelled' } {
   if (event.status === 'cancelled') return { text: 'Cancelled.', tone: 'cancelled' }
+  if (event.sessionId) return { text: 'Logged.', tone: 'ok' }
   if (role === 'coach') return event.draft ? { text: 'Draft. Only you see this.', tone: 'draft' } : { text: 'Published.', tone: 'ok' }
   return { text: 'Confirmed.', tone: 'ok' }
 }
@@ -50,29 +45,20 @@ function updatedNote(event: StripEvent): string | null {
   return `Updated ${/^\d+[mh]$/.test(when) ? `${when} ago` : lower}.`
 }
 
+/** The start time is the headline, with what it is and where under it. */
 function TimeRow({ event }: { event: StripEvent }) {
-  const startLabel = event.kind === 'match' ? 'Kick-off' : 'Starts'
+  if (event.sessionId) return null // a logged session has no start time to show
   if (!event.time) return <p className="text-[15px] text-white/80">Time to be confirmed</p>
-  const meet = event.meetTime && event.meetTime < event.time ? event.meetTime : null
-  const between = meet ? gap(meet, event.time) : null
   return (
-    <div className="flex items-end justify-between gap-3">
-      <div>
-        <p className="text-[34px] leading-none font-medium tracking-[-0.02em] text-white/95">{meet ?? event.time}</p>
-        <p className="text-[12px] text-white/50 mt-1">{meet ? 'Meet' : startLabel}{event.venue ? `, ${event.venue}` : ''}</p>
-      </div>
-      {meet && <>
-        <div aria-hidden="true" className="flex-1 flex items-center gap-2 pb-6 text-[11px] text-white/40">
-          <span className="flex-1 h-px bg-white/15" />{between}<span className="flex-1 h-px bg-white/15" />
-        </div>
-        <div className="text-right">
-          <p className="text-[34px] leading-none font-medium tracking-[-0.02em] text-white/95">{event.time}</p>
-          <p className="text-[12px] text-white/50 mt-1">{startLabel}</p>
-        </div>
-      </>}
+    <div>
+      <p className="text-[34px] leading-none font-medium tracking-[-0.02em] text-white/95">{event.time}</p>
+      <p className="text-[12px] text-white/50 mt-1">{event.kind === 'match' ? 'Kick-off' : 'Starts'}{event.venue ? `, ${event.venue}` : ''}</p>
     </div>
   )
 }
+
+/** An earlier meet time, as a detail rather than a second headline. */
+const meetTime = (event: StripEvent) => event.time && event.meetTime && event.meetTime < event.time ? event.meetTime : null
 
 export function EventSheet({ event, role, trigger, children }: {
   event: StripEvent
@@ -97,6 +83,11 @@ export function EventSheet({ event, role, trigger, children }: {
       detents={[0.62, 0.92]} className="arc">
       <div className="space-y-4 pb-4">
         <TimeRow event={event} />
+        {meetTime(event) && (
+          <p className="flex items-center gap-2 text-[14px] text-white/80">
+            <Clock size={16} aria-hidden="true" className="text-white/50" />Meet at {meetTime(event)}
+          </p>
+        )}
         {event.venue && event.status !== 'cancelled' && (
           <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`} target="_blank" rel="noopener noreferrer"
             className="inline-flex min-h-11 items-center gap-2 text-[14px] text-primary focus-visible:ring-2 focus-visible:ring-primary rounded-md">

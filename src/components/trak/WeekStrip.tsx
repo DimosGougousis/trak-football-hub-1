@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { ChevronRight } from 'lucide-react'
@@ -28,12 +27,12 @@ export type RenderEventSheet = (event: StripEvent, trigger: ReactElement, refres
  * TRAK-163: this week, Monday to Sunday, under the Home header (the Therabody
  * strip). Today is selected; a day with events shows a dot per event; tapping
  * a day lists its events. TRAK-182: each event opens in a bottom sheet where
- * it is (not the calendar); a coach's logged session opens its saved record.
+ * it is (not the calendar), a coach's logged session too (Imad, 16 Oct): it
+ * used to jump straight to its saved record.
  */
-export function WeekStrip({ events, renderSheet, sessionHref, refresh = () => {}, today = new Date() }: {
+export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new Date() }: {
   events: StripEvent[]
   renderSheet: RenderEventSheet
-  sessionHref?: (event: StripEvent) => string
   refresh?: () => void
   today?: Date
 }) {
@@ -74,11 +73,7 @@ export function WeekStrip({ events, renderSheet, sessionHref, refresh = () => {}
               <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-white/40" />
             </>
             const row = 'w-full flex items-center gap-3 min-h-12 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md'
-            return <li key={event.id}>
-              {event.sessionId && sessionHref
-                ? <Link to={sessionHref(event)} className={row}>{label}</Link>
-                : renderSheet(event, <button type="button" className={row}>{label}</button>, refresh)}
-            </li>
+            return <li key={event.id}>{renderSheet(event, <button type="button" className={row}>{label}</button>, refresh)}</li>
           })}
         </ul>
       )}
@@ -93,11 +88,10 @@ type WeekRows = PromiseLike<{ data: unknown[] | null; error: unknown }>
  * only load from today). `loadKey` names whose week it is. A failed read is
  * an error with Retry, never an empty week (the J4 standard).
  */
-export function LoadedWeekStrip({ load, loadKey, renderSheet, sessionHref }: {
+export function LoadedWeekStrip({ load, loadKey, renderSheet }: {
   load: (from: string, to: string) => WeekRows
   loadKey: string
   renderSheet: RenderEventSheet
-  sessionHref?: (event: StripEvent) => string
 }) {
   const [events, setEvents] = useState<StripEvent[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -125,5 +119,5 @@ export function LoadedWeekStrip({ load, loadKey, renderSheet, sessionHref }: {
 
   if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
   if (!events) return null
-  return <WeekStrip events={events} renderSheet={renderSheet} sessionHref={sessionHref} refresh={() => setAttempt(n => n + 1)} />
+  return <WeekStrip events={events} renderSheet={renderSheet} refresh={() => setAttempt(n => n + 1)} />
 }

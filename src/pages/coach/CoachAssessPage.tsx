@@ -24,8 +24,9 @@ import { Button } from '@/components/arc/button/button'
 const STEPS = [
   { id: 'who', label: 'Player' },
   { id: 'ratings', label: 'Ratings' },
-  { id: 'message', label: 'Message' },
-  { id: 'note', label: 'Note' },
+  // Imad, 16 Oct: one step for both, still two boxes: the message (white)
+  // reaches the player, the note (yellow) only the coach, and stands out.
+  { id: 'message', label: 'Message & note' },
   { id: 'review', label: 'Review' },
 ]
 
@@ -772,7 +773,7 @@ function CoachAssessmentForm() {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <div>
-              <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-sky-300/80" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/70" style={{ fontFamily: "'DM Mono', monospace" }}>
                 Message to {firstName}
               </label>
               <p className="text-[10px] text-white/45 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -793,7 +794,7 @@ function CoachAssessmentForm() {
             // Blue: words the player reads. The private note is yellow and the
             // same size, so the two never look interchangeable (TRAK-72 item 7).
             data-tone="message"
-            className="w-full px-4 py-3 rounded-[10px] bg-sky-400/[0.06] border border-sky-400/40 text-sm text-white/88 outline-none resize-none placeholder:text-white/20 disabled:opacity-40"
+            className="w-full px-4 py-3 rounded-[10px] bg-white/[0.04] border border-white/25 text-sm text-white/88 outline-none resize-none placeholder:text-white/20 disabled:opacity-40"
           />
           <p role="status" className="text-[10px] text-white/40" style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {liveUnchanged
@@ -806,13 +807,11 @@ function CoachAssessmentForm() {
           </p>
         </div>
 
-        </>}
-        {step === 3 && <>
         {/* ---- 8. private note ----
             The label used to read "AI will expand these into personalised
             feedback for the player". K9 made that false: the note is private
             and no family role can read it. */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 pt-4">
           <div className="flex justify-between items-center">
             <div>
               <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-amber-200/80" style={{ fontFamily: "'DM Mono', monospace" }}>
@@ -840,7 +839,7 @@ function CoachAssessmentForm() {
 
         </>}
         {/* ---- 9. review and save (TRAK-182) ---- */}
-        {step === 4 && <>
+        {step === 3 && <>
           <dl className="rounded-[14px] border border-white/[0.07] divide-y divide-white/[0.06] text-[13px]">
             {([
               ['Player', selectedPlayer?.player_name ?? ''],

@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import { logStep, saveLog } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -96,6 +97,7 @@ async function logMatch(
   await user.type(scoreUs, '4')
   await user.type(scoreThem, '1')
 
+  await logStep('Squad')
   // Marking played auto-expands the row, which is what renders the steppers.
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
 
@@ -111,7 +113,7 @@ async function logMatch(
     }
   }
 
-  await user.click(screen.getByRole('button', { name: 'Save match' }))
+  await saveLog('Save match')
   await waitFor(() => expect(calls.length).toBe(before + 1))
 
   cleanup()

@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { PostMatchPrompt } from '@/components/coach/PostMatchPrompt'
 import { renderApp } from '../../tests/support/render-app'
+import { matchAt } from '../../tests/support/log-steps'
 import { signInAs } from '../../tests/support/session'
 import { server } from '../../tests/msw/server'
 import { rpc, SUPABASE_URL } from '../../tests/msw/supabase'
@@ -118,10 +119,12 @@ describe('TRAK-47 parked feature boundary', () => {
 
   it('CONTROL retains the approved J4 match-entry route', async () => {
     renderApp('/coach/sessions/quick')
+    // TRAK-182: the match log is in steps; the squad is on its second.
+    await matchAt('Squad')
     expect(await screen.findByText(/No squad yet\./)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Coming soon' })).toBeNull()
     expect(reads).toContain('squad_players')
-  })
+  }, 20_000) // walks the match log to its Squad step (TRAK-182)
 })
 
 

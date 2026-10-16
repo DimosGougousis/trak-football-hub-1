@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useFeature } from '@/components/trak/parked'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
@@ -7,17 +8,23 @@ import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
 /**
  * TRAK-163: the coach's week on Home, drafts included (marked), so the
  * schedule is visible without hunting for it. Logged sessions open their
- * saved record; planned events open in a bottom sheet (TRAK-182) with Publish,
+ * saved record from a sheet; planned events open in a bottom sheet (TRAK-182) with Publish,
  * Copy WhatsApp link, Edit and Attending. Only where events are on.
  */
-export function CoachWeekStrip({ coachId }: { coachId: string }) {
+export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; version?: number }) {
   if (!useFeature('events')) return null
   return (
-    <LoadedWeekStrip key={coachId} loadKey={coachId}
-      sessionHref={event => `/coach/sessions/${event.sessionId}`}
+    // A new `version` (the quick-add saved a draft) reloads the week in place.
+    <LoadedWeekStrip key={coachId} loadKey={`${coachId}:${version}`}
       renderSheet={(event, trigger, refresh) => (
         <EventSheet event={event} role="coach" trigger={trigger}>
-          <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />
+          {/* A logged session's sheet says so and opens its saved record (Imad, 16 Oct). */}
+          {event.sessionId
+            ? <Link to={`/coach/sessions/${event.sessionId}`}
+                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-white/[0.08] text-[14px] font-medium text-white/90 focus-visible:ring-2 focus-visible:ring-primary">
+                Open session
+              </Link>
+            : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}
         </EventSheet>
       )}
       load={async (from, to) => {

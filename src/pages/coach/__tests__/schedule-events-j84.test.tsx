@@ -9,6 +9,7 @@ import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toAcademyInstant, toInstant } from '@/lib/event-time'
 import { pickTime, timeShown } from '../../../../tests/support/arc-pickers'
+import { eventStep, saveEventWith } from '../../../../tests/support/event-steps'
 
 /**
  * TRAK-127 (J8.4). With events switched on, the coach creates a training,
@@ -96,12 +97,20 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
     await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Away' }))
+    await userEvent.type(within(sheet).getByLabelText('Venue'), 'United Ground')
+    await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Kickoff', '16:00')
     await userEvent.click(within(sheet).getByRole('button', { name: '75 min' }))
-    await userEvent.type(within(sheet).getByLabelText('Venue'), 'United Ground')
     await pickTime(userEvent, /^Meet time/, '15:15')
+    await eventStep(sheet, 'For families')
     await userEvent.type(within(sheet).getByLabelText('Kit'), 'Red shirts')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+    // TRAK-182: Review shows everything before the save.
+    await eventStep(sheet, 'Review')
+    for (const [term, value] of [['Opponent', 'Synthetic United (Away)'], ['Title', 'vs Synthetic United'], ['Venue', 'United Ground'],
+      ['Kickoff', '16:00'], ['Meet', '15:15'], ['Length', '75 min'], ['Kit', 'Red shirts'], ['Note for families', 'None']]) {
+      expect(within(sheet).getByText(term).nextElementSibling).toHaveTextContent(value)
+    }
+    await saveEventWith(sheet, 'Save draft')
 
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0].method).toBe('post')
@@ -131,13 +140,15 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '17:00')
+    await eventStep(sheet, 'For families')
     await userEvent.type(within(sheet).getByLabelText('Kit'), 'Green kits')
     const note = within(sheet).getByLabelText('Note for families')
     expect(note).toHaveAttribute('maxlength', '200')
     expect(within(sheet).getByText(/players and parents see this/i)).toBeInTheDocument()
     await userEvent.type(note, 'Bring extra water, it is a hot day')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+    await saveEventWith(sheet, 'Save draft')
 
     await waitFor(() => expect(writes).toHaveLength(1))
     const [inserted] = writes[0].body as Record<string, unknown>[]
@@ -152,6 +163,9 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
+    await pickTime(userEvent, 'Start', '17:00')
+    await eventStep(sheet, 'For families')
     const note = within(sheet).getByLabelText('Note for families')
     await userEvent.type(note, 'Bring water')
     expect(within(sheet).queryByText(/families won't see this note/i)).toBeNull()
@@ -161,6 +175,9 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await userEvent.type(note, 'Directions: maps.app.goo.gl/abc')
     expect(within(sheet).getByText("Families won't see this note: it has a link.")).toBeInTheDocument()
     expect(note).toHaveAccessibleDescription(/it has a link/)
+    // Review says it again, before the coach saves.
+    await eventStep(sheet, 'Review')
+    expect(within(sheet).getByText("Families won't see this note: it has a link.")).toBeInTheDocument()
   })
 
   it('picks a venue the coach has used before', async () => {
@@ -176,20 +193,25 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
+    // TRAK-182: Next stops on the step that can fix it, and says what's missing.
+    const next = () => userEvent.click(within(sheet).getByRole('button', { name: 'Next' }))
+    await next()
+    expect(within(sheet).getByRole('alert')).toHaveTextContent('Add the opponent')
+    await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
+    expect(within(sheet).queryByRole('alert')).toBeNull()
+    await next()
+
     // TRAK-157: no event saves without a start time; there is no "no time".
     expect(timeShown('Kickoff')).toBe('Pick a start time')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+    await next()
     expect(within(sheet).getByRole('alert')).toHaveTextContent('Pick a start time')
     expect(within(sheet).queryByText(/time not set/i)).toBeNull()
 
     await pickTime(userEvent, 'Kickoff', '16:00')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
-    expect(within(sheet).getByRole('alert')).toHaveTextContent('Add the opponent')
-
-    await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
     await pickTime(userEvent, /^Meet time/, '16:30')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+    await next()
     expect(within(sheet).getByRole('alert')).toHaveTextContent('Meet time must be before the start')
+    expect(within(sheet).getByRole('button', { name: 'Next' })).toBeInTheDocument()
     expect(writes).toEqual([])
   })
 
@@ -202,13 +224,16 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
       failWrites = mode
       await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
       const sheet = screen.getByRole('dialog', { name: 'New event' })
-      await pickTime(userEvent, 'Start', '17:00')
       await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 1')
-      await userEvent.click(within(sheet).getByRole('button', { name: 'Save draft' }))
+      await eventStep(sheet, 'When')
+      await pickTime(userEvent, 'Start', '17:00')
+      await saveEventWith(sheet, 'Save draft')
 
       expect(await within(sheet).findByRole('alert')).toHaveTextContent("Couldn't save the event")
       expect(screen.getByRole('dialog', { name: 'New event' })).toBeInTheDocument()
+      await eventStep(sheet, 'What')
       expect(within(sheet).getByLabelText('Venue')).toHaveValue('Academy Pitch 1')
+      await eventStep(sheet, 'When')
       expect(timeShown('Start')).toBe('5:00 PM')
     })
 
@@ -221,18 +246,67 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect(emailNudges).toBe(0)
   })
 
+  // TRAK-182 (Imad's 7c): Review's Publish saves, then publishes what it saved.
+  it('publishes a new event from Review', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
+    await pickTime(userEvent, 'Start', '17:00')
+    await saveEventWith(sheet, 'Publish')
+
+    await waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[0]).toMatchObject({ method: 'post' })
+    expect((writes[0].body as Record<string, unknown>[])[0]).toMatchObject({ published: false })
+    expect(writes[1]).toMatchObject({ method: 'patch', query: '?id=in.(written)&select=id', body: { published: true } })
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    expect(emailNudges).toBe(0)
+  })
+
+  it('publishes a draft it edits, from Review', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Finishing' }))
+    const sheet = screen.getByRole('dialog', { name: 'Edit event' })
+    await saveEventWith(sheet, 'Publish')
+    await waitFor(() => expect(writes).toHaveLength(2))
+    expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.draft-1&select=id' })
+    expect(writes[0].body).not.toHaveProperty('published')
+    expect(writes[1]).toMatchObject({ method: 'patch', query: '?id=in.(draft-1)&select=id', body: { published: true } })
+  })
+
+  // A clash (TRAK-158) refuses the publish, not the save: the draft stays, said plainly.
+  it('keeps the draft and says why when the publish is refused', async () => {
+    let patches = 0
+    server.use(http.patch(EVENTS, async ({ request }) => {
+      writes.push({ method: 'patch', query: decodeURIComponent(new URL(request.url).search), body: await request.json() })
+      return ++patches === 1
+        ? HttpResponse.json([{ id: 'draft-1' }])
+        : HttpResponse.json({ code: 'P0001', message: 'This overlaps vs Synthetic Rovers (18:30–20:00).' }, { status: 400 })
+    }))
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Finishing' }))
+    await saveEventWith(screen.getByRole('dialog', { name: 'Edit event' }), 'Publish')
+    expect(await screen.findByText(/Saved as a draft, not published\. This overlaps vs Synthetic Rovers/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('edits a published event live, without touching published', async () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Edit vs Synthetic Rovers' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
-    // The saved event fills the form.
-    expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers')
-    expect(timeShown('Kickoff')).toBe('6:30 PM')
+    // TRAK-182: an edit opens on Review; a published event has no Publish or draft.
     expect(within(sheet).getByText('Families see the change as soon as you save.')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Save draft' })).toBeNull()
+    expect(within(sheet).queryByRole('button', { name: 'Publish' })).toBeNull()
+    // The saved event fills the form.
+    await eventStep(sheet, 'When')
+    expect(timeShown('Kickoff')).toBe('6:30 PM')
+    await eventStep(sheet, 'What')
+    expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers')
     const venue = within(sheet).getByLabelText('Venue')
     await userEvent.clear(venue)
     await userEvent.type(venue, 'Rovers Park Pitch 3')
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+    await saveEventWith(sheet, 'Save changes')
 
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.live-1&select=id' })
