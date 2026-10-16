@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { Button as ArcButton } from '@/components/arc/button/button'
 import type { PlayerEvent } from '@/lib/player-events'
 
 /* TRAK-137 (J8.14, Imad 8 Oct): like a school register, everyone counts as
@@ -45,7 +46,7 @@ export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent;
 
   return (
     // No box: one line and its button (Imad, 16 Oct: the box took space for nothing).
-    <section aria-label="Attendance">
+    <section aria-label="Attendance" className="arc">
       {absence.isError ? <>
         <p className="text-sm text-foreground">Couldn't check whether {self ? "you're" : `${child.name} is`} coming.</p>
         <button type="button" onClick={() => { void absence.refetch() }} className={`${button} mt-3`}>Retry</button>
@@ -67,7 +68,8 @@ export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent;
         </> : <>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">Everyone counts as coming. Only say if {self ? 'you' : child.name} can't.</p>
-            <button type="button" onClick={() => setWriting(true)} className={button}>Can't make it</button>
+            {/* Arc's danger button (Imad, 16 Oct): the one action here that changes the default. */}
+            <ArcButton variant="danger" className="shrink-0" onClick={() => setWriting(true)}>Can't make it</ArcButton>
           </div>
         </>}
     </section>
