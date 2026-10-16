@@ -225,8 +225,16 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await expect(page.getByRole('heading', { name: 'Coach feedback' })).toBeVisible()
         await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
       } else {
-        // TRAK-182: a logged session links straight to it; an event opens in the sheet, not the calendar.
-        await expect(week.getByRole('link', { name: /Logged.*Logged set pieces/ })).toHaveAttribute('href', '/coach/sessions/saved-session')
+        // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too. Open
+        // session goes to its record, and Back comes back to Home, not to the
+        // sessions history.
+        await week.getByRole('button', { name: /Logged.*Logged set pieces/ }).click()
+        const logged = page.getByRole('dialog', { name: 'Logged set pieces' })
+        await expect(logged.getByText('Logged.')).toBeVisible()
+        await logged.getByRole('link', { name: 'Open session' }).click()
+        await expect(page).toHaveURL(/\/coach\/sessions\/saved-session$/)
+        await page.getByRole('button', { name: 'Back' }).click()
+        await expect(page).toHaveURL(/\/coach\/home$/)
         await week.getByRole('button', { name: /Technical training/ }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
         await expect(sheet.getByText('Published.')).toBeVisible()

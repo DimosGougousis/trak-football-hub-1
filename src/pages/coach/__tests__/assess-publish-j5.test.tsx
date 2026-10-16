@@ -4,7 +4,7 @@
  * only you can see this." Nothing reaches the family until the coach presses
  * Publish. A waiting-for-parent player cannot be opened, and a consent
  * withdrawal mid-edit fails the save and keeps the values.
- * TRAK-182 (Imad, 15 Oct): one step per screen (Player, Ratings, Message, Note,
+ * TRAK-182 (Imad, 15–16 Oct): four steps (Player, Ratings, Message & note,
  * Review); Review offers Publish and Save draft when there is a message.
  */
 import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
@@ -115,16 +115,18 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(screen.getByText('Only Bella sees this.')).toBeInTheDocument()
     expect(screen.queryByText(/parents/i)).toBeNull()
     expect(screen.getByText(/Message to Bella/)).toBeInTheDocument()
-    // TRAK-182: the message has its own step, before the private note's, and the two never share a screen.
-    expect(screen.queryByLabelText(/^Private note/i)).toBeNull()
-    await toNote()
+    // TRAK-182 (Imad, 16 Oct): one step for both, message first, each in its own
+    // labelled box saying who sees it.
+    const message = screen.getByLabelText(/^Message to/i)
+    const note = screen.getByLabelText(/^Private note/i)
     expect(screen.getByText('Only you can see this.')).toBeInTheDocument()
-    expect(screen.queryByLabelText(/^Message to/i)).toBeNull()
+    expect(message.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  // TRAK-72 item 7: the player's message is blue, the private note yellow, and
-  // both are the same size, so the two can't be mistaken for each other.
-  it('colour-codes the message (blue) and the private note (yellow) at the same size', async () => {
+  // TRAK-72 item 7: the player's message and the private note look different,
+  // at the same size. Since 16 Oct (Imad) the message is plain white and only
+  // the private note is coloured (yellow), so it stands out.
+  it('keeps the message white and the private note yellow, at the same size', async () => {
     showForm()
     await choose('player-b')
     const message = await toMessage() as HTMLTextAreaElement
@@ -132,11 +134,12 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     const note = await toNote() as HTMLTextAreaElement
     expect(message.dataset.tone).toBe('message')
     expect(note.dataset.tone).toBe('private')
-    expect(messageClass).toMatch(/border-sky-/)
+    expect(messageClass).toMatch(/border-white\//)
+    expect(messageClass).not.toMatch(/sky-|amber-/)
     expect(note.className).toMatch(/border-amber-/)
     expect(message.rows).toBe(note.rows)
-    expect(messageClass.replace(/(bg|border)-(sky|amber)-\S+/g, ''))
-      .toBe(note.className.replace(/(bg|border)-(sky|amber)-\S+/g, ''))
+    expect(messageClass.replace(/(bg|border)-(white|amber)\S+/g, ''))
+      .toBe(note.className.replace(/(bg|border)-(white|amber)\S+/g, ''))
   })
 
   // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…
