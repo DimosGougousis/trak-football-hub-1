@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useNavigate, type NavigateOptions } from 'react-router-dom'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { ArrowLeft, Check, ClipboardCheck, Plus, Swords, CalendarPlus, Dumbbell, X } from 'lucide-react'
+import { ArrowLeft, Check, ClipboardCheck, ClipboardPen, Plus, Swords, CalendarPlus, Dumbbell, X } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { localTodayISO } from '@/lib/event-time'
@@ -247,6 +247,10 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                   </button>
                   <button type="button" role="menuitem" className={item} onClick={() => { setError(null); setFace('match') }}>
                     <Swords size={18} aria-hidden="true" className="text-white/60" />Log match
+                  </button>
+                  {/* Imad, 16 Oct (Kostas's item 9): assessing is one of the coach's quick actions. */}
+                  <button type="button" role="menuitem" className={item} onClick={() => go('/coach/assess')}>
+                    <ClipboardPen size={18} aria-hidden="true" className="text-white/60" />Assess player
                   </button>
                   <button type="button" role="menuitem" className={item} onClick={() => { if (!eventsOn) { comingSoon(); return } setError(null); setFace('event') }}>
                     <CalendarPlus size={18} aria-hidden="true" className="text-white/60" />New event
