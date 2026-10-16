@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { Button } from '@/components/ui/button'
@@ -198,6 +199,8 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
       if (!mounted.current || request.signal.aborted) return
       setSavedFor(child.full_name)
       setDraft(null)
+      // On Home the bar may fold or move on at once (Kostas, #329), so say it where it can't be missed.
+      if (embedded) toast.success(`Approval saved for ${child.full_name}.`)
       // An account child is linked now: Home's own reads (children, pending) catch up.
       // A roster child's invitation note stays up until Done, so Home waits for that.
       if (child.kind === 'account') settle()
@@ -354,7 +357,6 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
   const surface = (
       <ConsentSurface face={face} labelledBy="consent-title" aboveNav={embedded}>
         {face === 'bar' ? <>
-          {embedded && savedFor && <p role="status" className="text-[13px] text-white/60 mb-1">Approval saved for {savedFor}.</p>}
           {embedded && children.length > 1 && <p className="text-[13px] text-white/50 mb-1">{children.indexOf(child) + 1} of {children.length} waiting</p>}
           <p id="consent-title" className="text-[16px] font-medium text-white/95">Approve {firstName}'s Trak account?</p>
           <p className="text-[14px] text-white/65 mt-1">Their coach records how they train and play, and you see their progress.</p>
