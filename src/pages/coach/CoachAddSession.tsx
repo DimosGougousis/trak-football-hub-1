@@ -10,6 +10,8 @@ import { goalsKey, assistsKey } from '@/lib/match-input-keys'
 import { trackEvent } from '@/lib/telemetry'
 import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
 import { localTodayISO } from '@/lib/event-time'
+import { dateAsDay, dayAsDate } from '@/lib/coach-events'
+import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { TRAINING_FOCUS, trainingTypeFrom } from '@/lib/training-focus'
 import { trainingNotes, trainingTitle } from '@/lib/session-form'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
@@ -1083,12 +1085,11 @@ export default function CoachAddSession() {
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
             </div>}
 
-            {/* Date */}
-            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-              <MetadataLabel text="DATE" />
-              <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
-                className="w-full bg-transparent text-[15px] text-white/88 outline-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif", colorScheme: 'dark' }} />
+            {/* Date: Arc's picker, as the event form (TRAK-157, 16 Oct: the native box was too big). Days after today can't be picked. */}
+            {step === 0 && <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
+                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+                format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
             {/* Attendance */}
