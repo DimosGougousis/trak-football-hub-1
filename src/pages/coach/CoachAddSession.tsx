@@ -114,7 +114,9 @@ export default function CoachAddSession() {
     () => (quick || window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
   )
   const [title, setTitle] = useState('')
-  const [date,  setDate]  = useState(() => quick?.date ?? localTodayISO())
+  // TRAK-127: New event's "log it instead" hands over the past day it was given.
+  const [date,  setDate]  = useState(() => quick?.date
+    ?? (location.state as { logDate?: string } | null)?.logDate ?? localTodayISO())
   const [notes, setNotes] = useState('')
   const [step,  setStep]  = useState(quick ? 1 : 0)
 
