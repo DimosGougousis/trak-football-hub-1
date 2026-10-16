@@ -220,7 +220,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             </>}
           </>}
           {squad.data && squad.data.waiting.length > 0 && (
-            <p className="text-[12px] text-white/45 mt-4">Attendance excludes players who are not using Trak</p>
+            // Kostas, 16 Oct: they are on Trak, waiting for a parent's approval. A count, never names.
+            <p className="text-[12px] text-white/45 mt-4">{squad.data.waiting.length} not counted yet: waiting for a parent's approval</p>
           )}
         </section>
       )}

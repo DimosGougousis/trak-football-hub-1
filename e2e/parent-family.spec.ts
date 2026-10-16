@@ -178,6 +178,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
         unexpected.push(`${req.method()} ${url.pathname}`)
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
       })
+      // The training starts at 18:00 Dubai today; after that the coach's sheet offers
+      // Take register, not Published. Hold the page's clock before the start (never ahead of now).
+      await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
       await page.goto(`/${role}/home`)
       const week = page.getByRole('region', { name: 'This week' })
       await expect(week).toBeVisible()
