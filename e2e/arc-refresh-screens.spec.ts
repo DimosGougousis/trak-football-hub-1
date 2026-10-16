@@ -162,7 +162,7 @@ test.describe('TRAK-182 coach screens', () => {
     await page.screenshot({ path: testInfo.outputPath('coach-assess-ratings.png'), fullPage: true })
     await page.getByRole('button', { name: 'Next' }).click()
     await page.getByLabel(/^Message to/).fill('Great pressing today.')
-    await page.getByRole('button', { name: 'Next' }).click()
+    // Message and private note share a step (Imad, 16 Oct); Next goes to Review.
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByRole('button', { name: 'Publish' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Save draft' })).toBeVisible()

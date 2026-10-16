@@ -4,7 +4,7 @@
  * only you can see this." Nothing reaches the family until the coach presses
  * Publish. A waiting-for-parent player cannot be opened, and a consent
  * withdrawal mid-edit fails the save and keeps the values.
- * TRAK-182 (Imad, 15 Oct): one step per screen (Player, Ratings, Message, Note,
+ * TRAK-182 (Imad, 15–16 Oct): four steps (Player, Ratings, Message & note,
  * Review); Review offers Publish and Save draft when there is a message.
  */
 import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
@@ -115,11 +115,12 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(screen.getByText('Only Bella sees this.')).toBeInTheDocument()
     expect(screen.queryByText(/parents/i)).toBeNull()
     expect(screen.getByText(/Message to Bella/)).toBeInTheDocument()
-    // TRAK-182: the message has its own step, before the private note's, and the two never share a screen.
-    expect(screen.queryByLabelText(/^Private note/i)).toBeNull()
-    await toNote()
+    // TRAK-182 (Imad, 16 Oct): one step for both, message first, each in its own
+    // labelled box saying who sees it.
+    const message = screen.getByLabelText(/^Message to/i)
+    const note = screen.getByLabelText(/^Private note/i)
     expect(screen.getByText('Only you can see this.')).toBeInTheDocument()
-    expect(screen.queryByLabelText(/^Message to/i)).toBeNull()
+    expect(message.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   // TRAK-72 item 7: the player's message is blue, the private note yellow, and

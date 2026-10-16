@@ -24,8 +24,9 @@ import { Button } from '@/components/arc/button/button'
 const STEPS = [
   { id: 'who', label: 'Player' },
   { id: 'ratings', label: 'Ratings' },
-  { id: 'message', label: 'Message' },
-  { id: 'note', label: 'Note' },
+  // Imad, 16 Oct: one step for both, still two boxes: the message (blue)
+  // reaches the player, the note (yellow) only the coach.
+  { id: 'message', label: 'Message & note' },
   { id: 'review', label: 'Review' },
 ]
 
@@ -806,8 +807,6 @@ function CoachAssessmentForm() {
           </p>
         </div>
 
-        </>}
-        {step === 3 && <>
         {/* ---- 8. private note ----
             The label used to read "AI will expand these into personalised
             feedback for the player". K9 made that false: the note is private
@@ -840,7 +839,7 @@ function CoachAssessmentForm() {
 
         </>}
         {/* ---- 9. review and save (TRAK-182) ---- */}
-        {step === 4 && <>
+        {step === 3 && <>
           <dl className="rounded-[14px] border border-white/[0.07] divide-y divide-white/[0.06] text-[13px]">
             {([
               ['Player', selectedPlayer?.player_name ?? ''],
