@@ -81,7 +81,7 @@ export default function CoachSessionsPage() {
                 <div className="w-[34px] h-[34px] rounded-[10px] bg-raised flex items-center justify-center shrink-0">
                   <span
                     className={`text-[13px] font-semibold ${
-                      isMatch(s) ? 'text-green-400' : 'text-ink-3'
+                      isMatch(s) ? 'text-success' : 'text-ink-3'
                     }`}
                   >
                     {isMatch(s) ? 'M' : 'T'}
@@ -107,7 +107,7 @@ export default function CoachSessionsPage() {
 
                 {/* Badge */}
                 {isMatch(s) ? (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-green-500/15 text-green-400">
+                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
                     {s.result || 'W'}
                     {s.score ? ` ${s.score}` : ''}
                   </span>

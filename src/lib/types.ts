@@ -24,12 +24,12 @@ export interface BandConfig {
 // Edges:  0–2 Difficult · 2–4 Developing · 4–6 Mixed · 6–7 Steady · 7–8 Good · 8–9 Standout · 9–10 Exceptional
 export const BANDS: BandConfig[] = [
   { word: 'Exceptional', color: '#0B6623', bg: 'rgba(11,102,35,0.1)', border: 'rgba(11,102,35,0.28)', minScore: 9 },
-  { word: 'Standout',    color: '#1E7F45', bg: 'rgba(30,127,69,0.1)', border: 'rgba(30,127,69,0.28)', minScore: 8 },
-  { word: 'Good',        color: '#33802A', bg: 'rgba(51,128,42,0.1)', border: 'rgba(51,128,42,0.28)',  minScore: 7 },
-  { word: 'Steady',      color: '#2F6FC0', bg: 'rgba(47,111,192,0.1)', border: 'rgba(47,111,192,0.28)',  minScore: 6 },
-  { word: 'Mixed',       color: '#B5501A', bg: 'rgba(181,80,26,0.1)', border: 'rgba(181,80,26,0.28)',  minScore: 4 },
-  { word: 'Developing',  color: '#6D4BC4', bg: 'rgba(109,75,196,0.1)', border: 'rgba(109,75,196,0.28)', minScore: 2 },
-  { word: 'Difficult',   color: '#646C68', bg: 'rgba(100,108,104,0.1)', border: 'rgba(100,108,104,0.28)', minScore: 0 },
+  { word: 'Standout',    color: '#1A6C3B', bg: 'rgba(26,108,59,0.1)', border: 'rgba(26,108,59,0.28)', minScore: 8 },
+  { word: 'Good',        color: '#2B6B23', bg: 'rgba(43,107,35,0.1)', border: 'rgba(43,107,35,0.28)',  minScore: 7 },
+  { word: 'Steady',      color: '#285EA3', bg: 'rgba(40,94,163,0.1)', border: 'rgba(40,94,163,0.28)',  minScore: 6 },
+  { word: 'Mixed',       color: '#954214', bg: 'rgba(149,66,20,0.1)', border: 'rgba(149,66,20,0.28)',  minScore: 4 },
+  { word: 'Developing',  color: '#6845C2', bg: 'rgba(104,69,194,0.1)', border: 'rgba(104,69,194,0.28)', minScore: 2 },
+  { word: 'Difficult',   color: '#5A615E', bg: 'rgba(90,97,94,0.1)', border: 'rgba(90,97,94,0.28)', minScore: 0 },
 ]
 
 // The one way to turn a band into its colours. Before this existed, seven call

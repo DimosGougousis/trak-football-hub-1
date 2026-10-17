@@ -26,6 +26,8 @@ const COLOUR = [
   /['"`]#[0-9a-fA-F]{3}['"`]/,
   /rgba?\(\s*\d+\s*[, ]\s*\d+\s*[, ]\s*\d+/,   // any rgb()/rgba() written as numbers
   /(?<![\w-])(text|bg|border|ring|divide|outline|placeholder)-(white|black)(?![\w-])/,
+  // Tailwind's own colour scales (amber-300…) were tuned for the dark theme.
+  /(?<![\w-])(text|bg|border|ring|divide|outline|placeholder|from|to|via)-(amber|sky|emerald|red|green|blue|yellow|orange|rose|pink|purple|violet|lime|teal|cyan|indigo|slate|gray|zinc|neutral|stone)-\d{2,3}\b/,
 ]
 
 function files(dir: string): string[] {

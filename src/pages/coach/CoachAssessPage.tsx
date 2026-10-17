@@ -648,7 +648,7 @@ function CoachAssessmentForm() {
             SESSION
           </span>
           {openState === 'missing' || openState === 'error' ? (
-            <p role="alert" className="text-[12px] text-amber-300">
+            <p role="alert" className="text-[12px] text-warning">
               {openState === 'missing'
                 ? "We couldn't open that assessment. It may have been removed, or it isn't one of yours."
                 : "We couldn't open that assessment. Check your connection and try again."}
@@ -660,7 +660,7 @@ function CoachAssessmentForm() {
               <Link to="/coach/sessions" className="underline text-brand">Log a session</Link>
             </p>
           ) : playerId && attendanceError ? (
-            <div role="alert" className="text-[12px] text-amber-300">
+            <div role="alert" className="text-[12px] text-warning">
               Couldn't load which sessions {firstName} was at.
               <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">Retry</button>
             </div>
@@ -699,7 +699,7 @@ function CoachAssessmentForm() {
 
         {((playerId && (sessionId || openedRowId) && !formReady) || choicesError) && (
           (choicesError || (loadState.scope === scope && loadState.status === 'error')) ? (
-            <div role="alert" className="text-sm text-amber-300">
+            <div role="alert" className="text-sm text-warning">
               Could not load this assessment. Retry before editing or saving.
               <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">Retry</button>
             </div>
@@ -814,7 +814,7 @@ function CoachAssessmentForm() {
         <div className="space-y-1.5 pt-4">
           <div className="flex justify-between items-center">
             <div>
-              <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-amber-200/80" style={{ fontFamily: 'var(--t-font-mono)' }}>
+              <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-warning" style={{ fontFamily: 'var(--t-font-mono)' }}>
                 Private note <span className="text-ink-3">— optional</span>
               </label>
               <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
@@ -833,7 +833,7 @@ function CoachAssessmentForm() {
             rows={3}
             placeholder="e.g. First touch under pressure, positioning when defending set pieces"
             data-tone="private"
-            className="w-full px-4 py-3 rounded-[10px] bg-amber-300/[0.06] border border-amber-300/40 text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
+            className="w-full px-4 py-3 rounded-[10px] bg-warning/[0.08] border border-warning/40 text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
           />
         </div>
 

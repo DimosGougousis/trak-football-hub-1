@@ -17,14 +17,14 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
    match red: training blue, match green, other orange, cancelled red.
    Light theme (TRAK-189): the same hues, dark enough for a white page. */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
-  training:   '#2F6FC0',
-  match:      '#2E8540',
-  other:      '#B5501A',
-  tournament: '#6D4BC4',
+  training:   '#285EA3',
+  match:      '#256C34',
+  other:      '#9C4516',
+  tournament: '#6845C2',
 }
 export const CANCELLED_COLOR = '#B42318'
 /** "No time set" on a card: a warning, unlike every type colour. */
-export const NO_TIME_COLOR = '#8A5300'
+export const NO_TIME_COLOR = '#875100'
 export const DURATIONS = [60, 75, 90, 120] as const
 /** The family note fits one line on a phone; the database holds the same limit. */
 export const FAMILY_NOTE_MAX = 200

@@ -137,11 +137,12 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     // TRAK-189: the plain text-box roles (they were white-at-N% on the dark theme).
     expect(messageClass).toMatch(/\bbg-raised\b/)
     expect(messageClass).toMatch(/\bborder-line-strong\b/)
-    expect(messageClass).not.toMatch(/sky-|amber-/)
-    expect(note.className).toMatch(/border-amber-/)
+    expect(messageClass).not.toMatch(/sky-|amber-|warning/)
+    // TRAK-189: the private note's colour is the warning role (it was Tailwind's amber).
+    expect(note.className).toMatch(/border-warning\//)
     expect(message.rows).toBe(note.rows)
-    expect(messageClass.replace(/(bg|border)-(raised|line-strong|amber)\S*/g, ''))
-      .toBe(note.className.replace(/(bg|border)-(raised|line-strong|amber)\S*/g, ''))
+    expect(messageClass.replace(/(bg|border)-(raised|line-strong|warning)\S*/g, ''))
+      .toBe(note.className.replace(/(bg|border)-(raised|line-strong|warning)\S*/g, ''))
   })
 
   // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…

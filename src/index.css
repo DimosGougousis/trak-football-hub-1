@@ -156,7 +156,7 @@
     --t-raised: 238 237 231;        /* chips, quiet buttons, tracks */
     --t-ink: 26 36 33;        /* headings and body */
     --t-ink-2: 87 97 92;      /* supporting lines */
-    --t-ink-3: 100 108 104;      /* labels, timestamps, placeholders */
+    --t-ink-3: 94 102 98;      /* labels, timestamps, placeholders */
     --t-line: 226 224 216;          /* card edges, dividers */
     --t-line-strong: 133 139 135;   /* text boxes, pickers */
     --t-brand: 11 102 35;       /* main buttons, selected states */
@@ -167,7 +167,7 @@
     --t-success: 11 102 35;
     --t-info: 59 91 169;
     --t-warning: 138 83 0;
-    --t-orange: 181 80 26;
+    --t-orange: 156 69 22;
     --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
     --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
 
@@ -222,6 +222,17 @@
 
     font-family: var(--t-font);
   }
+}
+
+/* TRAK-189: fixed dark artwork in a light app (the parked player card). Everything
+   inside a .trak-dark element takes the dark role colours Trak had before. */
+.trak-dark {
+  color-scheme: dark;
+  --t-ground: 10 10 11; --t-surface: 16 16 18; --t-raised: 23 23 26;
+  --t-ink: 224 224 225; --t-ink-2: 145 145 147; --t-ink-3: 110 110 112;
+  --t-line: 30 30 33; --t-line-strong: 72 72 76;
+  --t-brand: 200 242 90; --t-on-brand: 0 0 0;
+  color: rgb(var(--t-ink));
 }
 
 @layer base {

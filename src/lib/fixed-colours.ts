@@ -5,4 +5,4 @@
 /** WhatsApp's own green, on its share icon. */
 export const WHATSAPP_GREEN = '#25D366'
 /** The "Developing" rating band (ratingBand.tsx), also named in the manual and on player Home. */
-export const DEVELOPING_PURPLE = '#6D4BC4'
+export const DEVELOPING_PURPLE = '#6845C2'
