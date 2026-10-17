@@ -5,7 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
-import { markEventOpened, toPlayerEvent, type PlayerEvent as Event } from '@/lib/player-events'
+import { changesSinceSeen, markEventOpened, toPlayerEvent, type PlayerEvent as Event } from '@/lib/player-events'
 import { EventDetails } from '@/components/player/EventDetails'
 import { CantMakeIt } from '@/components/parent/CantMakeIt'
 
@@ -20,7 +20,7 @@ export default function PlayerEvent() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [reloadKey, setReloadKey] = useState(0)
-  const [result, setResult] = useState<{ id: string; reloadKey: number; event: Event | null; failed: boolean } | null>(null)
+  const [result, setResult] = useState<{ id: string; reloadKey: number; event: Event | null; failed: boolean; changes: string[] } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -31,8 +31,10 @@ export default function PlayerEvent() {
       .then(({ data, error }) => {
         if (cancelled) return
         const event = data ? toPlayerEvent(data as Record<string, unknown>) : null
+        // TRAK-134: what moved, read before opening it marks it seen.
+        const changes = event ? changesSinceSeen(user.id, event) : []
         if (event) markEventOpened(user.id, event)
-        setResult({ id, reloadKey, event, failed: Boolean(error) })
+        setResult({ id, reloadKey, event, failed: Boolean(error), changes })
       })
     return () => { cancelled = true }
   }, [id, user, reloadKey])
@@ -71,7 +73,7 @@ export default function PlayerEvent() {
     body = <p className="text-[13px] text-ink-2">This event isn't available. Your coach may have removed it.</p>
   } else {
     body = <>
-      <EventDetails event={current.event} />
+      <EventDetails event={current.event} changes={current.changes} />
       {forThemselves && user && <CantMakeIt event={current.event} child={{ id: user.id, name: 'you' }} self />}
     </>
   }

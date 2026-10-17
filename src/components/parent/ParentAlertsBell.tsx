@@ -5,7 +5,7 @@ import { ParentAssessmentBands, ParentLoadError, ParentLoading } from '@/compone
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useParentDevelopment, useParentEvents, useParentMatches } from '@/hooks/useParentData'
 import { parentAlerts } from '@/lib/parent-data'
-import { noteFirstSeen, readFirstSeen } from '@/lib/player-events'
+import { noteEventSnapshots, noteFirstSeen, readFirstSeen } from '@/lib/player-events'
 import { trackEvent } from '@/lib/telemetry'
 
 /* TRAK-74 (decision 25 Sep): the parent's alerts are a bell on Home instead of
@@ -22,7 +22,12 @@ export function ParentAlertsBell() {
   const development = useParentDevelopment()
   const events = useParentEvents()
   const firstSeenKey = parentId ? `trak:parent-alerts-events:${parentId}` : null
-  useEffect(() => { if (firstSeenKey && events.data) noteFirstSeen(firstSeenKey, events.data) }, [firstSeenKey, events.data])
+  useEffect(() => {
+    if (!firstSeenKey || !parentId || !events.data) return
+    noteFirstSeen(firstSeenKey, events.data)
+    // TRAK-134: the version shown, so a later change can say what moved.
+    noteEventSnapshots(parentId, events.data)
+  }, [firstSeenKey, parentId, events.data])
   if (!parentId || !selectedChild || !firstSeenKey) return null
 
   const failed = matches.isError || development.isError || events.isError

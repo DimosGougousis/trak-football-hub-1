@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar } from '@/components/trak'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, History } from 'lucide-react'
 import { IconMatch, IconSessions } from '@/components/icons/TrakIcons'
 
 export default function CoachSessionsChooser() {
@@ -24,13 +24,14 @@ export default function CoachSessionsChooser() {
         >
           What are you logging?
         </span>
+        {/* TRAK-193: a button you can see (Kostas missed the old grey caps), 44 px tall. */}
         <button
           onClick={() => navigate('/coach/sessions/list')}
-          className="text-[10px] font-medium tracking-[0.14em] uppercase text-ink-3 px-2"
-          style={{ fontFamily: 'var(--t-font-mono)' }}
-          aria-label="History"
+          className="min-h-11 flex items-center gap-1.5 px-3 rounded-[10px] bg-raised border border-line text-[13px] font-medium text-ink active:scale-[0.97] transition-transform"
+          style={{ fontFamily: 'var(--t-font)' }}
         >
-          HISTORY
+          <History size={14} aria-hidden="true" className="text-ink-2" />
+          History
         </button>
       </div>
 

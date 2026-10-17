@@ -66,6 +66,9 @@ beforeEach(() => {
       sharedQueries.push(new URL(request.url).searchParams)
       return HttpResponse.json(sharedReply.body as never, { status: sharedReply.status })
     }),
+    // TRAK-171: the screen also reads this assessment's bands.
+    http.get(endpoint('coach_assessments'), () => HttpResponse.json(
+      { work_rate: 7, tactical: 7, attitude: 7, technical: 7, physical: 7, coachability: 7 })),
   )
 })
 

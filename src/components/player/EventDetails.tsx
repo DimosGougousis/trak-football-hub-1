@@ -1,6 +1,5 @@
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
-import { withAlpha } from '@/lib/with-alpha'
 
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
@@ -8,7 +7,11 @@ import { withAlpha } from '@/lib/with-alpha'
  * Cancelled stays visible, with the coach's reason. Kit and the family note
  * show on every kind of event (TRAK-161).
  */
-export function EventDetails({ event: e }: { event: PlayerEvent }) {
+export function EventDetails({ event: e, changes = [] }: {
+  event: PlayerEvent
+  /** TRAK-134: what moved since this device last saw it (changesSinceSeen). */
+  changes?: string[]
+}) {
   const cancelled = e.status === 'cancelled'
   // TRAK-161: home or away sits on the venue line, "Olympiacos Stadium (Away)".
   const side = e.kind === 'match' && e.homeAway ? (e.homeAway === 'home' ? 'Home' : 'Away') : null
@@ -24,8 +27,16 @@ export function EventDetails({ event: e }: { event: PlayerEvent }) {
   return (
     <div className="space-y-4">
       <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{eventHeading(e)}</h1>
+      {changes.length > 0 && (
+        <div role="status" aria-label="What changed" className="rounded-[14px] px-4 py-3 border border-primary/40">
+          <p className="text-[13px] font-semibold text-primary">Changed since you last looked</p>
+          <ul className="mt-1 space-y-0.5">
+            {changes.map(line => <li key={line} className="text-[13px] text-ink">{line}</li>)}
+          </ul>
+        </div>
+      )}
       {cancelled && (
-        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${withAlpha(CANCELLED_COLOR, 0.5)}` }}>
+        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${CANCELLED_COLOR}80` }}>
           <p className="text-[13px] font-semibold" style={{ color: CANCELLED_COLOR }}>This event is cancelled.</p>
           {e.cancelReason && <p className="text-[13px] text-ink-2 mt-1">{e.cancelReason}</p>}
         </div>

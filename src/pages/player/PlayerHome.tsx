@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
-import { bandForScore, scoreToBand } from '@/lib/rating-engine'
+import { scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
 import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { PlayerAlertsBell, type PublishedAssessmentAlert } from '@/components/player/PlayerAlertsBell'
@@ -19,8 +19,8 @@ import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
+import { AssessmentBands } from '@/components/player/AssessmentBands'
 import { timeOfDayGreeting } from '@/lib/greeting'
-import { DEVELOPING_PURPLE } from '@/lib/fixed-colours'
 
 const QUOTES = [
   { text: "The more difficult the victory, the greater the happiness in winning.", author: "Pelé" },
@@ -393,7 +393,7 @@ export default function PlayerHome() {
     { key: 'good', abbr: 'G', color: 'rgb(var(--t-success))' },
     { key: 'steady', abbr: 'Sy', color: 'rgb(var(--t-info))' },
     { key: 'mixed', abbr: 'M', color: 'rgb(var(--t-orange))' },
-    { key: 'developing', abbr: 'D', color: DEVELOPING_PURPLE },
+    { key: 'developing', abbr: 'D', color: '#a78bfa' },
   ]
 
   if (loading) return (
@@ -589,7 +589,7 @@ export default function PlayerHome() {
           {/* Band summary strip */}
           {matches.length > 0 && (
             <div className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgb(var(--t-raised))' }}>
+              style={{ background: 'rgba(0,0,0,0.3)' }}>
               <div className="flex items-center gap-[7px]">
                 <div className="w-[5px] h-[5px] rounded-full bg-ink-3" />
                 <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-3"
@@ -608,7 +608,7 @@ export default function PlayerHome() {
           {/* Next milestone */}
           {matches.length > 0 && (
             <div className="flex items-center justify-between px-3 py-2 mt-1.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgb(var(--t-raised))' }}>
+              style={{ background: 'rgba(0,0,0,0.2)' }}>
               <span className="text-[9px] tracking-[0.06em] text-ink-3"
                 style={{ fontFamily: 'var(--t-font-mono)' }}>
                 Next milestone
@@ -631,15 +631,15 @@ export default function PlayerHome() {
         {/* Stats grid */}
         {matches.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-3.5">
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
               <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{matches.length}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Matches</span>
             </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
               <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{totalGoals}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Goals</span>
             </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
               <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{totalAssists}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Assists</span>
             </div>
@@ -692,33 +692,7 @@ export default function PlayerHome() {
                 </div>
 
                 {/* Category bars */}
-                <div className="space-y-3 mt-4">
-                  {[
-                    { label: 'Work Rate',    score: coachAssessment.work_rate    },
-                    { label: 'Tactical',     score: coachAssessment.tactical     },
-                    { label: 'Attitude',     score: coachAssessment.attitude     },
-                    { label: 'Technical',    score: coachAssessment.technical    },
-                    { label: 'Physical',     score: coachAssessment.physical     },
-                    { label: 'Coachability', score: coachAssessment.coachability },
-                  ].map(cat => {
-                    // TRAK-110: the scores are NOT NULL, so 0 is a real score;
-                    // `|| 5` used to turn it into "Mixed".
-                    const band = bandForScore(cat.score)
-                    return (
-                    <div key={cat.label} className="flex items-center gap-2">
-                      <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3"
-                        style={{ fontFamily: 'var(--t-font-mono)' }}>{cat.label}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: band.color }} />
-                      </div>
-                      <span className="text-[11px] flex-shrink-0 w-[72px] text-right" style={{ color: band.color }}>
-                        {band.word}
-                      </span>
-                    </div>
-                    )
-                  })}
-                </div>
+                <AssessmentBands scores={coachAssessment} />
 
                 {/* TRAK-71: the coach's message in full, here, with no tap-through. */}
                 {feedbackLoadFailed ? (

@@ -87,7 +87,7 @@ useCase('UC-A04', () => {
 
       await waitFor(() => expect(matchesResponseLanded).toBe(true))
 
-      expect(await screen.findByText(/no matches found/i)).toBeInTheDocument()
+      expect(await screen.findByText(/no past matches yet/i)).toBeInTheDocument()
     } finally {
       server.events.removeListener('response:mocked', onResponseMocked)
     }
@@ -127,7 +127,7 @@ useCase('UC-A04', () => {
       // exactly as it would for a genuinely empty history. Recorded as
       // Q-2026-09-07-02 in docs/use-cases/OPEN-QUESTIONS.md — do not weaken
       // this assertion to make it pass.
-      const emptyMessage = screen.queryByText(/no matches found/i)
+      const emptyMessage = screen.queryByText(/no past matches yet/i)
       expect(
         emptyMessage,
         'A failed load must not render the empty-history message. ' +

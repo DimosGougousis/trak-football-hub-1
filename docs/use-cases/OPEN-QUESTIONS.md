@@ -246,3 +246,43 @@ The pilot change rule, release schedule and value targets remain open in
 [MVP Requirements](../../MVP%20Requirements). They are not settled by a passing
 harness. The academy briefing and operational-risk disclosures are still to
 happen; founder acceptance of a risk is not evidence it has been disclosed.
+
+## Q-2026-10-17-UC-A04 · UC-A04 · View match history and match detail
+Raised: 2026-10-17 · commit blocked · REQ-001
+Observed: UC-A04: enforced use-case test failed
+Spec (v2) says:
+  THEN Every logged match appears as a card
+  THEN An athlete with no matches sees an explicit empty message
+  THEN A failed load is distinguishable from an empty history
+
+Decision recorded:
+  [x] Spec stands -> code bug, fix the code, no registry change
+  [ ] Spec changes -> bump spec_version, add changelog entry, dev updates test
+  [ ] Spec ambiguous -> rewrite given/when/then, bump spec_version
+
+Resolution: the UC-A04 specification stands unchanged. TRAK-170 (live run 3)
+renames the explicit empty message from "No matches found" to "No past matches
+yet", because the list sits under Upcoming and holds matches already played.
+Updated the empty-state selector in both assertions (presence for an empty
+history, absence for a failed load). No registry or lock change.
+
+Status: RESOLVED 2026-10-17
+
+## Q-2026-10-17-UC-X02 · UC-X02 · A failed load never renders as a false empty state
+Raised: 2026-10-17 · commit blocked · REQ-004
+Observed: UC-X02: enforced use-case test failed
+Spec (v2) says:
+  THEN A retryable error is shown
+  THEN The error is visibly different from the genuine empty state
+
+Decision recorded:
+  [x] Spec stands -> code bug, fix the code, no registry change
+  [ ] Spec changes -> bump spec_version, add changelog entry, dev updates test
+  [ ] Spec ambiguous -> rewrite given/when/then, bump spec_version
+
+Resolution: the UC-X02 specification stands unchanged. The genuine empty
+state's wording is now "No past matches yet" (TRAK-170); the failed load still
+shows a retryable error and never that message. Updated the empty-state
+selector in both assertions. No registry or lock change.
+
+Status: RESOLVED 2026-10-17

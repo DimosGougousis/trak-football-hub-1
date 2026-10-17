@@ -130,3 +130,5 @@
 .arc-week { width: 100%; }
 .arc-week > * { flex: 1 1 auto; }
 .arc-week button { flex: 1 1 0; padding-inline: 0; }
+/* TRAK-171 (Tarek, 16 Oct): today's letter keeps the accent when another day is picked. */
+.arc-week button[aria-pressed="false"]:has(.trak-today) { color: hsl(var(--primary)); font-weight: 500; }

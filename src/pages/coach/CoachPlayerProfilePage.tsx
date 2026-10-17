@@ -7,7 +7,7 @@ import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError} from '@/c
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { openable } from '@/lib/openable'
-import { ChevronLeft, Trophy } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 function avgScore(a: any) {
   return (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
@@ -246,19 +246,14 @@ export default function CoachPlayerProfilePage() {
           </div>
         )}
 
-        {/* Action buttons */}
+        {/* Action buttons. TRAK-85 (Imad, 16 Oct): no Award button while awards
+            are parked; /coach/award stays a parked route, and it comes back here
+            when awards are unparked. */}
         <div className="flex gap-2 pt-1">
           <button
             onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}
-            className="flex-[2] py-3.5 rounded-[10px] bg-brand text-on-brand font-bold text-sm active:scale-[0.97] transition-transform">
+            className="flex-1 py-3.5 rounded-[10px] bg-brand text-on-brand font-bold text-sm active:scale-[0.97] transition-transform">
             Assess {player.player_name.split(' ')[0]} →
-          </button>
-          <button
-            onClick={() => navigate('/coach/award', { state: { preselectedPlayerId: player.id } })}
-            className="flex-1 py-3.5 rounded-[10px] border border-line text-ink-2 text-sm font-medium flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-            style={{ background: 'transparent' }}>
-            <Trophy size={14} />
-            Award
           </button>
         </div>
       </div>

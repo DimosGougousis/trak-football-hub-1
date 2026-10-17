@@ -98,7 +98,8 @@ export default function PlayerMatches() {
               style={{ fontFamily: 'var(--t-font)' }}>Sessions</h1>
           </div>
           {showMatches && <span className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
-            {failed ? '—' : `${filtered.length} ${filtered.length === 1 ? 'match' : 'matches'}`}
+            {/* TRAK-170: matches played, not the upcoming ones listed below it. */}
+            {failed ? '—' : `${filtered.length} ${filtered.length === 1 ? 'match' : 'matches'} played`}
           </span>}
         </div>
 
@@ -130,7 +131,8 @@ export default function PlayerMatches() {
         ) : loading ? (
           <p className="text-ink-3 text-sm mt-4">Loading…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-ink-3 text-sm mt-4">No matches found.</p>
+          // TRAK-170 (live run 3): this list is matches already played; upcoming ones sit above it.
+          <p className="text-ink-3 text-sm mt-4">{filter === 'All' ? 'No past matches yet.' : `No past ${filter.toLowerCase()} matches yet.`}</p>
         ) : (
           <div className="space-y-2">
             {filtered.map(m => (
