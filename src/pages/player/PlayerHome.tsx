@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
-import { bandForScore, scoreToBand } from '@/lib/rating-engine'
+import { scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
 import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { PlayerAlertsBell, type PublishedAssessmentAlert } from '@/components/player/PlayerAlertsBell'
@@ -19,6 +19,7 @@ import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
+import { AssessmentBands } from '@/components/player/AssessmentBands'
 import { timeOfDayGreeting } from '@/lib/greeting'
 
 const QUOTES = [
@@ -691,33 +692,7 @@ export default function PlayerHome() {
                 </div>
 
                 {/* Category bars */}
-                <div className="space-y-3 mt-4">
-                  {[
-                    { label: 'Work Rate',    score: coachAssessment.work_rate    },
-                    { label: 'Tactical',     score: coachAssessment.tactical     },
-                    { label: 'Attitude',     score: coachAssessment.attitude     },
-                    { label: 'Technical',    score: coachAssessment.technical    },
-                    { label: 'Physical',     score: coachAssessment.physical     },
-                    { label: 'Coachability', score: coachAssessment.coachability },
-                  ].map(cat => {
-                    // TRAK-110: the scores are NOT NULL, so 0 is a real score;
-                    // `|| 5` used to turn it into "Mixed".
-                    const band = bandForScore(cat.score)
-                    return (
-                    <div key={cat.label} className="flex items-center gap-2">
-                      <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
-                        style={{ fontFamily: "'DM Mono', monospace" }}>{cat.label}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-[#202024] overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: band.color }} />
-                      </div>
-                      <span className="text-[11px] flex-shrink-0 w-[72px] text-right" style={{ color: band.color }}>
-                        {band.word}
-                      </span>
-                    </div>
-                    )
-                  })}
-                </div>
+                <AssessmentBands scores={coachAssessment} />
 
                 {/* TRAK-71: the coach's message in full, here, with no tap-through. */}
                 {feedbackLoadFailed ? (
