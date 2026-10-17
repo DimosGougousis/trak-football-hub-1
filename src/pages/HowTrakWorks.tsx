@@ -39,31 +39,31 @@ export default function HowTrakWorks() {
           className="flex items-center justify-center"
           style={{
             width: 32, height: 32, borderRadius: 999,
-            background: '#101012', border: '1px solid rgba(255,255,255,0.07)',
-            color: 'rgba(255,255,255,0.88)',
+            background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))',
+            color: 'rgb(var(--t-ink))',
           }}
           aria-label="Back"
         >
           <ArrowLeft size={14} />
         </button>
-        <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>
           How TRAK works
         </span>
       </div>
 
       <div className="pt-2 pb-6 space-y-3">
         {/* Intro */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="THE IDEA" />
-          <p className="text-[13px] text-white/70 mt-2.5 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p className="text-[13px] text-ink-2 mt-2.5 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
             TRAK turns every match into a story, not a number. Instead of a raw score,
-            your performance lands in a <span className="text-white/88 font-medium">Performance Band</span>,
+            your performance lands in a <span className="text-ink font-medium">Performance Band</span>,
             a word that captures how the game went and how you grew.
           </p>
         </div>
 
         {/* Bands */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="PERFORMANCE BANDS" />
           <div className="mt-3 space-y-2.5">
             {BANDS.map(b => {
@@ -77,11 +77,11 @@ export default function HowTrakWorks() {
                     {b.word}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] text-white/80" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                    <p className="text-[12px] text-ink" style={{ fontFamily: 'var(--t-font)' }}>
                       {BAND_DESCRIPTIONS[key]}
                     </p>
-                    <p className="text-[9px] text-white/30 mt-0.5 tracking-[0.08em]"
-                      style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <p className="text-[9px] text-ink-3 mt-0.5 tracking-[0.08em]"
+                      style={{ fontFamily: 'var(--t-font-mono)' }}>
                       RATING {RANGES[key]}
                     </p>
                   </div>
@@ -92,12 +92,12 @@ export default function HowTrakWorks() {
         </div>
 
         {/* Rating Engine */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="THE RATING ENGINE" />
-          <div className="mt-2.5 space-y-2.5 text-[12px] text-white/70 leading-relaxed"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <div className="mt-2.5 space-y-2.5 text-[12px] text-ink-2 leading-relaxed"
+            style={{ fontFamily: 'var(--t-font)' }}>
             <p>
-              Every match starts at a baseline of <span className="text-white/88 font-medium">6.5</span>,
+              Every match starts at a baseline of <span className="text-ink font-medium">6.5</span>,
               a steady, average performance.
             </p>
             <p>
@@ -113,14 +113,14 @@ export default function HowTrakWorks() {
         </div>
 
         {/* Why bands not numbers */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="WHY WORDS, NOT NUMBERS" />
-          <p className="text-[12px] text-white/70 mt-2.5 leading-relaxed"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed"
+            style={{ fontFamily: 'var(--t-font)' }}>
             A 7.2 and a 7.4 feel the same on the pitch, but a number invites comparison and pressure.
-            Bands keep the focus on growth: how often you reach <span style={{ color: '#4ade80' }}>Good</span>,
-            how you bounce back from a <span style={{ color: '#fb923c' }}>Mixed</span> match, and when you
-            break into <span style={{ color: '#C8F25A' }}>Exceptional</span>.
+            Bands keep the focus on growth: how often you reach <span style={{ color: 'rgb(var(--t-success))' }}>Good</span>,
+            how you bounce back from a <span style={{ color: 'rgb(var(--t-orange))' }}>Mixed</span> match, and when you
+            break into <span style={{ color: 'rgb(var(--t-brand))' }}>Exceptional</span>.
           </p>
         </div>
       </div>

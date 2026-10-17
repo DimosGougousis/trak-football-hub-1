@@ -92,12 +92,12 @@ export default function PlayerMatches() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[9px] tracking-[0.12em] uppercase text-white/35 mb-0.5"
-              style={{ fontFamily: "'DM Mono', monospace" }}>Player</p>
-            <h1 className="text-[22px] font-light text-white/88 leading-tight"
-              style={{ fontFamily: "'DM Sans', sans-serif" }}>Sessions</h1>
+            <p className="text-[9px] tracking-[0.12em] uppercase text-ink-3 mb-0.5"
+              style={{ fontFamily: 'var(--t-font-mono)' }}>Player</p>
+            <h1 className="text-[22px] font-light text-ink leading-tight"
+              style={{ fontFamily: 'var(--t-font)' }}>Sessions</h1>
           </div>
-          {showMatches && <span className="text-[10px] text-white/30" style={{ fontFamily: "'DM Mono', monospace" }}>
+          {showMatches && <span className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
             {failed ? '—' : `${filtered.length} ${filtered.length === 1 ? 'match' : 'matches'}`}
           </span>}
         </div>
@@ -113,10 +113,10 @@ export default function PlayerMatches() {
               onClick={() => setFilter(f)}
               className="px-3 py-1.5 rounded-full text-[11px] whitespace-nowrap transition-colors flex-shrink-0"
               style={{
-                background: filter === f ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.04)',
-                border: filter === f ? '1px solid rgba(200,242,90,0.3)' : '1px solid rgba(255,255,255,0.07)',
-                color: filter === f ? '#C8F25A' : 'rgba(255,255,255,0.45)',
-                fontFamily: "'DM Mono', monospace",
+                background: filter === f ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-raised))',
+                border: filter === f ? '1px solid rgb(var(--t-brand) / 0.3)' : '1px solid rgb(var(--t-line))',
+                color: filter === f ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
+                fontFamily: 'var(--t-font-mono)',
               }}
             >
               {f}
@@ -128,9 +128,9 @@ export default function PlayerMatches() {
         {!showMatches ? null : failed ? (
           <LoadError what="your matches" onRetry={retry} retrying={loading} />
         ) : loading ? (
-          <p className="text-white/35 text-sm mt-4">Loading…</p>
+          <p className="text-ink-3 text-sm mt-4">Loading…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-white/35 text-sm mt-4">No matches found.</p>
+          <p className="text-ink-3 text-sm mt-4">No matches found.</p>
         ) : (
           <div className="space-y-2">
             {filtered.map(m => (
@@ -152,7 +152,7 @@ export default function PlayerMatches() {
         {hasMore && filter === 'All' && !failed && (
           <>
             {pageFailed && (
-              <p className="mt-4 text-[11px] text-white/45 text-center leading-relaxed" role="alert">
+              <p className="mt-4 text-[11px] text-ink-3 text-center leading-relaxed" role="alert">
                 Couldn't load the next matches. Nothing is missing from your record —
                 tap again to retry.
               </p>
@@ -160,8 +160,8 @@ export default function PlayerMatches() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="w-full mt-2 py-3 rounded-[12px] text-[11px] tracking-[0.08em] uppercase text-white/45 border border-white/[0.07] bg-transparent active:bg-white/[0.04] transition-colors disabled:opacity-40"
-              style={{ fontFamily: "'DM Mono', monospace" }}
+              className="w-full mt-2 py-3 rounded-[12px] text-[11px] tracking-[0.08em] uppercase text-ink-3 border border-line bg-transparent active:bg-raised transition-colors disabled:opacity-40"
+              style={{ fontFamily: 'var(--t-font-mono)' }}
             >
               {loadingMore ? 'Loading…' : pageFailed ? 'Retry' : 'Load more'}
             </button>

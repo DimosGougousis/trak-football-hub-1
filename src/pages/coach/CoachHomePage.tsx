@@ -29,7 +29,7 @@ const BAND_COLORS: Record<string, string> = Object.fromEntries(
 
 // Player overview flags. Not band colours: these describe what a coach should
 // look at, not how a child played.
-const FLAG_COLORS = { attention: '#fb923c', missed: '#facc15', improved: '#4ade80' } as const
+const FLAG_COLORS = { attention: 'rgb(var(--t-orange))', missed: 'rgb(var(--t-warning))', improved: 'rgb(var(--t-success))' } as const
 
 // A count not answered yet is "…", and one that failed is "—" (the banner
 // above says why). Only an answered read may print a number, zero included.
@@ -213,7 +213,7 @@ export default function CoachHomePage() {
   //                     real phone: "1 of the 3 classified as good should have
   //                     been steady." The screen could not tell them apart.
   //   developing +
-  //   difficult      -> one dash, coloured #60a5fa — which BANDS assigns to
+  //   difficult      -> one dash, coloured rgb(var(--t-info)) — which BANDS assigns to
   //                     STEADY. The two weakest bands rendered in a mid-band
   //                     blue, so a struggling squad read as an unremarkable one.
   //
@@ -258,26 +258,26 @@ export default function CoachHomePage() {
 
         {/* Identity section */}
         <div className="py-2.5 pb-4">
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>{greeting}</p>
+          <p className="text-xs" style={{ color: 'rgb(var(--t-ink-3))' }}>{greeting}</p>
           <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
             <span
-              className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase"
+              className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full border border-line text-[8px] font-medium tracking-[0.06em] uppercase"
               style={{
-                fontFamily: "'DM Mono', monospace",
-                background: 'rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.45)',
+                fontFamily: 'var(--t-font-mono)',
+                background: 'rgb(var(--t-raised))',
+                color: 'rgb(var(--t-ink-3))',
               }}
             >
-              <span className="w-1 h-1 rounded-full" style={{ background: '#C8F25A' }} />
+              <span className="w-1 h-1 rounded-full" style={{ background: 'rgb(var(--t-brand))' }} />
               Active
             </span>
             {coachDetails?.coach_role && (
               <span
-                className="h-5 px-2.5 rounded-full border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase inline-flex items-center"
+                className="h-5 px-2.5 rounded-full border border-line text-[8px] font-medium tracking-[0.06em] uppercase inline-flex items-center"
                 style={{
-                  fontFamily: "'DM Mono', monospace",
-                  background: 'rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.45)',
+                  fontFamily: 'var(--t-font-mono)',
+                  background: 'rgb(var(--t-raised))',
+                  color: 'rgb(var(--t-ink-3))',
                 }}
               >
                 {coachDetails.coach_role}
@@ -288,11 +288,11 @@ export default function CoachHomePage() {
                 showed. The academy's name is on Profile and Settings. */}
             {coachDetails?.team && (
               <span
-                className="h-5 px-2.5 rounded-full border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase inline-flex items-center"
+                className="h-5 px-2.5 rounded-full border border-line text-[8px] font-medium tracking-[0.06em] uppercase inline-flex items-center"
                 style={{
-                  fontFamily: "'DM Mono', monospace",
-                  background: 'rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.45)',
+                  fontFamily: 'var(--t-font-mono)',
+                  background: 'rgb(var(--t-raised))',
+                  color: 'rgb(var(--t-ink-3))',
                 }}
               >
                 {coachDetails.team}
@@ -303,13 +303,13 @@ export default function CoachHomePage() {
 
         {/* Hero card */}
         <div
-          className="relative overflow-hidden rounded-[24px] border border-white/[0.07] p-5 my-[6px] mb-[14px]"
-          style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)' }}
+          className="relative overflow-hidden rounded-[24px] border border-line p-5 my-[6px] mb-[14px]"
+          style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)' }}
         >
           {/* Radial glow ::after pseudo via div */}
           <div
             className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.08) 0%, transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.08) 0%, transparent 70%)' }}
           />
 
           <div className="flex items-start justify-between mb-4 relative z-10">
@@ -319,17 +319,17 @@ export default function CoachHomePage() {
               <p
                 className="text-[52px] leading-none mt-2"
                 style={{
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: 'var(--t-font)',
                   fontWeight: 300,
                   letterSpacing: '-0.04em',
-                  color: '#C8F25A',
+                  color: 'rgb(var(--t-brand))',
                 }}
               >
                 {countText(playerCount, failed.squad)}
               </p>
               <p
                 className="text-[9px] mt-1.5 tracking-[0.04em]"
-                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+                style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 Players in squad
               </p>
@@ -339,7 +339,7 @@ export default function CoachHomePage() {
             <div className="text-right">
               <p
                 className="text-[9px] font-medium tracking-[0.12em] uppercase mb-2"
-                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+                style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 Assessments
               </p>
@@ -354,9 +354,9 @@ export default function CoachHomePage() {
                         background:
                           i >= trendHeights.length - 2
                             ? i === trendHeights.length - 1
-                              ? '#C8F25A'
-                              : 'rgba(200,242,90,0.35)'
-                            : 'rgba(255,255,255,0.08)',
+                              ? 'rgb(var(--t-brand))'
+                              : 'rgb(var(--t-brand) / 0.35)'
+                            : 'rgb(var(--t-raised))',
                       }}
                     />
                   ))}
@@ -364,7 +364,7 @@ export default function CoachHomePage() {
               )}
               <p
                 className="text-[13px] font-medium mt-1.5"
-                style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)' }}
+                style={{ fontFamily: 'var(--t-font)', color: 'rgb(var(--t-ink-3))' }}
               >
                 {analyticsFailed ? 'Not available' : allAssessments ? `${allAssessments.length} total` : 'Loading…'}
               </p>
@@ -374,13 +374,13 @@ export default function CoachHomePage() {
           {/* Band summary strip */}
           <div
             className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
-            style={{ background: 'rgba(0,0,0,0.3)' }}
+            style={{ background: 'rgb(var(--t-raised))' }}
           >
             <div className="flex items-center gap-[7px]">
-              <div className="w-[5px] h-[5px] rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+              <div className="w-[5px] h-[5px] rounded-full" style={{ background: 'rgb(var(--t-ink) / 0.2)' }} />
               <span
                 className="text-[9px] font-medium tracking-[0.08em] uppercase"
-                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+                style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 Squad bands
               </span>
@@ -389,14 +389,14 @@ export default function CoachHomePage() {
               {analyticsFailed ? (
                 <span
                   className="text-[10px]"
-                  style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(251,191,36,0.7)' }}
+                  style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-warning) / 0.7)' }}
                 >
                   Couldn't load
                 </span>
               ) : squadBandChips.length === 0 ? (
                 <span
                   className="text-[10px]"
-                  style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.25)' }}
+                  style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
                 >
                   {squadAnalytics ? 'No assessments yet' : 'Loading…'}
                 </span>
@@ -408,10 +408,10 @@ export default function CoachHomePage() {
                   <span
                     key={chip.word}
                     className="inline-flex items-center gap-1 text-xs whitespace-nowrap flex-shrink-0"
-                    style={{ fontFamily: "'DM Sans', sans-serif", color: chip.color }}
+                    style={{ fontFamily: 'var(--t-font)', color: chip.color }}
                   >
                     {chip.count}
-                    <span className="text-[9px]" style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <span className="text-[9px]" style={{ fontFamily: 'var(--t-font-mono)' }}>
                       {chip.word}
                     </span>
                   </span>
@@ -426,22 +426,22 @@ export default function CoachHomePage() {
           <button
             onClick={() => navigate('/coach/squad')}
             className="rounded-[10px] p-[11px_8px] text-center active:scale-95 transition-transform"
-            style={{ background: 'rgba(0,0,0,0.35)' }}
+            style={{ background: 'rgb(var(--t-raised))' }}
           >
             <p
               className="text-[22px] leading-none"
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--t-font)',
                 fontWeight: 400,
                 letterSpacing: '-0.02em',
-                color: 'rgba(255,255,255,0.88)',
+                color: 'rgb(var(--t-ink))',
               }}
             >
               {countText(playerCount, failed.squad)}
             </p>
             <span
               className="text-[8px] font-medium tracking-[0.1em] uppercase mt-[5px] block"
-              style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+              style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
             >
               {playerCount === 1 ? 'Player' : 'Players'}
             </span>
@@ -451,22 +451,22 @@ export default function CoachHomePage() {
           <button
             onClick={() => navigate('/coach/sessions/list')}
             className="rounded-[10px] p-[11px_8px] text-center active:scale-95 transition-transform"
-            style={{ background: 'rgba(0,0,0,0.35)' }}
+            style={{ background: 'rgb(var(--t-raised))' }}
           >
             <p
               className="text-[22px] leading-none"
               style={{
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--t-font)',
                 fontWeight: 400,
                 letterSpacing: '-0.02em',
-                color: 'rgba(255,255,255,0.88)',
+                color: 'rgb(var(--t-ink))',
               }}
             >
               {countText(sessionCount, failed.sessions)}
             </p>
             <span
               className="text-[8px] font-medium tracking-[0.1em] uppercase mt-[5px] block"
-              style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+              style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
             >
               Sessions
             </span>
@@ -478,12 +478,12 @@ export default function CoachHomePage() {
         {playerCount === 0 && !failed.squad && (
           <div
             className="w-full mt-3 rounded-[14px] border p-4 text-left"
-            style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
+            style={{ background: 'rgb(var(--t-surface))', borderColor: 'rgb(var(--t-line))' }}
           >
-            <p className="text-[13px] font-medium text-white/70" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[13px] font-medium text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>
               Your squad is being prepared
             </p>
-            <p className="text-[10px] mt-0.5 text-white/35" style={{ fontFamily: "'DM Mono', monospace" }}>
+            <p className="text-[10px] mt-0.5 text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
               Your academy will add players to this squad.
             </p>
           </div>
@@ -495,28 +495,28 @@ export default function CoachHomePage() {
             onClick={() => navigate('/coach/assess')}
             className="w-full mt-3 relative overflow-hidden rounded-[14px] border p-4 text-left active:scale-[0.98] transition-transform"
             style={{
-              background: 'rgba(200,242,90,0.06)',
-              borderColor: 'rgba(200,242,90,0.2)',
-              boxShadow: '0 0 28px rgba(200,242,90,0.06)',
+              background: 'rgb(var(--t-brand) / 0.06)',
+              borderColor: 'rgb(var(--t-brand) / 0.2)',
+              boxShadow: '0 0 28px rgb(var(--t-brand) / 0.06)',
             }}
           >
             <div
               className="absolute -bottom-[40px] -right-[40px] w-[140px] h-[140px] rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.1) 0%, transparent 70%)' }}
+              style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.1) 0%, transparent 70%)' }}
             />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-1">
-                <Zap size={16} color="#C8F25A" fill="#C8F25A" strokeWidth={1.5} />
+                <Zap size={16} color="rgb(var(--t-brand))" fill="rgb(var(--t-brand))" strokeWidth={1.5} />
                 <span
                   className="text-[14px] font-semibold"
-                  style={{ color: '#C8F25A', fontFamily: "'DM Sans', sans-serif" }}
+                  style={{ color: 'rgb(var(--t-brand))', fontFamily: 'var(--t-font)' }}
                 >
                   Assess players
                 </span>
               </div>
               <p
                 className="text-[11px] mt-1"
-                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}
+                style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 Choose a player and record their assessment
               </p>
@@ -529,10 +529,10 @@ export default function CoachHomePage() {
           <button
             onClick={() => navigate('/coach/assistant')}
             className="w-full rounded-[14px] border p-3.5 text-left active:scale-[0.98] transition-transform"
-            style={{ background: '#101012', borderColor: 'rgba(255,255,255,0.07)' }}
+            style={{ background: 'rgb(var(--t-surface))', borderColor: 'rgb(var(--t-line))' }}
           >
-            <p className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.88)' }}>Coach Assistant</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Drills & session ideas</p>
+            <p className="text-[13px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>Coach Assistant</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'rgb(var(--t-ink-3))' }}>Drills & session ideas</p>
           </button>
         </div>
 
@@ -550,8 +550,8 @@ export default function CoachHomePage() {
                 return (
                   <div
                     key={a.id}
-                    className="flex items-center gap-3 rounded-[14px] border border-white/[0.07] p-[13px_14px] mb-2 cursor-pointer active:scale-[0.99] transition-transform"
-                    style={{ background: '#101012' }}
+                    className="flex items-center gap-3 rounded-[14px] border border-line p-[13px_14px] mb-2 cursor-pointer active:scale-[0.99] transition-transform"
+                    style={{ background: 'rgb(var(--t-surface))' }}
                     // TRAK-179 (16 Oct): the player's profile, as Squad → Open profile; the
                     // assessment is in their history there.
                     {...openable(`Open ${playerName}'s profile, assessed ${formattedDate}`,
@@ -562,13 +562,13 @@ export default function CoachHomePage() {
                     <div className="flex-1 min-w-0">
                       <p
                         className="text-[13px] font-medium truncate"
-                        style={{ color: 'rgba(255,255,255,0.88)' }}
+                        style={{ color: 'rgb(var(--t-ink))' }}
                       >
                         {playerName}
                       </p>
                       <p
                         className="text-[9px] mt-[3px] tracking-[0.04em]"
-                        style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+                        style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
                       >
                         {formattedDate} · {a.appearance || 'Assessment'}
                       </p>
@@ -591,19 +591,19 @@ export default function CoachHomePage() {
           <div className="mt-5">
             <span
               className="text-[9px] font-medium tracking-[0.12em] uppercase block mb-3"
-              style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
+              style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
             >
               Squad Overview
             </span>
 
             {/* Band Distribution Bar Chart */}
             <div
-              className="rounded-[18px] border border-white/[0.07] p-4 mb-3"
-              style={{ background: '#101012' }}
+              className="rounded-[18px] border border-line p-4 mb-3"
+              style={{ background: 'rgb(var(--t-surface))' }}
             >
               <span
                 className="text-[9px] font-medium tracking-[0.08em] uppercase block mb-3"
-                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}
+                style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 Band Distribution · all assessments
               </span>
@@ -617,15 +617,15 @@ export default function CoachHomePage() {
                       <span
                         className="text-[10px] w-[90px] flex-shrink-0 text-right"
                         style={{
-                          fontFamily: "'DM Mono', monospace",
-                          color: BAND_COLORS[bandKey] || 'rgba(255,255,255,0.4)',
+                          fontFamily: 'var(--t-font-mono)',
+                          color: BAND_COLORS[bandKey] || 'rgb(var(--t-ink-3))',
                         }}
                       >
                         {b.word}
                       </span>
                       <div
                         className="flex-1 h-[14px] rounded-[4px] overflow-hidden"
-                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                        style={{ background: 'rgb(var(--t-raised))' }}
                       >
                         {count > 0 && (
                           <div
@@ -633,7 +633,7 @@ export default function CoachHomePage() {
                             style={{
                               width: `${widthPct}%`,
                               minWidth: '4px',
-                              background: BAND_COLORS[bandKey] || 'rgba(255,255,255,0.4)',
+                              background: BAND_COLORS[bandKey] || 'rgb(var(--t-ink) / 0.4)',
                               opacity: 0.7,
                             }}
                           />
@@ -642,8 +642,8 @@ export default function CoachHomePage() {
                       <span
                         className="text-[10px] w-[24px] text-right flex-shrink-0"
                         style={{
-                          fontFamily: "'DM Mono', monospace",
-                          color: count > 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)',
+                          fontFamily: 'var(--t-font-mono)',
+                          color: count > 0 ? 'rgb(var(--t-ink-2))' : 'rgb(var(--t-ink-3))',
                         }}
                       >
                         {count}
@@ -664,12 +664,12 @@ export default function CoachHomePage() {
         {squadAnalytics && (overviewRows.length > 0 || missedFailed) && (
           <section
             aria-label="Player overview"
-            className="rounded-[18px] border border-white/[0.07] p-4 mt-3"
-            style={{ background: '#101012' }}
+            className="rounded-[18px] border border-line p-4 mt-3"
+            style={{ background: 'rgb(var(--t-surface))' }}
           >
             <span
               className="text-[9px] font-medium tracking-[0.08em] uppercase block mb-2.5"
-              style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}
+              style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
             >
               Player overview
             </span>
@@ -679,13 +679,13 @@ export default function CoachHomePage() {
                   key={row.playerId}
                   className="rounded-[10px] py-2.5 px-3"
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'rgb(var(--t-raised))',
                     borderLeft: `3px solid ${FLAG_COLORS[row.flags[0].kind]}`,
                   }}
                 >
                   <p
                     className="text-[13px] font-medium"
-                    style={{ fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.78)' }}
+                    style={{ fontFamily: 'var(--t-font)', color: 'rgb(var(--t-ink))' }}
                   >
                     {row.name}
                   </p>
@@ -694,7 +694,7 @@ export default function CoachHomePage() {
                       <span
                         key={flag.kind}
                         className="text-[10px]"
-                        style={{ fontFamily: "'DM Mono', monospace", color: FLAG_COLORS[flag.kind] }}
+                        style={{ fontFamily: 'var(--t-font-mono)', color: FLAG_COLORS[flag.kind] }}
                       >
                         {flag.label}
                       </span>
@@ -704,7 +704,7 @@ export default function CoachHomePage() {
               ))}
             </ul>
             {missedFailed && (
-              <p className="text-[10px] text-white/40 mt-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[10px] text-ink-3 mt-2" style={{ fontFamily: 'var(--t-font)' }}>
                 Couldn't check the last session's attendance. Reload to try again.
               </p>
             )}

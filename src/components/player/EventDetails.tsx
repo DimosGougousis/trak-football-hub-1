@@ -1,5 +1,6 @@
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
+import { withAlpha } from '@/lib/with-alpha'
 
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
@@ -22,19 +23,19 @@ export function EventDetails({ event: e }: { event: PlayerEvent }) {
   ]
   return (
     <div className="space-y-4">
-      <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-white/50' : 'text-white/90'}`}>{eventHeading(e)}</h1>
+      <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{eventHeading(e)}</h1>
       {cancelled && (
-        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${CANCELLED_COLOR}80` }}>
+        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${withAlpha(CANCELLED_COLOR, 0.5)}` }}>
           <p className="text-[13px] font-semibold" style={{ color: CANCELLED_COLOR }}>This event is cancelled.</p>
-          {e.cancelReason && <p className="text-[13px] text-white/70 mt-1">{e.cancelReason}</p>}
+          {e.cancelReason && <p className="text-[13px] text-ink-2 mt-1">{e.cancelReason}</p>}
         </div>
       )}
-      <ul aria-label="Event details" className="rounded-[18px] divide-y divide-white/[0.06]"
-        style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <ul aria-label="Event details" className="rounded-[18px] divide-y divide-line"
+        style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
         {rows.map(([label, value]) => (
           <li key={label} className="flex justify-between gap-4 px-4 py-3 text-[13px]">
-            <span className="text-white/45">{label}</span>
-            <span className="text-white/85 text-right">{value}</span>
+            <span className="text-ink-3">{label}</span>
+            <span className="text-ink text-right">{value}</span>
           </li>
         ))}
       </ul>

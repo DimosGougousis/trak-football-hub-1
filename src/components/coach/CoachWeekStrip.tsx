@@ -21,7 +21,7 @@ export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; vers
           {/* A logged session's sheet says so and opens its saved record (Imad, 16 Oct). */}
           {event.sessionId
             ? <Link to={`/coach/sessions/${event.sessionId}`}
-                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-white/[0.08] text-[14px] font-medium text-white/90 focus-visible:ring-2 focus-visible:ring-primary">
+                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
                 Open session
               </Link>
             : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}

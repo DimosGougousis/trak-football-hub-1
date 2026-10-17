@@ -20,6 +20,7 @@ import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
 import { timeOfDayGreeting } from '@/lib/greeting'
+import { DEVELOPING_PURPLE } from '@/lib/fixed-colours'
 
 const QUOTES = [
   { text: "The more difficult the victory, the greater the happiness in winning.", author: "Pelé" },
@@ -387,12 +388,12 @@ export default function PlayerHome() {
 
   // Band summary abbreviations
   const bandAbbrev = [
-    { key: 'exceptional', abbr: 'E', color: '#C8F25A' },
-    { key: 'standout', abbr: 'St', color: '#86efac' },
-    { key: 'good', abbr: 'G', color: '#4ade80' },
-    { key: 'steady', abbr: 'Sy', color: '#60a5fa' },
-    { key: 'mixed', abbr: 'M', color: '#fb923c' },
-    { key: 'developing', abbr: 'D', color: '#a78bfa' },
+    { key: 'exceptional', abbr: 'E', color: 'rgb(var(--t-brand))' },
+    { key: 'standout', abbr: 'St', color: 'rgb(var(--t-success))' },
+    { key: 'good', abbr: 'G', color: 'rgb(var(--t-success))' },
+    { key: 'steady', abbr: 'Sy', color: 'rgb(var(--t-info))' },
+    { key: 'mixed', abbr: 'M', color: 'rgb(var(--t-orange))' },
+    { key: 'developing', abbr: 'D', color: DEVELOPING_PURPLE },
   ]
 
   if (loading) return (
@@ -436,11 +437,11 @@ export default function PlayerHome() {
 
         {mayHaveMissedHistory && (
           <div className="rounded-xl border p-4 my-4" role="status"
-            style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
-            <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            style={{ borderColor: 'rgb(var(--t-line))', background: 'rgb(var(--t-raised))' }}>
+            <p className="text-[13px] text-ink" style={{ fontFamily: 'var(--t-font)' }}>
               Is anything missing?
             </p>
-            <p className="text-[12px] text-white/55 mt-1 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[12px] text-ink-2 mt-1 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
               Your coach may already have you on their list under a slightly different
               spelling. If you've been assessed before and nothing is showing here, ask
               them to check the name on your record.
@@ -455,10 +456,10 @@ export default function PlayerHome() {
         )}
         {consent?.required && !decidesForSelf && (
           <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 my-4">
-            <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[13px] text-ink" style={{ fontFamily: 'var(--t-font)' }}>
               Waiting for your parent
             </p>
-            <p className="text-[12px] text-white/55 mt-1 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[12px] text-ink-2 mt-1 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
               Your account needs a parent or guardian's approval before your coach can record your progress.
             </p>
           </div>
@@ -469,20 +470,20 @@ export default function PlayerHome() {
         {/* Identity */}
         <div className="py-2.5 pb-4">
           {/* The name is in the header now (TRAK-163). */}
-          <p className="text-xs text-white/22 mb-1">{timeOfDayGreeting()}</p>
+          <p className="text-xs text-ink-3 mb-1">{timeOfDayGreeting()}</p>
           {details && (
             <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45"
-                style={{ fontFamily: "'DM Mono', monospace" }}>
-                <span className="w-1 h-1 rounded-full bg-[#C8F25A]" />Active
+              <span className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3"
+                style={{ fontFamily: 'var(--t-font-mono)' }}>
+                <span className="w-1 h-1 rounded-full bg-brand" />Active
               </span>
               {details.position && (
-                <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>{details.position}</span>
+                <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>{details.position}</span>
               )}
               {details.current_club && details.age_group && (
-                <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>{details.current_club} {details.age_group}</span>
+                <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>{details.current_club} {details.age_group}</span>
               )}
             </div>
           )}
@@ -490,9 +491,9 @@ export default function PlayerHome() {
 
         {/* Hero Card */}
         <div className="relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
           <div className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.08) 0%, transparent 70%)' }} />
+            style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.08) 0%, transparent 70%)' }} />
 
           <div className="flex items-start justify-between mb-4 relative z-10">
             <div>
@@ -500,13 +501,13 @@ export default function PlayerHome() {
               {matches.length > 0 ? (
                 <>
                   <p className="text-[52px] leading-none mt-2" style={{
-                    fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.04em',
+                    fontFamily: 'var(--t-font)', fontWeight: 300, letterSpacing: '-0.04em',
                     color: BANDS.find(b => b.word.toLowerCase() === seasonBand)?.color
                   }}>
                     {BANDS.find(b => b.word.toLowerCase() === seasonBand)?.word}
                   </p>
                   {lastMatch && (
-                    <p className="text-[9px] text-white/22 mt-1.5 tracking-[0.04em]" style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <p className="text-[9px] text-ink-3 mt-1.5 tracking-[0.04em]" style={{ fontFamily: 'var(--t-font-mono)' }}>
                       Last match · {lastMatch.competition || 'Match'}
                     </p>
                   )}
@@ -514,12 +515,12 @@ export default function PlayerHome() {
               ) : (
                 /* ── Welcome state (no matches yet) ── */
                 <div className="mt-2">
-                  <p className="text-[34px] leading-tight text-white/70"
-                    style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.03em' }}>
+                  <p className="text-[34px] leading-tight text-ink-2"
+                    style={{ fontFamily: 'var(--t-font)', fontWeight: 300, letterSpacing: '-0.03em' }}>
                     Your card<br />is ready.
                   </p>
-                  <p className="text-[10px] text-white/28 mt-2"
-                    style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                  <p className="text-[10px] text-ink-3 mt-2"
+                    style={{ fontFamily: 'var(--t-font)' }}>
                     Play. Get assessed. Watch it evolve.
                   </p>
 
@@ -532,16 +533,16 @@ export default function PlayerHome() {
                         <div key={band.word} className="flex items-center">
                           <div className="flex flex-col items-center gap-1">
                             <div className="w-2.5 h-2.5 rounded-full" style={{
-                              background: isLast ? band.color : 'rgba(255,255,255,0.10)',
-                              boxShadow: isLast ? `0 0 8px rgba(200,242,90,0.5)` : 'none',
+                              background: isLast ? band.color : 'rgb(var(--t-ink-3))',
+                              boxShadow: isLast ? `0 0 8px rgb(var(--t-brand) / 0.5)` : 'none',
                             }} />
                             <span className="text-[7px]" style={{
-                              fontFamily: "'DM Mono', monospace",
-                              color: isLast ? band.color : 'rgba(255,255,255,0.18)',
+                              fontFamily: 'var(--t-font-mono)',
+                              color: isLast ? band.color : 'rgb(var(--t-ink-3))',
                             }}>{abbrs[i]}</span>
                           </div>
                           {!isLast && (
-                            <div className="w-3 h-px mb-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                            <div className="w-3 h-px mb-3" style={{ background: 'rgb(var(--t-raised))' }} />
                           )}
                         </div>
                       )
@@ -549,8 +550,8 @@ export default function PlayerHome() {
                   </div>
 
                   {/* Coach connection */}
-                  <p className="text-[9px] text-white/30 mt-3 tracking-[0.04em]"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>
+                  <p className="text-[9px] text-ink-3 mt-3 tracking-[0.04em]"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>
                     {coachName
                       ? `↳ ${coachName} has you in their squad`
                       : 'Your coach will log your first match soon.'}
@@ -562,24 +563,24 @@ export default function PlayerHome() {
             {/* Trend mini-chart */}
             {trendHeights.length > 0 && (
               <div className="text-right">
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/22 mb-2"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>Trend</p>
+                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3 mb-2"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>Trend</p>
                 <div className="flex items-end gap-[3px] h-8 justify-end">
                   {trendHeights.map((h, i) => (
                     <div key={i} className="w-2.5 rounded-t" style={{
                       height: `${h}%`,
                       background: i >= trendHeights.length - 2
-                        ? (i === trendHeights.length - 1 ? '#C8F25A' : 'rgba(200,242,90,0.35)')
-                        : 'rgba(255,255,255,0.08)',
+                        ? (i === trendHeights.length - 1 ? 'rgb(var(--t-brand))' : 'rgb(var(--t-brand) / 0.35)')
+                        : 'rgb(var(--t-raised))',
                     }} />
                   ))}
                 </div>
                 {streakCount >= 3 ? (
-                  <p className="text-[10px] font-medium text-[#C8F25A] mt-1.5"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>{streakCount} in a row</p>
+                  <p className="text-[10px] font-medium text-brand mt-1.5"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>{streakCount} in a row</p>
                 ) : isImproving ? (
-                  <p className="text-[10px] font-medium text-[#C8F25A] mt-1.5"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>↑ improving</p>
+                  <p className="text-[10px] font-medium text-brand mt-1.5"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>↑ improving</p>
                 ) : null}
               </div>
             )}
@@ -588,15 +589,15 @@ export default function PlayerHome() {
           {/* Band summary strip */}
           {matches.length > 0 && (
             <div className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgba(0,0,0,0.3)' }}>
+              style={{ background: 'rgb(var(--t-raised))' }}>
               <div className="flex items-center gap-[7px]">
-                <div className="w-[5px] h-[5px] rounded-full bg-white/20" />
-                <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-white/22"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>Season bands</span>
+                <div className="w-[5px] h-[5px] rounded-full bg-ink-3" />
+                <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-3"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>Season bands</span>
               </div>
               <div className="flex items-center gap-2.5">
                 {bandAbbrev.filter(b => distribution[b.key] > 0).map(b => (
-                  <span key={b.key} className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: b.color }}>
+                  <span key={b.key} className="text-xs" style={{ fontFamily: 'var(--t-font)', color: b.color }}>
                     {distribution[b.key]} {b.abbr}
                   </span>
                 ))}
@@ -607,19 +608,19 @@ export default function PlayerHome() {
           {/* Next milestone */}
           {matches.length > 0 && (
             <div className="flex items-center justify-between px-3 py-2 mt-1.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgba(0,0,0,0.2)' }}>
-              <span className="text-[9px] tracking-[0.06em] text-white/25"
-                style={{ fontFamily: "'DM Mono', monospace" }}>
+              style={{ background: 'rgb(var(--t-raised))' }}>
+              <span className="text-[9px] tracking-[0.06em] text-ink-3"
+                style={{ fontFamily: 'var(--t-font-mono)' }}>
                 Next milestone
               </span>
               {nextMilestone ? (
                 <span className="text-[9px] font-medium tracking-[0.04em]"
-                  style={{ fontFamily: "'DM Mono', monospace", color: nextMilestone.nextConfig.color }}>
+                  style={{ fontFamily: 'var(--t-font-mono)', color: nextMilestone.nextConfig.color }}>
                   {nextMilestone.needed} more {nextMilestone.nextConfig.word} → {nextMilestone.nextConfig.word} season
                 </span>
               ) : (
-                <span className="text-[9px] tracking-[0.04em] text-white/20"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                <span className="text-[9px] tracking-[0.04em] text-ink-3"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                   Season high — Exceptional ✦
                 </span>
               )}
@@ -630,17 +631,17 @@ export default function PlayerHome() {
         {/* Stats grid */}
         {matches.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-3.5">
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{matches.length}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Matches</span>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
+              <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{matches.length}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Matches</span>
             </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{totalGoals}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Goals</span>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
+              <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{totalGoals}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Goals</span>
             </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{totalAssists}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Assists</span>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
+              <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{totalAssists}</p>
+              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Assists</span>
             </div>
           </div>
         )}
@@ -650,16 +651,16 @@ export default function PlayerHome() {
           const quote = getDailyQuote()
           return (
             <div className="mt-4 rounded-[18px] px-5 py-4"
-              style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[9px] tracking-[0.14em] uppercase text-white/25 mb-3"
-                style={{ fontFamily: "'DM Mono', monospace" }}>Today</p>
-              <p className="text-[15px] font-light leading-[1.5] text-white/75"
-                style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.01em' }}>
+              style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
+              <p className="text-[9px] tracking-[0.14em] uppercase text-ink-3 mb-3"
+                style={{ fontFamily: 'var(--t-font-mono)' }}>Today</p>
+              <p className="text-[15px] font-light leading-[1.5] text-ink"
+                style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.01em' }}>
                 "{quote.text}"
               </p>
               {quote.author ? (
-                <p className="text-[9px] text-white/28 mt-2.5 tracking-[0.06em]"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                <p className="text-[9px] text-ink-3 mt-2.5 tracking-[0.06em]"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                   — {quote.author}
                 </p>
               ) : null}
@@ -672,15 +673,15 @@ export default function PlayerHome() {
           <div className="mt-5">
             <MetadataLabel text="LATEST COACH ASSESSMENT" />
             <div className="relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
               <div className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.06) 0%, transparent 70%)' }} />
+                style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.06) 0%, transparent 70%)' }} />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-[13px] font-medium text-white/88">{coachName || 'Coach'}</p>
-                    <p className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
-                      style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <p className="text-[13px] font-medium text-ink">{coachName || 'Coach'}</p>
+                    <p className="text-[9px] text-ink-3 mt-0.5 tracking-[0.04em]"
+                      style={{ fontFamily: 'var(--t-font-mono)' }}>
                       {new Date(coachAssessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </p>
                   </div>
@@ -705,9 +706,9 @@ export default function PlayerHome() {
                     const band = bandForScore(cat.score)
                     return (
                     <div key={cat.label} className="flex items-center gap-2">
-                      <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
-                        style={{ fontFamily: "'DM Mono', monospace" }}>{cat.label}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-[#202024] overflow-hidden">
+                      <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3"
+                        style={{ fontFamily: 'var(--t-font-mono)' }}>{cat.label}</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-500"
                           style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: band.color }} />
                       </div>
@@ -721,14 +722,14 @@ export default function PlayerHome() {
 
                 {/* TRAK-71: the coach's message in full, here, with no tap-through. */}
                 {feedbackLoadFailed ? (
-                  <p role="alert" className="mt-4 text-[12px] text-white/55">
+                  <p role="alert" className="mt-4 text-[12px] text-ink-2">
                     Couldn't load your coach's message.{' '}
-                    <button type="button" onClick={() => setReloadKey(k => k + 1)} className="underline text-[#C8F25A]">Retry</button>
+                    <button type="button" onClick={() => setReloadKey(k => k + 1)} className="underline text-brand">Retry</button>
                   </p>
                 ) : coachAssessmentNote ? (
-                  <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                  <div className="mt-4 pt-4 border-t border-line">
                     <MetadataLabel text="MESSAGE FROM YOUR COACH" />
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-white/80 whitespace-pre-line">{coachAssessmentNote}</p>
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-ink whitespace-pre-line">{coachAssessmentNote}</p>
                   </div>
                 ) : null}
               </div>
@@ -751,26 +752,26 @@ export default function PlayerHome() {
                 const result = m.team_score != null && m.opponent_score != null
                   ? (m.team_score > m.opponent_score ? 'W' : m.team_score < m.opponent_score ? 'L' : 'D')
                   : null
-                const resultColor = result === 'W' ? '#4ade80' : result === 'L' ? '#f87171' : '#fbbf24'
+                const resultColor = result === 'W' ? 'rgb(var(--t-success))' : result === 'L' ? 'rgb(var(--t-danger))' : 'rgb(var(--t-warning))'
                 return (
                   <button
                     key={m.id}
                     onClick={() => navigate(`/player/match/${m.id}`)}
                     className="w-full flex items-center justify-between rounded-[12px] px-4 py-3 text-left active:scale-[0.99] transition-transform"
-                    style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+                    style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
                   >
                     <div className="flex-1 min-w-0 mr-3">
-                      <p className="text-[13px] font-medium text-white/88 truncate">
+                      <p className="text-[13px] font-medium text-ink truncate">
                         {m.opponent ? `vs ${m.opponent}` : m.competition || 'Match'}
                       </p>
-                      <p className="text-[9px] text-white/[0.28] mt-[3px] tracking-[0.05em]"
-                        style={{ fontFamily: "'DM Mono', monospace" }}>
+                      <p className="text-[9px] text-ink-3 mt-[3px] tracking-[0.05em]"
+                        style={{ fontFamily: 'var(--t-font-mono)' }}>
                         {formattedDate}{m.competition ? ` · ${m.competition}` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {result && (
-                        <span className="text-[10px] font-semibold" style={{ color: resultColor, fontFamily: "'DM Mono', monospace" }}>
+                        <span className="text-[10px] font-semibold" style={{ color: resultColor, fontFamily: 'var(--t-font-mono)' }}>
                           {result}{m.team_score != null && m.opponent_score != null ? ` ${m.team_score}–${m.opponent_score}` : ''}
                         </span>
                       )}

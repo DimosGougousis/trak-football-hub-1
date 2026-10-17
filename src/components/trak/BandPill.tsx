@@ -12,7 +12,7 @@ export const BandPill = memo(
           color: config.color,
           background: config.bg,
           border: `1px solid ${config.border}`,
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: 'var(--t-font)',
           fontWeight: 400,
           letterSpacing: '-0.03em',
         }}

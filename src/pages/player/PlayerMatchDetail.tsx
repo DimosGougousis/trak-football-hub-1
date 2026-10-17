@@ -62,10 +62,10 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
         {currentResult.failed ? (
           <LoadError what="this match" onRetry={() => setReloadKey(k => k + 1)} />
         ) : (
-          <p className="text-center text-[13px] text-white/70" role="status">This match is unavailable.</p>
+          <p className="text-center text-[13px] text-ink-2" role="status">This match is unavailable.</p>
         )}
         <button onClick={() => navigate(matchesPath)}
-          className="flex items-center gap-2 mx-auto px-4 py-2 rounded-[10px] text-[12px] text-white/70 border border-white/[0.07]">
+          className="flex items-center gap-2 mx-auto px-4 py-2 rounded-[10px] text-[12px] text-ink-2 border border-line">
           <ChevronLeft size={14} />
           Back to matches
         </button>
@@ -78,7 +78,7 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
   const band = scoreToBand(match.computed_rating || 6.5)
   const resultLabel = match.team_score > match.opponent_score ? 'W'
     : match.team_score < match.opponent_score ? 'L' : 'D'
-  const resultColor = resultLabel === 'W' ? '#4ade80' : resultLabel === 'L' ? '#f87171' : '#60a5fa'
+  const resultColor = resultLabel === 'W' ? 'rgb(var(--t-success))' : resultLabel === 'L' ? 'rgb(var(--t-danger))' : 'rgb(var(--t-info))'
   const formattedDate = new Date(match.created_at).toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
   })
@@ -88,28 +88,28 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
       <div className="pt-6 pb-24 space-y-3">
         {/* Back */}
         <button onClick={() => navigate(-1)}
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11] mb-2">
-          <ChevronLeft size={16} className="text-white/70" />
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line mb-2">
+          <ChevronLeft size={16} className="text-ink-2" />
         </button>
 
         {/* Hero card: result + band */}
         <div className="relative rounded-[24px] p-5 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
           <div className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.08) 0%, transparent 70%)' }} />
+            style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.08) 0%, transparent 70%)' }} />
           <div className="relative z-10">
             <MetadataLabel text={formattedDate} />
             <div className="flex items-start justify-between mt-2">
               <div>
                 <div className="flex items-baseline gap-3">
-                  <span className="text-[48px] font-light text-white/88 leading-none"
-                    style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.04em' }}>
+                  <span className="text-[48px] font-light text-ink leading-none"
+                    style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.04em' }}>
                     {match.team_score}–{match.opponent_score}
                   </span>
                   <span className="text-[20px] font-semibold" style={{ color: resultColor }}>{resultLabel}</span>
                 </div>
                 {match.opponent && (
-                  <p className="text-[11px] text-white/35 mt-1" style={{ fontFamily: "'DM Mono', monospace" }}>
+                  <p className="text-[11px] text-ink-3 mt-1" style={{ fontFamily: 'var(--t-font-mono)' }}>
                     vs {match.opponent}
                   </p>
                 )}
@@ -121,7 +121,7 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
 
         {/* Match info */}
         <div className="rounded-[18px] p-4 space-y-3"
-          style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}>
+          style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
           <MetadataLabel text="MATCH INFO" />
           {[
             { label: 'Competition', value: match.competition },
@@ -133,10 +133,10 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
             ]),
           ].map(row => (
             <div key={row.label} className="flex items-center justify-between">
-              <span className="text-[11px] text-white/35" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <span className="text-[11px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
                 {row.label}
               </span>
-              <span className="text-[13px] text-white/88">{row.value || '—'}</span>
+              <span className="text-[13px] text-ink">{row.value || '—'}</span>
             </div>
           ))}
         </div>
@@ -148,11 +148,11 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
             { label: 'Assists', value: match.assists ?? 0 },
           ].map(stat => (
             <div key={stat.label} className="rounded-[14px] py-4 px-3 text-center"
-              style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p className="text-[28px] font-light text-white/88 leading-none"
-                style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.03em' }}>{stat.value}</p>
-              <span className="text-[9px] text-white/35 mt-1.5 block"
-                style={{ fontFamily: "'DM Mono', monospace" }}>{stat.label}</span>
+              style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
+              <p className="text-[28px] font-light text-ink leading-none"
+                style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.03em' }}>{stat.value}</p>
+              <span className="text-[9px] text-ink-3 mt-1.5 block"
+                style={{ fontFamily: 'var(--t-font-mono)' }}>{stat.label}</span>
             </div>
           ))}
         </div>}

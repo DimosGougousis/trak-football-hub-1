@@ -222,12 +222,12 @@ export default function CoachSessionEdit() {
   }
 
   const header = (
-    <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
+    <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
       <button onClick={goBack} aria-label="Back"
-        className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center">
-        <ChevronLeft size={14} className="text-white/88" />
+        className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center">
+        <ChevronLeft size={14} className="text-ink" />
       </button>
-      <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>
         {isMatch ? 'Match' : 'Edit session'}
       </span>
       <div className="w-[34px]" />
@@ -242,9 +242,9 @@ export default function CoachSessionEdit() {
           {status === 'failed' ? (
             <LoadError what="this session" onRetry={() => setAttempt(n => n + 1)} retrying={false} />
           ) : status === 'missing' ? (
-            <p role="status" className="text-[13px] text-white/55">This session isn't available. It may have been deleted.</p>
+            <p role="status" className="text-[13px] text-ink-2">This session isn't available. It may have been deleted.</p>
           ) : (
-            <p role="status" className="text-[13px] text-white/45">Loading the session…</p>
+            <p role="status" className="text-[13px] text-ink-3">Loading the session…</p>
           )}
         </div>
       </MobileShell>
@@ -257,16 +257,16 @@ export default function CoachSessionEdit() {
       <MobileShell>
         {header}
         <div className="pt-5 pb-24 space-y-5">
-          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-            <p className="text-[16px] text-white/88">{session.title}</p>
-            <p className="text-[11px] text-white/45 mt-1" style={{ fontFamily: "'DM Mono', monospace" }}>{session.session_date}</p>
-            {session.notes && <p className="text-[13px] text-white/70 mt-3 whitespace-pre-line">{session.notes}</p>}
+          <div className="rounded-[18px] p-4 border border-line bg-surface">
+            <p className="text-[16px] text-ink">{session.title}</p>
+            <p className="text-[11px] text-ink-3 mt-1" style={{ fontFamily: 'var(--t-font-mono)' }}>{session.session_date}</p>
+            {session.notes && <p className="text-[13px] text-ink-2 mt-3 whitespace-pre-line">{session.notes}</p>}
           </div>
-          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <div className="rounded-[18px] p-4 border border-line bg-surface">
             <MetadataLabel text={`PLAYED · ${attended.length}`} />
-            <p className="text-[13px] text-white/70 mt-2">{attended.length ? attended.join(', ') : 'Nobody recorded.'}</p>
+            <p className="text-[13px] text-ink-2 mt-2">{attended.length ? attended.join(', ') : 'Nobody recorded.'}</p>
           </div>
-          <p className="text-[12px] text-white/40">A logged match can't be edited yet.</p>
+          <p className="text-[12px] text-ink-3">A logged match can't be edited yet.</p>
         </div>
       </MobileShell>
     )
@@ -278,7 +278,7 @@ export default function CoachSessionEdit() {
       <div className="pt-5 pb-32 space-y-5">
         {isTraining ? (
           <>
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -288,18 +288,18 @@ export default function CoachSessionEdit() {
                       onClick={() => setFocus(prev => { const n = new Set(prev); if (n.has(key)) { n.delete(key) } else { n.add(key) } return n })}
                       className="text-left px-3 py-2.5 rounded-[12px] transition-colors"
                       style={{
-                        background: on ? 'rgba(200,242,90,0.10)' : 'rgba(0,0,0,0.3)',
-                        border: `1px solid ${on ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                        background: on ? 'rgb(var(--t-brand) / 0.10)' : 'rgb(var(--t-raised))',
+                        border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
                       }}>
-                      <p className="text-[13px] font-medium" style={{ color: on ? '#C8F25A' : 'rgba(255,255,255,0.78)' }}>{key}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'DM Mono', monospace" }}>{sub}</p>
+                      <p className="text-[13px] font-medium" style={{ color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink))' }}>{key}</p>
+                      <p className="text-[9px] mt-0.5" style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font-mono)' }}>{sub}</p>
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
+            <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -318,34 +318,34 @@ export default function CoachSessionEdit() {
               </div>
             </div>
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Theme"
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
-                className="w-full bg-transparent text-[15px] text-white/88 placeholder-white/20 outline-none mt-2" />
+                className="w-full bg-transparent text-[15px] text-ink placeholder-ink-3 outline-none mt-2" />
             </div>
           </>
         ) : (
-          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <div className="rounded-[18px] p-4 border border-line bg-surface">
             <MetadataLabel text="TITLE" />
             <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Title"
-              className="w-full bg-transparent text-[16px] text-white/88 placeholder-white/20 outline-none mt-2" />
+              className="w-full bg-transparent text-[16px] text-ink placeholder-ink-3 outline-none mt-2" />
           </div>
         )}
 
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="DATE" />
           <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
-            className="w-full bg-transparent text-[15px] text-white/88 outline-none mt-2" style={{ colorScheme: 'dark' }} />
+            className="w-full bg-transparent text-[15px] text-ink outline-none mt-2" style={{ colorScheme: 'dark' }} />
         </div>
 
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-          <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 mb-3"
-            style={{ fontFamily: "'DM Mono', monospace" }}>
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
+          <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-3"
+            style={{ fontFamily: 'var(--t-font-mono)' }}>
             ATTENDED · {present.size}
           </span>
           {shown.length === 0 ? (
-            <p role="status" className="text-[12px] text-white/40 py-2">No players can be recorded yet.</p>
+            <p role="status" className="text-[12px] text-ink-3 py-2">No players can be recorded yet.</p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               {shown.map(r => {
@@ -355,14 +355,14 @@ export default function CoachSessionEdit() {
                   <button key={r.id} type="button" aria-pressed={on} disabled={fixed} onClick={() => toggle(r)}
                     className="text-left px-3 py-2.5 rounded-[10px] transition-colors disabled:cursor-default"
                     style={{
-                      background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
-                      border: `1px solid ${on ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                      color: on ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
+                      background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
+                      border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                      color: on ? 'rgb(var(--t-ink))' : 'rgb(var(--t-ink-2))',
                       fontSize: 13,
                     }}>
                     {r.name}
                     {fixed && (
-                      <span className="block text-[10px] text-white/40 mt-0.5">
+                      <span className="block text-[10px] text-ink-3 mt-0.5">
                         {locked(r) ? 'Assessed on this session' : `Kept as saved: ${r.waitReason}`}
                       </span>
                     )}
@@ -372,32 +372,32 @@ export default function CoachSessionEdit() {
             </div>
           )}
           {waiting.length > 0 && (
-            <p className="text-[11px] text-white/40 pt-3">
+            <p className="text-[11px] text-ink-3 pt-3">
               Not recorded until a parent approves: {waiting.map(r => `${r.name} (${r.waitReason})`).join(', ')}
             </p>
           )}
         </div>
 
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text={isTraining ? 'SESSION NOTES' : 'NOTES'} />
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} aria-label="Notes"
             placeholder="What went well? What needs more work next session?"
-            className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2" />
+            className="w-full bg-transparent text-[14px] text-ink placeholder-ink-3 outline-none resize-none mt-2" />
         </div>
       </div>
 
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
-        style={{ background: 'linear-gradient(180deg,rgba(10,10,11,0) 0%,#0A0A0B 35%)' }}>
+        style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {futureDate && (
-          <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2">
+          <p role="alert" className="text-[11px] text-center text-warning mb-2">
             A session can't be dated in the future.
           </p>
         )}
         <button onClick={handleSave} disabled={!canSave}
           className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
           style={{
-            background: canSave ? '#C8F25A' : 'rgba(255,255,255,0.06)',
-            color: canSave ? '#000' : 'rgba(255,255,255,0.3)',
+            background: canSave ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))',
+            color: canSave ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink-3))',
             opacity: saving ? 0.6 : 1,
           }}>
           {saving ? 'Saving…' : 'Save changes'}

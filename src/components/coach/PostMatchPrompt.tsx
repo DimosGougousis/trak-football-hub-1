@@ -36,11 +36,11 @@ export function PostMatchPrompt({
     <div
       className="flex items-center gap-3 mb-4"
       style={{
-        background: 'rgba(200,242,90,0.06)',
-        borderTop: '1px solid rgba(200,242,90,0.18)',
-        borderRight: '1px solid rgba(200,242,90,0.18)',
-        borderBottom: '1px solid rgba(200,242,90,0.18)',
-        borderLeft: '3px solid #C8F25A',
+        background: 'rgb(var(--t-brand) / 0.06)',
+        borderTop: '1px solid rgb(var(--t-brand) / 0.18)',
+        borderRight: '1px solid rgb(var(--t-brand) / 0.18)',
+        borderBottom: '1px solid rgb(var(--t-brand) / 0.18)',
+        borderLeft: '3px solid rgb(var(--t-brand))',
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
         borderTopRightRadius: 14,
@@ -51,12 +51,12 @@ export function PostMatchPrompt({
       <div className="flex-1 min-w-0">
         <div
           style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: 'var(--t-font-mono)',
             fontSize: 8,
             fontWeight: 500,
             textTransform: 'uppercase',
             letterSpacing: '0.12em',
-            color: '#C8F25A',
+            color: 'rgb(var(--t-brand))',
           }}
         >
           Post-match
@@ -64,10 +64,10 @@ export function PostMatchPrompt({
         <p
           className="mt-1"
           style={{
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--t-font)',
             fontSize: 12,
             lineHeight: 1.5,
-            color: 'rgba(255,255,255,0.88)',
+            color: 'rgb(var(--t-ink))',
           }}
         >
           You have an unassessed match — {matchLabel}
@@ -77,11 +77,11 @@ export function PostMatchPrompt({
       <button
         onClick={() => navigate('/coach/assess')}
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--t-font-mono)',
           fontSize: 9,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
-          color: '#C8F25A',
+          color: 'rgb(var(--t-brand))',
           whiteSpace: 'nowrap',
         }}
       >
@@ -96,7 +96,7 @@ export function PostMatchPrompt({
           width: 22,
           height: 22,
           borderRadius: 999,
-          color: 'rgba(255,255,255,0.35)',
+          color: 'rgb(var(--t-ink-3))',
           background: 'transparent',
         }}
       >

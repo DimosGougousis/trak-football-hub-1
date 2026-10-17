@@ -20,11 +20,11 @@ interface Props {
 }
 
 const THRESHOLD_LINES = [
-  { y: 9.0, color: '#C8F25A' },
-  { y: 8.0, color: '#86efac' },
-  { y: 7.0, color: '#4ade80' },
-  { y: 6.0, color: '#60a5fa' },
-  { y: 4.8, color: '#fb923c' },
+  { y: 9.0, color: 'rgb(var(--t-brand))' },
+  { y: 8.0, color: 'rgb(var(--t-success))' },
+  { y: 7.0, color: 'rgb(var(--t-success))' },
+  { y: 6.0, color: 'rgb(var(--t-info))' },
+  { y: 4.8, color: 'rgb(var(--t-orange))' },
 ]
 
 function formatDate(iso: string): string {
@@ -44,10 +44,10 @@ function CustomTooltip({ active, payload }: any) {
   const d = payload[0].payload as ChartDatum
   return (
     <div
-      className="rounded-lg px-3 py-2 border border-white/[0.07]"
-      style={{ background: '#18181b', fontFamily: "'DM Sans', sans-serif" }}
+      className="rounded-lg px-3 py-2 border border-line"
+      style={{ background: 'rgb(var(--t-raised))', fontFamily: 'var(--t-font)' }}
     >
-      <p className="text-[10px] text-white/35 mb-0.5" style={{ fontFamily: "'DM Mono', monospace" }}>
+      <p className="text-[10px] text-ink-3 mb-0.5" style={{ fontFamily: 'var(--t-font-mono)' }}>
         {d.label}
       </p>
       <p className="text-[13px] font-semibold" style={{ color: d.color }}>
@@ -66,7 +66,7 @@ function CustomDot(props: any) {
       cy={cy}
       r={4}
       fill={payload.color}
-      stroke="#0a0a0b"
+      stroke="rgb(var(--t-ground))"
       strokeWidth={2}
     />
   )
@@ -79,7 +79,7 @@ export default function RatingTrendChart({ matches }: Props) {
     return {
       label: formatDate(m.created_at),
       rating: m.computed_rating,
-      color: bandConfig?.color ?? 'rgba(255,255,255,0.4)',
+      color: bandConfig?.color ?? 'rgb(var(--t-ink-3))',
       band: bandConfig?.word ?? 'Difficult',
     }
   })
@@ -95,8 +95,8 @@ export default function RatingTrendChart({ matches }: Props) {
         <XAxis
           dataKey="label"
           interval={interval}
-          tick={{ fill: 'rgba(255,255,255,0.22)', fontSize: 9, fontFamily: "'DM Mono', monospace" }}
-          axisLine={{ stroke: 'rgba(255,255,255,0.04)' }}
+          tick={{ fill: 'rgb(var(--t-ink-3))', fontSize: 9, fontFamily: 'var(--t-font-mono)' }}
+          axisLine={{ stroke: 'rgb(var(--t-ink-3))' }}
           tickLine={false}
         />
         {/* Y-axis hidden — reference lines carry the band context visually */}
@@ -114,10 +114,10 @@ export default function RatingTrendChart({ matches }: Props) {
         <Line
           type="monotone"
           dataKey="rating"
-          stroke="rgba(255,255,255,0.25)"
+          stroke="rgb(var(--t-ink-3))"
           strokeWidth={2}
           dot={<CustomDot />}
-          activeDot={{ r: 6, stroke: '#C8F25A', strokeWidth: 2, fill: '#0a0a0b' }}
+          activeDot={{ r: 6, stroke: 'rgb(var(--t-brand))', strokeWidth: 2, fill: 'rgb(var(--t-ground))' }}
           isAnimationActive={false}
         />
       </LineChart>

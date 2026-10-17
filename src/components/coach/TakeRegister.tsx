@@ -29,7 +29,7 @@ type Loaded = {
   familyReason: Map<string, string | null>
 }
 
-const font = { fontFamily: "'DM Sans', sans-serif" }
+const font = { fontFamily: 'var(--t-font)' }
 const SAVE_FAILED = "Couldn't save the register. Check your connection and save again; your ticks are still here."
 
 export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegisterProps) {
@@ -107,22 +107,22 @@ export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegis
 
   if (loadFailed) {
     return (
-      <p role="alert" className="text-[12px] text-white/55" style={font}>
+      <p role="alert" className="text-[12px] text-ink-2" style={font}>
         Couldn't load the register.{' '}
-        <button type="button" onClick={() => setAttempt(n => n + 1)} className="underline text-[#C8F25A]">Retry</button>
+        <button type="button" onClick={() => setAttempt(n => n + 1)} className="underline text-brand">Retry</button>
       </p>
     )
   }
-  if (!loaded) return <p className="text-[12px] text-white/40" style={font}>Loading your squad…</p>
+  if (!loaded) return <p className="text-[12px] text-ink-3" style={font}>Loading your squad…</p>
 
   const absent = loaded.players.length - present.size
   return (
     <div className="space-y-3">
       {loaded.players.length === 0 ? (
-        <p className="text-[12px] text-white/40" style={font}>No players to record yet.</p>
+        <p className="text-[12px] text-ink-3" style={font}>No players to record yet.</p>
       ) : (
         <>
-          <p className="text-[12px] text-white/50" style={font}>{present.size} present, {absent} absent</p>
+          <p className="text-[12px] text-ink-2" style={font}>{present.size} present, {absent} absent</p>
           <ul className="space-y-1.5">
             {loaded.players.map(p => {
               const on = present.has(p.id)
@@ -133,20 +133,20 @@ export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegis
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
                     aria-label={`${p.name}: ${on ? 'present' : 'absent'}`}
                     className="w-full flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-left"
-                    style={{ background: on ? 'rgba(200,242,90,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${on ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}` }}>
+                    style={{ background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))', border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}` }}>
                     <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: on ? '#C8F25A' : 'transparent', border: on ? 'none' : '1px solid rgba(255,255,255,0.25)' }}>
-                      {on && <Check size={12} color="#000" />}
+                      style={{ background: on ? 'rgb(var(--t-brand))' : 'transparent', border: on ? 'none' : '1px solid rgb(var(--t-line-strong))' }}>
+                      {on && <Check size={12} color="rgb(var(--t-on-brand))" />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-[13px] text-white/88 truncate" style={font}>{p.name}</span>
+                      <span className="block text-[13px] text-ink truncate" style={font}>{p.name}</span>
                       {family && (
-                        <span className="block text-[11px] text-white/45" style={font}>
+                        <span className="block text-[11px] text-ink-3" style={font}>
                           {reason ? `Can't make it · ${reason}` : "Can't make it"}
                         </span>
                       )}
                     </span>
-                    <span className="text-[11px]" style={{ ...font, color: on ? '#C8F25A' : 'rgba(255,255,255,0.4)' }}>
+                    <span className="text-[11px]" style={{ ...font, color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))' }}>
                       {on ? 'Present' : 'Absent'}
                     </span>
                   </button>
@@ -157,15 +157,15 @@ export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegis
         </>
       )}
       {loaded.notReady.length > 0 && (
-        <p className="text-[11px] text-white/40" style={font}>
+        <p className="text-[11px] text-ink-3" style={font}>
           Not recorded until a parent approves: {loaded.notReady.map(p => p.waitReason === 'waiting for a parent' ? p.name : `${p.name} (${p.waitReason})`).join(', ')}
         </p>
       )}
-      {error && <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{error}</p>}
+      {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
       {loaded.players.length > 0 && (
         <button type="button" onClick={save} disabled={saving}
           className="w-full py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-50"
-          style={{ background: '#C8F25A', color: '#000' }}>
+          style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
           {saving ? 'Saving…' : 'Save register'}
         </button>
       )}

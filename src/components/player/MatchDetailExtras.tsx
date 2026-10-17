@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { BAND_COLORS, SELF_RATING_BAND, categoryScoreToBand } from '@/lib/matchDetailHelpers'
 import type { Band } from '@/lib/clubMock'
+import { withAlpha } from '@/lib/with-alpha'
 
 interface Props {
   matchId: string
@@ -54,29 +55,29 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
         <section
           className="p-4"
           style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'rgb(var(--t-raised))',
+            border: '1px solid rgb(var(--t-line))',
             borderRadius: 14,
           }}
         >
           <div
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: 'var(--t-font-mono)',
               fontSize: 8,
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: '0.12em',
-              color: 'rgba(255,255,255,0.22)',
+              color: 'rgb(var(--t-ink-3))',
             }}
           >
             Your note
           </div>
           <p
             style={{
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--t-font)',
               fontSize: 12,
               fontStyle: 'italic',
-              color: 'rgba(255,255,255,0.5)',
+              color: 'rgb(var(--t-ink-2))',
               lineHeight: 1.6,
               marginTop: 6,
             }}
@@ -101,14 +102,14 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
                     style={{
                       flex: '0 0 90px',
                       fontSize: 12,
-                      color: 'rgba(255,255,255,0.6)',
+                      color: 'rgb(var(--t-ink-2))',
                     }}
                   >
                     {c.label}
                   </div>
                   <div
                     className="flex-1 h-1.5 rounded-full overflow-hidden"
-                    style={{ background: 'rgba(255,255,255,0.05)' }}
+                    style={{ background: 'rgb(var(--t-raised))' }}
                   >
                     <div
                       style={{
@@ -141,19 +142,19 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
               width: 6,
               height: 6,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.35)',
+              background: 'rgb(var(--t-ink) / 0.35)',
               animation: 'pulse 1.6s ease-in-out infinite',
               display: 'inline-block',
             }}
           />
           <span
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: 'var(--t-font-mono)',
               fontSize: 9,
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: '0.12em',
-              color: 'rgba(255,255,255,0.35)',
+              color: 'rgb(var(--t-ink-3))',
             }}
           >
             Coach assessment pending
@@ -168,12 +169,12 @@ function Label({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontFamily: "'DM Mono', monospace",
+        fontFamily: 'var(--t-font-mono)',
         fontSize: 9,
         fontWeight: 500,
         textTransform: 'uppercase',
         letterSpacing: '0.12em',
-        color: 'rgba(255,255,255,0.22)',
+        color: 'rgb(var(--t-ink-3))',
       }}
     >
       {children}
@@ -188,8 +189,8 @@ function BandPill({ band }: { band: Band }) {
       className="inline-flex items-center px-3 py-1 rounded-full text-xs"
       style={{
         color,
-        background: `${color}1F`,
-        border: `1px solid ${color}40`,
+        background: `${withAlpha(color, 0.12)}`,
+        border: `1px solid ${withAlpha(color, 0.25)}`,
       }}
     >
       {band}

@@ -134,12 +134,14 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     const note = await toNote() as HTMLTextAreaElement
     expect(message.dataset.tone).toBe('message')
     expect(note.dataset.tone).toBe('private')
-    expect(messageClass).toMatch(/border-white\//)
+    // TRAK-189: the plain text-box roles (they were white-at-N% on the dark theme).
+    expect(messageClass).toMatch(/\bbg-raised\b/)
+    expect(messageClass).toMatch(/\bborder-line-strong\b/)
     expect(messageClass).not.toMatch(/sky-|amber-/)
     expect(note.className).toMatch(/border-amber-/)
     expect(message.rows).toBe(note.rows)
-    expect(messageClass.replace(/(bg|border)-(white|amber)\S+/g, ''))
-      .toBe(note.className.replace(/(bg|border)-(white|amber)\S+/g, ''))
+    expect(messageClass.replace(/(bg|border)-(raised|line-strong|amber)\S*/g, ''))
+      .toBe(note.className.replace(/(bg|border)-(raised|line-strong|amber)\S*/g, ''))
   })
 
   // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…

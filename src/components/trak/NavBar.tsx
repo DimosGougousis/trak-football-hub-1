@@ -53,9 +53,9 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
     return (
       <nav
       ref={ref}
-      className="fixed bottom-0 w-full max-w-[430px] mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-white/[0.07] z-50"
+      className="fixed bottom-0 w-full max-w-[430px] mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-line z-50"
       style={{
-        background: 'rgba(10, 10, 11, 0.96)',
+        background: 'rgb(var(--t-ground) / 0.96)',
         paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
         willChange: 'auto',
       }}
@@ -69,19 +69,19 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
             onClick={() => onNavigate(item.path)}
             className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all relative"
             style={{
-              background: isActive ? 'rgba(200,242,90,0.06)' : 'transparent',
+              background: isActive ? 'rgb(var(--t-brand) / 0.06)' : 'transparent',
               minWidth: 52,
             }}
           >
             <Icon size={20} color={isActive ? ACTIVE_COLOR : DEFAULT_COLOR} />
             <span
               style={{
-                fontFamily: "'DM Mono', monospace",
+                fontFamily: 'var(--t-font-mono)',
                 fontWeight: 500,
                 fontSize: '9px',
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase' as const,
-                color: isActive ? '#C8F25A' : 'rgba(255,255,255,0.35)',
+                color: isActive ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
               }}
             >
               {item.label}
@@ -89,7 +89,7 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
             {isActive && (
               <span
                 className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                style={{ background: '#C8F25A' }}
+                style={{ background: 'rgb(var(--t-brand))' }}
               />
             )}
           </button>

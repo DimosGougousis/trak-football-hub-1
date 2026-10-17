@@ -53,7 +53,7 @@ export default function PlayerEvent() {
   const current = result && result.id === id && result.reloadKey === reloadKey ? result : null
   const back = (
     <button type="button" onClick={() => navigate('/player/matches')}
-      className="flex items-center gap-1 text-[13px] text-white/50">
+      className="flex items-center gap-1 text-[13px] text-ink-2">
       <ChevronLeft size={16} /> Sessions
     </button>
   )
@@ -68,7 +68,7 @@ export default function PlayerEvent() {
   } else if (current.failed) {
     body = <LoadError what="this event" onRetry={() => setReloadKey(k => k + 1)} />
   } else if (!current.event) {
-    body = <p className="text-[13px] text-white/60">This event isn't available. Your coach may have removed it.</p>
+    body = <p className="text-[13px] text-ink-2">This event isn't available. Your coach may have removed it.</p>
   } else {
     body = <>
       <EventDetails event={current.event} />

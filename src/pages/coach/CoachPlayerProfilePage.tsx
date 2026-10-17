@@ -79,7 +79,7 @@ export default function CoachPlayerProfilePage() {
   if (playerState === 'loading') return (
     <MobileShell>
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-6 h-6 border-2 border-[#C8F25A] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     </MobileShell>
   )
@@ -98,14 +98,14 @@ export default function CoachPlayerProfilePage() {
   if (playerState === 'missing') return (
     <MobileShell>
       <div className="px-5 pt-6 text-center">
-        <p className="text-[14px] text-white/70">We couldn't find that player.</p>
-        <p className="mt-1 text-[12px] text-white/40">
+        <p className="text-[14px] text-ink-2">We couldn't find that player.</p>
+        <p className="mt-1 text-[12px] text-ink-3">
           They may have been removed from your squad.
         </p>
         <button
           onClick={() => navigate('/coach/squad')}
-          className="mt-4 px-4 py-2 rounded-[10px] text-[12px] text-white/70 border border-white/[0.07] active:bg-white/[0.04]"
-          style={{ fontFamily: "'DM Mono', monospace" }}
+          className="mt-4 px-4 py-2 rounded-[10px] text-[12px] text-ink-2 border border-line active:bg-raised"
+          style={{ fontFamily: 'var(--t-font-mono)' }}
         >
           Back to squad
         </button>
@@ -117,21 +117,21 @@ export default function CoachPlayerProfilePage() {
   const openAssessment = (assessmentId: string) => navigate(`/coach/assess?assessment=${assessmentId}`)
   const shortDate = (a: any) => new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const messageTag = (a: any) => messageSentById === undefined ? null : (
-    <span className="text-[9px] text-white/40" style={{ fontFamily: "'DM Mono', monospace" }}>
+    <span className="text-[9px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
       {messageSentById[a.id] ? 'Message sent' : 'No message'}
     </span>
   )
 
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-[#0A0A0B]" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
       {/* Header — always visible, never scrolls */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
         <button onClick={() => navigate('/coach/squad')}
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]">
-          <ChevronLeft size={16} className="text-white/70" />
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line">
+          <ChevronLeft size={16} className="text-ink-2" />
         </button>
-        <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px] pointer-events-none">
+        <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px] pointer-events-none">
           {player.player_name.split(' ')[0]}
         </h1>
       </div>
@@ -143,18 +143,18 @@ export default function CoachPlayerProfilePage() {
         <div className="flex items-center gap-4 py-2">
           <Avatar name={player.player_name} size="lg" className="arc" aria-hidden />
           <div>
-            <p className="text-[22px] font-light text-white/88 leading-tight"
-              style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+            <p className="text-[22px] font-light text-ink leading-tight"
+              style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
               {player.player_name}
             </p>
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               {player.position && (
-                <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>{player.position}</span>
+                <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>{player.position}</span>
               )}
               {player.shirt_number && (
-                <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>#{player.shirt_number}</span>
+                <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>#{player.shirt_number}</span>
               )}
               {/* No assessment count here (TRAK-72 item 5). A failed read still
                   shows its own error card below. */}
@@ -173,14 +173,14 @@ export default function CoachPlayerProfilePage() {
         {/* Latest assessment */}
         {latest && (
           <div className="rounded-[18px] p-4 cursor-pointer active:scale-[0.99] transition-transform"
-            style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
             {...openable(`Open latest assessment, ${shortDate(latest)}${latest.coach_sessions?.title ? `, ${latest.coach_sessions.title}` : ''}`,
               () => openAssessment(latest.id))}>
             <div className="flex items-center justify-between mb-3">
               <MetadataLabel text="LATEST ASSESSMENT" />
               <div className="flex items-center gap-2">
-                <span className="text-[9px] text-white/22"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                <span className="text-[9px] text-ink-3"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                   {new Date(latest.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                 </span>
                 <BandPill band={scoreToBand(avgScore(latest))} />
@@ -196,14 +196,14 @@ export default function CoachPlayerProfilePage() {
               <CategoryBar label="Tactical"     score={latest.tactical}     />
             </div>
             <div className="flex items-center justify-between mt-3">
-              <span className="text-[11px] text-white/45">{latest.coach_sessions?.title ?? 'No session recorded'}</span>
+              <span className="text-[11px] text-ink-3">{latest.coach_sessions?.title ?? 'No session recorded'}</span>
               {messageTag(latest)}
             </div>
             {notesById[latest.id] && (
               <div className="mt-3">
                 <MetadataLabel text="PRIVATE NOTE · ONLY YOU" />
-                <p className="text-[11px] text-white/45 mt-1 italic"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}>"{notesById[latest.id]}"</p>
+                <p className="text-[11px] text-ink-3 mt-1 italic"
+                  style={{ fontFamily: 'var(--t-font)' }}>"{notesById[latest.id]}"</p>
               </div>
             )}
           </div>
@@ -218,19 +218,19 @@ export default function CoachPlayerProfilePage() {
               const bandColor = BANDS.find(b => b.word.toLowerCase() === band)?.color
               return (
                 <div key={a.id} className="flex items-center justify-between rounded-[12px] px-4 py-3 cursor-pointer active:scale-[0.99] transition-transform"
-                  style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+                  style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
                   {...openable(`Open assessment from ${new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}${a.coach_sessions?.title ? `, ${a.coach_sessions.title}` : ''}`,
                     () => openAssessment(a.id))}>
                   <div>
-                    <p className="text-[12px] text-white/60"
-                      style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <p className="text-[12px] text-ink-2"
+                      style={{ fontFamily: 'var(--t-font-mono)' }}>
                       {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
                     </p>
                     {a.coach_sessions?.title && (
-                      <p className="text-[11px] text-white/55 mt-0.5">{a.coach_sessions.title}</p>
+                      <p className="text-[11px] text-ink-2 mt-0.5">{a.coach_sessions.title}</p>
                     )}
                     {a.appearance && (
-                      <p className="text-[10px] text-white/35 mt-0.5 capitalize">{a.appearance}</p>
+                      <p className="text-[10px] text-ink-3 mt-0.5 capitalize">{a.appearance}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -250,12 +250,12 @@ export default function CoachPlayerProfilePage() {
         <div className="flex gap-2 pt-1">
           <button
             onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}
-            className="flex-[2] py-3.5 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm active:scale-[0.97] transition-transform">
+            className="flex-[2] py-3.5 rounded-[10px] bg-brand text-on-brand font-bold text-sm active:scale-[0.97] transition-transform">
             Assess {player.player_name.split(' ')[0]} →
           </button>
           <button
             onClick={() => navigate('/coach/award', { state: { preselectedPlayerId: player.id } })}
-            className="flex-1 py-3.5 rounded-[10px] border border-white/[0.1] text-white/60 text-sm font-medium flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+            className="flex-1 py-3.5 rounded-[10px] border border-line text-ink-2 text-sm font-medium flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
             style={{ background: 'transparent' }}>
             <Trophy size={14} />
             Award

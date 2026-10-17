@@ -232,16 +232,16 @@ export default function CoachAssistant() {
           <button
             onClick={() => navigate(-1)}
             className="flex items-center justify-center"
-            style={{ width: 36, height: 36, borderRadius: 999, background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ width: 36, height: 36, borderRadius: 999, background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
             aria-label="Back"
           >
-            <ArrowLeft size={16} color="rgba(255,255,255,0.6)" />
+            <ArrowLeft size={16} color="rgb(var(--t-ink-2))" />
           </button>
           <div>
-            <p className="text-[9px] tracking-[0.12em] uppercase" style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-[9px] tracking-[0.12em] uppercase" style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}>
               Coach
             </p>
-            <h1 className="text-[22px] leading-tight" style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, color: 'rgba(255,255,255,0.88)' }}>
+            <h1 className="text-[22px] leading-tight" style={{ fontFamily: 'var(--t-font)', fontWeight: 300, color: 'rgb(var(--t-ink))' }}>
               Assistant
             </h1>
           </div>
@@ -249,9 +249,9 @@ export default function CoachAssistant() {
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3">
           {messages.length === 0 && (
-            <div className="rounded-[18px] border border-white/[0.07] p-5" style={{ background: '#101012' }}>
+            <div className="rounded-[18px] border border-line p-5" style={{ background: 'rgb(var(--t-surface))' }}>
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={14} color="#C8F25A" />
+                <Sparkles size={14} color="rgb(var(--t-brand))" />
                 <MetadataLabel text="TRY ASKING" />
               </div>
               <div className="space-y-2 mt-3">
@@ -260,9 +260,9 @@ export default function CoachAssistant() {
                     key={i}
                     onClick={() => send(p)}
                     className="w-full text-left rounded-[12px] p-3 transition"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.05)' }}
+                    style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))' }}
                   >
-                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.78)' }}>{p}</span>
+                    <span className="text-[12px]" style={{ color: 'rgb(var(--t-ink))' }}>{p}</span>
                   </button>
                 ))}
               </div>
@@ -277,15 +277,15 @@ export default function CoachAssistant() {
               : (m.role === 'assistant' ? buildSegments(m.content) : [{ type: 'text', content: m.content }])
 
             const mdComponents = {
-              h1: ({ node, ...props }: any) => <h3 style={{ fontSize: 15, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
-              h2: ({ node, ...props }: any) => <h3 style={{ fontSize: 14, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgba(255,255,255,0.95)' }} {...props} />,
-              h3: ({ node, ...props }: any) => <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'rgba(255,255,255,0.92)' }} {...props} />,
+              h1: ({ node, ...props }: any) => <h3 style={{ fontSize: 15, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgb(var(--t-ink))' }} {...props} />,
+              h2: ({ node, ...props }: any) => <h3 style={{ fontSize: 14, fontWeight: 600, marginTop: 12, marginBottom: 6, color: 'rgb(var(--t-ink))' }} {...props} />,
+              h3: ({ node, ...props }: any) => <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'rgb(var(--t-ink))' }} {...props} />,
               p: ({ node, ...props }: any) => <p style={{ margin: '6px 0' }} {...props} />,
               ul: ({ node, ...props }: any) => <ul style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
               ol: ({ node, ...props }: any) => <ol style={{ margin: '6px 0', paddingLeft: 18 }} {...props} />,
               li: ({ node, ...props }: any) => <li style={{ margin: '2px 0' }} {...props} />,
-              strong: ({ node, ...props }: any) => <strong style={{ color: 'rgba(255,255,255,0.95)' }} {...props} />,
-              code: ({ node, ...props }: any) => <code style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: 4, fontSize: 12 }} {...props} />,
+              strong: ({ node, ...props }: any) => <strong style={{ color: 'rgb(var(--t-ink))' }} {...props} />,
+              code: ({ node, ...props }: any) => <code style={{ background: 'rgb(var(--t-raised))', padding: '1px 5px', borderRadius: 4, fontSize: 12 }} {...props} />,
             }
 
             return (
@@ -293,11 +293,11 @@ export default function CoachAssistant() {
                 key={i}
                 className="rounded-[14px] p-3.5"
                 style={{
-                  background: m.role === 'user' ? 'rgba(200,242,90,0.06)' : '#101012',
-                  border: m.role === 'user' ? '1px solid rgba(200,242,90,0.18)' : '1px solid rgba(255,255,255,0.07)',
+                  background: m.role === 'user' ? 'rgb(var(--t-brand) / 0.06)' : 'rgb(var(--t-surface))',
+                  border: m.role === 'user' ? '1px solid rgb(var(--t-brand) / 0.18)' : '1px solid rgb(var(--t-line))',
                 }}
               >
-                <p className="text-[8px] tracking-[0.12em] uppercase mb-2" style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}>
+                <p className="text-[8px] tracking-[0.12em] uppercase mb-2" style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}>
                   {m.role === 'user' ? 'You' : 'Trak AI'}
                 </p>
 
@@ -309,7 +309,7 @@ export default function CoachAssistant() {
                     <div
                       key={si}
                       className="prose prose-sm max-w-none"
-                      style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 1.55, fontFamily: "'DM Sans', sans-serif" }}
+                      style={{ color: 'rgb(var(--t-ink))', fontSize: 13, lineHeight: 1.55, fontFamily: 'var(--t-font)' }}
                     >
                       <ReactMarkdown components={mdComponents}>{seg.content}</ReactMarkdown>
                       {isStreaming && si === segments.length - 1 && <span style={{ opacity: 0.4 }}>▍</span>}
@@ -325,9 +325,9 @@ export default function CoachAssistant() {
                       navigate('/coach/sessions/add', { state: { fromAssistant: plan } })
                     }}
                     className="flex items-center gap-2 mt-3 px-3 py-2 rounded-[10px] w-full transition-colors active:scale-[0.98]"
-                    style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.2)' }}>
-                    <ClipboardList size={13} color="#C8F25A" />
-                    <span className="text-[11px] font-medium" style={{ color: '#C8F25A', fontFamily: "'DM Sans', sans-serif" }}>
+                    style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.2)' }}>
+                    <ClipboardList size={13} color="rgb(var(--t-brand))" />
+                    <span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-brand))', fontFamily: 'var(--t-font)' }}>
                       Log this as a session
                     </span>
                   </button>
@@ -336,36 +336,36 @@ export default function CoachAssistant() {
             )
           })}
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
-            <div className="rounded-[14px] border border-white/[0.07] p-4" style={{ background: '#101012' }}>
-              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Thinking…</p>
+            <div className="rounded-[14px] border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
+              <p className="text-[11px]" style={{ color: 'rgb(var(--t-ink-3))' }}>Thinking…</p>
             </div>
           )}
         </div>
 
         <div
           className="fixed bottom-[72px] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4 pb-2"
-          style={{ background: 'linear-gradient(to top, rgba(10,10,11,1) 60%, rgba(10,10,11,0))' }}
+          style={{ background: 'linear-gradient(to top, rgb(var(--t-ground) / 1) 60%, rgb(var(--t-ground) / 0))' }}
         >
           {/* Disclosure note */}
           <button
             onClick={() => setShowDisclosure(v => !v)}
             className="w-full text-left mb-1.5 px-1"
           >
-            <span className="text-[9px] tracking-[0.08em] text-white/25 flex items-center gap-1.5"
-              style={{ fontFamily: "'DM Mono', monospace" }}>
+            <span className="text-[9px] tracking-[0.08em] text-ink-3 flex items-center gap-1.5"
+              style={{ fontFamily: 'var(--t-font-mono)' }}>
               <span>ⓘ</span>
               <span>About these recommendations</span>
               <span className="ml-auto">{showDisclosure ? '▲' : '▼'}</span>
             </span>
             {showDisclosure && (
-              <p className="text-[11px] leading-[1.6] text-white/40 mt-1.5 pr-2"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[11px] leading-[1.6] text-ink-3 mt-1.5 pr-2"
+                style={{ fontFamily: 'var(--t-font)' }}>
                 Drills and session plans are AI-generated based on established football coaching methodology, following UEFA coaching principles — warm-up, technical focus, game application. These are a starting point. Not every suggestion will suit your squad's age group or level, so your judgment as a coach always takes priority.
               </p>
             )}
           </button>
 
-          <div className="flex items-end gap-2 rounded-[14px] p-2" style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="flex items-end gap-2 rounded-[14px] p-2" style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -373,7 +373,7 @@ export default function CoachAssistant() {
               placeholder="Ask for a drill, session plan, or idea…"
               rows={1}
               className="flex-1 outline-none resize-none p-2 text-[13px]"
-              style={{ background: 'transparent', color: 'rgba(255,255,255,0.88)', maxHeight: 120 }}
+              style={{ background: 'transparent', color: 'rgb(var(--t-ink))', maxHeight: 120 }}
             />
             <button
               onClick={() => send()}
@@ -381,8 +381,8 @@ export default function CoachAssistant() {
               className="rounded-full flex items-center justify-center"
               style={{
                 width: 36, height: 36,
-                background: input.trim() && !isLoading ? '#C8F25A' : 'rgba(255,255,255,0.06)',
-                color: '#000',
+                background: input.trim() && !isLoading ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))',
+                color: 'rgb(var(--t-on-brand))',
               }}
               aria-label="Send"
             >

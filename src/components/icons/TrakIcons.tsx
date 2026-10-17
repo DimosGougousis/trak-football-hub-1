@@ -6,8 +6,8 @@ interface IconProps {
   className?: string
 }
 
-const defaultColor = 'rgba(255,255,255,0.45)'
-const activeColor = '#C8F25A'
+const defaultColor = 'rgb(var(--t-ink-3))'
+const activeColor = 'rgb(var(--t-brand))'
 
 type SvgRender = (p: { size: number; color: string; className?: string }) => React.ReactElement
 
@@ -100,7 +100,7 @@ export const IconCoaches = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <rect x="3" y="2" width="16" height="18" rx="3" stroke={color} strokeWidth="1.5"/>
     <path d="M7 7H15M7 11H15M7 15H11" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
-    <circle cx="17" cy="17" r="4" fill="#0a0a0b" stroke={color} strokeWidth="1.5"/>
+    <circle cx="17" cy="17" r="4" fill="rgb(var(--t-ground))" stroke={color} strokeWidth="1.5"/>
     <path d="M15.5 17L16.5 18L18.5 15.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 ))
@@ -109,40 +109,40 @@ export const IconCoaches = makeIcon({}, ({ size, color, className }) => (
 
 export const IconRolePlayer = ({ size = 28 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="14" cy="8" r="5" stroke="#C8F25A" strokeWidth="1.5"/>
-    <path d="M4 26C4 20.5 8.5 17 14 17C19.5 17 24 20.5 24 26" stroke="#C8F25A" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M14 17V22M11 19.5L17 19.5" stroke="#C8F25A" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="14" cy="8" r="5" stroke="rgb(var(--t-brand))" strokeWidth="1.5"/>
+    <path d="M4 26C4 20.5 8.5 17 14 17C19.5 17 24 20.5 24 26" stroke="rgb(var(--t-brand))" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M14 17V22M11 19.5L17 19.5" stroke="rgb(var(--t-brand))" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 )
 
 export const IconRoleCoach = ({ size = 28 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="4" y="3" width="20" height="22" rx="3" stroke="#60a5fa" strokeWidth="1.5"/>
-    <path d="M9 9H19M9 13H19M9 17H14" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round"/>
-    <circle cx="20" cy="20" r="5" fill="#0a0a0b" stroke="#60a5fa" strokeWidth="1.5"/>
-    <path d="M18 20L19.5 21.5L22.5 18.5" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <rect x="4" y="3" width="20" height="22" rx="3" stroke="rgb(var(--t-info))" strokeWidth="1.5"/>
+    <path d="M9 9H19M9 13H19M9 17H14" stroke="rgb(var(--t-info))" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="20" cy="20" r="5" fill="rgb(var(--t-ground))" stroke="rgb(var(--t-info))" strokeWidth="1.5"/>
+    <path d="M18 20L19.5 21.5L22.5 18.5" stroke="rgb(var(--t-info))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 
 export const IconRoleParent = ({ size = 28 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="10" cy="8" r="4" stroke="#4ade80" strokeWidth="1.5"/>
-    <circle cx="20" cy="10" r="3" stroke="#4ade80" strokeWidth="1.5"/>
-    <path d="M3 24C3 19.6 6.1 17 10 17C14 17 17 19.6 17 24" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M17 24C17 21.5 18.3 20 20 20C21.7 20 23 21.5 23 24" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="10" cy="8" r="4" stroke="rgb(var(--t-success))" strokeWidth="1.5"/>
+    <circle cx="20" cy="10" r="3" stroke="rgb(var(--t-success))" strokeWidth="1.5"/>
+    <path d="M3 24C3 19.6 6.1 17 10 17C14 17 17 19.6 17 24" stroke="rgb(var(--t-success))" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M17 24C17 21.5 18.3 20 20 20C21.7 20 23 21.5 23 24" stroke="rgb(var(--t-success))" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 )
 
 export const IconRoleClub = ({ size = 28 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M14 3L4 8V14C4 19.5 8.4 24.6 14 26C19.6 24.6 24 19.5 24 14V8L14 3Z" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round"/>
-    <path d="M10 14L13 17L18 11" stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 3L4 8V14C4 19.5 8.4 24.6 14 26C19.6 24.6 24 19.5 24 14V8L14 3Z" stroke="rgb(var(--t-info))" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M10 14L13 17L18 11" stroke="rgb(var(--t-info))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 
 // ── Action icons ──
 
-export const IconMatch = makeIcon({ color: '#C8F25A' }, ({ size, color, className }) => (
+export const IconMatch = makeIcon({ color: 'rgb(var(--t-brand))' }, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <circle cx="11" cy="11" r="9" stroke={color} strokeWidth="1.5"/>
     <path d="M7 11C7.5 8.5 9.5 7 11 7C12.5 7 14.5 8.5 15 11" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
@@ -151,9 +151,9 @@ export const IconMatch = makeIcon({ color: '#C8F25A' }, ({ size, color, classNam
   </svg>
 ))
 
-export const IconAward = makeIcon({ color: '#C8F25A' }, ({ size, color, className }) => (
+export const IconAward = makeIcon({ color: 'rgb(var(--t-brand))' }, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <path d="M11 2L12.9 7.6H18.8L14 11L15.9 16.5L11 13.2L6.1 16.5L8 11L3.2 7.6H9.1L11 2Z" fill="rgba(200,242,90,0.15)" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M11 2L12.9 7.6H18.8L14 11L15.9 16.5L11 13.2L6.1 16.5L8 11L3.2 7.6H9.1L11 2Z" fill="rgb(var(--t-brand) / 0.15)" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
   </svg>
 ))
 

@@ -127,6 +127,30 @@
 
 @layer base {
   :root {
+    /* TRAK-189: Trak's own colours, by role, as RGB channels so Tailwind's /alpha
+       works (bg-brand/10). Screens use these, never a hex code or white-at-N%:
+       hard-coded-colours.test.ts fails on a new one. Values are still today's
+       dark look; the light palette replaces them once Imad approves it. */
+    --t-ground: 10 10 11;        /* the screen */
+    --t-surface: 16 16 18;       /* cards, sheets */
+    --t-raised: 23 23 26;        /* chips, quiet buttons, tracks */
+    --t-ink: 224 224 225;        /* headings and body */
+    --t-ink-2: 145 145 147;      /* supporting lines */
+    --t-ink-3: 110 110 112;      /* labels, timestamps, placeholders */
+    --t-line: 30 30 33;          /* card edges, dividers */
+    --t-line-strong: 72 72 76;   /* text boxes, pickers */
+    --t-brand: 200 242 90;       /* main buttons, selected states */
+    --t-on-brand: 0 0 0;         /* text on the brand colour */
+    --t-scrim: 0 0 0;            /* behind a modal, at an opacity */
+    --t-on-bright: 0 0 0;        /* text on bright band and status colours, in every theme */
+    --t-danger: 248 113 113;
+    --t-success: 74 222 128;
+    --t-info: 96 165 250;
+    --t-warning: 251 191 36;
+    --t-orange: 251 146 60;
+    --t-font: 'DM Sans', sans-serif;
+    --t-font-mono: 'DM Mono', monospace;
+
     --background: 0 0% 4%;
     --foreground: 0 0% 100%;
 

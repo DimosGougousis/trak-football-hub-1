@@ -23,7 +23,7 @@ export function HomeHeader({ calendarTo, center, right }: { calendarTo: string; 
 export function HomeTitle({ children }: { children: ReactNode }) {
   return (
     <h1 className="truncate text-[19px] font-semibold text-foreground/90"
-      style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+      style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
       {children}
     </h1>
   )

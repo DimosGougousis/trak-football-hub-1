@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import { AlertTriangle } from 'lucide-react'
+import { withAlpha } from '@/lib/with-alpha'
 
 type PlayerRow = {
   id: string
@@ -204,28 +205,28 @@ export default function ClubSquads() {
         <>
           <SectionLabel>
             <span className="flex items-center gap-1.5">
-              <AlertTriangle size={12} style={{ color: '#F59E0B' }} />
+              <AlertTriangle size={12} style={{ color: 'rgb(var(--t-warning))' }} />
               Players Without a Coach
             </span>
           </SectionLabel>
           <div className="mt-3 mb-6 space-y-2">
-            <div className="px-4 py-3 mb-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, color: 'rgba(245,158,11,0.8)', fontSize: 12, lineHeight: 1.5 }}>
+            <div className="px-4 py-3 mb-3" style={{ background: 'rgb(var(--t-warning) / 0.06)', border: '1px solid rgb(var(--t-warning) / 0.2)', borderRadius: 12, color: 'rgb(var(--t-warning) / 0.8)', fontSize: 12, lineHeight: 1.5 }}>
               These players' coach has left the academy. Their assessment history is preserved. Assign them to a new coach to continue tracking.
             </div>
             {orphanedPlayers.map(p => (
-              <ClubCard key={p.id} className="p-3 flex items-center gap-3" style={{ borderColor: 'rgba(245,158,11,0.15)' }}>
+              <ClubCard key={p.id} className="p-3 flex items-center gap-3" style={{ borderColor: 'rgb(var(--t-warning) / 0.15)' }}>
                 <div className="flex items-center justify-center shrink-0"
-                  style={{ width: 40, height: 40, borderRadius: 999, background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontSize: 13 }}>
+                  style={{ width: 40, height: 40, borderRadius: 999, background: 'rgb(var(--t-warning) / 0.1)', color: 'rgb(var(--t-warning))', fontSize: 13 }}>
                   {initials(p.name)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.88)' }}>{p.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                  <div style={{ fontSize: 14, color: 'rgb(var(--t-ink))' }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))' }}>
                     {p.position} · {p.ageGroup}
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-full text-[11px]"
-                  style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                  style={{ color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-warning) / 0.1)', border: '1px solid rgb(var(--t-warning) / 0.3)' }}>
                   Unassigned
                 </span>
               </ClubCard>
@@ -241,8 +242,8 @@ export default function ClubSquads() {
           return (
             <button key={g} onClick={() => setFilter(g)} className="px-3 py-1.5 rounded-full text-xs"
               style={active
-                ? { color: '#000', background: '#C8F25A', border: '1px solid #C8F25A' }
-                : { color: 'rgba(255,255,255,0.45)', background: 'transparent', border: '1px solid rgba(255,255,255,0.07)' }}>
+                ? { color: 'rgb(var(--t-on-brand))', background: 'rgb(var(--t-brand))', border: '1px solid rgb(var(--t-brand))' }
+                : { color: 'rgb(var(--t-ink-3))', background: 'transparent', border: '1px solid rgb(var(--t-line))' }}>
               {g}
             </button>
           )
@@ -256,25 +257,25 @@ export default function ClubSquads() {
             <LoadError what="your academy squads" onRetry={() => setRetry(value => value + 1)} />
           </div>
         ) : pending ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>Loading…</div>
+          <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>Loading…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No players found.</div>
+          <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>No players found.</div>
         ) : (
           filtered.map(p => (
             <ClubCard key={p.id} className="p-3 flex items-center gap-3">
               <div className="flex items-center justify-center shrink-0"
-                style={{ width: 40, height: 40, borderRadius: 999, background: 'rgba(200,242,90,0.1)', color: '#C8F25A', fontSize: 13 }}>
+                style={{ width: 40, height: 40, borderRadius: 999, background: 'rgb(var(--t-brand) / 0.1)', color: 'rgb(var(--t-brand))', fontSize: 13 }}>
                 {initials(p.name)}
               </div>
               <div className="flex-1 min-w-0">
-                <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.88)' }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                <div style={{ fontSize: 14, color: 'rgb(var(--t-ink))' }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))' }}>
                   {p.position} · {p.ageGroup} · {p.matchCount} matches
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{p.coachName}</div>
+                <div style={{ fontSize: 11, color: 'rgb(var(--t-ink-3))' }}>{p.coachName}</div>
               </div>
               <span className="px-2.5 py-1 rounded-full text-[11px] text-muted-foreground border border-border"
-                style={p.latestBandColor ? { color: p.latestBandColor, background: `${p.latestBandColor}1F`, border: `1px solid ${p.latestBandColor}40` } : undefined}>
+                style={p.latestBandColor ? { color: p.latestBandColor, background: `${withAlpha(p.latestBandColor, 0.12)}`, border: `1px solid ${withAlpha(p.latestBandColor, 0.25)}` } : undefined}>
                 {p.latestBand}
               </span>
             </ClubCard>
