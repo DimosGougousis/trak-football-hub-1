@@ -32,15 +32,15 @@ beforeEach(() => {
 })
 
 describe('J4: a session or match cannot be dated in the future', () => {
-  it('a training dated tomorrow cannot be saved, and today can', async () => {
+  // TRAK-157: the training log's date is Arc's picker, which won't offer a day after today.
+  it('a training cannot be dated tomorrow, and today can', async () => {
     const user = userEvent.setup()
     renderApp('/coach/sessions/add')
     await user.click(await screen.findByRole('button', { name: /Technical/ }))
-    expect(dateInput()).toHaveAttribute('max', localTodayISO())
-    fireEvent.change(dateInput(), { target: { value: tomorrow() } })
-    expect(await screen.findByText(/can't be dated in the future/)).toBeInTheDocument()
-    expect(next()).toBeDisabled()
-    fireEvent.change(dateInput(), { target: { value: localTodayISO() } })
+    await user.click(screen.getByRole('button', { name: /^Session date\b/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Session date calendar' })
+    expect(dialog.querySelector(`[data-present] [data-date="${tomorrow()}"]`)).toBeDisabled()
+    await user.click(dialog.querySelector(`[data-present] [data-date="${localTodayISO()}"]`) as HTMLElement)
     await waitFor(() => expect(next()).toBeEnabled())
   })
 

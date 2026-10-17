@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
-import { displayEventTime } from '@/lib/event-time'
+import { displayEventTime, localTodayISO } from '@/lib/event-time'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
@@ -11,7 +11,7 @@ import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useParked } from '@/components/trak/parked'
 import {
   CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
-  isCancelled, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
+  isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { FixtureImport } from '@/components/coach/FixtureImport'
@@ -155,10 +155,15 @@ const EVENT_STEPS = [
 ]
 const REVIEW = EVENT_STEPS.length - 1
 
+/** TRAK-127: a past date on New event, or moved to on an edit. */
+function pastProblem(form: EventForm, editing: EventRow | null) {
+  return pastDateProblem(form.date, localTodayISO(), editing ? rowToForm(editing).date : null)
+}
+
 /** What stops Next on a step: only what that step can fix. */
-function stepProblem(step: number, form: EventForm, repeat: Repeat, editing: boolean) {
+function stepProblem(step: number, form: EventForm, repeat: Repeat, editing: EventRow | null) {
   if (step === 0) return whatProblem(form)
-  if (step === 1) return formProblem(form) ?? (editing ? null : repeatProblem(form, repeat))
+  if (step === 1) return formProblem(form) ?? pastProblem(form, editing) ?? (editing ? null : repeatProblem(form, repeat))
   return null
 }
 
@@ -273,6 +278,15 @@ export default function CoachSchedule() {
   }, [user])
   // TRAK-161: tell the coach as they type when families won't see the note.
   const noteProblem = sheet.kind === 'edit' ? familyNoteProblem(sheet.form.familyNote, squad.childNames) : null
+  // TRAK-127: said as soon as a past day is picked, with the two logs.
+  const datePassed = sheet.kind === 'edit' ? pastProblem(sheet.form, sheet.row) : null
+  const logInstead = (to: 'match' | 'training') => {
+    if (sheet.kind !== 'edit') return
+    const { date, opponent, homeAway } = sheet.form
+    setSheet({ kind: 'closed' })
+    if (to === 'match') navigate('/coach/sessions/quick', { state: { fromEvent: { date, opponent: opponent.trim() || null, homeAway: homeAway || null } } })
+    else navigate('/coach/sessions/add', { state: { logDate: date } })
+  }
 
   const retry = async () => { setRetrying(true); await loadData(); setRetrying(false) }
 
@@ -357,7 +371,7 @@ export default function CoachSchedule() {
     if (parked) return comingSoon()
     if (!user || sheet.kind !== 'edit') return
     const { row: editing, form, repeat, scope } = sheet
-    const problem = formProblem(form) ?? (editing ? null : repeatProblem(form, repeat))
+    const problem = formProblem(form) ?? pastProblem(form, editing) ?? (editing ? null : repeatProblem(form, repeat))
     if (problem) { setSheet({ ...sheet, error: problem }); return }
 
     // This and following weeks: each week keeps its own date and takes the rest.
@@ -431,7 +445,7 @@ export default function CoachSchedule() {
   const toStep = (step: number) => setSheet(s => s.kind === 'edit' ? { ...s, step, error: null } : s)
   const nextStep = () => {
     if (sheet.kind !== 'edit') return
-    const problem = stepProblem(sheet.step, sheet.form, sheet.repeat, !!sheet.row)
+    const problem = stepProblem(sheet.step, sheet.form, sheet.repeat, sheet.row)
     if (problem) setSheet({ ...sheet, error: problem })
     else toStep(sheet.step + 1)
   }
@@ -691,10 +705,14 @@ export default function CoachSchedule() {
                           {registerSession.has(row.id) ? 'Register taken · Edit' : 'Take register'}
                         </button>
                       )}
-                      {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && (
+                      {/* TRAK-138: a logged match is its event, so it's logged once. */}
+                      {row && row.event_type === 'match' && registerSession.has(row.id) && (
+                        <p className="mt-2 text-[10px] tracking-[0.08em] uppercase text-white/45" style={mono}>Match logged</p>
+                      )}
+                      {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && !registerSession.has(row.id) && (
                         <button aria-label={`Log match for ${row.title}`}
                           onClick={parked ? comingSoon : () => navigate('/coach/sessions/quick', {
-                            state: { fromEvent: { date: row.event_date, opponent: row.opponent, homeAway: row.home_away } },
+                            state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away } },
                           })}
                           className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-[#4ade80]" style={mono}>
                           Log match
@@ -913,7 +931,17 @@ export default function CoachSchedule() {
               <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem} />
             </>}
 
-            {sheet.error && (
+            {datePassed && (sheet.step === 1 || sheet.step === REVIEW) && (
+              <div role="alert" className="rounded-[12px] p-3 space-y-2 border border-[#f87171]/30 bg-[#f87171]/[0.06]">
+                <p className="text-[12px] text-[#f87171]" style={font}>{datePassed}</p>
+                <div className="flex gap-2">
+                  <Button size="md" variant="secondary" className="flex-1" onClick={() => logInstead('match')}>Log match</Button>
+                  <Button size="md" variant="secondary" className="flex-1" onClick={() => logInstead('training')}>Log training</Button>
+                </div>
+              </div>
+            )}
+
+            {sheet.error && sheet.error !== datePassed && (
               <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{sheet.error}</p>
             )}
 
@@ -928,12 +956,12 @@ export default function CoachSchedule() {
                   <ChevronLeft size={18} aria-hidden="true" />
                 </Button>
                 {sheet.row?.published ? (
-                  <Button size="lg" className="flex-1" loading={saving} onClick={() => void saveEvent()}>Save changes</Button>
+                  <Button size="lg" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveEvent()}>Save changes</Button>
                 ) : <>
-                  <Button size="lg" variant="secondary" className="flex-1" loading={saving} onClick={() => void saveEvent()}>
+                  <Button size="lg" variant="secondary" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveEvent()}>
                     {seriesCount(sheet) > 1 ? `Save ${seriesCount(sheet)} drafts` : 'Save draft'}
                   </Button>
-                  <Button size="lg" className="flex-1" loading={saving} onClick={() => void saveEvent(true)}>
+                  <Button size="lg" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveEvent(true)}>
                     {seriesCount(sheet) > 1 ? `Publish ${seriesCount(sheet)}` : 'Publish'}
                   </Button>
                 </>}
