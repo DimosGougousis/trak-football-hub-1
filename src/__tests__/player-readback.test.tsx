@@ -132,7 +132,7 @@ describe('player readback through authenticated routes', () => {
     await waitFor(() => expect(screen.queryByText(/match.*(not found|unavailable)|couldn.t find.*match/i)).not.toBeNull())
     expect(screen.queryByText('vs recent opposition')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: /back to matches/i }))
-    await screen.findByText('No matches found.')
+    await screen.findByText('No past matches yet.')
   })
 
   it('does not show a previous match while a different match route is still loading', async () => {

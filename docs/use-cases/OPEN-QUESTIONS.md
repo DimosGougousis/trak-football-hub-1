@@ -246,3 +246,30 @@ The pilot change rule, release schedule and value targets remain open in
 [MVP Requirements](../../MVP%20Requirements). They are not settled by a passing
 harness. The academy briefing and operational-risk disclosures are still to
 happen; founder acceptance of a risk is not evidence it has been disclosed.
+
+## Q-2026-10-17-UC-A04 · UC-A04 · View match history and match detail
+Raised: 2026-10-17 · commit blocked · REQ-001
+Observed: UC-A04: enforced use-case test failed
+Spec (v2) says:
+  THEN Every logged match appears as a card
+  THEN An athlete with no matches sees an explicit empty message
+  THEN A failed load is distinguishable from an empty history
+
+PO decision needed — one of:
+  [ ] Spec stands -> code bug, fix the code, no registry change
+  [ ] Spec changes -> bump spec_version, add changelog entry, dev updates test
+  [ ] Spec ambiguous -> rewrite given/when/then, bump spec_version
+Status: OPEN
+
+## Q-2026-10-17-UC-X02 · UC-X02 · A failed load never renders as a false empty state
+Raised: 2026-10-17 · commit blocked · REQ-004
+Observed: UC-X02: enforced use-case test failed
+Spec (v2) says:
+  THEN A retryable error is shown
+  THEN The error is visibly different from the genuine empty state
+
+PO decision needed — one of:
+  [ ] Spec stands -> code bug, fix the code, no registry change
+  [ ] Spec changes -> bump spec_version, add changelog entry, dev updates test
+  [ ] Spec ambiguous -> rewrite given/when/then, bump spec_version
+Status: OPEN
