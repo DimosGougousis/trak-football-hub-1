@@ -5,10 +5,12 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { trackEvent } from '@/lib/telemetry'
+import { AssessmentBands, type AssessmentScores } from '@/components/player/AssessmentBands'
 
 type FeedbackState =
-  | { status: 'loading' | 'empty' | 'error' }
-  | { status: 'ready'; body: string }
+  | { status: 'loading' | 'error' }
+  | { status: 'empty'; scores: AssessmentScores | null }
+  | { status: 'ready'; body: string; scores: AssessmentScores | null }
 
 export default function PlayerFeedback() {
   const { assessmentId } = useParams<{ assessmentId: string }>()
@@ -33,14 +35,23 @@ function FeedbackMessage({ account, assessmentId }: { account: { id: string } | 
       try {
         // G7 permits only explicitly published coach words, including in DEV.
         // This migrated table is not yet in the repository's generated types.
-        const { data, error } = await (supabase as SupabaseClient).from('coach_shared_feedback')
-          .select('body').eq('assessment_id', assessmentId)
-          .not('published_at', 'is', null).abortSignal(controller.signal).returns<{ body: unknown }[]>().maybeSingle()
+        // TRAK-171 (live run 3): the screen shows this assessment's bands too,
+        // as Home does; a failed read of them is said, not hidden.
+        const [{ data, error }, bands] = await Promise.all([
+          (supabase as SupabaseClient).from('coach_shared_feedback')
+            .select('body').eq('assessment_id', assessmentId)
+            .not('published_at', 'is', null).abortSignal(controller.signal).returns<{ body: unknown }[]>().maybeSingle(),
+          supabase.from('coach_assessments')
+            .select('work_rate, tactical, attitude, technical, physical, coachability')
+            .eq('id', assessmentId).abortSignal(controller.signal).maybeSingle(),
+        ])
         if (!current) return
         if (error) throw error
-        if (!data) setState({ status: 'empty' })
+        if (bands.error) throw bands.error
+        const scores = (bands.data as AssessmentScores | null) ?? null
+        if (!data) setState({ status: 'empty', scores })
         else if (typeof data.body !== 'string' || !data.body.trim()) setState({ status: 'error' })
-        else setState({ status: 'ready', body: data.body })
+        else setState({ status: 'ready', body: data.body, scores })
       } catch {
         if (current) setState({ status: 'error' })
       }
@@ -66,6 +77,8 @@ function FeedbackMessage({ account, assessmentId }: { account: { id: string } | 
         </div>}
         {state.status === 'empty' && <p className="text-muted-foreground">Your coach is still writing your feedback.</p>}
         {state.status === 'ready' && <p className="whitespace-pre-wrap break-words rounded-2xl border border-border bg-card p-5 leading-relaxed text-foreground">{state.body}</p>}
+        {(state.status === 'ready' || state.status === 'empty') && state.scores &&
+          <section className="rounded-2xl border border-border bg-card p-5"><AssessmentBands scores={state.scores} /></section>}
       </main>
     </MobileShell>
   )

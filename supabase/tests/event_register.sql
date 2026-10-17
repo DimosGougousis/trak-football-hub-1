@@ -74,7 +74,7 @@ INSERT INTO public.player_parent_links(player_user_id,parent_user_id) VALUES
 INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id)
  SELECT pg_temp.g138sp(n), pg_temp.g138id(CASE WHEN n = 23 THEN 11 ELSE 10 END), 'Synthetic '||n, pg_temp.g138id(n)
  FROM unnest(ARRAY[20,21,22,23]) n;
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.g138id(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.g138id(100),'events') ON CONFLICT DO NOTHING;
 -- A's events: 800 training 2 days ago; 801 "other" yesterday; 802 training
 -- tomorrow; 803 cancelled 2 days ago; 804 a draft 2 days ago; 805 a match 2
 -- days ago (at 15:00: a coach's live events can't overlap, TRAK-158); 806 a

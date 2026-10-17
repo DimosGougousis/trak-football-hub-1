@@ -108,6 +108,8 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.p47id(100),pg_temp.p47id(1),'Parked Audit A','P47AA1'),
  (pg_temp.p47id(101),pg_temp.p47id(2),'Parked Audit B','P47BB1');
+-- New academies start with events on (TRAK-124); this suite audits the off state.
+DELETE FROM public.academy_features WHERE organization_id IN (pg_temp.p47id(100),pg_temp.p47id(101));
 INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.p47id(10),pg_temp.p47id(100)),(pg_temp.p47id(11),pg_temp.p47id(101)),
  (pg_temp.p47id(12),pg_temp.p47id(100)),(pg_temp.p47id(13),pg_temp.p47id(100));
