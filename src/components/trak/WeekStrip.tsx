@@ -36,7 +36,8 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
   refresh?: () => void
   today?: Date
 }) {
-  const [day, setDay] = useState(format(today, 'yyyy-MM-dd'))
+  const todayValue = format(today, 'yyyy-MM-dd')
+  const [day, setDay] = useState(todayValue)
   const onDay = (date: string) => events.filter(event => event.date === date)
     .sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'))
   const chosen = onDay(day)
@@ -51,7 +52,8 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
           return {
             value,
             label: format(date, 'EEEEE'),
-            accessory: <><span className="sr-only">{format(date, 'EEEE d MMMM')}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
+            // TRAK-171 (Tarek, 16 Oct): today stays marked after another day is picked.
+            accessory: <><span className={value === todayValue ? 'sr-only trak-today' : 'sr-only'}>{format(date, 'EEEE d MMMM')}{value === todayValue && ', today'}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
               {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[5px] h-[5px] rounded-full"
                 style={{ background: event.status === 'cancelled' ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />)}
             </span>}</>,
