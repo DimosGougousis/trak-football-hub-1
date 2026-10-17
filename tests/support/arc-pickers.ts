@@ -45,3 +45,35 @@ export async function pickDate(user: User, label: string, day: string) {
   }
   await waitFor(() => expect(screen.queryByRole('dialog', { name: `${label} calendar` })).toBeNull())
 }
+
+/** Opens the date field named `label`, runs `read` on its calendar, then closes it again. */
+async function withCalendar<T>(user: User, label: string, read: (dialog: HTMLElement) => Promise<T>): Promise<T> {
+  const trigger = screen.getByRole('button', { name: new RegExp(`^${label}\\b`) })
+  await user.click(trigger)
+  const dialog = await screen.findByRole('dialog', { name: `${label} calendar` })
+  const result = await read(dialog)
+  await user.click(trigger)
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: `${label} calendar` })).toBeNull())
+  return result
+}
+
+/** The day (YYYY-MM-DD) the date field named `label` holds, as its calendar marks it. */
+export function dateHeld(user: User, label: string): Promise<string | null> {
+  return withCalendar(user, label, async dialog =>
+    dialog.querySelector('[data-present] [aria-selected="true"]')?.getAttribute('data-date') ?? null)
+}
+
+/** Whether the date field named `label` lets the coach pick `day` (paging month by month toward it). */
+export function dateOffered(user: User, label: string, day: string): Promise<boolean> {
+  return withCalendar(user, label, async dialog => {
+    for (let step = 0; step < 60; step++) {
+      const cell = dialog.querySelector<HTMLButtonElement>(`[data-present] [data-date="${day}"]`)
+      if (cell) return !cell.disabled
+      const first = dialog.querySelector<HTMLElement>('[data-present] [data-date]')?.getAttribute('data-date') ?? ''
+      const nav = within(dialog).getByRole('button', { name: first < day ? 'Next month' : 'Previous month' })
+      if (nav.getAttribute('aria-disabled') === 'true') return false
+      await user.click(nav)
+    }
+    return false
+  })
+}

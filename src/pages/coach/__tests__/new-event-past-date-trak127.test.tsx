@@ -7,7 +7,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toInstant } from '@/lib/event-time'
-import { pickDate, pickTime } from '../../../../tests/support/arc-pickers'
+import { dateHeld, pickDate, pickTime } from '../../../../tests/support/arc-pickers'
 import { eventStep } from '../../../../tests/support/event-steps'
 
 /**
@@ -100,7 +100,7 @@ describe('TRAK-127: New event is for what is coming', { timeout: 30_000 }, () =>
     const sheet = await newEventOn(yesterday)
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Log match' }))
     expect(await screen.findByPlaceholderText('Opponent name')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getAllByLabelText('Session date')[0]).toHaveValue(yesterday))
+    expect(await dateHeld(userEvent, 'Session date')).toBe(yesterday)
   })
 
   it('today still works', async () => {
