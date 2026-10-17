@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
+import { BAND_COLOR } from '@/lib/types'
 
 interface MatchPoint {
   created_at: string
@@ -20,11 +21,11 @@ interface Props {
 }
 
 const THRESHOLD_LINES = [
-  { y: 9.0, color: 'rgb(var(--t-brand))' },
-  { y: 8.0, color: 'rgb(var(--t-success))' },
-  { y: 7.0, color: 'rgb(var(--t-success))' },
-  { y: 6.0, color: 'rgb(var(--t-info))' },
-  { y: 4.8, color: 'rgb(var(--t-orange))' },
+  { y: 9.0, color: BAND_COLOR.Exceptional },
+  { y: 8.0, color: BAND_COLOR.Standout },
+  { y: 7.0, color: BAND_COLOR.Good },
+  { y: 6.0, color: BAND_COLOR.Steady },
+  { y: 4.8, color: BAND_COLOR.Mixed },
 ]
 
 function formatDate(iso: string): string {

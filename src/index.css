@@ -224,14 +224,22 @@
   }
 }
 
-/* TRAK-189: fixed dark artwork in a light app (the parked player card). Everything
-   inside a .trak-dark element takes the dark role colours Trak had before. */
+/* TRAK-189: dark islands in the light app. Everything inside a .trak-dark element
+   takes Trak's dark colours: the band cards (Tarek, 17 Oct: the bands keep their
+   bright colours so they tell apart, which needs a dark card) and the parked
+   player card's artwork. */
 .trak-dark {
   color-scheme: dark;
   --t-ground: 10 10 11; --t-surface: 16 16 18; --t-raised: 23 23 26;
-  --t-ink: 224 224 225; --t-ink-2: 145 145 147; --t-ink-3: 110 110 112;
+  --t-ink: 224 224 225; --t-ink-2: 160 160 163; --t-ink-3: 138 138 141;
   --t-line: 30 30 33; --t-line-strong: 72 72 76;
   --t-brand: 200 242 90; --t-on-brand: 0 0 0;
+  --t-danger: 248 113 113; --t-success: 74 222 128; --t-info: 96 165 250;
+  --t-warning: 251 191 36; --t-orange: 251 146 60;
+  --background: 0 0% 4%; --foreground: 0 0% 100%;
+  --card: 240 4% 6.5%; --card-foreground: 0 0% 100%;
+  --muted: 240 3% 10%; --muted-foreground: 0 0% 60%;
+  --border: 0 0% 100% / 0.07; --primary: 73 85% 65%; --primary-foreground: 0 0% 0%;
   color: rgb(var(--t-ink));
 }
 

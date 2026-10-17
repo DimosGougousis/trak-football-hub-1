@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
 import { BANDS } from '@/lib/types'
+import { BAND_COLOR } from '@/lib/types'
 
 const BAND_DESCRIPTIONS: Record<string, string> = {
   exceptional: 'Outstanding — everything clicked',
@@ -118,9 +119,9 @@ export default function HowTrakWorks() {
           <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>
             A 7.2 and a 7.4 feel the same on the pitch, but a number invites comparison and pressure.
-            Bands keep the focus on growth: how often you reach <span style={{ color: 'rgb(var(--t-success))' }}>Good</span>,
-            how you bounce back from a <span style={{ color: 'rgb(var(--t-orange))' }}>Mixed</span> match, and when you
-            break into <span style={{ color: 'rgb(var(--t-brand))' }}>Exceptional</span>.
+            Bands keep the focus on growth: how often you reach <span style={{ color: BAND_COLOR.Good }}>Good</span>,
+            how you bounce back from a <span style={{ color: BAND_COLOR.Mixed }}>Mixed</span> match, and when you
+            break into <span style={{ color: BAND_COLOR.Exceptional }}>Exceptional</span>.
           </p>
         </div>
       </div>

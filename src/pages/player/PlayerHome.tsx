@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
-import { BANDS, type BandType } from '@/lib/types'
+import { BANDS, type BandType, BAND_COLOR } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
 import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
@@ -388,12 +388,12 @@ export default function PlayerHome() {
 
   // Band summary abbreviations
   const bandAbbrev = [
-    { key: 'exceptional', abbr: 'E', color: 'rgb(var(--t-brand))' },
-    { key: 'standout', abbr: 'St', color: 'rgb(var(--t-success))' },
-    { key: 'good', abbr: 'G', color: 'rgb(var(--t-success))' },
-    { key: 'steady', abbr: 'Sy', color: 'rgb(var(--t-info))' },
-    { key: 'mixed', abbr: 'M', color: 'rgb(var(--t-orange))' },
-    { key: 'developing', abbr: 'D', color: '#a78bfa' },
+    { key: 'exceptional', abbr: 'E', color: BAND_COLOR.Exceptional },
+    { key: 'standout', abbr: 'St', color: BAND_COLOR.Standout },
+    { key: 'good', abbr: 'G', color: BAND_COLOR.Good },
+    { key: 'steady', abbr: 'Sy', color: BAND_COLOR.Steady },
+    { key: 'mixed', abbr: 'M', color: BAND_COLOR.Mixed },
+    { key: 'developing', abbr: 'D', color: BAND_COLOR.Developing },
   ]
 
   if (loading) return (
@@ -589,7 +589,7 @@ export default function PlayerHome() {
           {/* Band summary strip */}
           {matches.length > 0 && (
             <div className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgba(0,0,0,0.3)' }}>
+              style={{ background: 'rgb(var(--t-raised))' }}>
               <div className="flex items-center gap-[7px]">
                 <div className="w-[5px] h-[5px] rounded-full bg-ink-3" />
                 <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-ink-3"
@@ -608,7 +608,7 @@ export default function PlayerHome() {
           {/* Next milestone */}
           {matches.length > 0 && (
             <div className="flex items-center justify-between px-3 py-2 mt-1.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgba(0,0,0,0.2)' }}>
+              style={{ background: 'rgb(var(--t-raised))' }}>
               <span className="text-[9px] tracking-[0.06em] text-ink-3"
                 style={{ fontFamily: 'var(--t-font-mono)' }}>
                 Next milestone
@@ -631,15 +631,15 @@ export default function PlayerHome() {
         {/* Stats grid */}
         {matches.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-3.5">
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
               <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{matches.length}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Matches</span>
             </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
               <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{totalGoals}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Goals</span>
             </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
+            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgb(var(--t-raised))' }}>
               <p className="text-[22px] font-normal text-ink leading-none" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>{totalAssists}</p>
               <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-ink-3 mt-[5px] block" style={{ fontFamily: 'var(--t-font-mono)' }}>Assists</span>
             </div>
@@ -672,7 +672,7 @@ export default function PlayerHome() {
         {coachAssessment && (
           <div className="mt-5">
             <MetadataLabel text="LATEST COACH ASSESSMENT" />
-            <div className="relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
+            <div className="trak-dark relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
               style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
               <div className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
                 style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.06) 0%, transparent 70%)' }} />

@@ -186,10 +186,10 @@ function BandPill({ band }: { band: Band }) {
   const color = BAND_COLORS[band]
   return (
     <span
-      className="inline-flex items-center px-3 py-1 rounded-full text-xs"
+      className="trak-dark inline-flex items-center px-3 py-1 rounded-full text-xs"
       style={{
         color,
-        background: `${withAlpha(color, 0.12)}`,
+        background: `linear-gradient(${withAlpha(color, 0.12)}, ${withAlpha(color, 0.12)}), rgb(var(--t-surface))`,
         border: `1px solid ${withAlpha(color, 0.25)}`,
       }}
     >

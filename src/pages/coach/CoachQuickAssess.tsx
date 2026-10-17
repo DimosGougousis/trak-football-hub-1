@@ -456,7 +456,7 @@ export default function CoachQuickAssess() {
         )}
 
         {/* ---- 4. Sliders ---- */}
-        <div className="rounded-[14px] bg-raised p-[14px_16px] space-y-5">
+        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={onSlide(setWorkRate)} />
           <SliderInput label="Tactical"     value={tactical}     onChange={onSlide(setTactical)} />
           <SliderInput label="Attitude"     value={attitude}     onChange={onSlide(setAttitude)} />
@@ -467,12 +467,12 @@ export default function CoachQuickAssess() {
 
         {/* ---- 5. Overall band preview ---- */}
         <div
-          className="flex items-center justify-between px-4 py-3.5 rounded-[12px]"
+          className="trak-dark flex items-center justify-between px-4 py-3.5 rounded-[12px]"
           style={needsInput ? {
             background: 'rgb(var(--t-raised))',
             border: '1px solid rgb(var(--t-line))',
           } : {
-            background: overallCfg.bg,
+            background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
             boxShadow: `0 0 20px ${overallCfg.bg}`,
           }}

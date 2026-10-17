@@ -7,10 +7,11 @@ export const BandPill = memo(
     return (
       <span
         ref={ref}
-        className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full"
+        className="trak-dark inline-flex items-center px-3 py-1 text-xs font-medium rounded-full"
         style={{
           color: config.color,
-          background: config.bg,
+          // Tarek, 17 Oct: the band colours read on a dark pill, as on the dark app.
+          background: `linear-gradient(${config.bg}, ${config.bg}), rgb(var(--t-surface))`,
           border: `1px solid ${config.border}`,
           fontFamily: 'var(--t-font)',
           fontWeight: 400,

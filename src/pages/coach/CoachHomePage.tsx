@@ -373,8 +373,8 @@ export default function CoachHomePage() {
 
           {/* Band summary strip */}
           <div
-            className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
-            style={{ background: 'rgb(var(--t-raised))' }}
+            className="trak-dark flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
+            style={{ background: 'rgb(var(--t-surface))' }}
           >
             <div className="flex items-center gap-[7px]">
               <div className="w-[5px] h-[5px] rounded-full" style={{ background: 'rgb(var(--t-ink) / 0.2)' }} />
@@ -598,7 +598,7 @@ export default function CoachHomePage() {
 
             {/* Band Distribution Bar Chart */}
             <div
-              className="rounded-[18px] border border-line p-4 mb-3"
+              className="trak-dark rounded-[18px] border border-line p-4 mb-3"
               style={{ background: 'rgb(var(--t-surface))' }}
             >
               <span

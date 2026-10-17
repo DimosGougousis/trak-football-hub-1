@@ -1,5 +1,6 @@
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
+import { withAlpha } from '@/lib/with-alpha'
 
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
@@ -36,7 +37,7 @@ export function EventDetails({ event: e, changes = [] }: {
         </div>
       )}
       {cancelled && (
-        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${CANCELLED_COLOR}80` }}>
+        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${withAlpha(CANCELLED_COLOR, 0.5)}` }}>
           <p className="text-[13px] font-semibold" style={{ color: CANCELLED_COLOR }}>This event is cancelled.</p>
           {e.cancelReason && <p className="text-[13px] text-ink-2 mt-1">{e.cancelReason}</p>}
         </div>

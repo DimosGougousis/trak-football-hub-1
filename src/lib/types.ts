@@ -23,14 +23,19 @@ export interface BandConfig {
 // Bands span the full 0..10 slider range. 5 sits squarely in "Mixed" (the neutral middle).
 // Edges:  0–2 Difficult · 2–4 Developing · 4–6 Mixed · 6–7 Steady · 7–8 Good · 8–9 Standout · 9–10 Exceptional
 export const BANDS: BandConfig[] = [
-  { word: 'Exceptional', color: '#0B6623', bg: 'rgba(11,102,35,0.1)', border: 'rgba(11,102,35,0.28)', minScore: 9 },
-  { word: 'Standout',    color: '#1A6C3B', bg: 'rgba(26,108,59,0.1)', border: 'rgba(26,108,59,0.28)', minScore: 8 },
-  { word: 'Good',        color: '#2B6B23', bg: 'rgba(43,107,35,0.1)', border: 'rgba(43,107,35,0.28)',  minScore: 7 },
-  { word: 'Steady',      color: '#285EA3', bg: 'rgba(40,94,163,0.1)', border: 'rgba(40,94,163,0.28)',  minScore: 6 },
-  { word: 'Mixed',       color: '#954214', bg: 'rgba(149,66,20,0.1)', border: 'rgba(149,66,20,0.28)',  minScore: 4 },
-  { word: 'Developing',  color: '#6845C2', bg: 'rgba(104,69,194,0.1)', border: 'rgba(104,69,194,0.28)', minScore: 2 },
-  { word: 'Difficult',   color: '#5A615E', bg: 'rgba(90,97,94,0.1)', border: 'rgba(90,97,94,0.28)', minScore: 0 },
+  { word: 'Exceptional', color: '#C8F25A', bg: 'rgba(200,242,90,0.15)', border: 'rgba(200,242,90,0.3)', minScore: 9 },
+  { word: 'Standout',    color: '#86efac', bg: 'rgba(134,239,172,0.13)', border: 'rgba(134,239,172,0.26)', minScore: 8 },
+  { word: 'Good',        color: '#4ade80', bg: 'rgba(74,222,128,0.13)',  border: 'rgba(74,222,128,0.24)',  minScore: 7 },
+  { word: 'Steady',      color: '#60a5fa', bg: 'rgba(96,165,250,0.13)',  border: 'rgba(96,165,250,0.24)',  minScore: 6 },
+  { word: 'Mixed',       color: '#fb923c', bg: 'rgba(251,146,60,0.13)',  border: 'rgba(251,146,60,0.24)',  minScore: 4 },
+  { word: 'Developing',  color: '#a78bfa', bg: 'rgba(167,139,250,0.13)', border: 'rgba(167,139,250,0.24)', minScore: 2 },
+  { word: 'Difficult',   color: 'rgba(255,255,255,0.55)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
 ]
+
+/** TRAK-189: each band's colour by name, from BANDS, for the few places that
+ *  name a band directly. Every band keeps its own colour so they tell apart. */
+export const BAND_COLOR = Object.fromEntries(BANDS.map(b => [b.word, b.color])) as
+  Record<'Exceptional' | 'Standout' | 'Good' | 'Steady' | 'Mixed' | 'Developing' | 'Difficult', string>
 
 // The one way to turn a band into its colours. Before this existed, seven call
 // sites each wrote `BANDS.find(b => b.word.toLowerCase() === band)` with their

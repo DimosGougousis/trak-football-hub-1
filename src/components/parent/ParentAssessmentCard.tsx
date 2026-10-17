@@ -6,7 +6,7 @@ import type { ParentAssessment } from '@/lib/parent-assessments'
 export function ParentAssessmentCard({ assessment, coachName, active = true, showOpenLink = true }: {
   assessment: ParentAssessment; coachName: string; active?: boolean; showOpenLink?: boolean
 }) {
-  return <div className="rounded-xl bg-card border border-border p-5">
+  return <div className="trak-dark rounded-xl bg-card border border-border p-5">
     <div className="flex items-center justify-between gap-2 mb-4">
       <div className="min-w-0">
         <p className="text-sm text-foreground break-words">{coachName}</p>

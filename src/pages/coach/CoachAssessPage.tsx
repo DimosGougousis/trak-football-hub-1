@@ -726,7 +726,7 @@ function CoachAssessmentForm() {
         </>}
         {step === 1 && <>
         {/* ---- 5. sliders in dark container ---- */}
-        <div className="rounded-[14px] bg-raised p-[14px_16px] space-y-5">
+        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
@@ -737,9 +737,9 @@ function CoachAssessmentForm() {
 
         {/* ---- 6. overall band card (amber glow) ---- */}
         <div
-          className="flex flex-col items-center gap-2 py-5 rounded-[14px]"
+          className="trak-dark flex flex-col items-center gap-2 py-5 rounded-[14px]"
           style={{
-            background: overallCfg.bg,
+            background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
             boxShadow: `0 0 24px ${overallCfg.bg}`,
           }}
