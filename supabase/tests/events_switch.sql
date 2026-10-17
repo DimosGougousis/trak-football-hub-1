@@ -71,8 +71,12 @@ INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_
  (pg_temp.e81id(501),pg_temp.e81id(11),'A2 event','2026-11-01','18:00',true),
  (pg_temp.e81id(510),pg_temp.e81id(12),'B own event','2026-11-01','18:00',true);
 
--- The operator switches the On academy on: one INSERT, no deploy.
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e81id(100),'events');
+-- A new academy starts with events on (TRAK-124, Imad 16 Oct): creating it
+-- added its switch row, with no operator step.
+SELECT pg_temp.e81check((SELECT count(*) FROM public.academy_features WHERE feature='events'
+ AND organization_id IN (pg_temp.e81id(100),pg_temp.e81id(101)))=2,'A new academy starts with events on');
+-- The operator switches the Off academy off: one DELETE, no deploy.
+DELETE FROM public.academy_features WHERE organization_id=pg_temp.e81id(101) AND feature='events';
 
 -- The switch table is operator-only, and only known features exist.
 DO $$ DECLARE r text; op text; BEGIN

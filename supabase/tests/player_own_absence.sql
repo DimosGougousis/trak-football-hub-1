@@ -66,7 +66,7 @@ INSERT INTO public.organizations(id, admin_user_id, name, join_code) VALUES
   (pg_temp.oa(101), pg_temp.oa(2), 'Own Absence AE', 'OA183A');
 -- Trak (an operator) sets the Greek academy to 15.
 UPDATE public.organizations SET consent_age = 15 WHERE id = pg_temp.oa(100);
-INSERT INTO public.academy_features(organization_id, feature) VALUES (pg_temp.oa(100),'events'), (pg_temp.oa(101),'events');
+INSERT INTO public.academy_features(organization_id, feature) VALUES (pg_temp.oa(100),'events'), (pg_temp.oa(101),'events') ON CONFLICT DO NOTHING;
 INSERT INTO public.coach_details(user_id, organization_id) VALUES (pg_temp.oa(3), pg_temp.oa(100)), (pg_temp.oa(4), pg_temp.oa(101));
 INSERT INTO public.player_details(user_id, date_of_birth) VALUES
   (pg_temp.oa(10), (current_date - interval '16 years 1 month')::date),

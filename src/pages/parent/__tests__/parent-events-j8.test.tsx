@@ -209,6 +209,23 @@ describe('TRAK-131: the parent\'s event page', () => {
 
   // TRAK-161 (J8.8): read through child_events() as the server sends it. Even
   // if a coach-only note slipped into the row, the page shows only family_note.
+  // TRAK-134 (live run 3): a changed event says what moved, for the parent as for the player.
+  it('says what moved since the parent last saw it, on that visit only', async () => {
+    localStorage.removeItem('trak:event-snapshots:parent-a')
+    renderAt('/parent/matches')
+    await within(await screen.findByRole('region', { name: 'Upcoming' })).findByText('Alex training')
+    cleanup()
+    EVENTS.Alex = [{ ...ALEX_EVENT, event_date: '2099-11-15', starts_at: '2099-11-15T06:00:00Z', sequence: 1 }]
+    renderAt('/parent/event/ev-alex')
+    const changed = await screen.findByRole('status', { name: 'What changed' })
+    expect(changed).toHaveTextContent(/Moved: \w{3} 14 Nov → \w{3} 15 Nov/)
+    expect(changed).not.toHaveTextContent('Time')
+    cleanup()
+    renderAt('/parent/event/ev-alex')
+    expect(await screen.findByRole('heading', { name: 'Alex training' })).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'What changed' })).toBeNull()
+  })
+
   it('shows the venue with (Away), Kit and the family note, never the coach-only notes', async () => {
     EVENTS.Alex = [event('ev-alex', { event_type: 'match', title: 'League', opponent: 'Rivals FC', home_away: 'away',
       venue: 'Olympiacos Stadium', kit: 'Green kits', family_note: 'Bring extra water, it\'s a hot day', notes: 'SECRET coach note' })]

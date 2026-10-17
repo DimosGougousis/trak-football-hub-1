@@ -110,7 +110,7 @@ INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_
  (pg_temp.e82id(501),pg_temp.e82id(10),'A draft','2026-11-03 16:00+00','20:00',false),
  (pg_temp.e82id(502),pg_temp.e82id(11),'B training','2026-11-02 16:00+00','20:00',true),
  (pg_temp.e82id(503),pg_temp.e82id(12),'Y training','2026-11-02 16:00+00','20:00',true);
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e82id(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e82id(100),'events') ON CONFLICT DO NOTHING;
 
 -- Consent through each parent's own RPC, the way the app records it.
 SET LOCAL ROLE authenticated;

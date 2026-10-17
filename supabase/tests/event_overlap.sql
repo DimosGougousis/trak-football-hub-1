@@ -67,7 +67,7 @@ INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.o158id(100),pg_temp.o158id(1),'Overlap Academy X','O158X1');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES
  (pg_temp.o158id(10),pg_temp.o158id(100),'U15'),(pg_temp.o158id(11),pg_temp.o158id(100),'U17');
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.o158id(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.o158id(100),'events') ON CONFLICT DO NOTHING;
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.o158actor(10);
