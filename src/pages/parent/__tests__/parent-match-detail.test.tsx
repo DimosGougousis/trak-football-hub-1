@@ -7,7 +7,6 @@
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { followChild } from '@/test/follow-child'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -88,10 +87,11 @@ function renderParent(route: string) {
 }
 
 describe('parent match detail (TRAK-73)', () => {
-  it('opens the selected child\'s match from parent home with the full detail', async () => {
+  // TRAK-194: parent Home lists no matches; the Matches tab opens them.
+  it('opens the selected child\'s match from the Matches tab with the full detail', async () => {
     const user = userEvent.setup()
-    renderParent('/parent/home')
-    await followChild('Zara')
+    renderParent('/parent/matches')
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Following' }), 'Zara')
     await user.click(await screen.findByRole('link', { name: /Zara opposition/ }))
     expect(screen.getByTestId('where')).toHaveTextContent(`/parent/match/match-Zara`)
     expect(await screen.findByText('3–1')).toBeInTheDocument()

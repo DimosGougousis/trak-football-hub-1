@@ -20,7 +20,6 @@ export default function ParentAssessments() {
     } finally { setPaging(false) }
   }
   const pages = query.data?.pages ?? []
-  const coachNames = Object.assign({}, ...pages.map(page => page.coachNames)) as Record<string, string>
   const assessments = [...new Map(pages.flatMap(page => page.assessments).map(row => [row.id, row])).values()]
   return <MobileShell>
     <div className="pt-3 pb-4">
@@ -34,10 +33,8 @@ export default function ParentAssessments() {
               : <ul aria-label="Assessment history" className="divide-y divide-border">
                 {assessments.map(row => <li key={row.id}>
                   <Link to={`/parent/assessment/${encodeURIComponent(row.id)}`} className="flex items-center justify-between gap-3 min-h-11 py-4 focus-visible:ring-2 focus-visible:ring-primary">
-                    <div className="min-w-0">
-                      <p className="text-sm text-foreground break-words">{row.coach_user_id ? coachNames[row.coach_user_id] || 'Coach' : 'Coach'}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{formatParentDate(row.created_at)}</p>
-                    </div>
+                    {/* TRAK-194: the date leads; the coach isn't named. */}
+                    <p className="min-w-0 text-sm text-foreground">{formatParentDate(row.created_at)}</p>
                     <ParentRating rating={row.coach_rating} missing="Not assessed" />
                   </Link>
                 </li>)}
