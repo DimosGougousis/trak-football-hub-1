@@ -133,10 +133,11 @@ describe('parent family navigation', () => {
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Profile' }))
-    // TRAK-73: the header counts the linked children; the selector shows which one is followed.
+    // TRAK-73: the header counts the linked children. TRAK-181: Profile has no
+    // "Following" picker; each child has its own line below.
     expect(await screen.findByText('Parent account · 2 children linked')).toBeInTheDocument()
     expect(screen.queryByText(/^Following Zara/)).not.toBeInTheDocument()
-    expect(screen.getByRole('combobox')).toHaveValue('Zara')
+    expect(screen.queryByRole('combobox', { name: 'Following' })).not.toBeInTheDocument()
     // TRAK-73: the linked children are on the Profile, one "Linked" row each.
     const connections = await screen.findByRole('list', { name: 'Linked children' })
     expect(within(connections).getByText('Alex')).toBeInTheDocument()
@@ -192,10 +193,14 @@ describe('parent family navigation', () => {
     expect(screen.getAllByRole('option')).toHaveLength(1)
     installFamily()
     await userEvent.click(screen.getByRole('button', { name: 'Profile' }))
+    // TRAK-181: Profile lists the new child; the picker for following them is on the other tabs.
+    const connections = await screen.findByRole('list', { name: 'Linked children' })
+    expect(await within(connections).findByText('Zara')).toBeInTheDocument()
+    expect(screen.getByText('Parent account · 2 children linked')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Matches' }))
     expect(await screen.findByRole('option', { name: 'Zara' })).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox'), 'Zara')
     expect(screen.getByRole('combobox')).toHaveValue('Zara')
-    expect(screen.getByText('Parent account · 2 children linked')).toBeInTheDocument()
   })
 })
 

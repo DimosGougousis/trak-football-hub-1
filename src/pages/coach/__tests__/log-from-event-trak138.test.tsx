@@ -104,6 +104,18 @@ describe('TRAK-138: a match logged from its event is that event', () => {
     expect(screen.getAllByRole('button', { name: 'Mark played' })).toHaveLength(1)
   }, 30_000)
 
+  // #334 review: a failed "Can't make it" read must not guess who played. It
+  // pre-marks nobody, so the coach marks each player who did.
+  it('pre-marks nobody as played when the "Can\'t make it" read fails', async () => {
+    fixtures()
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/event_absences`, () =>
+      HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
+    const user = userEvent.setup()
+    await logFromEvent(user)
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Mark played' })).toHaveLength(3))
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull()
+  }, 30_000)
+
   it('saves one session that carries the event id', async () => {
     fixtures()
     const user = userEvent.setup()

@@ -257,7 +257,9 @@ The TRAK-43 route decisions remain part of the contract:
   `CoachAddSession` screen as `/coach/sessions/add` in match mode.
 - `/player/passport`, `/player/evolution`, `/coach/feedback/:assessmentId`
   (AI draft review), `/coach/assistant`, `/coach/recognition`, `/coach/award`,
-  `/parent/alerts` and the `/club/*` console remain Coming soon.
+  `/parent/alerts` and the `/club/*` console remain Coming soon. Nothing
+  links to `/coach/award`: the coach's player profile has no Award button
+  while awards are parked (TRAK-85, 16 Oct).
   `/club/home` must render without errors when the academy director signs in.
 - `/coach/schedule` shows plainly only for an academy whose events switch is
   on (TRAK-124, live since 8 October; Rehearsal FC only). Everywhere else it

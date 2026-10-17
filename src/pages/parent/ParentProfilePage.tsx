@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
-import { ParentChildSelector, ParentFamilyContent } from '@/components/parent/ParentFamily'
+import { ParentFamilyContent } from '@/components/parent/ParentFamily'
 import { ParentConsentWithdrawal } from '@/components/parent/ParentConsentWithdrawal'
 import { RosterConsentWithdrawals } from '@/components/parent/ApprovedAwaitingSignup'
 import { ParentConnections } from '@/components/parent/ParentConnections'
@@ -33,15 +33,15 @@ export default function ParentProfilePage() {
           <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
             {profile?.full_name || 'Parent'}
           </p>
-          {/* TRAK-73: the account, and how many children it follows. The
-              selector below shows which child the tabs are about. */}
+          {/* TRAK-73: the account, and how many children it follows. */}
           <p className="text-sm text-muted-foreground mt-1">
             {loading || children.length === 0 ? 'Parent account'
               : `Parent account · ${children.length} ${children.length === 1 ? 'child' : 'children'} linked`}
           </p>
         </div>
 
-        <ParentChildSelector />
+        {/* TRAK-181: no "Following" picker here; each child has its own consent line,
+            and Connections lists them. Home's header still switches the child. */}
         <ParentFamilyContent>
           <ParentConsentWithdrawal />
           <ParentConnections />
