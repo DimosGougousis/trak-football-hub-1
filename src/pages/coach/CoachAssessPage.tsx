@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronDown } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
+import { useCoachSquad } from '@/lib/coach-squad'
 
 /** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
     and the private note get their own steps, so player-visible words never sit
@@ -77,6 +78,8 @@ function CoachAssessmentForm() {
   const navigate = useNavigate()
   const location = useLocation()
   const userId = user?.id
+  // TRAK-176: the picker offers the squad picked on Home (a player already chosen stays).
+  const { inSquad } = useCoachSquad(userId)
 
   /* --- data --- */
   const [players, setPlayers] = useState<any[]>([])
@@ -630,7 +633,7 @@ function CoachAssessmentForm() {
               className="w-full px-4 py-3 pr-10 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none appearance-none"
             >
               <option value="">{selectedPlayer ? 'Change player...' : 'Select player...'}</option>
-              {players.map(p => (
+              {players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => (
                 <option key={p.id} value={p.id}>
                   {p.player_name}
                 </option>

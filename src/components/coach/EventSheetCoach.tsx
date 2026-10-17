@@ -45,7 +45,7 @@ async function fetchEvent(id: string, signal: AbortSignal): Promise<{ row: Event
   return { row: event.data as EventRow, sessionId: session.data?.id ?? null }
 }
 
-async function fetchSquad(coachId: string, eventId: string, sessionId: string | null, signal: AbortSignal): Promise<Squad> {
+async function fetchSquad(coachId: string, eventId: string, sessionId: string | null, eventSquad: string | null, signal: AbortSignal): Promise<Squad> {
   const [roster, absences, attendance] = await Promise.all([
     supabase.from('squad_players').select('id, player_name, age_group, status').eq('coach_user_id', coachId)
       .order('player_name').abortSignal(signal),
@@ -57,7 +57,8 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   if (roster.error) throw roster.error
   if (absences.error) throw absences.error
   if (attendance.error) throw attendance.error
-  const rows = roster.data ?? []
+  // TRAK-176: an event for one squad lists that squad only; null is the whole roster.
+  const rows = (roster.data ?? []).filter(p => eventSquad == null || p.age_group?.trim() === eventSquad)
   const reasons = new Map((absences.data ?? []).map(a => [a.squad_player_id, a.reason as string | null]))
   const current = rows.filter(p => p.status !== 'coach_departed')
   // As the register (TakeRegister): only a child whose consent is active counts
@@ -117,8 +118,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   const details = useQuery({ queryKey: ['coach', 'event', event.id], queryFn: ({ signal }) => fetchEvent(event.id, signal) })
   const sessionId = details.data?.sessionId ?? null
   const squad = useQuery({
-    queryKey: ['coach', coachId, 'attending', event.id, sessionId],
-    queryFn: ({ signal }) => fetchSquad(coachId, event.id, sessionId, signal),
+    queryKey: ['coach', coachId, 'attending', event.id, sessionId, details.data?.row.squad ?? null],
+    queryFn: ({ signal }) => fetchSquad(coachId, event.id, sessionId, details.data?.row.squad ?? null, signal),
     enabled: details.isSuccess,
   })
   const publish = useMutation({
@@ -184,7 +185,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
       {updated && <p className="text-[13px] text-white/50">{updated}</p>}
 
       {registering && row && (
-        <TakeRegister eventId={row.id} coachId={coachId} sessionId={sessionId}
+        <TakeRegister eventId={row.id} coachId={coachId} sessionId={sessionId} squad={row.squad ?? null}
           onSaved={() => { setRegistering(false); void client.invalidateQueries({ queryKey: ['coach', 'event', event.id] }); onChanged() }} />
       )}
 
