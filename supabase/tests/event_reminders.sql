@@ -84,7 +84,7 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id)
  SELECT pg_temp.r136id(n+20), pg_temp.r136id(CASE WHEN n IN (23,27) THEN 11 ELSE 10 END), 'Synthetic '||n, pg_temp.r136id(n)
  FROM unnest(ARRAY[20,21,22,23,25,26,27]) n;
 UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.r136id(45);
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.r136id(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.r136id(100),'events') ON CONFLICT DO NOTHING;
 -- Events. In 2 days: A's training 700 and match 701 (published, at 17:00 and
 -- 19:00: a coach's live events can't overlap, TRAK-158), A's cancelled 702,
 -- A's draft 703, B's training 710. In 3 days: A's 704. Today: A's 705.

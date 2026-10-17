@@ -95,7 +95,7 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id)
  SELECT pg_temp.e135id(n+20), pg_temp.e135id(CASE WHEN n = 23 THEN 11 ELSE 10 END), 'Synthetic '||n, pg_temp.e135id(n)
  FROM unnest(ARRAY[20,21,22,23,24,25,26]) n;
 UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.e135id(45);
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e135id(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e135id(100),'events') ON CONFLICT DO NOTHING;
 -- Coach A's events. 600 published in 5 days; 601 published in 5 days;
 -- 602 published tomorrow; 603 a draft today; 604 published today;
 -- 605 published in 5 days; 606 a draft in 3 days. The three in 5 days have
