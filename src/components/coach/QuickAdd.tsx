@@ -133,8 +133,14 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   const done = (text: string) => {
     setFace('done')
     setDoneText(text)
-    window.setTimeout(() => setFace(f => f === 'done' ? 'closed' : f), 1100)
   }
+  // The check shows for 1.1 s, then "+" again. The timer belongs to the done face,
+  // so leaving it or unmounting clears it (Tarek, 16 Oct: it fired after a test's page was gone).
+  useEffect(() => {
+    if (face !== 'done') return
+    const timer = window.setTimeout(() => setFace('closed'), 1100)
+    return () => window.clearTimeout(timer)
+  }, [face])
 
   const datePassed = pastDateProblem(date, localTodayISO())
   const eventForm = (): EventForm => ({ ...blankForm(date), kind, time, opponent: kind === 'match' ? opponent : '', homeAway: kind === 'match' ? homeAway : '' })
