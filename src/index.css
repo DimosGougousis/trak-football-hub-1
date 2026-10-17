@@ -196,11 +196,11 @@
     --sidebar-ring: 73 85% 65%;
 
     /* Text opacity tokens */
-    --t1: rgba(255,255,255,0.88);
-    --t2: rgba(255,255,255,0.45);
-    --t3: rgba(255,255,255,0.22);
+    --t1: rgb(var(--t-ink));
+    --t2: rgb(var(--t-ink-3));
+    --t3: rgb(var(--t-ink-3) / 0.6);
 
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--t-font);
   }
 }
 

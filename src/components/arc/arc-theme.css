@@ -85,30 +85,30 @@
   --ease-spring: linear(0, 0.0258, 0.09, 0.1763, 0.2732, 0.3724, 0.4683, 0.5573, 0.6376, 0.7082, 0.7689, 0.8202, 0.8628, 0.8976, 0.9256, 0.9476, 0.9648, 0.9778, 0.9875, 0.9945, 0.9994, 1.0026, 1.0047, 1.0058, 1.0062, 1.0062, 1.0059, 1.0055, 1.0049, 1.0043, 1.0036, 1.0031, 1.0025, 1.002, 1.0016, 1.0013, 1);
   --duration-instant: 120ms; --duration-fast: 160ms; --duration-standard: 240ms; --duration-considered: 480ms; --duration-spring: 580ms;
 
-  /* Trak dark palette (src/index.css) */
+  /* Trak's role tokens (src/index.css --t-*, TRAK-189): one palette for Trak and Arc. */
   color-scheme: dark;
-  --background: hsl(0 0% 4%);
-  --surface: hsl(240 4% 6.5%);
-  --surface-raised: hsl(240 4% 9%);
-  --surface-muted: hsl(240 3% 12%);
-  --foreground: hsl(0 0% 100% / .88);
-  --text-secondary: hsl(0 0% 100% / .6);
-  --text-muted: hsl(0 0% 100% / .4);
-  --border: hsl(0 0% 100% / .07);
-  --border-subtle: hsl(0 0% 100% / .05);
-  --border-strong: hsl(0 0% 100% / .14);
-  --accent: hsl(73 85% 65%);
-  --accent-strong: hsl(73 85% 75%);
-  --accent-subtle: hsl(73 85% 65% / .14);
-  --accent-foreground: hsl(0 0% 0%);
-  --control-on: hsl(73 85% 65%);
-  --control-glyph: hsl(0 0% 0%);
-  --control-track: hsl(240 3% 16%);
-  --control-track-hover: hsl(240 3% 20%);
-  --control-fill: hsl(73 85% 65%);
-  --success: hsl(152 60% 52%);
-  --warning: hsl(38 92% 60%);
-  --danger: hsl(4 85% 66%);
+  --background: rgb(var(--t-ground));
+  --surface: rgb(var(--t-surface));
+  --surface-raised: rgb(var(--t-raised));
+  --surface-muted: rgb(var(--t-raised));
+  --foreground: rgb(var(--t-ink));
+  --text-secondary: rgb(var(--t-ink-2));
+  --text-muted: rgb(var(--t-ink-3));
+  --border: rgb(var(--t-line));
+  --border-subtle: rgb(var(--t-line));
+  --border-strong: rgb(var(--t-line-strong));
+  --accent: rgb(var(--t-brand));
+  --accent-strong: rgb(var(--t-brand));
+  --accent-subtle: rgb(var(--t-brand) / .14);
+  --accent-foreground: rgb(var(--t-on-brand));
+  --control-on: rgb(var(--t-brand));
+  --control-glyph: rgb(var(--t-on-brand));
+  --control-track: rgb(var(--t-raised));
+  --control-track-hover: rgb(var(--t-line-strong));
+  --control-fill: rgb(var(--t-brand));
+  --success: rgb(var(--t-success));
+  --warning: rgb(var(--t-warning));
+  --danger: rgb(var(--t-danger));
   --shadow-resting: 0 1px 2px hsl(0 0% 0% / .3);
   --shadow-raised: 0 8px 22px hsl(0 0% 0% / .4);
   --shadow-floating: 0 22px 55px hsl(0 0% 0% / .55);
@@ -118,12 +118,12 @@
 
 /* TRAK-157: an Arc picker in a Trak form carries Trak's small field label. */
 .arc-trak-field > :first-child {
-  font-family: 'DM Mono', monospace;
+  font-family: var(--t-font-mono);
   font-size: 9px;
   font-weight: 400;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: hsl(0 0% 100% / .4);
+  color: rgb(var(--t-ink-3));
 }
 
 /* TRAK-163: the Home week strip spans the screen, seven equal days (the Therabody strip). */

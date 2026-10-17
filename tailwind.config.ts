@@ -14,9 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ['"DM Sans"', 'sans-serif'],
-        body: ['"DM Sans"', 'sans-serif'],
-        mono: ['"DM Mono"', 'monospace'],
+        // TRAK-189: one font setting (src/index.css --t-font / --t-font-mono).
+        heading: ['var(--t-font)'],
+        body: ['var(--t-font)'],
+        mono: ['var(--t-font-mono)'],
       },
       colors: {
         border: "hsl(var(--border))",
