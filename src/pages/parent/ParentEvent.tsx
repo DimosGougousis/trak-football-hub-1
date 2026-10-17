@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft } from 'lucide-react'
@@ -8,7 +8,7 @@ import { EventDetails } from '@/components/player/EventDetails'
 import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { fetchParentEvent } from '@/lib/parent-data'
-import { markEventOpened } from '@/lib/player-events'
+import { changesSinceSeen, markEventOpened } from '@/lib/player-events'
 
 /**
  * One of the selected child's events (TRAK-131, J8.8): the player's event
@@ -27,7 +27,16 @@ export default function ParentEvent() {
     enabled: !!parentId && !!childId && !!id,
     networkMode: 'always',
   })
-  useEffect(() => { if (parentId && query.data) markEventOpened(parentId, query.data) }, [parentId, query.data])
+  // TRAK-134: what moved since this device last saw it, read before opening marks it
+  // seen, and kept for this visit (a refetch on refocus reads nothing new).
+  const [changes, setChanges] = useState<{ key: string; lines: string[] } | null>(null)
+  useEffect(() => {
+    if (!parentId || !query.data) return
+    const key = `${childId}:${query.data.id}:${query.data.sequence}`
+    const lines = changesSinceSeen(parentId, query.data)
+    setChanges(held => held?.key === key ? held : { key, lines })
+    markEventOpened(parentId, query.data)
+  }, [parentId, childId, query.data])
 
   return (
     <MobileShell>
@@ -40,7 +49,7 @@ export default function ParentEvent() {
           {query.isError ? <ParentLoadError message="Couldn't load this event." onRetry={() => { void query.refetch() }} />
             : query.isPending ? <ParentLoading />
               : query.data ? <>
-                <EventDetails event={query.data} />
+                <EventDetails event={query.data} changes={changes?.key === `${childId}:${query.data.id}:${query.data.sequence}` ? changes.lines : []} />
                 {selectedChild && <CantMakeIt key={selectedChild.id} event={query.data} child={selectedChild} />}
               </>
                 : <p className="text-sm text-muted-foreground">This event isn't available for {selectedChild?.name}.</p>}

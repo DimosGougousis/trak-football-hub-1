@@ -137,6 +137,7 @@ export function noteEventsShown(userId: string, events: PlayerEvent[]): Record<s
     if (seen[e.id] === undefined) { seen[e.id] = e.sequence; added = true }
   }
   if (added) writeSeen(userId, seen)
+  noteEventSnapshots(userId, events)
   return seen
 }
 
@@ -144,6 +145,52 @@ export function markEventOpened(userId: string, event: PlayerEvent) {
   const seen = readSeenSequences(userId)
   seen[event.id] = Math.max(seen[event.id] ?? 0, event.sequence)
   writeSeen(userId, seen)
+  const snapshots = readSnapshots(userId)
+  snapshots[event.id] = snapshotOf(event)
+  writeSnapshots(userId, snapshots)
+}
+
+// ── What changed (TRAK-134) ─────────────────────────────────────────────────
+// Per device, beside the sequences: the date, time and venue as this device
+// first showed them, moved on when the event is opened. A changed event's page
+// compares, so it can say "Moved: Sat 17 Oct → Sun 18 Oct" on that visit.
+
+type EventSnapshot = { sequence: number; date: string; time: string | null; venue: string | null }
+
+const snapshotKey = (userId: string) => `trak:event-snapshots:${userId}`
+const snapshotOf = (e: PlayerEvent): EventSnapshot => ({ sequence: e.sequence, date: e.date, time: e.time, venue: e.venue })
+
+function readSnapshots(userId: string): Record<string, EventSnapshot> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(snapshotKey(userId)) ?? '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, EventSnapshot>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeSnapshots(userId: string, snapshots: Record<string, EventSnapshot>) {
+  try { localStorage.setItem(snapshotKey(userId), JSON.stringify(snapshots)) } catch { /* storage unavailable */ }
+}
+
+/** Keep the version shown, for events this device has no copy of yet; a held copy stays the old one. */
+export function noteEventSnapshots(userId: string, events: PlayerEvent[]) {
+  const snapshots = readSnapshots(userId)
+  const fresh = events.filter(e => !snapshots[e.id])
+  if (!fresh.length) return
+  for (const e of fresh) snapshots[e.id] = snapshotOf(e)
+  writeSnapshots(userId, snapshots)
+}
+
+/** What moved since this device's copy, one line each. Nothing for a cancellation (it says so itself). */
+export function changesSinceSeen(userId: string, event: PlayerEvent): string[] {
+  const before = readSnapshots(userId)[event.id]
+  if (!before || event.sequence <= before.sequence || event.status === 'cancelled') return []
+  const lines: string[] = []
+  if (before.date !== event.date) lines.push(`Moved: ${format(parseISO(before.date), 'EEE d MMM')} → ${eventDay(event)}`)
+  if (before.time !== event.time) lines.push(`Time: ${before.time ?? 'to be confirmed'} → ${event.time ?? 'to be confirmed'}`)
+  if ((before.venue ?? '') !== (event.venue ?? '')) lines.push(`Venue: ${before.venue || 'not set'} → ${event.venue || 'not set'}`)
+  return lines
 }
 
 // The bell's own baseline (parent and player): each event's sequence when the

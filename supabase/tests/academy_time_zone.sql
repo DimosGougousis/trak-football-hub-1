@@ -96,7 +96,7 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id) 
  (pg_temp.tz175id(40),pg_temp.tz175id(11),'Synthetic 20',pg_temp.tz175id(20)),
  (pg_temp.tz175id(41),pg_temp.tz175id(10),'Synthetic 21',pg_temp.tz175id(21));
 INSERT INTO public.academy_features(organization_id,feature) VALUES
- (pg_temp.tz175id(100),'events'),(pg_temp.tz175id(101),'events');
+ (pg_temp.tz175id(100),'events'),(pg_temp.tz175id(101),'events') ON CONFLICT DO NOTHING;
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.tz175actor(30);
 SELECT public.record_parental_consent(pg_temp.tz175id(20),'parent','{"coaching_records":true}'::jsonb,'synthetic-v1','Synthetic disposable consent.');
