@@ -5,7 +5,7 @@
  * planning is the parked calendar, TRAK-25).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
@@ -13,10 +13,10 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, localParts } from '@/lib/event-time'
+import { dateHeld, dateOffered, pickDate } from '../../../../tests/support/arc-pickers'
 
 const COACH = { id: 'coach-1' }
 const tomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return localParts(d.toISOString()).date }
-const dateInput = () => screen.getByLabelText('Session date') as HTMLInputElement
 // TRAK-182: the date sits on the log's first step; Next stays shut while it is in the future.
 const next = () => screen.getByRole('button', { name: 'Next' })
 
@@ -44,16 +44,26 @@ describe('J4: a session or match cannot be dated in the future', () => {
     await waitFor(() => expect(next()).toBeEnabled())
   })
 
-  it('a match dated tomorrow cannot be saved', async () => {
+  // TRAK-157 (Imad, 17 Oct): Log match and Other use the same picker; one picker everywhere.
+  it('a match cannot be dated tomorrow, and today can', async () => {
     const user = userEvent.setup()
     renderApp('/coach/sessions/quick')
     await user.type(await screen.findByPlaceholderText('Opponent name'), 'Olympiacos Youth')
     const [us, them] = screen.getAllByPlaceholderText('0')
     await user.type(us, '1'); await user.type(them, '0')
+    expect(await dateOffered(user, 'Session date', tomorrow())).toBe(false)
+    await pickDate(user, 'Session date', localTodayISO())
+    expect(await dateHeld(user, 'Session date')).toBe(localTodayISO())
     await waitFor(() => expect(next()).toBeEnabled())
-    expect(dateInput()).toHaveAttribute('max', localTodayISO())
-    fireEvent.change(dateInput(), { target: { value: tomorrow() } })
-    expect(await screen.findByText(/can't be dated in the future/)).toBeInTheDocument()
-    expect(next()).toBeDisabled()
+  })
+
+  it('an Other session cannot be dated tomorrow, and today can', async () => {
+    const user = userEvent.setup()
+    renderApp('/coach/sessions/add')
+    await user.click(await screen.findByRole('button', { name: 'Other' }))
+    await user.type(await screen.findByPlaceholderText(/Video Analysis/), 'Team talk')
+    expect(await dateOffered(user, 'Session date', tomorrow())).toBe(false)
+    await pickDate(user, 'Session date', localTodayISO())
+    expect(await dateHeld(user, 'Session date')).toBe(localTodayISO())
   })
 })
