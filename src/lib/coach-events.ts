@@ -95,6 +95,18 @@ export function formProblem(form: EventForm): string | null {
   return null
 }
 
+/** TRAK-127: New event is for what's coming (Imad, 16 Oct); what already
+ *  happened is logged, with its score or register (TRAK-138). */
+export const PAST_DATE_PROBLEM = 'This date has passed: log it instead'
+
+/** A date before `today` on a new event, or moved to on an edit. An edit that
+ *  keeps a past event's own date still saves (a venue fix, a note). */
+export function pastDateProblem(date: string, today: string, originalDate?: string | null): string | null {
+  if (!date || date >= today) return null
+  if (originalDate && originalDate === date) return null
+  return PAST_DATE_PROBLEM
+}
+
 export function eventTitle(form: EventForm): string {
   const typed = form.title.trim()
   if (typed) return typed

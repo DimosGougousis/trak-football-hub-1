@@ -69,7 +69,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
  (pg_temp.eaid(30),'parent','Parent P'),(pg_temp.eaid(31),'parent','Parent Q'),(pg_temp.eaid(32),'parent','Parent R');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.eaid(100),pg_temp.eaid(1),'Absences X','EA14X1'),(pg_temp.eaid(101),pg_temp.eaid(2),'Absences Y','EA14Y1');
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.eaid(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.eaid(100),'events') ON CONFLICT DO NOTHING;
+-- New academies start with events on (TRAK-124); Absences Y is switched off.
+DELETE FROM public.academy_features WHERE organization_id=pg_temp.eaid(101) AND feature='events';
 INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.eaid(10),pg_temp.eaid(100)),(pg_temp.eaid(11),pg_temp.eaid(100)),(pg_temp.eaid(12),pg_temp.eaid(101));
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES

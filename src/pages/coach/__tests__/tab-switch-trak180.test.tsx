@@ -95,7 +95,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
       created_at: '2026-09-20T10:00:00Z', squad_players: { player_name: 'Ade Okafor' } }]
     server.use(table('coach_assessments', recent))
     renderApp('/coach/home')
-    expect(await screen.findByRole('button', { name: /Open assessment .*Ade Okafor/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Open Ade Okafor's profile/ })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^Squad$/i }))
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
 
@@ -105,7 +105,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
         ? HttpResponse.json({ message: 'unavailable' }, { status: 500 })
         : HttpResponse.json(recent)))
     await user.click(screen.getByRole('button', { name: /^Home$/i }))
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Open assessment .*Ade Okafor/ })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Open Ade Okafor's profile/ })).toBeNull())
   })
 
   it("keeps each account's screens apart, and forgets them all on sign-out", () => {

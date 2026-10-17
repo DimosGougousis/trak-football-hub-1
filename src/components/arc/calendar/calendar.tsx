@@ -2,7 +2,7 @@
 
 import { useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { animate, AnimatePresence, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useTransform } from "motion/react";
 import type { AnimationPlaybackControls, MotionValue, Variants } from "motion/react";
 import { motionTokens } from "../lib/motion-tokens";
@@ -129,6 +129,8 @@ export function Calendar({
   const reducedMotion = (useReducedMotion() ?? false) && hydrated;
   const [internalMonth, setInternalMonth] = useState(() => (value ? monthStart(value) : undefined));
   const [focusedDate, setFocusedDate] = useState(value);
+  /** Trak (TRAK-157): the title opens twelve months at a time, so March next year is two taps, not five. */
+  const [picking, setPicking] = useState<number | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const focusRequest = useRef<string | null>(null);
   // Without a value or month the calendar waits for the client's today, then settles on that month once.
@@ -255,6 +257,15 @@ export function Calendar({
     if (todaySelectable && !sameDay(value, today)) onChange?.(today);
   };
 
+  const shortMonth = useMemo(() => new Intl.DateTimeFormat(locale, { month: "short" }), [locale]);
+  const monthOutOfRange = (candidate: Date) =>
+    Boolean((minDate && candidate.getTime() < monthStart(minDate).getTime()) || (maxDate && candidate.getTime() > monthStart(maxDate).getTime()));
+  const pickMonth = (candidate: Date) => {
+    if (monthOutOfRange(candidate)) return;
+    setPicking(null);
+    if (!sameMonth(candidate, month)) changeMonth(candidate);
+  };
+
   const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(" ");
   // Six fixed weeks per month, so a day's cell is its distance from the first day on the grid.
   const cellOf = (paneMonth: Date) => {
@@ -301,21 +312,38 @@ export function Calendar({
       <div className={styles.header}>
         <h2 id={titleId} className={styles.heading}>
           <span className={styles.srOnly}>{monthLabel}</span>
-          <span className={styles.title} aria-hidden="true">
-            <AnimatePresence initial={false} custom={direction}>
-              {month && <motion.span key={monthKey} className={styles.titleRow} custom={direction} variants={reducedMotion || !direction ? titleFade : titleSlide} initial="enter" animate="center" exit="exit">{monthLabel}</motion.span>}
-            </AnimatePresence>
-          </span>
+          <button type="button" className={styles.titleButton} disabled={!month} aria-expanded={picking !== null}
+            aria-label={`${monthLabel}, choose month and year`} onClick={() => setPicking(picking === null ? target : null)}>
+            <span className={styles.title} aria-hidden="true">
+              <AnimatePresence initial={false} custom={direction}>
+                {month && <motion.span key={monthKey} className={styles.titleRow} custom={direction} variants={reducedMotion || !direction ? titleFade : titleSlide} initial="enter" animate="center" exit="exit">{monthLabel}</motion.span>}
+              </AnimatePresence>
+            </span>
+            <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={cx(styles.titleChevron, picking !== null && styles.titleChevronOpen)} />
+          </button>
         </h2>
         <span className={styles.srOnly} aria-live="polite">{direction ? monthLabel : ""}</span>
         <div className={styles.navigation}>
           {showToday && <button type="button" className={styles.todayButton} aria-disabled={todayIdle || undefined} aria-label={today ? `Today, ${today.toLocaleDateString(locale, { dateStyle: "full" })}` : "Today"} onClick={goToToday}>Today</button>}
+          {picking !== null ? <>
+            <button type="button" className={styles.navButton} aria-label="Earlier months" onClick={() => setPicking(picking - 12)}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+            <button type="button" className={styles.navButton} aria-label="Later months" onClick={() => setPicking(picking + 12)}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+          </> : <>
           <button type="button" className={styles.navButton} aria-label="Previous month" aria-disabled={previousDisabled || undefined} onClick={() => { if (!previousDisabled && previousMonth) changeMonth(previousMonth); }}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
           <button type="button" className={styles.navButton} aria-label="Next month" aria-disabled={nextDisabled || undefined} onClick={() => { if (!nextDisabled && nextMonth) changeMonth(nextMonth); }}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+          </>}
         </div>
       </div>
-      <div className={styles.weekdays} aria-hidden="true">{weekdays.map((day, index) => <span key={`${day}-${index}`}>{day.slice(0, 2)}</span>)}</div>
-      <div className={styles.monthViewport} ref={viewportRef}>
+      {picking !== null && <div className={styles.monthPicker} role="group" aria-label="Choose a month">
+        {Array.from({ length: 12 }, (_, i) => fromIndex(picking + i)).map((candidate) => <button key={dateKey(candidate)} type="button"
+          className={cx(styles.monthChoice, sameMonth(candidate, month) && styles.monthChoiceCurrent)}
+          aria-label={formatter.format(candidate)} aria-current={sameMonth(candidate, month) ? "true" : undefined}
+          disabled={monthOutOfRange(candidate)} onClick={() => pickMonth(candidate)}>
+          <span>{shortMonth.format(candidate)}</span><span className={styles.monthChoiceYear}>{candidate.getFullYear()}</span>
+        </button>)}
+      </div>}
+      <div className={styles.weekdays} aria-hidden="true" hidden={picking !== null}>{weekdays.map((day, index) => <span key={`${day}-${index}`}>{day.slice(0, 2)}</span>)}</div>
+      <div className={styles.monthViewport} ref={viewportRef} hidden={picking !== null}>
         {month ? paneIndexes.map((index) => <MonthPane key={index} index={index} position={position} present={index === target}>{renderMonth(fromIndex(index), index === target)}</MonthPane>)
           : <div className={styles.monthBody} aria-hidden="true"><div className={styles.grid}>{Array.from({ length: 6 }, (_, week) => <div key={week} className={styles.week}>{Array.from({ length: 7 }, (_, day) => <span key={day} className={styles.placeholderDay} />)}</div>)}</div></div>}
       </div>
