@@ -382,10 +382,8 @@ test('existing parent accepts a second child, recovers a failed family refresh a
 
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await expect(page.getByText('Parent account · 2 children linked', { exact: true })).toBeVisible();
-  await expect(page.getByRole('combobox')).toHaveValue(zaraId);
-  await page.getByRole('combobox').selectOption(alexId);
-  await expect(page.getByRole('combobox')).toHaveValue(alexId);
-  await page.getByRole('combobox').selectOption(zaraId);
+  // TRAK-181: no "Following" picker on Profile; each child has a consent line.
+  await expect(page.getByRole('combobox', { name: 'Following' })).toHaveCount(0);
   // TRAK-73: the linked children are listed on the Profile itself.
   const connections = page.getByRole('list', { name: 'Linked children', exact: true });
   await expect(connections.getByText(alex.name, { exact: true })).toHaveCount(1);
