@@ -9,6 +9,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { calendarFields, displayEventTime, localTodayISO, toInstant } from '@/lib/event-time'
 import { renderApp } from '../../../tests/support/render-app'
 import { signInAs } from '../../../tests/support/session'
@@ -44,8 +45,10 @@ describe('the add-session screen defaults to the coach\'s local day', () => {
       table('squad_players', []), table('coach_details', []), table('coach_sessions', []), table('coach_calendar_events', []),
     )
     renderApp('/coach/sessions/add')
-    const dateInput = await screen.findByDisplayValue(/^2026-10-0[12]$/)
-    expect((dateInput as HTMLInputElement).value).toBe('2026-10-02')
+    // TRAK-157: the training log's date is Arc's picker; the selected day is the date it holds.
+    await userEvent.click(await screen.findByRole('button', { name: /^Session date\b/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Session date calendar' })
+    expect(dialog.querySelector('[data-present] [aria-selected="true"]')?.getAttribute('data-date')).toBe('2026-10-02')
   })
 })
 
