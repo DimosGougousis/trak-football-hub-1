@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { HomeHeader } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
@@ -10,7 +10,7 @@ import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
-import { averageRecordedRating, formatParentAward, formatParentDate, parentMatchHref, matchResult } from '@/lib/parent-data'
+import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 import { ParentConsentBar } from '@/pages/parent/ParentConsent'
@@ -90,7 +90,7 @@ export default function ParentHome() {
                 )}
                 {development && <ParentAssessmentCarousel
                   key={`${selectedChild?.id}:${development.assessments.slice(0, 5).map(row => row.id).join(',')}`}
-                  assessments={development.assessments} coachNames={development.coachNames} />}
+                  assessments={development.assessments} />}
 
                 {award && <section className="mt-5" aria-label="Recognition">
                   <MetadataLabel text="RECOGNITION" />
@@ -101,21 +101,7 @@ export default function ParentHome() {
                     <p className="text-xs text-muted-foreground mt-2">{formatParentDate(award.created_at)}</p>
                   </div>
                 </section>}
-                <section className="mt-5" aria-label="Recent matches">
-                  <MetadataLabel text="RECENT MATCHES" />
-                  {matches.length ? <div className="rounded-xl mt-2 bg-card border border-border divide-y divide-border">
-                    {matches.slice(0, 5).map(match => <Link key={match.id} to={parentMatchHref(match)} state={{ matchId: match.id, childId: selectedChild?.id }} className="flex items-center gap-3 p-4">
-                      <span className="w-5 text-xs text-muted-foreground">{matchResult(match) ?? '—'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{match.opponent || match.competition || 'Match'}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatParentDate(match.match_date ?? match.created_at)} · {matchResult(match) ? `${match.team_score}–${match.opponent_score}` : 'Score not recorded'}
-                        </p>
-                      </div>
-                      <ParentRating rating={match.computed_rating} />
-                    </Link>)}
-                  </div> : <p className="py-4 text-sm text-muted-foreground">No matches yet. Matches recorded by the coach will appear here.</p>}
-                </section>
+                {/* TRAK-194 (Kostas, 16 Oct): no "Recent matches" here; the Matches tab lists every match. */}
               </>
             )}
         </ParentFamilyContent>

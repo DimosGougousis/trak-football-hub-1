@@ -25,11 +25,15 @@ let account: string
 let role: 'player' | 'parent'
 const CHILD_A = 'child-alex', CHILD_B = 'child-zara'
 const match = (id: string, owner = account) => ({
-  id, user_id: owner, opponent: `${id} opposition`, competition: 'League', venue: 'Home',
+  id, user_id: owner, opponent: `${id} opposition`, competition: `${id} league`, venue: 'Home',
   created_at: '2026-09-20T10:00:00Z', match_date: '2026-09-18', computed_rating: 7,
   team_score: 2, opponent_score: 1, minutes_played: 60, goals: 1, assists: 0,
   position: 'Defender', age_group: 'U15',
 })
+// TRAK-194: player Home shows no match list; its season card names the last match's
+// competition, and one line under the header holds position, club and age group.
+const homeMatch = (id: string) => `Last match · ${id} league`
+const homeLine = (club: string) => `Defender · ${club} · U15`
 const event = { id: 'event-a', coach_user_id: 'coach-a', title: 'Team training', event_type: 'training', published: true, event_date: '2026-09-28', starts_at: '2026-09-28T17:00:00Z', time_known: true }
 const assessment = {
   id: 'assessment-a', squad_player_id: 'squad-a', coach_user_id: 'coach-a',
@@ -187,7 +191,7 @@ describe('player readback through authenticated routes', () => {
       server.use(http.get(endpoint(name), () => { checked = true; return HttpResponse.json([]) }))
       await refresh()
       await waitFor(() => expect(checked).toBe(true))
-      await screen.findByText('vs recent opposition')
+      await screen.findByText(homeMatch('recent'))
       await waitFor(() => expect(screen.queryByText(WORDS, { exact: false })).toBeNull())
       expect(screen.queryByText('LATEST COACH ASSESSMENT')).toBeNull()
       expect(screen.queryByText('Coach Audit')).toBeNull()
@@ -203,7 +207,7 @@ describe('player readback through authenticated routes', () => {
     await screen.findByText(WORDS, { exact: false })
     server.use(table('coach_shared_feedback', []))
     await refresh()
-    await screen.findByText('vs recent opposition')
+    await screen.findByText(homeMatch('recent'))
     await waitFor(() => expect(screen.queryByText(WORDS, { exact: false })).toBeNull())
   })
 
@@ -338,7 +342,7 @@ describe('player readback through authenticated routes', () => {
     await screen.findByRole('alert')
     server.use(table('player_details', [{ position: 'Defender', current_club: 'Recovered Academy', age_group: 'U15' }]))
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(await screen.findByText('Recovered Academy U15')).toBeInTheDocument()
+    expect(await screen.findByText(homeLine('Recovered Academy'))).toBeInTheDocument()
     expect(await screen.findByText(WORDS, { exact: false })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
   })
@@ -375,14 +379,14 @@ describe('player readback through authenticated routes', () => {
         await waitFor(() => expect(requested).toBe(true))
         fresh = true
         await refresh()
-        await screen.findByText('vs current opposition')
-        await screen.findByText('Current Academy U15')
+        await screen.findByText(homeMatch('current'))
+        await screen.findByText(homeLine('Current Academy'))
         await releaseResponse(pending, name)
         expect(screen.queryByRole('alert')).toBeNull()
-        expect(screen.getByText('vs current opposition')).toBeInTheDocument()
-        expect(screen.getByText('Current Academy U15')).toBeInTheDocument()
-        expect(screen.queryByText('vs stale opposition')).toBeNull()
-        expect(screen.queryByText('Stale Academy U15')).toBeNull()
+        expect(screen.getByText(homeMatch('current'))).toBeInTheDocument()
+        expect(screen.getByText(homeLine('Current Academy'))).toBeInTheDocument()
+        expect(screen.queryByText(homeMatch('stale'))).toBeNull()
+        expect(screen.queryByText(homeLine('Stale Academy'))).toBeNull()
         expect(screen.queryByText('Stale Coach')).toBeNull()
         expect(screen.queryByText('LATEST COACH ASSESSMENT')).toBeNull()
         expect(screen.queryByText(WORDS, { exact: false })).toBeNull()
@@ -406,10 +410,10 @@ describe('player readback through authenticated routes', () => {
     try {
       await waitFor(() => expect(requests).toBe(1))
       await refresh()
-      await screen.findByText('Current Academy U15')
+      await screen.findByText(homeLine('Current Academy'))
       await releaseResponse(pending, 'player_details')
       expect(screen.queryByRole('alert')).toBeNull()
-      expect(screen.getByText('Current Academy U15')).toBeInTheDocument()
+      expect(screen.getByText(homeLine('Current Academy'))).toBeInTheDocument()
     } finally { pending.resolve() }
   })
 
@@ -471,7 +475,7 @@ describe('player readback through authenticated routes', () => {
         })
       try {
         renderApp('/player/home')
-        expect(await screen.findByText('vs recent opposition')).toBeInTheDocument()
+        expect(await screen.findByText(homeMatch('recent'))).toBeInTheDocument()
         expect(await screen.findByText(WORDS, { exact: false })).toBeInTheDocument()
         expect(screen.queryByRole('alert')).toBeNull()
         expect(screen.queryByText('YOUR CARD HAS BEEN UPDATED')).toBeNull()
@@ -489,7 +493,7 @@ describe('player readback through authenticated routes', () => {
     server.use(http.get(endpoint('matches'), async () => { await pending.promise; return HttpResponse.json([match('recent')]) }))
     try {
       await refresh()
-      const cardShown = screen.queryAllByText(/recent opposition/).length > 0
+      const cardShown = screen.queryAllByText(homeMatch('recent')).length > 0
       const messageShown = screen.queryByText(WORDS, { exact: false }) !== null
       await releaseResponse(pending, 'matches')
       expect(cardShown, 'match list stays visible during a same-account refresh').toBe(true)

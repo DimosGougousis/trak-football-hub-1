@@ -8,9 +8,7 @@ import type { ParentAssessment } from '@/lib/parent-assessments'
 import { trackEvent } from '@/lib/telemetry'
 
 /** Native swipe/snap: a complete band card at rest, followed by All assessments. */
-export function ParentAssessmentCarousel({ assessments, coachNames }: {
-  assessments: ParentAssessment[]; coachNames: Record<string, string>
-}) {
+export function ParentAssessmentCarousel({ assessments }: { assessments: ParentAssessment[] }) {
   const cards = assessments.slice(0, 5)
   const [active, setActive] = useState(0)
   const viewport = useRef<HTMLDivElement>(null)
@@ -42,8 +40,7 @@ export function ParentAssessmentCarousel({ assessments, coachNames }: {
         }}>
         {cards.map((assessment, index) => <div key={assessment.id} role="group" aria-label={`Assessment ${index + 1} of ${cards.length}`}
           aria-hidden={index !== active} className="min-w-0" style={{ flex: '0 0 100%', scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
-          <ParentAssessmentCard assessment={assessment}
-            coachName={assessment.coach_user_id ? coachNames[assessment.coach_user_id] || 'Coach' : 'Coach'} active={index === active} />
+          <ParentAssessmentCard assessment={assessment} active={index === active} />
         </div>)}
         <div aria-hidden={active !== cards.length} className="flex items-stretch min-w-0"
           style={{ flex: '0 0 100%', scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>

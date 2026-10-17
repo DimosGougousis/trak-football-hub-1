@@ -14,13 +14,11 @@ import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
 import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
-import { parseDisplayDate } from '@/lib/calendar'
 import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
 import { AssessmentBands } from '@/components/player/AssessmentBands'
-import { timeOfDayGreeting } from '@/lib/greeting'
 
 const QUOTES = [
   { text: "The more difficult the victory, the greater the happiness in winning.", author: "Pelé" },
@@ -374,7 +372,6 @@ export default function PlayerHome() {
     }
     return count
   })()
-  const recentMatches = matches.slice(0, 5)
   const lastMatch = matches[0]
 
   // Trend: calculate last 5 match ratings normalized to bar heights
@@ -427,6 +424,10 @@ export default function PlayerHome() {
             events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
             assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
             onRetry={() => setReloadKey(k => k + 1)} />} />
+        {/* TRAK-194 (Kostas, 16 Oct): one quiet line, as parent Home has it, not a greeting and chips that look like buttons. */}
+        {details && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">
+          {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
+        </p>}
         {user && <LoadedWeekStrip key={user.id} loadKey={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger}>
           {reportsForSelf && <CantMakeIt event={event} child={{ id: user.id, name: 'you' }} self />}
         </EventSheet>}
@@ -466,28 +467,6 @@ export default function PlayerHome() {
         )}
 
         {user && <PlayerParentInviteCard playerUserId={user.id} hideWhenLinked />}
-
-        {/* Identity */}
-        <div className="py-2.5 pb-4">
-          {/* The name is in the header now (TRAK-163). */}
-          <p className="text-xs text-white/22 mb-1">{timeOfDayGreeting()}</p>
-          {details && (
-            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45"
-                style={{ fontFamily: "'DM Mono', monospace" }}>
-                <span className="w-1 h-1 rounded-full bg-[#C8F25A]" />Active
-              </span>
-              {details.position && (
-                <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>{details.position}</span>
-              )}
-              {details.current_club && details.age_group && (
-                <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>{details.current_club} {details.age_group}</span>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Hero Card */}
         <div className="relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
@@ -711,52 +690,7 @@ export default function PlayerHome() {
           </div>
         )}
 
-        {/* Recent Matches */}
-        {recentMatches.length > 0 && (
-          <div className="mt-5">
-            <MetadataLabel text="RECENT MATCHES" />
-            <div className="mt-2.5 space-y-2">
-              {recentMatches.map(m => {
-                const band = scoreToBand(m.computed_rating || 6.5)
-                // Same source of truth as PlayerMatches: when the match was played,
-                // falling back to when the row was logged. The two screens used
-                // to disagree about the same match's date.
-                const formattedDate = parseDisplayDate(m.match_date || m.created_at)
-                  ?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) ?? ''
-                const result = m.team_score != null && m.opponent_score != null
-                  ? (m.team_score > m.opponent_score ? 'W' : m.team_score < m.opponent_score ? 'L' : 'D')
-                  : null
-                const resultColor = result === 'W' ? '#4ade80' : result === 'L' ? '#f87171' : '#fbbf24'
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => navigate(`/player/match/${m.id}`)}
-                    className="w-full flex items-center justify-between rounded-[12px] px-4 py-3 text-left active:scale-[0.99] transition-transform"
-                    style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
-                  >
-                    <div className="flex-1 min-w-0 mr-3">
-                      <p className="text-[13px] font-medium text-white/88 truncate">
-                        {m.opponent ? `vs ${m.opponent}` : m.competition || 'Match'}
-                      </p>
-                      <p className="text-[9px] text-white/[0.28] mt-[3px] tracking-[0.05em]"
-                        style={{ fontFamily: "'DM Mono', monospace" }}>
-                        {formattedDate}{m.competition ? ` · ${m.competition}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {result && (
-                        <span className="text-[10px] font-semibold" style={{ color: resultColor, fontFamily: "'DM Mono', monospace" }}>
-                          {result}{m.team_score != null && m.opponent_score != null ? ` ${m.team_score}–${m.opponent_score}` : ''}
-                        </span>
-                      )}
-                      <BandPill band={band} />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        {/* TRAK-194: no "Recent matches" here; the Sessions tab lists every match. */}
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
 
