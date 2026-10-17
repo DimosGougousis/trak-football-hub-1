@@ -255,11 +255,18 @@ Spec (v2) says:
   THEN An athlete with no matches sees an explicit empty message
   THEN A failed load is distinguishable from an empty history
 
-PO decision needed — one of:
-  [ ] Spec stands -> code bug, fix the code, no registry change
+Decision recorded:
+  [x] Spec stands -> code bug, fix the code, no registry change
   [ ] Spec changes -> bump spec_version, add changelog entry, dev updates test
   [ ] Spec ambiguous -> rewrite given/when/then, bump spec_version
-Status: OPEN
+
+Resolution: the UC-A04 specification stands unchanged. TRAK-170 (live run 3)
+renames the explicit empty message from "No matches found" to "No past matches
+yet", because the list sits under Upcoming and holds matches already played.
+Updated the empty-state selector in both assertions (presence for an empty
+history, absence for a failed load). No registry or lock change.
+
+Status: RESOLVED 2026-10-17
 
 ## Q-2026-10-17-UC-X02 · UC-X02 · A failed load never renders as a false empty state
 Raised: 2026-10-17 · commit blocked · REQ-004
@@ -268,8 +275,14 @@ Spec (v2) says:
   THEN A retryable error is shown
   THEN The error is visibly different from the genuine empty state
 
-PO decision needed — one of:
-  [ ] Spec stands -> code bug, fix the code, no registry change
+Decision recorded:
+  [x] Spec stands -> code bug, fix the code, no registry change
   [ ] Spec changes -> bump spec_version, add changelog entry, dev updates test
   [ ] Spec ambiguous -> rewrite given/when/then, bump spec_version
-Status: OPEN
+
+Resolution: the UC-X02 specification stands unchanged. The genuine empty
+state's wording is now "No past matches yet" (TRAK-170); the failed load still
+shows a retryable error and never that message. Updated the empty-state
+selector in both assertions. No registry or lock change.
+
+Status: RESOLVED 2026-10-17
