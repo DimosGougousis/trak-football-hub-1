@@ -61,12 +61,14 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
       }}
     >
       {items.map(item => {
-        const isActive = activeTab === item.path
+        // TRAK-186: a tab stays marked on every page under it (Sessions → History).
+        const isActive = activeTab === item.path || activeTab.startsWith(`${item.path}/`)
         const Icon = item.Icon
         return (
           <button
             key={item.path}
             onClick={() => onNavigate(item.path)}
+            aria-current={isActive ? 'page' : undefined}
             className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all relative"
             style={{
               background: isActive ? 'rgba(200,242,90,0.06)' : 'transparent',
