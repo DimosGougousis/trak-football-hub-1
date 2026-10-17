@@ -53,3 +53,17 @@
 /* Trak (TRAK-182): event dots under the day number. */
 .marks { position: absolute; bottom: 14%; left: 50%; display: flex; gap: 2px; translate: -50% 0; pointer-events: none; }
 .marks > span { width: 4px; height: 4px; border-radius: 50%; }
+
+/* Trak (TRAK-157): the title opens a twelve-month grid, labelled with years, so a date months away is two taps. */
+.titleButton { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: var(--radius-pill); background: transparent; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) and (pointer: fine) { .titleButton:hover { background: var(--surface-muted); } }
+.titleChevron { color: var(--text-secondary); transition: rotate var(--duration-fast) var(--ease-standard); }
+.titleChevronOpen { rotate: 180deg; }
+.monthViewport[hidden], .weekdays[hidden] { display: none; }
+.monthPicker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.monthChoice { display: grid; min-height: 52px; place-items: center; align-content: center; gap: 2px; border: 0; border-radius: 12px; background: var(--surface-muted); color: var(--foreground); font: inherit; font-size: var(--text-sm); font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.monthChoiceYear { color: var(--text-muted); font-size: var(--text-xs); font-weight: 400; font-variant-numeric: tabular-nums; }
+.monthChoiceCurrent { background: var(--accent); color: var(--accent-foreground); }
+.monthChoiceCurrent .monthChoiceYear { color: inherit; opacity: .7; }
+.monthChoice:disabled { cursor: default; opacity: .36; }
+@media (prefers-reduced-motion: reduce) { .titleChevron { transition: none; } }

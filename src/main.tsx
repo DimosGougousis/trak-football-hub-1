@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
+import { reloadForNewBuild } from "./lib/stale-build";
 import "./index.css";
 // TRAK-163: Arc component tokens, scoped to .arc (see the file for why).
 import "./components/arc/arc-theme.css";
@@ -17,6 +18,11 @@ Sentry.init({
   // capturing children's screens, free text included, and shipping them to a
   // US provider with no EU region. Removing the line removes the invitation.
 })
+
+// TRAK-192: Vite says a lazy screen's file failed to load, as happens when the
+// tab is older than the latest deploy. Reload once for the new release; the
+// error still reaches ErrorBoundary, which shows "Trak has just been updated".
+window.addEventListener('vite:preloadError', () => { reloadForNewBuild() })
 
 // Catch unhandled promise rejections — forwards to Sentry in production.
 window.addEventListener('unhandledrejection', (event) => {

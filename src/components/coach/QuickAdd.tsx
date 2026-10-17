@@ -5,7 +5,7 @@ import { ArrowLeft, Check, ClipboardCheck, ClipboardPen, Plus, Swords, CalendarP
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { localTodayISO } from '@/lib/event-time'
-import { blankForm, clashMessage, dateAsDay, dayAsDate, formProblem, formToRow, newDraftFields, type EventForm, type EventRow } from '@/lib/coach-events'
+import { blankForm, clashMessage, dateAsDay, dayAsDate, formProblem, formToRow, newDraftFields, pastDateProblem, type EventForm, type EventRow } from '@/lib/coach-events'
 import { useFeature, useParked } from '@/components/trak/parked'
 import { registerProblem } from '@/lib/event-register'
 import { Button } from '@/components/arc/button/button'
@@ -142,11 +142,12 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
     return () => window.clearTimeout(timer)
   }, [face])
 
+  const datePassed = pastDateProblem(date, localTodayISO())
   const eventForm = (): EventForm => ({ ...blankForm(date), kind, time, opponent: kind === 'match' ? opponent : '', homeAway: kind === 'match' ? homeAway : '' })
   const saveDraft = async () => {
     if (!user || saving) return
     const form = eventForm()
-    const problem = formProblem(form)
+    const problem = formProblem(form) ?? pastDateProblem(form.date, localTodayISO())
     if (problem) { setError(problem); return }
     setSaving(true)
     // As Schedule's Save draft: a new event starts unpublished; families never see a draft.
@@ -283,10 +284,19 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                     <TimePicker label={kind === 'match' ? 'Kickoff' : 'Start'} className="arc-trak-field" value={time}
                       onChange={t => { setTime(t); setError(null) }} minuteStep={5} format="12h" placeholder="Pick a time" emptyAt="17:00" />
                   </div>
-                  {error && <p role="alert" className="text-[12px] text-[#f87171]">{error}</p>}
+                  {/* TRAK-127: New event is for what's coming; a past day offers the logs. */}
+                  {datePassed ? (
+                    <div role="alert" className="space-y-2">
+                      <p className="text-[12px] text-[#f87171]">{datePassed}</p>
+                      <div className="flex gap-2">
+                        <Button size="md" variant="secondary" className="flex-1" onClick={() => { setError(null); setFace('match') }}>Log match</Button>
+                        <Button size="md" variant="secondary" className="flex-1" onClick={() => go('/coach/sessions/add', { state: { logDate: date } })}>Log training</Button>
+                      </div>
+                    </div>
+                  ) : error && <p role="alert" className="text-[12px] text-[#f87171]">{error}</p>}
                   <div className="flex gap-2">
                     <Button size="md" variant="ghost" className="flex-1" onClick={moreDetails}>More details</Button>
-                    <Button size="md" className="flex-1" loading={saving} onClick={() => void saveDraft()}>Save draft</Button>
+                    <Button size="md" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveDraft()}>Save draft</Button>
                   </div>
                 </div>
               )}

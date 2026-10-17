@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertsBell, type BellAlert } from '@/components/trak/AlertsBell'
 import { LoadError } from '@/components/trak/LoadError'
 import { eventAlert } from '@/lib/parent-data'
-import { noteFirstSeen, readFirstSeen, type PlayerEvent } from '@/lib/player-events'
+import { noteEventSnapshots, noteFirstSeen, readFirstSeen, type PlayerEvent } from '@/lib/player-events'
 
 /* TRAK-163 (Imad, 12 Oct): players get the parent's bell for their squad's
    events: new, changed (with the new time) and cancelled, counted since the
@@ -25,7 +25,8 @@ export function PlayerAlertsBell({ userId, events, assessment, assessmentLoadFai
 }) {
   const navigate = useNavigate()
   const firstSeenKey = `trak:player-alerts-events:${userId}`
-  useEffect(() => { noteFirstSeen(firstSeenKey, events) }, [firstSeenKey, events])
+  // TRAK-134: the version shown too, so a later change can say what moved.
+  useEffect(() => { noteFirstSeen(firstSeenKey, events); noteEventSnapshots(userId, events) }, [firstSeenKey, userId, events])
   // Read before this render's events are recorded as first seen.
   const firstSeen = readFirstSeen(firstSeenKey)
   const alerts: BellAlert[] = events.map(event => {
