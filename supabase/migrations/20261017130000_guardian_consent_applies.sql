@@ -18,3 +18,8 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION public.guardian_consent_applies(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.guardian_consent_applies(uuid) TO authenticated;
+
+-- TRAK-177 item 2 (Imad, 17 Oct: keep). The stored threshold is the age from
+-- which nobody needs consent, not the academy's own consent age.
+COMMENT ON COLUMN public.parental_consents.threshold_age IS
+  'The age from which nobody needs consent (consent_threshold_age(), 18). An academy''s own consent age, from which the young person decides, is organizations.consent_age.';
