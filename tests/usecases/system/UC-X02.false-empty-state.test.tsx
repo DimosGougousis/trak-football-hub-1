@@ -65,7 +65,7 @@ useCase('UC-X02', () => {
     // "The error is visibly different from the genuine empty state" — half one:
     // the empty copy must be absent. A player with a full season must never be
     // told their record does not exist.
-    expect(screen.queryByText(/no matches found/i)).toBeNull()
+    expect(screen.queryByText(/no past matches yet/i)).toBeNull()
   })
 
   it('renders the empty state, and no error, when the request genuinely returns nothing', async () => {
@@ -77,7 +77,7 @@ useCase('UC-X02', () => {
     // "The error is visibly different from the genuine empty state" — half two.
     // Without this the first two tests could be satisfied by showing the error
     // unconditionally, which would be just as dishonest in the other direction.
-    expect(await screen.findByText(/no matches found/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no past matches yet/i)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })

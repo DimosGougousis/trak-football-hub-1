@@ -63,7 +63,7 @@ INSERT INTO public.profiles(user_id,role,full_name)
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.s157id(100),pg_temp.s157id(1),'Start Time Academy X','S157X1');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES (pg_temp.s157id(10),pg_temp.s157id(100),'U15');
-INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.s157id(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.s157id(100),'events') ON CONFLICT DO NOTHING;
 
 -- Two events from before the rule, with no time: a published one (like the
 -- live run's Tuesdays) and a draft.

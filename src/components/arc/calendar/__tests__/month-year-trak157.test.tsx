@@ -49,4 +49,21 @@ describe('TRAK-157: month and year in two taps', () => {
     await user.click(within(dialog).getByRole('button', { name: 'March 2026' }))
     expect(within(dialog).getByRole('grid', { name: 'March 2026' })).toBeInTheDocument()
   })
+
+  // #336 review: paging moves a whole year each way, not one month.
+  it('Later and Earlier months each move exactly twelve months', async () => {
+    const user = userEvent.setup()
+    render(<Field />)
+    await user.click(screen.getByRole('button', { name: /^Date\b/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Date calendar' })
+    await user.click(within(dialog).getByRole('button', { name: /choose month and year/ }))
+    const months = () => within(within(dialog).getByRole('group', { name: 'Choose a month' })).getAllByRole('button').map(b => b.getAttribute('aria-label'))
+    expect(months()[0]).toBe('October 2026')
+    await user.click(within(dialog).getByRole('button', { name: 'Later months' }))
+    expect(months()).toHaveLength(12)
+    expect([months()[0], months()[11]]).toEqual(['October 2027', 'September 2028'])
+    await user.click(within(dialog).getByRole('button', { name: 'Earlier months' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Earlier months' }))
+    expect([months()[0], months()[11]]).toEqual(['October 2025', 'September 2026'])
+  })
 })
