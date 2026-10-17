@@ -80,8 +80,11 @@ function ChildConsent({ parentId, childId, childName }: { parentId: string; chil
   </section>
 }
 
+/** TRAK-181 (16 Oct): one line per child, each with its own Withdraw, so Profile
+ *  needs no "Following" picker. Hiding a child who consents for themselves is TRAK-177. */
 export function ParentConsentWithdrawal() {
-  const { parentId, selectedChild } = useParentChildren()
-  if (!parentId || !selectedChild) return null
-  return <ChildConsent key={`${parentId}:${selectedChild.id}`} parentId={parentId} childId={selectedChild.id} childName={selectedChild.name} />
+  const { parentId, children } = useParentChildren()
+  if (!parentId || !children.length) return null
+  return <>{children.map(child =>
+    <ChildConsent key={`${parentId}:${child.id}`} parentId={parentId} childId={child.id} childName={child.name} />)}</>
 }

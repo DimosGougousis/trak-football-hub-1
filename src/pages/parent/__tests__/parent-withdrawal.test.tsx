@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -98,11 +98,20 @@ async function open() {
   window.history.replaceState({}, '', '/parent/profile'); render(<App />)
   await screen.findByText('Parent account · 2 children linked')
 }
+const section = (name: string) => screen.getByRole('region', { name: `Consent for ${name}` })
 async function confirm(name = 'Amber Synthetic') {
   await userEvent.click(await screen.findByRole('button', { name: `Withdraw consent for ${name}` }))
   await userEvent.click(screen.getByRole('button', { name: `Confirm withdrawal for ${name}` }))
 }
 describe('parent Profile consent withdrawal through real App and SDK', () => {
+  // TRAK-181 (live run 3, 16 Oct): no "Following" picker on Profile; one consent line per child.
+  it('shows one consent section per child and no Following picker', async () => {
+    await open()
+    expect(await screen.findByRole('button', { name: 'Withdraw consent for Amber Synthetic' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })).toBeInTheDocument()
+    expect(screen.getAllByRole('region', { name: /^Consent for / })).toHaveLength(2)
+    expect(screen.queryByRole('combobox', { name: 'Following' })).not.toBeInTheDocument()
+  })
   it('exposes the promised control, confirms the named child, and leaves the second child approved', async () => {
     await open()
     await userEvent.click(await screen.findByRole('button', { name: 'Withdraw consent for Amber Synthetic' }))
@@ -113,9 +122,9 @@ describe('parent Profile consent withdrawal through real App and SDK', () => {
     await screen.findByText('Your consent for Amber Synthetic has been withdrawn.')
     expect(writes).toEqual([{ parent: session.user.id, child: childA }])
     expect(active.has(childB)).toBe(true)
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Following' }), childB)
-    await screen.findByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })
-    expect(screen.queryByText('Your consent for Amber Synthetic has been withdrawn.')).not.toBeInTheDocument()
+    // The other child's line is untouched.
+    expect(within(section('Indigo Synthetic')).getByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })).toBeEnabled()
+    expect(within(section('Indigo Synthetic')).queryByText(/has been withdrawn/)).not.toBeInTheDocument()
   })
   it('drops the selected child history cache after withdrawal before the normal stale interval', async () => {
     await open()
@@ -129,12 +138,13 @@ describe('parent Profile consent withdrawal through real App and SDK', () => {
     await waitFor(() => expect(matchReads).toBe(2))
     expect(screen.queryByText('Cached Amber match')).not.toBeInTheDocument()
   })
-  it('clears confirmation on child change so it cannot approve withdrawal for another child', async () => {
+  it("a confirmation for one child is only that child's, and never offers the other's", async () => {
     await open()
-    await userEvent.click(await screen.findByRole('button', { name: 'Withdraw consent for Amber Synthetic' }))
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Following' }), childB)
     await screen.findByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })
-    expect(screen.queryByRole('button', { name: /Confirm withdrawal/ })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Withdraw consent for Amber Synthetic' }))
+    expect(within(section('Amber Synthetic')).getByRole('button', { name: 'Confirm withdrawal for Amber Synthetic' })).toBeInTheDocument()
+    expect(within(section('Indigo Synthetic')).queryByRole('button', { name: /Confirm withdrawal/ })).not.toBeInTheDocument()
+    expect(within(section('Indigo Synthetic')).getByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })).toBeInTheDocument()
     expect(writes).toEqual([])
   })
   it('accepts an idempotent zero response', async () => {
@@ -155,15 +165,15 @@ describe('parent Profile consent withdrawal through real App and SDK', () => {
   it('shows no active own approval without claiming the child is globally unapproved', async () => {
     active.delete(childA); await open()
     await screen.findByText('You have no active consent recorded for Amber Synthetic.')
-    expect(screen.queryByRole('button', { name: /Withdraw consent for/ })).not.toBeInTheDocument()
+    expect(within(section('Amber Synthetic')).queryByRole('button', { name: /Withdraw consent for/ })).not.toBeInTheDocument()
     expect(writes).toEqual([])
   })
   it('does not turn a failed status read into no approval and provides a working retry', async () => {
     readFailure = true; await open()
-    await screen.findByRole('alert')
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
     expect(screen.queryByText(/You have no active consent/)).not.toBeInTheDocument()
     readFailure = false
-    await userEvent.click(screen.getByRole('button', { name: 'Check consent status' }))
+    await userEvent.click(within(section('Amber Synthetic')).getByRole('button', { name: 'Check consent status' }))
     await screen.findByRole('button', { name: 'Withdraw consent for Amber Synthetic' })
   })
   it.each([null, -1, '1'])('reconciles an ambiguous reply %j before offering another write', async reply => {
@@ -174,14 +184,14 @@ describe('parent Profile consent withdrawal through real App and SDK', () => {
     await screen.findByText('You have no active consent recorded for Amber Synthetic.')
     expect(writes).toHaveLength(1)
   })
-  it('does not repeat a pending write or apply its result after switching children', async () => {
+  it("does not repeat a pending write, and its result lands on that child's line only", async () => {
     hold = new Promise(resolve => { release = resolve }); await open(); await confirm()
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(screen.getByRole('button', { name: 'Withdrawing…' })).toBeDisabled()
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Following' }), childB)
-    await screen.findByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })
+    expect(within(section('Indigo Synthetic')).getByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })).toBeEnabled()
     await act(async () => { release!() })
-    expect(screen.queryByText(/Your consent for Amber/)).not.toBeInTheDocument()
+    await within(section('Amber Synthetic')).findByText('Your consent for Amber Synthetic has been withdrawn.')
+    expect(within(section('Indigo Synthetic')).queryByText(/has been withdrawn/)).not.toBeInTheDocument()
     expect(writes).toEqual([{ parent: session.user.id, child: childA }])
   })
   it('keeps an in-flight write bound to the parent who confirmed it', async () => {
