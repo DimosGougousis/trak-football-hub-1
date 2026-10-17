@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
@@ -114,6 +114,23 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     expect(await screen.findByText('Draft saved. Publish it from Schedule.')).toBeInTheDocument()
     // Then back to "+".
     expect(await screen.findByRole('button', { name: 'Quick add' }, { timeout: 3000 })).toBeInTheDocument()
+  })
+
+  // Tarek, 16 Oct: the check's 1.1 s timer outlived an unmounted QuickAdd and crashed a CI run.
+  it('clears the check\'s timer when it unmounts mid-check', async () => {
+    const set = vi.spyOn(window, 'setTimeout'), clear = vi.spyOn(window, 'clearTimeout')
+    const menu = await openMenu()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
+    const form = await screen.findByRole('dialog', { name: 'New event' })
+    await pickTime(userEvent, 'Start', '17:30')
+    await userEvent.click(within(form).getByRole('button', { name: 'Save draft' }))
+    await screen.findByText('Draft saved. Publish it from Schedule.')
+    const call = set.mock.calls.findIndex(args => args[1] === 1100)
+    expect(call).toBeGreaterThanOrEqual(0)
+    const timer = set.mock.results[call].value
+    cleanup()
+    expect(clear).toHaveBeenCalledWith(timer)
+    set.mockRestore(); clear.mockRestore()
   })
 
   it('a match draft needs its opponent, and Escape steps back to the menu', async () => {
