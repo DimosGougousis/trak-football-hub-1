@@ -5,10 +5,11 @@
  * planning is the parked calendar, TRAK-25).
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
+import App from '@/App'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, insertInto, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -65,5 +66,17 @@ describe('J4: a session or match cannot be dated in the future', () => {
     expect(await dateOffered(user, 'Session date', tomorrow())).toBe(false)
     await pickDate(user, 'Session date', localTodayISO())
     expect(await dateHeld(user, 'Session date')).toBe(localTodayISO())
+  })
+
+  // Imad's #350 review (P3): every date picker hides days after today, so the
+  // save-side guard is only reachable when a date arrives from elsewhere, such
+  // as the day New event hands over (TRAK-127). It must still refuse it.
+  it('a future day handed to the log is refused, and Next stays shut', async () => {
+    const user = userEvent.setup()
+    window.history.replaceState({ usr: { logDate: tomorrow() }, key: 'future-day', idx: 0 }, '', '/coach/sessions/add')
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: /Technical/ }))
+    expect(await screen.findByText(/can't be dated in the future/)).toBeInTheDocument()
+    expect(next()).toBeDisabled()
   })
 })
