@@ -552,8 +552,10 @@ export default function CoachHomePage() {
                     key={a.id}
                     className="flex items-center gap-3 rounded-[14px] border border-white/[0.07] p-[13px_14px] mb-2 cursor-pointer active:scale-[0.99] transition-transform"
                     style={{ background: '#101012' }}
-                    {...openable(`Open assessment for ${playerName}, ${formattedDate}`,
-                      () => navigate(`/coach/assess?assessment=${a.id}`))}
+                    // TRAK-179 (16 Oct): the player's profile, as Squad → Open profile; the
+                    // assessment is in their history there.
+                    {...openable(`Open ${playerName}'s profile, assessed ${formattedDate}`,
+                      () => navigate(`/coach/player/${a.squad_player_id}`))}
                   >
                     <Avatar name={playerName} size="md" className="arc" aria-hidden />
                     {/* Name + metadata */}
