@@ -116,7 +116,9 @@ export default function CoachAddSession() {
     () => (quick || window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
   )
   const [title, setTitle] = useState('')
-  const [date,  setDate]  = useState(() => quick?.date ?? localTodayISO())
+  // TRAK-127: New event's "log it instead" hands over the past day it was given.
+  const [date,  setDate]  = useState(() => quick?.date
+    ?? (location.state as { logDate?: string } | null)?.logDate ?? localTodayISO())
   const [notes, setNotes] = useState('')
   const [step,  setStep]  = useState(quick ? 1 : 0)
 
@@ -143,15 +145,35 @@ export default function CoachAddSession() {
   const [venue,       setVenue]       = useState<Venue>(quick?.venue ?? 'Home')
 
   // TRAK-138 (J8.15): "Log match" on a schedule event that has kicked off
-  // opens here with its date, opponent and home or away.
+  // opens here with its date, opponent and home or away. The saved session
+  // carries the event's id, so the event and its log are one item (16 Oct).
+  const [fromEvent] = useState(() => (location.state as { fromEvent?: {
+    eventId?: string | null, date?: string | null, opponent?: string | null, homeAway?: string | null
+  } } | null)?.fromEvent ?? null)
+  const eventId = fromEvent?.eventId ?? null
   useEffect(() => {
-    const event = (location.state as { fromEvent?: { date?: string | null, opponent?: string | null, homeAway?: string | null } } | null)?.fromEvent
-    if (!event) return
+    if (!fromEvent) return
     setType('match')
-    if (event.date) setDate(event.date)
-    if (event.opponent) setOpponent(event.opponent)
-    if (event.homeAway) setVenue(event.homeAway === 'away' ? 'Away' : 'Home')
-  }, [])
+    if (fromEvent.date) setDate(fromEvent.date)
+    if (fromEvent.opponent) setOpponent(fromEvent.opponent)
+    if (fromEvent.homeAway) setVenue(fromEvent.homeAway === 'away' ? 'Away' : 'Home')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, on arrival
+
+  // Who the family said can't make it (J8.14). Null until read; a failed read
+  // pre-marks nobody for the match, rather than guess who came.
+  const [absent, setAbsent] = useState<Set<string> | null>(eventId ? null : new Set())
+  const [absencesFailed, setAbsencesFailed] = useState(false)
+  useEffect(() => {
+    if (!eventId) return
+    let stale = false
+    supabase.from('event_absences').select('squad_player_id').eq('event_id', eventId)
+      .then(({ data, error }) => {
+        if (stale) return
+        setAbsencesFailed(!!error)
+        setAbsent(new Set((data ?? []).map(row => row.squad_player_id as string)))
+      })
+    return () => { stale = true }
+  }, [eventId])
 
   // Squad
   const [squad,       setSquad]       = useState<SquadPlayer[]>([])
@@ -223,6 +245,21 @@ export default function CoachAddSession() {
       })
     return () => { superseded = true }
   }, [user, rosterAttempt])
+
+  // TRAK-138: a register, not a pick list (Imad, 16 Oct). Once the first
+  // roster is in, everyone ready counts as there and the coach taps who
+  // wasn't. A match logged from its event marks them played, minus the
+  // family's "Can't make it"; their facts are still typed (J4: no defaults).
+  const [prefilled, setPrefilled] = useState(false)
+  useEffect(() => {
+    if (prefilled || rosterLoading || rosterFailed || absent === null) return
+    setPrefilled(true)
+    const there = squad.filter(p => !absent.has(p.id))
+    setAttended(new Set(there.map(p => p.id)))
+    if (eventId && !absencesFailed) {
+      setDetails(prev => ({ ...prev, ...Object.fromEntries(there.map(p => [p.id, { ...prev[p.id], played: true }])) }))
+    }
+  }, [prefilled, rosterLoading, rosterFailed, absent, squad, eventId, absencesFailed])
 
   // A squad still loading is not an empty one (TRAK-72). Coaches don't add
   // players: the academy roster decides the squad (#164).
@@ -446,6 +483,9 @@ export default function CoachAddSession() {
         // Only the fixed labels; the coach's theme stays in the title.
         training_type: type === 'training' ? trainingTypeFrom(trainingFocus) : null,
         session_date:  date,
+        // TRAK-138: the event this log completes. One session per event is a
+        // unique index, so a second log of it is refused below.
+        ...(eventId && { event_id: eventId }),
         notes: type === 'training'
           ? trainingNotes(trainingDuration, trainingIntensity, notes)
           : notes || null,
@@ -462,6 +502,11 @@ export default function CoachAddSession() {
       .select()
       .single()
 
+      if (error?.code === '23505' && eventId) {
+        toast.error('This match is already logged from its event. Nothing was saved; open it from Schedule to see it.', { duration: 12000 })
+        setSaving(false)
+        return
+      }
       if (error || !session) {
         console.error('Session save failed:', error)
         toast.error(error?.message ? `Could not save: ${error.message}` : 'Could not save session')
@@ -824,6 +869,7 @@ export default function CoachAddSession() {
                           {/* Expand toggle (only when played) */}
                           {d.played && (
                             <button onClick={() => toggleExpanded(p.id)}
+                              aria-label={`Details for ${p.player_name}`} aria-expanded={isExpanded}
                               className="flex-shrink-0 w-6 h-6 flex items-center justify-center"
                               style={{ color: 'rgba(255,255,255,0.3)' }}>
                               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
