@@ -148,18 +148,20 @@ describe('TRAK-182: the event sheet', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/coach/schedule?cancel=ev-1')
   })
 
-  it('shows who came once the register is taken, and no Cancel after the start', async () => {
+  // TRAK-182, live run 3 (Imad, 16 Oct): a past event says "Attended", not "Attending" or "Came", and has nothing to share.
+  it('shows who attended once the register is taken, and no Cancel or Share after the start', async () => {
     eventRow = row({ published: true, event_type: 'training', title: 'Finishing', starts_at: '2020-01-01T13:00:00Z', event_date: '2020-01-01' })
     server.use(http.get(endpoint('coach_sessions'), () => HttpResponse.json({ id: 'session-1' })))
     const user = userEvent.setup()
     renderStrip([event({ kind: 'training', title: 'Finishing', opponent: null, homeAway: null })], 'coach')
     await user.click(screen.getByRole('button', { name: /Finishing/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
-    expect(await within(sheet).findByRole('heading', { name: 'Came · 1' })).toBeInTheDocument()
-    await user.click(within(sheet).getByRole('button', { name: 'Show names: Came' }))
-    expect(within(within(sheet).getByRole('list', { name: 'Came' })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Bukayo Saka'])
+    expect(await within(sheet).findByRole('heading', { name: 'Attended · 1' })).toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: 'Show names: Attended' }))
+    expect(within(within(sheet).getByRole('list', { name: 'Attended' })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Bukayo Saka'])
     expect(within(sheet).getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
   })
 
   it('offers no Cancel once a match has started (a match has no register)', async () => {
@@ -170,6 +172,8 @@ describe('TRAK-182: the event sheet', () => {
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
   })
 
   // Kostas's #310 review: counted as the register counts, and no guessing on a failed read.
