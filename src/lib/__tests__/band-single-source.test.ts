@@ -74,7 +74,7 @@ describe('there is exactly one band to colour map', () => {
 describe('the specific contradictions Kostas saw', () => {
   it('a 5 is Mixed and orange, on every screen', () => {
     expect(bandForScore(5).word).toBe('Mixed')
-    expect(bandForScore(5).color).toBe('#fb923c')
+    expect(bandForScore(5).color).toBe('#B5501A')
     expect(categoryScoreToBand(5)).toBe('Mixed')
   })
 

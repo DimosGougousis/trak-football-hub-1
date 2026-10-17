@@ -86,7 +86,7 @@
   --duration-instant: 120ms; --duration-fast: 160ms; --duration-standard: 240ms; --duration-considered: 480ms; --duration-spring: 580ms;
 
   /* Trak's role tokens (src/index.css --t-*, TRAK-189): one palette for Trak and Arc. */
-  color-scheme: dark;
+  color-scheme: light;
   --background: rgb(var(--t-ground));
   --surface: rgb(var(--t-surface));
   --surface-raised: rgb(var(--t-raised));
@@ -109,9 +109,9 @@
   --success: rgb(var(--t-success));
   --warning: rgb(var(--t-warning));
   --danger: rgb(var(--t-danger));
-  --shadow-resting: 0 1px 2px hsl(0 0% 0% / .3);
-  --shadow-raised: 0 8px 22px hsl(0 0% 0% / .4);
-  --shadow-floating: 0 22px 55px hsl(0 0% 0% / .55);
+  --shadow-resting: 0 1px 2px hsl(0 0% 0% / .06);
+  --shadow-raised: 0 8px 22px hsl(0 0% 0% / .08);
+  --shadow-floating: 0 22px 55px hsl(0 0% 0% / .14);
   --font-display: inherit;
   --font-body: inherit;
 }

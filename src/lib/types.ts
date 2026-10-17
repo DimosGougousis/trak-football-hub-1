@@ -23,13 +23,13 @@ export interface BandConfig {
 // Bands span the full 0..10 slider range. 5 sits squarely in "Mixed" (the neutral middle).
 // Edges:  0–2 Difficult · 2–4 Developing · 4–6 Mixed · 6–7 Steady · 7–8 Good · 8–9 Standout · 9–10 Exceptional
 export const BANDS: BandConfig[] = [
-  { word: 'Exceptional', color: '#C8F25A', bg: 'rgba(200,242,90,0.15)', border: 'rgba(200,242,90,0.3)', minScore: 9 },
-  { word: 'Standout',    color: '#86efac', bg: 'rgba(134,239,172,0.13)', border: 'rgba(134,239,172,0.26)', minScore: 8 },
-  { word: 'Good',        color: '#4ade80', bg: 'rgba(74,222,128,0.13)',  border: 'rgba(74,222,128,0.24)',  minScore: 7 },
-  { word: 'Steady',      color: '#60a5fa', bg: 'rgba(96,165,250,0.13)',  border: 'rgba(96,165,250,0.24)',  minScore: 6 },
-  { word: 'Mixed',       color: '#fb923c', bg: 'rgba(251,146,60,0.13)',  border: 'rgba(251,146,60,0.24)',  minScore: 4 },
-  { word: 'Developing',  color: '#a78bfa', bg: 'rgba(167,139,250,0.13)', border: 'rgba(167,139,250,0.24)', minScore: 2 },
-  { word: 'Difficult',   color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
+  { word: 'Exceptional', color: '#0B6623', bg: 'rgba(11,102,35,0.1)', border: 'rgba(11,102,35,0.28)', minScore: 9 },
+  { word: 'Standout',    color: '#1E7F45', bg: 'rgba(30,127,69,0.1)', border: 'rgba(30,127,69,0.28)', minScore: 8 },
+  { word: 'Good',        color: '#33802A', bg: 'rgba(51,128,42,0.1)', border: 'rgba(51,128,42,0.28)',  minScore: 7 },
+  { word: 'Steady',      color: '#2F6FC0', bg: 'rgba(47,111,192,0.1)', border: 'rgba(47,111,192,0.28)',  minScore: 6 },
+  { word: 'Mixed',       color: '#B5501A', bg: 'rgba(181,80,26,0.1)', border: 'rgba(181,80,26,0.28)',  minScore: 4 },
+  { word: 'Developing',  color: '#6D4BC4', bg: 'rgba(109,75,196,0.1)', border: 'rgba(109,75,196,0.28)', minScore: 2 },
+  { word: 'Difficult',   color: '#646C68', bg: 'rgba(100,108,104,0.1)', border: 'rgba(100,108,104,0.28)', minScore: 0 },
 ]
 
 // The one way to turn a band into its colours. Before this existed, seven call
