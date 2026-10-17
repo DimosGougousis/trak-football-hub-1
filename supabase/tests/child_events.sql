@@ -157,7 +157,7 @@ SELECT pg_temp.cecheck(pg_temp.ce_note_for('   ')='(none)','6 a blank family not
 SELECT pg_temp.cecheck(pg_temp.ce_note_for(repeat('x',200))=repeat('x',200),'6 a 200-character note saves');
 SELECT pg_temp.cecheck(pg_temp.ce_note_for(repeat('x',201)) LIKE '23514:%','6 a longer one is refused',left(pg_temp.ce_note_for(repeat('x',201)),60));
 -- The coach writes it like any other field of their own event (with events on for their academy).
-INSERT INTO public.academy_features(organization_id,feature) VALUES (pg_temp.ceid(100),'events');
+INSERT INTO public.academy_features(organization_id,feature) VALUES (pg_temp.ceid(100),'events') ON CONFLICT DO NOTHING;
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.ceactor(10);
 UPDATE public.coach_calendar_events SET family_note='Shin guards on' WHERE id=pg_temp.ceid(600);
