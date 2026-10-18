@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, 
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO } from '@/lib/event-time'
+import { useCoachSquad } from '@/lib/coach-squad'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
@@ -226,6 +227,8 @@ export default function CoachSchedule() {
   const { parked, comingSoon } = useParked()
   const navigate = useNavigate()
   const { user } = useAuth()
+  // TRAK-176: the squad picked; its events and the whole-roster ones show, and new ones are saved for it.
+  const coachSquad = useCoachSquad(user?.id)
 
   // Calendar view state
   const today = new Date()
@@ -249,16 +252,16 @@ export default function CoachSchedule() {
         .select('*').eq('coach_user_id', user.id).order('starts_at'),
       supabase.from('coach_sessions')
         // coach_sessions has no opponent column; naming one failed the whole read.
-        .select('id, title, session_type, session_date, competition, venue, notes, event_id')
+        .select('id, title, session_type, session_date, competition, venue, notes, event_id, squad')
         .eq('coach_user_id', user.id).order('session_date'),
     ])
     // A failed read is not an empty calendar (the J4 standard).
     setLoadFailed(!!ev.error || !!sess.error)
-    if (!ev.error) setCalEvents((ev.data as EventRow[]) || [])
-    if (!sess.error) setSessions(sess.data || [])
+    if (!ev.error) setCalEvents(((ev.data as EventRow[]) || []).filter(e => coachSquad.eventInSquad(e.squad)))
+    if (!sess.error) setSessions((sess.data || []).filter(s => coachSquad.eventInSquad(s.squad)))
   }
 
-  useEffect(() => { loadData() }, [user])
+  useEffect(() => { loadData() }, [user, coachSquad.squad])
 
   // TRAK-139 (J8.16): the squad for the WhatsApp message title ("U15 Match"),
   // and its children's names, so coach-typed text naming one stays out.
@@ -404,8 +407,9 @@ export default function CoachSchedule() {
       return
     }
 
+    if (!editing && !coachSquad.ready) { setSheet({ ...sheet, error: coachSquad.retry() }); return }
     setSaving(true)
-    const fresh = newDraftFields(user.id)
+    const fresh = newDraftFields(user.id, coachSquad.squad)
     const series = !editing && repeat.on && form.kind !== 'match'
     const rows = series
       ? seriesRows(form, repeat, crypto.randomUUID()).map(r => ({ ...r, ...fresh }))
@@ -574,7 +578,8 @@ export default function CoachSchedule() {
   // at all. FixtureImport keeps every row and says so if this throws.
   const importFixtures = async (fixtures: Fixture[]) => {
     if (!user) throw new Error('Not signed in')
-    const rows = fixtureInsertRows(fixtures, user.id)
+    if (!coachSquad.ready) throw new Error(coachSquad.retry())
+    const rows = fixtureInsertRows(fixtures, user.id).map(row => ({ ...row, squad: coachSquad.squad }))
     const { data, error } = await supabase.from('coach_calendar_events').insert(rows).select('id')
     if (error || (data?.length ?? 0) !== rows.length) throw new Error("Couldn't save the fixtures")
     toast.success(`Added ${rows.length} ${rows.length === 1 ? 'fixture' : 'fixtures'} as drafts. Publish each when it's ready.`)
@@ -713,7 +718,7 @@ export default function CoachSchedule() {
                       {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && !registerSession.has(row.id) && (
                         <button aria-label={`Log match for ${row.title}`}
                           onClick={parked ? comingSoon : () => navigate('/coach/sessions/quick', {
-                            state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away } },
+                            state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
                           })}
                           className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-[#4ade80]" style={mono}>
                           Log match
@@ -752,7 +757,7 @@ export default function CoachSchedule() {
                         <Share2 size={14} color="rgba(255,255,255,0.5)" />
                       </button>
                     ) : (
-                      <a href={whatsAppShareUrl(shareableFromRow(row, squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
+                      <a href={whatsAppShareUrl(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
                         aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
                         <Share2 size={14} color="#25D366" />
                       </a>
@@ -1061,7 +1066,7 @@ export default function CoachSchedule() {
             <p className="text-[12px] text-white/50" style={font}>
               Tap anyone who didn't come. Saving makes this the completed session; saving again updates it.
             </p>
-            <TakeRegister eventId={sheet.row.id} coachId={user.id} sessionId={registerSession.get(sheet.row.id) ?? null}
+            <TakeRegister eventId={sheet.row.id} coachId={user.id} sessionId={registerSession.get(sheet.row.id) ?? null} squad={sheet.row.squad ?? null}
               onSaved={() => { setSheet({ kind: 'closed' }); loadData() }} />
           </div>
         </div>

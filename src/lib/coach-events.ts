@@ -46,6 +46,8 @@ export type EventForm = {
 
 export type EventRow = {
   id: string
+  /** TRAK-176: the squad it's for; null is the coach's whole roster. */
+  squad?: string | null
   title: string
   event_type: string
   starts_at: string
@@ -274,4 +276,5 @@ export const dateAsDay = (date: Date) =>
 
 /** What a new event's insert adds to formToRow(): a draft only its coach sees,
  *  until Publish (Imad, 9 Oct). Schedule's form and the quick-add share it. */
-export const newDraftFields = (coachId: string) => ({ coach_user_id: coachId, published: false, source: 'manual' })
+// TRAK-176: a new event belongs to the squad the coach has picked (null: the whole roster).
+export const newDraftFields = (coachId: string, squad: string | null = null) => ({ coach_user_id: coachId, published: false, source: 'manual', squad })

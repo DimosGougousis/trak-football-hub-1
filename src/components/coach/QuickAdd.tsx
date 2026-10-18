@@ -12,6 +12,7 @@ import { Button } from '@/components/arc/button/button'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
+import { useCoachSquad } from '@/lib/coach-squad'
 
 /* TRAK-182 part 8 (Imad, 15 Oct; plan 8a–8g): a "+" above the tab bar that
    becomes a menu, then the shortest form that makes a real record, then a
@@ -71,6 +72,8 @@ function useKeyboardInset() {
 
 export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   const { user } = useAuth()
+  // TRAK-176: a new event belongs to the squad picked; wait until the squads are known.
+  const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const keyboard = useKeyboardInset()
@@ -149,10 +152,11 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
     const form = eventForm()
     const problem = formProblem(form) ?? pastDateProblem(form.date, localTodayISO())
     if (problem) { setError(problem); return }
+    if (!coachSquad.ready) { setError(coachSquad.retry()); return }
     setSaving(true)
     // As Schedule's Save draft: a new event starts unpublished; families never see a draft.
     const { data, error: failed } = await supabase.from('coach_calendar_events')
-      .insert([{ ...formToRow(form), ...newDraftFields(user.id) }]).select('id')
+      .insert([{ ...formToRow(form), ...newDraftFields(user.id, coachSquad.squad) }]).select('id')
     setSaving(false)
     if (failed || !data?.length) { setError(clashMessage(failed) ?? "Couldn't save the draft. Check your connection and try again."); return }
     setTime(''); setOpponent(''); setHomeAway('')

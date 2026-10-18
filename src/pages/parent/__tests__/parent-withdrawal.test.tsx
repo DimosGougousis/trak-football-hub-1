@@ -66,6 +66,8 @@ beforeEach(() => {
       if (readFailure) return HttpResponse.json({ message: 'Synthetic unavailable' }, { status: 503 })
       return HttpResponse.json(active.has(child) ? [{ id: '99000000-0000-4000-8000-000000000003' }] : [])
     }),
+    // TRAK-177: both children are under their academy's consent age unless a test says otherwise.
+    http.post(endpoint('rpc/guardian_consent_applies'), () => HttpResponse.json(true)),
     http.post(endpoint('rpc/withdraw_parental_consent'), async ({ request }) => {
       const me = account(request); const body = await request.json() as { p_player_user_id: string }
       expect(Object.keys(body)).toEqual(['p_player_user_id'])
@@ -103,6 +105,38 @@ async function confirm(name = 'Amber Synthetic') {
   await userEvent.click(await screen.findByRole('button', { name: `Withdraw consent for ${name}` }))
   await userEvent.click(screen.getByRole('button', { name: `Confirm withdrawal for ${name}` }))
 }
+// TRAK-177 item 1 (live run 3, 16 Oct): a child at or over their academy's consent age
+// gives their own consent, so the guardian's Profile has no consent line for them.
+describe('parent Profile: no consent line for a child who consents for themselves', () => {
+  it('shows a line for the child the guardian approves, and none for one who decides alone', async () => {
+    active = new Set([childA])
+    server.use(http.post(endpoint('rpc/guardian_consent_applies'), async ({ request }) =>
+      HttpResponse.json((await request.json() as { p_child: string }).p_child !== childB)))
+    await open()
+    expect(await screen.findByRole('button', { name: 'Withdraw consent for Amber Synthetic' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Consent for Indigo Synthetic' })).toBeNull())
+    expect(screen.queryByText(/no active consent recorded for Indigo/)).not.toBeInTheDocument()
+  })
+
+  // Kostas's #352 review: an approval given at 14 carries over until the child chooses
+  // (player_consent_required), so the guardian must still be able to withdraw it,
+  // whatever guardian_consent_applies says.
+  it('keeps the line and Withdraw for an approval that still counts after the child reaches the consent age', async () => {
+    active = new Set([childA, childB])
+    server.use(http.post(endpoint('rpc/guardian_consent_applies'), () => HttpResponse.json(false)))
+    await open()
+    expect(await screen.findByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Withdraw consent for Amber Synthetic' })).toBeInTheDocument()
+  })
+
+  it('keeps the line when it cannot tell (the old wording, never a guess to hide it)', async () => {
+    active = new Set([childA])
+    server.use(http.post(endpoint('rpc/guardian_consent_applies'), () => HttpResponse.json({ message: 'Synthetic unavailable' }, { status: 503 })))
+    await open()
+    expect(await screen.findByText('You have no active consent recorded for Indigo Synthetic.')).toBeInTheDocument()
+  })
+})
+
 describe('parent Profile consent withdrawal through real App and SDK', () => {
   // TRAK-181 (live run 3, 16 Oct): no "Following" picker on Profile; one consent line per child.
   it('shows one consent section per child and no Following picker', async () => {

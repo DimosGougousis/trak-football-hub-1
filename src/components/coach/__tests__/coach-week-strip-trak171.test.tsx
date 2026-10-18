@@ -4,6 +4,14 @@ import { MemoryRouter } from 'react-router-dom'
 import { addDays, format, parseISO } from 'date-fns'
 import { CoachWeekStrip } from '../CoachWeekStrip'
 import { weekDays } from '@/components/trak/WeekStrip'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+
+// TRAK-176: coach screens read the coach's squads through the query cache.
+function queries() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return { wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> }
+}
 
 type Row = Record<string, unknown>
 type Reply = { data: Row[] | null; error: unknown }
@@ -72,7 +80,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       : table === 'squad_players' ? [{ id: 'sp-1', player_name: 'Bukayo Saka' }, { id: 'sp-2', player_name: 'Beth Mead' }]
       : table === 'session_attendance' ? [{ squad_player_id: 'sp-1', status: 'present' }, { squad_player_id: 'sp-2', status: 'absent' }]
       : [session('saved-training', 'Logged training', 'training'), session('saved-match', 'Logged match', 'match')]))
-    render(strip())
+    render(strip(), queries())
     await chooseMonday()
 
     expect(await screen.findByRole('button', { name: /Planned training/ })).toBeInTheDocument()
@@ -99,7 +107,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       ? ok([planned()])
       : sessionsFailed ? { data: null, error: new Error('Session read failed') }
         : ok([session('recovered', 'Recovered session', 'training')]))
-    render(strip())
+    render(strip(), queries())
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't load this week/i)
     expect(screen.queryByText('Nothing planned.')).not.toBeInTheDocument()
@@ -116,7 +124,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     database.read.mockImplementation(async table => ok(table === 'coach_calendar_events'
       ? [planned()]
       : [{ ...session('completed-training', 'Completed training', 'training'), event_id: 'planned-coach-1' }]))
-    render(strip())
+    render(strip(), queries())
     await chooseMonday()
 
     const trigger = await screen.findByRole('button', { name: /Completed training/ })
@@ -135,7 +143,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       ? [{ ...planned(), id: 'planned-match', event_type: 'match', title: 'vs Rovers', opponent: 'Rovers', home_away: 'away', kit: 'White shirts', venue: 'Rovers Park' }]
       : table === 'coach_sessions' ? [{ ...session('logged-match', 'vs Rovers', 'match'), event_id: 'planned-match', venue: null }]
       : []))
-    render(strip())
+    render(strip(), queries())
     await chooseMonday()
     fireEvent.click(await screen.findByRole('button', { name: /vs Rovers/ }))
     const sheet = await screen.findByRole('dialog', { name: /Rovers/ })
@@ -154,7 +162,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       return Promise.resolve(ok(table === 'coach_sessions'
         ? [session('new-coach', 'Current coach session', 'match', today)] : []))
     })
-    const view = render(strip())
+    const view = render(strip(), queries())
     // Finish the immediate calendar response; the first session read remains pending.
     await act(async () => {})
     view.rerender(strip('coach-2'))
@@ -174,11 +182,31 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     database.read.mockImplementation(async (table, _coachId, filter) => ok(table === 'coach_calendar_events'
       ? [planned()]
       : filter?.includes('event_id') && filter.includes('planned-coach-1') ? [moved] : []))
-    render(strip())
+    render(strip(), queries())
     await chooseMonday()
 
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Moved completed training/ })).not.toBeInTheDocument()
     expect(screen.getByText('Nothing planned.')).toBeInTheDocument()
+  })
+
+  it('TRAK-176: with two squads, the week shows the squad picked and whole-roster events only', async () => {
+    database.read.mockImplementation(async table => ok(
+      table === 'squad_players' ? [{ age_group: 'U14', status: 'active' }, { age_group: 'U16', status: 'active' }]
+      : table === 'coach_calendar_events' ? [
+        { ...planned(), id: 'e-u14', title: 'U14 training', squad: 'U14' },
+        { ...planned(), id: 'e-u16', title: 'U16 training', squad: 'U16' },
+        { ...planned(), id: 'e-all', title: 'Whole roster training', squad: null },
+      ]
+      : [{ ...session('s-u14', 'U14 logged', 'training'), squad: 'U14' }, { ...session('s-u16', 'U16 logged', 'match'), squad: 'U16' }]))
+    localStorage.setItem('trak:coach-squad:coach-1', 'U16')
+    try {
+      render(strip(), queries())
+      await chooseMonday()
+      expect(await screen.findByRole('button', { name: /U16 training/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Whole roster training/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /U16 logged/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /U14/ })).toBeNull()
+    } finally { localStorage.clear() }
   })
 })

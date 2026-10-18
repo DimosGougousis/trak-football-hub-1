@@ -14,6 +14,7 @@ import { Users, WifiOff } from 'lucide-react'
 import { fetchWaitReason } from '@/lib/wait-reason'
 import type { Tables } from '@/integrations/supabase/types'
 import { remember, remembered } from '@/lib/screen-memory'
+import { useCoachSquad } from '@/lib/coach-squad'
 
 // TRAK-180: what Squad last showed a coach (see screen-memory).
 type SquadMemory = { players: any[]; assessments: Record<string, number>; consent: Record<string, ConsentStatus> }
@@ -62,7 +63,6 @@ export default function CoachSquadPage() {
   // Whether the squad has answered at all: until then it is loading, not empty.
   const [loaded, setLoaded] = useState(Boolean(seed))
   const [posFilter, setPosFilter] = useState<string>('All')
-  const [ageFilter, setAgeFilter] = useState<string>('All')
   const [query, setQuery] = useState('')
   const [loadFailed, setLoadFailed] = useState(false)
   const [retry, setRetry] = useState(0)
@@ -73,10 +73,9 @@ export default function CoachSquadPage() {
   // Age group label: prefer the age_group text column ('U12'), fall back to legacy integer age
   const ageLabel = (p: any): string | null => p.age_group ?? (p.age != null ? String(p.age) : null)
 
-  // Derive age groups present in the squad (sorted)
-  const ageGroups = Array.from(
-    new Set(players.map(ageLabel).filter(Boolean))
-  ).sort() as string[]
+  // TRAK-176: with two squads the coach sees the one picked (here or on Home).
+  const { squads, squad, setSquad, inSquad } = useCoachSquad(user?.id)
+  const inView = players.filter(p => inSquad(ageLabel(p)))
 
   useEffect(() => {
     if (!user) return
@@ -153,13 +152,12 @@ export default function CoachSquadPage() {
   }, [user, loaded, loadFailed, players, assessments, consent])
 
   const search = query.trim().toLowerCase().replace(/^#/, '')
-  const filtered = players.filter(p => {
+  const filtered = inView.filter(p => {
     const posMatch = posFilter === 'All' || p.position?.toLowerCase() === posFilter.toLowerCase()
-    const ageMatch = ageFilter === 'All' || ageLabel(p) === ageFilter
     const searchMatch = !search || String(p.player_name ?? '').toLowerCase().includes(search) || String(p.shirt_number ?? '') === search
-    return posMatch && ageMatch && searchMatch
+    return posMatch && searchMatch
   })
-  const clearFilters = () => { setPosFilter('All'); setAgeFilter('All'); setQuery('') }
+  const clearFilters = () => { setPosFilter('All'); setQuery('') }
 
   return (
     <MobileShell>
@@ -167,18 +165,18 @@ export default function CoachSquadPage() {
           search, filters, avatar rows, and a player panel in a bottom sheet. */}
       <div className="flex items-baseline justify-between px-5 pt-4 pb-1 shrink-0">
         <h1 className="text-[22px] font-medium tracking-[-0.01em] text-white/95">Squad</h1>
-        {players.length > 0 && <p className="text-[13px] text-white/45">{players.length} {players.length === 1 ? 'player' : 'players'}</p>}
+        {inView.length > 0 && <p className="text-[13px] text-white/45">{squad ? `${squad} · ` : ''}{inView.length} {inView.length === 1 ? 'player' : 'players'}</p>}
       </div>
 
       {players.length > 0 && (
         <div className="arc px-5 pt-2 pb-3 space-y-3 shrink-0 [&_label]:sr-only">
           <SearchField label="Search players" placeholder="Name or shirt number" value={query} onValueChange={setQuery} />
-          {/* Age groups only when the coach has two or more (U14 and U16, TRAK-176). */}
-          {ageGroups.length >= 2 && (
+          {/* TRAK-176: the coach's squads, when there are two or more; the pick is shared with Home. */}
+          {squad && squads.length >= 2 && (
             <LayoutGroup id="age">
               <div className="flex justify-center">
-                <SegmentedControl label="Age group" value={ageFilter} onValueChange={setAgeFilter}
-                  options={['All', ...ageGroups].map(age => ({ value: age, label: age }))} />
+                <SegmentedControl label="Squad" value={squad} onValueChange={setSquad}
+                  options={squads.map(age => ({ value: age, label: age }))} />
               </div>
             </LayoutGroup>
           )}
