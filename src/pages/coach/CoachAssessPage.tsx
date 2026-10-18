@@ -165,7 +165,7 @@ function CoachAssessmentForm() {
     setOpenState('loading')
     void (async () => {
       const { data, error } = await supabase.from('coach_assessments')
-        .select('id, squad_player_id, session_id, created_at, coach_sessions(id, title, session_date)')
+        .select('id, squad_player_id, session_id, created_at, coach_sessions(id, title, session_date, session_type)')
         .eq('id', openId).eq('coach_user_id', userId).abortSignal(controller.signal).maybeSingle()
       if (cancelled) return
       if (error) { console.error('Opening the assessment failed:', error); setOpenState('error'); return }
@@ -312,6 +312,9 @@ function CoachAssessmentForm() {
   )
   const firstName: string = selectedPlayer?.player_name?.trim().split(/\s+/)[0] || 'the player'
   const selectedSession = sessionOptions.find(s => s.id === sessionId)
+  // TRAK-182 (live run 3, 16 Oct): a training is a training, so Started or Sub isn't asked.
+  const isTraining = selectedSession?.session_type === 'training'
+  const savedAppearance = isTraining ? 'training' : appearance
   // TRAK-100: the time it was logged tells two same-day, same-title sessions apart.
   const loggedAt = (s: any) => s.created_at
     ? ` · logged ${new Date(s.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''
@@ -372,7 +375,7 @@ function CoachAssessmentForm() {
         squad_player_id: playerId,
         // Null only for a row opened by id that predates required sessions.
         session_id: sessionId || null,
-        appearance,
+        appearance: savedAppearance,
         // raw coach inputs
         work_rate: workRate,
         tactical,
@@ -712,7 +715,7 @@ function CoachAssessmentForm() {
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
         {step === 0 && <>
         {/* ---- 4. appearance selector ---- */}
-        <div className="space-y-1.5">
+        {!isTraining && <div className="space-y-1.5">
           <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
             APPEARANCE
           </span>
@@ -721,7 +724,7 @@ function CoachAssessmentForm() {
             <OptPill label="Sub" active={appearance === 'sub'} onClick={() => setAppearance('sub')} />
             <OptPill label="Training" active={appearance === 'training'} onClick={() => setAppearance('training')} />
           </div>
-        </div>
+        </div>}
 
         </>}
         {step === 1 && <>
@@ -844,7 +847,7 @@ function CoachAssessmentForm() {
             {([
               ['Player', selectedPlayer?.player_name ?? ''],
               ['Session', selectedSession ? sessionLabel(selectedSession) : opened ? 'No session recorded' : ''],
-              ['Appearance', appearance === 'started' ? 'Started' : appearance === 'sub' ? 'Sub' : 'Training'],
+              ['Appearance', savedAppearance === 'started' ? 'Started' : savedAppearance === 'sub' ? 'Sub' : 'Training'],
               ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
               [`Message to ${firstName}`, message || 'None'],

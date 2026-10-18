@@ -141,6 +141,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   const quiet = `${button} border border-line-strong text-ink`
   const heading = 'text-[15px] font-medium text-ink mb-2'
   const updated = updatedNote(event)
+  // TRAK-182 (Imad, 16 Oct): once it has started, it's who attended, register or not.
+  const past = !!squad.data?.came || (!!row && hasStarted(row))
 
   return (
     <div className="space-y-5">
@@ -160,8 +162,9 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               {publish.isPending ? 'Publishing…' : 'Publish'}
             </button>
           )}
-          {/* A draft has nothing to share (J8.16); a cancellation is shared with its reason. */}
-          {row?.published && squad.data && (
+          {/* A draft has nothing to share (J8.16); a cancellation is shared with its reason.
+              Once it has started there's nothing to tell the group (TRAK-182, 16 Oct). */}
+          {row?.published && !hasStarted(row) && squad.data && (
             <a href={whatsAppShareUrl(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })}
               target="_blank" rel="noopener noreferrer" className={quiet}>
               <SendIcon />Share to WhatsApp
@@ -192,7 +195,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
         <section aria-labelledby={`attending-${event.id}`}>
           {/* The heading carries the count; no separate "Coming" line (Imad, 16 Oct). */}
           <h3 id={`attending-${event.id}`} className={heading}>
-            {squad.data?.came ? 'Came' : 'Attending'}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
+            {past ? 'Attended' : 'Attending'}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
           </h3>
           {!row.published ? (
             <p className="text-[13px] text-ink-2">Families see this once you publish.</p>
@@ -203,9 +206,9 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           : squad.data.coming.length + squad.data.away.length + squad.data.waiting.length === 0 ? (
             <p className="text-[13px] text-ink-2">No players in your squad yet.</p>
           ) : squad.data.came ? (
-            <People heading="Came" people={squad.data.came} />
+            <People heading="Attended" people={squad.data.came} />
           ) : <>
-            <People heading="Attending" people={squad.data.coming} />
+            <People heading={past ? 'Attended' : 'Attending'} people={squad.data.coming} />
             {squad.data.away.length > 0 && <>
               <h3 className={`${heading} mt-5`}>Can't make it · {squad.data.away.length}</h3>
               <ul className="space-y-2">

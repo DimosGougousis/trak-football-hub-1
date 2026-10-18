@@ -90,6 +90,10 @@ test.describe('TRAK-182 coach screens', () => {
     page.on('pageerror', error => errors.push(error.message))
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
     await coachBackend(context, unexpected, true)
+    // The match is tonight at 20:00 Dubai: hold the page before kick-off, or after it
+    // the sheet rightly says Attended (TRAK-182) and this check depends on the hour.
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+    await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
     await page.goto('/coach/home')
     await page.getByRole('button', { name: /Rivals FC/ }).click()
     const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
