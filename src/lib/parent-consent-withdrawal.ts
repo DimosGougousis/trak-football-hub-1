@@ -15,6 +15,7 @@ type WithdrawalDatabase = Database & { public: {
   Functions: {
     withdraw_parental_consent: { Args: { p_player_user_id: string }; Returns: number }
     withdraw_roster_consent: { Args: { p_roster_child_id: string }; Returns: number }
+    guardian_consent_applies: { Args: { p_child: string }; Returns: boolean }
   }
 } }
 
@@ -47,6 +48,14 @@ export async function hasOwnConsent(parentId: string, childId: string, signal: A
     throw new Error('Unconfirmed consent status')
   }
   return data.length > 0
+}
+
+/** TRAK-177: false only for a child at or over their academy's consent age, who
+ *  decides alone. Not knowing counts as applying: the line stays, never hidden by a guess. */
+export async function guardianConsentApplies(parentId: string, childId: string, signal: AbortSignal): Promise<boolean> {
+  const client = await parentAccount(parentId, signal)
+  const { data, error } = await client.rpc('guardian_consent_applies', { p_child: childId }).abortSignal(signal).retry(false)
+  return Boolean(error) || data !== false
 }
 
 export async function withdrawOwnConsent(parentId: string, childId: string, signal: AbortSignal): Promise<void> {
