@@ -297,6 +297,7 @@ export type Database = {
           ends_at: string | null
           end_time: string | null
           event_date: string | null
+          squad: string | null
           start_time: string | null
           event_type: string
           home_away: string | null
@@ -324,6 +325,7 @@ export type Database = {
           ends_at?: string | null
           end_time?: string | null
           event_date?: string | null
+          squad?: string | null
           start_time?: string | null
           event_type?: string
           home_away?: string | null
@@ -351,6 +353,7 @@ export type Database = {
           ends_at?: string | null
           end_time?: string | null
           event_date?: string | null
+          squad?: string | null
           start_time?: string | null
           event_type?: string
           home_away?: string | null
@@ -413,6 +416,7 @@ export type Database = {
           notes: string | null
           session_date: string | null
           session_type: string
+          squad: string | null
           title: string
           training_type: string | null
           venue: string | null
@@ -426,6 +430,7 @@ export type Database = {
           notes?: string | null
           session_date?: string | null
           session_type?: string
+          squad?: string | null
           title: string
           training_type?: string | null
           venue?: string | null
@@ -439,6 +444,7 @@ export type Database = {
           notes?: string | null
           session_date?: string | null
           session_type?: string
+          squad?: string | null
           title?: string
           training_type?: string | null
           venue?: string | null

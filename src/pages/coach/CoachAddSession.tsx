@@ -17,6 +17,7 @@ import { trainingNotes, trainingTitle } from '@/lib/session-form'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
+import { useCoachSquad } from '@/lib/coach-squad'
 
 type SquadPlayer = {
   id: string
@@ -156,9 +157,14 @@ export default function CoachAddSession() {
   // opens here with its date, opponent and home or away. The saved session
   // carries the event's id, so the event and its log are one item (16 Oct).
   const [fromEvent] = useState(() => (location.state as { fromEvent?: {
-    eventId?: string | null, date?: string | null, opponent?: string | null, homeAway?: string | null
+    eventId?: string | null, date?: string | null, opponent?: string | null, homeAway?: string | null, squad?: string | null
   } } | null)?.fromEvent ?? null)
   const eventId = fromEvent?.eventId ?? null
+  // TRAK-176: a log of an event is for the event's squad; otherwise the squad
+  // picked on Home. Null is the whole roster (a coach with one squad).
+  const coachSquad = useCoachSquad(user?.id)
+  const sessionSquad = eventId ? (fromEvent?.squad ?? null) : coachSquad.squad
+  const squadKnown = !!eventId || coachSquad.ready
   useEffect(() => {
     if (!fromEvent) return
     setType('match')
@@ -217,6 +223,10 @@ export default function CoachAddSession() {
 
   useEffect(() => {
     if (!user) return
+    // A failed squads read is a failed roster (Retry asks again), never the whole roster.
+    if (!eventId && coachSquad.failed) { setRosterFailed(true); setSquad([]); setNotReady([]); setRosterLoading(false); return }
+    // Until the squad is known, the roster waits, and so does Save.
+    if (!squadKnown) return
     // A later load supersedes this one; its late answers must not overwrite it.
     let superseded = false
     setRosterLoading(true)
@@ -231,7 +241,7 @@ export default function CoachAddSession() {
         // no players from an earlier load. Drafts stay for when a retry works.
         setRosterFailed(!!error)
         if (error) { setSquad([]); setNotReady([]); setRosterLoading(false); return }
-        const players = data ?? []
+        const players = (data ?? []).filter(p => sessionSquad == null || p.age_group?.trim() === sessionSquad)
         // J4 + G1: the database refuses any record about a child whose consent
         // is not confirmed, and one refused row fails the whole attendance
         // insert. Offer confirmed players only; name the rest. Same check as
@@ -252,7 +262,7 @@ export default function CoachAddSession() {
         setRosterLoading(false)
       })
     return () => { superseded = true }
-  }, [user, rosterAttempt])
+  }, [user, rosterAttempt, squadKnown, sessionSquad, eventId, coachSquad.failed])
 
   // TRAK-138: a register, not a pick list (Imad, 16 Oct). Once the first
   // roster is in, everyone ready counts as there and the coach taps who
@@ -280,7 +290,7 @@ export default function CoachAddSession() {
   const rosterNote = rosterFailed ? (
     <p role="alert" className="text-[12px] text-white/55 px-4 py-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       Couldn't load your squad.{' '}
-      <button type="button" onClick={() => setRosterAttempt(n => n + 1)} className="underline text-[#C8F25A]">Retry</button>
+      <button type="button" onClick={() => { if (coachSquad.failed) coachSquad.retry(); setRosterAttempt(n => n + 1) }} className="underline text-[#C8F25A]">Retry</button>
     </p>
   ) : notReady.length > 0 && (
     <p className="text-[11px] text-white/40 px-4 py-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -491,6 +501,7 @@ export default function CoachAddSession() {
         // Only the fixed labels; the coach's theme stays in the title.
         training_type: type === 'training' ? trainingTypeFrom(trainingFocus) : null,
         session_date:  date,
+        squad:         sessionSquad,
         // TRAK-138: the event this log completes. One session per event is a
         // unique index, so a second log of it is refused below.
         ...(eventId && { event_id: eventId }),
