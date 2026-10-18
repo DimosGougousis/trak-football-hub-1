@@ -56,10 +56,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 function Where() { return <p data-testid="where">{useLocation().pathname + useLocation().search}</p> }
+function From() { return <p data-testid="from">{(useLocation().state as { from?: string } | null)?.from}</p> }
 function renderStrip(events: StripEvent[], role: 'coach' | 'parent') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/home']}>
-    <Routes><Route path="*" element={<>
+    <Routes><Route path="/parent/event/:id" element={<From />} /><Route path="*" element={<>
       <WeekStrip events={events} today={new Date(`${day}T12:00:00`)} renderSheet={(e, trigger) => (
         <EventSheet event={e} role={role} trigger={trigger}>
           {role === 'coach' && <EventSheetCoach event={e} coachId="coach-1" onChanged={() => {}} />}
@@ -224,6 +225,9 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).queryByText('Beth Mead')).not.toBeInTheDocument()
     // The full page (Add to calendar, details) stays one tap away (Kostas, #310).
     expect(within(sheet).getByRole('link', { name: 'Open event page' })).toHaveAttribute('href', '/parent/event/ev-1')
+    // TRAK-182 (live run 3): the page's Back returns here, so the link says where "here" is.
+    await user.click(within(sheet).getByRole('link', { name: 'Open event page' }))
+    expect(await screen.findByTestId('from')).toHaveTextContent('/home')
   })
 
   it('says Training ground for a training and shows a cancellation', async () => {

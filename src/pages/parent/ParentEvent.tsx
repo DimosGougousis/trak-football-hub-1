@@ -9,6 +9,7 @@ import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { fetchParentEvent } from '@/lib/parent-data'
 import { changesSinceSeen, markEventOpened } from '@/lib/player-events'
+import { useEventBack } from '@/lib/event-back'
 
 /**
  * One of the selected child's events (TRAK-131, J8.8): the player's event
@@ -19,6 +20,7 @@ import { changesSinceSeen, markEventOpened } from '@/lib/player-events'
 export default function ParentEvent() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const backTo = useEventBack('/parent/events')
   const { parentId, selectedChild } = useParentChildren()
   const childId = selectedChild?.id
   const query = useQuery({
@@ -41,9 +43,9 @@ export default function ParentEvent() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4 space-y-5">
-        <button type="button" onClick={() => navigate('/parent/events')}
+        <button type="button" onClick={backTo.go}
           className="flex items-center gap-1 min-h-11 text-sm text-muted-foreground">
-          <ChevronLeft size={16} /> Events
+          <ChevronLeft size={16} /> {backTo.label}
         </button>
         <ParentFamilyContent>
           {query.isError ? <ParentLoadError message="Couldn't load this event." onRetry={() => { void query.refetch() }} />

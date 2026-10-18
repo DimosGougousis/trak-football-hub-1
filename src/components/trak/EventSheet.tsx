@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
@@ -58,6 +58,7 @@ export function EventSheet({ event, role, trigger, children }: {
   trigger: ReactElement
   children?: ReactNode
 }) {
+  const { pathname } = useLocation()
   const status = sheetStatus(event, role)
   const updated = updatedNote(event)
   const cancelled = event.status === 'cancelled'
@@ -103,7 +104,8 @@ export function EventSheet({ event, role, trigger, children }: {
         )}
         {/* Kostas's #310 review: the full page (Add to calendar, every detail) stays one tap away. */}
         {role !== 'coach' && (
-          <Link to={`/${role}/event/${event.id}`}
+          // TRAK-182: the page's Back returns here in one step.
+          <Link to={`/${role}/event/${event.id}`} state={{ from: pathname }}
             className="inline-flex min-h-11 items-center gap-2 text-[14px] text-primary focus-visible:ring-2 focus-visible:ring-primary rounded-md">
             <CalendarPlus size={16} aria-hidden="true" />Open event page
           </Link>
