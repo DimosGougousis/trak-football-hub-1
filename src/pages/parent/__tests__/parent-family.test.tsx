@@ -143,6 +143,11 @@ describe('parent family navigation', () => {
     expect(within(connections).getByText('Alex')).toBeInTheDocument()
     expect(within(connections).getByText('Zara')).toBeInTheDocument()
     expect(within(connections).getAllByText('Linked')).toHaveLength(2)
+    // TRAK-182 (live run 3): Arc's round avatars, as on the coach's screens: the
+    // parent's initials in the header, and each linked child's beside their name.
+    expect(screen.getByText('TP')).toBeInTheDocument()
+    expect(within(connections).getByText('A')).toBeInTheDocument()
+    expect(within(connections).getByText('Z')).toBeInTheDocument()
   })
 
   it('does not carry child names or match data into another parent account', async () => {
