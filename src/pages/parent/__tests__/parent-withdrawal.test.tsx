@@ -118,6 +118,17 @@ describe('parent Profile: no consent line for a child who consents for themselve
     expect(screen.queryByText(/no active consent recorded for Indigo/)).not.toBeInTheDocument()
   })
 
+  // Kostas's #352 review: an approval given at 14 carries over until the child chooses
+  // (player_consent_required), so the guardian must still be able to withdraw it,
+  // whatever guardian_consent_applies says.
+  it('keeps the line and Withdraw for an approval that still counts after the child reaches the consent age', async () => {
+    active = new Set([childA, childB])
+    server.use(http.post(endpoint('rpc/guardian_consent_applies'), () => HttpResponse.json(false)))
+    await open()
+    expect(await screen.findByRole('button', { name: 'Withdraw consent for Indigo Synthetic' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Withdraw consent for Amber Synthetic' })).toBeInTheDocument()
+  })
+
   it('keeps the line when it cannot tell (the old wording, never a guess to hide it)', async () => {
     active = new Set([childA])
     server.use(http.post(endpoint('rpc/guardian_consent_applies'), () => HttpResponse.json({ message: 'Synthetic unavailable' }, { status: 503 })))
