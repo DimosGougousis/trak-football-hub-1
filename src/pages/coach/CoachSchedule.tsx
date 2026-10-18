@@ -140,6 +140,8 @@ type Sheet =
   | { kind: 'closed' }
   | { kind: 'edit'; row: EventRow | null; form: EventForm; repeat: Repeat; scope: Scope; step: number; error: string | null }
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
+  // TRAK-168: the event just cancelled, offered to the team group.
+  | { kind: 'cancelled'; row: EventRow }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
   | { kind: 'import' }
   | { kind: 'register'; row: EventRow }
@@ -523,6 +525,13 @@ export default function CoachSchedule() {
     if (row.published || following) askToEmailFamilies()
     if (draftError) {
       setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
+      return
+    }
+    // TRAK-168 (Imad, 17 Oct): after cancelling, the coach tells the team group,
+    // so one cancelled published event is offered straight to WhatsApp.
+    // "This and following" cancels several dates, which one message can't carry.
+    if (!following && row.published) {
+      setSheet({ kind: 'cancelled', row: { ...row, ...cancelPatch(sheet.reason) } })
       return
     }
     setSheet({ kind: 'closed' })
@@ -1007,6 +1016,33 @@ export default function CoachSchedule() {
             <button onClick={() => setSheet({ kind: 'closed' })}
               className="w-full py-2 text-[13px] text-white/60" style={font}>
               Keep event
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancelled: tell the team group (TRAK-168) ─────────────────────── */}
+      {sheet.kind === 'cancelled' && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)' }}
+          onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
+          <div role="dialog" aria-label="Event cancelled"
+            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', marginBottom: 64 }}>
+            <span className="text-[16px] font-medium text-white/88 block" style={font}>Event cancelled</span>
+            <p className="text-[12px] text-white/50" style={font}>
+              It stays on everyone's schedule, marked Cancelled. Let the team group know.
+            </p>
+            {/* Nothing is sent until the coach picks a chat in WhatsApp. */}
+            <a href={whatsAppShareUrl(shareableFromRow(sheet.row, squad.label), { childNames: squad.childNames })}
+              target="_blank" rel="noopener noreferrer"
+              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2"
+              style={{ background: '#25D366', color: '#000' }}>
+              <Share2 size={16} aria-hidden="true" />Share to WhatsApp
+            </a>
+            <button onClick={() => setSheet({ kind: 'closed' })}
+              className="w-full py-2 text-[13px] text-white/60" style={font}>
+              Done
             </button>
           </div>
         </div>

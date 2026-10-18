@@ -223,6 +223,8 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.w1&select=id', body: { status: 'cancelled' } })
 
+    // TRAK-168: one cancelled week is offered to the team group; Done closes it.
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await userEvent.click(screen.getByRole('button', { name: 'Cancel Training' }))
     sheet = screen.getByRole('dialog', { name: 'Cancel event' })
@@ -242,6 +244,8 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     })
     // TRAK-135: each cancel asks for the families' email; the series is one email per person.
     await waitFor(() => expect(emailNudges).toBe(2))
+    // TRAK-168: several dates make no one message, so nothing is offered to share.
+    expect(screen.queryByRole('dialog', { name: 'Event cancelled' })).toBeNull()
   })
 
   it('publishes this and following draft weeks in one go', async () => {
