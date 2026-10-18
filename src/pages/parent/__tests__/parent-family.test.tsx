@@ -121,7 +121,7 @@ describe('parent family navigation', () => {
     expect(screen.getByText('Zara teamwork')).toBeInTheDocument()
     expect(screen.queryByText('Alex teamwork')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Matches' }))
+    await user.click(screen.getByRole('button', { name: 'Events' }))
     expect(await screen.findByText('Zara opposition')).toBeInTheDocument()
     expect(screen.getByRole('combobox')).toHaveValue('Zara')
     // TRAK-74: alerts are a bell on Home, not a tab.
@@ -143,6 +143,11 @@ describe('parent family navigation', () => {
     expect(within(connections).getByText('Alex')).toBeInTheDocument()
     expect(within(connections).getByText('Zara')).toBeInTheDocument()
     expect(within(connections).getAllByText('Linked')).toHaveLength(2)
+    // TRAK-182 (live run 3): Arc's round avatars, as on the coach's screens: the
+    // parent's initials in the header, and each linked child's beside their name.
+    expect(screen.getByText('TP')).toBeInTheDocument()
+    expect(within(connections).getByText('A')).toBeInTheDocument()
+    expect(within(connections).getByText('Z')).toBeInTheDocument()
   })
 
   it('does not carry child names or match data into another parent account', async () => {
@@ -197,7 +202,7 @@ describe('parent family navigation', () => {
     const connections = await screen.findByRole('list', { name: 'Linked children' })
     expect(await within(connections).findByText('Zara')).toBeInTheDocument()
     expect(screen.getByText('Parent account · 2 children linked')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Matches' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
     expect(await screen.findByRole('option', { name: 'Zara' })).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox'), 'Zara')
     expect(screen.getByRole('combobox')).toHaveValue('Zara')
@@ -515,7 +520,7 @@ describe('truthful parent ratings', () => {
     expect(cachedMatches?.map(row => row.id)).toEqual([
       ...historicalMatches.map(row => row.id), 'match-Backfilled',
     ])
-    await userEvent.click(screen.getByRole('button', { name: 'Matches' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
     expect((await screen.findAllByText(/opposition/))[0]).toHaveTextContent('Fixture 1 opposition')
   })
 

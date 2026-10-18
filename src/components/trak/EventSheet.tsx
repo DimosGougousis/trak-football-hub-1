@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
@@ -38,7 +38,8 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
 
 /** "Kick-off" (or "Starts") over the start time, the sheet's headline. */
 function TimeRow({ event }: { event: StripEvent }) {
-  if (event.sessionId) return null // a logged session has no start time to show
+  // A logged session has no start time of its own; a logged match shows its event's kick-off (TRAK-182).
+  if (event.sessionId && !event.time) return null
   return (
     <div>
       <p className="text-[13px] text-white/50">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
@@ -58,10 +59,14 @@ export function EventSheet({ event, role, trigger, children }: {
   trigger: ReactElement
   children?: ReactNode
 }) {
+  const { pathname } = useLocation()
   const status = sheetStatus(event, role)
   const updated = updatedNote(event)
   const cancelled = event.status === 'cancelled'
-  const meet = meetTime(event)
+  // Decided 16 Oct (TRAK-182): once an event has started, the coach's sheet drops
+  // what only mattered before it, the meet time and the note for families.
+  const past = role === 'coach' && !!event.startsAt && Date.parse(event.startsAt) <= Date.now()
+  const meet = past ? null : meetTime(event)
   const rows = ([
     cancelled && event.cancelReason ? ['Reason', event.cancelReason] : null,
     meet ? ['Meet', meet] : null,
@@ -75,7 +80,7 @@ export function EventSheet({ event, role, trigger, children }: {
       )}
     </>] : null,
     event.kit ? ['Kit', event.kit] : null,
-    event.familyNote ? ['Note', event.familyNote] : null,
+    event.familyNote && !past ? ['Note', event.familyNote] : null,
   ] as ([string, ReactNode] | null)[]).filter((row): row is [string, ReactNode] => !!row)
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
   const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgba(255,255,255,0.55)' : '#4ade80'
@@ -103,7 +108,8 @@ export function EventSheet({ event, role, trigger, children }: {
         )}
         {/* Kostas's #310 review: the full page (Add to calendar, every detail) stays one tap away. */}
         {role !== 'coach' && (
-          <Link to={`/${role}/event/${event.id}`}
+          // TRAK-182: the page's Back returns here in one step.
+          <Link to={`/${role}/event/${event.id}`} state={{ from: pathname }}
             className="inline-flex min-h-11 items-center gap-2 text-[14px] text-primary focus-visible:ring-2 focus-visible:ring-primary rounded-md">
             <CalendarPlus size={16} aria-hidden="true" />Open event page
           </Link>

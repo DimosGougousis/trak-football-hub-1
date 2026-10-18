@@ -8,6 +8,7 @@ import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { changesSinceSeen, markEventOpened, toPlayerEvent, type PlayerEvent as Event } from '@/lib/player-events'
 import { EventDetails } from '@/components/player/EventDetails'
 import { CantMakeIt } from '@/components/parent/CantMakeIt'
+import { useEventBack } from '@/lib/event-back'
 
 /**
  * The event page (TRAK-130, J8.7): every detail of one of the squad's events.
@@ -19,6 +20,7 @@ export default function PlayerEvent() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const backTo = useEventBack('/player/matches')
   const [reloadKey, setReloadKey] = useState(0)
   const [result, setResult] = useState<{ id: string; reloadKey: number; event: Event | null; failed: boolean; changes: string[] } | null>(null)
 
@@ -54,9 +56,9 @@ export default function PlayerEvent() {
 
   const current = result && result.id === id && result.reloadKey === reloadKey ? result : null
   const back = (
-    <button type="button" onClick={() => navigate('/player/matches')}
+    <button type="button" onClick={backTo.go}
       className="flex items-center gap-1 text-[13px] text-white/50">
-      <ChevronLeft size={16} /> Sessions
+      <ChevronLeft size={16} /> {backTo.label}
     </button>
   )
 

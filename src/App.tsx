@@ -59,7 +59,6 @@ const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfi
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
-const ParentEventsPage = lazy(() => import("./pages/parent/ParentEventsPage"));
 const ParentAssessments = lazy(() => import("./pages/parent/ParentAssessments"));
 const ParentAssessment = lazy(() => import("./pages/parent/ParentAssessment"));
 const ParentMatchDetail = lazy(() => import("./pages/parent/ParentMatchDetail"));
@@ -167,7 +166,8 @@ const App = () => (
             {/* Parent routes */}
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
             <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
-            <Route path="/parent/events" element={<RouteGuard allowedRole="parent"><ParentEventsPage /></RouteGuard>} />
+            {/* TRAK-171 (live run 3): one Events page for parents, the tab's; old links land there. */}
+            <Route path="/parent/events" element={<Navigate to="/parent/matches" replace />} />
             <Route path="/parent/assessments" element={<RouteGuard allowedRole="parent"><ParentAssessments /></RouteGuard>} />
             <Route path="/parent/assessment/:id" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
             <Route path="/parent/session/:sessionId/assessment" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
