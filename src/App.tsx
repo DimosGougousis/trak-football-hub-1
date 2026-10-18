@@ -56,6 +56,7 @@ const CoachSessionEdit = lazy(() => import("./pages/coach/CoachSessionEdit"));
 const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
 const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
 const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
+const CoachAssessmentsPage = lazy(() => import("./pages/coach/CoachAssessmentsPage"));
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
@@ -158,6 +159,7 @@ const App = () => (
             <Route path="/coach/manual" element={<CoachManual />} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/assess" replace /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
+            <Route path="/coach/assessments" element={<RouteGuard allowedRole="coach"><CoachAssessmentsPage /></RouteGuard>} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachRecognition /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAwardPlayer /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/schedule" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="events"><CoachSchedule /></ParkedScreen></RouteGuard>} />
