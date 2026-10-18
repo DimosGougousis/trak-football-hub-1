@@ -38,7 +38,8 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
 
 /** "Kick-off" (or "Starts") over the start time, the sheet's headline. */
 function TimeRow({ event }: { event: StripEvent }) {
-  if (event.sessionId) return null // a logged session has no start time to show
+  // A logged session has no start time of its own; a logged match shows its event's kick-off (TRAK-182).
+  if (event.sessionId && !event.time) return null
   return (
     <div>
       <p className="text-[13px] text-white/50">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>

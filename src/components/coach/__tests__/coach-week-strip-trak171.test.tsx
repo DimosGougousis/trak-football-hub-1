@@ -68,8 +68,9 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('shows logged training and match sessions alongside planned events, opening each saved session', async () => {
-    database.read.mockImplementation(async table => ok(table === 'coach_calendar_events'
-      ? [planned()]
+    database.read.mockImplementation(async table => ok(table === 'coach_calendar_events' ? [planned()]
+      : table === 'squad_players' ? [{ id: 'sp-1', player_name: 'Bukayo Saka' }, { id: 'sp-2', player_name: 'Beth Mead' }]
+      : table === 'session_attendance' ? [{ squad_player_id: 'sp-1', status: 'present' }, { squad_player_id: 'sp-2', status: 'absent' }]
       : [session('saved-training', 'Logged training', 'training'), session('saved-match', 'Logged match', 'match')]))
     render(strip())
     await chooseMonday()
@@ -82,6 +83,11 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       const sheet = await screen.findByRole('dialog', { name: title })
       expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
       expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', `/coach/sessions/${id}`)
+      // TRAK-182 (live run 3): who came and who didn't, from the saved register.
+      expect(await within(sheet).findByText('Attended · 1')).toBeInTheDocument()
+      expect(within(sheet).getByText("Didn't come · 1")).toBeInTheDocument()
+      fireEvent.click(within(sheet).getByRole('button', { name: "Show names: Didn't come" }))
+      expect(within(within(sheet).getByRole('list', { name: "Didn't come" })).getByText('Beth Mead')).toBeInTheDocument()
       fireEvent.keyDown(sheet, { key: 'Escape' })
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     }
@@ -122,6 +128,22 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Completed training' })
     expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', '/coach/sessions/completed-training')
     expect(within(sheet).queryByText(/18:00|Time to be confirmed/)).not.toBeInTheDocument()
+  })
+
+  it("TRAK-182: a logged match from its planned event shows the event's kick-off, venue and kit", async () => {
+    database.read.mockImplementation(async table => ok(table === 'coach_calendar_events'
+      ? [{ ...planned(), id: 'planned-match', event_type: 'match', title: 'vs Rovers', opponent: 'Rovers', home_away: 'away', kit: 'White shirts', venue: 'Rovers Park' }]
+      : table === 'coach_sessions' ? [{ ...session('logged-match', 'vs Rovers', 'match'), event_id: 'planned-match', venue: null }]
+      : []))
+    render(strip())
+    await chooseMonday()
+    fireEvent.click(await screen.findByRole('button', { name: /vs Rovers/ }))
+    const sheet = await screen.findByRole('dialog', { name: /Rovers/ })
+    expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
+    expect(within(sheet).getByText('18:00')).toBeInTheDocument()
+    expect(within(sheet).getByText(/Rovers Park/)).toBeInTheDocument()
+    expect(within(sheet).getByText('White shirts')).toBeInTheDocument()
+    expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
   })
 
   it('does not let a late response restore the previous coach’s sessions after an account change', async () => {

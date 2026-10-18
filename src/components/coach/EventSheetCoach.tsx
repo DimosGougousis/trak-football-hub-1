@@ -93,7 +93,7 @@ function SendIcon() {
 }
 
 /** Avatars only (Imad, 16 Oct); tapping them, "+N" included, lists the full names. */
-function People({ heading, people }: { heading: string; people: Person[] }) {
+export function People({ heading, people }: { heading: string; people: Person[] }) {
   const [open, setOpen] = useState(false)
   return <>
     {people.length > 0 && <>

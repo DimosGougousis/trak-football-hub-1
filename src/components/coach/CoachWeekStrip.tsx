@@ -4,6 +4,7 @@ import { useFeature } from '@/components/trak/parked'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
 import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
+import { LoggedAttendance } from '@/components/coach/LoggedAttendance'
 
 /**
  * TRAK-163: the coach's week on Home, drafts included (marked), so the
@@ -18,12 +19,15 @@ export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; vers
     <LoadedWeekStrip key={coachId} loadKey={`${coachId}:${version}`}
       renderSheet={(event, trigger, refresh) => (
         <EventSheet event={event} role="coach" trigger={trigger}>
-          {/* A logged session's sheet says so and opens its saved record (Imad, 16 Oct). */}
+          {/* A logged session's sheet says so, shows who came (TRAK-182) and opens its saved record (Imad, 16 Oct). */}
           {event.sessionId
-            ? <Link to={`/coach/sessions/${event.sessionId}`}
-                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-white/[0.08] text-[14px] font-medium text-white/90 focus-visible:ring-2 focus-visible:ring-primary">
-                Open session
-              </Link>
+            ? <>
+                <Link to={`/coach/sessions/${event.sessionId}`}
+                  className="flex min-h-11 w-full items-center justify-center rounded-xl bg-white/[0.08] text-[14px] font-medium text-white/90 focus-visible:ring-2 focus-visible:ring-primary">
+                  Open session
+                </Link>
+                <LoggedAttendance sessionId={event.sessionId} coachId={coachId} />
+              </>
             : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}
         </EventSheet>
       )}
@@ -43,11 +47,21 @@ export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; vers
           .order('session_date', { ascending: true })
         if (sessions.error) return { data: null, error: sessions.error }
         const completedEvents = new Set((sessions.data ?? []).map(session => session.event_id).filter(Boolean))
+        // TRAK-182 (live run 3): a logged match looks like its planned match: the event's
+        // kick-off, venue, kit and home or away, while the date is still the event's.
+        const planned = new Map((events.data ?? []).map(event => [event.id, event]))
+        const fromEvent = (session: { event_id: string | null; session_type: string | null; session_date: string | null }) => {
+          const event = session.event_id ? planned.get(session.event_id) : undefined
+          if (!event || session.session_type !== 'match' || event.event_date !== session.session_date) return {}
+          const { start_time, starts_at, kit, opponent, home_away, venue } = event
+          return { start_time, starts_at, kit, opponent, home_away, venue }
+        }
         return { error: null, data: [
           ...(events.data ?? []).filter(event => !completedEvents.has(event.id)),
           ...(sessions.data ?? []).filter(session => session.session_date && session.session_date >= from && session.session_date <= to).map(session => ({
+            ...fromEvent(session),
             id: `session:${session.id}`, sessionId: session.id, published: true,
-            title: session.title || 'Session', event_date: session.session_date, venue: session.venue,
+            title: session.title || 'Session', event_date: session.session_date, ...(session.venue && { venue: session.venue }),
             event_type: session.session_type === 'match' || session.session_type === 'training' ? session.session_type : 'other',
           })),
         ] }
