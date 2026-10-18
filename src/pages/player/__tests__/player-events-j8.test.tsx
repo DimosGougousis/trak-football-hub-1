@@ -57,7 +57,8 @@ describe('TRAK-171: player Home uses the week strip', () => {
     expect(await screen.findByRole('region', { name: 'This week' })).toBeInTheDocument()
     expect(screen.queryByText('NEXT UP')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /next up/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/matches')
+    // TRAK-171 (live run 3): the calendar button opens the player's month calendar, not Sessions.
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/calendar')
   })
 
   it('keeps cancellation details in Sessions', async () => {
