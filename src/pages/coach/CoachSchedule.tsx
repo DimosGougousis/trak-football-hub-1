@@ -141,8 +141,8 @@ type Sheet =
   | { kind: 'closed' }
   | { kind: 'edit'; row: EventRow | null; form: EventForm; repeat: Repeat; scope: Scope; step: number; error: string | null }
   | { kind: 'cancel'; row: EventRow; reason: string; scope: Scope; error: string | null }
-  // TRAK-168: the event just cancelled, offered to the team group.
-  | { kind: 'cancelled'; row: EventRow }
+  // TRAK-168: the event just cancelled, offered to the team group, and what was cancelled.
+  | { kind: 'cancelled'; row: EventRow; note: string }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
   | { kind: 'import' }
   | { kind: 'register'; row: EventRow }
@@ -532,19 +532,20 @@ export default function CoachSchedule() {
       setSheet({ ...sheet, error: `Cancelled ${data!.length} published events, but couldn't remove the unpublished drafts after them. Delete them from the schedule.` })
       return
     }
-    // TRAK-168 (Imad, 17 Oct): after cancelling, the coach tells the team group,
-    // so one cancelled published event is offered straight to WhatsApp.
-    // "This and following" cancels several dates, which one message can't carry.
-    if (!following && row.published) {
-      setSheet({ kind: 'cancelled', row: { ...row, ...cancelPatch(sheet.reason) } })
+    const removed = removedDrafts?.length ?? 0
+    const note = (data!.length > 1
+      ? `${data!.length} events cancelled. They stay on the schedule as Cancelled.`
+      : 'Event cancelled. It stays on the schedule as Cancelled.')
+      + (removed ? ` ${removed} unpublished draft${removed > 1 ? 's' : ''} removed.` : '')
+    // TRAK-168 (Imad, 17 and 18 Oct): after cancelling, the coach tells the team
+    // group, so the cancelled published event is offered straight to share.
+    // "This and following" shares this week's event only; later weeks get no message.
+    if (row.published) {
+      setSheet({ kind: 'cancelled', row: { ...row, ...cancelPatch(sheet.reason) }, note })
       return
     }
     setSheet({ kind: 'closed' })
-    const removed = removedDrafts?.length ?? 0
-    toast.success((data!.length > 1
-      ? `${data!.length} events cancelled. They stay on the schedule as Cancelled.`
-      : 'Event cancelled. It stays on the schedule as Cancelled.')
-      + (removed ? ` ${removed} unpublished draft${removed > 1 ? 's' : ''} removed.` : ''))
+    toast.success(note)
   }
 
   /** Publish or delete a week of a series: only this week, or this and following. */
@@ -1044,7 +1045,7 @@ export default function CoachSchedule() {
             style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-white/88 block" style={font}>Event cancelled</span>
             <p className="text-[12px] text-white/50" style={font}>
-              It stays on everyone's schedule, marked Cancelled. Let the team group know.
+              {sheet.note} Let the team group know.
             </p>
             {/* Nothing is sent until the coach picks a chat in WhatsApp. */}
             <a href={whatsAppShareUrl(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}

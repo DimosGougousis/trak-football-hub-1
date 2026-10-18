@@ -249,8 +249,15 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     })
     // TRAK-135: each cancel asks for the families' email; the series is one email per person.
     await waitFor(() => expect(emailNudges).toBe(2))
-    // TRAK-168: several dates make no one message, so nothing is offered to share.
-    expect(screen.queryByRole('dialog', { name: 'Event cancelled' })).toBeNull()
+    // TRAK-168 (Imad, 18 Oct): the share is still offered, for this week's event
+    // only; the following weeks get no message.
+    const done = await screen.findByRole('dialog', { name: 'Event cancelled' })
+    // What the toast used to say stays: the cancel, and the drafts removed after it.
+    expect(done).toHaveTextContent('1 unpublished draft removed.')
+    const shared = within(done).getByRole('link', { name: /Share/ })
+    const text = decodeURIComponent(new URL(shared.getAttribute('href')!).searchParams.get('text')!)
+    expect(text).toContain('/event/w1')
+    expect(text.match(/trakfootball\.com\/event\//g)).toHaveLength(1)
   })
 
   it('publishes this and following draft weeks in one go', async () => {

@@ -75,6 +75,7 @@ describe('TRAK-168: right after Cancel event, Share to WhatsApp', () => {
     expect(text).toContain('CANCELLED')
     expect(text).toContain('U14 Match vs Synthetic Rovers')
     expect(text).toContain('Pitch waterlogged')
+    expect(text).not.toContain('Rovers Park') // the event is off; no venue (Imad, 18 Oct)
     expect(text).toContain(`https://trakfootball.com/event/${LIVE.id}`)
     await userEvent.click(within(done).getByRole('button', { name: 'Done' }))
     expect(screen.queryByRole('dialog', { name: 'Event cancelled' })).toBeNull()

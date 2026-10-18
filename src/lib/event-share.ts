@@ -132,12 +132,12 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
   const side = isMatch ? (event.homeAway === 'home' ? ' (Home)' : event.homeAway === 'away' ? ' (Away)' : '') : ''
 
   // TRAK-168: Tarek's cancellation wording (option A, 18 Oct). What is off and
-  // when sit in the first two lines, which is what the chat list shows.
+  // when sit in the first two lines, which is what the chat list shows. No
+  // venue (Imad, 18 Oct): the event is off, so where it was doesn't matter.
   if (event.status === 'cancelled') {
     return [
       `*❌ CANCELLED | ${what}${side}*`,
       event.startTime ? `📅 ${day} @ ${start}` : `📅 ${day}`,
-      venue && `🏟️ ${venue}`,
       reason && `📌 Reason: ${reason}`,
       `This ${CANCELLED_NOUN[event.kind]} won't go ahead.`,
       `🔗 Event details: ${eventLink(event.id)}`,

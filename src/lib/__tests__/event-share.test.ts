@@ -56,12 +56,12 @@ describe('whatsAppShareText: the team-group templates', () => {
   })
 
   // TRAK-168: Tarek's cancellation wording (option A, 18 Oct): the date and
-  // time on one line, and the sentence names what is off.
-  it('writes a cancellation with its reason', () => {
+  // time on one line, and the sentence names what is off. No venue (Imad,
+  // 18 Oct): the event is off, so where it was doesn't matter.
+  it('writes a cancellation with its reason, and no venue', () => {
     expect(whatsAppShareText({ ...training, status: 'cancelled', cancelReason: 'Pitch waterlogged' }, opts)).toBe([
       '*❌ CANCELLED | U15 Training*',
       '📅 Tue, 13 Oct @ 18:00',
-      '🏟️ Main pitch',
       '📌 Reason: Pitch waterlogged',
       "This training won't go ahead.",
       `🔗 Event details: ${link}`,
@@ -73,7 +73,6 @@ describe('whatsAppShareText: the team-group templates', () => {
     expect(text).toBe([
       '*❌ CANCELLED | U15 Match vs Rivals FC (Away)*',
       '📅 Tue, 13 Oct @ 18:00',
-      '🏟️ Rivals Park',
       '📌 Reason: Pitch waterlogged',
       "This match won't go ahead.",
       `🔗 Event details: ${link}`,
