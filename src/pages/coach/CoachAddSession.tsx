@@ -64,7 +64,7 @@ const MATCH_POSITIONS = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as 
    so Review ends in one Save. */
 const LOG_STEPS = {
   match:    ['Match', 'Squad', 'Notes', 'Review'],
-  training: ['Session', 'Load', 'Attendance', 'Notes', 'Review'],
+  training: ['Session', 'Attendance', 'Notes', 'Review'],
   other:    ['Event', 'Attendance', 'Notes', 'Review'],
 } as const
 const RESULT_WORD = { W: 'Won', D: 'Drew', L: 'Lost' } as const
@@ -1088,8 +1088,8 @@ export default function CoachAddSession() {
               </div>
             </div>}
 
-            {/* Duration + Intensity on same card */}
-            {step === 1 && <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
+            {/* Duration + Intensity on one card, on the Notes step (TRAK-182, live run 3: four steps, as a match) */}
+            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -1149,7 +1149,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Attendance */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 1 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
                   style={{ fontFamily: 'var(--t-font-mono)' }}>
@@ -1190,7 +1190,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Notes */}
-            {step === 3 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="SESSION NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="What went well? What needs more work next session?"
