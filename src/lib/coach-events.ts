@@ -15,12 +15,15 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
 /* TRAK-159: one colour per type, everywhere events show (the coach calendar,
    the Home strip, the family lists). Founders, 12 Oct, replacing 11 Oct's
    match red: training blue, match green, other orange, cancelled red.
-   Light theme (TRAK-189): the same hues, dark enough for a white page. */
+   Light theme (TRAK-189): dark enough for a white page, and match moves to
+   purple (Imad, 18 Oct), since a green match read as the brand's buttons. A
+   blue-leaning purple, so it stays apart from training's blue with
+   deuteranopia; tournament, purple before, moves to teal. */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
   training:   '#285EA3',
-  match:      '#256C34',
+  match:      '#7B2FBE',
   other:      '#9C4516',
-  tournament: '#6845C2',
+  tournament: '#0F766E',
 }
 export const CANCELLED_COLOR = '#B42318'
 /** "No time set" on a card: a warning, unlike every type colour. */
