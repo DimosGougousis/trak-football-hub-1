@@ -5,11 +5,11 @@ import userEvent from '@testing-library/user-event'
  * TRAK-182: the match and training log is one step per screen, ending in
  * Review. Tests walk it the way a coach does: Next and "Back to <step>".
  */
-const NAMES = ['Match', 'Squad', 'Session', 'Load', 'Attendance', 'Event', 'Notes', 'Review']
+const NAMES = ['Match', 'Squad', 'Session', 'Attendance', 'Event', 'Notes', 'Review']
 const nameIn = (text: string | null) => NAMES.find(name => (text ?? '').includes(name)) ?? ''
 const current = () => nameIn(document.querySelector('[aria-current="step"]')?.textContent ?? '')
 
-/** Goes forward or back to the step named `step` (Match, Squad, Session, Load, Attendance, Notes, Review…). */
+/** Goes forward or back to the step named `step` (Match, Squad, Session, Attendance, Notes, Review…). */
 export async function logStep(step: string) {
   const order = [...document.querySelectorAll('[aria-label="Log steps"] li')].map(li => nameIn(li.textContent))
   const target = order.indexOf(step)

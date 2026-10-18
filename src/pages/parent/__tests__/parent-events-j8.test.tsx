@@ -9,14 +9,13 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
 import ParentMatches from '../ParentMatches'
 import ParentHome from '../ParentHome'
 import ParentEvent from '../ParentEvent'
-import ParentEventsPage from '../ParentEventsPage'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 
@@ -93,7 +92,7 @@ function renderAt(path: string) {
         <Routes>
           <Route path="/parent/home" element={<ParentHome />} />
           <Route path="/parent/matches" element={<ParentMatches />} />
-          <Route path="/parent/events" element={<ParentEventsPage />} />
+          <Route path="/parent/events" element={<Navigate to="/parent/matches" replace />} />
           <Route path="/parent/event/:id" element={<ParentEvent />} />
         </Routes>
       </ParentChildrenProvider>
@@ -179,7 +178,8 @@ describe('TRAK-171: parent Home calendar', () => {
   it('opens events and avoids a duplicate Next up card', async () => {
     renderAt('/parent/home')
     await screen.findByRole('region', { name: 'This week' })
-    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/parent/events')
+    // TRAK-171 (live run 3, Kostas): one Events page, the tab's, so the icon opens it.
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/parent/matches')
     expect(screen.queryByRole('region', { name: 'Next up' })).not.toBeInTheDocument()
   })
 
@@ -195,7 +195,8 @@ describe('TRAK-171: parent Home calendar', () => {
     expect(within(list).queryByText('Alex training')).not.toBeInTheDocument()
     await userEvent.click(within(list).getByRole('link', { name: /Rivals FC/ }))
     expect(await screen.findByText('Kit')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
+    // The page's own Back (the tab bar has an Events button too, TRAK-171).
+    await userEvent.click(screen.getAllByRole('button', { name: 'Events' }).find(b => !b.closest('nav'))!)
     expect(await screen.findByRole('heading', { name: 'Events' })).toBeInTheDocument()
     expect(await screen.findByText('Match vs Rivals FC (away)')).toBeInTheDocument()
   })
@@ -254,5 +255,16 @@ describe('TRAK-131: the parent\'s event page', () => {
     renderAt('/parent/event/ev-zara')
     expect(await screen.findByText("This event isn't available for Alex.")).toBeInTheDocument()
     expect(asked).toContain('Alex')
+  })
+})
+
+describe('TRAK-171 (live run 3): the parent tab is Events, one page', () => {
+  it('the tab and the page say Events; an old Events link lands on the same page', async () => {
+    renderAt('/parent/events')
+    expect(await screen.findByRole('heading', { name: 'Events' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation')).getByRole('button', { name: 'Events' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Matches' })).not.toBeInTheDocument()
+    // The page's other half, played matches and training, is there too.
+    expect(await screen.findByText(/opposition|No matches yet/)).toBeInTheDocument()
   })
 })

@@ -43,6 +43,8 @@ export interface PlayerEvent {
   updatedAt: string | null
   /** What the coach wrote for families (TRAK-161), already scrubbed by child_events(); never the coach-only notes. */
   familyNote: string | null
+  /** The start instant, where the read has it: the coach's sheet hides pre-event details once it has passed (TRAK-182). */
+  startsAt?: string | null
 }
 
 export const EVENT_KIND_LABEL: Record<EventKind, string> = {
@@ -82,6 +84,7 @@ export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null 
     sequence: Number.isInteger(sequence) && sequence > 0 ? sequence : 0,
     updatedAt: text(row.updated_at),
     familyNote: text(row[EVENT_COLUMNS.familyNote]),
+    startsAt: text(row.starts_at),
   }
 }
 
