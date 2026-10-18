@@ -62,10 +62,11 @@ describe('TRAK-174 parent match links', () => {
     expect(screen.queryByText('vs Zara linked match')).not.toBeInTheDocument()
   })
 
-  it.each(['home', 'matches'])('uses an exact session on %s and preserves legacy match details', async page => {
+  // TRAK-194: parent Home lists no matches, so the Matches tab is where match rows open.
+  it('uses an exact session on Matches and preserves legacy match details', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     clients.push(client)
-    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/parent/${page}`]}>
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/parent/matches']}>
       <ParentChildrenProvider><Routes>
         <Route path="/parent/home" element={<ParentHome />} />
         <Route path="/parent/matches" element={<ParentMatches />} />
@@ -89,10 +90,8 @@ describe('TRAK-174 parent match links', () => {
     await userEvent.click(await screen.findByRole('link', { name: /Alex legacy match/ }))
     expect(await screen.findByText('No assessment link is available for this match.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Matches' }))
-    if (page === 'matches') {
-      await userEvent.selectOptions(screen.getByLabelText('Following'), 'Zara')
-      expect(await screen.findByRole('link', { name: /Zara linked match/ })).toHaveAttribute('href', '/parent/session/Zara-exact-session/assessment')
-      expect(screen.queryByRole('link', { name: /Alex linked match/ })).not.toBeInTheDocument()
-    }
+    await userEvent.selectOptions(screen.getByLabelText('Following'), 'Zara')
+    expect(await screen.findByRole('link', { name: /Zara linked match/ })).toHaveAttribute('href', '/parent/session/Zara-exact-session/assessment')
+    expect(screen.queryByRole('link', { name: /Alex linked match/ })).not.toBeInTheDocument()
   })
 })

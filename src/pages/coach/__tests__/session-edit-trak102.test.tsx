@@ -244,6 +244,17 @@ describe('TRAK-102: a coach opens and corrects a saved training session', () => 
     expect(await dateOffered(user, 'Session date', localTodayISO())).toBe(true)
   })
 
+  // Imad's #350 review (P3): the picker can't choose tomorrow, but a session
+  // already stored with a later date must still be refused, not re-saved.
+  it('a saved session dated after today says so and cannot be saved', async () => {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, () =>
+      HttpResponse.json([{ ...TRAINING, session_date: localParts(tomorrow.toISOString()).date }])))
+    await openSaved()
+    expect(screen.getByText(/can't be dated in the future/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+  })
+
   it('a logged match opens read-only', async () => {
     renderApp('/coach/sessions/match-1')
     expect(await screen.findByText(/A logged match can't be edited yet/, undefined, { timeout: 5000 })).toBeInTheDocument()
