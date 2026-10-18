@@ -247,6 +247,7 @@ async function secondChildFixture(page: Page, context: BrowserContext) {
       if (url.pathname === '/rest/v1/rpc/get_roster_children_awaiting_consent') return json([]);
       if (url.pathname === '/rest/v1/rpc/get_my_child_logins') return json([]);
       if (url.pathname === '/rest/v1/rpc/get_my_approved_children_awaiting_signup') return json([]);
+      if (url.pathname === '/rest/v1/rpc/guardian_consent_applies') return json(true); // TRAK-177
       if (url.pathname === '/rest/v1/rpc/get_my_child_credentials') return json([]);
       // TRAK-77: Matches lists the selected child's training (a read, over POST).
       if (url.pathname === '/rest/v1/rpc/family_training_history') return json([]);
@@ -406,7 +407,7 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   const allowedPosts = new Set([
     '/rest/v1/telemetry_events', '/rest/v1/rpc/get_children_awaiting_consent', '/rest/v1/rpc/get_roster_children_awaiting_consent', '/rest/v1/rpc/get_my_child_logins', '/rest/v1/rpc/get_my_child_credentials', '/rest/v1/rpc/get_my_approved_children_awaiting_signup',
     '/rest/v1/rpc/get_my_pending_parent_invites', '/rest/v1/rpc/get_parent_invite_by_token',
-    '/rest/v1/rpc/accept_parent_invite', '/rest/v1/rpc/family_training_history', '/rest/v1/rpc/child_events',
+    '/rest/v1/rpc/accept_parent_invite', '/rest/v1/rpc/family_training_history', '/rest/v1/rpc/child_events', '/rest/v1/rpc/guardian_consent_applies',
   ]);
   expect(observed.requests.filter(request => request.method !== 'GET')
     .every(request => request.method === 'POST' && allowedPosts.has(request.path))).toBe(true);
