@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, LoadError } from '@/components/trak'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { localTodayISO } from '@/lib/event-time'
+import { dateAsDay, dayAsDate } from '@/lib/coach-events'
+import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { TRAINING_FOCUS, trainingTypeFrom } from '@/lib/training-focus'
 import {
   TRAINING_DURATIONS, TRAINING_INTENSITIES,
@@ -333,10 +335,11 @@ export default function CoachSessionEdit() {
           </div>
         )}
 
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
-          <MetadataLabel text="DATE" />
-          <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
-            className="w-full bg-transparent text-[15px] text-ink outline-none mt-2" style={{ colorScheme: 'dark' }} />
+        {/* TRAK-157: the same Arc picker as the logs; a day after today isn't offered. */}
+        <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
+          <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
+            maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+            format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
         </div>
 
         <div className="rounded-[18px] p-4 border border-line bg-surface">

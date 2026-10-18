@@ -54,11 +54,7 @@ export default function ParentProfilePage() {
         {/* Also available for a created login whose first run is unfinished. */}
         <ParentChildCredentials key={user?.id ?? 'signed-out'} />
 
-        {/* Account info */}
-        <Section label="ACCOUNT">
-          <Row label="Name" value={profile?.full_name || '—'} />
-          <Row label="Email" value={user?.email || '—'} last />
-        </Section>
+        {/* TRAK-194 (Kostas, 16 Oct): no Account block here; Settings shows the name and email, editable. */}
 
         {/* How TRAK works link */}
         <button
@@ -101,43 +97,5 @@ export default function ParentProfilePage() {
       </div>
       <NavBar role="parent" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
-  )
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="px-1 mb-2">
-        <MetadataLabel text={label} />
-      </div>
-      <div className="px-4 rounded-[18px] border border-line bg-surface">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function Row({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
-  return (
-    <div
-      className="py-3.5 flex items-center justify-between gap-3"
-      style={{ borderBottom: last ? 'none' : '1px solid rgb(var(--t-line))' }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--t-font-mono)',
-          fontSize: 9,
-          fontWeight: 500,
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          color: 'rgb(var(--t-ink-3))',
-        }}
-      >
-        {label}
-      </span>
-      <span className="text-[13px] text-ink truncate max-w-[200px]" style={{ fontFamily: 'var(--t-font)' }}>
-        {value}
-      </span>
-    </div>
   )
 }

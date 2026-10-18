@@ -37,6 +37,23 @@ describe('J8.7 Sessions: the next 3 upcoming events, then See more', () => {
     expect(within(list).getAllByRole('link')).toHaveLength(3)
   })
 
+  // TRAK-195 (Kostas, 16 Oct list, item 14): with a season of events, one tap
+  // must not dump them all. Each See more adds the next 5.
+  it('with 20 upcoming, each See more adds 5: 3, 8, 13, 18, 20, then Show fewer', async () => {
+    server.use(rpc('child_events', () => Array.from({ length: 20 }, (_, i) => event(i + 1))))
+    mount()
+    const list = await screen.findByRole('region', { name: 'Upcoming' })
+    expect(await within(list).findByText('Session 1')).toBeInTheDocument()
+    for (const [shown, left] of [[3, 17], [8, 12], [13, 7], [18, 2]]) {
+      expect(within(list).getAllByRole('link')).toHaveLength(shown)
+      await userEvent.click(within(list).getByRole('button', { name: `See more (${left})` }))
+    }
+    expect(within(list).getAllByRole('link')).toHaveLength(20)
+    expect(within(list).queryByRole('button', { name: /See more/ })).toBeNull()
+    await userEvent.click(within(list).getByRole('button', { name: 'Show fewer' }))
+    expect(within(list).getAllByRole('link')).toHaveLength(3)
+  })
+
   it('offers no button when there are 3 or fewer', async () => {
     server.use(rpc('child_events', () => [1, 2, 3].map(n => event(n))))
     mount()
