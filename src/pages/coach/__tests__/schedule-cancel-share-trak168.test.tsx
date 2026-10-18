@@ -87,6 +87,20 @@ describe('TRAK-168: right after Cancel event, Share to WhatsApp', () => {
     expect(shared(link)).toContain('CANCELLED')
   })
 
+  // TRAK-176: a coach with two squads; the message names the event's own squad,
+  // as Schedule's Share does, not the coach's larger one.
+  it("names the event's own squad", async () => {
+    rows = [{ ...LIVE, squad: 'U16' }]
+    server.use(table('squad_players', [
+      { id: 'sq-1', age_group: 'U14', status: 'active', player_name: 'Ade Okafor' },
+      { id: 'sq-2', age_group: 'U14', status: 'active', player_name: 'Ben Okoro' },
+      { id: 'sq-3', age_group: 'U16', status: 'active', player_name: 'Cal Mensah' },
+    ]))
+    await cancelWith('')
+    const link = within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('link', { name: /Share to WhatsApp/ })
+    expect(shared(link).split('\n')[0]).toBe('*❌ CANCELLED | U16 Match vs Synthetic Rovers (Away)*')
+  })
+
   it('offers nothing to share when the cancel fails', async () => {
     failCancel = true
     await cancelWith('Pitch waterlogged')

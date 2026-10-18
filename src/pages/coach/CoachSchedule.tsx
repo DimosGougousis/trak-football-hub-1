@@ -1039,7 +1039,7 @@ export default function CoachSchedule() {
               It stays on everyone's schedule, marked Cancelled. Let the team group know.
             </p>
             {/* Nothing is sent until the coach picks a chat in WhatsApp. */}
-            <a href={whatsAppShareUrl(shareableFromRow(sheet.row, squad.label), { childNames: squad.childNames })}
+            <a href={whatsAppShareUrl(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
               target="_blank" rel="noopener noreferrer"
               className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2"
               style={{ background: '#25D366', color: '#000' }}>
