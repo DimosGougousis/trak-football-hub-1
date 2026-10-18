@@ -68,7 +68,7 @@ await context.route('**/*',async route=>{
  await expect(following.getByRole('button',{name:'Zara Example'})).toBeVisible();
  await expect(page.getByText('Midfielder · Zara Academy · U15',{exact:true})).toBeVisible();
  await expect(page.getByText('Midfielder · Alex Academy · U15',{exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Matches',exact:true}).click();
+ await page.getByRole('button',{name:'Events',exact:true}).click();
  await expect(page.getByRole('combobox')).toHaveValue(zara);
  // TRAK-181: Trak draws the picker and its chevron, so Safari can't swap in its own grey bar.
  await expect(page.getByRole('combobox')).toHaveCSS('appearance','none');
@@ -212,7 +212,8 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await page.screenshot({ path: testInfo.outputPath('parent-events.png'), fullPage: true })
         await page.getByRole('link', { name: /Sibling training/ }).click()
         await expect(page.getByRole('heading', { name: 'Sibling training' })).toBeVisible()
-        await page.getByRole('button', { name: 'Events', exact: true }).click()
+        // The page's own Back, first on the page; the tab bar has an Events button too (TRAK-171, live run 3).
+        await page.getByRole('button', { name: 'Events', exact: true }).first().click()
         await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
       } else if (role === 'player') {
         await expect(page.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/matches')

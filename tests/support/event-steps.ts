@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 
 /**
  * TRAK-182: Schedule's event form is one step per screen (What, When, For
- * families, Review); an edit opens on Review. Tests walk it the way a coach
+ * families, Review); an edit opens on What, filled in. Tests walk it the way a coach
  * does: Next and "Back to <step>".
  */
 const STEPS = ['What', 'When', 'For families', 'Review'] as const

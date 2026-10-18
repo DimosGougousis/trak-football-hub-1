@@ -148,7 +148,7 @@ type Sheet =
   | { kind: 'register'; row: EventRow }
 
 /* TRAK-182 (Imad's 7c): the event form one step per screen, related fields
-   together, then Review with Publish or Save draft. An edit opens on Review,
+   together, then Review with Publish or Save draft. An edit opens on What,
    where each step can be reopened from the stepper. */
 const EVENT_STEPS = [
   { id: 'what', label: 'What' },
@@ -351,8 +351,9 @@ export default function CoachSchedule() {
 
   const openNew = (date: string) =>
     setSheet({ kind: 'edit', row: null, form: blankForm(date), repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
+  // TRAK-182 (live run 3): an edit opens on the first step, filled in, not on Review.
   const openEdit = (row: EventRow) =>
-    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', step: REVIEW, error: null })
+    setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', step: 0, error: null })
   const setForm = (patch: Partial<EventForm>) =>
     setSheet(s => {
       if (s.kind !== 'edit') return s
@@ -808,6 +809,12 @@ export default function CoachSchedule() {
             </div>
 
             {sheet.step === 0 && <>
+              {/* An edit opens here, so a weekly series asks first which weeks change:
+                  "This and following" keeps each week's own date (the When step). */}
+              {inSeries(sheet.row) && (
+                <ScopeChoice scope={sheet.scope}
+                  onChange={scope => setSheet(s => s.kind === 'edit' ? { ...s, scope, error: null } : s)} />
+              )}
               <div className="flex gap-2 flex-wrap" role="group" aria-label="Event type">
                 {EVENT_KINDS.map(t => (
                   <Chip key={t} on={sheet.form.kind === t} color={TYPE_COLOR[t]} onClick={() => setForm({ kind: t })}>
@@ -939,8 +946,9 @@ export default function CoachSchedule() {
 
             {sheet.step === REVIEW && <>
               {inSeries(sheet.row) && (
-                <ScopeChoice scope={sheet.scope}
-                  onChange={scope => setSheet(s => s.kind === 'edit' ? { ...s, scope, error: null } : s)} />
+                <p className="text-[12px] text-white/60" style={font}>
+                  {sheet.scope === 'following' ? 'Saves this week and the following weeks.' : 'Saves only this week.'}
+                </p>
               )}
               <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem} />
             </>}

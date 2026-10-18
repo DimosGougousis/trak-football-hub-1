@@ -9,6 +9,7 @@ import { ParentConnections } from '@/components/parent/ParentConnections'
 import { ParentChildCredentials } from '@/components/parent/ParentChildCredentials'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconHowItWorks } from '@/components/icons/TrakIcons'
+import { Avatar } from '@/components/arc/avatar/avatar'
 
 export default function ParentProfilePage() {
   const { user, profile } = useAuth()
@@ -25,10 +26,9 @@ export default function ParentProfilePage() {
       <div className="pt-3.5 pb-4 space-y-2.5">
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
-          <div className="w-[72px] h-[72px] rounded-[22px] overflow-hidden bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center">
-            <span className="text-2xl font-semibold text-primary" aria-hidden="true">
-              {(profile?.full_name || '?').charAt(0).toUpperCase()}
-            </span>
+          {/* TRAK-182 (live run 3): Arc's round avatar, as on the coach's screens. */}
+          <div className="flex justify-center mb-3">
+            <Avatar name={profile?.full_name || 'Parent'} size="xl" className="arc" aria-hidden />
           </div>
           <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
             {profile?.full_name || 'Parent'}

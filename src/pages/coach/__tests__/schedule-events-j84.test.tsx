@@ -294,15 +294,17 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Edit vs Synthetic Rovers' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
-    // TRAK-182: an edit opens on Review; a published event has no Publish or draft.
+    // TRAK-182 (live run 3, 16 Oct): an edit opens on the first step, filled in from the saved event.
+    expect(sheet.querySelector('[aria-current="step"]')).toHaveTextContent('What')
+    expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers')
+    await eventStep(sheet, 'When')
+    expect(timeShown('Kickoff')).toBe('6:30 PM')
+    // A published event has no Publish or draft.
+    await eventStep(sheet, 'Review')
     expect(within(sheet).getByText('Families see the change as soon as you save.')).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Save draft' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Publish' })).toBeNull()
-    // The saved event fills the form.
-    await eventStep(sheet, 'When')
-    expect(timeShown('Kickoff')).toBe('6:30 PM')
     await eventStep(sheet, 'What')
-    expect(within(sheet).getByLabelText('Opponent')).toHaveValue('Synthetic Rovers')
     const venue = within(sheet).getByLabelText('Venue')
     await userEvent.clear(venue)
     await userEvent.type(venue, 'Rovers Park Pitch 3')

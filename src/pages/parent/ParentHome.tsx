@@ -41,7 +41,7 @@ export default function ParentHome() {
     <MobileShell>
       <div className="pt-3 pb-4">
         {/* TRAK-163: calendar, the child (switcher), the bell (TRAK-74: alerts are a bell, not a tab). */}
-        <HomeHeader calendarTo="/parent/events" center={<ParentChildSwitcher />} right={<ParentAlertsBell />} />
+        <HomeHeader calendarTo="/parent/matches" center={<ParentChildSwitcher />} right={<ParentAlertsBell />} />
         {consentQuery.isError || rosterConsentQuery.isError ? (
           <ParentLoadError message="Couldn't check pending approvals." onRetry={() => { void consentQuery.refetch(); void rosterConsentQuery.refetch() }} />
         ) : waitingNames.length > 0 && parentId && (
