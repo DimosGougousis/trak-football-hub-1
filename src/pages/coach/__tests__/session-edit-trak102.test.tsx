@@ -6,6 +6,8 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { localParts, localTodayISO } from '@/lib/event-time'
+import { dateHeld, dateOffered, pickDate } from '../../../../tests/support/arc-pickers'
 import { parseTrainingNotes, parseTrainingTitle, trainingNotes, trainingTitle } from '@/lib/session-form'
 
 /**
@@ -103,7 +105,7 @@ describe('TRAK-102: a coach opens and corrects a saved training session', () => 
     // TRAK-119: the heading shows while the saved session still loads; wait for the form.
     expect(await screen.findByRole('button', { name: /^Finishing/, pressed: true })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '60 min', pressed: true })).toBeInTheDocument()
-    expect(screen.getByLabelText('Session date')).toHaveValue('2026-10-01')
+    expect(await dateHeld(user, 'Session date')).toBe('2026-10-01')
     expect(screen.getByLabelText('Notes')).toHaveValue('')
     expect(tile(/Remi Removed/)).toHaveAttribute('aria-pressed', 'true')
     expect(tile(/Anna Added/)).toHaveAttribute('aria-pressed', 'false')
@@ -137,8 +139,7 @@ describe('TRAK-102: a coach opens and corrects a saved training session', () => 
 
     await user.type(screen.getByLabelText('Notes'), 'Good first touch')
     await user.click(screen.getByRole('button', { name: /^Set Pieces/ }))
-    await user.clear(screen.getByLabelText('Session date'))
-    await user.type(screen.getByLabelText('Session date'), '2026-09-30')
+    await pickDate(user, 'Session date', '2026-09-30')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(await screen.findByText('Session updated')).toBeInTheDocument()
@@ -234,12 +235,22 @@ describe('TRAK-102: a coach opens and corrects a saved training session', () => 
     expect(attendanceWrites().filter(w => w.method === 'post')).toHaveLength(2)
   })
 
-  it('a future date blocks the save', async () => {
+  // TRAK-157: the date is Arc's picker, as on every log; a day after today isn't offered.
+  it('a day after today cannot be picked', async () => {
     const user = userEvent.setup()
     await openSaved()
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+    expect(await dateOffered(user, 'Session date', localParts(tomorrow.toISOString()).date)).toBe(false)
+    expect(await dateOffered(user, 'Session date', localTodayISO())).toBe(true)
+  })
 
-    await user.clear(screen.getByLabelText('Session date'))
-    await user.type(screen.getByLabelText('Session date'), '2099-01-01')
+  // Imad's #350 review (P3): the picker can't choose tomorrow, but a session
+  // already stored with a later date must still be refused, not re-saved.
+  it('a saved session dated after today says so and cannot be saved', async () => {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, () =>
+      HttpResponse.json([{ ...TRAINING, session_date: localParts(tomorrow.toISOString()).date }])))
+    await openSaved()
     expect(screen.getByText(/can't be dated in the future/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
   })

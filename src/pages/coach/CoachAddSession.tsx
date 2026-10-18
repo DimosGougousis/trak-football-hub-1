@@ -781,12 +781,11 @@ export default function CoachAddSession() {
               </div>
             </div>
 
-            {/* Date */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-              <MetadataLabel text="DATE" />
-              <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
-                className="w-full bg-transparent text-[15px] text-white/88 outline-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif", colorScheme: 'dark' }} />
+            {/* Date: the same Arc picker as Log training (TRAK-157, Imad 17 Oct: one picker everywhere). */}
+            <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
+                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+                format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>
 
             </>}
@@ -1199,11 +1198,11 @@ export default function CoachAddSession() {
                 style={{ fontFamily: "'DM Sans', sans-serif" }} />
             </div>}
 
-            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-              <MetadataLabel text="DATE" />
-              <input type="date" aria-label="Session date" max={localTodayISO()} value={date} onChange={e => setDate(e.target.value)}
-                className="w-full bg-transparent text-[15px] text-white/88 outline-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif", colorScheme: 'dark' }} />
+            {/* Date: the same Arc picker as Log training (TRAK-157). */}
+            {step === 0 && <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
+                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+                format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
             {step === 1 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">

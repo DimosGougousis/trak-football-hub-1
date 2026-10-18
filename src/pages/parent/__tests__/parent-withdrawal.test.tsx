@@ -163,14 +163,15 @@ describe('parent Profile consent withdrawal through real App and SDK', () => {
   it('drops the selected child history cache after withdrawal before the normal stale interval', async () => {
     await open()
     await userEvent.click(screen.getByRole('button', { name: 'Home' }))
-    await screen.findByText('Cached Amber match')
+    // TRAK-194: Home lists no matches; its summary card is the cached match data on screen.
+    await screen.findByRole('region', { name: 'Recorded matches summary' })
     expect(matchReads).toBe(1)
     await userEvent.click(screen.getByRole('button', { name: 'Profile' }))
     await confirm()
     await screen.findByText('Your consent for Amber Synthetic has been withdrawn.')
     await userEvent.click(screen.getByRole('button', { name: 'Home' }))
     await waitFor(() => expect(matchReads).toBe(2))
-    expect(screen.queryByText('Cached Amber match')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Recorded matches summary' })).not.toBeInTheDocument()
   })
   it("a confirmation for one child is only that child's, and never offers the other's", async () => {
     await open()

@@ -53,10 +53,11 @@ describe('TRAK-112: the player Sessions tab', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Training' }))
     expect(trainingShown()).not.toBeNull()
     expect(matchShown()).toBeNull()
-    expect(screen.queryByText(/No matches found/)).toBeNull()
+    expect(screen.queryByText(/No past .*matches yet/)).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: 'Cup' }))
-    expect(screen.getByText(/No matches found/)).toBeInTheDocument()
+    // TRAK-170: the list is past matches, so it says so, for the chosen competition.
+    expect(screen.getByText('No past cup matches yet.')).toBeInTheDocument()
     expect(trainingShown()).toBeNull()
   })
 })

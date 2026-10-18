@@ -46,7 +46,7 @@ await context.route('**/*',async route=>{
    expect(u.searchParams.get('withdrawn_at')).toBe('is.null');
    return json([]);
  }
- if(u.pathname==='/rest/v1/player_details') return json([{position:'Midfielder',current_club:'Synthetic Academy',age_group:'U15'}]);
+ if(u.pathname==='/rest/v1/player_details') return json([{position:'Midfielder',current_club:u.searchParams.get('user_id')===`eq.${zara}`?'Zara Academy':'Alex Academy',age_group:'U15'}]);
  if(u.pathname==='/rest/v1/squad_players') return json([{id:u.searchParams.get('linked_player_id')?.slice(3)}]);
  if(u.pathname==='/rest/v1/coach_assessments') return json([{id:'assessment',created_at:'2026-09-01T12:00:00Z',coach_user_id:coach,coach_rating:0,work_rate:0,tactical:0,attitude:0,technical:0,physical:0,coachability:0}]);
  if(u.pathname==='/rest/v1/recognition_awards') return json([]);
@@ -60,13 +60,14 @@ await context.route('**/*',async route=>{
  // TRAK-163: Home's header names the followed child; with siblings it is a menu.
  const following=page.getByRole('group',{name:'Following'});
  await expect(following.getByRole('button',{name:'Alex Example'})).toBeVisible();
- await expect(page.getByText('Alex Opposition',{exact:true})).toBeVisible();
+ // TRAK-194: Home lists no matches; each child's line says whose Home it is.
+ await expect(page.getByText('Midfielder · Alex Academy · U15',{exact:true})).toBeVisible();
  await page.screenshot({path:testInfo.outputPath('home-mobile.png'),fullPage:true});
  await following.getByRole('button').click();
  await page.getByRole('menuitem',{name:'Zara Example'}).click();
  await expect(following.getByRole('button',{name:'Zara Example'})).toBeVisible();
- await expect(page.getByText('Zara Opposition',{exact:true})).toBeVisible();
- await expect(page.getByText('Alex Opposition',{exact:true})).toHaveCount(0);
+ await expect(page.getByText('Midfielder · Zara Academy · U15',{exact:true})).toBeVisible();
+ await expect(page.getByText('Midfielder · Alex Academy · U15',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Matches',exact:true}).click();
  await expect(page.getByRole('combobox')).toHaveValue(zara);
  // TRAK-181: Trak draws the picker and its chevron, so Safari can't swap in its own grey bar.
@@ -95,8 +96,8 @@ await context.route('**/*',async route=>{
  await page.keyboard.press('Escape');
  await expect(alertsSheet).toHaveCount(0);
  await expect(following.getByRole('button',{name:'Zara Example'})).toBeVisible();
- await expect(page.getByText('Zara Opposition',{exact:true})).toBeVisible();
- await expect(page.getByText('Alex Opposition',{exact:true})).toHaveCount(0);
+ await expect(page.getByText('Midfielder · Zara Academy · U15',{exact:true})).toBeVisible();
+ await expect(page.getByText('Midfielder · Alex Academy · U15',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Profile',exact:true}).click();
  await expect(page.getByText('Parent account · 2 children linked',{exact:true})).toBeVisible();
  // TRAK-181: no "Following" picker on Profile; each child has a consent line.

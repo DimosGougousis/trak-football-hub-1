@@ -1,5 +1,5 @@
 /** TRAK-172: parent history is bands-only, child-scoped, and reaches older records. */
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -112,6 +112,14 @@ function renderAt(path = '/parent/home') {
   </MemoryRouter></QueryClientProvider>)
 }
 
+// TRAK-194: cards and rows lead with the date and never name the coach; each links to its own assessment.
+const href = (id: string) => `/parent/assessment/${id}`
+const findLinkTo = (id: string) => waitFor(() => {
+  const link = document.querySelector(`a[href="${href(id)}"]`)
+  expect(link).not.toBeNull()
+  return link!
+})
+
 function expectBandsOnlyReads() {
   expect(assessmentRequests.length).toBeGreaterThan(0)
   for (const params of assessmentRequests) {
@@ -128,13 +136,14 @@ describe('TRAK-172 parent assessment history', () => {
     renderAt()
     const region = await screen.findByRole('region', { name: 'Latest coach assessment' })
     const first = await within(region).findByRole('group', { name: 'Assessment 1 of 5' })
-    expect(within(first).getByText('Coach Alex-assessment-1')).toBeInTheDocument()
+    expect(within(first).getByRole('link', { name: 'Open assessment' })).toHaveAttribute('href', href('Alex-assessment-1'))
+    expect(within(first).queryByText(/^Coach /)).not.toBeInTheDocument()
     expect(within(first).getAllByText('Work Rate')).toHaveLength(1)
     expect(within(region).getByRole('button', { name: 'Previous assessment' })).toBeDisabled()
     for (let index = 2; index <= 5; index++) {
       await user.click(within(region).getByRole('button', { name: 'Next assessment' }))
       const card = within(region).getByRole('group', { name: `Assessment ${index} of 5` })
-      expect(within(card).getByText(`Coach Alex-assessment-${index}`)).toBeInTheDocument()
+      expect(within(card).getByRole('link', { name: 'Open assessment' })).toHaveAttribute('href', href(`Alex-assessment-${index}`))
       expect(within(region).queryByRole('group', { name: `Assessment ${index - 1} of 5` })).not.toBeInTheDocument()
       expect(within(card).getAllByText('Work Rate')).toHaveLength(1)
     }
@@ -143,7 +152,7 @@ describe('TRAK-172 parent assessment history', () => {
     expect(within(region).queryByRole('group', { name: /^Assessment \d/ })).not.toBeInTheDocument()
     expect(within(region).getByRole('button', { name: 'Next assessment' })).toBeDisabled()
     await user.click(within(region).getByRole('button', { name: 'Previous assessment' }))
-    expect(within(within(region).getByRole('group', { name: 'Assessment 5 of 5' })).getByText('Coach Alex-assessment-5')).toBeInTheDocument()
+    expect(within(within(region).getByRole('group', { name: 'Assessment 5 of 5' })).getByRole('link', { name: 'Open assessment' })).toHaveAttribute('href', href('Alex-assessment-5'))
     expectBandsOnlyReads()
   })
 
@@ -153,9 +162,9 @@ describe('TRAK-172 parent assessment history', () => {
     await within(region).findByRole('group', { name: 'Assessment 1 of 5' })
     await userEvent.click(within(region).getByRole('button', { name: 'Next assessment' }))
     await followChild('Zara')
-    expect(await screen.findByText('Coach Zara-assessment-1')).toBeInTheDocument()
+    await findLinkTo('Zara-assessment-1')
     const siblingRegion = screen.getByRole('region', { name: 'Latest coach assessment' })
-    expect(within(siblingRegion).queryByText(/Coach Alex/)).not.toBeInTheDocument()
+    expect(siblingRegion.querySelector('a[href^="/parent/assessment/Alex"]')).toBeNull()
     expect(within(siblingRegion).getByRole('button', { name: 'Previous assessment' })).toBeDisabled()
     expectBandsOnlyReads()
   })
@@ -172,12 +181,12 @@ describe('TRAK-172 parent assessment history', () => {
   it('reaches assessments older than the old ten-record limit and loads the next page', async () => {
     renderAt('/parent/assessments')
     expect(await screen.findByRole('heading', { name: 'Assessments' })).toBeInTheDocument()
-    expect(await screen.findByText('Coach Alex-assessment-11')).toBeInTheDocument()
-    expect(screen.queryByText('Coach Alex-assessment-24')).not.toBeInTheDocument()
+    await findLinkTo('Alex-assessment-11')
+    expect(document.querySelector(`a[href="${href('Alex-assessment-24')}"]`)).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }))
-    expect(await screen.findByText('Coach Alex-assessment-24')).toBeInTheDocument()
+    await findLinkTo('Alex-assessment-24')
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Coach Alex-assessment-24/ })).toHaveAttribute('href', '/parent/assessment/Alex-assessment-24')
+    expect(screen.queryByText(/^Coach /)).not.toBeInTheDocument() // TRAK-194: rows lead with the date, no coach name
     expectBandsOnlyReads()
   })
 
@@ -188,31 +197,30 @@ describe('TRAK-172 parent assessment history', () => {
     expect(screen.queryByText('No assessments are available for this child.')).not.toBeInTheDocument()
     failAssessments = false
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(await screen.findByText('Coach Alex-assessment-1')).toBeInTheDocument()
+    await findLinkTo('Alex-assessment-1')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expectBandsOnlyReads()
   })
 
   it('clears previously visible bands when consent is withdrawn before loading more', async () => {
     renderAt('/parent/assessments')
-    expect(await screen.findByText('Coach Alex-assessment-20')).toBeInTheDocument()
+    await findLinkTo('Alex-assessment-20')
     hiddenAssessments = true // Current permission checks now make all Alex records inaccessible.
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }))
     expect(await screen.findByText('No assessments are available for this child.')).toBeInTheDocument()
-    expect(screen.queryByText(/Coach Alex/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Coach Alex/ })).not.toBeInTheDocument()
+    expect(document.querySelector('a[href^="/parent/assessment/Alex"]')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
     expectBandsOnlyReads()
   })
 
   it('clears the expanded history when changing to a sibling', async () => {
     renderAt('/parent/assessments')
-    await screen.findByText('Coach Alex-assessment-11')
+    await findLinkTo('Alex-assessment-11')
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }))
-    await screen.findByText('Coach Alex-assessment-24')
+    await findLinkTo('Alex-assessment-24')
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Following' }), 'Zara')
-    expect(await screen.findByText('Coach Zara-assessment-1')).toBeInTheDocument()
-    expect(screen.queryByText(/Coach Alex/)).not.toBeInTheDocument()
+    await findLinkTo('Zara-assessment-1')
+    expect(document.querySelector('a[href^="/parent/assessment/Alex"]')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument()
     expectBandsOnlyReads()
   })
@@ -223,9 +231,9 @@ describe('TRAK-172 parent assessment history', () => {
   ])('opens only the exact selected-child assessment at %s', async (path, field, filter) => {
     renderAt(path)
     expect(await screen.findByRole('heading', { name: 'Coach assessment' })).toBeInTheDocument()
-    expect(await screen.findByText('Coach Alex-assessment-12')).toBeInTheDocument()
+    expect(await screen.findByText('2 Oct')).toBeInTheDocument() // Alex-assessment-12's date
     expect(screen.getAllByText('Work Rate')).toHaveLength(1)
-    expect(screen.queryByText('Coach Alex-assessment-1')).not.toBeInTheDocument()
+    expect(screen.queryByText('13 Oct')).not.toBeInTheDocument() // Alex-assessment-1's date
     expect(assessmentRequests.every(params => params.get(field) === filter)).toBe(true)
     expectBandsOnlyReads()
   })
@@ -234,7 +242,7 @@ describe('TRAK-172 parent assessment history', () => {
     assessments.push({ ...makeAssessment('Alex', 12), id: 'Alex-assessment-12b', coach_user_id: 'Alex-coach-12b',
       created_at: '2026-10-14T12:00:00.000Z' })
     renderAt('/parent/session/Alex-session-12/assessment')
-    expect(await screen.findByText('Coach Alex-assessment-12b')).toBeInTheDocument()
+    expect(await screen.findByText('14 Oct')).toBeInTheDocument() // 12b, the newer one
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expectBandsOnlyReads()
   })
@@ -246,7 +254,7 @@ describe('TRAK-172 parent assessment history', () => {
     'does not disclose sibling bands through a direct URL at %s', async (path, message) => {
       renderAt(path)
       expect(await screen.findByText(message)).toBeInTheDocument()
-      expect(screen.queryByText('Coach Zara-assessment-1')).not.toBeInTheDocument()
+      expect(screen.queryByText('13 Oct')).not.toBeInTheDocument() // Zara-assessment-1's date
       expect(screen.queryByText('Work Rate')).not.toBeInTheDocument()
       expect(assessmentRequests.every(params => params.get('squad_player_id') === 'in.(Alex-squad)')).toBe(true)
       expectBandsOnlyReads()

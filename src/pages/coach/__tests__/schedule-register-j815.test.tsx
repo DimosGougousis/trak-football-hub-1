@@ -6,6 +6,7 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { dateHeld } from '../../../../tests/support/arc-pickers'
 
 /**
  * TRAK-138 (J8.15), part 2: after the event, the coach takes the register
@@ -192,7 +193,7 @@ describe('J8.15: the coach takes the register from the schedule', () => {
     const opponent = await screen.findByPlaceholderText('Opponent name')
     // The screen fills it in just after it first draws.
     await waitFor(() => expect(opponent).toHaveValue('Synthetic Rovers'))
-    expect(screen.getAllByLabelText('Session date')[0]).toHaveValue(DAY)
+    expect(await dateHeld(user, 'Session date')).toBe(DAY)
     expect(screen.getByRole('button', { name: 'Away' })).toHaveAttribute('aria-pressed', 'true')
   }, 20_000)
 })
