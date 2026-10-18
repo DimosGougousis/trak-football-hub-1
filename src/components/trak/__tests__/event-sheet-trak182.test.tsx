@@ -168,13 +168,17 @@ describe('TRAK-182: the event sheet', () => {
   it('offers no Cancel once a match has started (a match has no register)', async () => {
     eventRow = row({ published: true, starts_at: '2020-01-01T13:00:00Z', event_date: '2020-01-01' })
     const user = userEvent.setup()
-    renderStrip([event({})], 'coach')
+    renderStrip([event({ startsAt: '2020-01-01T13:00:00Z' })], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
+    // Decided 16 Oct: a past event's sheet has no meet time and no family note; the kit stays.
+    expect(within(sheet).queryByText('Meet')).toBeNull()
+    expect(within(sheet).queryByText('Bring water')).toBeNull()
+    expect(within(sheet).getByText('White')).toBeInTheDocument()
   })
 
   // Kostas's #310 review: counted as the register counts, and no guessing on a failed read.

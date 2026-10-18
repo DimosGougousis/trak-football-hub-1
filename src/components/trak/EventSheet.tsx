@@ -63,7 +63,10 @@ export function EventSheet({ event, role, trigger, children }: {
   const status = sheetStatus(event, role)
   const updated = updatedNote(event)
   const cancelled = event.status === 'cancelled'
-  const meet = meetTime(event)
+  // Decided 16 Oct (TRAK-182): once an event has started, the coach's sheet drops
+  // what only mattered before it, the meet time and the note for families.
+  const past = role === 'coach' && !!event.startsAt && Date.parse(event.startsAt) <= Date.now()
+  const meet = past ? null : meetTime(event)
   const rows = ([
     cancelled && event.cancelReason ? ['Reason', event.cancelReason] : null,
     meet ? ['Meet', meet] : null,
@@ -77,7 +80,7 @@ export function EventSheet({ event, role, trigger, children }: {
       )}
     </>] : null,
     event.kit ? ['Kit', event.kit] : null,
-    event.familyNote ? ['Note', event.familyNote] : null,
+    event.familyNote && !past ? ['Note', event.familyNote] : null,
   ] as ([string, ReactNode] | null)[]).filter((row): row is [string, ReactNode] => !!row)
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
   const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgba(255,255,255,0.55)' : '#4ade80'
