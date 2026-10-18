@@ -78,10 +78,9 @@ async function logFromEvent(user: ReturnType<typeof userEvent.setup>) {
   await logStep('Squad')
 }
 
-/** Minutes and no goals or assists for each player already marked played. */
+/** No goals or assists for each player already marked played (the quick log asks no minutes, TRAK-198). */
 async function completePlayed(user: ReturnType<typeof userEvent.setup>, names: string[]) {
   for (const name of names) {
-    await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${name}` }), '60')
     await user.click(screen.getByRole('button', { name: `One fewer goals for ${name}` }))
     await user.click(screen.getByRole('button', { name: `One fewer assists for ${name}` }))
   }

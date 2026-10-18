@@ -160,9 +160,12 @@ export function computeMatchScore(input: MatchInput): number {
   else if (input.body_condition === 'tired') modifiers -= 0.05
   else if (input.body_condition === 'knock') modifiers -= 0.15
 
-  // Minutes played
-  if (input.minutes_played >= 75) modifiers += 0.1
-  else if (input.minutes_played < 45) modifiers -= 0.1
+  // Minutes played. Not recorded (TRAK-198): no modifier, where `null < 45`
+  // would otherwise count as a short game.
+  if (input.minutes_played !== null) {
+    if (input.minutes_played >= 75) modifiers += 0.1
+    else if (input.minutes_played < 45) modifiers -= 0.1
+  }
 
   // Position-specific modifiers
   modifiers += getPositionModifiers(input.position, input.position_inputs)
