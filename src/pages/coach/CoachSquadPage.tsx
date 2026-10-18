@@ -286,7 +286,8 @@ function StatusChip({ status }: { status: ConsentStatus }) {
 }
 
 /** TRAK-182 (Imad, 18 Oct; pilot coach's item 15): training attendance, read when the panel opens.
-    Nothing while loading, on a failed read, or before any training is recorded (never a false 0%). */
+    Nothing while loading, on a failed read, before any training counts (never a false 0%), or for a
+    child waiting for a parent (they can't be ticked). Same rules as Home's Player overview. */
 function AttendanceLine({ player }: { player: SquadRow }) {
   const { user } = useAuth()
   const rate = useQuery({
@@ -316,7 +317,7 @@ function PlayerPanel({ player, age, score, status, trigger }: {
             <div className="flex items-center gap-2 text-[13px] text-white/60">
               {score !== null ? <>Latest band <BandPill band={scoreToBand(score)} /></> : 'Not assessed yet'}
             </div>
-            <AttendanceLine player={player} />
+            {status === 'ready' && <AttendanceLine player={player} />}
           </div>
         </div>
         <div className="flex gap-2">
