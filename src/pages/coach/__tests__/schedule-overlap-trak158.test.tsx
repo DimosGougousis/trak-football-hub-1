@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { saveEventWith } from '../../../../tests/support/event-steps'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -80,7 +81,7 @@ describe('TRAK-158: an overlap is refused with the clash named', () => {
     await open('Fitness')
     await userEvent.click(screen.getByRole('button', { name: 'Edit Fitness' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+    await saveEventWith(sheet, 'Save changes')
     expect(await within(sheet).findByRole('alert')).toHaveTextContent(CLASH)
     expect(within(sheet).getByRole('alert')).not.toHaveTextContent(/connection/)
   }, 20_000)
@@ -92,7 +93,7 @@ describe('TRAK-158: an overlap is refused with the clash named', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit Training' }))
     const sheet = screen.getByRole('dialog', { name: 'Edit event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Save changes' }))
+    await saveEventWith(sheet, 'Save changes')
     expect(await within(sheet).findByRole('alert')).toHaveTextContent(`Saved 1 of 2 weeks. ${CLASH}`)
   }, 20_000)
 
