@@ -45,17 +45,19 @@ export default function PlayerCalendar() {
     return () => { stale = true }
   }, [user, month, attempt])
 
-  // TRAK-183: at or above their academy's consent age, a player says "Can't make it" for themselves, as on Home.
+  // TRAK-183: at or above their academy's consent age, a player says "Can't make it" for themselves,
+  // as on Home, once their consent is in place (no button that can only fail).
   const consent = useQuery({
     queryKey: ['player', 'consent-status', user?.id],
     enabled: Boolean(user),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('my_consent_status' as never)
       if (error) throw error
-      return data as { age?: number | null; consent_age?: number | null } | null
+      return data as { required?: boolean; age?: number | null; consent_age?: number | null } | null
     },
   })
-  const forThemselves = consent.data?.age != null && consent.data.consent_age != null && consent.data.age >= consent.data.consent_age
+  const forThemselves = consent.data?.required === false && consent.data.age != null && consent.data.consent_age != null
+    && consent.data.age >= consent.data.consent_age
 
   const events = loaded?.month === day(month) ? loaded.events : null
   const onDay = (date: string) => (events ?? []).filter(e => e.date === date).sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'))

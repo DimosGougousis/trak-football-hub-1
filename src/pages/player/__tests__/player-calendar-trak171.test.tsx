@@ -8,10 +8,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc, rpcRows, rpcError } from '../../../../tests/msw/supabase'
+import { table, rpc, rpcRows, rpcError, SUPABASE_URL } from '../../../../tests/msw/supabase'
 
 const PLAYER = { id: 'player-calendar-171' }
 const event = (id: string, extra: Record<string, unknown> = {}) => ({
@@ -69,5 +70,32 @@ describe("TRAK-171: the player's month calendar", () => {
     expect(await screen.findByText(/couldn't load your calendar/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
     expect(screen.queryByText('Nothing planned.')).toBeNull()
+  })
+
+  // TRAK-183 rule, as on Home: Can't make it only once the player's own
+  // consent is in place; before that the server refuses, so no button.
+  // One player per case: the app's query cache is shared, keyed by user.
+  it.each([
+    [false, 'shown'],
+    [true, 'hidden'],
+  ])("a 16-year-old at a consent-age-15 academy, consent required = %s: Can't make it is %s", async (required, expected) => {
+    signInAs({ id: `player-calendar-171-consent-${required}` })
+    setup()
+    server.use(
+      rpc('my_consent_status', () => ({ required, age: 16, consent_age: 15, threshold: 18, own_choice: true })),
+      http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json([{ id: 'squad-1' }])),
+      http.get(`${SUPABASE_URL}/rest/v1/event_absences`, () => HttpResponse.json([])),
+    )
+    renderApp('/player/calendar')
+    // TRAINING (17 Nov, 13:30 UTC) is still ahead of the test clock.
+    await userEvent.click(await within(await screen.findByRole('grid', { name: /November 2026/ })).findByRole('gridcell', { name: /17 November 2026/ }))
+    await userEvent.click(await within(screen.getByRole('region', { name: 'Day' })).findByRole('button', { name: /Finishing/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'Finishing' })
+    if (expected === 'shown') expect(await within(sheet).findByRole('button', { name: "Can't make it" })).toBeInTheDocument()
+    else {
+      // Give the consent read time to land before asserting absence.
+      await new Promise(resolve => setTimeout(resolve, 200))
+      expect(within(sheet).queryByRole('button', { name: "Can't make it" })).toBeNull()
+    }
   })
 })
