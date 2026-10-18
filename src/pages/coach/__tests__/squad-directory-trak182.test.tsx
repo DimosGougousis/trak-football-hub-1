@@ -87,4 +87,26 @@ describe('TRAK-182: the Squad directory', () => {
     const picker = await screen.findByRole('combobox', { name: 'Player' })
     await waitFor(() => expect(picker).toHaveValue('sq-luka'))
   })
+
+  // TRAK-182 (Imad, 18 Oct; pilot coach's item 15): the panel shows training attendance.
+  it("shows the player's training attendance", async () => {
+    const user = userEvent.setup()
+    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U14')
+    server.use(
+      table('squad_players', [
+        { id: 'sq-luka', coach_user_id: COACH.id, player_name: 'Luka Modric', position: 'Midfielder', shirt_number: 10, age_group: 'U14', created_at: '2026-09-01T00:00:00Z' },
+        { id: 'sq-virgil', coach_user_id: COACH.id, player_name: 'Virgil van Dijk', position: 'Defender', shirt_number: 4, age_group: 'U16', created_at: '2026-09-01T00:00:00Z' },
+      ]),
+      table('coach_sessions', Array.from({ length: 10 }, (_, i) => ({ id: `t${i}`, squad: 'U14', session_date: `2026-10-${String(i + 1).padStart(2, '0')}` }))),
+      http.get(`${SUPABASE_URL}/rest/v1/session_attendance`, ({ request }) => {
+        const player = new URL(request.url).searchParams.get('squad_player_id')?.replace('eq.', '')
+        return HttpResponse.json(player === 'sq-luka' ? ['t0', 't1', 't2', 't3', 't4', 't5', 't6'].map(session_id => ({ session_id })) : [])
+      }),
+    )
+    renderApp('/coach/squad')
+    await user.click(await screen.findByRole('button', { name: /Luka Modric/ }))
+    const luka = await screen.findByRole('dialog', { name: 'Luka Modric' })
+    expect(await within(luka).findByText('Attendance 70%')).toBeInTheDocument()
+    expect(within(luka).getByText('7 of 10 trainings')).toBeInTheDocument()
+  })
 })
