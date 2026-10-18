@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { Button } from '@/components/ui/button'
-import { consentRequest, hasOwnConsent, withdrawOwnConsent } from '@/lib/parent-consent-withdrawal'
+import { consentRequest, guardianConsentApplies, hasOwnConsent, withdrawOwnConsent } from '@/lib/parent-consent-withdrawal'
 
-type State = 'loading' | 'active' | 'confirm' | 'writing' | 'none' | 'done' | 'read-error' | 'write-error'
+type State = 'hidden' | 'loading' | 'active' | 'confirm' | 'writing' | 'none' | 'done' | 'read-error' | 'write-error'
 
 function ChildConsent({ parentId, childId, childName }: { parentId: string; childId: string; childName: string }) {
   const cache = useQueryClient()
@@ -19,7 +19,9 @@ function ChildConsent({ parentId, childId, childName }: { parentId: string; chil
     setState('loading')
     try {
       const active = await consentRequest(request, () => hasOwnConsent(parentId, childId, request.signal))
-      if (mounted.current && current.current === request) setState(active ? 'active' : 'none')
+      // TRAK-177: no line for a child who gives their own consent (at or over the academy's age).
+      const applies = active || await guardianConsentApplies(parentId, childId, request.signal).catch(() => true)
+      if (mounted.current && current.current === request) setState(active ? 'active' : applies ? 'none' : 'hidden')
     } catch {
       if (mounted.current && current.current === request) setState('read-error')
     }
@@ -53,6 +55,7 @@ function ChildConsent({ parentId, childId, childName }: { parentId: string; chil
     }
   }
 
+  if (state === 'hidden') return null
   return <section aria-label={`Consent for ${childName}`} className="rounded-xl border border-border bg-card p-4 space-y-3">
     <h2 className="text-base font-medium text-foreground">Consent for {childName}</h2>
     {state === 'loading' && <p role="status" className="text-sm text-muted-foreground">Checking consent…</p>}

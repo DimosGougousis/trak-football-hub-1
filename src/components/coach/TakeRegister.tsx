@@ -20,6 +20,8 @@ interface TakeRegisterProps {
   coachId: string
   /** The completed session this event already has, if the register was taken. */
   sessionId: string | null
+  /** TRAK-176: the event's squad; null is the whole roster. */
+  squad?: string | null
   onSaved: () => void
 }
 
@@ -32,7 +34,7 @@ type Loaded = {
 const font = { fontFamily: 'var(--t-font)' }
 const SAVE_FAILED = "Couldn't save the register. Check your connection and save again; your ticks are still here."
 
-export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegisterProps) {
+export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = null, onSaved }: TakeRegisterProps) {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -46,14 +48,14 @@ export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegis
     setLoadFailed(false)
     ;(async () => {
       const [squad, absences, attendance] = await Promise.all([
-        supabase.from('squad_players').select('id, player_name, status').eq('coach_user_id', coachId).order('player_name'),
+        supabase.from('squad_players').select('id, player_name, age_group, status').eq('coach_user_id', coachId).order('player_name'),
         supabase.from('event_absences').select('squad_player_id, reason').eq('event_id', eventId),
         sessionId
           ? supabase.from('session_attendance').select('squad_player_id, status').eq('session_id', sessionId)
           : Promise.resolve({ data: null, error: null }),
       ])
       if (squad.error || absences.error || attendance.error) throw new Error('register read failed')
-      const rows = (squad.data ?? []).filter(p => p.status !== 'coach_departed')
+      const rows = (squad.data ?? []).filter(p => p.status !== 'coach_departed' && (eventSquad == null || p.age_group?.trim() === eventSquad))
       // Same check as the J4 screens; a failed check counts as not confirmed.
       const required = await Promise.all(rows.map(p =>
         supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
@@ -75,7 +77,7 @@ export function TakeRegister({ eventId, coachId, sessionId, onSaved }: TakeRegis
       setPresent(first)
     })().catch(() => { if (!superseded) setLoadFailed(true) })
     return () => { superseded = true }
-  }, [eventId, coachId, sessionId, attempt])
+  }, [eventId, coachId, sessionId, eventSquad, attempt])
 
   const names = useMemo(() => new Map([...(loaded?.players ?? []), ...(loaded?.notReady ?? [])].map(p => [p.id, p.name])), [loaded])
 

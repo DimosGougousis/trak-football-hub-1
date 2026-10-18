@@ -8,6 +8,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CoachAssessPage from '@/pages/coach/CoachAssessPage'
 import { server } from '../../tests/msw/server'
 import { SUPABASE_URL } from '../../tests/msw/supabase'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+
+// TRAK-176: coach screens read the coach's squads through the query cache.
+function queries() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return { wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> }
+}
 
 const auth = vi.hoisted(() => ({ user: { id: 'coach-a' }, profile: { full_name: 'Coach A' } }))
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }))
@@ -32,7 +40,7 @@ function showForm() {
   return render(<MemoryRouter initialEntries={['/coach/assess']}><Routes>
     <Route path="/coach/assess" element={<CoachAssessPage />} />
     <Route path="/coach/home" element={<p>Coach home</p>} />
-  </Routes></MemoryRouter>)
+  </Routes></MemoryRouter>, queries())
 }
 
 const selector = () => screen.getAllByRole('combobox')[0]

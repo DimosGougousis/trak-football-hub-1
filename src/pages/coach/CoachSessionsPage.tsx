@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { Plus } from 'lucide-react'
+import { useCoachSquad } from '@/lib/coach-squad'
 
 export default function CoachSessionsPage() {
   const { user } = useAuth()
@@ -15,6 +16,9 @@ export default function CoachSessionsPage() {
      claim about sessions the coach created themselves. */
   const [loadFailed, setLoadFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  // TRAK-176: the squad picked on Home, plus whole-roster sessions.
+  const { eventInSquad } = useCoachSquad(user?.id)
+  const shown = sessions.filter(s => eventInSquad(s.squad))
 
   const loadSessions = useCallback(async () => {
     if (!user) return
@@ -61,15 +65,15 @@ export default function CoachSessionsPage() {
 
       {/* Sessions list */}
       <div className="flex-1 overflow-y-auto px-5 pb-24">
-        {loadFailed && sessions.length === 0 ? (
+        {loadFailed && shown.length === 0 ? (
           <div className="mt-4">
             <LoadError what="your sessions" onRetry={retry} retrying={retrying} />
           </div>
-        ) : sessions.length === 0 ? (
+        ) : shown.length === 0 ? (
           <p className="text-ink-3 text-sm mt-4">No sessions logged yet.</p>
         ) : (
           <div className="space-y-0">
-            {sessions.map((s) => (
+            {shown.map((s) => (
               // TRAK-102: a row opens its session.
               <button
                 type="button"
