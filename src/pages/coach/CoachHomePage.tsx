@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel, BandPill, LoadError} from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { Zap } from 'lucide-react'
-import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
+import { HomeHeader } from '@/components/trak/HomeHeader'
+import { CoachSquadSwitcher } from '@/components/coach/CoachSquadSwitcher'
 import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
@@ -243,7 +244,7 @@ export default function CoachHomePage() {
     <MobileShell>
       <div className="pt-3 pb-4">
         {/* TRAK-163: the calendar is top left (it replaces the "Smart Calendar" button), then the next seven days. */}
-        <HomeHeader calendarTo="/coach/schedule" center={<HomeTitle>{profile?.full_name || 'Coach'}</HomeTitle>} />
+        <HomeHeader calendarTo="/coach/schedule" center={<CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} />} />
         {user && <CoachWeekStrip coachId={user.id} version={weekVersion} />}
 
         {/* A failed load must not be reported as a season with nothing in it.

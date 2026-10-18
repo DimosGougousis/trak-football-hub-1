@@ -129,6 +129,9 @@ SELECT pg_temp.sq_check((SELECT string_agg(right(user_id::text,2), ',' ORDER BY 
   '6 a whole-roster event emails both squads, as today', (SELECT string_agg(right(user_id::text,2), ',' ORDER BY user_id) FROM trak_private.event_change_recipients(pg_temp.sq(801))));
 SELECT pg_temp.sq_check(NOT EXISTS (SELECT 1 FROM trak_private.event_reminder_due((now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date) d
   WHERE d.event_id = pg_temp.sq(800) AND d.user_id IN (pg_temp.sq(21), pg_temp.sq(31))), '6 no U16 reminder for the U14 event');
+-- Kostas's #353 review: the positive control, so the check above can't pass because no reminder is due at all.
+SELECT pg_temp.sq_check(EXISTS (SELECT 1 FROM trak_private.event_reminder_due((now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date) d
+  WHERE d.event_id = pg_temp.sq(800) AND d.user_id IN (pg_temp.sq(20), pg_temp.sq(30))), '6 the U14 family does get the U14 event''s reminder');
 
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.sq_results WHERE ok IS DISTINCT FROM true;

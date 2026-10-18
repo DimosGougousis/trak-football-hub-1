@@ -16,6 +16,7 @@ import { table, SUPABASE_URL } from '../../../../tests/msw/supabase'
 const COACH = { id: 'coach-182-squad' }
 
 beforeEach(() => {
+  localStorage.clear()
   signInAs(COACH)
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', nationality: 'AE' }]),
@@ -37,12 +38,15 @@ beforeEach(() => {
 const names = () => screen.getAllByRole('listitem').map(li => li.querySelector('p')?.textContent).sort()
 
 describe('TRAK-182: the Squad directory', () => {
-  it('searches by name or shirt number and filters by age group and position', async () => {
+  it('searches by name or shirt number and filters by squad and position', async () => {
     const user = userEvent.setup()
     renderApp('/coach/squad')
+    // TRAK-176: two squads, so the first one shows until the coach picks the other.
     await screen.findByText('Luka Modric')
-    expect(screen.getByText('3 players')).toBeInTheDocument()
+    expect(screen.getByText('U14 · 1 player')).toBeInTheDocument()
     expect(screen.getByText('Midfielder · #10 · U14')).toBeInTheDocument()
+    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U16' }))
+    expect(names()).toEqual(['Alisson Becker', 'Virgil van Dijk'])
 
     await user.type(screen.getByRole('searchbox', { name: 'Search players' }), 'van')
     expect(names()).toEqual(['Virgil van Dijk'])
@@ -51,19 +55,19 @@ describe('TRAK-182: the Squad directory', () => {
     expect(names()).toEqual(['Alisson Becker'])
     await user.click(screen.getByRole('button', { name: 'Clear search' }))
 
-    await user.click(within(screen.getByRole('group', { name: 'Age group' })).getByRole('button', { name: 'U16' }))
-    expect(names()).toEqual(['Alisson Becker', 'Virgil van Dijk'])
     await user.click(within(screen.getByRole('group', { name: 'Position' })).getByRole('button', { name: 'GK' }))
     expect(names()).toEqual(['Alisson Becker'])
 
     await user.type(screen.getByRole('searchbox', { name: 'Search players' }), 'Luka')
     expect(screen.getByText('No players match that search.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Clear filters' }))
-    expect(names()).toHaveLength(3)
+    // Clearing the filters keeps the squad picked.
+    expect(names()).toEqual(['Alisson Becker', 'Virgil van Dijk'])
   })
 
   it('opens a player panel; Assess goes to that player only when they can be assessed', async () => {
     const user = userEvent.setup()
+    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     renderApp('/coach/squad')
     await user.click(await screen.findByRole('button', { name: /Virgil van Dijk/ }))
     const waiting = await screen.findByRole('dialog', { name: 'Virgil van Dijk' })
@@ -73,7 +77,8 @@ describe('TRAK-182: the Squad directory', () => {
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 
-    await user.click(screen.getByRole('button', { name: /Luka Modric/ }))
+    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U14' }))
+    await user.click(await screen.findByRole('button', { name: /Luka Modric/ }))
     const ready = await screen.findByRole('dialog', { name: 'Luka Modric' })
     expect(within(ready).getByText('Ready to assess')).toBeInTheDocument()
     expect(within(ready).getByText(/Latest band/)).toBeInTheDocument()

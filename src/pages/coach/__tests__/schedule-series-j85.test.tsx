@@ -57,6 +57,8 @@ function fixtures() {
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
     http.get(EVENTS, () => HttpResponse.json(rows)),
     table('coach_sessions', []),
+    // TRAK-176: a new event waits for the coach's squads.
+    table('squad_players', []),
     rpc('feature_on', () => true),
     http.post(EVENTS, write('post')),
     http.patch(EVENTS, write('patch')),
