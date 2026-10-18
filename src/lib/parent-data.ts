@@ -179,6 +179,16 @@ export function eventAlert(event: PlayerEvent, firstSeen: Record<string, number>
   }
 }
 
+/**
+ * The bell's assessment title, for parent and player (TRAK-202, Imad 18 Oct):
+ * "New assessment from Coach <name>". fetchCoachNames turns an empty name into
+ * 'Coach', so that reads as no name too: "your coach", never "Coach Coach".
+ */
+export function assessmentAlertTitle(coachName: string | null | undefined): string {
+  const name = coachName?.trim()
+  return name && name !== 'Coach' ? `New assessment from Coach ${name}` : 'New assessment from your coach'
+}
+
 /** Newest first. Awards are left out on Home's bell while awards are parked (TRAK-31). */
 export function parentAlerts(matches: ParentMatch[], development: ParentDevelopment | undefined,
   { awards = true, events = [], eventsFirstSeen = {} }:
@@ -194,8 +204,9 @@ export function parentAlerts(matches: ParentMatch[], development: ParentDevelopm
         description: `vs ${match.opponent || match.competition || 'Unknown'}${match.team_score != null && match.opponent_score != null ? ` · ${match.team_score}–${match.opponent_score}` : ''}`,
       })),
     ...(development?.assessments ?? []).map((assessment): ParentAlert => ({
-      id: `assessment-${assessment.id}`, kind: 'assessment', targetId: assessment.id, title: 'New coach assessment', date: assessment.created_at,
-      description: `by ${coach(assessment.coach_user_id)} · ${assessment.coach_rating == null ? 'Not assessed' : scoreToBand(assessment.coach_rating)}`,
+      id: `assessment-${assessment.id}`, kind: 'assessment', targetId: assessment.id, date: assessment.created_at,
+      title: assessmentAlertTitle(assessment.coach_user_id ? development?.coachNames[assessment.coach_user_id] : null),
+      description: assessment.coach_rating == null ? 'Not assessed' : scoreToBand(assessment.coach_rating),
     })),
     ...(awards ? development?.awards ?? [] : []).map((award): ParentAlert => ({
       id: `award-${award.id}`, kind: 'award', targetId: award.id, title: formatParentAward(award.award_type), date: award.created_at,

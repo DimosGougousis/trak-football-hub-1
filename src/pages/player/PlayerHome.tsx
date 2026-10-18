@@ -262,7 +262,7 @@ export default function PlayerHome() {
             const body = published?.body?.trim()
             setCoachAssessmentNote(body || null)
             setAssessmentAlert(body && published?.published_at && Number.isFinite(Date.parse(published.published_at))
-              ? { id: latest.id, userId: user.id, publishedAt: published.published_at } : null)
+              ? { id: latest.id, userId: user.id, publishedAt: published.published_at, coachName: cp?.full_name ?? '' } : null)
           }
         }
 
