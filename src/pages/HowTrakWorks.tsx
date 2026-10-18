@@ -63,8 +63,8 @@ export default function HowTrakWorks() {
           </p>
         </div>
 
-        {/* Bands */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        {/* Bands: their bright colours read on a dark card (TRAK-189, Tarek, 17 Oct). */}
+        <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="PERFORMANCE BANDS" />
           <div className="mt-3 space-y-2.5">
             {BANDS.map(b => {
@@ -113,8 +113,8 @@ export default function HowTrakWorks() {
           </div>
         </div>
 
-        {/* Why bands not numbers */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        {/* Why bands not numbers: it names three bands in their colours, so a dark card too. */}
+        <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="WHY WORDS, NOT NUMBERS" />
           <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>

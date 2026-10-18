@@ -143,9 +143,9 @@ export default function PlayerProfilePage() {
           )}
         </div>
 
-        {/* Coach Assessments */}
+        {/* Coach Assessments: the six metrics in their band colours, on a dark card (TRAK-189). */}
         {assessmentCategories.length > 0 && (
-          <div className="rounded-[18px] p-4 border border-line bg-surface">
+          <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
             <MetadataLabel text="COACH ASSESSMENTS" />
             <div className="mt-3 space-y-2">
               {assessmentCategories.map(cat => {
