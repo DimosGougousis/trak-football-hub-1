@@ -501,7 +501,7 @@ export type Database = {
           logged_by: string | null
           logged_by_role: string | null
           match_date: string | null
-          minutes_played: number
+          minutes_played: number | null
           opponent: string | null
           opponent_score: number
           position: string
@@ -524,7 +524,7 @@ export type Database = {
           logged_by?: string | null
           logged_by_role?: string | null
           match_date?: string | null
-          minutes_played?: number
+          minutes_played?: number | null
           opponent?: string | null
           opponent_score?: number
           position: string
@@ -547,7 +547,7 @@ export type Database = {
           logged_by?: string | null
           logged_by_role?: string | null
           match_date?: string | null
-          minutes_played?: number
+          minutes_played?: number | null
           opponent?: string | null
           opponent_score?: number
           position?: string
@@ -983,7 +983,7 @@ export type Database = {
           p_computed_rating: number
           p_goals: number
           p_match_date?: string
-          p_minutes_played: number
+          p_minutes_played: number | null
           p_opponent: string
           p_opponent_score: number
           p_position: string

@@ -39,9 +39,11 @@ function setup(player: Record<string, unknown> = PLAYER) {
   return calls
 }
 
+// TRAK-198: the quick log no longer asks minutes, so these run on the full log, which does.
 async function startMatch() {
   const user = userEvent.setup()
-  renderApp('/coach/sessions/quick')
+  renderApp('/coach/sessions/add')
+  await user.click(await screen.findByRole('button', { name: 'Match' }))
   await user.type(await screen.findByPlaceholderText('Opponent name'), 'Olympiakos U14')
   const [us, them] = screen.getAllByPlaceholderText('0')
   await user.type(us, '2')
