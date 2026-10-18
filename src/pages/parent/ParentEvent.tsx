@@ -20,7 +20,7 @@ import { useEventBack } from '@/lib/event-back'
 export default function ParentEvent() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const backTo = useEventBack('/parent/events')
+  const backTo = useEventBack('/parent/matches')
   const { parentId, selectedChild } = useParentChildren()
   const childId = selectedChild?.id
   const query = useQuery({

@@ -67,7 +67,7 @@ await context.route('**/*',async route=>{
  await expect(following.getByRole('button',{name:'Zara Example'})).toBeVisible();
  await expect(page.getByText('Midfielder · Zara Academy · U15',{exact:true})).toBeVisible();
  await expect(page.getByText('Midfielder · Alex Academy · U15',{exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Matches',exact:true}).click();
+ await page.getByRole('button',{name:'Events',exact:true}).click();
  await expect(page.getByRole('combobox')).toHaveValue(zara);
  // TRAK-181: Trak draws the picker and its chevron, so Safari can't swap in its own grey bar.
  await expect(page.getByRole('combobox')).toHaveCSS('appearance','none');

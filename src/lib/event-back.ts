@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
  */
 const LABEL: Record<string, string> = {
   '/player/home': 'Home', '/player/matches': 'Sessions',
-  '/parent/home': 'Home', '/parent/matches': 'Matches', '/parent/events': 'Events',
+  '/parent/home': 'Home', '/parent/matches': 'Events',
 }
 
 export function useEventBack(list: string) {

@@ -359,7 +359,7 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   await expect(page.getByText(homeLine(zara), { exact: true })).toBeVisible();
   await expect(page.getByText(homeLine(alex), { exact: true })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Matches', exact: true }).click();
+  await page.getByRole('button', { name: 'Events', exact: true }).click();
   await expect(page.getByRole('combobox')).toHaveValue(zaraId);
   await expect(page.getByText(zara.opponent, { exact: true })).toBeVisible();
   await page.getByRole('combobox').selectOption(alexId);
@@ -391,7 +391,7 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   const connections = page.getByRole('list', { name: 'Linked children', exact: true });
   await expect(connections.getByText(alex.name, { exact: true })).toHaveCount(1);
   await expect(connections.getByText(zara.name, { exact: true })).toHaveCount(1);
-  await page.getByRole('button', { name: 'Matches', exact: true }).click();
+  await page.getByRole('button', { name: 'Events', exact: true }).click();
   await page.reload();
   await expect(page.getByRole('option')).toHaveCount(2);
   await page.getByRole('combobox').selectOption(zaraId);
