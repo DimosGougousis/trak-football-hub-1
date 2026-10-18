@@ -103,6 +103,7 @@ beforeEach(async () => {
   )
 })
 afterEach(() => { cleanup(); client.clear() })
+// TRAK-194: parent Home has no match list; each child's latest award is its readout here.
 // TRAK-74: /parent/alerts (parked, with awards) has no tab any more; open it by address.
 function mount(path = '/parent/home') {
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><AuthProvider>
@@ -125,8 +126,8 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
       if (mode === 'all-null') rows[1].coach_user_id = null
     }
     mount()
-    await screen.findByText('Alex opposition')
-    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).getByText('Coach')).toBeInTheDocument()
+    await screen.findByText('Alex recognition 1')
+    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).queryByText(/^(Coach|Synthetic \w+ Coach)$/)).toBeNull()
     expect(screen.getByText('Alex recognition 1')).toBeInTheDocument()
     expectPreserved(alex)
     expect(nameFilters).toEqual(mode === 'all-null' ? [] : [`in.(${coachA})`])
@@ -151,8 +152,8 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
 
   it.each([false, true])('retains live-coach records when names are hidden by RLS: %s', async hidden => {
     hiddenNames = hidden
-    mount(); await screen.findByText('Alex opposition')
-    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).getByText(hidden ? 'Coach' : 'Synthetic Alex Coach')).toBeInTheDocument()
+    mount(); await screen.findByText('Alex recognition 1')
+    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).queryByText(/^(Coach|Synthetic \w+ Coach)$/)).toBeNull()
     expect(nameFilters).toEqual([`in.(${coachA})`])
     expectPreserved(alex)
     cleanup(); mount('/parent/alerts')
@@ -164,10 +165,10 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     failNames = true
     mount(); await screen.findByRole('alert')
     expect(screen.queryByText('No coach assessments yet.')).not.toBeInTheDocument()
-    expect(screen.queryByText('Alex opposition')).not.toBeInTheDocument()
+    expect(screen.queryByText('Alex recognition 1')).not.toBeInTheDocument()
     failNames = false
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    await screen.findByText('Alex opposition')
+    await screen.findByText('Alex recognition 1')
     expectPreserved(alex)
     expect(nameFilters).toEqual([`in.(${coachA})`, `in.(${coachA})`])
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -179,12 +180,12 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
   it("shows the bands but never the coach's published message, for either child", async () => {
     messages[assessments[alex][0].id] = 'Alex: keep working on your first touch.'
     messages[assessments[zara][0].id] = 'Zara: great pressing this week.'
-    mount(); await screen.findByText('Alex opposition')
+    mount(); await screen.findByText('Alex recognition 1')
     expect(screen.getByRole('region', { name: 'Latest coach assessment' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Message from the coach' })).not.toBeInTheDocument()
     expect(screen.queryByText(/keep working on your first touch/)).not.toBeInTheDocument()
     await followChild('Zara')
-    await screen.findByText('Zara opposition')
+    await screen.findByText('Zara recognition 1')
     expect(screen.queryByText(/great pressing this week/)).not.toBeInTheDocument()
     expect(messageFilters).toEqual([])
   })
@@ -201,11 +202,13 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     mount()
     await waitFor(() => expect(started).toBe(true))
     await followChild('Zara')
-    await screen.findByText('Zara opposition')
-    expect(within(screen.getByRole('group', { name: 'Assessment 1 of 2' })).getByText('Synthetic Zara Coach')).toBeInTheDocument()
+    await screen.findByText('Zara recognition 1')
+    // TRAK-194: Home's card never names the coach; the bell's assessment alerts do.
+    fireEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
+    expect((await screen.findAllByText(/by Synthetic Zara Coach/)).length).toBeGreaterThan(0)
     await act(async () => { release(); await delayed; await new Promise(resolve => setTimeout(resolve, 20)) })
     expect(screen.queryByText('Late Alex Coach')).not.toBeInTheDocument()
-    expect(screen.queryByText('Alex opposition')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Alex recognition/)).not.toBeInTheDocument()
     expect(followedChild()).toHaveTextContent('Zara')
     expectPreserved(zara)
   })

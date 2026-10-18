@@ -315,12 +315,15 @@ async function secondChildFixture(page: Page, context: BrowserContext) {
   };
 }
 
+// TRAK-194: parent Home lists no matches; the child's line under the header says whose Home it is.
+const homeLine = (child: { club: string }) => `Midfielder · ${child.club} · Senior`
+
 test('existing parent accepts a second child, recovers a failed family refresh and keeps both links after reload', async ({ page, context }) => {
   const observed = await secondChildFixture(page, context);
   const [alex, zara] = observed.children;
   await page.goto('/parent/home');
   await expect(page.getByRole('heading', { name: alex.name, exact: true })).toBeVisible();
-  await expect(page.getByText(alex.opponent, { exact: true })).toBeVisible();
+  await expect(page.getByText(homeLine(alex), { exact: true })).toBeVisible();
   // TRAK-163: one child is a plain name in Home's header; siblings make it a menu.
   const following = page.getByRole('group', { name: 'Following' });
   await expect(following).toHaveCount(0);
@@ -342,19 +345,19 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   await expect(failure).toBeVisible({ timeout: 15_000 });
   expect(observed.memberships.slice(beforeClaim).some(read => read.failed && read.ids.includes(zaraId))).toBe(true);
   await expect(page.getByText('No child has signed up yet', { exact: true })).toHaveCount(0);
-  await expect(page.getByText(alex.opponent, { exact: true })).toHaveCount(0);
-  await expect(page.getByText(zara.opponent, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(homeLine(alex), { exact: true })).toHaveCount(0);
+  await expect(page.getByText(homeLine(zara), { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox')).toHaveCount(0);
 
   observed.restoreMembership();
   await failure.getByRole('button', { name: 'Retry', exact: true }).click();
   await expect(following.getByRole('button', { name: alex.name, exact: true })).toBeVisible();
-  await expect(page.getByText(alex.opponent, { exact: true })).toBeVisible();
+  await expect(page.getByText(homeLine(alex), { exact: true })).toBeVisible();
   await following.getByRole('button').click();
   await page.getByRole('menuitem', { name: zara.name, exact: true }).click();
   await expect(following.getByRole('button', { name: zara.name, exact: true })).toBeVisible();
-  await expect(page.getByText(zara.opponent, { exact: true })).toBeVisible();
-  await expect(page.getByText(alex.opponent, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(homeLine(zara), { exact: true })).toBeVisible();
+  await expect(page.getByText(homeLine(alex), { exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Matches', exact: true }).click();
   await expect(page.getByRole('combobox')).toHaveValue(zaraId);
@@ -377,8 +380,8 @@ test('existing parent accepts a second child, recovers a failed family refresh a
   await page.keyboard.press('Escape');
   await expect(alertsSheet).toHaveCount(0);
   await expect(following.getByRole('button', { name: zara.name, exact: true })).toBeVisible();
-  await expect(page.getByText(zara.opponent, { exact: true })).toBeVisible();
-  await expect(page.getByText(alex.opponent, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(homeLine(zara), { exact: true })).toBeVisible();
+  await expect(page.getByText(homeLine(alex), { exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await expect(page.getByText('Parent account · 2 children linked', { exact: true })).toBeVisible();
