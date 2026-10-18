@@ -56,10 +56,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 function Where() { return <p data-testid="where">{useLocation().pathname + useLocation().search}</p> }
+function From() { return <p data-testid="from">{(useLocation().state as { from?: string } | null)?.from}</p> }
 function renderStrip(events: StripEvent[], role: 'coach' | 'parent') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/home']}>
-    <Routes><Route path="*" element={<>
+    <Routes><Route path="/parent/event/:id" element={<From />} /><Route path="*" element={<>
       <WeekStrip events={events} today={new Date(`${day}T12:00:00`)} renderSheet={(e, trigger) => (
         <EventSheet event={e} role={role} trigger={trigger}>
           {role === 'coach' && <EventSheetCoach event={e} coachId="coach-1" onChanged={() => {}} />}
@@ -167,13 +168,17 @@ describe('TRAK-182: the event sheet', () => {
   it('offers no Cancel once a match has started (a match has no register)', async () => {
     eventRow = row({ published: true, starts_at: '2020-01-01T13:00:00Z', event_date: '2020-01-01' })
     const user = userEvent.setup()
-    renderStrip([event({})], 'coach')
+    renderStrip([event({ startsAt: '2020-01-01T13:00:00Z' })], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
+    // Decided 16 Oct: a past event's sheet has no meet time and no family note; the kit stays.
+    expect(within(sheet).queryByText('Meet')).toBeNull()
+    expect(within(sheet).queryByText('Bring water')).toBeNull()
+    expect(within(sheet).getByText('White')).toBeInTheDocument()
   })
 
   // Kostas's #310 review: counted as the register counts, and no guessing on a failed read.
@@ -228,6 +233,9 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).queryByText('Beth Mead')).not.toBeInTheDocument()
     // The full page (Add to calendar, details) stays one tap away (Kostas, #310).
     expect(within(sheet).getByRole('link', { name: 'Open event page' })).toHaveAttribute('href', '/parent/event/ev-1')
+    // TRAK-182 (live run 3): the page's Back returns here, so the link says where "here" is.
+    await user.click(within(sheet).getByRole('link', { name: 'Open event page' }))
+    expect(await screen.findByTestId('from')).toHaveTextContent('/home')
   })
 
   it('says Training ground for a training and shows a cancellation', async () => {

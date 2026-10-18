@@ -116,6 +116,8 @@ describe('TRAK-127: New event is for what is coming', { timeout: 30_000 }, () =>
     renderApp('/coach/schedule?edit=old-1')
     const sheet = await screen.findByRole('dialog', { name: 'Edit event' })
     expect(within(sheet).queryByText(PASSED)).toBeNull()
+    await eventStep(sheet, 'Review')
+    expect(within(sheet).queryByText(PASSED)).toBeNull()
     expect(within(sheet).getByRole('button', { name: 'Save changes' })).toBeEnabled()
   })
 })

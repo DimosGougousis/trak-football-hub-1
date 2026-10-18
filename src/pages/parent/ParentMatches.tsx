@@ -16,7 +16,8 @@ export default function ParentMatches() {
   return (
     <MobileShell>
       <div className="pt-3 pb-4">
-        <h1 className="text-xl text-foreground mb-5">Matches</h1>
+        {/* TRAK-171 (live run 3): the tab is Events (players keep Sessions); the calendar icon opens this page too. */}
+        <h1 className="text-xl text-foreground mb-5">Events</h1>
         <ParentChildSelector />
         <ParentFamilyContent>
           {/* J8.8 (TRAK-131): the selected child's upcoming events. */}
