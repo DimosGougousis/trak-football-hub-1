@@ -94,12 +94,12 @@ describe('TRAK-198: the quick match log asks no minutes', () => {
     expect(quick.p_minutes_played).toBeNull()
     expect(quick.p_goals).toBe(1)
 
-    // The same match in the full log at 60 minutes: no minutes modifier either way.
+    // Pilot coach's item 13 (Imad, 18 Oct): the full log asks no minutes either, so it rates the same.
     await fullLog()
     await fillMatch()
-    await playStriker('60')
+    await playStriker()
     const full = await save(calls)
-    expect(full.p_minutes_played).toBe(60)
+    expect(full.p_minutes_played).toBeNull()
     expect(quick.p_computed_rating).toBe(full.p_computed_rating)
   }, 30_000)
 
@@ -115,16 +115,19 @@ describe('TRAK-198: the quick match log asks no minutes', () => {
     expect((await save(calls)).p_minutes_played).toBeNull()
   }, 20_000)
 
-  it('full log: still asks minutes, and a played row without them is not saved', async () => {
+  // Pilot coach's item 13 (Imad, 18 Oct): no minutes and no Starter/Sub anywhere in the match log.
+  it('full log: no minutes and no Starter/Sub; goals and assists are enough to move on', async () => {
     captureMatchRpc()
     await fullLog()
     await fillMatch()
     await logStep('Squad')
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Mark played' }))
-    expect(minutesField()).toBeInTheDocument()
+    expect(minutesField()).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^starter$/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^sub$/i })).toBeNull()
     await userEvent.setup().click(screen.getByRole('button', { name: `One fewer goals for ${STRIKER.player_name}` }))
     await userEvent.setup().click(screen.getByRole('button', { name: `One fewer assists for ${STRIKER.player_name}` }))
-    expect(screen.getByText(`${STRIKER.player_name} still needs minutes.`)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(screen.queryByText(/still needs/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
   }, 20_000)
 })

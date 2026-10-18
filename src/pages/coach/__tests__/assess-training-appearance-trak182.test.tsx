@@ -80,10 +80,16 @@ describe('TRAK-182: no Appearance question for a training', { timeout: 20_000 },
     expect(posted[0].appearance).toBe('training')
   })
 
-  it('a match still asks Started or Sub', async () => {
+  // Pilot coach's item 13 (Imad, 18 Oct): a match asks no Started or Sub either.
+  it('a match asks no Started or Sub, and saves no appearance', async () => {
     showForm()
     await choose('session-match')
-    expect(screen.getByText('APPEARANCE')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Started' })).toBeInTheDocument()
+    expect(screen.queryByText('APPEARANCE')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Started' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Sub' })).toBeNull()
+    await saveAssessment()
+    await screen.findByText('Coach home')
+    expect(posted).toHaveLength(1)
+    expect(posted[0].appearance).toBeNull()
   })
 })
