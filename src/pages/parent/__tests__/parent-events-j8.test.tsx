@@ -113,6 +113,18 @@ describe('TRAK-131: the parent\'s Upcoming list', () => {
     expect(within(list).getAllByRole('link')).toHaveLength(5)
   })
 
+  // TRAK-195 (Kostas, 16 Oct list, item 7): each See more adds the next 5, not the whole season.
+  it('with 20 upcoming, each See more adds 5', async () => {
+    EVENTS.Alex = Array.from({ length: 20 }, (_, i) => event(`ev-a${i + 1}`, { title: `Alex session ${i + 1}` }))
+    renderAt('/parent/matches')
+    const list = await screen.findByRole('region', { name: 'Upcoming' })
+    expect(await within(list).findByText('Alex session 1')).toBeInTheDocument()
+    expect(within(list).getAllByRole('link')).toHaveLength(3)
+    await userEvent.click(within(list).getByRole('button', { name: 'See more (17)' }))
+    expect(within(list).getAllByRole('link')).toHaveLength(8)
+    expect(within(list).getByRole('button', { name: 'See more (12)' })).toBeInTheDocument()
+  })
+
   it('shows only the selected child\'s events, and the other child\'s after switching', async () => {
     renderAt('/parent/matches')
     const list = await screen.findByRole('region', { name: 'Upcoming' })
