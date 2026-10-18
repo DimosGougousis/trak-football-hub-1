@@ -43,10 +43,12 @@ describe('TRAK-182: the session log in steps', { timeout: 20_000 }, () => {
     await user.click(screen.getByRole('button', { name: /^Technical/ }))
     await user.type(screen.getByPlaceholderText(/Pressing triggers/), 'Rondos')
     expect(next()).toBeEnabled()
-    await logStep('Load')
+    // TRAK-182 (live run 3): four steps, as a match has; length and intensity sit with the notes.
+    expect([...document.querySelectorAll('[aria-label="Log steps"] li')].map(li => li.textContent))
+      .toEqual([expect.stringContaining('Session'), expect.stringContaining('Attendance'), expect.stringContaining('Notes'), expect.stringContaining('Review')])
+    await logStep('Notes')
     await user.click(screen.getByRole('button', { name: '75 min' }))
     await user.click(screen.getByRole('button', { name: 'High' }))
-    await logStep('Notes')
     await user.type(screen.getByPlaceholderText(/What went well/), 'Sharp passing')
 
     // Back keeps everything typed.
