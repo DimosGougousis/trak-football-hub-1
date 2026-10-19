@@ -211,7 +211,7 @@ afterEach(({ task }) => {
 
 describe('parent consent read and grant recovery through the real route', () => {
   it('TRAK-166 shows the approved events notice and records its new version', async () => {
-    const eventsNotice = "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you when an event is added, changed or cancelled, two days before. You can turn the reminder off in Settings."
+    const eventsNotice = "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you, and your child, when an event is added, changed or cancelled, and again two days before it. You can turn the reminder off in Settings."
     await openConsent([{ data: [childA] }, { data: [] }])
     await screen.findByRole('heading', { name: 'Alex Synthetic is waiting for your approval' })
     await openPanel()

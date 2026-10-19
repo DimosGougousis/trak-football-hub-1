@@ -96,7 +96,7 @@ afterEach(() => { cleanup(); vi.unstubAllEnvs() })
 
 describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
   it('TRAK-166 shows the approved events notice and records its new version', async () => {
-    const eventsNotice = "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you when an event is added, changed or cancelled, two days before. You can turn the reminder off in Settings."
+    const eventsNotice = "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you, and your child, when an event is added, changed or cancelled, and again two days before it. You can turn the reminder off in Settings."
     await open('/parent/consent')
     await screen.findByRole('heading', { name: 'Ana is waiting for your approval' })
     await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
