@@ -1,5 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { findTestedMerge } from './merge-gate-evidence.mjs'
 
 function fixture() {
@@ -54,4 +59,26 @@ for (const [name, alter] of [
 test('an API error blocks deployment rather than accepting absent evidence', async () => {
   const f = fixture(); f.options.api = async () => { throw new Error('GitHub unavailable') }
   await assert.rejects(findTestedMerge(f.options), /GitHub unavailable/)
+})
+
+for (const mode of ['clean', 'dirty', 'draft']) test(`records real checkout evidence: ${mode}`, t => {
+  const cwd = mkdtempSync(join(tmpdir(), 'trak-record-proof-'))
+  t.after(() => rmSync(cwd, { recursive: true, force: true }))
+  const git = args => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  git(['init', '-q'])
+  writeFileSync(join(cwd, 'source.txt'), 'tested contents\n')
+  git(['add', 'source.txt'])
+  git(['-c', 'user.name=Synthetic', '-c', 'user.email=synthetic@example.invalid', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'Synthetic candidate'])
+  if (mode === 'dirty') writeFileSync(join(cwd, 'source.txt'), 'different test contents\n')
+  const event = join(cwd, 'event.json')
+  writeFileSync(event, JSON.stringify({ number: 12, pull_request: { draft: mode === 'draft', base: { ref: 'main' }, head: { sha: 'synthetic-head' } } }))
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL('./merge-gate-evidence.mjs', import.meta.url)), 'record'], {
+    cwd, encoding: 'utf8', env: { ...process.env, GITHUB_EVENT_PATH: event, GITHUB_EVENT_NAME: 'pull_request', GITHUB_REPOSITORY: 'synthetic/trak', GITHUB_RUN_ID: '42', GITHUB_RUN_ATTEMPT: '2', RUNNER_TEMP: cwd },
+  })
+  if (mode !== 'clean') { assert.notEqual(result.status, 0); return }
+  assert.equal(result.status, 0, result.stderr)
+  assert.deepEqual(JSON.parse(readFileSync(join(cwd, 'merge-gate-proof.json'), 'utf8')), {
+    repository: 'synthetic/trak', pullRequest: 12, head: 'synthetic-head',
+    tree: git(['rev-parse', 'HEAD^{tree}']).trim(), runId: 42, attempt: 2,
+  })
 })

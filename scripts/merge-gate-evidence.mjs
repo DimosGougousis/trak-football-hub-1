@@ -34,6 +34,9 @@ function record() {
   if (process.env.GITHUB_EVENT_NAME !== 'pull_request' || event.pull_request?.draft || event.pull_request?.base.ref !== 'main') {
     throw new Error('Only a final pull request to main can record merge-gate proof.')
   }
+  // Evidence must describe the checked-out candidate, not source that a test
+  // changed temporarily and that will be absent from the deployment.
+  execFileSync('git', ['diff', '--exit-code', 'HEAD', '--'], { stdio: 'pipe' })
   const proof = {
     repository: process.env.GITHUB_REPOSITORY,
     pullRequest: event.number,
