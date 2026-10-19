@@ -31,3 +31,9 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// TRAK-182: Arc's Select (Radix) scrolls the chosen option into view and checks
+// pointer capture, which every browser Trak supports has and jsdom lacks.
+Element.prototype.scrollIntoView ??= function scrollIntoView() {}
+Element.prototype.hasPointerCapture ??= function hasPointerCapture() { return false }
+Element.prototype.releasePointerCapture ??= function releasePointerCapture() {}
