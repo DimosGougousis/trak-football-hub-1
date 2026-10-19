@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { RatingBandPill } from '@/lib/ratingBand';
 import { User as UserIcon, Star, MessageCircle } from 'lucide-react';
+import { appearanceLabel } from '@/lib/types';
 
 const CoachPlayerProfile = () => {
   const { user } = useAuth();
@@ -126,7 +127,7 @@ const CoachPlayerProfile = () => {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-sm font-medium text-foreground">{(a.coach_sessions as any)?.title || 'General'}</p>
-                  <p className="text-[11px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()} · {a.appearance || ''}</p>
+                  <p className="text-[11px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()} · {appearanceLabel(a.appearance)}</p>
                 </div>
                 <RatingBandPill rating={Number(a.coach_rating)} />
               </div>
