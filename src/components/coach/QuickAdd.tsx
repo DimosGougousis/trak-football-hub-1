@@ -70,7 +70,12 @@ function useKeyboardInset() {
   return inset
 }
 
-export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
+/** Where the "+" sits. "top" is Home's header corner, the slot a coach's
+ *  bell would take (HomeHeader), so it stays in reach however far the page
+ *  scrolls; other tabs have their own controls there and keep "bottom". */
+type Corner = 'top' | 'bottom'
+
+export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void; corner?: Corner }) {
   const { user } = useAuth()
   // TRAK-176: a new event belongs to the squad picked; wait until the squads are known.
   const coachSquad = useCoachSquad(user?.id)
@@ -192,32 +197,34 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   }
 
   const round = face === 'closed' || face === 'done'
+  const top = corner === 'top'
+  // At the top it lines up with the header's 44 px corner slot (the shell's 20 px
+  // gutter, the header's 12 px top padding) and opens downward.
+  const position = top
+    ? { right: 'max(20px, calc((100vw - 430px) / 2 + 20px))', top: 'calc(12px + env(safe-area-inset-top))' }
+    : { right: 'max(16px, calc((100vw - 430px) / 2 + 16px))', bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))` }
   const item = 'flex w-full min-h-11 items-center gap-3 rounded-[12px] px-3 text-left text-[15px] text-white/90 hover:bg-white/[0.06] focus-visible:bg-white/[0.08] focus-visible:outline-none active:scale-[0.98] transition-transform'
 
   return <>
     {/* Room under the last row, so the "+" never covers it. */}
-    <div aria-hidden="true" className="h-16" />
-    <div data-quick-add className="fixed z-40 pointer-events-none"
-      style={{
-        right: 'max(16px, calc((100vw - 430px) / 2 + 16px))',
-        bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))`,
-      }}>
+    {!top && <div aria-hidden="true" className="h-16" />}
+    <div data-quick-add data-corner={corner} className="fixed z-40 pointer-events-none" style={position}>
       <LayoutGroup>
         <motion.div ref={surface} layout={!reduced} onKeyDown={onKeyDown}
           role={face === 'event' || face === 'match' ? 'dialog' : undefined}
           aria-label={face === 'event' ? 'New event' : face === 'match' ? 'Log a match' : undefined}
           transition={face === 'done' ? CHECK_SPRING : SPRING}
           // Clip (never "hidden", which focus can scroll) while the shape morphs; a
-          // form lets its pickers out, and they open upward: the surface sits at
-          // the bottom of the screen, so opening down ran off it (Imad, 16 Oct).
-          style={{ borderRadius: round ? 28 : 22, originX: 1, originY: 1 }}
+          // form lets its pickers out, and at the bottom they open upward: opening
+          // down ran off the screen (Imad, 16 Oct). At the top they open down as usual.
+          style={{ borderRadius: round ? (top ? 22 : 28) : 22, originX: 1, originY: top ? 0 : 1 }}
           className={`arc pointer-events-auto border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]
             bg-[#141416]/90 backdrop-blur-xl [@media(prefers-reduced-transparency:reduce)]:bg-[#141416] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none
-            [&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
-            [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left
+            ${top ? '' : `[&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
+            [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left`}
             [&_[aria-label$=calendar]]:bg-[#1a1a1d] [&_[role=listbox]]:bg-[#1a1a1d]
             ${face === 'event' || face === 'match' ? 'overflow-visible' : 'overflow-clip'}
-            ${round ? 'w-14 h-14' : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
+            ${round ? (top ? 'w-11 h-11' : 'w-14 h-14') : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div key={face} initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}
