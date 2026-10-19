@@ -119,6 +119,8 @@ beforeEach(() => {
         return HttpResponse.json([])
       })),
     http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, () => HttpResponse.json(false)),
+    // Home's Player overview reads registers and "Can't make it" (TRAK-197); none here.
+    ...['session_attendance', 'event_absences'].map(table => http.get(`${SUPABASE_URL}/rest/v1/${table}`, () => HttpResponse.json([]))),
   )
 })
 afterEach(() => cleanup())
@@ -166,12 +168,12 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     expect(noteBox().value).toBe('Assistant: strong first touch')
   })
 
-  // TRAK-179 (live run 3, 16 Oct): a recent assessment on coach Home opens the player, not the editor.
-  it("a recent assessment on coach home opens that player's profile, where the assessment opens", async () => {
+  // TRAK-179 (live run 3, 16 Oct): a player on coach Home opens the player, not the editor.
+  // TRAK-197: Recent assessments went; the Player overview row opens the profile.
+  it("a player on coach home opens that player's profile, where the assessment opens", async () => {
     const user = userEvent.setup()
     renderApp('/coach/home')
-    // Manos has two recent assessments; the 21 Sep one belongs to the Youth match.
-    await user.click(await screen.findByRole('button', { name: /Open Manos Synthetic's profile, assessed 21 Sep/ }))
+    await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
     await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
@@ -191,7 +193,7 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
   it('Back from an assessment reached from coach home returns to that player', async () => {
     const user = userEvent.setup()
     renderApp('/coach/home')
-    await user.click(await screen.findByRole('button', { name: /Open Manos Synthetic's profile, assessed 21 Sep/ }))
+    await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
     await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Back' }))
