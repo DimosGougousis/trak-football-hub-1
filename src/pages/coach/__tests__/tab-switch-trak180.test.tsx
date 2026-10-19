@@ -22,6 +22,9 @@ const PLAYERS = [
 ]
 // TRAK-197: Home lists its players in the Player overview, one row each.
 const homeRow = (name: string) => screen.queryByRole('button', { name: new RegExp(`^Open ${name}'s profile`) })
+// Home reads the squad, assessments, sessions and attendance before its rows show:
+// over 1 s on GitHub's runner (#367's run, 19 Oct), so allow 5 s like the other coach waits.
+const HOME_LOAD = { timeout: 5000 }
 
 /** The coach's reads; squad_players waits for `gate` when one is given. */
 function coachReads(players: typeof PLAYERS | [], gate?: Promise<void>) {
@@ -72,7 +75,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     renderApp('/coach/squad')
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^Home$/i }))
-    await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull())
+    await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull(), HOME_LOAD)
 
     // From here every squad read is held: only the memory can show players.
     let release!: () => void
@@ -86,7 +89,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     expect(homeRow('Ade Okafor')).not.toBeNull()
     expect(screen.queryByText('Loading your players…')).toBeNull()
     release()
-    await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull())
+    await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull(), HOME_LOAD)
   }, 20_000) // four tab switches take longer than 5 s on GitHub's runners
 
   it("a revisit whose assessments read fails doesn't show the last visit's players", async () => {
@@ -94,7 +97,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     const user = userEvent.setup()
     coachReads(PLAYERS)
     renderApp('/coach/home')
-    await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull())
+    await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull(), HOME_LOAD)
     await user.click(screen.getByRole('button', { name: /^Squad$/i }))
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
 
