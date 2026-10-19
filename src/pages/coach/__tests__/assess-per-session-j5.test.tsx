@@ -6,7 +6,7 @@
  * to the second match.
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
-import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
+import { assessStep, chooseAppearanceIfAsked, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -120,6 +120,7 @@ describe('TRAK-68: an assessment belongs to a session that already happened', { 
     await screen.findByRole('option', { name: /Finishing training/ })
     expect(nextButton()).toBeDisabled()
     await chooseSession('session-a')
+    await chooseAppearanceIfAsked()
     await waitFor(() => expect(nextButton()).toBeEnabled())
   })
 
@@ -131,6 +132,7 @@ describe('TRAK-68: an assessment belongs to a session that already happened', { 
     cleanup()
     showForm()
     await choosePlayer('player-b'); await chooseSession('session-b')
+    await chooseAppearanceIfAsked()
     await waitFor(() => expect(nextButton()).toBeEnabled())
     expect(screen.queryByText(/Editing your assessment/)).toBeNull()
     await saveAssessment()

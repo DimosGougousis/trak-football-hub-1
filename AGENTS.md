@@ -110,6 +110,11 @@ development SQL on the shared project.
 
 `supabase/config.toml` controls function JWT settings. `vercel.json` controls
 rewrites, caching and CSP; verify allowed origins when adding an integration.
+The one CSP exception is `/trainings/*`: the static training pages there may
+run inline scripts and be framed by this site only, for the Trainings tab
+(`src/pages/TrainingsPage.tsx`). The rest of the site still blocks inline
+scripts and refuses to be framed; a test in
+`src/pages/__tests__/trainings-tab.test.tsx` guards both.
 Email templates run in the Supabase dashboard; CI never deploys them. Read the
 email-template notes in the [README](README.md) before touching them. Since
 TRAK-142 (#252) the repository copies equal the live ones, and a test guards

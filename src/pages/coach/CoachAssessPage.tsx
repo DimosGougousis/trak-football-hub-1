@@ -18,6 +18,11 @@ import { useLocation } from 'react-router-dom'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { Select } from '@/components/arc/select/select'
+import { APPEARANCE_LABEL } from '@/lib/types'
+
+const MATCH_APPEARANCES = ['started', 'sub', 'didnt_play'] as const
+type MatchAppearance = typeof MATCH_APPEARANCES[number]
 
 /** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
     and the private note get their own steps, so player-visible words never sit
@@ -38,31 +43,6 @@ function bandConfig(band: BandType) {
 }
 
 
-/* ---------- option pill ---------- */
-
-function OptPill({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors disabled:opacity-40"
-      style={{
-        background: active ? 'rgba(200,242,90,0.12)' : '#0d0d0f',
-        border: active ? '1.5px solid #C8F25A' : '1.5px solid rgba(255,255,255,0.06)',
-        color: active ? '#C8F25A' : 'rgba(255,255,255,0.55)',
-      }}
-    >
-      {label}
-    </button>
-  )
-}
 
 /* ========== main page ========== */
 
@@ -96,7 +76,8 @@ function CoachAssessmentForm() {
   const openId = new URLSearchParams(location.search).get('assessment')
   const [opened, setOpened] = useState<{ id: string; playerId: string; sessionId: string; createdAt: string; session: any | null } | null>(null)
   const [openState, setOpenState] = useState<'idle' | 'loading' | 'missing' | 'error'>(openId ? 'loading' : 'idle')
-  const [appearance, setAppearance] = useState<'started' | 'sub' | 'training'>('started')
+  // Imad, 19 Oct (J4, no invented defaults): nothing pre-picked; a match waits for the coach's choice.
+  const [appearance, setAppearance] = useState<MatchAppearance | null>(null)
   const [workRate, setWorkRate]         = useState(5)
   const [tactical, setTactical]         = useState(5)
   const [attitude, setAttitude]         = useState(5)
@@ -193,7 +174,7 @@ function CoachAssessmentForm() {
     setExistingId(null)
     setWorkRate(5); setTactical(5); setAttitude(5)
     setTechnical(5); setPhysical(5); setCoachability(5)
-    setAppearance('started')
+    setAppearance(null)
     setNote(''); setNoteExists(false)
     setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null); setAssessmentPublished(false)
     setSaving(false)
@@ -227,7 +208,7 @@ function CoachAssessmentForm() {
             setWorkRate(data.work_rate); setTactical(data.tactical)
             setAttitude(data.attitude); setTechnical(data.technical)
             setPhysical(data.physical); setCoachability(data.coachability)
-            setAppearance((data.appearance as 'started' | 'sub' | 'training') ?? 'started')
+            setAppearance(MATCH_APPEARANCES.includes(data.appearance as MatchAppearance) ? data.appearance as MatchAppearance : null)
             setNote(privateResult.data?.note ?? '')
             setNoteExists(privateResult.data != null)
             setShared(sf?.body ?? '')
@@ -365,6 +346,8 @@ function CoachAssessmentForm() {
      Unpublish is not a save: see handleUnpublish below. */
   const handleSave = async (draft = false) => {
     if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
+    // Option A (Imad, 19 Oct): a player who didn't play isn't assessed, even if Review is reached another way.
+    if (!isTraining && (!appearance || appearance === 'didnt_play')) return
     // Rewriting an unchanged, still-published message would re-stamp it and
     // mark it "new" for the player again. Leave it alone, unless it's being
     // taken back to a draft.
@@ -723,16 +706,14 @@ function CoachAssessmentForm() {
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
         {step === 0 && <>
-        {/* ---- 4. appearance selector ---- */}
-        {!isTraining && <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
-            APPEARANCE
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            <OptPill label="Started" active={appearance === 'started'} onClick={() => setAppearance('started')} />
-            <OptPill label="Sub" active={appearance === 'sub'} onClick={() => setAppearance('sub')} />
-            <OptPill label="Training" active={appearance === 'training'} onClick={() => setAppearance('training')} />
-          </div>
+        {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started, Sub or Didn't play,
+            for a match. A training is a training (TRAK-182), so it isn't asked. ---- */}
+        {!isTraining && <div className="arc">
+          <Select label="Appearance" placeholder="Choose" value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
+            options={MATCH_APPEARANCES.map(value => ({ value, label: APPEARANCE_LABEL[value] }))} />
+          {/* Imad, 19 Oct (option A): there's nothing to assess when a player didn't play, so it ends here and saves nothing.
+              The match record carries "Didn't play" (TRAK-185). */}
+          {appearance === 'didnt_play' && <p role="status" className="mt-2 text-sm text-muted-foreground">A player who didn't play isn't assessed.</p>}
         </div>}
 
         </>}
@@ -856,7 +837,7 @@ function CoachAssessmentForm() {
             {([
               ['Player', selectedPlayer?.player_name ?? ''],
               ['Session', selectedSession ? sessionLabel(selectedSession) : opened ? 'No session recorded' : ''],
-              ['Appearance', savedAppearance === 'started' ? 'Started' : savedAppearance === 'sub' ? 'Sub' : 'Training'],
+              ['Appearance', savedAppearance ? APPEARANCE_LABEL[savedAppearance] : ''],
               ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
               [`Message to ${firstName}`, message || 'None'],
@@ -909,7 +890,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
             onClick={() => setStep(step - 1)}>Back</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait)}
+          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && (!appearance || appearance === 'didnt_play')))}
             onClick={() => setStep(step + 1)}>Next</Button>
         </>}
       </div>
