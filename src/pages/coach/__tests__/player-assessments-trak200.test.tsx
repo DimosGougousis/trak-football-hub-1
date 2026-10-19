@@ -9,11 +9,10 @@ import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 
 /**
  * TRAK-200 (Imad, 18 Oct): a coach couldn't tell a draft from a published
- * assessment, or find a draft again. Home's "Assess players" becomes "Player
- * Assessments": a page with Assess player and the recent assessments as
- * swipe cards, each saying Draft or Published, with Publish (or Published)
- * on the card. Tapping a card opens its quick look: opponent, message,
- * private note. The player's profile shows its latest assessment the same way.
+ * assessment. The player's profile shows its latest assessment as Arc's card:
+ * Draft or Published, the bands, the overall band, and Publish (or Published,
+ * with Edit and Unpublish) on the card. Tapping it opens the quick look:
+ * opponent, message, private note. History rows mark drafts.
  */
 const COACH = { id: 'coach-200' }
 const scores = { work_rate: 6, tactical: 6, attitude: 9, technical: 6, physical: 8, coachability: 9 }
@@ -57,31 +56,29 @@ function serve(rows: Record<string, unknown>[] = [DRAFT, PUBLISHED]) {
 beforeEach(() => signInAs(COACH))
 afterEach(() => cleanup())
 
-describe('TRAK-200: Player Assessments', () => {
-  it('Home\'s button is "Player Assessments" and opens the page', async () => {
-    serve()
-    renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: /Player Assessments/ }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/assessments'))
-    expect(await screen.findByRole('heading', { name: 'Player Assessments' })).toBeInTheDocument()
+describe("TRAK-200: the assessment card on the coach's player profile", () => {
+  // The profile reads its player by id with maybeSingle; the mock returns every row given.
+  const onlyAde = () => server.use(table('squad_players', [{ id: 'sp-1', coach_user_id: COACH.id, player_name: 'Ade Okafor', created_at: '2026-09-01T00:00:00Z' }]))
+
+  it('a draft says Draft, offers Publish, and opens a quick look with the opponent, message and private note', async () => {
+    serve(); onlyAde()
+    renderApp('/coach/player/sp-1')
+    const card = await screen.findByRole('article', { name: /Draft/ })
+    expect(within(card).getByRole('heading', { name: 'Draft' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Publish' })).toBeInTheDocument()
+    expect(within(card).queryByText('Needs to work on composure')).toBeNull()
+    await userEvent.click(within(card).getByRole('button', { name: 'Draft' }))
+    const look = await screen.findByRole('dialog')
+    expect(within(look).getByText('vs Synthetic Rovers')).toBeInTheDocument()
+    expect(within(look).getByText('Great pressing, keep your shape')).toBeInTheDocument()
+    expect(within(look).getByText('Needs to work on composure')).toBeInTheDocument()
+    expect(within(look).getByRole('button', { name: 'Close quick look' })).toBeInTheDocument()
   }, 20_000)
 
-  it('offers Assess player, and labels each recent assessment Draft or Published', async () => {
-    serve()
-    renderApp('/coach/assessments')
-    expect(await screen.findByRole('link', { name: 'Assess player' })).toHaveAttribute('href', '/coach/assess')
-    const recent = await screen.findByRole('region', { name: 'Recent assessments' })
-    const first = await within(recent).findByRole('article', { name: /Ade Okafor/ })
-    expect(within(first).getByRole('heading', { name: 'Draft' })).toBeInTheDocument()
-    expect(within(first).getByRole('button', { name: 'Publish' })).toBeInTheDocument()
-    const second = within(recent).getByRole('article', { name: /Bo Lind/ })
-    expect(within(second).getByRole('heading', { name: 'Published' })).toBeInTheDocument()
-  }, 20_000)
-
-  it('Publish on a draft card publishes the bands and the message, and the card says Published', async () => {
-    serve()
-    renderApp('/coach/assessments')
-    const card = await screen.findByRole('article', { name: /Ade Okafor/ })
+  it('Publish on the card publishes the bands and the message, and the card says Published', async () => {
+    serve(); onlyAde()
+    renderApp('/coach/player/sp-1')
+    const card = await screen.findByRole('article', { name: /Draft/ })
     await userEvent.click(within(card).getByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(patches).toEqual([
       { table: 'coach_assessments', body: { published_at: expect.any(String) } },
@@ -90,11 +87,10 @@ describe('TRAK-200: Player Assessments', () => {
     expect(await within(card).findByRole('heading', { name: 'Published' })).toBeInTheDocument()
   }, 20_000)
 
-  it('Unpublish, from a published card\'s menu, hides the bands and the message again', async () => {
-    serve([{ ...DRAFT, published_at: '2026-10-18T11:00:00Z' }])
-    renderApp('/coach/assessments')
-    const card = await screen.findByRole('article', { name: /Ade Okafor/ })
-    expect(within(card).getByRole('heading', { name: 'Published' })).toBeInTheDocument()
+  it("Unpublish, from a published card's menu, hides the bands and the message again", async () => {
+    serve([{ ...DRAFT, published_at: '2026-10-18T11:00:00Z' }]); onlyAde()
+    renderApp('/coach/player/sp-1')
+    const card = await screen.findByRole('article', { name: /Published/ })
     await userEvent.click(within(card).getByRole('button', { name: 'Published more actions' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Unpublish' }))
     await waitFor(() => expect(patches).toEqual([
@@ -102,20 +98,5 @@ describe('TRAK-200: Player Assessments', () => {
       { table: 'coach_shared_feedback', body: { published_at: null } },
     ]))
     expect(await within(card).findByRole('heading', { name: 'Draft' })).toBeInTheDocument()
-  }, 20_000)
-
-  it("the player's profile shows the latest as a card; its quick look has the opponent, message and private note", async () => {
-    serve()
-    // The profile reads its player by id with maybeSingle; the mock returns every row given.
-    server.use(table('squad_players', [{ id: 'sp-1', coach_user_id: COACH.id, player_name: 'Ade Okafor', created_at: '2026-09-01T00:00:00Z' }]))
-    renderApp('/coach/player/sp-1')
-    const card = await screen.findByRole('article', { name: /Draft/ })
-    expect(within(card).queryByText('Needs to work on composure')).toBeNull()
-    await userEvent.click(within(card).getByRole('button', { name: 'Draft' }))
-    const look = await screen.findByRole('dialog')
-    expect(within(look).getByText('vs Synthetic Rovers')).toBeInTheDocument()
-    expect(within(look).getByText('Great pressing, keep your shape')).toBeInTheDocument()
-    expect(within(look).getByText('Needs to work on composure')).toBeInTheDocument()
-    expect(within(look).getByRole('button', { name: 'Close quick look' })).toBeInTheDocument()
   }, 20_000)
 })

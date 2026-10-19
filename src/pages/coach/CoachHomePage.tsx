@@ -493,7 +493,7 @@ export default function CoachHomePage() {
         {/* Full assessment entry */}
         {playerCount !== null && playerCount > 0 && (
           <button
-            onClick={() => navigate('/coach/assessments')}
+            onClick={() => navigate('/coach/assess')}
             className="w-full mt-3 relative overflow-hidden rounded-[14px] border p-4 text-left active:scale-[0.98] transition-transform"
             style={{
               background: 'rgba(200,242,90,0.06)',
@@ -512,14 +512,14 @@ export default function CoachHomePage() {
                   className="text-[14px] font-semibold"
                   style={{ color: '#C8F25A', fontFamily: "'DM Sans', sans-serif" }}
                 >
-                  Player Assessments
+                  Assess players
                 </span>
               </div>
               <p
                 className="text-[11px] mt-1"
                 style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.3)' }}
               >
-                Assess a player, or find and publish a draft
+                Choose a player and record their assessment
               </p>
             </div>
           </button>
