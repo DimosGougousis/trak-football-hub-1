@@ -18,11 +18,27 @@ const current = (): number => {
 
 export const nextButton = () => screen.getByRole('button', { name: 'Next' })
 
+/** A match asks Appearance with nothing pre-picked (Imad, 19 Oct); a coach picks one before Next.
+ *  assess-training-appearance-trak182.test.tsx proves the choice is required. */
+export async function chooseAppearanceIfAsked() {
+  const appearance = screen.queryByRole('combobox', { name: 'Appearance' })
+  if (!appearance) return
+  await waitFor(() => expect(appearance).toBeEnabled())
+  // Next is the truth: Arc's animated label can still show the last player's choice while it fades.
+  if (!nextButton().hasAttribute('disabled')) return
+  appearance.focus()
+  await userEvent.keyboard('{Enter}')
+  await screen.findAllByRole('option')
+  await userEvent.keyboard('{Home}{Enter}')
+  await waitFor(() => expect(appearance).toHaveTextContent('Started'))
+}
+
 /** Goes to a step; Next must be open (a player who can be assessed, loaded). */
 export async function assessStep(step: AssessStep) {
   const target = indexOf(step)
   for (let guard = 0; guard < STEPS.length && current() !== target; guard++) {
     if (current() < target) {
+      await chooseAppearanceIfAsked()
       await waitFor(() => expect(nextButton()).toBeEnabled())
       await userEvent.click(nextButton())
     } else {
