@@ -14,21 +14,24 @@ interface Scenario {
   tests?: string
   backend?: string
   credentials?: string
+  evidence?: string
+  draft?: boolean
 }
 function permits(job: string, scenario: Scenario = {}) {
   const github = {
     repository: scenario.repository ?? upstream,
     event_name: scenario.event ?? 'push',
     ref: scenario.ref ?? 'refs/heads/main',
-    event: { pull_request: { head: { repo: { full_name: scenario.headRepository ?? upstream } } } },
+    event: { pull_request: { draft: scenario.draft ?? false, head: { repo: { full_name: scenario.headRepository ?? upstream } } } },
   }
   const needs = {
     test: { result: scenario.tests ?? 'success' },
+    'tested-main': { result: scenario.evidence ?? 'success' },
     supabase: { result: scenario.backend ?? 'success' },
     'vercel-credentials': { outputs: { configured: scenario.credentials ?? 'true' } },
   }
   // Evaluate the actual checked-in GitHub expression, not a duplicate gate.
-  const expression = workflow.jobs[job].if.replaceAll('needs.vercel-credentials', "needs['vercel-credentials']")
+  const expression = workflow.jobs[job].if.replaceAll('needs.vercel-credentials', "needs['vercel-credentials']").replaceAll('needs.tested-main', "needs['tested-main']")
   return new Function('github', 'needs', 'always', `return (${expression})`)(github, needs, () => true)
 }
 describe('release workflow regression gates', () => {
@@ -59,23 +62,33 @@ describe('release workflow regression gates', () => {
   it.each(['vercel-credentials', 'supabase', 'deploy'])('never runs %s from fork main even with credentials', job => {
     expect(permits(job, { repository: fork })).toBe(false)
   })
-  it('deploys upstream main only after successful tests and backend', () => {
+  it('deploys main using identical tested contents without running the suite again', () => {
     expect(permits('deploy')).toBe(true)
+    expect(permits('test')).toBe(false)
+    expect(permits('deploy', { tests: 'skipped' })).toBe(true)
     for (const result of ['failure', 'cancelled', 'skipped']) {
-      expect(permits('deploy', { tests: result })).toBe(false)
+      expect(permits('deploy', { evidence: result })).toBe(false)
+      expect(permits('supabase', { evidence: result })).toBe(false)
       expect(permits('deploy', { backend: result })).toBe(false)
     }
     expect(permits('deploy', { credentials: 'false' })).toBe(false)
-    expect(workflow.jobs.supabase.needs).toEqual(expect.arrayContaining(['test', 'vercel-credentials']))
+    expect(workflow.jobs.supabase.needs).toEqual(expect.arrayContaining(['tested-main', 'vercel-credentials']))
   })
   it('allows an upstream preview but blocks a fork PR preview and every PR database write', () => {
     const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
     expect(permits('deploy', pr)).toBe(true)
     expect(permits('deploy', { ...pr, headRepository: fork })).toBe(false)
     expect(permits('supabase', pr)).toBe(false)
+    for (const tests of ['failure', 'cancelled', 'skipped']) expect(permits('deploy', { ...pr, tests })).toBe(false)
   })
-  it('runs checks on task branches and never cancels a main release', () => {
-    expect(workflow.on.push.branches).toEqual(expect.arrayContaining(['parent/**', 'shared/**']))
+  it('runs the full gate only for final PRs, never branch pushes or drafts', () => {
+    expect(workflow.on.push.branches).toEqual(['main'])
+    expect(workflow.on.pull_request.types).toEqual(expect.arrayContaining(['ready_for_review', 'synchronize', 'converted_to_draft']))
+    const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
+    expect(permits('test', pr)).toBe(true)
+    expect(permits('test', { ...pr, draft: true })).toBe(false)
+    expect(permits('deploy', { ...pr, draft: true })).toBe(false)
+    expect(permits('test', { ref: 'refs/heads/shared/task' })).toBe(false)
     expect(workflow.concurrency['cancel-in-progress']).toBe("${{ github.event_name == 'pull_request' }}")
     expect(workflow.jobs.test.steps.find((step: { name: string }) => step.name === 'Install dependencies').run).toBe('npm ci --legacy-peer-deps')
   })
