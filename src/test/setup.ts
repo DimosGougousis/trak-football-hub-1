@@ -31,3 +31,7 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// TRAK-172: the assessment carousel's Next/Previous scroll its viewport, which
+// every browser Trak supports can do and jsdom can't.
+Element.prototype.scrollTo ??= function scrollTo() {}
