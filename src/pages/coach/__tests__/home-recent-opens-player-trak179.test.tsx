@@ -15,9 +15,7 @@ const COACH = { id: 'coach-179' }
 
 afterEach(() => cleanup())
 
-describe('TRAK-179: a Recent assessments row on Home opens the player', () => {
-  it("goes to the player's profile, not the assessment editor", async () => {
-    signInAs(COACH)
+function serve() {
     server.use(
       table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
       table('coach_details', [{ user_id: COACH.id, team: 'U16s', coach_role: 'Head Coach' }]),
@@ -30,8 +28,33 @@ describe('TRAK-179: a Recent assessments row on Home opens the player', () => {
       rpc('feature_on', () => true),
       rpc('coach_squad_player_consent_required', () => false),
     )
+}
+
+describe('TRAK-179: a Recent assessments row on Home opens the player', () => {
+  it("goes to the player's profile, not the assessment editor", async () => {
+    signInAs(COACH)
+    serve()
     renderApp('/coach/home')
     await userEvent.click(await screen.findByRole('button', { name: /^Open Ade Okafor's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/sp-1'))
+  }, 20_000)
+
+  // TRAK-200 (Imad, 18 Oct): Back on that profile returns to Home, not Squad.
+  it('Back on the profile returns to Home', async () => {
+    signInAs(COACH)
+    serve()
+    renderApp('/coach/home')
+    await userEvent.click(await screen.findByRole('button', { name: /^Open Ade Okafor's profile/ }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/player/sp-1'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/home'))
+  }, 20_000)
+
+  it('a profile opened with no history behind it goes Back to Squad', async () => {
+    signInAs(COACH)
+    serve()
+    renderApp('/coach/player/sp-1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
   }, 20_000)
 })
