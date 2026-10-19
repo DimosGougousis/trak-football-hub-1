@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Check delivery policy
+        run: node scripts/check-delivery-policy.mjs
+
       - name: Lint
         run: npm run lint
 

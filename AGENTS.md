@@ -2,6 +2,8 @@
 
 ## Before changing the product
 
+**Delivery policy:** before starting work on any branch, read the [current canonical delivery policy](https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/main/docs/release/merge-gate.md). It governs branch work, completion, merging and deployment across Linear, PR descriptions and historical plans. Use issue descriptions for product acceptance and explicit scope holds. Historical process instructions are reference material, not delivery requirements.
+
 Read the assigned issue’s current description and relevant requirements in
 [MVP Requirements](MVP%20Requirements). Fetch comments only to resolve a
 specific missing fact; follow links on demand instead of loading their history.
