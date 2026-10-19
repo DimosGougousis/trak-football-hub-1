@@ -90,6 +90,8 @@ describe('TRAK-137: Can\'t make it', () => {
     const user = userEvent.setup()
     renderEvent()
     await user.click(await screen.findByRole('button', { name: "Can't make it" }))
+    // Imad, 18 Oct: no medical details in the reason until counsel confirms (a child's health data under GDPR).
+    expect(screen.getByLabelText(/Reason/)).toHaveAccessibleName('Reason (optional, the coach sees it; no medical details)')
     await user.type(screen.getByLabelText(/Reason/), 'School trip')
     await user.click(screen.getByRole('button', { name: 'Tell the coach' }))
     expect(await screen.findByText("You told the coach Alex can't make it.")).toBeInTheDocument()
