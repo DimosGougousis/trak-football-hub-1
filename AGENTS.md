@@ -78,6 +78,9 @@ See README for setup and `package.json` for optional checks.
 `package.json` lists optional local commands. `.github/workflows/ci.yml` runs
 the complete required suite once for the final non-draft PR candidate. Reuse
 that result rather than running a separate author/reviewer/verification suite.
+Workflow actions must run on Node 24: `ci-action-runtimes.test.ts` lists each
+action's first such major, and Dependabot opens a weekly grouped PR for newer
+ones, reviewed like any other change.
 Pending use cases report failures without blocking; they are not passes.
 Edit `registry.yaml`, then regenerate its README with `npm run uc:report`.
 Preserve enforced contracts and the registry lock/version rules.
