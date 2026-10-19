@@ -14,7 +14,7 @@ export const CONSENT_THRESHOLD_AGE = 18
  * Bump whenever the wording below changes. Stored on every consent record so
  * a past consent can be reconstructed against the text actually shown.
  */
-export const CONSENT_NOTICE_VERSION = '2026-10-15.2'
+export const CONSENT_NOTICE_VERSION = '2026-10-19.1'
 
 /**
  * TRAK-177: a 15–17 player's own consent, where the academy's consent age is
@@ -100,7 +100,8 @@ export const CONSENT_PURPOSES: {
  */
 export const CONSENT_STATEMENT_TEMPLATE =
   "By approving, you confirm you're {child}'s parent or legal guardian and agree to the choices above. " +
-  'You can withdraw any time in settings, which stops new records.'
+  'You can withdraw any time in settings, which stops new records. ' +
+  "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you when an event is added, changed or cancelled, two days before. You can turn the reminder off in Settings."
 
 export const withChild = (text: string, firstName: string) => text.split('{child}').join(firstName)
 export const consentStatement = (firstName: string) => withChild(CONSENT_STATEMENT_TEMPLATE, firstName)

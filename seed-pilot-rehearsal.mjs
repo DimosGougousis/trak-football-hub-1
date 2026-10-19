@@ -60,10 +60,11 @@ const JOIN_CODE = 'REHRS'
 // Mirrors src/lib/consent.ts (CONSENT_NOTICE_VERSION, CONSENT_STATEMENT_TEMPLATE)
 // — a .mjs cannot import the TS module. Change both together, as the app does.
 // The app stores the statement with the first name of the child filled in.
-const CONSENT_NOTICE_VERSION = '2026-10-15.2'
+const CONSENT_NOTICE_VERSION = '2026-10-19.1'
 const CONSENT_STATEMENT_TEMPLATE =
   "By approving, you confirm you're {child}'s parent or legal guardian and agree to the choices above. " +
-  'You can withdraw any time in settings, which stops new records.'
+  'You can withdraw any time in settings, which stops new records. ' +
+  "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you when an event is added, changed or cancelled, two days before. You can turn the reminder off in Settings."
 const consentStatement = firstName => CONSENT_STATEMENT_TEMPLATE.split('{child}').join(firstName)
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
