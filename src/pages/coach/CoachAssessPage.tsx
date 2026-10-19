@@ -93,6 +93,8 @@ function CoachAssessmentForm() {
   // point of the two tables, and it has to be true in the UI as well.
   const [shared,          setShared]          = useState('')
   const [sharedPublished, setSharedPublished] = useState(false)
+  // TRAK-200: a draft assessment (published_at NULL) is the coach's alone, bands included.
+  const [assessmentPublished, setAssessmentPublished] = useState(false)
   const [sharedExists,    setSharedExists]    = useState(false)
   // The text the family can read right now, or null. J5: nothing reaches the
   // family until the coach presses Publish, so an edit to published text is a
@@ -174,14 +176,14 @@ function CoachAssessmentForm() {
     setTechnical(5); setPhysical(5); setCoachability(5)
     setAppearance(null)
     setNote(''); setNoteExists(false)
-    setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null)
+    setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null); setAssessmentPublished(false)
     setSaving(false)
     setLoadState({ scope, status: 'loading' })
     if (userId && playerId && (sessionId || openedRowId)) {
       void (async () => {
         try {
           const query = supabase.from('coach_assessments')
-            .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, session_id')
+            .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, session_id, published_at')
             .eq('coach_user_id', userId).eq('squad_player_id', playerId)
           const { data, error } = await (openedRowId ? query.eq('id', openedRowId) : query.eq('session_id', sessionId))
             .order('created_at', { ascending: false }).limit(1).abortSignal(controller.signal).maybeSingle()
@@ -202,6 +204,7 @@ function CoachAssessmentForm() {
             if (sharedResult.error) throw sharedResult.error
             const sf = sharedResult.data as { body: string; published_at: string | null } | null
             setExistingId(data.id)
+            setAssessmentPublished(data.published_at != null)
             setWorkRate(data.work_rate); setTactical(data.tactical)
             setAttitude(data.attitude); setTechnical(data.technical)
             setPhysical(data.physical); setCoachability(data.coachability)
@@ -371,6 +374,9 @@ function CoachAssessmentForm() {
         coachability,
         // derived card stats
         ...cardStats,
+        // TRAK-200: Save draft hides the bands from the family; Publish shows them.
+        // An already published row keeps its date; a new one takes the database's now().
+        ...(draft ? { published_at: null } : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
       }
 
       const { data: saved, error: saveError } = existingId

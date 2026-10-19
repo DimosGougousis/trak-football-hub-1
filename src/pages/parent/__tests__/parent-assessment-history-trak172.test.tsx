@@ -178,6 +178,30 @@ describe('TRAK-172 parent assessment history', () => {
     expect(screen.queryByText('Alex first touch')).not.toBeInTheDocument()
   })
 
+  // TRAK-204 (Kostas, 19 Oct, live check on iPhone): an event opened by mistake needs a way straight back.
+  it('Back on an assessment returns to the screen it was opened from', async () => {
+    renderAt('/parent/matches')
+    await userEvent.click(await within(await screen.findByRole('region', { name: 'Training' })).findByRole('link', { name: /Alex first touch/ }))
+    await screen.findByRole('heading', { name: 'Coach assessment' })
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('region', { name: 'Training' })).toBeInTheDocument()
+
+    cleanup()
+    renderAt()
+    const region = await screen.findByRole('region', { name: 'Latest coach assessment' })
+    await userEvent.click(within(await within(region).findByRole('group', { name: 'Assessment 1 of 5' })).getByRole('link', { name: 'Open assessment' }))
+    await screen.findByRole('heading', { name: 'Coach assessment' })
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('region', { name: 'Latest coach assessment' })).toBeInTheDocument()
+  })
+
+  it('Back on an assessment opened with nothing behind it goes to Events', async () => {
+    renderAt('/parent/assessment/Alex-assessment-1')
+    await screen.findByRole('heading', { name: 'Coach assessment' })
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('region', { name: 'Training' })).toBeInTheDocument()
+  })
+
   it('reaches assessments older than the old ten-record limit and loads the next page', async () => {
     renderAt('/parent/assessments')
     expect(await screen.findByRole('heading', { name: 'Assessments' })).toBeInTheDocument()
