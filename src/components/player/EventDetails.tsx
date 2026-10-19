@@ -1,5 +1,6 @@
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
+import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
 
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
@@ -21,7 +22,7 @@ export function EventDetails({ event: e, changes = [] }: {
     ['Time', eventTime(e)],
     ...(e.meetTime ? [['Meet', e.meetTime] as [string, string]] : []),
     ...(venue ? [['Venue', venue] as [string, string]] : []),
-    ...(e.kit ? [['Kit', e.kit] as [string, string]] : []),
+    ...(e.kit && !e.kitSnapshot ? [['Kit', e.kit] as [string, string]] : []),
     ...(e.familyNote ? [['Notes', e.familyNote] as [string, string]] : []),
   ]
   return (
@@ -50,6 +51,7 @@ export function EventDetails({ event: e, changes = [] }: {
           </li>
         ))}
       </ul>
+      {e.kitSnapshot && <KitAnnouncement kit={e.kitSnapshot.design} slot={e.kitSnapshot.slot} />}
     </div>
   )
 }

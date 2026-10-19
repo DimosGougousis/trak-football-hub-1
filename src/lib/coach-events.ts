@@ -8,6 +8,7 @@
  * the app never writes it.
  */
 import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { describeEventKit, readKitSnapshot, type EventKitSnapshot } from '@/lib/kit-templates'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -40,6 +41,7 @@ export type EventForm = {
   opponent: string
   homeAway: '' | 'home' | 'away'
   kit: string
+  kitSnapshot?: EventKitSnapshot | null
   /** TRAK-161: what families read under Kit; '' for none. Not the coach-only notes. */
   familyNote: string
 }
@@ -60,6 +62,7 @@ export type EventRow = {
   published: boolean
   meet_time?: string | null
   kit?: string | null
+  kit_snapshot?: unknown
   family_note?: string | null
   home_away?: string | null
   status?: string | null
@@ -68,7 +71,7 @@ export type EventRow = {
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', kitSnapshot: null, familyNote: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -145,7 +148,8 @@ export function formToRow(form: EventForm) {
     opponent: isMatch ? form.opponent.trim() : null,
     home_away: isMatch && form.homeAway ? form.homeAway : null,
     // TRAK-161: kit and the family note on every kind of event.
-    kit: form.kit.trim() || null,
+    kit: form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || null,
+    kit_snapshot: form.kitSnapshot ? readKitSnapshot(form.kitSnapshot) : null,
     family_note: form.familyNote.trim() || null,
   }
 }
@@ -169,6 +173,7 @@ export function rowToForm(row: EventRow): EventForm {
     opponent: row.opponent ?? '',
     homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : '',
     kit: row.kit ?? '',
+    kitSnapshot: readKitSnapshot(row.kit_snapshot),
     familyNote: row.family_note ?? '',
   }
 }

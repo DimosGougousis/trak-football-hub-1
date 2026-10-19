@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { updatedNote } from '@/lib/alert-read-state'
 import type { StripEvent } from '@/components/trak/WeekStrip'
+import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
 
 /* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet. Imad's 16 Oct
    layout: the opponent (or the session's name) at top left with Home / Away /
@@ -79,7 +80,7 @@ export function EventSheet({ event, role, trigger, children }: {
         </a>
       )}
     </>] : null,
-    event.kit ? ['Kit', event.kit] : null,
+    event.kit && !event.kitSnapshot ? ['Kit', event.kit] : null,
     event.familyNote && !past ? ['Note', event.familyNote] : null,
   ] as ([string, ReactNode] | null)[]).filter((row): row is [string, ReactNode] => !!row)
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
@@ -87,7 +88,7 @@ export function EventSheet({ event, role, trigger, children }: {
 
   return (
     <BottomSheet trigger={trigger} title={sheetTitle(event)} description={sheetPlace(event) ?? undefined}
-      aside={format(parseISO(event.date), 'EEE MMM d')} detents={[0.62, 0.92]} className="arc">
+      aside={format(parseISO(event.date), 'EEE MMM d')} detents={[0.62, 0.92]} initialDetent={event.kitSnapshot ? 1 : 0} className="arc">
       <div className="space-y-5 pb-4">
         <TimeRow event={event} />
         {status && (
@@ -106,6 +107,7 @@ export function EventSheet({ event, role, trigger, children }: {
             ))}
           </dl>
         )}
+        {event.kitSnapshot && <KitAnnouncement kit={event.kitSnapshot.design} slot={event.kitSnapshot.slot} />}
         {/* Kostas's #310 review: the full page (Add to calendar, every detail) stays one tap away. */}
         {role !== 'coach' && (
           // TRAK-182: the page's Back returns here in one step.

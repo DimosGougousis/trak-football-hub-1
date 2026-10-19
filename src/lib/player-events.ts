@@ -1,5 +1,6 @@
 import { format, parseISO } from 'date-fns'
 import { displayEventTime } from './event-time'
+import { readKitSnapshot, type EventKitSnapshot } from './kit-templates'
 
 /**
  * What a player sees of their squad's events (J8.7, TRAK-130).
@@ -33,6 +34,7 @@ export interface PlayerEvent {
   meetTime: string | null
   venue: string | null
   kit: string | null
+  kitSnapshot?: EventKitSnapshot | null
   opponent: string | null
   homeAway: 'home' | 'away' | null
   status: 'scheduled' | 'cancelled'
@@ -77,6 +79,7 @@ export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null 
     meetTime: clock(row[EVENT_COLUMNS.meetTime]),
     venue: text(row.venue),
     kit: text(row[EVENT_COLUMNS.kit]),
+    kitSnapshot: readKitSnapshot(row.kit_snapshot),
     opponent: text(row.opponent),
     homeAway: homeAway === 'home' || homeAway === 'away' ? homeAway : null,
     status: row[EVENT_COLUMNS.status] === 'cancelled' ? 'cancelled' : 'scheduled',

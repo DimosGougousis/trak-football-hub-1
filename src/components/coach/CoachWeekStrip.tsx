@@ -56,8 +56,8 @@ export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; vers
         const fromEvent = (session: { event_id: string | null; session_type: string | null; session_date: string | null }) => {
           const event = session.event_id ? planned.get(session.event_id) : undefined
           if (!event || session.session_type !== 'match' || event.event_date !== session.session_date) return {}
-          const { start_time, starts_at, kit, opponent, home_away, venue } = event
-          return { start_time, starts_at, kit, opponent, home_away, venue }
+          const { start_time, starts_at, kit, kit_snapshot, opponent, home_away, venue } = event
+          return { start_time, starts_at, kit, kit_snapshot, opponent, home_away, venue }
         }
         return { error: null, data: [
           ...(events.data ?? []).filter(event => !completedEvents.has(event.id) && eventInSquad(event.squad)),
