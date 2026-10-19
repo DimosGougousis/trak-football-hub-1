@@ -1,9 +1,11 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { MobileShell, NavBar } from '@/components/trak'
+import { NavBar } from '@/components/trak'
 
 /* The two training pages are static HTML in public/trainings, kept exactly as
    designed (white, their own fonts and scripts). vercel.json lets only
-   /trainings/* run inline scripts and be framed, and only by this site. */
+   /trainings/* run inline scripts and be framed, and only by this site.
+   Unlike the rest of the app, the frame is not held to the 430px phone
+   column: on a tablet or desktop it spans the whole window. */
 const PAGES = [
   { id: 'sessions', tab: 'Coaching sessions', title: 'Coaching Session Catalogue', src: '/trainings/coaching-session-catalogue.html' },
   { id: 'play-it-right', tab: 'Play It Right', title: 'Play It Right', src: '/trainings/play-it-right.html' },
@@ -17,8 +19,8 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
   const lib = page.id === 'sessions' ? params.get('lib') : null
 
   return (
-    <MobileShell>
-      <div className="pt-3 pb-3 border-b border-white/[0.07] grid gap-3">
+    <div className="min-h-screen bg-[#0A0A0B] pb-24">
+      <div className="mx-auto w-full max-w-[760px] px-5 pt-3 pb-3 border-b border-white/[0.07] grid gap-3">
         <h1
           className="text-[16px] font-medium text-white/88 tracking-tight text-center"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
@@ -55,11 +57,11 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
         title={page.title}
         src={lib ? `${page.src}?${new URLSearchParams({ lib })}` : page.src}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-        className="block -mx-5 w-[calc(100%+40px)] border-0 bg-white"
+        className="block w-full border-0 bg-white"
         style={{ height: 'calc(100dvh - 186px)' }}
       />
 
       <NavBar role={role} activeTab={`/${role}/trainings`} onNavigate={navigate} />
-    </MobileShell>
+    </div>
   )
 }

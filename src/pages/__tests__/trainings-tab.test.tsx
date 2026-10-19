@@ -67,6 +67,18 @@ describe.each([
     expect(screen.getByRole('tab', { name: 'Play It Right' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByTitle('Coaching Session Catalogue')).toBeNull()
   }, 20_000)
+
+  it('gives both pages the full width of a tablet or desktop screen', async () => {
+    signIn()
+    renderApp(path)
+    for (const [tab, title] of [['Coaching sessions', 'Coaching Session Catalogue'], ['Play It Right', 'Play It Right']]) {
+      await userEvent.click(await screen.findByRole('tab', { name: tab }))
+      const frame = await screen.findByTitle(title)
+      // The rest of the app keeps to a 430px phone column; these pages must not.
+      expect(frame.closest('[class*="max-w-"]')).toBeNull()
+      expect(frame).toHaveClass('w-full')
+    }
+  }, 20_000)
 })
 
 describe('Play It Right keeps answers to the person answering', () => {
@@ -128,6 +140,12 @@ describe('Trainings pages ship as static files', () => {
       expect(html).toContain(`<title>${title}</title>`)
       expect(html).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/)
       expect(html).toContain("url('/fonts/dm-sans-normal-variable-latin.woff2')")
+    }
+  })
+
+  it('widens both pages past their 760px phone/tablet column on a desktop screen', () => {
+    for (const p of [CATALOGUE, PLAY_IT_RIGHT]) {
+      expect(page(p)).toContain('@media (min-width: 1024px) { .wrap { max-width: 1180px; } }')
     }
   })
 
