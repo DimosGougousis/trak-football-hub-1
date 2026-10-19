@@ -79,6 +79,9 @@ npm run build
 
 `package.json` and `.github/workflows/ci.yml` define the current commands and
 full CI checks. Run checks appropriate to the change and the release gate.
+Workflow actions must run on Node 24: `ci-action-runtimes.test.ts` lists each
+action's first such major, and Dependabot opens a weekly grouped PR for newer
+ones, reviewed like any other change.
 Pending use cases report failures without blocking; they are not passes.
 Edit `registry.yaml`, then regenerate its README with `npm run uc:report`.
 Preserve enforced contracts and the registry lock/version rules.
