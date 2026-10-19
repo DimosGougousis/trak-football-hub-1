@@ -98,6 +98,10 @@ SELECT public.withdraw_parental_consent(pg_temp.kid(20));
 SELECT pg_temp.kcheck((SELECT count(*)=0 FROM public.child_events(pg_temp.kid(20))),'withdrawal removes event and kit from guardian');
 SELECT pg_temp.kas(20);
 SELECT pg_temp.kcheck((SELECT count(*)=0 FROM public.child_events(pg_temp.kid(20))),'withdrawal removes event and kit from player');
+SELECT pg_temp.kas(10);
+UPDATE public.coach_calendar_events SET kit='Green bibs' WHERE id=pg_temp.kid(800);
+SELECT pg_temp.kcheck((SELECT kit_snapshot IS NULL AND kit='Green bibs' FROM public.coach_calendar_events WHERE id=pg_temp.kid(800)),
+ 'an older text-only client cannot leave a contradictory illustration');
 
 RESET ROLE;
 DELETE FROM public.academy_features WHERE organization_id=pg_temp.kid(100) AND feature='events';

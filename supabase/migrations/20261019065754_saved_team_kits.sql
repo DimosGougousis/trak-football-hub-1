@@ -70,6 +70,20 @@ ALTER TABLE public.coach_calendar_events ADD COLUMN kit_snapshot jsonb
 COMMENT ON COLUMN public.coach_calendar_events.kit_snapshot IS
  'Versioned design selected for this event. Template edits do not change existing announcements.';
 
+-- A cached/rolled-back text-only client can still edit kit. If it changes the
+-- instruction without replacing the design, show its new text rather than stale art.
+CREATE FUNCTION trak_private.clear_changed_text_kit() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+ IF NEW.kit IS DISTINCT FROM OLD.kit AND NEW.kit_snapshot IS NOT DISTINCT FROM OLD.kit_snapshot THEN
+  NEW.kit_snapshot := NULL;
+ END IF;
+ RETURN NEW;
+END $$;
+REVOKE ALL ON FUNCTION trak_private.clear_changed_text_kit() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_clear_changed_text_kit BEFORE UPDATE OF kit ON public.coach_calendar_events
+ FOR EACH ROW EXECUTE FUNCTION trak_private.clear_changed_text_kit();
+
 -- Return-type extension requires a drop/recreate. Keep every existing family,
 -- consent, publication, academy and squad condition from TRAK-176 unchanged.
 DROP FUNCTION public.child_events(uuid);

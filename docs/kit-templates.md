@@ -86,6 +86,8 @@ reselecting a kit while editing an event replaces it explicitly. The existing
 event sequence tracks that edit. The legacy `kit` column receives a readable
 description for calendar and sharing paths, or the coach's free text when no
 visual is selected. Existing email-notice trigger rules are unchanged.
+If an older client changes the text instruction without replacing the design,
+the database clears the old illustration so the announcement shows the new text.
 
 The `child_events` RPC returns the snapshot under its existing publication,
 relationship, academy, squad and consent checks. Both full family event pages
