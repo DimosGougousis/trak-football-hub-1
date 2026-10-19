@@ -669,7 +669,7 @@ export default function CoachSchedule() {
                 return (
                   <div key={ev.id}
                     className="rounded-[14px] px-4 py-3 flex items-start gap-3"
-                    style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))', opacity: cancelled ? 0.7 : 1 }}>
+                    style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
                     <div className="w-1 self-stretch rounded-full flex-shrink-0"
                       style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
                     <div className="flex-1 min-w-0">

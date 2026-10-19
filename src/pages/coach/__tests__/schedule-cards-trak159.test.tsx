@@ -68,6 +68,9 @@ describe('TRAK-159: the coach calendar cards', () => {
     expect(label.style.color).toBe(hexToRgb(CANCELLED_COLOR))
     const stripe = card('Rained off').firstElementChild as HTMLElement
     expect(stripe.style.background).toBe(hexToRgb(CANCELLED_COLOR))
+    // TRAK-189: not faded as well. On the light theme a 0.7 fade drops the label to
+    // 3.8:1 and the details to 3.1:1 (axe, 19 Oct); red, label and stripe say it already.
+    expect(card('Rained off').style.opacity).not.toBe('0.7')
   }, 20_000)
 })
 
