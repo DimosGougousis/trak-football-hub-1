@@ -23,3 +23,31 @@ COMMENT ON COLUMN public.coach_assessments.published_at IS
 CREATE POLICY "Only the coach reads a draft assessment" ON public.coach_assessments
   AS RESTRICTIVE FOR SELECT TO authenticated
   USING (published_at IS NOT NULL OR coach_user_id = (SELECT auth.uid()));
+
+-- Publish and Unpublish in one transaction (Tarek's review of #364): the bands
+-- and the message change together or not at all, so the coach is never told
+-- "Not published" while the bands are already readable. SECURITY INVOKER: the
+-- caller's own policies apply to both writes (the coach's own rows, consent).
+-- An empty message is never published.
+CREATE OR REPLACE FUNCTION public.set_assessment_published(p_assessment_id uuid, p_published boolean)
+RETURNS timestamptz
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_at timestamptz := CASE WHEN p_published THEN now() END;
+BEGIN
+  UPDATE public.coach_assessments SET published_at = v_at
+  WHERE id = p_assessment_id AND coach_user_id = (SELECT auth.uid());
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'assessment_not_found' USING ERRCODE = 'P0002';
+  END IF;
+  UPDATE public.coach_shared_feedback SET published_at = v_at
+  WHERE assessment_id = p_assessment_id AND coach_user_id = (SELECT auth.uid())
+    AND (NOT p_published OR btrim(body) <> '');
+  RETURN v_at;
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.set_assessment_published(uuid, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.set_assessment_published(uuid, boolean) TO authenticated;

@@ -115,13 +115,64 @@ RESET ROLE;
 SELECT pg_temp.ad_check((SELECT published_at IS NULL FROM public.coach_assessments WHERE id = pg_temp.ad(32)),
   '3 neither the parent nor the child can publish a draft', NULL);
 
+-- ── 4. Publish is one transaction: bands and message together, or neither ──
+-- (Tarek's review of #364: two separate writes could publish the bands and then
+-- fail on the message, while the card said "Not published".)
+INSERT INTO public.coach_shared_feedback (assessment_id, coach_user_id, body, published_at)
+VALUES (pg_temp.ad(32), pg_temp.ad(2), 'Keep your shape', NULL);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ad_as(pg_temp.ad(2));
+SELECT public.set_assessment_published(pg_temp.ad(32), true);
+RESET ROLE;
+SELECT pg_temp.ad_check(
+  (SELECT published_at IS NOT NULL FROM public.coach_assessments WHERE id = pg_temp.ad(32))
+  AND (SELECT published_at IS NOT NULL FROM public.coach_shared_feedback WHERE assessment_id = pg_temp.ad(32)),
+  '4 Publish sets the bands and the message together', NULL);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ad_as(pg_temp.ad(2));
+SELECT public.set_assessment_published(pg_temp.ad(32), false);
+RESET ROLE;
+SELECT pg_temp.ad_check(
+  (SELECT published_at IS NULL FROM public.coach_assessments WHERE id = pg_temp.ad(32))
+  AND (SELECT published_at IS NULL FROM public.coach_shared_feedback WHERE assessment_id = pg_temp.ad(32)),
+  '4 Unpublish clears both', NULL);
+-- The message write fails: the bands must stay a draft.
+CREATE FUNCTION pg_temp.ad_refuse() RETURNS trigger LANGUAGE plpgsql AS $test$
+BEGIN RAISE EXCEPTION 'synthetic message failure'; END; $test$;
+CREATE TRIGGER ad_refuse_message BEFORE UPDATE ON public.coach_shared_feedback
+  FOR EACH ROW EXECUTE FUNCTION pg_temp.ad_refuse();
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ad_as(pg_temp.ad(2));
+DO $test$
+BEGIN
+  PERFORM public.set_assessment_published(pg_temp.ad(32), true);
+EXCEPTION WHEN raise_exception THEN NULL;
+END;
+$test$;
+RESET ROLE;
+DROP TRIGGER ad_refuse_message ON public.coach_shared_feedback;
+SELECT pg_temp.ad_check((SELECT published_at IS NULL FROM public.coach_assessments WHERE id = pg_temp.ad(32)),
+  '4 a failed message write leaves the bands a draft', NULL);
+-- Only the coach who wrote it can publish it.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ad_as(pg_temp.ad(5));
+DO $test$
+BEGIN
+  PERFORM public.set_assessment_published(pg_temp.ad(32), true);
+EXCEPTION WHEN no_data_found THEN NULL;
+END;
+$test$;
+RESET ROLE;
+SELECT pg_temp.ad_check((SELECT published_at IS NULL FROM public.coach_assessments WHERE id = pg_temp.ad(32)),
+  '4 another coach cannot publish it', NULL);
+
 -- ── Report ─────────────────────────────────────────────────────────────────
 DO $test$
 DECLARE failed integer; total integer;
 BEGIN
   SELECT count(*) FILTER (WHERE NOT passed), count(*) INTO failed, total FROM pg_temp.ad_results;
-  IF total <> 10 THEN
-    RAISE EXCEPTION 'Assessment drafts: % assertions ran; expected exactly 10', total;
+  IF total <> 14 THEN
+    RAISE EXCEPTION 'Assessment drafts: % assertions ran; expected exactly 14', total;
   END IF;
   IF failed > 0 THEN
     RAISE EXCEPTION 'Assessment drafts: % of % failed: %', failed, total,

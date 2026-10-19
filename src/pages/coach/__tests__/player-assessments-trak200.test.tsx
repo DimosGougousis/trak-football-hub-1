@@ -22,9 +22,14 @@ const DRAFT = { id: 'as-draft', coach_user_id: COACH.id, squad_player_id: 'sp-1'
 const PUBLISHED = { ...DRAFT, id: 'as-pub', created_at: '2026-10-11T10:00:00Z', published_at: '2026-10-11T10:00:00Z',
   squad_player_id: 'sp-2', squad_players: { player_name: 'Bo Lind', age_group: null }, coach_sessions: { title: 'Finishing', session_date: '2026-10-10' } }
 
-let patches: { table: string; body: Record<string, unknown> }[]
+// Calls to the one-transaction publish (Tarek's review of #364); `publishFails` makes it refuse.
+let published: Record<string, unknown>[]
+let publishFails: boolean
+let patches: { table: string }[]
 
 function serve(rows: Record<string, unknown>[] = [DRAFT, PUBLISHED]) {
+  published = []
+  publishFails = false
   patches = []
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
@@ -44,12 +49,14 @@ function serve(rows: Record<string, unknown>[] = [DRAFT, PUBLISHED]) {
     table('coach_calendar_events', []),
     rpc('feature_on', () => true),
     rpc('coach_squad_player_consent_required', () => false),
+    http.post(`${SUPABASE_URL}/rest/v1/rpc/set_assessment_published`, async ({ request }) => {
+      if (publishFails) return HttpResponse.json({ code: 'XX000', message: 'synthetic failure' }, { status: 500 })
+      published.push(await request.json() as Record<string, unknown>)
+      return HttpResponse.json('2026-10-19T12:00:00Z')
+    }),
+    // The card never writes the two tables one by one any more.
     ...['coach_assessments', 'coach_shared_feedback'].map(name =>
-      http.patch(`${SUPABASE_URL}/rest/v1/${name}`, async ({ request }) => {
-        patches.push({ table: name, body: await request.json() as Record<string, unknown> })
-        const id = new URL(request.url).searchParams.get(name === 'coach_assessments' ? 'id' : 'assessment_id')?.replace('eq.', '')
-        return HttpResponse.json([name === 'coach_assessments' ? { id } : { assessment_id: id }])
-      })),
+      http.patch(`${SUPABASE_URL}/rest/v1/${name}`, () => { patches.push({ table: name }); return HttpResponse.json([]) })),
   )
 }
 
@@ -80,10 +87,8 @@ describe("TRAK-200: the assessment card on the coach's player profile", () => {
     renderApp('/coach/player/sp-1')
     const card = await screen.findByRole('article', { name: /Draft/ })
     await userEvent.click(within(card).getByRole('button', { name: 'Publish' }))
-    await waitFor(() => expect(patches).toEqual([
-      { table: 'coach_assessments', body: { published_at: expect.any(String) } },
-      { table: 'coach_shared_feedback', body: { published_at: expect.any(String) } },
-    ]))
+    await waitFor(() => expect(published).toEqual([{ p_assessment_id: 'as-draft', p_published: true }]))
+    expect(patches).toEqual([])
     expect(await within(card).findByRole('heading', { name: 'Published' })).toBeInTheDocument()
   }, 20_000)
 
@@ -93,10 +98,32 @@ describe("TRAK-200: the assessment card on the coach's player profile", () => {
     const card = await screen.findByRole('article', { name: /Published/ })
     await userEvent.click(within(card).getByRole('button', { name: 'Published more actions' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Unpublish' }))
-    await waitFor(() => expect(patches).toEqual([
-      { table: 'coach_assessments', body: { published_at: null } },
-      { table: 'coach_shared_feedback', body: { published_at: null } },
-    ]))
+    await waitFor(() => expect(published).toEqual([{ p_assessment_id: 'as-draft', p_published: false }]))
     expect(await within(card).findByRole('heading', { name: 'Draft' })).toBeInTheDocument()
+  }, 20_000)
+
+  // Tarek's review of #364, finding 1: a refused publish changes nothing, and the card says so truthfully.
+  it('a refused publish leaves the card a Draft and says Not published', async () => {
+    serve(); onlyAde(); publishFails = true
+    renderApp('/coach/player/sp-1')
+    const card = await screen.findByRole('article', { name: /Draft/ })
+    await userEvent.click(within(card).getByRole('button', { name: 'Publish' }))
+    expect(await screen.findByText(/Not published/)).toBeInTheDocument()
+    expect(within(card).getByRole('heading', { name: 'Draft' })).toBeInTheDocument()
+  }, 20_000)
+
+  // Finding 2: a failed message read is not "no message". Publish still goes through the one call
+  // (which publishes the message server-side), and the quick look says the message didn't load.
+  it('a failed message read still publishes the message, and the quick look says it did not load', async () => {
+    serve(); onlyAde()
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_shared_feedback`, () => HttpResponse.json({ message: 'offline' }, { status: 500 })))
+    renderApp('/coach/player/sp-1')
+    const card = await screen.findByRole('article', { name: /Draft/ })
+    await userEvent.click(within(card).getByRole('button', { name: 'Publish' }))
+    await waitFor(() => expect(published).toEqual([{ p_assessment_id: 'as-draft', p_published: true }]))
+    // (jsdom never finishes the quick look's closing animation, so it's opened last.)
+    await userEvent.click((await within(card).findByRole('heading', { name: 'Published' })).querySelector('button')!)
+    expect(await within(await screen.findByRole('dialog')).findByText(/Couldn't load the message/)).toBeInTheDocument()
+    expect(screen.queryByText('No message')).toBeNull()
   }, 20_000)
 })

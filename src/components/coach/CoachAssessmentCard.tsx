@@ -27,11 +27,12 @@ const average = (a: CoachAssessment) =>
  * A draft is the coach's alone, bands included (published_at NULL); Publish
  * shows the bands and the message to the family, Unpublish hides both.
  */
-export function CoachAssessmentCard({ assessment, coachId, playerName, message, note, onChanged }: {
+export function CoachAssessmentCard({ assessment, playerName, message, messageFailed = false, note, onChanged }: {
   assessment: CoachAssessment
-  coachId: string
   playerName?: string
   message?: string | null
+  /** The message couldn't be read: say so, never "No message". Publishing doesn't depend on it. */
+  messageFailed?: boolean
   note?: string | null
   onChanged?: (published: boolean) => void
 }) {
@@ -46,18 +47,12 @@ export function CoachAssessmentCard({ assessment, coachId, playerName, message, 
   const setPublishedTo = async (next: boolean) => {
     if (busy) return
     setBusy(true)
-    const at = next ? new Date().toISOString() : null
     try {
-      const { data: saved, error: saveError } = await supabase.from('coach_assessments').update({ published_at: at })
-        .eq('id', assessment.id).eq('coach_user_id', coachId).select('id').maybeSingle()
-      // No row back means nothing changed (removed, or no longer this coach's): never report it as done.
-      if (saveError || !saved) throw saveError ?? new Error('not found')
-      // The message follows the bands. A missing message row is fine: there is nothing to send.
-      if (message) {
-        const { error: sendError } = await supabase.from('coach_shared_feedback' as never).update({ published_at: at } as never)
-          .eq('assessment_id', assessment.id).eq('coach_user_id', coachId)
-        if (sendError) throw sendError
-      }
+      // One transaction (Tarek's review of #364): the bands and the message change together or not at
+      // all, whatever this screen managed to read. Not this coach's, or gone: an error, never "done".
+      const { error } = await supabase.rpc('set_assessment_published' as never,
+        { p_assessment_id: assessment.id, p_published: next } as never)
+      if (error) throw error
       setPublished(next)
       onChanged?.(next)
       toast.success(next ? 'Published. The player and their parents can see it.' : 'Unpublished. Only you can see it now.')
@@ -88,7 +83,7 @@ export function CoachAssessmentCard({ assessment, coachId, playerName, message, 
         <p className="text-muted-foreground">{date}</p>
         <div>
           <MetadataLabel text="MESSAGE TO THE PLAYER" />
-          <p className="mt-1 text-foreground">{message || 'No message'}</p>
+          <p className="mt-1 text-foreground">{messageFailed ? "Couldn't load the message. Publish still sends it." : message || 'No message'}</p>
         </div>
         {note ? <div>
           <MetadataLabel text="PRIVATE NOTE · ONLY YOU" />

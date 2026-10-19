@@ -179,8 +179,8 @@ export default function CoachPlayerProfilePage() {
         {/* Latest assessment, as Arc's card (TRAK-200): Draft or Published, Publish on the card,
             and the quick look with the opponent, the message and the private note. */}
         {latest && user && (
-          <CoachAssessmentCard key={latest.id} assessment={latest} coachId={user.id}
-            message={messageById[latest.id]} note={notesById[latest.id]}
+          <CoachAssessmentCard key={latest.id} assessment={latest}
+            message={messageById[latest.id]} messageFailed={messageSentById === undefined} note={notesById[latest.id]}
             onChanged={published => setAssessments(list => list.map(a => a.id === latest.id ? { ...a, published_at: published ? new Date().toISOString() : null } : a))} />
         )}
 
