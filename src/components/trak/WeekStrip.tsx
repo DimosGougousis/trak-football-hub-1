@@ -61,30 +61,42 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
             </span>}</>,
           }
         })} />
-      <p className="text-[11px] tracking-[0.08em] uppercase text-ink-3 mt-3 mb-1" style={{ fontFamily: 'var(--t-font-mono)' }}>
-        {format(parseISO(day), 'EEEE d MMMM')}
-      </p>
-      {chosen.length === 0 ? <p className="text-[13px] text-ink-3 py-2">Nothing planned.</p> : (
-        <ul className="divide-y divide-line border-y border-line">
-          {chosen.map(event => {
-            const label = <>
-              <span aria-hidden="true" className="w-[7px] h-[7px] rounded-full shrink-0"
-                style={event.status === 'cancelled'
-                  ? { background: 'transparent', border: `1.5px solid ${CANCELLED_COLOR}` }
-                  : { background: EVENT_COLOR[event.kind] }} />
-              <span className="w-12 shrink-0 text-[13px] text-ink-2">{event.sessionId ? 'Logged' : event.time ?? 'TBC'}</span>
-              <span className="flex-1 min-w-0 truncate text-[14px] text-ink">{eventHeading(event)}</span>
-              {event.status === 'cancelled' && <span className="text-[12px]" style={{ color: CANCELLED_COLOR }}>Cancelled</span>}
-              {event.draft && <span className="text-[12px] text-ink-3">Draft</span>}
-              <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-ink-3" />
-            </>
-            const row = 'w-full flex items-center gap-3 min-h-12 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md'
-            return <li key={event.id}>{renderSheet(event, <button type="button" className={row}>{label}</button>, refresh)}</li>
-          })}
-        </ul>
-      )}
+      <DayEvents day={day} events={chosen} renderSheet={renderSheet} refresh={refresh} />
     </section>
   )
+}
+
+/** One day's events as rows, each opening its sheet: the week strip's list, and the player's month calendar (TRAK-171). */
+export function DayEvents({ day, events, renderSheet, refresh = () => {} }: {
+  day: string
+  events: StripEvent[]
+  renderSheet: RenderEventSheet
+  refresh?: () => void
+}) {
+  return <>
+    <p className="text-[11px] tracking-[0.08em] uppercase text-ink-3 mt-3 mb-1" style={{ fontFamily: 'var(--t-font-mono)' }}>
+      {format(parseISO(day), 'EEEE d MMMM')}
+    </p>
+    {events.length === 0 ? <p className="text-[13px] text-ink-3 py-2">Nothing planned.</p> : (
+      <ul className="divide-y divide-line border-y border-line">
+        {events.map(event => {
+          const label = <>
+            <span aria-hidden="true" className="w-[7px] h-[7px] rounded-full shrink-0"
+              style={event.status === 'cancelled'
+                ? { background: 'transparent', border: `1.5px solid ${CANCELLED_COLOR}` }
+                : { background: EVENT_COLOR[event.kind] }} />
+            <span className="w-12 shrink-0 text-[13px] text-ink-2">{event.sessionId ? 'Logged' : event.time ?? 'TBC'}</span>
+            <span className="flex-1 min-w-0 truncate text-[14px] text-ink">{eventHeading(event)}</span>
+            {event.status === 'cancelled' && <span className="text-[12px]" style={{ color: CANCELLED_COLOR }}>Cancelled</span>}
+            {event.draft && <span className="text-[12px] text-ink-3">Draft</span>}
+            <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-ink-3" />
+          </>
+          const row = 'w-full flex items-center gap-3 min-h-12 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md'
+          return <li key={event.id}>{renderSheet(event, <button type="button" className={row}>{label}</button>, refresh)}</li>
+        })}
+      </ul>
+    )}
+  </>
 }
 
 type WeekRows = PromiseLike<{ data: unknown[] | null; error: unknown }>

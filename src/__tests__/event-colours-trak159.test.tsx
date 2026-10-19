@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import { WeekStrip, type StripEvent } from '@/components/trak/WeekStrip'
+import { DayEvents, WeekStrip, type StripEvent } from '@/components/trak/WeekStrip'
 import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
 import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 
@@ -51,4 +51,14 @@ describe('family event card colours', () => {
     expect(stripe('match')).toBe(rgb(EVENT_COLOR.match))
     expect(stripe('training', 'cancelled')).toBe(rgb(CANCELLED_COLOR))
   })
+})
+
+it('the shared day list keeps a cancelled event hollow on Home and the player calendar', () => {
+  render(<DayEvents day="2026-10-12" renderSheet={(_, trigger) => trigger}
+    events={[event({ status: 'cancelled' })]} />)
+  const row = screen.getByRole('button', { name: /Technical.*Cancelled/ })
+  const dot = row.querySelector('span[aria-hidden="true"]') as HTMLElement
+  expect(dot.style.background).toBe('transparent')
+  expect(dot.style.borderColor).toBe(CANCELLED_COLOR.toLowerCase())
+  expect(dot.style.borderStyle).toBe('solid')
 })

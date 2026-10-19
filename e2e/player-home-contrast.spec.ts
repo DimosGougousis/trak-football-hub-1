@@ -6,10 +6,10 @@ const playerId = '97189000-0000-4000-8000-000000000002'
 
 // Production build, synthetic backend only. The season card must be exercised
 // with matches: an empty fixture missed the band and milestone contrast bug.
-async function playerBackend(context: BrowserContext, hasMatches: boolean, unexpected: string[]) {
+async function playerBackend(context: BrowserContext, hasMatches: boolean, unexpected: string[], now = Date.now()) {
   const user = { id: playerId, email: 'player@theme189.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
-  const exp = Math.floor(Date.now() / 1000) + 3600
+  const exp = Math.floor(now / 1000) + 3600
   const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: playerId, exp, role: 'authenticated' }]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
@@ -74,3 +74,39 @@ for (const hasMatches of [false, true]) {
     expect(errors).toEqual([])
   })
 }
+
+test('TRAK-189 player calendar contrast and cancelled ring on the selected day', async ({ page, context }, testInfo) => {
+  const unexpected: string[] = [], errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  // The synthetic session must be valid at the same date as the browser clock.
+  const now = new Date('2026-11-14T08:00:00Z')
+  await playerBackend(context, false, unexpected, now.getTime())
+  await context.route('**/rest/v1/rpc/child_events*', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      id: 'event-calendar-189', coach_user_id: 'coach-189', published: true,
+      event_type: 'training', title: 'Synthetic training', event_date: '2026-11-14',
+      start_time: '10:00:00', starts_at: '2026-11-14T06:00:00Z', venue: 'Synthetic pitch',
+      status: 'cancelled', sequence: 1, updated_at: '2026-11-13T10:00:00Z',
+    }]),
+  }))
+  await page.clock.setFixedTime(now)
+  await page.goto('/player/calendar')
+  const cell = page.getByRole('gridcell', { name: /14 November 2026, 1 event/ })
+  await expect(cell).toBeVisible()
+  const dot = cell.locator('span[aria-hidden="true"] > span')
+  await expect(dot).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(dot).toHaveCSS('border-color', 'rgb(180, 35, 24)')
+  await expect(dot).toHaveCSS('border-style', 'solid')
+  await expect(page.getByRole('region', { name: 'Day' }).getByRole('button', { name: /Synthetic training.*Cancelled/ })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: unknown[] }> } }).axe
+    return (await axe.run({ runOnly: ['color-contrast'] })).violations
+  })
+  await page.screenshot({ path: testInfo.outputPath('player-calendar-cancelled.png'), fullPage: true })
+  expect(violations).toEqual([])
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
