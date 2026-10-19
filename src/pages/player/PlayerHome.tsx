@@ -18,7 +18,7 @@ import { trackEvent } from '@/lib/telemetry'
 import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
-import { AssessmentBands } from '@/components/player/AssessmentBands'
+import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 
 const QUOTES = [
   { text: "The more difficult the victory, the greater the happiness in winning.", author: "Pelé" },
@@ -69,6 +69,8 @@ export default function PlayerHome() {
   const [loading, setLoading] = useState(true)
   const [details, setDetails] = useState<any>(null)
   const [coachAssessment, setCoachAssessment] = useState<any>(null)
+  // TRAK-172 (Imad, 19 Oct): the latest five, as the parent's swipe cards. Set and cleared with coachAssessment.
+  const [recentAssessments, setRecentAssessments] = useState<any[]>([])
   const [coachName, setCoachName] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PlayerEvent[]>([])
   type ConsentStatus = { required: boolean; invited_parent: string | null; age?: number | null
@@ -142,6 +144,7 @@ export default function PlayerHome() {
     // A successful empty read must not retain values from the previous load.
     const clearCoach = () => {
       setCoachAssessment(null)
+      setRecentAssessments([])
       setCoachName('')
       setCoachAssessmentNote(null)
       setAssessmentAlert(null)
@@ -207,7 +210,7 @@ export default function PlayerHome() {
           .select('*')
           .in('squad_player_id', ids)
           .order('created_at', { ascending: false })
-          .limit(1)
+          .limit(5)
         if (cancelled) return
         if (assessError) { fail(); return }
         if (!assessments?.length) clearCoach()
@@ -234,6 +237,7 @@ export default function PlayerHome() {
           // The assessment, its coach and its message change together, so a
           // background refresh never pairs a new assessment with an old message.
           setCoachAssessment(latest)
+          setRecentAssessments(assessments)
           setCoachName(cp?.full_name || '')
           // Assign unconditionally, including null. The previous version only
           // assigned a truthy body, so once feedback had been displayed it
@@ -647,46 +651,24 @@ export default function PlayerHome() {
           )
         })()}
 
-        {/* Coach Assessment */}
+        {/* Coach assessments: the parent's swipe cards (TRAK-172, Imad 19 Oct), each opening
+            that assessment; the coach's message on the latest stays below (TRAK-71). */}
         {coachAssessment && (
           <div className="mt-5">
-            <MetadataLabel text="LATEST COACH ASSESSMENT" />
-            <div className="relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.06) 0%, transparent 70%)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-[13px] font-medium text-white/88">{coachName || 'Coach'}</p>
-                    <p className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
-                      style={{ fontFamily: "'DM Mono', monospace" }}>
-                      {new Date(coachAssessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    </p>
-                  </div>
-                  <BandPill band={scoreToBand(
-                    (coachAssessment.work_rate + coachAssessment.tactical + coachAssessment.attitude +
-                     coachAssessment.technical + coachAssessment.physical + coachAssessment.coachability) / 6
-                  )} />
-                </div>
-
-                {/* Category bars */}
-                <AssessmentBands scores={coachAssessment} />
-
-                {/* TRAK-71: the coach's message in full, here, with no tap-through. */}
-                {feedbackLoadFailed ? (
-                  <p role="alert" className="mt-4 text-[12px] text-white/55">
-                    Couldn't load your coach's message.{' '}
-                    <button type="button" onClick={() => setReloadKey(k => k + 1)} className="underline text-[#C8F25A]">Retry</button>
-                  </p>
-                ) : coachAssessmentNote ? (
-                  <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                    <MetadataLabel text="MESSAGE FROM YOUR COACH" />
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-white/80 whitespace-pre-line">{coachAssessmentNote}</p>
-                  </div>
-                ) : null}
+            <ParentAssessmentCarousel key={recentAssessments.map(a => a.id).join(',')} assessments={recentAssessments}
+              allHref={null} openHref={id => `/player/feedback/${encodeURIComponent(id)}`} />
+            {feedbackLoadFailed ? (
+              <p role="alert" className="mt-4 text-[12px] text-white/55">
+                Couldn't load your coach's message.{' '}
+                <button type="button" onClick={() => setReloadKey(k => k + 1)} className="underline text-[#C8F25A]">Retry</button>
+              </p>
+            ) : coachAssessmentNote ? (
+              <div className="mt-4 rounded-xl border border-border bg-card p-5">
+                <MetadataLabel text="MESSAGE FROM YOUR COACH" />
+                {coachName && <p className="mt-1.5 text-[13px] font-medium text-foreground">{coachName}</p>}
+                <p className="mt-1.5 text-[13px] leading-relaxed text-foreground whitespace-pre-line">{coachAssessmentNote}</p>
               </div>
-            </div>
+            ) : null}
           </div>
         )}
 

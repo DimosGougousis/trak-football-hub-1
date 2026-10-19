@@ -50,7 +50,7 @@ describe('TRAK-171: published assessment in the player bell', () => {
     { rows: [{ body: 'Unpublished draft', published_at: null }] }])('does not alert for absent, empty or unpublished feedback: $rows', async ({ rows }) => {
     feedback = rows
     renderApp('/player/home')
-    await screen.findByText('LATEST COACH ASSESSMENT')
+    await screen.findByRole('region', { name: 'Latest coach assessment' })
     await userEvent.click(await screen.findByRole('button', { name: 'Alerts' }))
     expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).queryByText('New coach assessment')).not.toBeInTheDocument()
   })
