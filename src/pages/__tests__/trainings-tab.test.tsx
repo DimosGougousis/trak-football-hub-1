@@ -6,7 +6,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { JSDOM, VirtualConsole } from 'jsdom'
+import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -73,17 +73,20 @@ describe('Play It Right keeps answers to the person answering', () => {
   // Review on #372: one origin-wide key carried a player's answers, confidence
   // and reasons to the next account (and the public URL) on the same device.
   const KEY = 'play-it-right-v2'
+  // jsdom (vitest's DOM) ships without type declarations; load it untyped to
+  // run the real page with its scripts in a window of its own.
+  const { JSDOM, VirtualConsole } = createRequire(import.meta.url)('jsdom')
   const html = readFileSync(resolve(__dirname, '../../../public/trainings/play-it-right.html'), 'utf8')
 
   function open(seed?: unknown) {
     const errors: unknown[] = []
     const virtualConsole = new VirtualConsole()
-    virtualConsole.on('jsdomError', e => errors.push(e))
+    virtualConsole.on('jsdomError', (e: unknown) => errors.push(e))
     const dom = new JSDOM(html, {
       url: 'http://localhost/trainings/play-it-right.html',
       runScripts: 'dangerously',
       virtualConsole,
-      beforeParse(window) {
+      beforeParse(window: Window) {
         window.scrollTo = () => {}  // jsdom does not implement scrolling
         if (seed !== undefined) window.localStorage.setItem(KEY, JSON.stringify(seed))
       },
