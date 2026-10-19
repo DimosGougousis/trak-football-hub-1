@@ -40,7 +40,6 @@ describe('J4: our scorers cannot outnumber our goals', { timeout: 20_000 }, () =
     await logStep('Squad')
     for (const name of ['Alexis Georgiou', 'Marios Rizos']) {
       await user.click((await screen.findAllByRole('button', { name: 'Mark played' }))[0])
-      await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${name}` }), '90')
       await user.click(screen.getByRole('button', { name: `One more goals for ${name}` }))
       await user.click(screen.getByRole('button', { name: `One fewer assists for ${name}` }))
     }

@@ -320,6 +320,44 @@ SELECT pg_temp.ms_assert(
   'MS39: a player with no assist can still join a 1-0 whose assist is saved');
 RESET ROLE;
 
+-- ── 4e. Minutes not recorded (TRAK-198) ─────────────────────
+-- The quick match log asks goals, assists and cards only, and saves NULL
+-- minutes: "not recorded", never 0. The two minute-based checks (MS6, MS8)
+-- can't apply without minutes; the team totals (TRAK-149, TRAK-167) still do.
+-- MS4, MS6 and MS8 above still refuse impossible recorded minutes.
+CREATE FUNCTION pg_temp.ms_log_no_minutes(player integer, goals integer, assists integer,
+                                          team_score integer, opponent text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $test$
+  SELECT format(
+    'SELECT public.log_match_for_player(%L::uuid, %L, %s, 0, %L, %L, %L, %L, NULL, %s, %s, %L, %L, %L, 6.5, current_date - 4)',
+    '96000000-0000-0000-0000-' || lpad(player::text, 12, '0'), opponent, team_score,
+    'League', 'Home', 'ST', 'U12', goals, assists, 'None', 'Fresh', 'Good');
+$test$;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"96000000-0000-0000-0000-000000000001"}', true);
+SELECT pg_temp.ms_expect_ok(pg_temp.ms_log_no_minutes(2, 1, 0, 2, 'MS-NO-MINUTES'),
+  'MS40: a quick-logged scorer with no minutes recorded is stored');
+-- Four contributions is past the floor of 3 that MS8's cap gives any player.
+SELECT pg_temp.ms_expect_ok(pg_temp.ms_log_no_minutes(3, 4, 0, 4, 'MS-NO-MINUTES-HAUL'),
+  'MS41: with no minutes recorded, the minutes cap does not apply (4 goals in a 4-0)');
+SELECT pg_temp.ms_expect_rpc_refusal(pg_temp.ms_log_no_minutes(3, 2, 0, 2, 'MS-NO-MINUTES'),
+  '3 goals entered, but the team scored 2',
+  'MS42: with no minutes recorded, the match''s goals still add up (TRAK-149)');
+SELECT pg_temp.ms_expect_rpc_refusal(pg_temp.ms_log_no_minutes(4, 0, 3, 2, 'MS-NO-MINUTES'),
+  '3 assists entered, but the team scored 2',
+  'MS43: with no minutes recorded, the match''s assists still add up (TRAK-167)');
+RESET ROLE;
+SELECT pg_temp.ms_assert(
+  (SELECT count(*) = 1 AND bool_and(minutes_played IS NULL) FROM public.matches
+    WHERE user_id = pg_temp.ms_id(2) AND lower(opponent) = 'ms-no-minutes'),
+  'MS44: readback, the quick-logged row says "not recorded" (NULL), never 0');
+-- The table's CHECKs pass on NULL, so a direct write with no minutes is stored as well.
+SELECT pg_temp.ms_expect_ok(
+  format('INSERT INTO public.matches (user_id, opponent, position, competition, venue, age_group, team_score, goals, assists, minutes_played, match_date) VALUES (%L::uuid, %L, %L, %L, %L, %L, 2, 1, 0, NULL, CURRENT_DATE)',
+         '96000000-0000-0000-0000-000000000002', 'MS-DIRECT-NO-MINUTES', 'ST', 'League', 'Home', 'U12'),
+  'MS45: the table accepts a row with no minutes recorded');
+
 
 -- ── 5. What this migration must not have broken ──────────────
 SELECT pg_temp.ms_assert(
@@ -344,8 +382,8 @@ BEGIN
   IF failed > 0 THEN
     RAISE EXCEPTION 'Match stat rules: % failing assertions', failed USING DETAIL = details;
   END IF;
-  IF (SELECT count(*) FROM pg_temp.ms_results) <> 39 THEN
-    RAISE EXCEPTION 'Match stat rules: % assertions ran; expected exactly 39', (SELECT count(*) FROM pg_temp.ms_results);
+  IF (SELECT count(*) FROM pg_temp.ms_results) <> 45 THEN
+    RAISE EXCEPTION 'Match stat rules: % assertions ran; expected exactly 45', (SELECT count(*) FROM pg_temp.ms_results);
   END IF;
 END;
 $test$;
