@@ -210,6 +210,20 @@ afterEach(({ task }) => {
 })
 
 describe('parent consent read and grant recovery through the real route', () => {
+  it('TRAK-166 shows the approved events notice and records its new version', async () => {
+    const eventsNotice = "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you, and your child, when an event is added, changed or cancelled, and again two days before it. You can turn the reminder off in Settings."
+    await openConsent([{ data: [childA] }, { data: [] }])
+    await screen.findByRole('heading', { name: 'Alex Synthetic is waiting for your approval' })
+    await openPanel()
+    expect(screen.getByText(eventsNotice, { exact: false })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await waitFor(() => expect(grantBodies).toHaveLength(1))
+    expect(grantBodies[0]).toMatchObject({
+      p_notice_version: '2026-10-19.1',
+      p_consent_text: expect.stringContaining(eventsNotice),
+    })
+  })
+
   it('shows a newly pending child after granting the formerly last child, without navigating Home', async () => {
     await openConsent([{ data: [childA] }, { data: [childB] }])
     await approveAlex()

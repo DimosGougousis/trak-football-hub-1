@@ -220,7 +220,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
         await page.getByRole('button', { name: /Alerts/ }).click()
         const panel = page.getByRole('dialog', { name: 'Alerts' })
-        await panel.getByRole('button', { name: /New coach assessment/ }).click()
+        await panel.getByRole('button', { name: /New assessment from / }).click()
         await expect(panel.getByRole('button', { name: 'Open assessment' })).toBeVisible()
         await expect.poll(() => panel.getByRole('button', { name: 'Open assessment' }).evaluate(button => {
           const frame = button.parentElement?.parentElement
