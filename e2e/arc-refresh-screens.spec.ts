@@ -67,7 +67,9 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
 test.describe('TRAK-182 coach screens', () => {
   test.use({ timezoneId: 'Asia/Dubai' })
   for (const [name, path, ready] of [
-    ['home', '/coach/home', 'Hugo Lloris'],
+    // TRAK-211: Home lists no players; they are on the Feedback and assessment tab.
+    ['home', '/coach/home', 'Assess a player'],
+    ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
     ['player', '/coach/player/sq-2', 'Bukayo Saka'],
