@@ -5,7 +5,7 @@
 -- send-event-emails makes one email per person listing the dates.
 --
 -- Publishing queues a 'published' notice for the academy's today or later
--- (a past event isn't news). An edit inside the 15 s window keeps the notice
+-- that hasn't started yet (a past event isn't news). An edit inside the 15 s window keeps the notice
 -- 'published', so the email shows the final state and never "old → new"
 -- (families never saw the draft). A cancel inside the window leaves it
 -- 'published' too; the sender sees the event cancelled and sends nothing.
@@ -27,8 +27,10 @@ DECLARE
   v_kind text;
 BEGIN
   IF NOT OLD.published AND NEW.published THEN
-    -- TRAK-135: a draft becomes something families can see.
-    IF NEW.status = 'scheduled' AND trak_private.event_day(NEW) >= v_today THEN
+    -- TRAK-135: a draft becomes something families can see. One published
+    -- after it has started isn't news either (Imad, 19 Oct).
+    IF NEW.status = 'scheduled' AND trak_private.event_day(NEW) >= v_today
+      AND (NEW.starts_at IS NULL OR NEW.starts_at > now()) THEN
       v_kind := 'published';
     ELSE
       RETURN NULL;

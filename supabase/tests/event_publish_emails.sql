@@ -72,20 +72,22 @@ SELECT public.record_parental_consent(pg_temp.p135id(20),'parent','{"coaching_re
 RESET ROLE;
 
 -- Coach 10's drafts (one start time each: live events can't overlap, TRAK-158).
--- 700 today 21:00; 701 tomorrow; 702 in 10 days; 703 yesterday; 704–707 a
--- weekly series from 14 days out; 708 a cancelled draft in 4 days; 709 already
--- published in 5 days; 710 tomorrow 19:00 (edited after publishing,
--- which on its own would queue a change: tomorrow counts); 711 in 7 days
--- (cancelled after publishing).
+-- 700 today 23:59 (not started whenever the suite runs, bar that minute);
+-- 701 tomorrow; 702 in 10 days; 703 yesterday; 704–707 a weekly series from
+-- 14 days out; 708 a cancelled draft in 4 days; 709 already published in
+-- 5 days; 710 tomorrow 19:00 (edited after publishing, which on its own would
+-- queue a change: tomorrow counts); 711 in 7 days (cancelled after
+-- publishing); 712 today 00:00 (already started).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,venue,published,status,series_id)
  SELECT pg_temp.p135id(700+i), pg_temp.p135id(10), 'Training '||i, 'training',
-  pg_temp.p135at(d, t0), pg_temp.p135day(d), t0, t0 + interval '90 minutes', 'Pitch 2', p, s, sr
- FROM (VALUES (0,0,time '21:00',false,'scheduled',null::uuid),(1,1,time '17:00',false,'scheduled',null),
-              (2,10,time '17:00',false,'scheduled',null),(3,-1,time '17:00',false,'scheduled',null),
-              (4,14,time '17:00',false,'scheduled',pg_temp.p135id(800)),(5,21,time '17:00',false,'scheduled',pg_temp.p135id(800)),
-              (6,28,time '17:00',false,'scheduled',pg_temp.p135id(800)),(7,35,time '17:00',false,'scheduled',pg_temp.p135id(800)),
-              (8,4,time '17:00',false,'cancelled',null),(9,5,time '17:00',true,'scheduled',null),
-              (10,1,time '19:00',false,'scheduled',null),(11,7,time '17:00',false,'scheduled',null)) v(i,d,t0,p,s,sr);
+  pg_temp.p135at(d, t0), pg_temp.p135day(d), t0, t0 + len, 'Pitch 2', p, s, sr
+ FROM (VALUES (0,0,time '23:59',interval '0',false,'scheduled',null::uuid),(1,1,time '17:00',interval '90 minutes',false,'scheduled',null),
+              (2,10,time '17:00',interval '90 minutes',false,'scheduled',null),(3,-1,time '17:00',interval '90 minutes',false,'scheduled',null),
+              (4,14,time '17:00',interval '90 minutes',false,'scheduled',pg_temp.p135id(800)),(5,21,time '17:00',interval '90 minutes',false,'scheduled',pg_temp.p135id(800)),
+              (6,28,time '17:00',interval '90 minutes',false,'scheduled',pg_temp.p135id(800)),(7,35,time '17:00',interval '90 minutes',false,'scheduled',pg_temp.p135id(800)),
+              (8,4,time '17:00',interval '90 minutes',false,'cancelled',null),(9,5,time '17:00',interval '90 minutes',true,'scheduled',null),
+              (10,1,time '19:00',interval '90 minutes',false,'scheduled',null),(11,7,time '17:00',interval '90 minutes',false,'scheduled',null),
+              (12,0,time '00:00',interval '1 minute',false,'scheduled',null)) v(i,d,t0,len,p,s,sr);
 
 -- ── 1. What publishing queues ─────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
@@ -101,6 +103,7 @@ SELECT pg_temp.p135allowed(format('UPDATE public.coach_calendar_events SET publi
 SELECT pg_temp.p135allowed(format('UPDATE public.coach_calendar_events SET start_time=''20:00'', end_time=''21:30'', starts_at=%L WHERE id=%L',pg_temp.p135at(1,'20:00'),pg_temp.p135id(710)),'1 coach edits the event just published',1);
 SELECT pg_temp.p135allowed(format('UPDATE public.coach_calendar_events SET published=true WHERE id=%L',pg_temp.p135id(711)),'1 coach publishes, then (next line) cancels inside the window',1);
 SELECT pg_temp.p135allowed(format('UPDATE public.coach_calendar_events SET status=''cancelled'' WHERE id=%L',pg_temp.p135id(711)),'1 coach cancels the event just published',1);
+SELECT pg_temp.p135allowed(format('UPDATE public.coach_calendar_events SET published=true WHERE id=%L',pg_temp.p135id(712)),'1 coach publishes today''s draft that has already started',1);
 RESET ROLE;
 SELECT pg_temp.p135check(pg_temp.p135notices(700)='published/pending','1 publishing today''s draft queues a published notice',pg_temp.p135notices(700));
 SELECT pg_temp.p135check(pg_temp.p135notices(701)='published/pending','1 publishing tomorrow''s draft queues one',pg_temp.p135notices(701));
@@ -109,6 +112,7 @@ SELECT pg_temp.p135check(pg_temp.p135notices(703)='none','1 publishing a past dr
 SELECT pg_temp.p135check((SELECT count(*) = 4 AND count(DISTINCT due_at) = 1 AND bool_and(kind = 'published' AND status = 'pending')
   FROM public.event_change_notices WHERE event_id IN (SELECT id FROM public.coach_calendar_events WHERE series_id = pg_temp.p135id(800))),
  '1 a series published at once queues one notice per date, all due together');
+SELECT pg_temp.p135check(pg_temp.p135notices(712)='none','1 publishing an event that has already started queues nothing (Imad, 19 Oct)',pg_temp.p135notices(712));
 SELECT pg_temp.p135check(pg_temp.p135notices(708)='none','1 publishing a cancelled draft queues nothing',pg_temp.p135notices(708));
 SELECT pg_temp.p135check(pg_temp.p135notices(709)='none','1 re-saving a published event queues nothing',pg_temp.p135notices(709));
 SELECT pg_temp.p135check(pg_temp.p135notices(710)='published/pending','1 an edit inside the window keeps one published notice',pg_temp.p135notices(710));
@@ -134,8 +138,8 @@ SELECT pg_temp.p135check((SELECT x->'event'->>'status' = 'cancelled'
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.p135_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.p135_results;
- IF n <> 24 THEN
-  RAISE EXCEPTION 'Event publish emails: % checks ran; expected exactly 24', n;
+ IF n <> 26 THEN
+  RAISE EXCEPTION 'Event publish emails: % checks ran; expected exactly 26', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event publish emails failed',DETAIL=failures;
