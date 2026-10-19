@@ -87,7 +87,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     expect(screen.queryByText('Loading your players…')).toBeNull()
     release()
     await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull())
-  })
+  }, 20_000) // four tab switches take longer than 5 s on GitHub's runners
 
   it("a revisit whose assessments read fails doesn't show the last visit's players", async () => {
     signInAs(COACH)
@@ -104,7 +104,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     await user.click(screen.getByRole('button', { name: /^Home$/i }))
     expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
     expect(homeRow('Ade Okafor')).toBeNull()
-  })
+  }, 20_000)
 
   it("keeps each account's screens apart, and forgets them all on sign-out", () => {
     remember('coach-squad', 'coach-1', { players: PLAYERS })
