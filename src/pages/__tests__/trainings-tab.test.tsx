@@ -6,6 +6,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { JSDOM, VirtualConsole } from 'jsdom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -66,6 +67,51 @@ describe.each([
     expect(screen.getByRole('tab', { name: 'Play It Right' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByTitle('Coaching Session Catalogue')).toBeNull()
   }, 20_000)
+})
+
+describe('Play It Right keeps answers to the person answering', () => {
+  // Review on #372: one origin-wide key carried a player's answers, confidence
+  // and reasons to the next account (and the public URL) on the same device.
+  const KEY = 'play-it-right-v2'
+  const html = readFileSync(resolve(__dirname, '../../../public/trainings/play-it-right.html'), 'utf8')
+
+  function open(seed?: unknown) {
+    const errors: unknown[] = []
+    const virtualConsole = new VirtualConsole()
+    virtualConsole.on('jsdomError', e => errors.push(e))
+    const dom = new JSDOM(html, {
+      url: 'http://localhost/trainings/play-it-right.html',
+      runScripts: 'dangerously',
+      virtualConsole,
+      beforeParse(window) {
+        window.scrollTo = () => {}  // jsdom does not implement scrolling
+        if (seed !== undefined) window.localStorage.setItem(KEY, JSON.stringify(seed))
+      },
+    })
+    return { dom, errors }
+  }
+
+  it("drops a previous visitor's saved answers instead of showing them", () => {
+    const { dom, errors } = open({
+      prog: { answers: { c1: { pick: 0, conf: 'sure', reason: 'synthetic reason' } }, recalls: {} },
+      senior: {}, tab: 'senior',
+    })
+    expect(errors).toEqual([])
+    expect(dom.window.localStorage.getItem(KEY)).toBeNull()
+    expect(dom.window.document.getElementById('tab-academy')?.getAttribute('aria-selected')).toBe('true')
+    expect(dom.window.document.body.textContent).not.toContain('synthetic reason')
+  })
+
+  it('writes nothing to browser storage while someone uses it', () => {
+    const { dom, errors } = open()
+    const doc = dom.window.document
+    ;(doc.getElementById('tab-senior') as HTMLButtonElement).click()
+    ;(doc.getElementById('tab-academy') as HTMLButtonElement).click()
+    expect(errors).toEqual([])
+    expect(doc.getElementById('tab-academy')?.getAttribute('aria-selected')).toBe('true')
+    expect(dom.window.localStorage.length).toBe(0)
+    expect(dom.window.sessionStorage.length).toBe(0)
+  })
 })
 
 describe('Trainings pages ship as static files', () => {

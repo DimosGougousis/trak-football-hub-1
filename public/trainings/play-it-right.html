@@ -588,11 +588,11 @@ const S = {
   cfg: null, picks: [], suggestions: [], live: false, canEdit: false, speaking: null
 };
 let DB = null, UID = null;
-try {
-  const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
-  if (saved) { if (saved.prog) S.prog = Object.assign(S.prog, saved.prog); if (saved.senior) S.senior = saved.senior; if (saved.tab) S.tab = saved.tab; }
-} catch (e) {}
-function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ prog: S.prog, senior: S.senior, tab: S.tab })); } catch (e) {} }
+/* Trak: this page runs inside every signed-in account on a shared device and
+   knows nothing about who is signed in, so answers stay in memory for this
+   visit only. Earlier visits saved them under one origin-wide key; remove it. */
+try { localStorage.removeItem(LS_KEY); } catch (e) {}
+function saveLocal() {}
 let saving = false, saveAgain = false;
 async function saveProg() {
   saveLocal();
