@@ -115,16 +115,18 @@ describe('TRAK-198: the quick match log asks no minutes', () => {
     expect((await save(calls)).p_minutes_played).toBeNull()
   }, 20_000)
 
-  // Pilot coach's item 13 (Imad, 18 Oct): no minutes and no Starter/Sub anywhere in the match log.
-  it('full log: no minutes and no Starter/Sub; goals and assists are enough to move on', async () => {
+  // Pilot coach's item 13 (Imad, 18 Oct): no minutes anywhere in the match log; Started/Sub stays (Imad, 19 Oct).
+  it('full log: no minutes, Starter and Sub kept; goals and assists are enough to move on', async () => {
     captureMatchRpc()
     await fullLog()
     await fillMatch()
     await logStep('Squad')
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Mark played' }))
     expect(minutesField()).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^starter$/i })).toBeNull()
-    expect(screen.queryByRole('button', { name: /^sub$/i })).toBeNull()
+    const details = screen.getByRole('button', { name: `Details for ${STRIKER.player_name}` })
+    if (details.getAttribute('aria-expanded') !== 'true') await userEvent.setup().click(details)
+    expect(screen.getByRole('button', { name: /^starter$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^sub$/i })).toBeInTheDocument()
     await userEvent.setup().click(screen.getByRole('button', { name: `One fewer goals for ${STRIKER.player_name}` }))
     await userEvent.setup().click(screen.getByRole('button', { name: `One fewer assists for ${STRIKER.player_name}` }))
     expect(screen.queryByText(/still needs/)).toBeNull()

@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError} from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
-import { BANDS } from '@/lib/types'
+import { BANDS, appearanceLabel } from '@/lib/types'
 import { openable } from '@/lib/openable'
 import { ChevronLeft } from 'lucide-react'
 
@@ -230,7 +230,7 @@ export default function CoachPlayerProfilePage() {
                       <p className="text-[11px] text-white/55 mt-0.5">{a.coach_sessions.title}</p>
                     )}
                     {a.appearance && (
-                      <p className="text-[10px] text-white/35 mt-0.5 capitalize">{a.appearance}</p>
+                      <p className="text-[10px] text-white/35 mt-0.5">{appearanceLabel(a.appearance)}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

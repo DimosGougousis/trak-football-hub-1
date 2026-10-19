@@ -35,6 +35,7 @@ type CardType   = 'None' | 'Yellow' | 'Red'
 // Per-player match detail (full session only)
 type PlayerDetail = {
   played:  boolean
+  role:    'starter' | 'sub'
   /* J4: "no invented defaults". null means the coach has not said. Position
      starts from the roster (a fact, not a guess) and can be changed per match. */
   position: string | null
@@ -51,7 +52,7 @@ type PlayerDetail = {
    at 90 minutes, 0 goals and 0 assists, so a coach who only ticked "played"
    saved numbers they never entered (MVP Requirements J4). */
 const DEFAULT_DETAIL: PlayerDetail = {
-  played: false, position: null,
+  played: false, role: 'starter', position: null,
   goals: null, assists: null, card: 'None',
 }
 
@@ -117,7 +118,7 @@ export default function CoachAddSession() {
   /* TRAK-198 (16 Oct live-run call): grassroots coaches don't know minutes, so
      the match log asks goals, assists and cards only, and saves minutes as NULL,
      "not recorded". Since 18 Oct (pilot coach's item 13, Imad) that is every
-     log, the full one included, and Starter/Sub is gone too. */
+     log, the full one included. */
   const stillNeeded = missingFacts
   const [title, setTitle] = useState('')
   // TRAK-127: New event's "log it instead" hands over the past day it was given.
@@ -324,7 +325,7 @@ export default function CoachAddSession() {
 
   const setAllStarters = () => {
     const all: Record<string, PlayerDetail> = {}
-    squad.forEach(p => { all[p.id] = { ...DEFAULT_DETAIL, position: p.position, played: true } })
+    squad.forEach(p => { all[p.id] = { ...DEFAULT_DETAIL, position: p.position, played: true, role: 'starter' } })
     setDetails(all)
   }
 
@@ -890,6 +891,28 @@ export default function CoachAddSession() {
                         {d.played && isExpanded && (
                           <div className="px-4 pb-4 space-y-3"
                             style={{ background: 'rgba(0,0,0,0.25)' }}>
+
+                            {/* Role (minutes are no longer asked: TRAK-198, item 13) */}
+                            <div className="flex items-center gap-4">
+                              {/* Role */}
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 mr-0.5"
+                                  style={{ fontFamily: "'DM Mono', monospace" }}>ROLE</span>
+                                {(['starter', 'sub'] as const).map(r => (
+                                  <button key={r} onClick={() => setDetail(p.id, { role: r })}
+                                    className="px-2.5 py-1 rounded-full text-[10px] transition-colors"
+                                    style={{
+                                      background: d.role === r ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.04)',
+                                      color: d.role === r ? '#C8F25A' : 'rgba(255,255,255,0.4)',
+                                      border: `1px solid ${d.role === r ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                                      fontFamily: "'DM Sans', sans-serif",
+                                    }}>
+                                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+
+                            </div>
 
                             {/* Position for this match. Starts from the roster; required. */}
                             <div className="flex items-center gap-2">

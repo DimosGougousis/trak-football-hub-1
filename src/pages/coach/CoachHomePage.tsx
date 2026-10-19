@@ -10,7 +10,7 @@ import { HomeHeader } from '@/components/trak/HomeHeader'
 import { CoachSquadSwitcher } from '@/components/coach/CoachSquadSwitcher'
 import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { scoreToBand } from '@/lib/rating-engine'
-import { BANDS } from '@/lib/types'
+import { BANDS, appearanceLabel } from '@/lib/types'
 import { calculateSquadAnalytics, missedLastSession, playerOverview, type SquadAnalytics } from '@/lib/squad-analytics'
 import { localTodayISO } from '@/lib/event-time'
 import { trackEvent } from '@/lib/telemetry'
@@ -571,7 +571,7 @@ export default function CoachHomePage() {
                         className="text-[9px] mt-[3px] tracking-[0.04em]"
                         style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.22)' }}
                       >
-                        {formattedDate} · {a.appearance || 'Assessment'}
+                        {formattedDate} · {appearanceLabel(a.appearance) || 'Assessment'}
                       </p>
                     </div>
                     {/* Band pill. No `|| 5` fallback: showing "Mixed" for an

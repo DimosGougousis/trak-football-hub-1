@@ -80,16 +80,21 @@ describe('TRAK-182: no Appearance question for a training', { timeout: 20_000 },
     expect(posted[0].appearance).toBe('training')
   })
 
-  // Pilot coach's item 13 (Imad, 18 Oct): a match asks no Started or Sub either.
-  it('a match asks no Started or Sub, and saves no appearance', async () => {
+  // Pilot coach's item 13 (Imad, 19 Oct): a match asks Started, Sub or Didn't play, in Arc's select.
+  it("a match asks Started, Sub or Didn't play, and saves the choice", async () => {
     showForm()
     await choose('session-match')
-    expect(screen.queryByText('APPEARANCE')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Started' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Sub' })).toBeNull()
+    const appearance = screen.getByRole('combobox', { name: 'Appearance' })
+    expect(appearance).toHaveTextContent('Started')
+    // By keyboard, as Radix supports it (jsdom has no pointer capture).
+    appearance.focus()
+    await userEvent.keyboard('{Enter}')
+    expect((await screen.findAllByRole('option')).map(o => o.textContent)).toEqual(['Started', 'Sub', "Didn't play"])
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+    await waitFor(() => expect(appearance).toHaveTextContent("Didn't play"))
     await saveAssessment()
     await screen.findByText('Coach home')
     expect(posted).toHaveLength(1)
-    expect(posted[0].appearance).toBeNull()
+    expect(posted[0].appearance).toBe('didnt_play')
   })
 })

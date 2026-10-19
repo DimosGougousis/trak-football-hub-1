@@ -299,7 +299,7 @@ describe('J5: consent', { timeout: 20_000 }, () => {
     await waitFor(() => expect(nextButton()).toBeDisabled())
     expect(screen.queryAllByRole('slider')).toEqual([])
     expect(screen.queryByLabelText(/^Message to/i)).toBeNull()
-    // Started/Sub is gone (pilot coach's item 13); Next, the sliders and the message prove the lock.
+    expect(screen.getByRole('combobox', { name: 'Appearance' })).toBeDisabled()
   })
 
   // Control for the test above: the lock is caused by consent, not by the form.
