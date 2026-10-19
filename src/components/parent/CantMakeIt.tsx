@@ -57,7 +57,7 @@ export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent;
           <button type="button" disabled={change.isPending} onClick={() => change.mutate(false)} className={`${button} mt-3`}>Undo</button>
           {refusal}
         </> : writing ? <>
-          <label htmlFor={reasonId} className="block text-sm text-foreground mb-2">Reason (optional, the coach sees it)</label>
+          <label htmlFor={reasonId} className="block text-sm text-foreground mb-2">Reason (optional, the coach sees it; no medical details)</label>
           <textarea id={reasonId} value={reason} maxLength={140} rows={2} onChange={e => setReason(e.target.value)}
             className="w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary" />
           <div className="flex gap-2 mt-3">
