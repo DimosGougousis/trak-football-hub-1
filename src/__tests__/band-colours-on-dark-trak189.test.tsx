@@ -6,7 +6,9 @@
  * colour must sit inside a `.trak-dark` card.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { CoachAssessmentCard } from '@/components/coach/CoachAssessmentCard'
 import { renderApp } from '../../tests/support/render-app'
 import { signInAs } from '../../tests/support/session'
 import { server } from '../../tests/msw/server'
@@ -66,6 +68,14 @@ describe('TRAK-189: band colours only on dark cards', () => {
   it('How Trak Works: the band list and the band words', async () => {
     renderApp('/how-it-works')
     await screen.findByText('PERFORMANCE BANDS')
+    const painted = bandPainted()
+    expect(painted.length).toBeGreaterThan(6)
+    expect(painted.filter(p => !p.dark)).toEqual([])
+  })
+
+  it("the coach's assessment card on a player's profile (TRAK-200's Arc card)", () => {
+    render(<MemoryRouter><CoachAssessmentCard assessment={{ id: 'as-card', created_at: '2026-10-12T10:00:00Z', published_at: null,
+      work_rate: 9, tactical: 6, attitude: 8, technical: 5, physical: 7, coachability: 3 }} /></MemoryRouter>)
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(6)
     expect(painted.filter(p => !p.dark)).toEqual([])

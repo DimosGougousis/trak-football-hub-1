@@ -4,3 +4,5 @@
  */
 /** WhatsApp's own green, on its share icon. */
 export const WHATSAPP_GREEN = '#25D366'
+/** Text on a WhatsApp-green button (TRAK-168's Share to WhatsApp after Cancel): black, 11:1. */
+export const ON_WHATSAPP_GREEN = '#000000'

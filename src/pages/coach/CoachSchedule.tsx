@@ -28,7 +28,7 @@ import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
 import { withAlpha } from '@/lib/with-alpha'
-import { WHATSAPP_GREEN } from '@/lib/fixed-colours'
+import { ON_WHATSAPP_GREEN, WHATSAPP_GREEN } from '@/lib/fixed-colours'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -1040,24 +1040,24 @@ export default function CoachSchedule() {
       {/* ── Cancelled: tell the team group (TRAK-168) ─────────────────────── */}
       {sheet.kind === 'cancelled' && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
-          style={{ background: 'rgba(0,0,0,0.75)' }}
+          style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Event cancelled"
             className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
-            style={{ background: '#17171A', border: '1px solid rgba(255,255,255,0.10)', marginBottom: 64 }}>
-            <span className="text-[16px] font-medium text-white/88 block" style={font}>Event cancelled</span>
-            <p className="text-[12px] text-white/50" style={font}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            <span className="text-[16px] font-medium text-ink block" style={font}>Event cancelled</span>
+            <p className="text-[12px] text-ink-2" style={font}>
               {sheet.note} Let the team group know.
             </p>
             {/* Nothing is sent until the coach picks a chat in WhatsApp. */}
             <a href={whatsAppShareUrl(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
               target="_blank" rel="noopener noreferrer"
               className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2"
-              style={{ background: '#25D366', color: '#000' }}>
+              style={{ background: WHATSAPP_GREEN, color: ON_WHATSAPP_GREEN }}>
               <Share2 size={16} aria-hidden="true" />Share to WhatsApp
             </a>
             <button onClick={() => setSheet({ kind: 'closed' })}
-              className="w-full py-2 text-[13px] text-white/60" style={font}>
+              className="w-full py-2 text-[13px] text-ink-2" style={font}>
               Done
             </button>
           </div>
