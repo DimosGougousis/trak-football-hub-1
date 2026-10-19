@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertsBell, type BellAlert } from '@/components/trak/AlertsBell'
 import { LoadError } from '@/components/trak/LoadError'
-import { eventAlert } from '@/lib/parent-data'
+import { assessmentAlertTitle, eventAlert } from '@/lib/parent-data'
 import { noteEventSnapshots, noteFirstSeen, readFirstSeen, type PlayerEvent } from '@/lib/player-events'
 
 /* TRAK-163 (Imad, 12 Oct): players get the parent's bell for their squad's
@@ -14,6 +14,8 @@ export interface PublishedAssessmentAlert {
   id: string
   userId: string
   publishedAt: string
+  /** TRAK-202: the coach who wrote it, for "New assessment from Coach <name>". */
+  coachName?: string
 }
 
 export function PlayerAlertsBell({ userId, events, assessment, assessmentLoadFailed, onRetry }: {
@@ -35,7 +37,7 @@ export function PlayerAlertsBell({ userId, events, assessment, assessmentLoadFai
       action: { label: 'Open event', onSelect: () => navigate(`/player/event/${alert.targetId}`) } }
   })
   if (!assessmentLoadFailed && assessment?.userId === userId) alerts.push({
-    id: `assessment-${assessment.id}`, title: 'New coach assessment',
+    id: `assessment-${assessment.id}`, title: assessmentAlertTitle(assessment.coachName),
     description: 'Your coach has published an assessment.', date: assessment.publishedAt,
     action: { label: 'Open assessment', onSelect: () => navigate(`/player/feedback/${assessment.id}`) },
   })

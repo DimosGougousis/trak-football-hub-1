@@ -133,7 +133,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     expect(nameFilters).toEqual(mode === 'all-null' ? [] : [`in.(${coachA})`])
     cleanup(); mount('/parent/alerts')
     await screen.findByText('vs Alex opposition · 0–0')
-    expect(screen.getAllByText('New coach assessment')).toHaveLength(2)
+    expect(screen.getAllByText(/^New assessment from /)).toHaveLength(2)
     expect(screen.getAllByText('Player Of Week')).toHaveLength(2)
     expect(screen.getByText('Alex recognition 1 · by Coach')).toBeInTheDocument()
     expect(screen.getByText(`Alex recognition 2 · by ${mode === 'all-null' ? 'Coach' : 'Synthetic Alex Coach'}`)).toBeInTheDocument()
@@ -145,7 +145,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     expectPreserved(zara)
     fireEvent.change(screen.getByRole('combobox'), { target: { value: alex } })
     await screen.findByText('vs Alex opposition · 0–0')
-    expect(screen.getAllByText('New coach assessment')).toHaveLength(2)
+    expect(screen.getAllByText(/^New assessment from /)).toHaveLength(2)
     expect(screen.queryByText(/Zara recognition/)).not.toBeInTheDocument()
     expectPreserved(alex)
   })
@@ -158,7 +158,7 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     expectPreserved(alex)
     cleanup(); mount('/parent/alerts')
     await screen.findByText(`Alex recognition 1 · by ${hidden ? 'Coach' : 'Synthetic Alex Coach'}`)
-    expect(screen.getAllByText('New coach assessment')).toHaveLength(2)
+    expect(screen.getAllByText(/^New assessment from /)).toHaveLength(2)
   })
 
   it('keeps genuine name-query errors visible and recovers on retry without discarding history', async () => {
@@ -205,9 +205,10 @@ describe('parent retained coach history through the real AuthProvider and SDK', 
     await screen.findByText('Zara recognition 1')
     // TRAK-194: Home's card never names the coach; the bell's assessment alerts do.
     fireEvent.click(screen.getByRole('button', { name: /^Alerts/ }))
-    expect((await screen.findAllByText(/by Synthetic Zara Coach/)).length).toBeGreaterThan(0)
+    // TRAK-202: the name is in the alert's title, "New assessment from Coach <name>".
+    expect((await screen.findAllByText('New assessment from Coach Synthetic Zara Coach')).length).toBeGreaterThan(0)
     await act(async () => { release(); await delayed; await new Promise(resolve => setTimeout(resolve, 20)) })
-    expect(screen.queryByText('Late Alex Coach')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Late Alex Coach/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Alex recognition/)).not.toBeInTheDocument()
     expect(followedChild()).toHaveTextContent('Zara')
     expectPreserved(zara)
