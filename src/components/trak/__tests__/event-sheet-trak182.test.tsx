@@ -53,7 +53,16 @@ beforeEach(() => {
     http.get(endpoint('event_absences'), () => HttpResponse.json([{ squad_player_id: 'sp-2', reason: 'School trip' }])),
   )
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+
+/** "Updated 3h ago" is yesterday shortly after midnight (Tarek, #369, 19 Oct): pin
+ *  Date at noon on the same day. Only Date is faked; animation timers stay real. */
+function atNoonToday() {
+  const noon = new Date(today)
+  noon.setHours(12, 0, 0, 0)
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(noon)
+}
 
 function Where() { return <p data-testid="where">{useLocation().pathname + useLocation().search}</p> }
 function From() { return <p data-testid="from">{(useLocation().state as { from?: string } | null)?.from}</p> }
@@ -255,6 +264,7 @@ describe('TRAK-182: the event sheet', () => {
   })
 
   it('tells families when the coach changed the event after publishing', async () => {
+    atNoonToday()
     const user = userEvent.setup()
     renderStrip([event({ sequence: 2, updatedAt: new Date(Date.now() - 5 * 60_000).toISOString() })], 'parent')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
@@ -263,6 +273,7 @@ describe('TRAK-182: the event sheet', () => {
   })
   it('puts the coach\'s "Updated" line between the buttons and Attending', async () => {
     eventRow = row({ published: true })
+    atNoonToday()
     const user = userEvent.setup()
     renderStrip([event({ sequence: 1, updatedAt: new Date(Date.now() - 3 * 3600_000).toISOString() })], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
