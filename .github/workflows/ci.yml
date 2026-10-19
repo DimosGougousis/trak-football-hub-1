@@ -27,6 +27,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # TEMPORARY (PR #373 review): the Supabase job only runs on main, so
+      # prove setup-cli@v2 installs the pinned CLI here. Remove before merge.
+      - uses: supabase/setup-cli@v2
+        with:
+          version: 2.117.0
+      - name: Check pinned Supabase CLI (temporary)
+        run: |
+          supabase --version
+          test "$(supabase --version)" = "2.117.0"
+
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
