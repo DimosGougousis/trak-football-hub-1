@@ -12,7 +12,7 @@
  * withdrawn mid-form) is translated rather than shown raw.
  */
 import { setSlider, sliderValue, sliderDisabled } from '../../../../tests/support/slider'
-import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
+import { assessStep, chooseAppearanceIfAsked, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import { it, expect, describe } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -95,6 +95,7 @@ describe('CoachAssessPage and parental consent', { timeout: 20_000 }, () => {
   it('does not block when the consent check itself fails', async () => {
     setup({ consentRequired: 'error' })
     await choosePlayer()
+    await chooseAppearanceIfAsked()
     await waitFor(() => expect(nextButton()).toBeEnabled())
     expect(screen.queryByText(/waiting for a parent/i)).not.toBeInTheDocument()
   })
