@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client'
 import { scoreToBand } from '@/lib/rating-engine'
+import { bandConfig } from '@/lib/types'
 import type { Tables } from '@/integrations/supabase/types'
 import { eventDay, eventHeading, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { fetchCoachNames, PARENT_ASSESSMENT_COLUMNS, type ParentAssessment } from './parent-assessments'
@@ -206,7 +207,7 @@ export function parentAlerts(matches: ParentMatch[], development: ParentDevelopm
     ...(development?.assessments ?? []).map((assessment): ParentAlert => ({
       id: `assessment-${assessment.id}`, kind: 'assessment', targetId: assessment.id, date: assessment.created_at,
       title: assessmentAlertTitle(assessment.coach_user_id ? development?.coachNames[assessment.coach_user_id] : null),
-      description: assessment.coach_rating == null ? 'Not assessed' : scoreToBand(assessment.coach_rating),
+      description: assessment.coach_rating == null ? 'Not assessed' : bandConfig(scoreToBand(assessment.coach_rating)).word,
     })),
     ...(awards ? development?.awards ?? [] : []).map((award): ParentAlert => ({
       id: `award-${award.id}`, kind: 'award', targetId: award.id, title: formatParentAward(award.award_type), date: award.created_at,

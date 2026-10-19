@@ -21,7 +21,13 @@ describe("TRAK-202: the parent's bell", () => {
   it('names the coach in the title; the second line is the band, with no "by"', () => {
     const alert = assessmentAlert({ 'coach-1': 'Angelos Basinas' })
     expect(alert.title).toBe('New assessment from Coach Angelos Basinas')
-    expect(alert.description).toBe('good') // the band key, as the bell showed it before
+    expect(alert.description).toBe('Good') // the band's word, not its key (Imad, 19 Oct)
+  })
+
+  it('an unrated assessment still says "Not assessed"', () => {
+    const dev = development({})
+    dev.assessments[0].coach_rating = null
+    expect(parentAlerts([], dev, { awards: false })[0].description).toBe('Not assessed')
   })
 
   // fetchCoachNames turns an empty full_name into 'Coach'.
