@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO } from '@/lib/event-time'
@@ -15,6 +15,7 @@ import {
   isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
   type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
+import { TRAINING_THEMES, catalogueLink, type TrainingTheme } from '@/lib/training-theme'
 import { FixtureImport } from '@/components/coach/FixtureImport'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { Calendar } from '@/components/arc/calendar/calendar'
@@ -120,6 +121,42 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+/** A training's theme: the catalogue's seven libraries, and a link into it. */
+function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange: (theme: TrainingTheme) => void }) {
+  const picked = TRAINING_THEMES.find(t => t.key === theme)
+  return (
+    <div className="space-y-2">
+      <span id="training-theme" className="block text-[9px] tracking-[0.1em] uppercase text-white/40" style={mono}>Theme</span>
+      <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 gap-2">
+        {TRAINING_THEMES.map(t => {
+          const on = t.key === theme
+          return (
+            <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
+              style={{
+                background: on ? `${TYPE_COLOR.training}1a` : '#0A0A0B',
+                border: `1px solid ${on ? TYPE_COLOR.training + '55' : 'rgba(255,255,255,0.07)'}`,
+                ...font,
+              }}>
+              <input type="radio" name="training-theme" value={t.key} checked={on} onChange={() => onChange(t.key)}
+                className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: TYPE_COLOR.training }} />
+              <span className="min-w-0">
+                <span className="block text-[13px] leading-tight" style={{ color: on ? TYPE_COLOR.training : 'rgba(255,255,255,0.8)' }}>{t.label}</span>
+                <span className="block text-[11px] text-white/40 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      {/* A new tab, so the event being set up stays as it is. */}
+      <a href={catalogueLink(theme)} target="_blank" rel="noopener"
+        className="inline-flex items-center gap-1.5 text-[12px]" style={{ color: TYPE_COLOR.training, ...font }}>
+        {picked ? `Find ${picked.label} sessions in the Trainings Catalogue` : 'Browse all sessions in the Trainings Catalogue'}
+        <ExternalLink size={12} aria-hidden />
+      </a>
+    </div>
+  )
+}
+
 /** The meet-time list opens half an hour before the start: the usual gap. */
 function halfHourBefore(time: string) {
   if (!time) return '17:00'
@@ -183,6 +220,7 @@ function EventSummary({ form, repeat, noteProblem }: {
 }) {
   const rows: [string, string][] = [
     ['Type', TYPE_LABEL[form.kind]],
+    ...(form.kind === 'training' ? [['Theme', TRAINING_THEMES.find(t => t.key === form.theme)?.label ?? 'Not set'] as [string, string]] : []),
     ...(form.kind === 'match' ? [['Opponent', form.opponent.trim() + (form.homeAway ? ` (${form.homeAway === 'home' ? 'Home' : 'Away'})` : '')] as [string, string]] : []),
     ['Title', eventTitle(form)],
     ['Venue', form.venue.trim() || 'Not set'],
@@ -823,6 +861,10 @@ export default function CoachSchedule() {
                   </Chip>
                 ))}
               </div>
+
+              {sheet.form.kind === 'training' && (
+                <ThemeChoice theme={sheet.form.theme} onChange={theme => setForm({ theme })} />
+              )}
 
               {sheet.form.kind === 'match' && (
                 <>

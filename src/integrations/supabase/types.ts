@@ -304,6 +304,7 @@ export type Database = {
           id: string
           kit: string | null
           family_note: string | null
+          training_theme: string | null
           meet_time: string | null
           notes: string | null
           opponent: string | null
@@ -332,6 +333,7 @@ export type Database = {
           id?: string
           kit?: string | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -360,6 +362,7 @@ export type Database = {
           id?: string
           kit?: string | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null

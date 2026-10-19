@@ -13,6 +13,8 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const page = PAGES.find(p => p.id === params.get('page')) ?? PAGES[0]
+  // New event's theme link: the catalogue opens on that library.
+  const lib = page.id === 'sessions' ? params.get('lib') : null
 
   return (
     <MobileShell>
@@ -51,7 +53,7 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
       <iframe
         key={page.id}
         title={page.title}
-        src={page.src}
+        src={lib ? `${page.src}?${new URLSearchParams({ lib })}` : page.src}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         className="block -mx-5 w-[calc(100%+40px)] border-0 bg-white"
         style={{ height: 'calc(100dvh - 186px)' }}
