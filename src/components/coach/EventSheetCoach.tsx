@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { askToEmailFamilies } from '@/lib/event-emails'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
 import { TakeRegister } from '@/components/coach/TakeRegister'
@@ -128,6 +129,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
       if (error || !data?.length) throw new Error(clashMessage(error) ?? "Couldn't publish. Try again.")
     },
     onSuccess: () => {
+      askToEmailFamilies() // TRAK-135: publishing emails families too
       toast.success('Published to the squad')
       void client.invalidateQueries({ queryKey: ['coach', 'event', event.id] })
       onChanged()

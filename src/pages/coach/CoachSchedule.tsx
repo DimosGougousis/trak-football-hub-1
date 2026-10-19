@@ -444,6 +444,7 @@ export default function CoachSchedule() {
       toast.error(`Saved as ${ids.length > 1 ? 'drafts' : 'a draft'}, not published. ${clashMessage(error) ?? 'Tap Publish on the event to try again.'}`)
       return
     }
+    askToEmailFamilies() // TRAK-135: publishing emails families too
     toast.success(ids.length > 1 ? `Published ${ids.length} events to the squad` : 'Published to the squad')
   }
 
@@ -461,6 +462,7 @@ export default function CoachSchedule() {
     const { data, error } = await supabase.from('coach_calendar_events')
       .update({ published: true }).eq('id', row.id).select('id')
     if (failed(error, data)) { toast.error(clashMessage(error) ?? `Couldn't publish "${row.title}". Try again.`); return }
+    askToEmailFamilies() // TRAK-135
     loadData()
     toast.success('Published to the squad')
   }
@@ -556,6 +558,7 @@ export default function CoachSchedule() {
       return
     }
     setSheet({ kind: 'closed' })
+    if (action === 'publish') askToEmailFamilies() // TRAK-135: the series is one email per person
     loadData()
     const n = data!.length
     toast.success(action === 'publish'

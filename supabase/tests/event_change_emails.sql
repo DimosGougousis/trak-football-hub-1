@@ -1,6 +1,6 @@
 -- @trak-suite mode=--event-emails in-all=true
 -- TRAK-135 (J8.12): a cancellation (any date) or a today/tomorrow change to a
--- published event queues one email notice; drafts, publishing and changes
+-- published event queues one email notice; drafts and changes
 -- further out queue nothing; quick edits join one notice that keeps the
 -- first "before". Recipients follow the app's read rule (TRAK-125): consented
 -- children on that coach's squad in that academy, and their guardians, once
@@ -148,7 +148,8 @@ SELECT pg_temp.e135check((SELECT before->>'start_time' = '17:00:00' AND before->
 SELECT pg_temp.e135check(pg_temp.e135notices(603)='none','1 cancelling a draft queues nothing',pg_temp.e135notices(603));
 SELECT pg_temp.e135check(pg_temp.e135notices(604)='none','1 a title change queues nothing',pg_temp.e135notices(604));
 SELECT pg_temp.e135check(pg_temp.e135notices(605)='changed/pending','1 moving onto tomorrow queues a notice',pg_temp.e135notices(605));
-SELECT pg_temp.e135check(pg_temp.e135notices(606)='none','1 publishing queues nothing',pg_temp.e135notices(606));
+-- TRAK-135 (16 Oct): publishing now emails too (event_publish_emails.sql has the cases).
+SELECT pg_temp.e135check(pg_temp.e135notices(606)='published/pending','1 publishing a draft 3 days out queues a published notice',pg_temp.e135notices(606));
 SELECT pg_temp.e135check((SELECT before ? 'cancel_reason' AND NOT (before ? 'notes')
   FROM public.event_change_notices WHERE event_id=pg_temp.e135id(600)),'1 a notice carries the cancel reason (scrubbed in the email), never notes');
 
@@ -184,8 +185,8 @@ RESET ROLE;
 UPDATE public.event_change_notices SET due_at = now() - interval '1 second';
 SET LOCAL ROLE service_role;
 INSERT INTO e135_claim SELECT 1, public.claim_event_change_notices();
-SELECT pg_temp.e135check((SELECT jsonb_array_length(claimed) = 3 FROM e135_claim WHERE n = 1),
- '4 the three due notices are claimed',(SELECT jsonb_array_length(claimed)::text FROM e135_claim WHERE n = 1));
+SELECT pg_temp.e135check((SELECT jsonb_array_length(claimed) = 4 FROM e135_claim WHERE n = 1),
+ '4 the four due notices are claimed (three changes, one publish)',(SELECT jsonb_array_length(claimed)::text FROM e135_claim WHERE n = 1));
 SELECT pg_temp.e135check((SELECT x->'event'->>'start_time' = '18:30:00' AND x->'event'->>'venue' = 'Pitch 4'
   AND x->'before'->>'start_time' = '17:00:00' AND x->>'squad' = 'U15' AND x->>'academy' = 'Emails Academy X'
   FROM e135_claim, jsonb_array_elements(claimed) x WHERE n = 1 AND x->>'notice_id' =

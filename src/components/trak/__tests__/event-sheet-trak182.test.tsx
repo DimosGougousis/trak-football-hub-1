@@ -90,8 +90,12 @@ describe('TRAK-182: the event sheet', () => {
     expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
     expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    // TRAK-135: publishing emails families, so the app asks the server to send.
+    let nudges = 0
+    server.use(http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => { nudges++; return HttpResponse.json({ accepted: true }, { status: 202 }) }))
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(patched).toEqual([{ published: true }]))
+    await waitFor(() => expect(nudges).toBe(1))
   })
 
   it('stays open while the week reloads after Publish', async () => {

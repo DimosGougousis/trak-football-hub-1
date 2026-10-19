@@ -1,6 +1,7 @@
-// TRAK-135 (J8.12): the wording of a cancellation or change email. Pure, so
-// tests pin exactly what a family reads. Plain text for a phone: what
-// changed, old → new, the squad, the date and the venue. No child names, no
+// TRAK-135 (J8.12): the wording of a cancellation, change or publish email.
+// Pure, so tests pin exactly what a family reads. Plain text for a phone: what
+// changed, old → new (or, for a newly published event, what and when), the
+// squad, the date and the venue. No child names, no
 // notes, and no link but the plain trakfootball.com page.
 // Coach-typed text (title, venue, opponent, cancel reason) has its links
 // replaced, because sendPlainEmail() refuses a whole email over one Google
@@ -28,7 +29,7 @@ export interface EventRecipient { user_id: string; email: string }
 /** One claimed notice, as claim_event_change_notices() returns it. */
 export interface ClaimedNotice {
   notice_id: string;
-  kind: 'cancelled' | 'changed';
+  kind: 'cancelled' | 'changed' | 'published';
   before: EventFields;
   event: EventFields;
   squad: string | null;
@@ -112,14 +113,17 @@ export function eventName(e: EventFields, names: RegExp[] = []): string {
   return kindLabel(e);
 }
 
-export type EventChange = { what: 'cancelled' } | { what: 'changed'; lines: string[] };
+export type EventChange = { what: 'cancelled' } | { what: 'changed'; lines: string[] } | { what: 'published' };
 
 /**
  * What families need to hear, from the event as they last saw it to now, or
  * null when nothing they'd notice changed (edits that cancelled out).
  */
-export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { child_names?: string[] }): EventChange | null {
+export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { kind?: ClaimedNotice['kind']; child_names?: string[] }): EventChange | null {
   const { before, event } = notice;
+  // TRAK-135: newly published. Families never saw the draft, so no "old → new";
+  // cancelled inside the 15 s window, they never heard of it: nothing to send.
+  if (notice.kind === 'published') return event.status === 'scheduled' ? { what: 'published' } : null;
   const names = namePatterns(notice.child_names ?? []);
   if (event.status === 'cancelled') return before.status === 'cancelled' ? null : { what: 'cancelled' };
   if (event.status !== 'scheduled' || before.status !== 'scheduled') return null;
@@ -149,8 +153,11 @@ function block(notice: ClaimedNotice, change: EventChange): string {
   const venue = clean(e.venue, names);
   const when = `${longDay(eventDate(e))}, ${timeRange(e)}`;
   const reason = cancelReason(e, names);
+  const meet = hhmm(e.meet_time);
   const lines = change.what === 'cancelled'
     ? [`CANCELLED: ${eventName(e, names)}`, `Was: ${when}${venue ? ` at ${venue}` : ''}`, ...(reason ? [`Reason: ${reason}`] : [])]
+    : change.what === 'published'
+    ? [`NEW: ${eventName(e, names)}`, `When: ${when}${venue ? ` at ${venue}` : ''}`, ...(meet ? [`Meet: ${meet}`] : [])]
     : [`CHANGED: ${eventName(e, names)}`, ...change.lines, `Now: ${when}${venue ? ` at ${venue}` : ''}`];
   const squad = squadLine(notice, names);
   return [...lines, ...(squad ? [squad] : [])].join('\n');
@@ -177,10 +184,13 @@ export function composeEventEmail(to: string, notices: ClaimedNotice[]): PlainEm
   if (items.length === 1) {
     const { notice, change } = items[0];
     // Generic, never coach-typed: a subject shows on lock screens and in previews.
-    subject = `${kindLabel(notice.event)} ${change.what}: ${shortDay(eventDate(notice.event))}`;
+    // TRAK-135: "added" until Kostas's TRAK-190 wording.
+    subject = `${kindLabel(notice.event)} ${change.what === 'published' ? 'added' : change.what}: ${shortDay(eventDate(notice.event))}`;
   } else {
     subject = items.every(item => item.change.what === 'cancelled')
       ? `${items.length} events cancelled`
+      : items.every(item => item.change.what === 'published')
+      ? `${items.length} events added`
       : `${items.length} schedule changes`;
   }
 
