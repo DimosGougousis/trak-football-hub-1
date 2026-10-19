@@ -343,6 +343,8 @@ function CoachAssessmentForm() {
      Unpublish is not a save: see handleUnpublish below. */
   const handleSave = async (draft = false) => {
     if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
+    // Option A (Imad, 19 Oct): a player who didn't play isn't assessed, even if Review is reached another way.
+    if (!isTraining && (!appearance || appearance === 'didnt_play')) return
     // Rewriting an unchanged, still-published message would re-stamp it and
     // mark it "new" for the player again. Leave it alone, unless it's being
     // taken back to a draft.
@@ -703,6 +705,9 @@ function CoachAssessmentForm() {
         {!isTraining && <div className="arc">
           <Select label="Appearance" placeholder="Choose" value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
             options={MATCH_APPEARANCES.map(value => ({ value, label: APPEARANCE_LABEL[value] }))} />
+          {/* Imad, 19 Oct (option A): there's nothing to assess when a player didn't play, so it ends here and saves nothing.
+              The match record carries "Didn't play" (TRAK-185). */}
+          {appearance === 'didnt_play' && <p role="status" className="mt-2 text-sm text-muted-foreground">A player who didn't play isn't assessed.</p>}
         </div>}
 
         </>}
@@ -879,7 +884,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
             onClick={() => setStep(step - 1)}>Back</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && !appearance))}
+          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && (!appearance || appearance === 'didnt_play')))}
             onClick={() => setStep(step + 1)}>Next</Button>
         </>}
       </div>
