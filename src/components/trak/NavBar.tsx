@@ -9,6 +9,7 @@ import {
   IconSquad,
   IconSessions,
   IconMatch,
+  IconTraining,
   ACTIVE_COLOR,
   DEFAULT_COLOR,
 } from '@/components/icons/TrakIcons'
@@ -25,6 +26,7 @@ function getNavItems(role: Role): NavItem[] {
   if (role === 'player') return [
     { label: 'Home', path: '/player/home', Icon: IconHome },
     { label: 'Sessions', path: '/player/matches', Icon: IconMatch },  // TRAK-112: matches and training
+    { label: 'Trainings', path: '/player/trainings', Icon: IconTraining },
     { label: 'Card', path: '/player/evolution', Icon: IconRecognition },
     { label: 'Profile', path: '/player/profile', Icon: IconProfile },
   ]
@@ -32,6 +34,7 @@ function getNavItems(role: Role): NavItem[] {
     { label: 'Home', path: '/coach/home', Icon: IconHome },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
     { label: 'Sessions', path: '/coach/sessions', Icon: IconSessions },
+    { label: 'Trainings', path: '/coach/trainings', Icon: IconTraining },
     { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
   ]
   return [

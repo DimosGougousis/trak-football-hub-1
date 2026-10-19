@@ -95,6 +95,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllEnvs() })
 
 describe('TRAK-11 phase 4: approving a child who has no account yet', () => {
+  it('TRAK-166 shows the approved events notice and records its new version', async () => {
+    const eventsNotice = "Events: your child's training and match schedule is shown in the app and, if you choose, in your phone's calendar through a private link. We email you, and your child, when an event is added, changed or cancelled, and again two days before it. You can turn the reminder off in Settings."
+    await open('/parent/consent')
+    await screen.findByRole('heading', { name: 'Ana is waiting for your approval' })
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(screen.getByText(eventsNotice, { exact: false })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await waitFor(() => expect(grants).toHaveLength(1))
+    expect(grants[0]).toMatchObject({
+      p_notice_version: '2026-10-19.1',
+      p_consent_text: expect.stringContaining(eventsNotice),
+    })
+  })
+
   // TRAK-182 (Imad, 16 Oct): on Home it is Arc's consent bar, not a banner that opens a page.
   it('asks on Home with a bar at the bottom, and approving there stays on Home', async () => {
     await open('/parent/home')
@@ -220,7 +234,7 @@ describe('TRAK-182: the consent bar', () => {
     expect(screen.getByText('Their coach records their progress, logs their matches and can write feedback. You see their bands and history. Their coach can also keep private notes, which are never shared.')).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: /Recognition awards/ })).not.toBeChecked()
     expect(screen.getByText('Things like player of the week, seen by you and Ana.')).toBeInTheDocument()
-    expect(screen.getByText("By approving, you confirm you're Ana's parent or legal guardian and agree to the choices above. You can withdraw any time in settings, which stops new records.")).toBeInTheDocument()
+    expect(screen.getByText("By approving, you confirm you're Ana's parent or legal guardian and agree to the choices above. You can withdraw any time in settings, which stops new records.", { exact: false })).toBeInTheDocument()
     // Escape steps back to the bar without saving anything.
     await userEvent.keyboard('{Escape}')
     expect(await screen.findByText("Approve Ana's Trak account?")).toBeInTheDocument()

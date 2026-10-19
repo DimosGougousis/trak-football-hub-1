@@ -39,7 +39,6 @@ type PlayerDetail = {
   /* J4: "no invented defaults". null means the coach has not said. Position
      starts from the roster (a fact, not a guess) and can be changed per match. */
   position: string | null
-  minutes: number | null
   /* Exact counts. These were once `0 | 1 | 2` with 2 meaning "2+", so a
      hat-trick was stored as 2 and the only vocabulary the form had was the
      rating bucket. The bucket still exists — match-input-keys.ts — but it is
@@ -53,7 +52,7 @@ type PlayerDetail = {
    at 90 minutes, 0 goals and 0 assists, so a coach who only ticked "played"
    saved numbers they never entered (MVP Requirements J4). */
 const DEFAULT_DETAIL: PlayerDetail = {
-  played: false, role: 'starter', position: null, minutes: null,
+  played: false, role: 'starter', position: null,
   goals: null, assists: null, card: 'None',
 }
 
@@ -77,11 +76,10 @@ function rosterAgeGroup(p: SquadPlayer): string | null {
 }
 
 /** What still has to be entered before this child's match can be saved.
- *  The quick match log doesn't ask minutes (TRAK-198). */
-function missingFacts(p: SquadPlayer, d: PlayerDetail, askMinutes = true): string[] {
+ *  No log asks minutes (TRAK-198; pilot coach's item 13, Imad 18 Oct). */
+function missingFacts(p: SquadPlayer, d: PlayerDetail): string[] {
   const missing: string[] = []
   if (!d.position) missing.push('position')
-  if (askMinutes && d.minutes === null) missing.push('minutes')
   if (d.goals === null) missing.push('goals')
   if (d.assists === null) missing.push('assists')
   if (!rosterAgeGroup(p)) missing.push('age group on the roster')
@@ -117,13 +115,11 @@ export default function CoachAddSession() {
   const [type,  setType]  = useState<'training' | 'match' | 'other'>(
     () => (quick || window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
   )
-  /* TRAK-198 (16 Oct live-run call): the quick match log asks goals, assists
-     and cards only; grassroots coaches don't know minutes. Quick is
-     /sessions/quick (the chooser, Log match from an event) and the "+" menu's
-     hand-over. Its matches save minutes as NULL, "not recorded"; the full log
-     still asks them. */
-  const [askMinutes] = useState(() => !(quick || window.location.pathname.endsWith('/sessions/quick')))
-  const stillNeeded = (p: SquadPlayer, d: PlayerDetail) => missingFacts(p, d, askMinutes)
+  /* TRAK-198 (16 Oct live-run call): grassroots coaches don't know minutes, so
+     the match log asks goals, assists and cards only, and saves minutes as NULL,
+     "not recorded". Since 18 Oct (pilot coach's item 13, Imad) that is every
+     log, the full one included. */
+  const stillNeeded = missingFacts
   const [title, setTitle] = useState('')
   // TRAK-127: New event's "log it instead" hands over the past day it was given.
   const [date,  setDate]  = useState(() => quick?.date
@@ -354,7 +350,7 @@ export default function CoachAddSession() {
   const impossibleRecords = !isMatch ? [] : squad
     .filter(p => details[p.id]?.played && stillNeeded(p, details[p.id]).length === 0)
     .filter(p => validateMatchInput({
-      minutes: askMinutes ? details[p.id].minutes as number : null,
+      minutes: null,
       goals:   details[p.id].goals as number,
       assists: details[p.id].assists as number,
       teamScore: scoreUs === '' ? undefined : Number(scoreUs),
@@ -568,7 +564,7 @@ export default function CoachAddSession() {
         const d = details[p.id]
         // canSave guarantees every played row is complete; these never fall back.
         const position = d.position as string
-        const minutes = askMinutes ? d.minutes as number : null
+        const minutes = null
         const goals = d.goals as number
         const assists = d.assists as number
         const pos = mapPosition(position)
@@ -877,10 +873,6 @@ export default function CoachAddSession() {
                                   {d.position}
                                 </span>
                               )}
-                              {askMinutes && <span className="text-[10px] text-ink-3"
-                                style={{ fontFamily: 'var(--t-font-mono)' }}>
-                                {d.minutes === null ? '—' : `${d.minutes}'`}
-                              </span>}
                             </div>
                           )}
 
@@ -900,7 +892,7 @@ export default function CoachAddSession() {
                           <div className="px-4 pb-4 space-y-3"
                             style={{ background: 'rgb(var(--t-raised))' }}>
 
-                            {/* Role + Minutes on same line */}
+                            {/* Role (minutes are no longer asked: TRAK-198, item 13) */}
                             <div className="flex items-center gap-4">
                               {/* Role */}
                               <div className="flex items-center gap-1.5">
@@ -920,21 +912,6 @@ export default function CoachAddSession() {
                                 ))}
                               </div>
 
-                              {/* Minutes: typed, not stepped from a guessed 90. Match
-                                  length differs by age group, so there is no honest default. */}
-                              {askMinutes && <label className="flex items-center gap-2 ml-auto">
-                                <span className="text-[8px] tracking-[0.1em] uppercase text-ink-3"
-                                  style={{ fontFamily: 'var(--t-font-mono)' }}>MINS</span>
-                                <input
-                                  type="number" inputMode="numeric"
-                                  min={MATCH_LIMITS.minutesMin} max={MATCH_LIMITS.minutesMax}
-                                  aria-label={`Minutes played by ${p.player_name}`}
-                                  placeholder="—"
-                                  value={d.minutes ?? ''}
-                                  onChange={e => setDetail(p.id, { minutes: e.target.value === '' ? null : Number(e.target.value) })}
-                                  className="w-14 h-7 rounded-[8px] bg-raised text-center text-[13px] text-ink outline-none placeholder:text-ink-3"
-                                  style={{ fontFamily: 'var(--t-font-mono)' }} />
-                              </label>}
                             </div>
 
                             {/* Position for this match. Starts from the roster; required. */}
@@ -998,7 +975,7 @@ export default function CoachAddSession() {
                                 )
                               }
                               const problems = validateMatchInput({
-                                minutes: askMinutes ? d.minutes as number : null, goals: d.goals as number, assists: d.assists as number,
+                                minutes: null, goals: d.goals as number, assists: d.assists as number,
                                 teamScore: scoreUs === '' ? undefined : Number(scoreUs),
                               })
                               if (problems.length === 0) return null
