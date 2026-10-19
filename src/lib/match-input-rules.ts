@@ -44,7 +44,8 @@ export const MATCH_LIMITS = {
 } as const
 
 export interface MatchInput {
-  minutes: number
+  /** TRAK-198: null is "not recorded" (the quick match log never asks). */
+  minutes: number | null
   goals: number
   assists: number
   /** The player's OWN team's score. Undefined when not yet entered. */
@@ -74,7 +75,7 @@ export function validateMatchInput(input: MatchInput): Violation[] {
   // Checked before range, so 1.5 is reported as "not a whole number" rather
   // than passing a range check that Number.isInteger would have caught.
   for (const [field, value] of [
-    ['minutes', minutes], ['goals', goals], ['assists', assists],
+    ...(minutes === null ? [] : [['minutes', minutes]] as const), ['goals', goals], ['assists', assists],
   ] as const) {
     if (!Number.isFinite(value)) {
       v.push({ field, message: `${field} must be a number` })
@@ -87,7 +88,7 @@ export function validateMatchInput(input: MatchInput): Violation[] {
   if (v.length > 0) return v
 
   // ── Ranges ───────────────────────────────────────────────────
-  if (minutes < MATCH_LIMITS.minutesMin || minutes > MATCH_LIMITS.minutesMax) {
+  if (minutes !== null && (minutes < MATCH_LIMITS.minutesMin || minutes > MATCH_LIMITS.minutesMax)) {
     v.push({
       field: 'minutes',
       message: `Minutes must be between ${MATCH_LIMITS.minutesMin} and ${MATCH_LIMITS.minutesMax}`,
@@ -121,6 +122,8 @@ export function validateMatchInput(input: MatchInput): Violation[] {
   }
 
   // ── Contributions against time on the pitch ──────────────────
+  // Not recorded (TRAK-198): no minutes to hold them against.
+  if (minutes === null) return v
   const allowed = Math.max(
     MATCH_LIMITS.contributionFloor,
     Math.floor(minutes / MATCH_LIMITS.minutesPerContribution),

@@ -129,7 +129,8 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
             ...(limited ? [] : [
               { label: 'Position', value: match.position },
               { label: 'Age Group', value: match.age_group },
-              { label: 'Minutes', value: `${match.minutes_played}'` },
+              // TRAK-198: a quick-logged match has no minutes recorded; no row, never "0'".
+              ...(match.minutes_played == null ? [] : [{ label: 'Minutes', value: `${match.minutes_played}'` }]),
             ]),
           ].map(row => (
             <div key={row.label} className="flex items-center justify-between">

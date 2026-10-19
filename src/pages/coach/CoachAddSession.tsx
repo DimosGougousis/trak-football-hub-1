@@ -39,7 +39,6 @@ type PlayerDetail = {
   /* J4: "no invented defaults". null means the coach has not said. Position
      starts from the roster (a fact, not a guess) and can be changed per match. */
   position: string | null
-  minutes: number | null
   /* Exact counts. These were once `0 | 1 | 2` with 2 meaning "2+", so a
      hat-trick was stored as 2 and the only vocabulary the form had was the
      rating bucket. The bucket still exists — match-input-keys.ts — but it is
@@ -53,7 +52,7 @@ type PlayerDetail = {
    at 90 minutes, 0 goals and 0 assists, so a coach who only ticked "played"
    saved numbers they never entered (MVP Requirements J4). */
 const DEFAULT_DETAIL: PlayerDetail = {
-  played: false, role: 'starter', position: null, minutes: null,
+  played: false, role: 'starter', position: null,
   goals: null, assists: null, card: 'None',
 }
 
@@ -76,11 +75,11 @@ function rosterAgeGroup(p: SquadPlayer): string | null {
   return p.age_group ?? (p.age != null ? String(p.age) : null)
 }
 
-/** What still has to be entered before this child's match can be saved. */
+/** What still has to be entered before this child's match can be saved.
+ *  No log asks minutes (TRAK-198; pilot coach's item 13, Imad 18 Oct). */
 function missingFacts(p: SquadPlayer, d: PlayerDetail): string[] {
   const missing: string[] = []
   if (!d.position) missing.push('position')
-  if (d.minutes === null) missing.push('minutes')
   if (d.goals === null) missing.push('goals')
   if (d.assists === null) missing.push('assists')
   if (!rosterAgeGroup(p)) missing.push('age group on the roster')
@@ -116,6 +115,11 @@ export default function CoachAddSession() {
   const [type,  setType]  = useState<'training' | 'match' | 'other'>(
     () => (quick || window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
   )
+  /* TRAK-198 (16 Oct live-run call): grassroots coaches don't know minutes, so
+     the match log asks goals, assists and cards only, and saves minutes as NULL,
+     "not recorded". Since 18 Oct (pilot coach's item 13, Imad) that is every
+     log, the full one included. */
+  const stillNeeded = missingFacts
   const [title, setTitle] = useState('')
   // TRAK-127: New event's "log it instead" hands over the past day it was given.
   const [date,  setDate]  = useState(() => quick?.date
@@ -342,11 +346,11 @@ export default function CoachAddSession() {
      (J4: no invented defaults) before its numbers are checked for sense. */
   const incompleteRecords = !isMatch ? [] : squad
     .filter(p => details[p.id]?.played)
-    .filter(p => missingFacts(p, details[p.id]).length > 0)
+    .filter(p => stillNeeded(p, details[p.id]).length > 0)
   const impossibleRecords = !isMatch ? [] : squad
-    .filter(p => details[p.id]?.played && missingFacts(p, details[p.id]).length === 0)
+    .filter(p => details[p.id]?.played && stillNeeded(p, details[p.id]).length === 0)
     .filter(p => validateMatchInput({
-      minutes: details[p.id].minutes as number,
+      minutes: null,
       goals:   details[p.id].goals as number,
       assists: details[p.id].assists as number,
       teamScore: scoreUs === '' ? undefined : Number(scoreUs),
@@ -560,7 +564,7 @@ export default function CoachAddSession() {
         const d = details[p.id]
         // canSave guarantees every played row is complete; these never fall back.
         const position = d.position as string
-        const minutes = d.minutes as number
+        const minutes = null
         const goals = d.goals as number
         const assists = d.assists as number
         const pos = mapPosition(position)
@@ -869,10 +873,6 @@ export default function CoachAddSession() {
                                   {d.position}
                                 </span>
                               )}
-                              <span className="text-[10px] text-white/40"
-                                style={{ fontFamily: "'DM Mono', monospace" }}>
-                                {d.minutes === null ? '—' : `${d.minutes}'`}
-                              </span>
                             </div>
                           )}
 
@@ -892,7 +892,7 @@ export default function CoachAddSession() {
                           <div className="px-4 pb-4 space-y-3"
                             style={{ background: 'rgba(0,0,0,0.25)' }}>
 
-                            {/* Role + Minutes on same line */}
+                            {/* Role (minutes are no longer asked: TRAK-198, item 13) */}
                             <div className="flex items-center gap-4">
                               {/* Role */}
                               <div className="flex items-center gap-1.5">
@@ -912,21 +912,6 @@ export default function CoachAddSession() {
                                 ))}
                               </div>
 
-                              {/* Minutes: typed, not stepped from a guessed 90. Match
-                                  length differs by age group, so there is no honest default. */}
-                              <label className="flex items-center gap-2 ml-auto">
-                                <span className="text-[8px] tracking-[0.1em] uppercase text-white/30"
-                                  style={{ fontFamily: "'DM Mono', monospace" }}>MINS</span>
-                                <input
-                                  type="number" inputMode="numeric"
-                                  min={MATCH_LIMITS.minutesMin} max={MATCH_LIMITS.minutesMax}
-                                  aria-label={`Minutes played by ${p.player_name}`}
-                                  placeholder="—"
-                                  value={d.minutes ?? ''}
-                                  onChange={e => setDetail(p.id, { minutes: e.target.value === '' ? null : Number(e.target.value) })}
-                                  className="w-14 h-7 rounded-[8px] bg-white/[0.06] text-center text-[13px] text-white/88 outline-none placeholder:text-white/30"
-                                  style={{ fontFamily: "'DM Mono', monospace" }} />
-                              </label>
                             </div>
 
                             {/* Position for this match. Starts from the roster; required. */}
@@ -980,7 +965,7 @@ export default function CoachAddSession() {
                                 be the only place they are applied — but a coach
                                 should not have to learn them from a rejection. */}
                             {(() => {
-                              const missing = missingFacts(p, d)
+                              const missing = stillNeeded(p, d)
                               if (missing.length > 0) {
                                 return (
                                   <p role="status" className="text-[10px] leading-snug text-[rgb(251,191,36)] pl-[52px]"
@@ -990,7 +975,7 @@ export default function CoachAddSession() {
                                 )
                               }
                               const problems = validateMatchInput({
-                                minutes: d.minutes as number, goals: d.goals as number, assists: d.assists as number,
+                                minutes: null, goals: d.goals as number, assists: d.assists as number,
                                 teamScore: scoreUs === '' ? undefined : Number(scoreUs),
                               })
                               if (problems.length === 0) return null
@@ -1314,7 +1299,7 @@ export default function CoachAddSession() {
           <p role="status" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
             style={{ fontFamily: "'DM Sans', sans-serif" }}>
             {incompleteRecords.length === 1
-              ? `${incompleteRecords[0].player_name} still needs ${missingFacts(incompleteRecords[0], details[incompleteRecords[0].id]).join(', ')}.`
+              ? `${incompleteRecords[0].player_name} still needs ${stillNeeded(incompleteRecords[0], details[incompleteRecords[0].id]).join(', ')}.`
               : `${incompleteRecords.length} players still need their match details.`}
           </p>
         )}

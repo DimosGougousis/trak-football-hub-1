@@ -216,11 +216,11 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await page.getByRole('button', { name: 'Events', exact: true }).first().click()
         await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
       } else if (role === 'player') {
-        await expect(page.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/matches')
+        await expect(page.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/calendar')
         await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
         await page.getByRole('button', { name: /Alerts/ }).click()
         const panel = page.getByRole('dialog', { name: 'Alerts' })
-        await panel.getByRole('button', { name: /New coach assessment/ }).click()
+        await panel.getByRole('button', { name: /New assessment from / }).click()
         await expect(panel.getByRole('button', { name: 'Open assessment' })).toBeVisible()
         await expect.poll(() => panel.getByRole('button', { name: 'Open assessment' }).evaluate(button => {
           const frame = button.parentElement?.parentElement

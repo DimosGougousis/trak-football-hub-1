@@ -9,7 +9,11 @@ export type BandType = 'exceptional' | 'standout' | 'good' | 'steady' | 'mixed' 
 export type MedalType = 'first_match' | 'on_a_roll' | 'first_star' | 'ten_down' | 'most_improved' | 'self_aware'
 export type GoalCategory = 'performance' | 'consistency' | 'development' | 'personal'
 export type ProgressLevel = 'just_started' | 'making_progress' | 'nearly_there' | 'achieved'
-export type Appearance = 'started' | 'sub' | 'training'
+export type Appearance = 'started' | 'sub' | 'didnt_play' | 'training'
+/** How an assessment's appearance reads (pilot coach's item 13; Imad, 19 Oct: Started, Sub, Didn't play). */
+export const APPEARANCE_LABEL: Record<Appearance, string> = { started: 'Started', sub: 'Sub', didnt_play: "Didn't play", training: 'Training' }
+export const appearanceLabel = (value: string | null | undefined) =>
+  value ? APPEARANCE_LABEL[value as Appearance] ?? value : ''
 export type SelfRatingFlag = 'fair' | 'generous' | 'way off'
 
 export interface BandConfig {
@@ -49,7 +53,8 @@ export interface MatchInput {
   opponent: string
   score_us: number
   score_them: number
-  minutes_played: number
+  /** TRAK-198: null is "not recorded" (the quick match log). */
+  minutes_played: number | null
   card: CardType
   body_condition: BodyCondition
   self_rating: SelfRating

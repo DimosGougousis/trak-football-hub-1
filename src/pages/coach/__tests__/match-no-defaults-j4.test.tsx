@@ -39,9 +39,11 @@ function setup(player: Record<string, unknown> = PLAYER) {
   return calls
 }
 
+// The full log. Pilot coach's item 13 (Imad, 18 Oct): no log asks minutes any more.
 async function startMatch() {
   const user = userEvent.setup()
-  renderApp('/coach/sessions/quick')
+  renderApp('/coach/sessions/add')
+  await user.click(await screen.findByRole('button', { name: 'Match' }))
   await user.type(await screen.findByPlaceholderText('Opponent name'), 'Olympiakos U14')
   const [us, them] = screen.getAllByPlaceholderText('0')
   await user.type(us, '2')
@@ -58,26 +60,25 @@ const nextButton = () => screen.getByRole('button', { name: 'Next' })
 describe('J4: no invented match defaults', { timeout: 20_000 }, () => {
   beforeEach(() => signInAs(COACH))
 
-  it('ticking "played" alone cannot save: minutes, goals and assists start empty', async () => {
+  it('ticking "played" alone cannot save: goals and assists start empty', async () => {
     const calls = setup()
     await startMatch()
-    expect(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' })).toHaveValue(null)
+    expect(screen.queryByRole('spinbutton', { name: 'Minutes played by Ade Okafor' })).toBeNull()
     expect(nextButton()).toBeDisabled()
-    expect(screen.getAllByText(/still needs? .*minutes, goals, assists/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/still needs? goals, assists/i).length).toBeGreaterThan(0)
     expect(calls).toHaveLength(0)
   })
 
   it('saves exactly what the coach entered, including an explicit 0', async () => {
     const calls = setup()
     const user = await startMatch()
-    await user.type(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' }), '55')
     await user.click(screen.getByRole('button', { name: 'One more goals for Ade Okafor' }))
     await user.click(screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }))
     await waitFor(() => expect(nextButton()).toBeEnabled())
     await saveLog('Save match')
     await waitFor(() => expect(calls).toHaveLength(1))
     expect(calls[0]).toMatchObject({
-      p_minutes_played: 55, p_goals: 1, p_assists: 0,
+      p_minutes_played: null, p_goals: 1, p_assists: 0,
       // From the roster, not invented.
       p_position: 'Defender', p_age_group: 'U14',
     })
@@ -86,7 +87,6 @@ describe('J4: no invented match defaults', { timeout: 20_000 }, () => {
   it('a roster row with no position needs one picked; it is never sent as Midfielder', async () => {
     const calls = setup({ ...PLAYER, position: null })
     const user = await startMatch()
-    await user.type(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' }), '30')
     await user.click(screen.getByRole('button', { name: 'One fewer goals for Ade Okafor' }))
     await user.click(screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }))
     expect(nextButton()).toBeDisabled()
@@ -101,7 +101,6 @@ describe('J4: no invented match defaults', { timeout: 20_000 }, () => {
   it('a child with no age group on the roster is never logged as U19+', async () => {
     const calls = setup({ ...PLAYER, age_group: null, age: null })
     const user = await startMatch()
-    await user.type(screen.getByRole('spinbutton', { name: 'Minutes played by Ade Okafor' }), '30')
     await user.click(screen.getByRole('button', { name: 'One fewer goals for Ade Okafor' }))
     await user.click(screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }))
     expect(nextButton()).toBeDisabled()

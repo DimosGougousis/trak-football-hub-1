@@ -46,7 +46,6 @@ async function saveOneZeroWin() {
   await user.type(scoreThem, '0')
   await logStep('Squad')
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
-  await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${PLAYER.player_name}` }), '70')
   await user.click(screen.getByRole('button', { name: `One fewer goals for ${PLAYER.player_name}` }))
   await user.click(screen.getByRole('button', { name: `One fewer assists for ${PLAYER.player_name}` }))
   await saveLog('Save match')
