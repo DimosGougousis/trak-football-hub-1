@@ -33,7 +33,9 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     const path = url.pathname
     if (path === '/auth/v1/user') return json(user)
     if (path === '/rest/v1/profiles') return json([{ user_id: ids.coach, id: ids.coach, role: 'coach', full_name: 'Synthetic Coach' }])
-    if (path === '/rest/v1/coach_details') return json([{ user_id: ids.coach, organization_id: 'org-182' }])
+    if (path === '/rest/v1/coach_details') return json([{ user_id: ids.coach, organization_id: 'org-182', coach_role: 'Head Coach', team: 'U16' }])
+    // TRAK-196: Home's quiet line names the academy.
+    if (path === '/rest/v1/organizations') return json([{ id: 'org-182', name: 'Synthetic Academy' }])
     if (path === '/rest/v1/squad_players') {
       const one = url.searchParams.get('id')?.replace(/^eq\./, '')
       return json(one ? players.filter(p => p.id === one) : players)

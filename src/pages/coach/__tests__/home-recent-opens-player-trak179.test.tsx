@@ -30,7 +30,7 @@ function serve() {
     )
 }
 
-describe('TRAK-179: a Recent assessments row on Home opens the player', () => {
+describe('TRAK-179: a player on Home opens the player (TRAK-197: from the Player overview)', () => {
   it("goes to the player's profile, not the assessment editor", async () => {
     signInAs(COACH)
     serve()
