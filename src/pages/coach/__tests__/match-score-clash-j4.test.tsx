@@ -57,7 +57,6 @@ async function fillOneZeroWin(opponent = 'Olympiakos U16', goals = 0, assists = 
   await user.type(scoreThem, '0')
   await logStep('Squad')
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
-  await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${PLAYER.player_name}` }), '70')
   await user.click(screen.getByRole('button', { name: goals > 0 ? `One more goals for ${PLAYER.player_name}` : `One fewer goals for ${PLAYER.player_name}` }))
   if (assists === 0) await user.click(screen.getByRole('button', { name: `One fewer assists for ${PLAYER.player_name}` }))
   for (let i = 0; i < assists; i++) await user.click(screen.getByRole('button', { name: `One more assists for ${PLAYER.player_name}` }))
@@ -128,7 +127,6 @@ describe('J4: a match already saved with another score saves nothing', () => {
     await logStep('Squad')
     for (const p of [PLAYER, BEA]) {
       await user.click((await screen.findAllByRole('button', { name: 'Mark played' }))[0])
-      await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${p.player_name}` }), '70')
       await user.click(screen.getByRole('button', { name: `One more goals for ${p.player_name}` }))
       await user.click(screen.getByRole('button', { name: `One fewer assists for ${p.player_name}` }))
     }

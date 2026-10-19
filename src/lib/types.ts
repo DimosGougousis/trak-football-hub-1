@@ -49,7 +49,8 @@ export interface MatchInput {
   opponent: string
   score_us: number
   score_them: number
-  minutes_played: number
+  /** TRAK-198: null is "not recorded" (the quick match log). */
+  minutes_played: number | null
   card: CardType
   body_condition: BodyCondition
   self_rating: SelfRating
