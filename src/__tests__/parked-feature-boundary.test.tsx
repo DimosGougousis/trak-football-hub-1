@@ -142,7 +142,7 @@ describe('retained coach entry points', () => {
       { id: 'synthetic-roster', coach_user_id: account, player_name: 'Synthetic Player', linked_player_id: 'synthetic-player' },
     ])))
     renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: /Assess players/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Assess a player' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
     expect(await screen.findByRole('heading', { name: 'Assessment' })).toBeInTheDocument()
     expect(screen.queryByText('Quick Assess')).toBeNull()
