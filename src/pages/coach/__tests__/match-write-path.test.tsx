@@ -101,9 +101,8 @@ async function logMatch(
   // Marking played auto-expands the row, which is what renders the steppers.
   await user.click(await screen.findByRole('button', { name: 'Mark played' }))
 
-  // J4: nothing is pre-filled, so minutes, goals and assists are all entered.
-  // "One fewer" from empty records an explicit 0.
-  await user.type(screen.getByRole('spinbutton', { name: `Minutes played by ${STRIKER.player_name}` }), '70')
+  // J4: nothing is pre-filled, so goals and assists are entered (the quick log
+  // asks no minutes, TRAK-198). "One fewer" from empty records an explicit 0.
   for (const [key, count] of [['goals', goals], ['assists', assists]] as const) {
     if (count === 0) {
       await user.click(screen.getByRole('button', { name: `One fewer ${key} for ${STRIKER.player_name}` }))
@@ -128,7 +127,7 @@ describe('what the coach records reaches the database and the rating', () => {
     expect(saved.p_session_id).toBe('session-1')
   }, 20_000)
 
-  // Several full render-type-save passes; typing minutes (J4) makes each one longer.
+  // Several full render-type-save passes.
   beforeEach(() => signInAs(COACH))
 
   it('stores the exact count, and pays an attacker on the attacker scale', async () => {
