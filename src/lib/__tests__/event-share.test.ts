@@ -55,21 +55,42 @@ describe('whatsAppShareText: the team-group templates', () => {
     expect(text).not.toContain('Meet Time')
   })
 
-  it('writes a cancellation with its reason', () => {
+  // TRAK-168: Tarek's cancellation wording (option A, 18 Oct): the date and
+  // time on one line, and the sentence names what is off. No venue (Imad,
+  // 18 Oct): the event is off, so where it was doesn't matter.
+  it('writes a cancellation with its reason, and no venue', () => {
     expect(whatsAppShareText({ ...training, status: 'cancelled', cancelReason: 'Pitch waterlogged' }, opts)).toBe([
       '*❌ CANCELLED | U15 Training*',
-      '📅 Date: Tue, 13 Oct',
-      '🏟️ Venue: Main pitch',
+      '📅 Tue, 13 Oct @ 18:00',
       '📌 Reason: Pitch waterlogged',
-      'Please note this session will not go ahead as scheduled.',
-      `🔗 Updated event info: ${link}`,
+      "This training won't go ahead.",
+      `🔗 Event details: ${link}`,
     ].join('\n'))
   })
 
-  it('a cancelled match names the opponent, and a cancellation without a reason has no reason line', () => {
-    const text = whatsAppShareText({ ...training, kind: 'match', opponent: 'Rivals FC', homeAway: 'away', status: 'cancelled' }, opts)
-    expect(text.split('\n')[0]).toBe('*❌ CANCELLED | U15 Match vs Rivals FC*')
+  it('a cancelled match names the opponent and home or away, and says the match is off', () => {
+    const text = whatsAppShareText({ ...training, kind: 'match', opponent: 'Rivals FC', homeAway: 'away', venue: 'Rivals Park', status: 'cancelled', cancelReason: 'Pitch waterlogged' }, opts)
+    expect(text).toBe([
+      '*❌ CANCELLED | U15 Match vs Rivals FC (Away)*',
+      '📅 Tue, 13 Oct @ 18:00',
+      '📌 Reason: Pitch waterlogged',
+      "This match won't go ahead.",
+      `🔗 Event details: ${link}`,
+    ].join('\n'))
+  })
+
+  it('a cancellation without a reason has no reason line; without a time, no "@"', () => {
+    const text = whatsAppShareText({ ...training, startTime: null, status: 'cancelled' }, opts)
     expect(text).not.toContain('Reason:')
+    expect(text.split('\n')[1]).toBe('📅 Tue, 13 Oct')
+  })
+
+  it('names what is off for every kind of event', () => {
+    const off = (kind: ShareableEvent['kind']) => whatsAppShareText({ ...training, kind, status: 'cancelled' }, opts).split('\n').at(-2)
+    expect(off('training')).toBe("This training won't go ahead.")
+    expect(off('match')).toBe("This match won't go ahead.")
+    expect(off('tournament')).toBe("This tournament won't go ahead.")
+    expect(off('other')).toBe("This event won't go ahead.")
   })
 
   // Imad, 14 Oct (#292): 24-hour times, as the app shows them.
@@ -104,7 +125,7 @@ describe('whatsAppShareText: the team-group templates', () => {
   it('leaves out lines with nothing to say, in every layout', () => {
     for (const shape of [{}, { kind: 'match' as const }, { status: 'cancelled' as const }, { kind: 'match' as const, status: 'cancelled' as const }]) {
       const text = whatsAppShareText({ ...training, ...shape, venue: '  ', kit: '' }, opts)
-      expect(text).not.toContain('Venue:')
+      expect(text).not.toContain('🏟️')
       expect(text).not.toContain('Kit:')
     }
   })
