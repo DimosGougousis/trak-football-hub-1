@@ -20,7 +20,7 @@ const rgb = (hex: string) => {
 }
 
 describe('Home week strip colours', () => {
-  it('a dot per event in its type colour, and red for a cancelled one', () => {
+  it('filled dots in each event colour, and a hollow red ring for a cancelled one', () => {
     render(<MemoryRouter><WeekStrip today={new Date('2026-10-12T09:00:00')} renderSheet={(_, trigger) => trigger} events={[
       event({ id: 't', kind: 'training', time: '17:00' }),
       event({ id: 'm', kind: 'match', time: '18:00', opponent: 'Olympiakos' }),
@@ -28,8 +28,11 @@ describe('Home week strip colours', () => {
     ]} /></MemoryRouter>)
     const dots = [...screen.getByLabelText('3 events').children] as HTMLElement[]
     expect(dots.map(d => d.style.background)).toEqual([
-      rgb(EVENT_COLOR.training), rgb(EVENT_COLOR.match), rgb(CANCELLED_COLOR),
+      rgb(EVENT_COLOR.training), rgb(EVENT_COLOR.match), 'transparent',
     ])
+    expect(dots[2].style.borderColor).toBe(CANCELLED_COLOR.toLowerCase())
+    expect(dots[2].style.borderStyle).toBe('solid')
+    expect(parseFloat(dots[2].style.borderWidth)).toBeGreaterThan(0)
   })
 })
 

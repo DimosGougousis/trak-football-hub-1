@@ -11,6 +11,8 @@ import styles from "./calendar.module.css";
 
 export type CalendarDateMatcher = (date: Date) => boolean;
 
+export type CalendarMark = string | { color: string; hollow?: boolean };
+
 export interface CalendarProps {
   value?: Date;
   onChange?: (date: Date) => void;
@@ -23,8 +25,8 @@ export interface CalendarProps {
   className?: string;
   /** Adds a Today button that slides back to the current month and selects today when it is available. */
   showToday?: boolean;
-  /** Trak (TRAK-182): one dot per colour under a day, e.g. its events. The day's label gains the count. */
-  marks?: (date: Date) => string[];
+  /** Trak: event dots under a day; hollow marks distinguish cancellations without colour alone. */
+  marks?: (date: Date) => CalendarMark[];
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -301,7 +303,12 @@ export function Calendar({
           onKeyDown={(event) => onDayKeyDown(event, date)}
           onClick={() => onChange?.(date)}
         ><span className={styles.dayNumber}>{date.getDate()}</span>
-          {dots.length > 0 && <span className={styles.marks} aria-hidden="true">{dots.slice(0, 3).map((color, i) => <span key={i} style={{ background: color }} />)}</span>}
+          {dots.length > 0 && <span className={styles.marks} aria-hidden="true">{dots.slice(0, 3).map((mark, i) => {
+            const { color, hollow } = typeof mark === "string" ? { color: mark, hollow: false } : mark;
+            return <span key={i} style={hollow
+              ? { background: "transparent", border: `1.5px solid ${color}` }
+              : { background: color }} />;
+          })}</span>}
         </button>;
       })}
     </div>)}

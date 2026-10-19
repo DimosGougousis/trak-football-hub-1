@@ -469,7 +469,7 @@ export default function PlayerHome() {
         {user && <PlayerParentInviteCard playerUserId={user.id} hideWhenLinked />}
 
         {/* Hero Card */}
-        <div className="relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
+        <div className="trak-dark relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
           style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
           <div className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.08) 0%, transparent 70%)' }} />

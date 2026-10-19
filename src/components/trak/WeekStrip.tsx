@@ -54,8 +54,10 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
             label: format(date, 'EEEEE'),
             // TRAK-171 (Tarek, 16 Oct): today stays marked after another day is picked.
             accessory: <><span className={value === todayValue ? 'sr-only trak-today' : 'sr-only'}>{format(date, 'EEEE d MMMM')}{value === todayValue && ', today'}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
-              {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[5px] h-[5px] rounded-full"
-                style={{ background: event.status === 'cancelled' ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />)}
+              {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[6px] h-[6px] rounded-full"
+                style={event.status === 'cancelled'
+                  ? { background: 'transparent', border: `1.5px solid ${CANCELLED_COLOR}` }
+                  : { background: EVENT_COLOR[event.kind] }} />)}
             </span>}</>,
           }
         })} />
@@ -67,7 +69,9 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
           {chosen.map(event => {
             const label = <>
               <span aria-hidden="true" className="w-[7px] h-[7px] rounded-full shrink-0"
-                style={{ background: event.status === 'cancelled' ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />
+                style={event.status === 'cancelled'
+                  ? { background: 'transparent', border: `1.5px solid ${CANCELLED_COLOR}` }
+                  : { background: EVENT_COLOR[event.kind] }} />
               <span className="w-12 shrink-0 text-[13px] text-ink-2">{event.sessionId ? 'Logged' : event.time ?? 'TBC'}</span>
               <span className="flex-1 min-w-0 truncate text-[14px] text-ink">{eventHeading(event)}</span>
               {event.status === 'cancelled' && <span className="text-[12px]" style={{ color: CANCELLED_COLOR }}>Cancelled</span>}

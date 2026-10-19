@@ -12,7 +12,7 @@ const players = [
   { id: 'sq-5', player_name: 'Thiago Silva', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
 ].map(p => ({ ...p, coach_user_id: ids.coach, status: 'active', linked_player_id: `${p.id}-user`, created_at: '2026-10-01T08:00:00Z' }))
 
-async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false) {
+async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false, cancelled = false) {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
   const user = { id: ids.coach, email: 'coach@arc182.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
@@ -43,7 +43,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // withMatch: a published away match tonight, changed 3 h ago; Beth can't make it, Thiago's consent isn't active.
     const match = { id: 'ev-182', coach_user_id: ids.coach, event_type: 'match', title: 'League', event_date: day, start_time: '20:00:00',
       meet_time: '19:15:00', starts_at: `${day}T16:00:00Z`, venue: 'Rivals Park', kit: 'White shirts, black shorts', opponent: 'Rivals FC',
-      home_away: 'away', status: 'scheduled', published: true, family_note: 'Bring water and shin pads', sequence: 1,
+      home_away: 'away', status: cancelled ? 'cancelled' : 'scheduled', published: true, family_note: 'Bring water and shin pads', sequence: 1,
       updated_at: new Date(Date.now() - 3 * 3600_000).toISOString() }
     if (withMatch && path === '/rest/v1/coach_sessions' && url.searchParams.has('event_id')) return json([])
     if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
@@ -228,4 +228,19 @@ test.describe('TRAK-182 coach screens', () => {
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
+})
+
+// Cancelled and Other must differ by shape even on the green selected day.
+test('TRAK-189 cancelled calendar mark stays hollow and readable when selected', async ({ page, context }, testInfo) => {
+  const unexpected: string[] = []
+  await coachBackend(context, unexpected, true, true)
+  await page.goto('/coach/schedule')
+  const day = page.getByRole('gridcell', { selected: true })
+  const ring = day.locator('[aria-hidden="true"] > span').first()
+  await expect(ring).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(ring).toHaveCSS('border-top-style', 'solid')
+  // A neutral backing keeps the red outline distinct from the green disc.
+  await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+  await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
+  expect(unexpected).toEqual([])
 })

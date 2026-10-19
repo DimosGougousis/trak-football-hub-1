@@ -173,3 +173,18 @@ describe('match input rules', () => {
     })
   })
 })
+
+// TRAK-198: the quick match log records no minutes. Unknown minutes are not a
+// violation, and the two minute-based rules don't apply to them; recorded
+// minutes are still checked.
+describe('validateMatchInput with minutes not recorded', () => {
+  it('accepts unknown minutes, with no minutes cap on goals and assists', () => {
+    expect(validateMatchInput({ minutes: null, goals: 0, assists: 0, teamScore: 0 })).toEqual([])
+    expect(validateMatchInput({ minutes: null, goals: 4, assists: 0, teamScore: 4 })).toEqual([])
+  })
+  it('still refuses impossible recorded minutes, and goals past the team score', () => {
+    expect(validateMatchInput({ minutes: 121, goals: 0, assists: 0 }).map(v => v.field)).toEqual(['minutes'])
+    expect(validateMatchInput({ minutes: 0, goals: 1, assists: 0, teamScore: 1 }).map(v => v.field)).toContain('minutes')
+    expect(validateMatchInput({ minutes: null, goals: 3, assists: 0, teamScore: 2 }).map(v => v.field)).toEqual(['goals'])
+  })
+})

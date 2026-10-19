@@ -60,7 +60,7 @@ describe('event colours on the light theme (TRAK-189)', () => {
   // The four kinds and the brand. Cancelled red and No-time amber can't also be
   // told from orange by colour alone with deuteranopia (no orange that still
   // reads at 4.5:1 manages it), so those two carry words: "Cancelled",
-  // "No time set". A non-colour mark for a cancelled dot is raised separately.
+  // "No time set". Cancelled dots also use a hollow ring (TRAK-189).
   it('every kind of event is told apart from the others and from the brand, also with deuteranopia', () => {
     const all = { ...EVENT_COLOR, brand: token('brand') }
     const names = Object.keys(all) as (keyof typeof all)[]

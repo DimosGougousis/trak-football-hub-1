@@ -100,6 +100,17 @@ describe('parent match detail (TRAK-73)', () => {
     expect(screen.getByText('Goals')).toBeInTheDocument()
   })
 
+  // TRAK-198: a quick-logged match has no minutes ("not recorded", NULL). The
+  // page (the player's too: it's the same component) shows no minutes value,
+  // never "null'" or "0'".
+  it('shows no minutes for a match logged without them', async () => {
+    server.use(http.get(endpoint('matches'), () => HttpResponse.json({ ...fullMatch(ALEX), minutes_played: null })))
+    renderParent('/parent/match/match-Alex')
+    expect(await screen.findByText('Midfielder')).toBeInTheDocument()
+    expect(screen.queryByText('Minutes')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^(null|0)'$/)).not.toBeInTheDocument()
+  })
+
   it('opens a match from the Matches tab', async () => {
     const user = userEvent.setup()
     renderParent('/parent/matches')

@@ -625,7 +625,7 @@ export default function CoachSchedule() {
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
               month={new Date(viewYear, viewMonth, 1)}
               onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
-              marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? CANCELLED_COLOR : TYPE_COLOR[ev.type])} />
+              marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])} />
           </div>
 
           {/* Legend */}

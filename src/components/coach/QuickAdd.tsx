@@ -322,7 +322,7 @@ export function QuickAdd({ onSaved }: { onSaved?: () => void }) {
                     onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
                     format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
                   {error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
-                  <p className="text-[12px] text-ink-3">Next: who played, their minutes, goals and assists.</p>
+                  <p className="text-[12px] text-ink-3">Next: who played, their goals and assists.</p>
                   <Button size="md" className="w-full" onClick={continueMatch}>Continue</Button>
                 </div>
               )}
