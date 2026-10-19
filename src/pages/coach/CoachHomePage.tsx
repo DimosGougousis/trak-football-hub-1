@@ -54,7 +54,7 @@ export default function CoachHomePage() {
 
   return (
     <MobileShell>
-      {/* pb-24: the quick actions scroll clear of the "+" (QuickAdd) above the tab bar. */}
+      {/* TRAK-212: the "+" (QuickAdd) is pinned to the header's empty right slot. */}
       <div className="pt-3 pb-24">
         {/* TRAK-163: the calendar is top left; TRAK-176: the squad switcher in the middle. */}
         <HomeHeader calendarTo="/coach/schedule" center={<CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} />} />
@@ -78,7 +78,7 @@ export default function CoachHomePage() {
           </button>
         </div>
       </div>
-      <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />
+      <QuickAdd corner="top" onSaved={() => setWeekVersion(v => v + 1)} />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
