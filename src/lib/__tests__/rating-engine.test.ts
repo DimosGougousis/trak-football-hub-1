@@ -235,3 +235,15 @@ describe('computeMatchScore', () => {
     ).not.toThrow()
   })
 })
+
+// TRAK-198: the quick match log records no minutes (NULL, "not recorded").
+// Unknown minutes give no minutes modifier: not +0.1, and not the −0.1 that
+// `null < 45` (true in JavaScript) would quietly apply.
+describe('computeMatchScore with minutes not recorded', () => {
+  it('rates as if minutes were neither long nor short', () => {
+    const middling = computeMatchScore({ ...baseMatch, minutes_played: 60 })
+    expect(computeMatchScore({ ...baseMatch, minutes_played: null })).toBe(middling)
+    expect(computeMatchScore({ ...baseMatch, minutes_played: 30 })).toBeLessThan(middling)
+    expect(computeMatchScore({ ...baseMatch, minutes_played: 80 })).toBeGreaterThan(middling)
+  })
+})

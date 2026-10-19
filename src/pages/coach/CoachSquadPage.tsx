@@ -15,6 +15,8 @@ import { fetchWaitReason } from '@/lib/wait-reason'
 import type { Tables } from '@/integrations/supabase/types'
 import { remember, remembered } from '@/lib/screen-memory'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { useQuery } from '@tanstack/react-query'
+import { loadTrainingAttendance } from '@/lib/attendance-rate'
 
 // TRAK-180: what Squad last showed a coach (see screen-memory).
 type SquadMemory = { players: any[]; assessments: Record<string, number>; consent: Record<string, ConsentStatus> }
@@ -283,6 +285,21 @@ function StatusChip({ status }: { status: ConsentStatus }) {
     style={{ color: chip.color, background: chip.bg }}>{chip.label}</span>
 }
 
+/** TRAK-182 (Imad, 18 Oct; pilot coach's item 15): training attendance, read when the panel opens.
+    Nothing while loading, on a failed read, before any training counts (never a false 0%), or for a
+    child waiting for a parent (they can't be ticked). Same rules as Home's Player overview. */
+function AttendanceLine({ player }: { player: SquadRow }) {
+  const { user } = useAuth()
+  const rate = useQuery({
+    queryKey: ['coach', user?.id, 'attendance', player.id],
+    enabled: Boolean(user && player.created_at),
+    queryFn: () => loadTrainingAttendance(user!.id, { id: player.id, created_at: player.created_at!, age_group: player.age_group }),
+  })
+  if (!rate.data) return null
+  return <p className="text-[13px] text-white/60"><span className="text-white/85">Attendance {rate.data.percent}%</span>
+    {' · '}<span>{rate.data.attended} of {rate.data.total} trainings</span></p>
+}
+
 /** The player panel: who they are, the status chip (whether they can be assessed), their band, and where to go next. */
 function PlayerPanel({ player, age, score, status, trigger }: {
   player: SquadRow; age: string | null; score: number | null; status: ConsentStatus | undefined; trigger: JSX.Element
@@ -300,6 +317,7 @@ function PlayerPanel({ player, age, score, status, trigger }: {
             <div className="flex items-center gap-2 text-[13px] text-white/60">
               {score !== null ? <>Latest band <BandPill band={scoreToBand(score)} /></> : 'Not assessed yet'}
             </div>
+            {status === 'ready' && <AttendanceLine player={player} />}
           </div>
         </div>
         <div className="flex gap-2">

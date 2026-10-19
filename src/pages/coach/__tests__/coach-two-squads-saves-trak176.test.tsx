@@ -117,11 +117,11 @@ describe('TRAK-176: the squad picked is saved on every way an event is made', { 
     await logStep('Squad')
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
     expect(screen.getByText('Bo Lind')).toBeInTheDocument()
-    // J4: every player's facts are typed. From its event, a player who came may already be marked played.
+    // J4: every player's facts are typed (Log match from an event asks no minutes, TRAK-198).
+    // From its event, a player who came may already be marked played.
     for (const name of ['Ade Okafor', 'Bo Lind']) {
       const details = screen.getByRole('button', { name: `Details for ${name}` })
       if (details.getAttribute('aria-expanded') !== 'true') await user.click(details)
-      await user.type(await screen.findByRole('spinbutton', { name: `Minutes played by ${name}` }), '70')
       await user.click(screen.getByRole('button', { name: `One fewer goals for ${name}` }))
       await user.click(screen.getByRole('button', { name: `One fewer assists for ${name}` }))
     }
