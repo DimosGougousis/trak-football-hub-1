@@ -225,7 +225,7 @@ describe('parent alerts bell', () => {
     expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     const sheet = await openAlerts()
     expect(within(sheet).getByText('vs Alex opposition · 0–0')).toBeInTheDocument()
-    expect(within(sheet).getByText('New coach assessment')).toBeInTheDocument()
+    expect(within(sheet).getByText(/^New assessment from /)).toBeInTheDocument()
     expect(within(sheet).queryByText('Player Of Week')).toBeNull()
     expect(within(sheet).queryByText(/teamwork/)).toBeNull()
     // TRAK-163: Arc's notification center. Closing keeps the count; Mark all read clears it.
@@ -258,7 +258,7 @@ describe('parent alerts bell', () => {
   it('a match alert opens that match; an assessment alert shows its bands', async () => {
     renderFamily()
     const sheet = await openAlerts()
-    await userEvent.click(within(sheet).getByRole('button', { name: /New coach assessment/ }))
+    await userEvent.click(within(sheet).getByRole('button', { name: /New assessment from / }))
     const bands = within(sheet).getByRole('region', { name: 'Assessment bands' })
     for (const label of ['Work Rate', 'Tactical', 'Attitude', 'Technical', 'Physical', 'Coachability']) {
       expect(within(bands).getByText(label)).toBeInTheDocument()
