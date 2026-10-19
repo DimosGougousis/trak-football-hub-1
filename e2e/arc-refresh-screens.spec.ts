@@ -268,16 +268,21 @@ test.describe('TRAK-182 coach screens', () => {
 })
 
 // Cancelled and Other must differ by shape even on the green selected day.
-test('TRAK-189 cancelled calendar mark stays hollow and readable when selected', async ({ page, context }, testInfo) => {
-  const unexpected: string[] = []
-  await coachBackend(context, unexpected, true, true)
-  await page.goto('/coach/schedule')
-  const day = page.getByRole('gridcell', { selected: true })
-  const ring = day.locator('[aria-hidden="true"] > span').first()
-  await expect(ring).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-  await expect(ring).toHaveCSS('border-top-style', 'solid')
-  // A neutral backing keeps the red outline distinct from the green disc.
-  await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
-  await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
-  expect(unexpected).toEqual([])
+// The backend dates the event by Dubai's day, so the page must be on Dubai's day
+// too: on UTC it picked yesterday from 20:00 to 24:00 UTC and found no mark.
+test.describe('TRAK-189 calendar on Dubai time', () => {
+  test.use({ timezoneId: 'Asia/Dubai' })
+  test('TRAK-189 cancelled calendar mark stays hollow and readable when selected', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected, true, true)
+    await page.goto('/coach/schedule')
+    const day = page.getByRole('gridcell', { selected: true })
+    const ring = day.locator('[aria-hidden="true"] > span').first()
+    await expect(ring).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(ring).toHaveCSS('border-top-style', 'solid')
+    // A neutral backing keeps the red outline distinct from the green disc.
+    await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
+    expect(unexpected).toEqual([])
+  })
 })
