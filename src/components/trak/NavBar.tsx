@@ -10,6 +10,7 @@ import {
   IconSessions,
   IconMatch,
   IconTraining,
+  IconAssess,
   ACTIVE_COLOR,
   DEFAULT_COLOR,
 } from '@/components/icons/TrakIcons'
@@ -33,6 +34,7 @@ function getNavItems(role: Role): NavItem[] {
   if (role === 'coach') return [
     { label: 'Home', path: '/coach/home', Icon: IconHome },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
+    { label: 'Feedback', path: '/coach/feedback', Icon: IconAssess },  // TRAK-211: Feedback and assessment
     { label: 'Sessions', path: '/coach/sessions', Icon: IconSessions },
     { label: 'Trainings', path: '/coach/trainings', Icon: IconTraining },
     { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
@@ -72,10 +74,11 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
             key={item.path}
             onClick={() => onNavigate(item.path)}
             aria-current={isActive ? 'page' : undefined}
-            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all relative"
+            // TRAK-211: six coach tabs fit a 375 px phone only with narrower padding.
+            className={`flex flex-col items-center gap-1 ${items.length > 5 ? 'px-1' : 'px-3'} py-1.5 rounded-xl transition-all relative`}
             style={{
               background: isActive ? 'rgba(200,242,90,0.06)' : 'transparent',
-              minWidth: 52,
+              minWidth: items.length > 5 ? 44 : 52,
             }}
           >
             <Icon size={20} color={isActive ? ACTIVE_COLOR : DEFAULT_COLOR} />

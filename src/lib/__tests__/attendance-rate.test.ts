@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { trainingAttendance } from '@/lib/attendance-rate'
 
 // TRAK-182 (Imad, 18 Oct; pilot coach's item 15): a player's training attendance
-// for the coach, on the same rules as Home's Player overview (TRAK-197).
+// for the coach, on the same rules as the Feedback and assessment tab (TRAK-197, TRAK-211).
 const ME = 'sp-me'
 const training = (n: number, extra: { squad?: string | null } = {}) =>
   ({ id: `s${n}`, squad: null, session_date: `2026-10-${String(n).padStart(2, '0')}`, ...extra })

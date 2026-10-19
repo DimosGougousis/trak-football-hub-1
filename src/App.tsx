@@ -49,6 +49,7 @@ const HowTrakWorks = lazy(() => import("./pages/HowTrakWorks"));
 
 const CoachHomePage = lazy(() => import("./pages/coach/CoachHomePage"));
 const CoachSquadPage = lazy(() => import("./pages/coach/CoachSquadPage"));
+const CoachFeedbackPage = lazy(() => import("./pages/coach/CoachFeedbackPage"));
 const CoachAssessPage = lazy(() => import("./pages/coach/CoachAssessPage"));
 const CoachSessionsPage = lazy(() => import("./pages/coach/CoachSessionsPage"));
 const CoachAddSession = lazy(() => import("./pages/coach/CoachAddSession"));
@@ -145,6 +146,7 @@ const App = () => (
             <Route path="/coach/squad" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
             <Route path="/coach/squad/add" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/squad" replace /></RouteGuard>} />
             <Route path="/coach/assess" element={<RouteGuard allowedRole="coach"><CoachAssessPage /></RouteGuard>} />
+            <Route path="/coach/feedback" element={<RouteGuard allowedRole="coach"><CoachFeedbackPage /></RouteGuard>} />
             <Route path="/coach/feedback/:assessmentId" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachReviewFeedback /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><CoachSessionsChooser /></RouteGuard>} />
             <Route path="/coach/sessions/list" element={<RouteGuard allowedRole="coach"><CoachSessionsPage /></RouteGuard>} />
