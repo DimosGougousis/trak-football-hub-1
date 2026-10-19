@@ -65,7 +65,8 @@ async function choose(sessionId: string) {
   await userEvent.selectOptions(select('Player'), 'player-a')
   await screen.findByRole('option', { name: /Gym work/ })
   await userEvent.selectOptions(select('Session'), sessionId)
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
+  // Loaded: a training opens Next; a match first asks Appearance (enabled once the form is ready).
+  await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Appearance' }) ?? screen.getByRole('button', { name: 'Next' })).toBeEnabled())
 }
 
 describe('TRAK-182: no Appearance question for a training', { timeout: 20_000 }, () => {
@@ -80,10 +81,37 @@ describe('TRAK-182: no Appearance question for a training', { timeout: 20_000 },
     expect(posted[0].appearance).toBe('training')
   })
 
-  it('a match still asks Started or Sub', async () => {
+  // Pilot coach's item 13 (Imad, 19 Oct): a match asks Started, Sub or Didn't play, in Arc's select,
+  // with nothing pre-picked (J4). A player who didn't play isn't assessed (Imad, option A): nothing is saved.
+  it("a match asks Started, Sub or Didn't play; Didn't play ends it with nothing saved", async () => {
     showForm()
     await choose('session-match')
-    expect(screen.getByText('APPEARANCE')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Started' })).toBeInTheDocument()
+    const appearance = screen.getByRole('combobox', { name: 'Appearance' })
+    expect(appearance).not.toHaveTextContent(/Started|Sub|Didn't play/)
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    // By keyboard, as Radix supports it (jsdom has no pointer capture).
+    appearance.focus()
+    await userEvent.keyboard('{Enter}')
+    expect((await screen.findAllByRole('option')).map(o => o.textContent)).toEqual(['Started', 'Sub', "Didn't play"])
+    await userEvent.keyboard('{End}{Enter}')
+    await waitFor(() => expect(appearance).toHaveTextContent("Didn't play"))
+    expect(screen.getByText("A player who didn't play isn't assessed.")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(posted).toEqual([])
+  })
+
+  it('a match saves Started or Sub as chosen', async () => {
+    showForm()
+    await choose('session-match')
+    const appearance = screen.getByRole('combobox', { name: 'Appearance' })
+    appearance.focus()
+    await userEvent.keyboard('{Enter}')
+    await screen.findAllByRole('option')
+    await userEvent.keyboard('{Home}{ArrowDown}{Enter}')
+    await waitFor(() => expect(appearance).toHaveTextContent('Sub'))
+    await saveAssessment()
+    await screen.findByText('Coach home')
+    expect(posted).toHaveLength(1)
+    expect(posted[0].appearance).toBe('sub')
   })
 })

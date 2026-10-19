@@ -20,7 +20,8 @@ const PLAYERS = [
   { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Ade Okafor', position: 'Midfielder', created_at: '2026-09-01T00:00:00Z' },
   { id: 'sp-2', coach_user_id: COACH.id, player_name: 'Bo Lind', position: 'Defender', created_at: '2026-09-01T00:00:00Z' },
 ]
-const heroCount = () => screen.getByText('Players in squad').previousElementSibling?.textContent?.trim()
+// TRAK-197: Home lists its players in the Player overview, one row each.
+const homeRow = (name: string) => screen.queryByRole('button', { name: new RegExp(`^Open ${name}'s profile`) })
 
 /** The coach's reads; squad_players waits for `gate` when one is given. */
 function coachReads(players: typeof PLAYERS | [], gate?: Promise<void>) {
@@ -71,7 +72,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     renderApp('/coach/squad')
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^Home$/i }))
-    await waitFor(() => expect(heroCount()).toBe('2'))
+    await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull())
 
     // From here every squad read is held: only the memory can show players.
     let release!: () => void
@@ -82,31 +83,28 @@ describe('TRAK-180 switching between Home and Squad', () => {
     expect(screen.queryByText(/Loading your squad/)).toBeNull()
 
     await user.click(screen.getByRole('button', { name: /^Home$/i }))
-    expect(heroCount()).toBe('2')
+    expect(homeRow('Ade Okafor')).not.toBeNull()
+    expect(screen.queryByText('Loading your players…')).toBeNull()
     release()
-    await waitFor(() => expect(heroCount()).toBe('2'))
-  })
+    await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull())
+  }, 20_000) // four tab switches take longer than 5 s on GitHub's runners
 
-  it("a revisit whose recent-assessments read fails doesn't show the last visit's list", async () => {
+  it("a revisit whose assessments read fails doesn't show the last visit's players", async () => {
     signInAs(COACH)
     const user = userEvent.setup()
     coachReads(PLAYERS)
-    const recent = [{ id: 'a-1', coach_user_id: COACH.id, squad_player_id: 'sp-1', coach_rating: 7,
-      created_at: '2026-09-20T10:00:00Z', squad_players: { player_name: 'Ade Okafor' } }]
-    server.use(table('coach_assessments', recent))
     renderApp('/coach/home')
-    expect(await screen.findByRole('button', { name: /Open Ade Okafor's profile/ })).toBeInTheDocument()
+    await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull())
     await user.click(screen.getByRole('button', { name: /^Squad$/i }))
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
 
-    // Only the recent list (limit 5) fails this time.
-    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, ({ request }) =>
-      new URL(request.url).searchParams.get('limit') === '5'
-        ? HttpResponse.json({ message: 'unavailable' }, { status: 500 })
-        : HttpResponse.json(recent)))
+    // The assessments decide each level, so a failed read can't keep the old list.
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, () =>
+      HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
     await user.click(screen.getByRole('button', { name: /^Home$/i }))
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Open Ade Okafor's profile/ })).toBeNull())
-  })
+    expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
+    expect(homeRow('Ade Okafor')).toBeNull()
+  }, 20_000)
 
   it("keeps each account's screens apart, and forgets them all on sign-out", () => {
     remember('coach-squad', 'coach-1', { players: PLAYERS })
