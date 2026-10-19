@@ -48,14 +48,15 @@ export function CoachAssessmentCard({ assessment, coachId, playerName, message, 
     setBusy(true)
     const at = next ? new Date().toISOString() : null
     try {
-      const saved = await supabase.from('coach_assessments').update({ published_at: at })
+      const { data: saved, error: saveError } = await supabase.from('coach_assessments').update({ published_at: at })
         .eq('id', assessment.id).eq('coach_user_id', coachId).select('id').maybeSingle()
-      if (saved.error || !saved.data) throw saved.error ?? new Error('not found')
+      // No row back means nothing changed (removed, or no longer this coach's): never report it as done.
+      if (saveError || !saved) throw saveError ?? new Error('not found')
       // The message follows the bands. A missing message row is fine: there is nothing to send.
       if (message) {
-        const sent = await supabase.from('coach_shared_feedback' as never).update({ published_at: at } as never)
+        const { error: sendError } = await supabase.from('coach_shared_feedback' as never).update({ published_at: at } as never)
           .eq('assessment_id', assessment.id).eq('coach_user_id', coachId)
-        if (sent.error) throw sent.error
+        if (sendError) throw sendError
       }
       setPublished(next)
       onChanged?.(next)
