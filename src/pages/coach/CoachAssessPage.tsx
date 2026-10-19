@@ -76,7 +76,8 @@ function CoachAssessmentForm() {
   const openId = new URLSearchParams(location.search).get('assessment')
   const [opened, setOpened] = useState<{ id: string; playerId: string; sessionId: string; createdAt: string; session: any | null } | null>(null)
   const [openState, setOpenState] = useState<'idle' | 'loading' | 'missing' | 'error'>(openId ? 'loading' : 'idle')
-  const [appearance, setAppearance] = useState<MatchAppearance>('started')
+  // Imad, 19 Oct (J4, no invented defaults): nothing pre-picked; a match waits for the coach's choice.
+  const [appearance, setAppearance] = useState<MatchAppearance | null>(null)
   const [workRate, setWorkRate]         = useState(5)
   const [tactical, setTactical]         = useState(5)
   const [attitude, setAttitude]         = useState(5)
@@ -171,7 +172,7 @@ function CoachAssessmentForm() {
     setExistingId(null)
     setWorkRate(5); setTactical(5); setAttitude(5)
     setTechnical(5); setPhysical(5); setCoachability(5)
-    setAppearance('started')
+    setAppearance(null)
     setNote(''); setNoteExists(false)
     setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null)
     setSaving(false)
@@ -204,7 +205,7 @@ function CoachAssessmentForm() {
             setWorkRate(data.work_rate); setTactical(data.tactical)
             setAttitude(data.attitude); setTechnical(data.technical)
             setPhysical(data.physical); setCoachability(data.coachability)
-            setAppearance(MATCH_APPEARANCES.includes(data.appearance as MatchAppearance) ? data.appearance as MatchAppearance : 'started')
+            setAppearance(MATCH_APPEARANCES.includes(data.appearance as MatchAppearance) ? data.appearance as MatchAppearance : null)
             setNote(privateResult.data?.note ?? '')
             setNoteExists(privateResult.data != null)
             setShared(sf?.body ?? '')
@@ -700,7 +701,7 @@ function CoachAssessmentForm() {
         {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started, Sub or Didn't play,
             for a match. A training is a training (TRAK-182), so it isn't asked. ---- */}
         {!isTraining && <div className="arc">
-          <Select label="Appearance" value={appearance} onValueChange={value => setAppearance(value as MatchAppearance)}
+          <Select label="Appearance" placeholder="Choose" value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
             options={MATCH_APPEARANCES.map(value => ({ value, label: APPEARANCE_LABEL[value] }))} />
         </div>}
 
@@ -825,7 +826,7 @@ function CoachAssessmentForm() {
             {([
               ['Player', selectedPlayer?.player_name ?? ''],
               ['Session', selectedSession ? sessionLabel(selectedSession) : opened ? 'No session recorded' : ''],
-              ['Appearance', APPEARANCE_LABEL[savedAppearance]],
+              ['Appearance', savedAppearance ? APPEARANCE_LABEL[savedAppearance] : ''],
               ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
               [`Message to ${firstName}`, message || 'None'],
@@ -878,7 +879,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
             onClick={() => setStep(step - 1)}>Back</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait)}
+          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && !appearance))}
             onClick={() => setStep(step + 1)}>Next</Button>
         </>}
       </div>

@@ -65,7 +65,8 @@ async function choose(sessionId: string) {
   await userEvent.selectOptions(select('Player'), 'player-a')
   await screen.findByRole('option', { name: /Gym work/ })
   await userEvent.selectOptions(select('Session'), sessionId)
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled())
+  // Loaded: a training opens Next; a match first asks Appearance (enabled once the form is ready).
+  await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Appearance' }) ?? screen.getByRole('button', { name: 'Next' })).toBeEnabled())
 }
 
 describe('TRAK-182: no Appearance question for a training', { timeout: 20_000 }, () => {
@@ -85,13 +86,16 @@ describe('TRAK-182: no Appearance question for a training', { timeout: 20_000 },
     showForm()
     await choose('session-match')
     const appearance = screen.getByRole('combobox', { name: 'Appearance' })
-    expect(appearance).toHaveTextContent('Started')
+    // Imad, 19 Oct (J4, no invented defaults): nothing is pre-picked, and Next waits for a choice.
+    expect(appearance).not.toHaveTextContent(/Started|Sub|Didn't play/)
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
     // By keyboard, as Radix supports it (jsdom has no pointer capture).
     appearance.focus()
     await userEvent.keyboard('{Enter}')
     expect((await screen.findAllByRole('option')).map(o => o.textContent)).toEqual(['Started', 'Sub', "Didn't play"])
-    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+    await userEvent.keyboard('{End}{Enter}')
     await waitFor(() => expect(appearance).toHaveTextContent("Didn't play"))
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
     await saveAssessment()
     await screen.findByText('Coach home')
     expect(posted).toHaveLength(1)
