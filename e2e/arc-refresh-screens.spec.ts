@@ -1,4 +1,7 @@
 import { test, expect, type BrowserContext } from '@playwright/test'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
 
 // TRAK-182: the coach screens the Arc refresh touches, on the production build
 // with a synthetic, intercepted backend. Screenshots at phone width for review;
@@ -33,7 +36,9 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     const path = url.pathname
     if (path === '/auth/v1/user') return json(user)
     if (path === '/rest/v1/profiles') return json([{ user_id: ids.coach, id: ids.coach, role: 'coach', full_name: 'Synthetic Coach' }])
-    if (path === '/rest/v1/coach_details') return json([{ user_id: ids.coach, organization_id: 'org-182' }])
+    if (path === '/rest/v1/coach_details') return json([{ user_id: ids.coach, organization_id: 'org-182', coach_role: 'Head Coach', team: 'U16' }])
+    // TRAK-196: Home's quiet line names the academy.
+    if (path === '/rest/v1/organizations') return json([{ id: 'org-182', name: 'Synthetic Academy' }])
     if (path === '/rest/v1/squad_players') {
       const one = url.searchParams.get('id')?.replace(/^eq\./, '')
       return json(one ? players.filter(p => p.id === one) : players)
@@ -64,6 +69,38 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
 
 test.describe('TRAK-182 coach screens', () => {
   test.use({ timezoneId: 'Asia/Dubai' })
+  test('TRAK-189 coach Home attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await coachBackend(context, unexpected)
+    // All three levels must render; a fixture with only recent assessments
+    // cannot check the warning and urgent colours introduced by #365.
+    await context.route('**/rest/v1/coach_assessments*', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([30, 15, 0].map((days, i) => ({
+        id: `attention-${i}`, squad_player_id: players[i].id, coach_user_id: ids.coach,
+        created_at: new Date(Date.now() - days * 86400_000).toISOString(),
+      }))),
+    }))
+    await page.goto('/coach/home')
+    const overview = page.getByRole('region', { name: 'Player overview' })
+    for (const level of ['Urgent', 'Warning', 'On track']) {
+      await expect(overview.getByText(level, { exact: true }).first()).toBeVisible()
+    }
+    await expect(page.getByRole('button', { name: 'Assess a player', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Log a match or training', exact: true })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: unknown[] }> } }).axe
+      return (await axe.run({ runOnly: ['color-contrast'] })).violations
+    })
+    await page.screenshot({ path: testInfo.outputPath('coach-home-attention-contrast.png'), fullPage: true })
+    expect(violations).toEqual([])
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   for (const [name, path, ready] of [
     ['home', '/coach/home', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
