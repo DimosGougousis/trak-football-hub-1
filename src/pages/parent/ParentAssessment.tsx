@@ -6,6 +6,7 @@ import { ParentAssessmentCard } from '@/components/parent/ParentAssessmentCard'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useParentAssessment } from '@/hooks/useParentAssessments'
 import { trackEvent } from '@/lib/telemetry'
+import { ChevronLeft } from 'lucide-react'
 
 export default function ParentAssessment() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>()
@@ -23,7 +24,15 @@ export default function ParentAssessment() {
   }, [shownId])
   return <MobileShell>
     <div className="pt-3 pb-4">
-      <Link to="/parent/assessments" className="inline-flex min-h-11 items-center text-sm text-muted-foreground">All assessments</Link>
+      {/* TRAK-204 (Kostas, 19 Oct): an event opened by mistake goes straight back, as Match details does.
+          With nothing behind it (a link opened fresh), Back goes to Events. */}
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" aria-label="Back" onClick={() => { if (location.key !== 'default') navigate(-1); else navigate('/parent/matches') }}
+          className="inline-flex min-h-11 min-w-11 -ml-2 items-center justify-center rounded-xl text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary">
+          <ChevronLeft size={20} aria-hidden="true" />
+        </button>
+        <Link to="/parent/assessments" className="inline-flex min-h-11 items-center text-sm text-muted-foreground">All assessments</Link>
+      </div>
       <h1 className="text-xl text-foreground mb-5">Coach assessment</h1>
       <ParentChildSelector />
       <ParentFamilyContent>

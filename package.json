@@ -27,7 +27,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "check:bundle": "node scripts/check-bundle-secrets.mjs",
-    "uc:check": "node scripts/uc-check.mjs --stage=commit",
+    "uc:check": "node scripts/uc-check.mjs --stage=ci",
     "uc:lock": "node scripts/uc-check.mjs --write-lock",
     "uc:report": "node scripts/uc-report.mjs",
     "prepare": "husky",

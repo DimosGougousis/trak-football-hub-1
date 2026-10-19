@@ -1,0 +1,15 @@
+# Keeps workflow actions on supported runtimes (GitHub retired Node 20 for
+# actions in 2025). One grouped PR a week; it goes through the same review and
+# CI as any other change. src/__tests__/ci-action-runtimes.test.ts blocks a
+# step that falls back to a Node 20 major.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
+    commit-message:
+      prefix: '[scope] CI'
