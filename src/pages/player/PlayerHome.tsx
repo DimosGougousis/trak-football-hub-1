@@ -419,7 +419,7 @@ export default function PlayerHome() {
     <MobileShell>
       <div className="pt-3 pb-4">
         {/* TRAK-163: calendar, the player's name, the bell; then the next seven days. */}
-        <HomeHeader calendarTo="/player/matches" center={<HomeTitle>{profile?.full_name || 'Player'}</HomeTitle>}
+        <HomeHeader calendarTo="/player/calendar" center={<HomeTitle>{profile?.full_name || 'Player'}</HomeTitle>}
           right={user && <PlayerAlertsBell key={user.id} userId={user.id}
             events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
             assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
