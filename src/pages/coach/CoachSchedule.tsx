@@ -128,22 +128,22 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
   const picked = TRAINING_THEMES.find(t => t.key === theme)
   return (
     <div className="space-y-2">
-      <span id="training-theme" className="block text-[9px] tracking-[0.1em] uppercase text-white/40" style={mono}>Theme</span>
+      <span id="training-theme" className="block text-[9px] tracking-[0.1em] uppercase text-ink-3" style={mono}>Theme</span>
       <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 gap-2">
         {TRAINING_THEMES.map(t => {
           const on = t.key === theme
           return (
             <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
               style={{
-                background: on ? `${TYPE_COLOR.training}1a` : '#0A0A0B',
-                border: `1px solid ${on ? TYPE_COLOR.training + '55' : 'rgba(255,255,255,0.07)'}`,
+                background: on ? withAlpha(TYPE_COLOR.training, 0.1) : 'rgb(var(--t-ground))',
+                border: `1px solid ${on ? withAlpha(TYPE_COLOR.training, 0.33) : 'rgb(var(--t-line))'}`,
                 ...font,
               }}>
               <input type="radio" name="training-theme" value={t.key} checked={on} onChange={() => onChange(t.key)}
                 className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: TYPE_COLOR.training }} />
               <span className="min-w-0">
-                <span className="block text-[13px] leading-tight" style={{ color: on ? TYPE_COLOR.training : 'rgba(255,255,255,0.8)' }}>{t.label}</span>
-                <span className="block text-[11px] text-white/40 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
+                <span className="block text-[13px] leading-tight" style={{ color: on ? TYPE_COLOR.training : 'rgb(var(--t-ink))' }}>{t.label}</span>
+                <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
               </span>
             </label>
           )
