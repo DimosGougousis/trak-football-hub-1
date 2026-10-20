@@ -96,7 +96,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const RouteFallback = () => <div className="min-h-screen bg-[#0A0A0B]" />;
+const RouteFallback = () => <div className="min-h-screen bg-ground" />;
 
 const App = () => (
   <ErrorBoundary>

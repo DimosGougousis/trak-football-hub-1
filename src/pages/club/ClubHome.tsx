@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
+import { withAlpha } from '@/lib/with-alpha'
 
 type CoachRow = {
   userId: string
@@ -20,7 +21,7 @@ type CoachRow = {
 
 function getBandColor(bandKey: string) {
   const cfg = BANDS.find(b => b.word.toLowerCase() === bandKey)
-  return cfg?.color ?? 'rgba(255,255,255,0.4)'
+  return cfg?.color ?? 'rgb(var(--t-ink-3))'
 }
 
 export default function ClubHome() {
@@ -185,14 +186,14 @@ export default function ClubHome() {
       <ClubCard className="p-5 mb-5">
         <SectionLabel>Total Players</SectionLabel>
         <div className="mt-3 flex items-end justify-between">
-          <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 64, lineHeight: 1, color: '#C8F25A' }}>
+          <div style={{ fontFamily: 'var(--t-font)', fontWeight: 300, fontSize: 64, lineHeight: 1, color: 'rgb(var(--t-brand))' }}>
             {ready ? totalPlayers : '—'}
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between px-4 py-3"
-          style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
-          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>Assessments this week</span>
-          <span style={{ color: 'rgba(255,255,255,0.88)', fontSize: 16 }}>{ready ? assessmentsThisWeek : '—'}</span>
+          style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))', borderRadius: 12 }}>
+          <span style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13 }}>Assessments this week</span>
+          <span style={{ color: 'rgb(var(--t-ink))', fontSize: 16 }}>{ready ? assessmentsThisWeek : '—'}</span>
         </div>
       </ClubCard>
 
@@ -203,20 +204,20 @@ export default function ClubHome() {
             <LoadError what="your academy overview" onRetry={() => setRetry(value => value + 1)} />
           </div>
         ) : pending ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>Loading…</div>
+          <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>Loading…</div>
         ) : coaches.length === 0 ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No coaches connected yet. Trak sets up your coaches' accounts.</div>
+          <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>No coaches connected yet. Trak sets up your coaches' accounts.</div>
         ) : (
           coaches.map(c => (
             <ClubCard key={c.userId} className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.88)' }}>{c.team || 'Squad'}</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>{c.name} · {c.coachRole}</div>
+                  <div style={{ fontSize: 18, color: 'rgb(var(--t-ink))' }}>{c.team || 'Squad'}</div>
+                  <div style={{ fontSize: 13, color: 'rgb(var(--t-ink-3))' }}>{c.name} · {c.coachRole}</div>
                 </div>
                 <div className="text-right">
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)' }}>{c.playerCount} players</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{c.assessmentsThisWeek} assessed this week</div>
+                  <div style={{ fontSize: 13, color: 'rgb(var(--t-ink))' }}>{c.playerCount} players</div>
+                  <div style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))' }}>{c.assessmentsThisWeek} assessed this week</div>
                 </div>
               </div>
               {Object.keys(c.bandDist).length > 0 && (
@@ -231,7 +232,7 @@ export default function ClubHome() {
         )}
       </div>
 
-      <div className="mt-6 px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 1.5 }}>
+      <div className="mt-6 px-4 py-3" style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', borderRadius: 12, color: 'rgb(var(--t-ink-3))', fontSize: 12, lineHeight: 1.5 }}>
         Read-only view. Performance data belongs to players and coaches. Club administrators can monitor activity but cannot edit player or coach records.
       </div>
     </ClubShell>
@@ -240,7 +241,7 @@ export default function ClubHome() {
 
 function BandTag({ color, letter, count }: { color: string; letter: string; count: number }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ color, background: `${color}1F`, border: `1px solid ${color}40`, fontSize: 11 }}>
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ color, background: `${withAlpha(color, 0.12)}`, border: `1px solid ${withAlpha(color, 0.25)}`, fontSize: 11 }}>
       <span style={{ fontWeight: 500 }}>{letter}</span>
       <span style={{ opacity: 0.85 }}>{count}</span>
     </span>

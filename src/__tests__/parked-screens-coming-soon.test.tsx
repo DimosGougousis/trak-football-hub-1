@@ -27,7 +27,7 @@ const READ_RPCS = ['my_consent_status', 'my_session_is_live', 'get_children_awai
 // Unlabelled buttons are the screens' icon-only Back (navigate(-1)); every
 // handler that writes, calls AI, shares or copies is guarded and listed in the
 // audit on the PR, and each screen's own actions are asserted below.
-const NAVIGATION = /^(|DEV|Back|Home|Squad|Sessions|Profile|Matches|Card|Alerts|Overview|Squads|Radar|Coaches|Previous month|Next month|Week|Month|Season|All|U\d+s?|\d{1,2}|HOW TRAK WORKS.*|SETTINGS.*|Close|×)$/i
+const NAVIGATION = /^(|DEV|Back|Home|Squad|Feedback|Sessions|Profile|Matches|Card|Alerts|Overview|Squads|Radar|Coaches|Previous month|Next month|Week|Month|Season|All|U\d+s?|\d{1,2}|HOW TRAK WORKS.*|SETTINGS.*|Close|×)$/i
 
 let sequence = 0
 let role = 'coach'

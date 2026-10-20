@@ -27,16 +27,16 @@ type Face = 'closed' | 'menu' | 'event' | 'match' | 'done'
 
 const SPRING = { type: 'spring', bounce: 0, visualDuration: 0.35 } as const
 const CHECK_SPRING = { type: 'spring', bounce: 0.3, visualDuration: 0.35 } as const
-const field = 'w-full rounded-[12px] border border-white/[0.08] bg-[#0A0A0B] px-3 py-2.5 text-[16px] text-white/90 placeholder-white/25 outline-none focus-visible:ring-2 focus-visible:ring-primary'
+const field = 'w-full rounded-[12px] border border-line bg-ground px-3 py-2.5 text-[16px] text-ink placeholder-ink-3 outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
 /** The top row of the open surface: Back (on a form), its title, and X, which
  *  closes it from anywhere (Imad, 16 Oct, as Arc's action menu does). */
 function Header({ title, onBack, onClose }: { title: string; onBack?: () => void; onClose: () => void }) {
-  const icon = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 hover:bg-white/[0.06] active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  const icon = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-raised active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
   return (
     <div className="-mx-1 -mt-1 mb-1 flex items-center gap-1">
       {onBack && <button type="button" aria-label="Back to Create" onClick={onBack} className={icon}><ArrowLeft size={18} aria-hidden="true" /></button>}
-      <p className={`flex-1 text-[15px] font-medium text-white/90 ${onBack ? '' : 'pl-2'}`}>{title}</p>
+      <p className={`flex-1 text-[15px] font-medium text-ink ${onBack ? '' : 'pl-2'}`}>{title}</p>
       <button type="button" aria-label="Close quick add" onClick={onClose} className={icon}><X size={18} aria-hidden="true" /></button>
     </div>
   )
@@ -203,7 +203,7 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
   const position = top
     ? { right: 'max(20px, calc((100vw - 430px) / 2 + 20px))', top: 'calc(12px + env(safe-area-inset-top))' }
     : { right: 'max(16px, calc((100vw - 430px) / 2 + 16px))', bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))` }
-  const item = 'flex w-full min-h-11 items-center gap-3 rounded-[12px] px-3 text-left text-[15px] text-white/90 hover:bg-white/[0.06] focus-visible:bg-white/[0.08] focus-visible:outline-none active:scale-[0.98] transition-transform'
+  const item = 'flex w-full min-h-11 items-center gap-3 rounded-[12px] px-3 text-left text-[15px] text-ink hover:bg-raised focus-visible:bg-raised focus-visible:outline-none active:scale-[0.98] transition-transform'
 
   return <>
     {/* Room under the last row, so the "+" never covers it. */}
@@ -218,11 +218,11 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
           // form lets its pickers out, and at the bottom they open upward: opening
           // down ran off the screen (Imad, 16 Oct). At the top they open down as usual.
           style={{ borderRadius: round ? (top ? 22 : 28) : 22, originX: 1, originY: top ? 0 : 1 }}
-          className={`arc pointer-events-auto border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.5)]
-            bg-[#141416]/90 backdrop-blur-xl [@media(prefers-reduced-transparency:reduce)]:bg-[#141416] [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none
+          className={`arc pointer-events-auto border border-line shadow-[0_12px_40px_rgba(0,0,0,0.5)]
+            bg-surface/90 backdrop-blur-xl [@media(prefers-reduced-transparency:reduce)]:bg-surface [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none
             ${top ? '' : `[&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
             [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left`}
-            [&_[aria-label$=calendar]]:bg-[#1a1a1d] [&_[role=listbox]]:bg-[#1a1a1d]
+            [&_[aria-label$=calendar]]:bg-raised [&_[role=listbox]]:bg-raised
             ${face === 'event' || face === 'match' ? 'overflow-visible' : 'overflow-clip'}
             ${round ? (top ? 'w-11 h-11' : 'w-14 h-14') : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
           <AnimatePresence mode="popLayout" initial={false}>
@@ -235,13 +235,13 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
                   // Opens on press (8d). The press must not then focus this fading "+", or
                   // it would take focus back from the menu's first item.
                   onPointerDown={() => setFace('menu')} onMouseDown={e => e.preventDefault()} onClick={() => setFace('menu')} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFace('menu') } }}
-                  className="flex w-full h-full items-center justify-center bg-primary text-black active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                  className="flex w-full h-full items-center justify-center bg-primary text-on-brand active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink">
                   <Plus size={24} strokeWidth={2.2} aria-hidden="true" />
                 </button>
               )}
 
               {face === 'done' && (
-                <div role="status" className="flex w-full h-full items-center justify-center bg-primary text-black">
+                <div role="status" className="flex w-full h-full items-center justify-center bg-primary text-on-brand">
                   <motion.span initial={reduced ? false : { scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={CHECK_SPRING}>
                     <Check size={26} strokeWidth={2.6} aria-hidden="true" />
                   </motion.span>
@@ -261,17 +261,17 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
                     </button>
                   )}
                   <button type="button" role="menuitem" className={item} onClick={() => go('/coach/sessions/add')}>
-                    <Dumbbell size={18} aria-hidden="true" className="text-white/60" />Log training
+                    <Dumbbell size={18} aria-hidden="true" className="text-ink-2" />Log training
                   </button>
                   <button type="button" role="menuitem" className={item} onClick={() => { setError(null); setFace('match') }}>
-                    <Swords size={18} aria-hidden="true" className="text-white/60" />Log match
+                    <Swords size={18} aria-hidden="true" className="text-ink-2" />Log match
                   </button>
                   {/* Imad, 16 Oct (Kostas's item 9): assessing is one of the coach's quick actions. */}
                   <button type="button" role="menuitem" className={item} onClick={() => go('/coach/assess')}>
-                    <ClipboardPen size={18} aria-hidden="true" className="text-white/60" />Assess player
+                    <ClipboardPen size={18} aria-hidden="true" className="text-ink-2" />Assess player
                   </button>
                   <button type="button" role="menuitem" className={item} onClick={() => { if (!eventsOn) { comingSoon(); return } setError(null); setFace('event') }}>
-                    <CalendarPlus size={18} aria-hidden="true" className="text-white/60" />New event
+                    <CalendarPlus size={18} aria-hidden="true" className="text-ink-2" />New event
                   </button>
                 </div>
                 </>
@@ -298,13 +298,13 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
                   {/* TRAK-127: New event is for what's coming; a past day offers the logs. */}
                   {datePassed ? (
                     <div role="alert" className="space-y-2">
-                      <p className="text-[12px] text-[#f87171]">{datePassed}</p>
+                      <p className="text-[12px] text-danger">{datePassed}</p>
                       <div className="flex gap-2">
                         <Button size="md" variant="secondary" className="flex-1" onClick={() => { setError(null); setFace('match') }}>Log match</Button>
                         <Button size="md" variant="secondary" className="flex-1" onClick={() => go('/coach/sessions/add', { state: { logDate: date } })}>Log training</Button>
                       </div>
                     </div>
-                  ) : error && <p role="alert" className="text-[12px] text-[#f87171]">{error}</p>}
+                  ) : error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
                   <div className="flex gap-2">
                     <Button size="md" variant="ghost" className="flex-1" onClick={moreDetails}>More details</Button>
                     <Button size="md" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveDraft()}>Save draft</Button>
@@ -321,15 +321,15 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                     <input aria-label="Our score" inputMode="numeric" value={scoreUs} placeholder="Us"
                       onChange={e => { setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />
-                    <span aria-hidden="true" className="text-white/40">–</span>
+                    <span aria-hidden="true" className="text-ink-3">–</span>
                     <input aria-label="Their score" inputMode="numeric" value={scoreThem} placeholder="Them"
                       onChange={e => { setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />
                   </div>
                   <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
                     onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
                     format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
-                  {error && <p role="alert" className="text-[12px] text-[#f87171]">{error}</p>}
-                  <p className="text-[12px] text-white/45">Next: who played, their goals and assists.</p>
+                  {error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
+                  <p className="text-[12px] text-ink-3">Next: who played, their goals and assists.</p>
                   <Button size="md" className="w-full" onClick={continueMatch}>Continue</Button>
                 </div>
               )}

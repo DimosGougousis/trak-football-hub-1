@@ -7,7 +7,7 @@ import type { ParentAssessment } from '@/lib/parent-assessments'
 export function ParentAssessmentCard({ assessment, active = true, showOpenLink = true }: {
   assessment: ParentAssessment; active?: boolean; showOpenLink?: boolean
 }) {
-  return <div className="rounded-xl bg-card border border-border p-5">
+  return <div className="trak-dark rounded-xl bg-card border border-border p-5">
     <div className="flex items-center justify-between gap-2 mb-4">
       <p className="min-w-0 text-sm text-foreground">{formatParentDate(assessment.created_at)}</p>
       <ParentRating rating={assessment.coach_rating} missing="Not assessed" />

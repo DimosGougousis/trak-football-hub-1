@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AlertsBell } from '@/components/trak/AlertsBell'
 import { ParentAssessmentBands, ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
@@ -17,6 +17,8 @@ import { trackEvent } from '@/lib/telemetry'
 
 export function ParentAlertsBell() {
   const navigate = useNavigate()
+  // Live run, 19 Oct (Tarek): the event page's Back returns where the bell was opened (Home).
+  const { pathname } = useLocation()
   const { parentId, selectedChild } = useParentChildren()
   const matches = useParentMatches()
   const development = useParentDevelopment()
@@ -51,7 +53,7 @@ export function ParentAlertsBell() {
           details: assessment && <section aria-label="Assessment bands"><ParentAssessmentBands assessment={assessment} /></section>,
           action: alert.kind === 'match' || alert.kind === 'event' ? {
             label: alert.kind === 'event' ? 'Open event' : 'Open match',
-            onSelect: () => navigate(`/parent/${alert.kind}/${alert.targetId}`),
+            onSelect: () => navigate(`/parent/${alert.kind}/${alert.targetId}`, { state: { from: pathname } }),
           } : undefined,
         }
       })} />
