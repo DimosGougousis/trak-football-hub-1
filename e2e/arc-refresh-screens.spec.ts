@@ -303,6 +303,56 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
   })
 })
 
+// TRAK-221 (20 Oct live run): scrolling the assessment with a finger that
+// lands on a slider changed that rating. Real touches through Chromium's touch
+// input, so the browser's own scroll, cancel and capture rules apply (jsdom
+// has none of them).
+test.describe('TRAK-221 assessment sliders under a finger', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('a vertical swipe scrolls without changing a rating; a tap and a sideways drag still set one', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/assess')
+    await page.getByRole('combobox', { name: 'Player' }).selectOption({ label: 'Bukayo Saka' })
+    await page.getByRole('combobox', { name: 'Session' }).selectOption({ index: 1 })
+    await page.getByRole('button', { name: 'Next' }).click()
+    const cdp = await context.newCDPSession(page)
+    const finger = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+    const row = async (name: string) => {
+      const slider = page.getByRole('slider', { name })
+      await slider.scrollIntoViewIfNeeded()
+      const box = (await slider.locator('xpath=ancestor::div[contains(@class, "control")][1]').boundingBox())!
+      return { slider, box, y: box.y + box.height / 2 }
+    }
+
+    // Vertical swipe starting at 85% across Work Rate: no rating moves.
+    const work = await row('Work Rate')
+    const before = await page.getByRole('slider').evaluateAll(all => all.map(s => s.getAttribute('aria-valuenow')))
+    const x = work.box.x + work.box.width * 0.85
+    await finger('touchStart', x, work.y)
+    for (let i = 1; i <= 12; i++) { await finger('touchMove', x, work.y - i * 15); await page.waitForTimeout(16) }
+    await finger('touchEnd')
+    await page.waitForTimeout(400)
+    expect(await page.getByRole('slider').evaluateAll(all => all.map(s => s.getAttribute('aria-valuenow')))).toEqual(before)
+
+    // A tap near the right end sets a high rating.
+    const tactical = await row('Tactical')
+    await page.touchscreen.tap(tactical.box.x + tactical.box.width * 0.95, tactical.y)
+    await expect(tactical.slider).toHaveAttribute('aria-valuenow', '10')
+
+    // A sideways drag from the middle to the left end sets the lowest.
+    const attitude = await row('Attitude')
+    const from = attitude.box.x + attitude.box.width * 0.5
+    await finger('touchStart', from, attitude.y)
+    for (let i = 1; i <= 12; i++) { await finger('touchMove', from - i * attitude.box.width * 0.05, attitude.y + i); await page.waitForTimeout(16) }
+    await finger('touchEnd')
+    await expect(attitude.slider).toHaveAttribute('aria-valuenow', '0')
+    expect(unexpected).toEqual([])
+  })
+})
+
 // Cancelled and Other must differ by shape even on the green selected day.
 // The backend dates the event by Dubai's day, so the page must be on Dubai's day
 // too: on UTC it picked yesterday from 20:00 to 24:00 UTC and found no mark.
