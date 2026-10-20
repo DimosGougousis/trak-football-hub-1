@@ -8,6 +8,7 @@
  * the app never writes it.
  */
 import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { trainingThemeFrom, type TrainingTheme } from '@/lib/training-theme'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -45,6 +46,8 @@ export type EventForm = {
   kit: string
   /** TRAK-161: what families read under Kit; '' for none. Not the coach-only notes. */
   familyNote: string
+  /** A training's catalogue theme; '' for none. Coach-only. */
+  theme: TrainingTheme | ''
 }
 
 export type EventRow = {
@@ -68,10 +71,11 @@ export type EventRow = {
   status?: string | null
   cancel_reason?: string | null
   series_id?: string | null
+  training_theme?: string | null
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '', theme: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -150,6 +154,7 @@ export function formToRow(form: EventForm) {
     // TRAK-161: kit and the family note on every kind of event.
     kit: form.kit.trim() || null,
     family_note: form.familyNote.trim() || null,
+    training_theme: form.kind === 'training' && form.theme ? form.theme : null,
   }
 }
 
@@ -173,6 +178,7 @@ export function rowToForm(row: EventRow): EventForm {
     homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : '',
     kit: row.kit ?? '',
     familyNote: row.family_note ?? '',
+    theme: trainingThemeFrom(row.training_theme),
   }
 }
 
