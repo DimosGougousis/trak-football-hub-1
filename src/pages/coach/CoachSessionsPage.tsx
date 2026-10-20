@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
@@ -9,7 +9,6 @@ import { useCoachSquad } from '@/lib/coach-squad'
 export default function CoachSessionsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [sessions, setSessions] = useState<any[]>([])
   /* Three states, not two. `[]` alone cannot distinguish "the coach has logged
      nothing" from "we could not ask" — and the empty copy below is a factual
@@ -126,7 +125,8 @@ export default function CoachSessionsPage() {
         )}
       </div>
 
-      <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
+      {/* No Sessions tab: History is opened from Home, so Home stays marked. */}
+      <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }
