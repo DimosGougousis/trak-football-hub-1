@@ -287,7 +287,7 @@ function StatusChip({ status }: { status: ConsentStatus }) {
 
 /** TRAK-182 (Imad, 18 Oct; pilot coach's item 15): training attendance, read when the panel opens.
     Nothing while loading, on a failed read, before any training counts (never a false 0%), or for a
-    child waiting for a parent (they can't be ticked). Same rules as Home's Player overview. */
+    child waiting for a parent (they can't be ticked). Same rules as the Feedback and assessment tab (TRAK-211). */
 function AttendanceLine({ player }: { player: SquadRow }) {
   const { user } = useAuth()
   const rate = useQuery({

@@ -27,11 +27,12 @@ const tabNames = () => within(screen.getByRole('navigation')).getAllByRole('butt
 
 describe('TRAK-186: the coach\'s logging pages keep Home marked', () => {
   // Kostas, 20 Oct: no Sessions tab. Home's "Log a match or training" and the "+" open it.
+  // TRAK-211: Feedback and assessment has its own tab, after Squad.
   it('has no Sessions tab', async () => {
     coach()
     renderApp('/coach/home')
     await screen.findByRole('navigation')
-    expect(tabNames()).toEqual(['Home', 'Squad', 'Trainings', 'Profile'])
+    expect(tabNames()).toEqual(['Home', 'Squad', 'Feedback', 'Trainings', 'Profile'])
   }, 20_000)
 
   it('marks Home on "What are you logging?"', async () => {

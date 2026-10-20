@@ -38,7 +38,7 @@ function signedInCoach() {
     table('coach_sessions', [{ id: 's-1', coach_user_id: COACH.id }]),
     table('coach_assessment_notes', []),
     table('organizations', []),
-    // Home's Player overview asks per child (TRAK-197); everyone is confirmed here.
+    // Feedback and assessment asks per child (TRAK-197, TRAK-211); everyone is confirmed here.
     http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, () => HttpResponse.json(false)),
   )
 }
@@ -62,8 +62,7 @@ describe('TRAK-72 coach Home', () => {
     renderApp('/coach/home')
     // The file's first render loads coach Home cold; on a busy CI runner that
     // took over the default 1 s (run 36394909944, Imad on TRAK-72).
-    const overview = await screen.findByRole('region', { name: 'Player overview' }, { timeout: 5000 })
-    await within(overview).findByText('Alex Synthetic', {}, { timeout: 5000 })
+    expect(await screen.findByText('Head Coach · U15s', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText(/TRK-/)).toBeNull()
     expect(screen.queryByText(/tap to copy/i)).toBeNull()
     // Give any code generator the time it used to take, then check nothing wrote.
@@ -123,7 +122,7 @@ describe('TRAK-72 player page', () => {
   })
 })
 
-describe('TRAK-72 item 4: one Player overview', () => {
+describe('TRAK-72 item 4: one Player overview (TRAK-211: in Feedback and assessment)', () => {
   const ROSTER = [
     { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Alex Synthetic', linked_player_id: 'child-1', created_at: '2026-09-01T10:00:00Z' },
     { id: 'sp-2', coach_user_id: COACH.id, player_name: 'Bella Synthetic', linked_player_id: 'child-2', created_at: '2026-09-01T10:00:00Z' },
@@ -146,8 +145,8 @@ describe('TRAK-72 item 4: one Player overview', () => {
   // for a parent isn't listed at all (they can't be ticked or assessed).
   it('flags the consented child who missed training, never the one waiting for a parent', async () => {
     withLastTraining(id => HttpResponse.json(id === 'sp-3'))
-    renderApp('/coach/home')
-    const overview = await screen.findByRole('region', { name: 'Player overview' })
+    renderApp('/coach/feedback')
+    const overview = await screen.findByRole('region', { name: 'Feedback and assessment' })
     await waitFor(() => expect(within(overview).getAllByText('Missed the last training')).toHaveLength(1))
     const missedRow = within(overview).getByText('Missed the last training').closest('li') as HTMLElement
     expect(within(missedRow).getByText('Bella Synthetic')).toBeInTheDocument()
@@ -159,21 +158,21 @@ describe('TRAK-72 item 4: one Player overview', () => {
 
   it('says it could not load, rather than flagging nobody, when a consent check fails', async () => {
     withLastTraining(() => HttpResponse.json({ message: 'unavailable' }, { status: 500 }))
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
     expect(screen.queryByText('Missed the last training')).toBeNull()
     expect(screen.queryByText(/On track/)).toBeNull()
   })
 
-  // TRAK-180: Home starts a revisit from what it last showed, so a check that
+  // TRAK-180: the tab starts a revisit from what it last showed, so a check that
   // fails this time must take the last visit's flag with it.
   it("a revisit whose check fails shows no flag from the last visit", async () => {
     withLastTraining(id => HttpResponse.json(id === 'sp-3'))
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await waitFor(() => expect(screen.getAllByText('Missed the last training')).toHaveLength(1))
     cleanup()
     withLastTraining(() => HttpResponse.json({ message: 'unavailable' }, { status: 500 }))
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
     expect(screen.queryByText('Missed the last training')).toBeNull()
   })

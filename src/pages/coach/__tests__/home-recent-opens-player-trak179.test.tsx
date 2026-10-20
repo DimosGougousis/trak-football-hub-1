@@ -30,24 +30,24 @@ function serve() {
     )
 }
 
-describe('TRAK-179: a player on Home opens the player (TRAK-197: from the Player overview)', () => {
+describe('TRAK-179: a player in the overview opens the player (TRAK-211: on Feedback and assessment)', () => {
   it("goes to the player's profile, not the assessment editor", async () => {
     signInAs(COACH)
     serve()
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await userEvent.click(await screen.findByRole('button', { name: /^Open Ade Okafor's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/sp-1'))
   }, 20_000)
 
-  // TRAK-200 (Imad, 18 Oct): Back on that profile returns to Home, not Squad.
-  it('Back on the profile returns to Home', async () => {
+  // TRAK-200 (Imad, 18 Oct): Back on that profile returns where it was opened, not Squad.
+  it('Back on the profile returns to Feedback and assessment', async () => {
     signInAs(COACH)
     serve()
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await userEvent.click(await screen.findByRole('button', { name: /^Open Ade Okafor's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/sp-1'))
     await userEvent.click(await screen.findByRole('button', { name: 'Back' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/home'))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/feedback'))
   }, 20_000)
 
   it('a profile opened with no history behind it goes Back to Squad', async () => {
