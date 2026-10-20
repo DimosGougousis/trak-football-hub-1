@@ -15,7 +15,7 @@ import type { StripEvent } from '@/components/trak/WeekStrip'
 import { updatedNote } from '@/lib/alert-read-state'
 
 /* TRAK-182: the coach's part of the event sheet. Publish (a draft) or
-   Published; after the event, Take register (J8.15). Share to WhatsApp (the
+   Published; after the event, Take register (J8.15). Share (the
    J8.16 message, which links the event's own page), Edit and Cancel (Schedule's
    own sheets). Attending follows the register model (Imad, 15 Oct): everyone
    is coming unless a guardian said they can't (TRAK-137); once the register is

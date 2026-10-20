@@ -2,7 +2,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { followChild } from '@/test/follow-child'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
@@ -82,7 +82,10 @@ function installFamily() {
 }
 
 const MatchDetailProbe = () => <p>Match detail {useParams().id}</p>
-const EventPageProbe = () => <p>Event page {useParams().id}</p>
+const EventPageProbe = () => {
+  const from = (useLocation().state as { from?: string } | null)?.from
+  return <><p>Event page {useParams().id}</p><p>Opened from {from ?? 'nowhere'}</p></>
+}
 
 const clients: QueryClient[] = []
 function renderFamily(route = '/parent/home') {
@@ -346,6 +349,8 @@ describe('J8.11 events in the parent alerts bell', () => {
     await userEvent.click(await within(sheet).findByRole('button', { name: /New: Training/ }))
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Open event' }))
     expect(await screen.findByText('Event page event-Alex')).toBeInTheDocument()
+    // Live run, 19 Oct (Tarek): opened from Home's bell, the event page's Back returns to Home.
+    expect(screen.getByText('Opened from /parent/home')).toBeInTheDocument()
   })
 
   // TRAK-163 (Tarek's review): read state is per child (TRAK-74). Siblings on one

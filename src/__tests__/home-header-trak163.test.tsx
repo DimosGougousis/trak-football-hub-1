@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { LoadedWeekStrip, WeekStrip, weekDays, type RenderEventSheet, type StripEvent } from '@/components/trak/WeekStrip'
@@ -17,7 +17,10 @@ const event = (over: Partial<StripEvent> = {}): StripEvent => ({
   sequence: 1, updatedAt: '2026-10-11T19:00:00Z', familyNote: null, ...over,
 })
 
-function EventPage() { return <p>Event page {useParams().id}</p> }
+function EventPage() {
+  const from = (useLocation().state as { from?: string } | null)?.from
+  return <><p>Event page {useParams().id}</p><p>Opened from {from ?? 'nowhere'}</p></>
+}
 const at = (ui: JSX.Element) => render(
   <MemoryRouter initialEntries={['/home']}>
     <Routes>
@@ -163,5 +166,7 @@ describe('player bell', () => {
     await userEvent.click(within(panel).getByRole('button', { name: /New: Fitness/ }))
     await userEvent.click(await within(panel).findByRole('button', { name: 'Open event' }))
     expect(await screen.findByText('Event page e2')).toBeInTheDocument()
+    // Live run, 19 Oct (Tarek): opened from Home's bell, the event page's Back returns to Home.
+    expect(screen.getByText('Opened from /home')).toBeInTheDocument()
   })
 })
