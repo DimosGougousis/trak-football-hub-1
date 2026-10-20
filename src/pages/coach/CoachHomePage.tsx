@@ -66,15 +66,15 @@ export default function CoachHomePage() {
         <div className="grid grid-cols-2 gap-2 mt-3">
           <button type="button" onClick={() => navigate('/coach/assess')}
             className="rounded-[14px] border p-4 text-left active:scale-[0.98] transition-transform"
-            style={{ background: 'rgba(200,242,90,0.06)', borderColor: 'rgba(200,242,90,0.2)' }}>
-            <Zap size={16} color="#C8F25A" fill="#C8F25A" strokeWidth={1.5} aria-hidden="true" />
-            <span className="block mt-2 text-[14px] font-semibold text-[#C8F25A]" style={{ fontFamily: "'DM Sans', sans-serif" }}>Assess a player</span>
+            style={{ background: 'rgb(var(--t-brand) / 0.06)', borderColor: 'rgb(var(--t-brand) / 0.2)' }}>
+            <Zap size={16} color="rgb(var(--t-brand))" fill="rgb(var(--t-brand))" strokeWidth={1.5} aria-hidden="true" />
+            <span className="block mt-2 text-[14px] font-semibold text-brand" style={{ fontFamily: 'var(--t-font)' }}>Assess a player</span>
           </button>
           <button type="button" onClick={() => navigate('/coach/sessions')}
-            className="rounded-[14px] border border-white/[0.07] p-4 text-left active:scale-[0.98] transition-transform"
-            style={{ background: '#101012' }}>
-            <ClipboardList size={16} color="rgba(255,255,255,0.8)" strokeWidth={1.75} aria-hidden="true" />
-            <span className="block mt-2 text-[14px] font-semibold text-white/85" style={{ fontFamily: "'DM Sans', sans-serif" }}>Log a match or training</span>
+            className="rounded-[14px] border border-line p-4 text-left active:scale-[0.98] transition-transform"
+            style={{ background: 'rgb(var(--t-surface))' }}>
+            <ClipboardList size={16} color="rgb(var(--t-ink))" strokeWidth={1.75} aria-hidden="true" />
+            <span className="block mt-2 text-[14px] font-semibold text-ink" style={{ fontFamily: 'var(--t-font)' }}>Log a match or training</span>
           </button>
         </div>
       </div>

@@ -13,9 +13,9 @@ const IS_DEV = import.meta.env.DEV;
 
 const DEV_ACCOUNTS = [
   { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
-  { role: 'player', label: 'Player', email: 'player@trak.dev', color: '#C8F25A' },
+  { role: 'player', label: 'Player', email: 'player@trak.dev', color: 'rgb(var(--t-brand))' },
   { role: 'parent', label: 'Parent', email: 'parent@trak.dev', color: 'hsl(214,60%,57%)' },
-  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgba(255,255,255,0.7)' },
+  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgb(var(--t-ink-2))' },
 ] as const;
 
 // Read from the environment, never a literal: this file is in the ENTRY bundle,
@@ -71,13 +71,13 @@ export default function LandingPage() {
   return (
     <div
       className="app-container relative flex flex-col min-h-screen overflow-hidden"
-      style={{ background: '#0A0A0B' }}
+      style={{ background: 'rgb(var(--t-ground))' }}
     >
       {/* Ambient glow — top centre */}
       <div
         className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[420px] h-[320px] opacity-[0.07]"
         style={{
-          background: 'radial-gradient(ellipse at center top, #C8F25A 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse at center top, rgb(var(--t-brand)) 0%, transparent 70%)',
         }}
       />
 
@@ -86,9 +86,9 @@ export default function LandingPage() {
         {/* ── Wordmark ── */}
         <div className="text-center mb-12">
           <h1
-            className="text-[72px] leading-none text-white/90 select-none"
+            className="text-[72px] leading-none text-ink select-none"
             style={{
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--t-font)',
               fontWeight: 300,
               letterSpacing: '-0.04em',
             }}
@@ -96,14 +96,14 @@ export default function LandingPage() {
             TRAK
           </h1>
           <p
-            className="text-[#C8F25A] italic mt-1 tracking-[0.14em]"
-            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 400 }}
+            className="text-brand italic mt-1 tracking-[0.14em]"
+            style={{ fontFamily: 'var(--t-font)', fontSize: 16, fontWeight: 400 }}
           >
             football
           </p>
           <p
-            className="mt-3 text-white/28 tracking-[0.08em] uppercase"
-            style={{ fontFamily: "'DM Mono', monospace", fontSize: 10 }}
+            className="mt-3 text-ink-3 tracking-[0.08em] uppercase"
+            style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10 }}
           >
             Own your career
           </p>
@@ -186,7 +186,7 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
         <button
           type="button"
           onClick={() => setShowPw(v => !v)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink-2 transition-colors"
           tabIndex={-1}
         >
           {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -197,8 +197,8 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
       <button
         type="button"
         onClick={handleForgot}
-        className="text-[11px] text-white/35 hover:text-[#C8F25A] transition-colors self-end -mt-1 tracking-[0.04em]"
-        style={{ fontFamily: "'DM Mono', monospace" }}
+        className="text-[11px] text-ink-3 hover:text-brand transition-colors self-end -mt-1 tracking-[0.04em]"
+        style={{ fontFamily: 'var(--t-font-mono)' }}
       >
         Forgot password?
       </button>
@@ -209,9 +209,9 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
         disabled={loading}
         className="w-full py-[15px] rounded-[14px] text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-1"
         style={{
-          background: loading ? 'rgba(200,242,90,0.5)' : '#C8F25A',
-          color: '#0A0A0B',
-          fontFamily: "'DM Sans', sans-serif",
+          background: loading ? 'rgb(var(--t-brand) / 0.5)' : 'rgb(var(--t-brand))',
+          color: 'rgb(var(--t-ground))',
+          fontFamily: 'var(--t-font)',
         }}
       >
         {loading ? 'Signing in…' : 'Sign in'}
@@ -219,14 +219,14 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
 
       {/* Divider */}
       <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 h-px bg-white/[0.07]" />
+        <div className="flex-1 h-px bg-raised" />
         <span
-          className="text-white/22 text-[10px] tracking-[0.08em] uppercase"
-          style={{ fontFamily: "'DM Mono', monospace" }}
+          className="text-ink-3 text-[10px] tracking-[0.08em] uppercase"
+          style={{ fontFamily: 'var(--t-font-mono)' }}
         >
           New to Trak?
         </span>
-        <div className="flex-1 h-px bg-white/[0.07]" />
+        <div className="flex-1 h-px bg-raised" />
       </div>
 
       {/* Create account */}
@@ -236,9 +236,9 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
         className="w-full py-[14px] rounded-[14px] text-[14px] font-medium transition-all active:scale-[0.98] border"
         style={{
           background: 'transparent',
-          border: '1px solid rgba(200,242,90,0.2)',
-          color: '#C8F25A',
-          fontFamily: "'DM Sans', sans-serif",
+          border: '1px solid rgb(var(--t-brand) / 0.2)',
+          color: 'rgb(var(--t-brand))',
+          fontFamily: 'var(--t-font)',
         }}
       >
         Create account
@@ -268,11 +268,11 @@ function PremiumInput({
         htmlFor={id}
         className="absolute left-4 transition-all pointer-events-none"
         style={{
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: 'var(--t-font)',
           fontSize: focused || value ? 10 : 14,
           top: focused || value ? 10 : '50%',
           transform: focused || value ? 'none' : 'translateY(-50%)',
-          color: focused ? '#C8F25A' : 'rgba(255,255,255,0.3)',
+          color: focused ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
           letterSpacing: focused || value ? '0.08em' : '0',
           textTransform: focused || value ? 'uppercase' : 'none',
           fontWeight: focused || value ? 500 : 400,
@@ -291,13 +291,13 @@ function PremiumInput({
         required
         className="w-full outline-none transition-all text-[15px]"
         style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: `1px solid ${focused ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.07)'}`,
+          background: 'rgb(var(--t-raised))',
+          border: `1px solid ${focused ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
           borderRadius: 14,
           padding: value || focused ? '24px 16px 10px' : '16px',
-          color: 'rgba(255,255,255,0.88)',
-          fontFamily: "'DM Sans', sans-serif",
-          caretColor: '#C8F25A',
+          color: 'rgb(var(--t-ink))',
+          fontFamily: 'var(--t-font)',
+          caretColor: 'rgb(var(--t-brand))',
         }}
       />
     </div>
@@ -319,24 +319,24 @@ function RegisterView({
       icon: <IconRolePlayer size={24} />,
       name: 'Player',
       desc: 'Track your career, log matches and earn your card',
-      bg: 'rgba(200,242,90,0.08)',
-      border: 'rgba(200,242,90,0.18)',
+      bg: 'rgb(var(--t-brand) / 0.08)',
+      border: 'rgb(var(--t-brand) / 0.18)',
     },
     {
       role: 'parent',
       icon: <IconRoleParent size={24} />,
       name: 'Parent',
       desc: "Follow your child's development and progress",
-      bg: 'rgba(74,222,128,0.08)',
-      border: 'rgba(74,222,128,0.18)',
+      bg: 'rgb(var(--t-success) / 0.08)',
+      border: 'rgb(var(--t-success) / 0.18)',
     },
   ];
 
   return (
     <div className="w-full">
       <p
-        className="text-[10px] tracking-[0.12em] uppercase text-white/35 mb-5 text-center"
-        style={{ fontFamily: "'DM Mono', monospace" }}
+        className="text-[10px] tracking-[0.12em] uppercase text-ink-3 mb-5 text-center"
+        style={{ fontFamily: 'var(--t-font-mono)' }}
       >
         I am a…
       </p>
@@ -354,41 +354,41 @@ function RegisterView({
           >
             <div
               className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(0,0,0,0.2)', border: `1px solid ${r.border}` }}
+              style={{ background: 'rgb(var(--t-raised))', border: `1px solid ${r.border}` }}
             >
               {r.icon}
             </div>
             <div className="flex-1 min-w-0">
               <p
-                className="text-white/88 text-[16px] leading-tight"
-                style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 400 }}
+                className="text-ink text-[16px] leading-tight"
+                style={{ fontFamily: 'var(--t-font)', fontWeight: 400 }}
               >
                 {r.name}
               </p>
               <p
-                className="text-white/38 text-[11px] mt-0.5 leading-snug"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
+                className="text-ink-3 text-[11px] mt-0.5 leading-snug"
+                style={{ fontFamily: 'var(--t-font)' }}
               >
                 {r.desc}
               </p>
             </div>
-            <span className="text-white/25 text-lg group-hover:text-white/50 transition-colors">→</span>
+            <span className="text-ink-3 text-lg group-hover:text-ink-2 transition-colors">→</span>
           </button>
         ))}
       </div>
       {/* TRAK-12: staff are set up by Trak; the database refuses a self-made
           coach or academy admin (#151), so the screen does not offer one. */}
       <p
-        className="text-white/45 text-[12px] mt-4 text-center leading-snug"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
+        className="text-ink-3 text-[12px] mt-4 text-center leading-snug"
+        style={{ fontFamily: 'var(--t-font)' }}
       >
         Coach or academy staff? Trak sets up coach and academy accounts. Ask your academy.
       </p>
 
       <button
         onClick={onBack}
-        className="w-full mt-6 text-[13px] text-white/35 hover:text-white/60 transition-colors text-center"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
+        className="w-full mt-6 text-[13px] text-ink-3 hover:text-ink-2 transition-colors text-center"
+        style={{ fontFamily: 'var(--t-font)' }}
       >
         ← Back to sign in
       </button>
@@ -436,14 +436,14 @@ function DevLoginPanel() {
   return (
     <div className="mt-10 w-full">
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 h-px bg-white/[0.07]" />
+        <div className="flex-1 h-px bg-raised" />
         <span
-          className="text-[9px] font-medium tracking-[0.12em] text-white/20 uppercase"
-          style={{ fontFamily: "'DM Mono', monospace" }}
+          className="text-[9px] font-medium tracking-[0.12em] text-ink-3 uppercase"
+          style={{ fontFamily: 'var(--t-font-mono)' }}
         >
           Dev quick-login
         </span>
-        <div className="flex-1 h-px bg-white/[0.07]" />
+        <div className="flex-1 h-px bg-raised" />
       </div>
 
       {!unlocked ? (
@@ -457,14 +457,14 @@ function DevLoginPanel() {
             maxLength={3}
             className={`w-20 text-center py-2 rounded-[10px] text-[18px] tracking-[0.3em] outline-none transition-all ${shake ? 'animate-shake' : ''}`}
             style={{
-              background: shake ? 'rgba(255,80,80,0.08)' : 'rgba(255,255,255,0.04)',
-              border: `1.5px solid ${shake ? 'rgba(255,80,80,0.35)' : 'rgba(255,255,255,0.08)'}`,
-              color: 'rgba(255,255,255,0.6)',
-              fontFamily: "'DM Mono', monospace",
+              background: shake ? 'rgb(var(--t-danger) / 0.08)' : 'rgb(var(--t-raised))',
+              border: `1.5px solid ${shake ? 'rgb(var(--t-danger) / 0.35)' : 'rgb(var(--t-line))'}`,
+              color: 'rgb(var(--t-ink-2))',
+              fontFamily: 'var(--t-font-mono)',
             }}
             autoComplete="off"
           />
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, color: 'rgb(var(--t-ink-3))', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             Enter PIN to access
           </span>
         </div>
@@ -478,8 +478,8 @@ function DevLoginPanel() {
                 disabled={busyRole !== null}
                 className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1.5px solid rgba(255,255,255,0.08)',
+                  background: 'rgb(var(--t-raised))',
+                  border: '1.5px solid rgb(var(--t-line))',
                   color: account.color,
                 }}
               >
@@ -489,8 +489,8 @@ function DevLoginPanel() {
           </div>
           <button
             onClick={() => navigate('/dev-setup')}
-            className="w-full text-[9px] text-white/25 hover:text-white/50 text-center mt-2 transition-colors"
-            style={{ fontFamily: "'DM Mono', monospace" }}
+            className="w-full text-[9px] text-ink-3 hover:text-ink-2 text-center mt-2 transition-colors"
+            style={{ fontFamily: 'var(--t-font-mono)' }}
           >
             First time? Run setup → /dev-setup
           </button>

@@ -1,11 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { MobileShell, NavBar } from '@/components/trak'
+import { MetadataLabel, MobileShell, NavBar } from '@/components/trak'
+import { SeeMoreList } from '@/components/trak/SeeMoreList'
 import { ParentChildSelector, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { useParentMatches } from '@/hooks/useParentData'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { TrainingHistory } from '@/components/player/TrainingHistory'
 import { ParentUpcomingEvents } from '@/components/parent/ParentEvents'
 import { formatParentDate, parentMatchHref, matchResult } from '@/lib/parent-data'
+import { EVENT_COLOR } from '@/lib/coach-events'
 
 export default function ParentMatches() {
   const navigate = useNavigate()
@@ -22,24 +24,33 @@ export default function ParentMatches() {
         <ParentFamilyContent>
           {/* J8.8 (TRAK-131): the selected child's upcoming events. */}
           <ParentUpcomingEvents />
-          {query.isError ? <ParentLoadError message="Couldn't load matches." onRetry={() => { void query.refetch() }} />
-            : query.isPending ? <ParentLoading />
-              : matches.length === 0 ? <p className="text-sm text-muted-foreground text-center py-12">No matches yet.</p>
-                : <div className="divide-y divide-border">
-                  {matches.map(match => <Link key={match.id} to={parentMatchHref(match)} state={{ matchId: match.id, childId: selectedChild?.id }} className="flex items-center gap-3 py-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{match.opponent || match.competition || 'Match'}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {[formatParentDate(match.match_date ?? match.created_at), match.competition, match.venue].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <ParentRating rating={match.computed_rating} />
-                      <p className="text-xs text-muted-foreground mt-1">{matchResult(match)
-                        ? `${matchResult(match)} ${match.team_score}–${match.opponent_score}` : 'Score not recorded'}</p>
-                    </div>
-                  </Link>)}
-                </div>}
+          {/* TRAK-214 (Kostas, 16 Oct list item 3): past matches are boxed cards under
+              their own heading, the same box as an Upcoming card, 3 then See more. */}
+          <section className="mb-5" aria-label="Match history">
+            <MetadataLabel text="MATCH HISTORY" />
+            <div className="mt-2 space-y-2">
+              {query.isError ? <ParentLoadError message="Couldn't load matches." onRetry={() => { void query.refetch() }} />
+                : query.isPending ? <ParentLoading />
+                  : matches.length === 0 ? <p className="text-sm text-muted-foreground">No matches yet.</p>
+                    : <SeeMoreList items={matches} render={match => <Link key={match.id} to={parentMatchHref(match)}
+                      state={{ matchId: match.id, childId: selectedChild?.id }}
+                      className="flex items-stretch gap-3 rounded-[14px] p-3.5"
+                      style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
+                      <div aria-hidden="true" className="w-1 rounded-full flex-shrink-0" style={{ background: EVENT_COLOR.match }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-ink truncate">{match.opponent || match.competition || 'Match'}</p>
+                        <p className="text-[11px] mt-0.5 text-ink-2">
+                          {[formatParentDate(match.match_date ?? match.created_at), match.competition, match.venue].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 self-center">
+                        <ParentRating rating={match.computed_rating} />
+                        <p className="text-[11px] text-ink-2 mt-1">{matchResult(match)
+                          ? `${matchResult(match)} ${match.team_score}–${match.opponent_score}` : 'Score not recorded'}</p>
+                      </div>
+                    </Link>} />}
+            </div>
+          </section>
           {/* J6 (TRAK-77): the training the coach logged for this child. */}
           {selectedChild && <TrainingHistory key={selectedChild.id} playerUserId={selectedChild.id}
             assessmentHref={sessionId => `/parent/session/${encodeURIComponent(sessionId)}/assessment`}

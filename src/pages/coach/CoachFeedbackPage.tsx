@@ -19,9 +19,9 @@ import { remember, remembered } from '@/lib/screen-memory'
    picked here, on Home or in Squad (TRAK-176). */
 
 const LEVEL: Record<AttentionLevel, { word: string; color: string }> = {
-  urgent: { word: 'Urgent', color: '#f87171' },
-  warning: { word: 'Warning', color: '#facc15' },
-  'on-track': { word: 'On track', color: '#4ade80' },
+  urgent: { word: 'Urgent', color: 'rgb(var(--t-danger))' },
+  warning: { word: 'Warning', color: 'rgb(var(--t-warning))' },
+  'on-track': { word: 'On track', color: 'rgb(var(--t-success))' },
 }
 
 /** `squad` is the one it was read for: after a switch, the other squad's rows never show. */
@@ -116,7 +116,7 @@ export default function CoachFeedbackPage() {
   return (
     <MobileShell>
       <div className="px-5 pt-4 pb-40">
-        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-white/95">Feedback and assessment</h1>
+        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Feedback and assessment</h1>
         {/* TRAK-176: the coach's squads, when there are two or more; the pick is shared with Home and Squad. */}
         {coachSquad.squad && coachSquad.squads.length >= 2 && (
           <LayoutGroup id="feedback-squad">
@@ -127,40 +127,40 @@ export default function CoachFeedbackPage() {
           </LayoutGroup>
         )}
 
-        <section aria-label="Feedback and assessment" className="rounded-[18px] border border-white/[0.07] p-4 mt-3" style={{ background: '#101012' }}>
+        <section aria-label="Feedback and assessment" className="rounded-[18px] border border-line p-4 mt-3" style={{ background: 'rgb(var(--t-surface))' }}>
           {failed ? (
-            <p role="alert" className="text-[12px] text-white/60" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p role="alert" className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>
               Couldn't load your players.{' '}
-              <button type="button" onClick={retry} className="underline text-[#C8F25A]">Retry</button>
+              <button type="button" onClick={retry} className="underline text-brand">Retry</button>
             </p>
           ) : !overview ? (
-            <p role="status" className="text-[12px] text-white/40" style={{ fontFamily: "'DM Sans', sans-serif" }}>Loading your players…</p>
+            <p role="status" className="text-[12px] text-ink-3" style={{ fontFamily: 'var(--t-font)' }}>Loading your players…</p>
           ) : overview.players === 0 ? (
             <div>
-              <p className="text-[13px] font-medium text-white/70" style={{ fontFamily: "'DM Sans', sans-serif" }}>Your squad is being prepared</p>
-              <p className="text-[10px] mt-0.5 text-white/35" style={{ fontFamily: "'DM Mono', monospace" }}>Your academy will add players to this squad.</p>
+              <p className="text-[13px] font-medium text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>Your squad is being prepared</p>
+              <p className="text-[10px] mt-0.5 text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>Your academy will add players to this squad.</p>
             </div>
           ) : overview.rows.length === 0 ? (
             // Everyone left is waiting for a parent: nothing can be said about them yet.
-            <p className="text-[12px] text-white/50" style={{ fontFamily: "'DM Sans', sans-serif" }}>Your players are waiting for a parent's approval.</p>
+            <p className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>Your players are waiting for a parent's approval.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {overview.rows.map(row => (
                 <li key={row.playerId}
                   className="flex items-center gap-3 rounded-[10px] py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
-                  style={{ background: 'rgba(255,255,255,0.03)', borderLeft: `3px solid ${LEVEL[row.level].color}` }}
+                  style={{ background: 'rgb(var(--t-raised))', borderLeft: `3px solid ${LEVEL[row.level].color}` }}
                   // TRAK-179: the player's profile, as Squad → Open profile.
                   {...openable(`Open ${row.name}'s profile: ${LEVEL[row.level].word}`, () => navigate(`/coach/player/${row.playerId}`))}>
                   <Avatar name={row.name} size="sm" className="arc flex-shrink-0" aria-hidden />
                   <div className="min-w-0 flex-1">
                     <p className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-[13px] font-medium text-white/80" style={{ fontFamily: "'DM Sans', sans-serif" }}>{row.name}</span>
+                      <span className="truncate text-[13px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>{row.name}</span>
                       {/* The word, never colour alone. */}
                       <span className="flex-shrink-0 text-[9px] font-medium uppercase tracking-[0.08em]"
-                        style={{ fontFamily: "'DM Mono', monospace", color: LEVEL[row.level].color }}>{LEVEL[row.level].word}</span>
+                        style={{ fontFamily: 'var(--t-font-mono)', color: LEVEL[row.level].color }}>{LEVEL[row.level].word}</span>
                     </p>
                     {row.reasons.map(reason => (
-                      <p key={reason} className="text-[11px] text-white/50 mt-[2px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>{reason}</p>
+                      <p key={reason} className="text-[11px] text-ink-2 mt-[2px]" style={{ fontFamily: 'var(--t-font)' }}>{reason}</p>
                     ))}
                   </div>
                 </li>

@@ -1,4 +1,7 @@
 import { test, expect, type BrowserContext } from '@playwright/test'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
 
 // TRAK-182: the coach screens the Arc refresh touches, on the production build
 // with a synthetic, intercepted backend. Screenshots at phone width for review;
@@ -12,7 +15,7 @@ const players = [
   { id: 'sq-5', player_name: 'Thiago Silva', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
 ].map(p => ({ ...p, coach_user_id: ids.coach, status: 'active', linked_player_id: `${p.id}-user`, created_at: '2026-10-01T08:00:00Z' }))
 
-async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false) {
+async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false, cancelled = false) {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
   const user = { id: ids.coach, email: 'coach@arc182.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
@@ -45,7 +48,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // withMatch: a published away match tonight, changed 3 h ago; Beth can't make it, Thiago's consent isn't active.
     const match = { id: 'ev-182', coach_user_id: ids.coach, event_type: 'match', title: 'League', event_date: day, start_time: '20:00:00',
       meet_time: '19:15:00', starts_at: `${day}T16:00:00Z`, venue: 'Rivals Park', kit: 'White shirts, black shorts', opponent: 'Rivals FC',
-      home_away: 'away', status: 'scheduled', published: true, family_note: 'Bring water and shin pads', sequence: 1,
+      home_away: 'away', status: cancelled ? 'cancelled' : 'scheduled', published: true, family_note: 'Bring water and shin pads', sequence: 1,
       updated_at: new Date(Date.now() - 3 * 3600_000).toISOString() }
     if (withMatch && path === '/rest/v1/coach_sessions' && url.searchParams.has('event_id')) return json([])
     if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
@@ -66,6 +69,37 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
 
 test.describe('TRAK-182 coach screens', () => {
   test.use({ timezoneId: 'Asia/Dubai' })
+  // TRAK-211: the attention levels moved from Home to the Feedback and assessment tab.
+  test('TRAK-189 coach Feedback attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await coachBackend(context, unexpected)
+    // All three levels must render; a fixture with only recent assessments
+    // cannot check the warning and urgent colours introduced by #365.
+    await context.route('**/rest/v1/coach_assessments*', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify([30, 15, 0].map((days, i) => ({
+        id: `attention-${i}`, squad_player_id: players[i].id, coach_user_id: ids.coach,
+        created_at: new Date(Date.now() - days * 86400_000).toISOString(),
+      }))),
+    }))
+    await page.goto('/coach/feedback')
+    const overview = page.getByRole('region', { name: 'Feedback and assessment' })
+    for (const level of ['Urgent', 'Warning', 'On track']) {
+      await expect(overview.getByText(level, { exact: true }).first()).toBeVisible()
+    }
+    await page.waitForLoadState('networkidle')
+    await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: unknown[] }> } }).axe
+      return (await axe.run({ runOnly: ['color-contrast'] })).violations
+    })
+    await page.screenshot({ path: testInfo.outputPath('coach-feedback-attention-contrast.png'), fullPage: true })
+    expect(violations).toEqual([])
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   for (const [name, path, ready] of [
     // TRAK-211: Home lists no players; they are on the Feedback and assessment tab.
     ['home', '/coach/home', 'Assess a player'],
@@ -231,5 +265,25 @@ test.describe('TRAK-182 coach screens', () => {
     await page.screenshot({ path: testInfo.outputPath('coach-assess-review.png'), fullPage: true })
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
+  })
+})
+
+// Cancelled and Other must differ by shape even on the green selected day.
+// The backend dates the event by Dubai's day, so the page must be on Dubai's day
+// too: on UTC it picked yesterday from 20:00 to 24:00 UTC and found no mark.
+test.describe('TRAK-189 calendar on Dubai time', () => {
+  test.use({ timezoneId: 'Asia/Dubai' })
+  test('TRAK-189 cancelled calendar mark stays hollow and readable when selected', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected, true, true)
+    await page.goto('/coach/schedule')
+    const day = page.getByRole('gridcell', { selected: true })
+    const ring = day.locator('[aria-hidden="true"] > span').first()
+    await expect(ring).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(ring).toHaveCSS('border-top-style', 'solid')
+    // A neutral backing keeps the red outline distinct from the green disc.
+    await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
+    expect(unexpected).toEqual([])
   })
 })

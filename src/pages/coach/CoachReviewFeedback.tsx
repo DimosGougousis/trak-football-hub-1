@@ -178,28 +178,28 @@ export default function CoachReviewFeedback() {
   }
 
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-[#0A0A0B] min-h-[100dvh]">
+    <div className="flex flex-col mx-auto max-w-[430px] bg-ground min-h-[100dvh]">
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
         <button onClick={() => navigate(-1)} aria-label="Back"
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]">
-          <ChevronLeft size={16} className="text-white/70" />
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line">
+          <ChevronLeft size={16} className="text-ink-2" />
         </button>
-        <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px] pointer-events-none">
+        <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px] pointer-events-none">
           Review feedback
         </h1>
       </div>
 
       <div className="flex-1 px-5 py-4 space-y-4">
         {loading ? (
-          <p className="text-white/35 text-sm">Loading…</p>
+          <p className="text-ink-3 text-sm">Loading…</p>
         ) : error ? (
-          <div role="alert" className="rounded-[14px] p-4 border border-white/[0.07] bg-[#101012]">
-            <p className="text-[13px] text-white/70">{error}</p>
+          <div role="alert" className="rounded-[14px] p-4 border border-line bg-surface">
+            <p className="text-[13px] text-ink-2">{error}</p>
           </div>
         ) : (
           <>
-            <p className="text-[12px] text-white/45 leading-relaxed">
+            <p className="text-[12px] text-ink-3 leading-relaxed">
               Nothing here reaches {playerName.split(' ')[0] || 'the player'} until you send it.
               Edit anything you don't agree with — the words that get published are yours.
             </p>
@@ -208,8 +208,8 @@ export default function CoachReviewFeedback() {
               <button
                 onClick={generate}
                 disabled={generating}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-[12px] text-[14px] font-medium text-black disabled:opacity-40"
-                style={{ background: '#C8F25A' }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-[12px] text-[14px] font-medium text-on-brand disabled:opacity-40"
+                style={{ background: 'rgb(var(--t-brand))' }}
               >
                 {generating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {generating ? 'Drafting…' : 'Draft feedback'}
@@ -220,8 +220,8 @@ export default function CoachReviewFeedback() {
               <>
                 {published && (
                   <div className="rounded-[12px] px-3 py-2.5"
-                    style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.18)' }}>
-                    <p className="text-[11px] text-[#C8F25A]">
+                    style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}>
+                    <p className="text-[11px] text-brand">
                       Sent — {playerName.split(' ')[0]} can read this now. Editing and sending
                       again replaces it.
                     </p>
@@ -229,13 +229,13 @@ export default function CoachReviewFeedback() {
                 )}
 
                 {draft.points.map((point, i) => (
-                  <div key={i} className="rounded-[14px] p-4 border border-white/[0.07] bg-[#101012] space-y-2">
+                  <div key={i} className="rounded-[14px] p-4 border border-line bg-surface space-y-2">
                     <MetadataLabel text={`POINT ${i + 1}`} />
                     <input
                       value={point.title}
                       onChange={e => updatePoint(i, 'title', e.target.value)}
                       aria-label={`Point ${i + 1} title`}
-                      className="w-full bg-transparent text-[14px] text-white/88 outline-none border-b border-white/[0.07] pb-1.5"
+                      className="w-full bg-transparent text-[14px] text-ink outline-none border-b border-line pb-1.5"
                     />
                     {(['what', 'why', 'drill'] as const).map(field => (
                       <textarea
@@ -244,28 +244,28 @@ export default function CoachReviewFeedback() {
                         onChange={e => updatePoint(i, field, e.target.value)}
                         aria-label={`Point ${i + 1} ${field}`}
                         rows={2}
-                        className="w-full bg-transparent text-[12px] text-white/60 outline-none resize-none leading-relaxed"
+                        className="w-full bg-transparent text-[12px] text-ink-2 outline-none resize-none leading-relaxed"
                       />
                     ))}
                   </div>
                 ))}
 
-                <div className="rounded-[14px] p-4 border border-white/[0.07] bg-[#101012] space-y-2">
+                <div className="rounded-[14px] p-4 border border-line bg-surface space-y-2">
                   <MetadataLabel text="CLOSING" />
                   <textarea
                     value={draft.encouragement}
                     onChange={e => setDraft({ ...draft, encouragement: e.target.value })}
                     aria-label="Closing encouragement"
                     rows={2}
-                    className="w-full bg-transparent text-[12px] text-white/60 outline-none resize-none leading-relaxed"
+                    className="w-full bg-transparent text-[12px] text-ink-2 outline-none resize-none leading-relaxed"
                   />
                 </div>
 
                 <button
                   onClick={publish}
                   disabled={publishing}
-                  className="w-full py-3.5 rounded-[12px] text-[14px] font-medium text-black disabled:opacity-40"
-                  style={{ background: '#C8F25A' }}
+                  className="w-full py-3.5 rounded-[12px] text-[14px] font-medium text-on-brand disabled:opacity-40"
+                  style={{ background: 'rgb(var(--t-brand))' }}
                 >
                   {publishing ? 'Sending…' : published ? 'Send update' : `Send to ${playerName.split(' ')[0] || 'player'}`}
                 </button>
@@ -273,7 +273,7 @@ export default function CoachReviewFeedback() {
                 <button
                   onClick={generate}
                   disabled={generating}
-                  className="w-full py-3 rounded-[12px] text-[12px] text-white/45 border border-white/[0.07] disabled:opacity-40"
+                  className="w-full py-3 rounded-[12px] text-[12px] text-ink-3 border border-line disabled:opacity-40"
                 >
                   {generating ? 'Drafting…' : 'Draft again'}
                 </button>

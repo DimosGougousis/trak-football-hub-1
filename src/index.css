@@ -121,39 +121,83 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* TRAK-189: Jost (SIL Open Font License), self-hosted like DM Sans. It stands in
+   for Futura, which is built into Apple devices but can't be shipped without a
+   paid web licence: --t-font asks for Futura first. Neither has a Greek subset. */
+@font-face {
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jost-normal-variable-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jost-normal-variable-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 100%;
+    /* TRAK-189: Trak's own colours, by role, as RGB channels so Tailwind's /alpha
+       works (bg-brand/10). Screens use these, never a hex code or white-at-N%:
+       hard-coded-colours.test.ts fails on a new one. Values are still today's
+       dark look; the light palette replaces them once Imad approves it. */
+    --t-ground: 246 245 241;        /* the screen */
+    --t-surface: 255 255 255;       /* cards, sheets */
+    --t-raised: 238 237 231;        /* chips, quiet buttons, tracks */
+    --t-ink: 26 36 33;        /* headings and body */
+    --t-ink-2: 87 97 92;      /* supporting lines */
+    --t-ink-3: 94 102 98;      /* labels, timestamps, placeholders */
+    --t-line: 226 224 216;          /* card edges, dividers */
+    --t-line-strong: 133 139 135;   /* text boxes, pickers */
+    --t-brand: 11 102 35;       /* main buttons, selected states */
+    --t-on-brand: 255 255 255;         /* text on the brand colour */
+    --t-scrim: 0 0 0;            /* behind a modal, at an opacity */
+    --t-on-bright: 0 0 0;        /* text on bright band and status colours, in every theme */
+    --t-danger: 180 35 24;
+    --t-success: 11 102 35;
+    --t-info: 59 91 169;
+    --t-warning: 138 83 0;
+    --t-orange: 156 69 22;
+    --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
+    --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
 
-    --card: 240 4% 6.5%;
-    --card-foreground: 0 0% 100%;
+    --background: 48 18% 95%;
+    --foreground: 160 16% 12%;
 
-    --popover: 240 4% 6.5%;
-    --popover-foreground: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 16% 12%;
 
-    --primary: 73 85% 65%;
-    --primary-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 16% 12%;
 
-    --secondary: 240 3% 10%;
-    --secondary-foreground: 0 0% 100%;
+    --primary: 136 81% 22%;
+    --primary-foreground: 0 0% 100%;
 
-    --muted: 240 3% 10%;
-    --muted-foreground: 0 0% 45%;
+    --secondary: 51 13% 92%;
+    --secondary-foreground: 160 16% 12%;
 
-    --accent: 73 85% 65%;
-    --accent-foreground: 0 0% 0%;
+    --muted: 51 13% 92%;
+    --muted-foreground: 150 5% 36%;
 
-    --destructive: 0 85% 60%;
+    --accent: 136 81% 22%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 4 77% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 100% / 0.07;
-    --input: 240 3% 13%;
-    --ring: 73 85% 65%;
+    --border: 48 15% 87%;
+    --input: 140 3% 53%;
+    --ring: 136 81% 22%;
 
     --radius: 0.75rem;
 
@@ -172,12 +216,31 @@
     --sidebar-ring: 73 85% 65%;
 
     /* Text opacity tokens */
-    --t1: rgba(255,255,255,0.88);
-    --t2: rgba(255,255,255,0.45);
-    --t3: rgba(255,255,255,0.22);
+    --t1: rgb(var(--t-ink));
+    --t2: rgb(var(--t-ink-3));
+    --t3: rgb(var(--t-ink-3) / 0.6);
 
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--t-font);
   }
+}
+
+/* TRAK-189: dark islands in the light app. Everything inside a .trak-dark element
+   takes Trak's dark colours: the band cards (Tarek, 17 Oct: the bands keep their
+   bright colours so they tell apart, which needs a dark card) and the parked
+   player card's artwork. */
+.trak-dark {
+  color-scheme: dark;
+  --t-ground: 10 10 11; --t-surface: 16 16 18; --t-raised: 23 23 26;
+  --t-ink: 224 224 225; --t-ink-2: 160 160 163; --t-ink-3: 138 138 141;
+  --t-line: 30 30 33; --t-line-strong: 72 72 76;
+  --t-brand: 200 242 90; --t-on-brand: 0 0 0;
+  --t-danger: 248 113 113; --t-success: 74 222 128; --t-info: 96 165 250;
+  --t-warning: 251 191 36; --t-orange: 251 146 60;
+  --background: 0 0% 4%; --foreground: 0 0% 100%;
+  --card: 240 4% 6.5%; --card-foreground: 0 0% 100%;
+  --muted: 240 3% 10%; --muted-foreground: 0 0% 60%;
+  --border: 0 0% 100% / 0.07; --primary: 73 85% 65%; --primary-foreground: 0 0% 0%;
+  color: rgb(var(--t-ink));
 }
 
 @layer base {
