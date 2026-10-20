@@ -7,7 +7,6 @@ import {
   IconRecognition,
   IconProfile,
   IconSquad,
-  IconSessions,
   IconMatch,
   IconTraining,
   ACTIVE_COLOR,
@@ -33,7 +32,7 @@ function getNavItems(role: Role): NavItem[] {
   if (role === 'coach') return [
     { label: 'Home', path: '/coach/home', Icon: IconHome },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
-    { label: 'Sessions', path: '/coach/sessions', Icon: IconSessions },
+    // No Sessions tab: Home's "Log a match or training" and the "+" reach it.
     { label: 'Trainings', path: '/coach/trainings', Icon: IconTraining },
     { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
   ]
@@ -64,7 +63,7 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
       }}
     >
       {items.map(item => {
-        // TRAK-186: a tab stays marked on every page under it (Sessions → History).
+        // TRAK-186: a tab stays marked on every page under it (Squad → a player).
         const isActive = activeTab === item.path || activeTab.startsWith(`${item.path}/`)
         const Icon = item.Icon
         return (
