@@ -168,3 +168,50 @@ describe('TRAK-138: a logged training starts with everyone present', () => {
     expect(await screen.findByText('ATTENDED · 3/3')).toBeInTheDocument()
   }, 20_000)
 })
+
+// TRAK-235 (20 Oct live run): logging a planned match left its opponent
+// editable, so the log could name a different team from the event it belongs to.
+describe('TRAK-235: a match logged from its event keeps the event\'s opponent', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    signInAs(COACH)
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('shows the opponent read-only and saves the event\'s name', async () => {
+    fixtures()
+    const user = userEvent.setup()
+    renderApp('/coach/schedule')
+    await user.click(await screen.findByRole('button', { name: 'Log match for vs Synthetic Rovers' }))
+    const opponent = await screen.findByRole('textbox', { name: 'Opponent' })
+    await waitFor(() => expect(opponent).toHaveValue('Synthetic Rovers'))
+    expect(opponent).toHaveAttribute('readonly')
+    await user.type(opponent, ' Reserves')
+    expect(opponent).toHaveValue('Synthetic Rovers')
+    expect(screen.getByText(/from the planned match/i)).toBeInTheDocument()
+
+    const [us, them] = screen.getAllByPlaceholderText('0')
+    await user.type(us, '1')
+    await user.type(them, '0')
+    await logStep('Squad')
+    await waitFor(() => expect(screen.getByText(/SQUAD · 2 played/)).toBeInTheDocument())
+    for (const name of ['Ade Okafor', 'Cal Moss']) await user.click(screen.getByRole('button', { name: `Details for ${name}` }))
+    await completePlayed(user, ['Ade Okafor', 'Cal Moss'])
+    await saveLog('Save match')
+    await waitFor(() => expect(logged).toHaveLength(2))
+    expect(inserted[0]).toMatchObject({ event_id: 'match-1', title: 'vs Synthetic Rovers' })
+    expect(logged.map(call => call.p_opponent)).toEqual(['Synthetic Rovers', 'Synthetic Rovers'])
+  }, 30_000)
+
+  it('a match logged without an event still takes a typed opponent', async () => {
+    fixtures()
+    const user = userEvent.setup()
+    renderApp('/coach/sessions/add')
+    await user.click(await screen.findByRole('button', { name: 'Match' }))
+    const opponent = await screen.findByRole('textbox', { name: 'Opponent' })
+    expect(opponent).not.toHaveAttribute('readonly')
+    await user.type(opponent, 'Olympiakos U14')
+    expect(opponent).toHaveValue('Olympiakos U14')
+  }, 30_000)
+})
