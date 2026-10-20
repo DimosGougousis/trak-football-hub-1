@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO } from '@/lib/event-time'
@@ -24,12 +24,12 @@ import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
-import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
+import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
+import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
 import { withAlpha } from '@/lib/with-alpha'
-import { ON_WHATSAPP_GREEN, WHATSAPP_GREEN } from '@/lib/fixed-colours'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -799,18 +799,18 @@ export default function CoachSchedule() {
                         )}
                       </div>
                     )}
-                    {/* TRAK-139 (J8.16): WhatsApp's own share link. Trak sends
-                        nothing; the coach picks the group. Drafts have nothing
-                        to share yet. */}
+                    {/* TRAK-139 (J8.16), TRAK-168: Share opens the phone's share sheet (Viber
+                        or WhatsApp; WhatsApp's link without one). Trak sends nothing; the
+                        coach picks the group. Drafts have nothing to share yet. */}
                     {row?.published && (parked ? (
-                      <button onClick={comingSoon} aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
-                        <Share2 size={14} color="rgb(var(--t-ink-2))" />
+                      <button onClick={comingSoon} aria-label={`Share ${row.title}`} className="flex-shrink-0 text-ink-2">
+                        <ShareIcon size={16} />
                       </button>
                     ) : (
-                      <a href={whatsAppShareUrl(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
-                        aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
-                        <Share2 size={14} color={WHATSAPP_GREEN} />
-                      </a>
+                      <ShareEventButton text={whatsAppShareText(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames })}
+                        aria-label={`Share ${row.title}`} className="flex-shrink-0 text-brand">
+                        <ShareIcon size={16} />
+                      </ShareEventButton>
                     ))}
                     {ev.source === 'session' && (
                       <button
@@ -1091,13 +1091,11 @@ export default function CoachSchedule() {
             <p className="text-[12px] text-ink-2" style={font}>
               {sheet.note} Let the team group know.
             </p>
-            {/* Nothing is sent until the coach picks a chat in WhatsApp. */}
-            <a href={whatsAppShareUrl(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
-              target="_blank" rel="noopener noreferrer"
-              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2"
-              style={{ background: WHATSAPP_GREEN, color: ON_WHATSAPP_GREEN }}>
-              <Share2 size={16} aria-hidden="true" />Share to WhatsApp
-            </a>
+            {/* Nothing is sent until the coach picks a chat (the phone's share sheet, or WhatsApp's link). */}
+            <ShareEventButton text={whatsAppShareText(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
+              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2 bg-brand text-on-brand">
+              <ShareIcon size={18} />Share
+            </ShareEventButton>
             <button onClick={() => setSheet({ kind: 'closed' })}
               className="w-full py-2 text-[13px] text-ink-2" style={font}>
               Done
