@@ -174,6 +174,7 @@ describe('TRAK-85 parked screens: actions say "Coming soon" and send nothing', (
     expect(share).not.toHaveBeenCalled()
     expect(clipboard).not.toHaveBeenCalled()
     expect(canvas).not.toHaveBeenCalled()
-    expect(await screen.findAllByText(COMING_SOON_DETAIL)).not.toHaveLength(0)
+    // 4 s like the waits above: under the full suite's load 1 s was too short (TRAK-211's gate runs).
+    expect(await screen.findAllByText(COMING_SOON_DETAIL, {}, { timeout: 4000 })).not.toHaveLength(0)
   }, 20000)
 })
