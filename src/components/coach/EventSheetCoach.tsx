@@ -9,7 +9,8 @@ import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { clashMessage, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
-import { shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
+import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
+import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 import { updatedNote } from '@/lib/alert-read-state'
 
@@ -81,16 +82,6 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
     came: present && players.filter(p => present.has(p.id)),
     waiting,
   }
-}
-
-/** Iconly's Send (Imad, 16 Oct), for Share to WhatsApp. */
-function SendIcon() {
-  return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path transform="translate(3 3)" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
-        d="M12.8324759,5.17463303 L7.10903824,10.9591851 L0.599436312,6.88767232 C-0.333249591,6.30414294 -0.139234755,4.88743509 0.915720913,4.57892564 L16.3712257,0.0527673159 C17.3372579,-0.230371288 18.2325555,0.67283071 17.9455752,1.6419969 L13.3730902,17.0867511 C13.059837,18.1431929 11.6512085,18.331952 11.073206,17.3952605 L7.10600676,10.9602" />
-    </svg>
-  )
 }
 
 /** Avatars only (Imad, 16 Oct); tapping them, "+N" included, lists the full names. */
@@ -166,10 +157,10 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           {/* A draft has nothing to share (J8.16); a cancellation is shared with its reason.
               Once it has started there's nothing to tell the group (TRAK-182, 16 Oct). */}
           {row?.published && !hasStarted(row) && squad.data && (
-            <a href={whatsAppShareUrl(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })}
-              target="_blank" rel="noopener noreferrer" className={quiet}>
-              <SendIcon />Share to WhatsApp
-            </a>
+            // TRAK-168 (Imad, 18 Oct): the phone's share sheet, so the coach picks Viber or WhatsApp.
+            <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })} className={quiet}>
+              <ShareIcon size={18} />Share
+            </ShareEventButton>
           )}
           {!cancelled && <>
             <button type="button" onClick={() => navigate(`/coach/schedule?edit=${event.id}`)} className={quiet}>

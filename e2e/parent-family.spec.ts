@@ -245,7 +245,10 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await week.getByRole('button', { name: /Technical training/ }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
         await expect(sheet.getByRole('button', { name: 'Published' })).toBeDisabled()
-        await expect(sheet.getByRole('link', { name: 'Share to WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
+        // TRAK-168: "Share" opens the phone's share sheet where there is one, else WhatsApp's link.
+        const share = sheet.getByRole('link', { name: 'Share' }).or(sheet.getByRole('button', { name: 'Share' }))
+        await expect(share).toBeVisible()
+        if (await share.evaluate(el => el.tagName === 'A')) await expect(share).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
         await expect(sheet.getByRole('button', { name: 'Edit' })).toBeVisible()
         await expect(sheet.getByText('No players in your squad yet.')).toBeVisible()
         await expect(page).toHaveURL(/\/coach\/home$/)
