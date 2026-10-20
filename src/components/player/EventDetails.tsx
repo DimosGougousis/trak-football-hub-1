@@ -1,4 +1,5 @@
-import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
+import { eventDay, eventHeading, eventTime, meetText, type PlayerEvent } from '@/lib/player-events'
+import { academyClock } from '@/lib/event-time'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { withAlpha } from '@/lib/with-alpha'
 
@@ -17,10 +18,12 @@ export function EventDetails({ event: e, changes = [] }: {
   // TRAK-161: home or away sits on the venue line, "Olympiacos Stadium (Away)".
   const side = e.kind === 'match' && e.homeAway ? (e.homeAway === 'home' ? 'Home' : 'Away') : null
   const venue = e.venue && side ? `${e.venue} (${side})` : e.venue ?? side
+  // TRAK-223: "17:00 Athens time (19:00 on this phone)": the academy's clock, named.
+  const clock = academyClock(e)
   const rows: [string, string][] = [
     ['Date', eventDay(e)],
-    ['Time', eventTime(e)],
-    ...(e.meetTime ? [['Meet', e.meetTime] as [string, string]] : []),
+    ['Time', `${eventTime(e)}${clock ? ` ${clock.zone}` : ''}${clock?.here ? ` (${clock.here})` : ''}`],
+    ...(e.meetTime ? [['Meet', meetText(e, e.meetTime)] as [string, string]] : []),
     ...(venue ? [['Venue', venue] as [string, string]] : []),
     ...(e.kit ? [['Kit', e.kit] as [string, string]] : []),
     ...(e.familyNote ? [['Notes', e.familyNote] as [string, string]] : []),

@@ -92,7 +92,8 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText(format(parseISO(day), 'EEE MMM d'))).toBeInTheDocument()
     expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
-    const meet = within(sheet).getByText('16:15')
+    // TRAK-223: the meet line says how long before kick-off it is.
+    const meet = within(sheet).getByText('16:15, 45 min before kick-off')
     expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
