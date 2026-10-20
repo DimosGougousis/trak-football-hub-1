@@ -110,7 +110,8 @@ describe('a failed coach load is not an empty squad', () => {
     })
   })
 
-  describe('Home', () => {
+  // TRAK-211: Home's player overview is now the Feedback and assessment tab.
+  describe('Feedback and assessment', () => {
     /* The dashboard is the worst instance, because it does not render an empty
        list — it renders NUMBERS. Four independent loads each discarded their
        error, so a failed dashboard read "0 players · 0 total · 0 sessions":
@@ -120,7 +121,7 @@ describe('a failed coach load is not an empty squad', () => {
       signedInCoach()
       server.use(tableError('squad_players', 500, { message: 'upstream unavailable' }))
 
-      await requestSettled('/squad_players', () => renderApp('/coach/home'))
+      await requestSettled('/squad_players', () => renderApp('/coach/feedback'))
 
       expect(await screen.findByRole('alert')).toBeInTheDocument()
       // The specific lie: an empty squad where the answer is "we could not ask".
@@ -139,7 +140,7 @@ describe('a failed coach load is not an empty squad', () => {
         table('coach_sessions', []),
       )
 
-      await requestSettled('/coach_assessments', () => renderApp('/coach/home'))
+      await requestSettled('/coach_assessments', () => renderApp('/coach/feedback'))
 
       expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toBeInTheDocument()
       expect(screen.queryByText(/On track/)).not.toBeInTheDocument()
@@ -156,7 +157,7 @@ describe('a failed coach load is not an empty squad', () => {
         table('coach_sessions', []),
       )
 
-      await requestSettled('/squad_players', () => renderApp('/coach/home'))
+      await requestSettled('/squad_players', () => renderApp('/coach/feedback'))
 
       expect(await screen.findByText('Your squad is being prepared')).toBeInTheDocument()
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()

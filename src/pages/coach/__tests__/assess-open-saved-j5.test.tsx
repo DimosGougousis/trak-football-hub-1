@@ -119,7 +119,7 @@ beforeEach(() => {
         return HttpResponse.json([])
       })),
     http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, () => HttpResponse.json(false)),
-    // Home's Player overview reads registers and "Can't make it" (TRAK-197); none here.
+    // The Feedback and assessment overview reads registers and "Can't make it" (TRAK-197); none here.
     ...['session_attendance', 'event_absences'].map(table => http.get(`${SUPABASE_URL}/rest/v1/${table}`, () => HttpResponse.json([]))),
   )
 })
@@ -176,10 +176,10 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
   })
 
   // TRAK-179 (live run 3, 16 Oct): a player on coach Home opens the player, not the editor.
-  // TRAK-197: Recent assessments went; the Player overview row opens the profile.
-  it("a player on coach home opens that player's profile, where the assessment opens", async () => {
+  // TRAK-197: Recent assessments went; the overview row opens the profile (TRAK-211: on the Feedback tab).
+  it("a player in the overview opens that player's profile, where the assessment opens", async () => {
     const user = userEvent.setup()
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
     await openLatest(user)
@@ -197,9 +197,9 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     expect(await screen.findByRole('article', { name: /assessment, / })).toBeInTheDocument()
   })
 
-  it('Back from an assessment reached from coach home returns to that player', async () => {
+  it('Back from an assessment reached from the overview returns to that player', async () => {
     const user = userEvent.setup()
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
     await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()

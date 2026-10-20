@@ -9,6 +9,7 @@ import {
   IconSquad,
   IconMatch,
   IconTraining,
+  IconAssess,
   ACTIVE_COLOR,
   DEFAULT_COLOR,
 } from '@/components/icons/TrakIcons'
@@ -32,6 +33,7 @@ function getNavItems(role: Role): NavItem[] {
   if (role === 'coach') return [
     { label: 'Home', path: '/coach/home', Icon: IconHome },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
+    { label: 'Feedback', path: '/coach/feedback', Icon: IconAssess },  // TRAK-211: Feedback and assessment
     // No Sessions tab: Home's "Log a match or training" and the "+" reach it.
     { label: 'Trainings', path: '/coach/trainings', Icon: IconTraining },
     { label: 'Profile', path: '/coach/profile', Icon: IconProfile },

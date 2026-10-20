@@ -10,9 +10,9 @@ import { forgetScreens } from '@/lib/screen-memory'
 
 /**
  * TRAK-197 (Kostas's 16 Oct list, items 9 + 10) and TRAK-196 (item 8): coach
- * Home is one quiet line, the week, the Player overview (at most 5, most
- * urgent first) and two quick actions. With two squads it follows the squad
- * picked in the header (Imad, 18 Oct).
+ * Home is one quiet line, the week and two quick actions. TRAK-211 moved the
+ * Player overview to its own coach tab, Feedback and assessment: every player,
+ * most urgent first. With two squads both follow the squad picked (Imad, 18 Oct).
  */
 const NOW = new Date('2026-11-30T12:00:00Z')
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 24 * 60 * 60 * 1000).toISOString()
@@ -44,9 +44,9 @@ function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[];
 }
 // Everyone in `ids` came to every training, so each register counts as taken.
 const cameToAll = (...ids: string[]) => TRAININGS.flatMap(t => ids.map(id => [t.id, id] as [string, string]))
-const overview = () => screen.getByRole('region', { name: 'Player overview' })
-// The first look waits for the lazy Home to load.
-const region = () => screen.findByRole('region', { name: 'Player overview' }, { timeout: 5000 })
+const overview = () => screen.getByRole('region', { name: 'Feedback and assessment' })
+// The first look waits for the lazy tab to load.
+const region = () => screen.findByRole('region', { name: 'Feedback and assessment' }, { timeout: 5000 })
 // Each row is a button (it opens the player); its name starts "Open <name>'s profile".
 const rows = () => within(overview()).getAllByRole('button', { name: /^Open .*'s profile/ })
 
@@ -64,7 +64,6 @@ describe('TRAK-196: one quiet line', () => {
     home({ players: [player('a', 'Ade Okafor')], assessments: [{ squad_player_id: 'a', created_at: daysAgo(1) }], present: cameToAll('a') })
     renderApp('/coach/home')
     expect(await screen.findByText('Head Coach · Synthetic Athens · U16s')).toBeInTheDocument()
-    await within(await region()).findByText('Ade Okafor')
     expect(screen.queryByText(/^Good (morning|afternoon|evening)/)).toBeNull()
     expect(screen.queryByText('Active')).toBeNull()
     for (const gone of ['THIS SEASON', 'Players in squad', 'Squad bands', 'RECENT ASSESSMENTS', 'Squad Overview', 'Coach Assistant']) {
@@ -73,7 +72,7 @@ describe('TRAK-196: one quiet line', () => {
   })
 })
 
-describe('TRAK-197: the Player overview', { timeout: 20_000 }, () => {
+describe('TRAK-211: the Feedback and assessment tab', { timeout: 20_000 }, () => {
   it('lists the most urgent first, says each level in words, and why', async () => {
     home({
       players: [player('ok', 'Olly Steady'), player('warn', 'Wes Late'), player('urg', 'Uma Away')],
@@ -81,7 +80,7 @@ describe('TRAK-197: the Player overview', { timeout: 20_000 }, () => {
       // Uma missed t1–t3; Wes missed only the last; Olly came to all.
       present: [...cameToAll('ok'), ['t2', 'warn'], ['t3', 'warn'], ['t4', 'warn'], ['t4', 'urg']],
     })
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await region()
     await waitFor(() => expect(rows()).toHaveLength(3), { timeout: 5000 })
     expect(rows().map(r => within(r).getByText(/^(Urgent|Warning|On track)$/).textContent)).toEqual(['Urgent', 'Warning', 'On track'])
@@ -98,25 +97,33 @@ describe('TRAK-197: the Player overview', { timeout: 20_000 }, () => {
       present: [['t1', 'x'], ['t2', 'a'], ['t3', 'a'], ['t4', 'a']],
       absences: [{ event_id: 'e1', squad_player_id: 'a', reason: 'Ill' }],
     })
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     expect(await within(await region()).findByText("Missed the last training (Can't make it: Ill)")).toBeInTheDocument()
   })
 
-  it('shows at most 5, and points to Squad for the rest who need attention', async () => {
+  it('lists every player, not just the first 5', async () => {
     const players = Array.from({ length: 8 }, (_, i) => player(`p${i}`, `Player ${i}`))
     // Nobody assessed for 5 weeks: all 8 are Urgent.
     home({ players, assessments: players.map(p => ({ squad_player_id: p.id, created_at: daysAgo(35) })), present: cameToAll(...players.map(p => p.id)) })
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await region()
-    await waitFor(() => expect(rows()).toHaveLength(5), { timeout: 5000 })
-    const more = within(overview()).getByRole('link', { name: '3 more need attention · Squad' })
-    await userEvent.click(more)
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
+    await waitFor(() => expect(rows()).toHaveLength(8), { timeout: 5000 })
+    expect(within(rows()[0]).getByText('No assessment for 5 weeks')).toBeInTheDocument()
+    expect(within(overview()).queryByRole('link')).toBeNull()
+  })
+
+  it('is a coach tab, and its heading says Feedback and assessment', async () => {
+    home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
+    renderApp('/coach/home')
+    await userEvent.click(await screen.findByRole('button', { name: /^Feedback$/i }, { timeout: 5000 }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/feedback'))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Feedback and assessment' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(await within(await region()).findByText('Ade Okafor')).toBeInTheDocument()
   })
 
   it('a row opens that player', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await userEvent.click(await screen.findByRole('button', { name: "Open Ade Okafor's profile: Urgent" }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/a'))
   })
@@ -127,22 +134,20 @@ describe('TRAK-197: the Player overview', { timeout: 20_000 }, () => {
       present: cameToAll('u14', 'u16'),
     })
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     expect(await within(await region()).findByText('Bo Lind')).toBeInTheDocument()
     expect(within(overview()).queryByText('Ade Okafor')).toBeNull()
-    expect(screen.getByText('Head Coach · Synthetic Athens · U16')).toBeInTheDocument()
 
     // The new squad's reads held: the old squad's rows must not stand in for it.
     let release!: () => void
     const held = new Promise<void>(resolve => { release = resolve })
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, async () => { await held; return HttpResponse.json([]) }))
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Squad' }), 'U14')
+    await userEvent.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U14' }))
     expect(within(overview()).queryByText('Bo Lind')).toBeNull()
     expect(within(overview()).getByRole('status')).toHaveTextContent('Loading your players…')
     release()
     expect(await within(overview()).findByText('Ade Okafor')).toBeInTheDocument()
     expect(within(overview()).queryByText('Bo Lind')).toBeNull()
-    expect(screen.getByText('Head Coach · Synthetic Athens · U14')).toBeInTheDocument()
   })
 
   it("a training only the other squad had doesn't count against this squad", async () => {
@@ -158,7 +163,7 @@ describe('TRAK-197: the Player overview', { timeout: 20_000 }, () => {
     ]), table('squad_players', [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')]),
     table('session_attendance', [['t0', 'u14'], ...cameToAll('u16')].map(([session_id, squad_player_id]) => ({ session_id, squad_player_id }))))
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     expect(await within(await region()).findByText('Assessed 1 day ago')).toBeInTheDocument()
   })
 })
@@ -175,12 +180,22 @@ describe('TRAK-197: two quick actions', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/coach/sessions'))
   })
 
-  it('stay when the overview fails, so the coach can still work', async () => {
-    home({ players: [player('a', 'Ade Okafor')] })
-    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, () => HttpResponse.json({ message: 'down' }, { status: 500 })))
+  // TRAK-211: Home lists no players now; the overview is the Feedback tab's.
+  it('stand without the player overview on Home', async () => {
+    home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
     renderApp('/coach/home')
-    expect(await within(await region()).findByRole('alert')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Assess a player' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Assess a player' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log a match or training' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Player overview|Feedback and assessment/ })).toBeNull()
+    expect(screen.queryByText('Ade Okafor')).toBeNull()
+  })
+
+  it('the quiet line follows the squad picked in the header', async () => {
+    home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
+    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    renderApp('/coach/home')
+    expect(await screen.findByText('Head Coach · Synthetic Athens · U16', {}, { timeout: 5000 })).toBeInTheDocument()
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Squad' }), 'U14')
+    expect(await screen.findByText('Head Coach · Synthetic Athens · U14')).toBeInTheDocument()
   })
 })

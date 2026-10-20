@@ -69,7 +69,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
 
 test.describe('TRAK-182 coach screens', () => {
   test.use({ timezoneId: 'Asia/Dubai' })
-  test('TRAK-189 coach Home attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
+  // TRAK-211: the attention levels moved from Home to the Feedback and assessment tab.
+  test('TRAK-189 coach Feedback attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await coachBackend(context, unexpected)
@@ -82,27 +83,27 @@ test.describe('TRAK-182 coach screens', () => {
         created_at: new Date(Date.now() - days * 86400_000).toISOString(),
       }))),
     }))
-    await page.goto('/coach/home')
-    const overview = page.getByRole('region', { name: 'Player overview' })
+    await page.goto('/coach/feedback')
+    const overview = page.getByRole('region', { name: 'Feedback and assessment' })
     for (const level of ['Urgent', 'Warning', 'On track']) {
       await expect(overview.getByText(level, { exact: true }).first()).toBeVisible()
     }
-    await expect(page.getByRole('button', { name: 'Assess a player', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Log a match or training', exact: true })).toBeVisible()
     await page.waitForLoadState('networkidle')
     await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
     const violations = await page.evaluate(async () => {
       const axe = (window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: unknown[] }> } }).axe
       return (await axe.run({ runOnly: ['color-contrast'] })).violations
     })
-    await page.screenshot({ path: testInfo.outputPath('coach-home-attention-contrast.png'), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath('coach-feedback-attention-contrast.png'), fullPage: true })
     expect(violations).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 
   for (const [name, path, ready] of [
-    ['home', '/coach/home', 'Hugo Lloris'],
+    // TRAK-211: Home lists no players; they are on the Feedback and assessment tab.
+    ['home', '/coach/home', 'Assess a player'],
+    ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
     ['player', '/coach/player/sq-2', 'Bukayo Saka'],
