@@ -174,17 +174,17 @@ export default function CoachQuickMatchLog() {
   return (
     <MobileShell>
       {/* Topbar */}
-      <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
+      <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
         <button
           onClick={() => navigate('/coach/sessions')}
-          className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center"
+          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center"
           aria-label="Back"
         >
-          <ChevronLeft size={14} className="text-white/88" />
+          <ChevronLeft size={14} className="text-ink" />
         </button>
         <span
-          className="text-[16px] font-medium text-white/88 tracking-tight"
-          style={{ fontFamily: "'DM Sans', sans-serif" }}
+          className="text-[16px] font-medium text-ink tracking-tight"
+          style={{ fontFamily: 'var(--t-font)' }}
         >
           Quick match log
         </span>
@@ -193,10 +193,10 @@ export default function CoachQuickMatchLog() {
 
       <div className="pt-5 pb-32 space-y-5">
         {/* Match date */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <span
-            className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 block mb-3"
-            style={{ fontFamily: "'DM Mono', monospace" }}
+            className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-3"
+            style={{ fontFamily: 'var(--t-font-mono)' }}
           >
             DATE PLAYED
           </span>
@@ -205,16 +205,16 @@ export default function CoachQuickMatchLog() {
             value={matchDate}
             max={localTodayISO()}
             onChange={e => setMatchDate(e.target.value)}
-            className="w-full bg-transparent text-[20px] text-white/88 outline-none"
-            style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}
+            className="w-full bg-transparent text-[20px] text-ink outline-none"
+            style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}
           />
         </div>
 
         {/* Opponent + score */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <span
-            className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 block mb-3"
-            style={{ fontFamily: "'DM Mono', monospace" }}
+            className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-3"
+            style={{ fontFamily: 'var(--t-font-mono)' }}
           >
             OPPONENT
           </span>
@@ -222,35 +222,35 @@ export default function CoachQuickMatchLog() {
             value={opponent}
             onChange={e => setOpponent(e.target.value)}
             placeholder="Opponent name"
-            className="w-full bg-transparent text-[20px] text-white/88 placeholder-white/20 outline-none"
-            style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}
+            className="w-full bg-transparent text-[20px] text-ink placeholder-ink-3 outline-none"
+            style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}
           />
 
           <div className="grid grid-cols-3 items-center gap-3 mt-5">
             <div className="text-center">
               <span
-                className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 mb-2"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+                className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
+                style={{ fontFamily: 'var(--t-font-mono)' }}
               >US</span>
               <input
                 inputMode="numeric"
                 value={scoreUs}
                 onChange={e => setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2))}
                 placeholder="0"
-                className="w-full bg-[#0A0A0B] border border-white/[0.07] rounded-[12px] py-3 text-center text-[28px] text-white/88 placeholder-white/20 outline-none"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
+                className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                style={{ fontFamily: 'var(--t-font)' }}
               />
             </div>
             <div className="text-center">
               <span
-                className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/30 mb-2"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+                className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
+                style={{ fontFamily: 'var(--t-font-mono)' }}
               >RESULT</span>
               <div
                 className="w-full py-3 rounded-[12px] text-center text-[28px]"
                 style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  color: result === 'W' ? '#C8F25A' : result === 'L' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.6)',
+                  fontFamily: 'var(--t-font)',
+                  color: result === 'W' ? 'rgb(var(--t-brand))' : result === 'L' ? 'rgb(var(--t-ink-3))' : 'rgb(var(--t-ink-2))',
                 }}
               >
                 {result || '–'}
@@ -258,27 +258,27 @@ export default function CoachQuickMatchLog() {
             </div>
             <div className="text-center">
               <span
-                className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 mb-2"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+                className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
+                style={{ fontFamily: 'var(--t-font-mono)' }}
               >THEM</span>
               <input
                 inputMode="numeric"
                 value={scoreThem}
                 onChange={e => setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2))}
                 placeholder="0"
-                className="w-full bg-[#0A0A0B] border border-white/[0.07] rounded-[12px] py-3 text-center text-[28px] text-white/88 placeholder-white/20 outline-none"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
+                className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                style={{ fontFamily: 'var(--t-font)' }}
               />
             </div>
           </div>
         </div>
 
         {/* Competition + venue chips */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
+        <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
           <div>
             <span
-              className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 block mb-2"
-              style={{ fontFamily: "'DM Mono', monospace" }}
+              className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-2"
+              style={{ fontFamily: 'var(--t-font-mono)' }}
             >
               COMPETITION
             </span>
@@ -290,8 +290,8 @@ export default function CoachQuickMatchLog() {
           </div>
           <div>
             <span
-              className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 block mb-2"
-              style={{ fontFamily: "'DM Mono', monospace" }}
+              className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-2"
+              style={{ fontFamily: 'var(--t-font-mono)' }}
             >
               VENUE
             </span>
@@ -304,30 +304,30 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Attendance */}
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <div className="flex items-center justify-between mb-3">
             <span
-              className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
-              style={{ fontFamily: "'DM Mono', monospace" }}
+              className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
+              style={{ fontFamily: 'var(--t-font-mono)' }}
             >
               ATTENDED · {attended.size}/{squad.length}
             </span>
             <div className="flex gap-3">
               <button
                 onClick={selectAll}
-                className="text-[10px] tracking-[0.12em] uppercase text-[#C8F25A]"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+                className="text-[10px] tracking-[0.12em] uppercase text-brand"
+                style={{ fontFamily: 'var(--t-font-mono)' }}
               >ALL</button>
               <button
                 onClick={clearAll}
-                className="text-[10px] tracking-[0.12em] uppercase text-white/35"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+                className="text-[10px] tracking-[0.12em] uppercase text-ink-3"
+                style={{ fontFamily: 'var(--t-font-mono)' }}
               >NONE</button>
             </div>
           </div>
 
           {squad.length === 0 ? (
-            <p className="text-[12px] text-white/40 py-2">
+            <p className="text-[12px] text-ink-3 py-2">
               No squad yet. Add players from the Squad tab first.
             </p>
           ) : (
@@ -340,10 +340,10 @@ export default function CoachQuickMatchLog() {
                     onClick={() => togglePlayer(p.id)}
                     className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
                     style={{
-                      background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
-                      border: `1px solid ${on ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                      color: on ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
-                      fontFamily: "'DM Sans', sans-serif",
+                      background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
+                      border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                      color: on ? 'rgb(var(--t-ink))' : 'rgb(var(--t-ink-2))',
+                      fontFamily: 'var(--t-font)',
                       fontSize: 13,
                     }}
                   >
@@ -360,7 +360,7 @@ export default function CoachQuickMatchLog() {
       <div
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
         style={{
-          background: 'linear-gradient(180deg, rgba(10,10,11,0) 0%, #0A0A0B 35%)',
+          background: 'linear-gradient(180deg, rgb(var(--t-ground) / 0) 0%, rgb(var(--t-ground)) 35%)',
         }}
       >
         <button
@@ -368,8 +368,8 @@ export default function CoachQuickMatchLog() {
           disabled={!canSave || saving}
           className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
           style={{
-            background: canSave ? '#C8F25A' : 'rgba(255,255,255,0.06)',
-            color: canSave ? '#000' : 'rgba(255,255,255,0.3)',
+            background: canSave ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))',
+            color: canSave ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink-3))',
             opacity: saving ? 0.6 : 1,
           }}
         >
@@ -386,10 +386,10 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
       onClick={onClick}
       className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors"
       style={{
-        background: active ? 'rgba(200,242,90,0.12)' : '#202024',
-        color: active ? '#C8F25A' : 'rgba(255,255,255,0.45)',
-        border: `1px solid ${active ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
-        fontFamily: "'DM Sans', sans-serif",
+        background: active ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-raised))',
+        color: active ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
+        border: `1px solid ${active ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+        fontFamily: 'var(--t-font)',
       }}
     >
       {children}

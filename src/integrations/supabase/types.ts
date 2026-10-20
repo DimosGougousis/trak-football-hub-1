@@ -214,6 +214,7 @@ export type Database = {
           impact: number
           organization_id: string | null
           physical: number
+          published_at: string | null
           private_note: string | null
           session_id: string | null
           spirit: number
@@ -238,6 +239,7 @@ export type Database = {
           impact?: number
           organization_id?: string | null
           physical?: number
+          published_at?: string | null
           private_note?: string | null
           session_id?: string | null
           spirit?: number
@@ -262,6 +264,7 @@ export type Database = {
           impact?: number
           organization_id?: string | null
           physical?: number
+          published_at?: string | null
           private_note?: string | null
           session_id?: string | null
           spirit?: number

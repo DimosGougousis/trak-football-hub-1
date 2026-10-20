@@ -21,7 +21,7 @@ export function BandPreview({ matchInput, visible }: BandPreviewProps) {
         className="flex items-center justify-center gap-3 py-3 rounded-[14px] border"
         style={{ background: config.bg, borderColor: config.border }}
       >
-        <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-[rgba(255,255,255,0.45)]" style={{ fontFamily: "'DM Mono', monospace" }}>
+        <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-line-strong" style={{ fontFamily: 'var(--t-font-mono)' }}>
           CURRENT BAND
         </span>
         <BandPill band={band} />

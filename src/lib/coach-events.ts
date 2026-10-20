@@ -16,16 +16,19 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
 /* TRAK-159: one colour per type, everywhere events show (the coach calendar,
    the Home strip, the family lists). Founders, 12 Oct, replacing 11 Oct's
    match red: training blue, match green, other orange, cancelled red.
-   Tailwind's 400 shades, which read on the dark theme. */
+   Light theme (TRAK-189): dark enough for a white page, and match moves to
+   purple (Imad, 18 Oct), since a green match read as the brand's buttons. A
+   blue-leaning purple, so it stays apart from training's blue with
+   deuteranopia; tournament, purple before, moves to teal. */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
-  training:   '#60a5fa',
-  match:      '#4ade80',
-  other:      '#fb923c',
-  tournament: '#c084fc',
+  training:   '#285EA3',
+  match:      '#7B2FBE',
+  other:      '#9C4516',
+  tournament: '#0F766E',
 }
-export const CANCELLED_COLOR = '#f87171'
+export const CANCELLED_COLOR = '#B42318'
 /** "No time set" on a card: a warning, unlike every type colour. */
-export const NO_TIME_COLOR = '#facc15'
+export const NO_TIME_COLOR = '#875100'
 export const DURATIONS = [60, 75, 90, 120] as const
 /** The family note fits one line on a phone; the database holds the same limit. */
 export const FAMILY_NOTE_MAX = 200

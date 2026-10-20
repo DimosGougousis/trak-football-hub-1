@@ -13,18 +13,18 @@ export function SeeMoreList<T>({ items, first = 3, step = 5, render }: {
   const [shown, setShown] = useState(first)
   const visible = items.slice(0, shown)
   const hidden = items.length - visible.length
-  const button = 'w-full py-2 text-[12px] text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg'
+  const button = 'w-full py-2 text-[12px] text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg'
   return (
     <>
       {visible.map(render)}
       {hidden > 0 ? (
         <button type="button" aria-expanded={false} onClick={() => setShown(n => n + step)} className={button}
-          style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          style={{ fontFamily: 'var(--t-font)' }}>
           See more ({hidden})
         </button>
       ) : items.length > first && (
         <button type="button" aria-expanded onClick={() => setShown(first)} className={button}
-          style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          style={{ fontFamily: 'var(--t-font)' }}>
           Show fewer
         </button>
       )}

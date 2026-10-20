@@ -133,6 +133,13 @@ const noteBox = () => screen.getByLabelText(/^Private note/i) as HTMLTextAreaEle
 const assessmentWrites = () => writes.filter(w => w.table === 'coach_assessments').map(w => [w.method, w.id])
 
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+// TRAK-200: the latest assessment is Arc's card; Edit sits behind its split button's chevron.
+async function openLatest(user: ReturnType<typeof userEvent.setup>) {
+  const card = await screen.findByRole('article', { name: /assessment, / })
+  await user.click(within(card).getByRole('button', { name: /more actions$/ }))
+  await user.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+}
+
 describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeout: 20_000 }, () => {
   it("opens an older assessment from the player's history, with its scores, note and message", async () => {
     const user = userEvent.setup()
@@ -162,7 +169,7 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
   it("opens the player's latest assessment from its card", async () => {
     const user = userEvent.setup()
     renderApp('/coach/player/player-a')
-    await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
+    await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
     await toStep('Note')
     expect(noteBox().value).toBe('Assistant: strong first touch')
@@ -175,7 +182,7 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     renderApp('/coach/home')
     await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
-    await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
+    await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
   })
 
@@ -187,14 +194,14 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Academy/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
-    expect(await screen.findByRole('button', { name: /Open latest assessment/ })).toBeInTheDocument()
+    expect(await screen.findByRole('article', { name: /assessment, / })).toBeInTheDocument()
   })
 
   it('Back from an assessment reached from coach home returns to that player', async () => {
     const user = userEvent.setup()
     renderApp('/coach/home')
     await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
-    await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
+    await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
@@ -236,7 +243,10 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     const row = await screen.findByRole('button', { name: /Open assessment .*vs Olympiacos Academy/ })
     expect(within(row).getByText('vs Olympiacos Academy')).toBeInTheDocument()
     expect(within(row).getByText('Message sent')).toBeInTheDocument()
-    const latest = screen.getByRole('button', { name: /Open latest assessment/ })
+    // TRAK-200: the latest card's quick look carries the message state and the private note.
+    const card = screen.getByRole('article', { name: /assessment, / })
+    await userEvent.click(within(card).getByRole('heading').querySelector('button')!)
+    const latest = await screen.findByRole('dialog')
     expect(within(latest).getByText(/No message/)).toBeInTheDocument()
     expect(within(latest).getByText(/Private note/i)).toBeInTheDocument()
     expect(within(latest).getByText(/Assistant: strong first touch/)).toBeInTheDocument()

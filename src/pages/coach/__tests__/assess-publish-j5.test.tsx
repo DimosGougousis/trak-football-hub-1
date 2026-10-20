@@ -67,6 +67,7 @@ const noteBox = () => screen.getByLabelText(/^Private note/i)
 const toMessage = async () => { await assessStep('Message'); return messageBox() }
 const toNote = async () => { await assessStep('Note'); return noteBox() }
 const shared = () => writes.filter(w => w.table === 'coach_shared_feedback').map(w => w.body)
+const assessed = () => writes.filter(w => w.table === 'coach_assessments').map(w => w.body)
 
 beforeEach(() => {
   writes = []
@@ -142,12 +143,15 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     const note = await toNote() as HTMLTextAreaElement
     expect(message.dataset.tone).toBe('message')
     expect(note.dataset.tone).toBe('private')
-    expect(messageClass).toMatch(/border-white\//)
-    expect(messageClass).not.toMatch(/sky-|amber-/)
-    expect(note.className).toMatch(/border-amber-/)
+    // TRAK-189: the plain text-box roles (they were white-at-N% on the dark theme).
+    expect(messageClass).toMatch(/\bbg-raised\b/)
+    expect(messageClass).toMatch(/\bborder-line-strong\b/)
+    expect(messageClass).not.toMatch(/sky-|amber-|warning/)
+    // TRAK-189: the private note's colour is the warning role (it was Tailwind's amber).
+    expect(note.className).toMatch(/border-warning\//)
     expect(message.rows).toBe(note.rows)
-    expect(messageClass.replace(/(bg|border)-(white|amber)\S+/g, ''))
-      .toBe(note.className.replace(/(bg|border)-(white|amber)\S+/g, ''))
+    expect(messageClass.replace(/(bg|border)-(raised|line-strong|warning)\S*/g, ''))
+      .toBe(note.className.replace(/(bg|border)-(raised|line-strong|warning)\S*/g, ''))
   })
 
   // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…
@@ -245,6 +249,36 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
     await screen.findByText('Coach home')
     expect(shared()).toEqual([expect.objectContaining({ body: 'Good pressing today', published_at: null })])
+    // TRAK-200 (Imad, 18 Oct): a draft's bands stay hidden from the family too.
+    expect(assessed()).toEqual([expect.objectContaining({ published_at: null })])
+  })
+
+  // TRAK-200: Publish shows the bands; a new assessment saves published.
+  it('Publish saves the assessment published, never as a draft', async () => {
+    showForm()
+    await choose('player-b')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    await screen.findByText('Coach home')
+    expect(assessed()).toHaveLength(1)
+    expect(assessed()[0].published_at).not.toBeNull()
+  })
+
+  // TRAK-200: a draft opened again and published becomes visible to the family.
+  it('publishing a saved draft publishes its bands', async () => {
+    server.use(
+      http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: null }])),
+      http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([{ body: 'Draft for Alex', published_at: null }])),
+    )
+    showForm()
+    await choose('player-a')
+    await toMessage()
+    await screen.findByDisplayValue('Draft for Alex')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    await screen.findByText('Coach home')
+    expect(assessed()).toEqual([expect.objectContaining({ published_at: expect.any(String) })])
   })
 
   // Kostas's #313 review: "Save draft" on a message the player has read would
