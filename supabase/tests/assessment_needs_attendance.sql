@@ -129,6 +129,17 @@ SELECT pg_temp.an_refused(format('INSERT INTO public.coach_assessments (coach_us
 SELECT pg_temp.an_allowed(format('INSERT INTO public.coach_assessments (id, coach_user_id, squad_player_id, session_id) VALUES (%L, %L, %L, NULL)',
   pg_temp.an(71), pg_temp.an(2), pg_temp.an(20)), 1,
   '1 an assessment with no session (the pre-TRAK-68 shape) is left to the other rules');
+-- TRAK-219: a player who didn't play isn't assessed, so no assessment says so.
+SELECT pg_temp.an_refused(format('INSERT INTO public.coach_assessments (coach_user_id, squad_player_id, session_id, appearance) VALUES (%L, %L, %L, %L)',
+  pg_temp.an(2), pg_temp.an(21), pg_temp.an(33), 'didnt_play'),
+  'new row for relation "coach_assessments" violates check constraint "coach_assessments_never_didnt_play"',
+  '1 TRAK-219 an assessment saying Didn''t play is refused');
+SELECT pg_temp.an_allowed(format('INSERT INTO public.coach_assessments (id, coach_user_id, squad_player_id, session_id, appearance) VALUES (%L, %L, %L, %L, %L)',
+  pg_temp.an(72), pg_temp.an(2), pg_temp.an(21), pg_temp.an(33), 'sub'), 1,
+  '1 TRAK-219 CONTROL the same assessment as Sub saves');
+SELECT pg_temp.an_refused(format('UPDATE public.coach_assessments SET appearance = %L WHERE id = %L', 'didnt_play', pg_temp.an(72)),
+  'new row for relation "coach_assessments" violates check constraint "coach_assessments_never_didnt_play"',
+  '1 TRAK-219 nor can a saved one be changed to Didn''t play');
 
 -- ── 2. Editing ─────────────────────────────────────────────────────────────
 SELECT pg_temp.an_allowed(format('UPDATE public.coach_assessments SET work_rate = 7 WHERE id = %L', pg_temp.an(70)), 1,
@@ -196,8 +207,8 @@ DO $test$
 DECLARE failed integer; total integer;
 BEGIN
   SELECT count(*) FILTER (WHERE NOT passed), count(*) INTO failed, total FROM pg_temp.an_results;
-  IF total <> 23 THEN
-    RAISE EXCEPTION 'Assessment attendance: % assertions ran; expected exactly 23', total;
+  IF total <> 26 THEN
+    RAISE EXCEPTION 'Assessment attendance: % assertions ran; expected exactly 26', total;
   END IF;
   IF failed > 0 THEN
     RAISE EXCEPTION 'Assessment attendance: % of % failed: %', failed, total,
