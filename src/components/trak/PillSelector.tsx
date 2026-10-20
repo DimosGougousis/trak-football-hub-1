@@ -10,8 +10,8 @@ export function PillSelector({ options, value, onChange, label }: PillSelectorPr
     <div className="space-y-2">
       {label && (
         <span
-          className="text-[9px] font-medium tracking-[0.12em] uppercase text-[rgba(255,255,255,0.45)]"
-          style={{ fontFamily: "'DM Mono', monospace" }}
+          className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3"
+          style={{ fontFamily: 'var(--t-font-mono)' }}
         >
           {label}
         </span>
@@ -24,8 +24,8 @@ export function PillSelector({ options, value, onChange, label }: PillSelectorPr
             onClick={() => onChange(opt.value)}
             className={`px-4 py-2 rounded-[10px] text-sm transition-colors ${
               value === opt.value
-                ? 'border-[#C8F25A] bg-[rgba(200,242,90,0.08)] text-[rgba(255,255,255,0.88)]'
-                : 'border-white/[0.07] bg-[#202024] text-[rgba(255,255,255,0.45)]'
+                ? 'border-brand bg-brand/[0.08] text-ink'
+                : 'border-line bg-raised text-ink-3'
             } border`}
           >
             {opt.label}

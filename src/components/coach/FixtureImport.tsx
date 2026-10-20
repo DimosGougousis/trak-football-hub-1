@@ -144,10 +144,10 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
         data-testid="fixture-drop-zone"
         onDragOver={e => e.preventDefault()}
         onDrop={onDrop}
-        className="rounded-[18px] border border-dashed border-white/[0.15] px-4 py-6 text-center"
+        className="rounded-[18px] border border-dashed border-line-strong px-4 py-6 text-center"
       >
-        <FileUp size={22} className="mx-auto text-white/40" />
-        <label className="mt-3 inline-block cursor-pointer rounded-[12px] bg-[#C8F25A] px-4 py-2 text-[13px] font-semibold text-black">
+        <FileUp size={22} className="mx-auto text-ink-3" />
+        <label className="mt-3 inline-block cursor-pointer rounded-[12px] bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand">
           Choose a CSV file
           <input
             type="file"
@@ -156,10 +156,10 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
             onChange={e => { void takeFile(e.target.files?.[0]); e.target.value = '' }}
           />
         </label>
-        <p className="mt-2 text-[12px] text-white/45">or drop it here</p>
-        <p className="mt-3 text-[12px] text-white/45">
+        <p className="mt-2 text-[12px] text-ink-3">or drop it here</p>
+        <p className="mt-3 text-[12px] text-ink-3">
           CSV only. If your league sends a PDF, copy the fixtures into the template.{' '}
-          <a href={TEMPLATE_HREF} download="trak-fixtures-template.csv" className="text-[#C8F25A] underline">
+          <a href={TEMPLATE_HREF} download="trak-fixtures-template.csv" className="text-brand underline">
             Download the template
           </a>
         </p>
@@ -171,12 +171,12 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
         </div>
       )}
 
-      {added !== null && <p className="text-[13px] text-[#C8F25A]">Added {plural(added, 'fixture', 'fixtures')}.</p>}
+      {added !== null && <p className="text-[13px] text-brand">Added {plural(added, 'fixture', 'fixtures')}.</p>}
 
       {loaded && (
         <>
-          {loaded.warnings.map(w => <p key={w} className="text-[12px] text-white/45">{w}</p>)}
-          <p className="text-[12px] text-white/60">
+          {loaded.warnings.map(w => <p key={w} className="text-[12px] text-ink-3">{w}</p>)}
+          <p className="text-[12px] text-ink-2">
             {[
               `${toAdd.length} to add`,
               needFixing > 0 ? `${needFixing} ${needFixing === 1 ? 'needs' : 'need'} fixing` : null,
@@ -191,16 +191,16 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                 <li
                   key={row.line}
                   aria-label={`Line ${row.line}`}
-                  className={`rounded-[14px] border px-4 py-3 ${row.fixture ? 'border-white/[0.07]' : 'border-destructive/60'}`}
+                  className={`rounded-[14px] border px-4 py-3 ${row.fixture ? 'border-line' : 'border-destructive/60'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[11px] text-white/40">Line {row.line}</p>
-                      <p className="text-[13px] text-white/85">
+                      <p className="text-[11px] text-ink-3">Line {row.line}</p>
+                      <p className="text-[13px] text-ink">
                         {row.fixture ? summary(row.fixture) : (row.values.date || 'No date')}
                       </p>
-                      {row.fixture?.venue && <p className="text-[12px] text-white/45">{row.fixture.venue}</p>}
-                      {knownRow && <p className="text-[12px] text-white/45">Already on your schedule: not added again.</p>}
+                      {row.fixture?.venue && <p className="text-[12px] text-ink-3">{row.fixture.venue}</p>}
+                      {knownRow && <p className="text-[12px] text-ink-3">Already on your schedule: not added again.</p>}
                       {row.problems.map(p => <p key={p} className="text-[12px] text-destructive">{p}</p>)}
                     </div>
                     <div className="flex shrink-0 gap-1">
@@ -208,7 +208,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                         type="button"
                         aria-label={`Edit line ${row.line}`}
                         onClick={() => setEditing(editing === row.line ? null : row.line)}
-                        className="rounded-full p-2 text-white/50"
+                        className="rounded-full p-2 text-ink-2"
                       >
                         <Pencil size={14} />
                       </button>
@@ -216,7 +216,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                         type="button"
                         aria-label={`Remove line ${row.line}`}
                         onClick={() => remove(row.line)}
-                        className="rounded-full p-2 text-white/50"
+                        className="rounded-full p-2 text-ink-2"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -226,13 +226,13 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                   {editing === row.line && (
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       {EDIT_FIELDS.map(({ field, label, placeholder }) => (
-                        <label key={field} className="text-[11px] text-white/45">
+                        <label key={field} className="text-[11px] text-ink-3">
                           {label}
                           <input
                             value={row.values[field]}
                             placeholder={placeholder}
                             onChange={e => update(row.line, field, e.target.value)}
-                            className="mt-1 w-full rounded-[10px] bg-white/[0.05] px-2 py-1.5 text-[13px] text-white outline-none"
+                            className="mt-1 w-full rounded-[10px] bg-raised px-2 py-1.5 text-[13px] text-ink outline-none"
                           />
                         </label>
                       ))}
@@ -250,13 +250,13 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
           )}
 
           {toAdd.length === 0 && needFixing === 0 ? (
-            <p className="text-[13px] text-white/60">Nothing new to add: every fixture is already on your schedule.</p>
+            <p className="text-[13px] text-ink-2">Nothing new to add: every fixture is already on your schedule.</p>
           ) : (
             <button
               type="button"
               onClick={() => void confirm()}
               disabled={saving || needFixing > 0 || toAdd.length === 0}
-              className="w-full rounded-[14px] bg-[#C8F25A] py-3 text-[14px] font-semibold text-black disabled:opacity-40"
+              className="w-full rounded-[14px] bg-brand py-3 text-[14px] font-semibold text-on-brand disabled:opacity-40"
             >
               {`Add ${plural(toAdd.length, 'fixture', 'fixtures')}`}
             </button>

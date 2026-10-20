@@ -52,14 +52,14 @@ export default function CoachSessionsPage() {
   return (
     <MobileShell>
       {/* Topbar */}
-      <div className="flex items-center justify-between px-5 py-[10px] border-b border-white/[0.07] shrink-0">
-        <h1 className="text-[15px] font-semibold text-white/90">Sessions</h1>
+      <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
+        <h1 className="text-[15px] font-semibold text-ink">Sessions</h1>
         <button
           onClick={() => navigate('/coach/sessions')}
-          className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-[#C8F25A] active:scale-95 transition-transform"
+          className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-brand active:scale-95 transition-transform"
           aria-label="New session"
         >
-          <Plus size={16} className="text-black" strokeWidth={2.5} />
+          <Plus size={16} className="text-on-brand" strokeWidth={2.5} />
         </button>
       </div>
 
@@ -70,7 +70,7 @@ export default function CoachSessionsPage() {
             <LoadError what="your sessions" onRetry={retry} retrying={retrying} />
           </div>
         ) : shown.length === 0 ? (
-          <p className="text-white/45 text-sm mt-4">No sessions logged yet.</p>
+          <p className="text-ink-3 text-sm mt-4">No sessions logged yet.</p>
         ) : (
           <div className="space-y-0">
             {shown.map((s) => (
@@ -79,13 +79,13 @@ export default function CoachSessionsPage() {
                 type="button"
                 key={s.id}
                 onClick={() => navigate(`/coach/sessions/${s.id}`)}
-                className="w-full text-left flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03]"
+                className="w-full text-left flex items-center gap-3 py-3 border-b border-line active:bg-raised"
               >
                 {/* Icon */}
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-[#202024] flex items-center justify-center shrink-0">
+                <div className="w-[34px] h-[34px] rounded-[10px] bg-raised flex items-center justify-center shrink-0">
                   <span
                     className={`text-[13px] font-semibold ${
-                      isMatch(s) ? 'text-green-400' : 'text-white/[0.45]'
+                      isMatch(s) ? 'text-success' : 'text-ink-3'
                     }`}
                   >
                     {isMatch(s) ? 'M' : 'T'}
@@ -94,14 +94,14 @@ export default function CoachSessionsPage() {
 
                 {/* Title + metadata */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-white/[0.88] truncate">
+                  <p className="text-[13px] font-medium text-ink truncate">
                     {isMatch(s)
                       ? s.opponent || s.title || 'Match'
                       : s.title || 'Training'}
                   </p>
                   <p
-                    className="text-[9px] text-white/[0.22] mt-0.5 truncate"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
+                    className="text-[9px] text-ink-3 mt-0.5 truncate"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}
                   >
                     {isMatch(s) ? 'Match' : 'Training'}
                     {s.session_date ? ` · ${formatDate(s.session_date)}` : ''}
@@ -111,12 +111,12 @@ export default function CoachSessionsPage() {
 
                 {/* Badge */}
                 {isMatch(s) ? (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-green-500/15 text-green-400">
+                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
                     {s.result || 'W'}
                     {s.score ? ` ${s.score}` : ''}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.45)]">
+                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-raised text-ink-3">
                     {s.focus || 'Tactical'}
                   </span>
                 )}

@@ -29,9 +29,9 @@ export function LoggedAttendance({ sessionId, coachId }: { sessionId: string; co
     return () => { stale = true }
   }, [sessionId, coachId])
 
-  const heading = 'text-[15px] font-medium text-white/95 mb-2'
-  if (failed) return <p role="alert" className="text-[13px] text-white/60">Couldn't load who came.</p>
-  if (!register) return <p role="status" className="text-[13px] text-white/50">Loading…</p>
+  const heading = 'text-[15px] font-medium text-ink mb-2'
+  if (failed) return <p role="alert" className="text-[13px] text-ink-2">Couldn't load who came.</p>
+  if (!register) return <p role="status" className="text-[13px] text-ink-2">Loading…</p>
   return (
     <div className="space-y-5">
       <div>

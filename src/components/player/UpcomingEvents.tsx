@@ -43,9 +43,9 @@ export function UpcomingEvents({ playerUserId }: { playerUserId: string }) {
         {failed ? (
           <LoadError what="upcoming events" onRetry={() => setReloadKey(k => k + 1)} />
         ) : events === null ? (
-          <p className="text-[12px] text-white/35">Loading…</p>
+          <p className="text-[12px] text-ink-3">Loading…</p>
         ) : events.length === 0 ? (
-          <p className="text-[12px] text-white/45">Nothing scheduled yet.</p>
+          <p className="text-[12px] text-ink-3">Nothing scheduled yet.</p>
         ) : (
           <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} />} />
         )}

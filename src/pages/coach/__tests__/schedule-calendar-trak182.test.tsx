@@ -41,6 +41,19 @@ beforeEach(() => {
 })
 
 describe('TRAK-182: Schedule month on Arc\'s calendar', () => {
+  it('shows a hollow ring for cancelled events, while scheduled events stay filled', async () => {
+    renderApp('/coach/schedule')
+    const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })
+    const cancelled = screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` })
+    const ring = cancelled.querySelector<HTMLElement>('[aria-hidden="true"] > span')!
+    expect(ring.style.background).toBe('transparent')
+    expect(ring.style.borderStyle).toBe('solid')
+    expect(parseFloat(ring.style.borderWidth)).toBeGreaterThan(0)
+    const filled = busy.querySelector<HTMLElement>('[aria-hidden="true"] > span')!
+    expect(filled.style.background).not.toBe('transparent')
+    expect(filled.style.borderStyle).not.toBe('solid')
+  })
+
   it('counts each day\'s events, starts weeks on Monday, and lists a tapped day', async () => {
     renderApp('/coach/schedule')
     const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })

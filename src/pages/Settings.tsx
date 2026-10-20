@@ -158,7 +158,7 @@ function AccountSettings({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0A0A0B', fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="min-h-screen" style={{ background: 'rgb(var(--t-ground))', fontFamily: 'var(--t-font)' }}>
       <div className="mx-auto max-w-[430px] px-5 pt-5 pb-12">
         {/* Header */}
         <div className="relative flex items-center justify-center mb-6 h-10">
@@ -167,14 +167,14 @@ function AccountSettings({ userId }: { userId: string }) {
             className="absolute left-0 flex items-center justify-center"
             style={{
               width: 36, height: 36, borderRadius: 999,
-              background: '#101012', border: '1px solid rgba(255,255,255,0.07)',
-              color: 'rgba(255,255,255,0.88)',
+              background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))',
+              color: 'rgb(var(--t-ink))',
             }}
             aria-label="Back"
           >
             <ArrowLeft size={16} />
           </button>
-          <h1 style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.88)' }}>
+          <h1 style={{ fontSize: 17, fontWeight: 400, color: 'rgb(var(--t-ink))' }}>
             Settings
           </h1>
         </div>
@@ -197,8 +197,8 @@ function AccountSettings({ userId }: { userId: string }) {
               // database refuses a rename, so there is nothing to edit.
               role === 'player' ? (
                 <span className="flex flex-col items-end" style={{ fontSize: 13 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.88)' }}>{displayName || '—'}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Your academy sets your name.</span>
+                  <span style={{ color: 'rgb(var(--t-ink))' }}>{displayName || '—'}</span>
+                  <span style={{ fontSize: 11, color: 'rgb(var(--t-ink-3))' }}>Your academy sets your name.</span>
                 </span>
               ) : editingName ? (
                 <div className="flex items-center gap-2">
@@ -210,18 +210,18 @@ function AccountSettings({ userId }: { userId: string }) {
                     onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
                     className="text-[13px]"
                     style={{
-                      background: '#202024',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgb(var(--t-raised))',
+                      border: '1px solid rgb(var(--t-line))',
                       borderRadius: 8,
                       padding: '6px 10px',
-                      color: 'rgba(255,255,255,0.88)',
+                      color: 'rgb(var(--t-ink))',
                       width: 160,
                     }}
                   />
-                  <button onClick={saveName} disabled={!!pending} aria-label="Save" style={{ color: '#C8F25A' }}>
+                  <button onClick={saveName} disabled={!!pending} aria-label="Save" style={{ color: 'rgb(var(--t-brand))' }}>
                     <Check size={16} />
                   </button>
-                  <button disabled={!!pending} onClick={() => { setEditingName(false); setNameDraft(displayName) }} aria-label="Cancel" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <button disabled={!!pending} onClick={() => { setEditingName(false); setNameDraft(displayName) }} aria-label="Cancel" style={{ color: 'rgb(var(--t-ink-3))' }}>
                     <X size={16} />
                   </button>
                 </div>
@@ -229,10 +229,10 @@ function AccountSettings({ userId }: { userId: string }) {
                 <button
                   disabled={!!pending} onClick={() => { setNameDraft(displayName); setEditingName(true) }}
                   className="flex items-center gap-2"
-                  style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)' }}
+                  style={{ fontSize: 13, color: 'rgb(var(--t-ink))' }}
                 >
                   {displayName || '—'}
-                  <Pencil size={12} style={{ color: 'rgba(255,255,255,0.35)' }} />
+                  <Pencil size={12} style={{ color: 'rgb(var(--t-ink-3))' }} />
                 </button>
               )
             }
@@ -241,7 +241,7 @@ function AccountSettings({ userId }: { userId: string }) {
           <Row
             label="Password"
             right={
-              <button onClick={changePassword} disabled={!!pending} style={{ fontSize: 13, color: '#C8F25A' }}>
+              <button onClick={changePassword} disabled={!!pending} style={{ fontSize: 13, color: 'rgb(var(--t-brand))' }}>
                 {childLogin ? 'Ask your guardian' : 'Send reset email'}
               </button>
             }
@@ -267,7 +267,7 @@ function AccountSettings({ userId }: { userId: string }) {
             <Row label="Club" right={<Value>{coachClub || '—'}</Value>} />
             <Row label="Age Group" right={<Value>{coachTeam || '—'}</Value>} />
             <Row label="Role" right={<Value>{coachRoleVal || '—'}</Value>} />
-            <p className="py-3" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+            <p className="py-3" style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))', lineHeight: 1.5 }}>
               Your academy sets these. Ask them if something is wrong.
             </p>
           </Section>
@@ -285,7 +285,7 @@ function AccountSettings({ userId }: { userId: string }) {
         {/* Club admin info */}
         {role === 'club' && (
           <Section label="Access">
-            <div className="py-3" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+            <div className="py-3" style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))', lineHeight: 1.6 }}>
               Read-only academy view. You can see all coaches and squads but cannot edit player or coach records.
             </div>
           </Section>
@@ -298,8 +298,8 @@ function AccountSettings({ userId }: { userId: string }) {
           className="w-full py-3 rounded-lg mt-2"
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.78)',
+            border: '1px solid rgb(var(--t-line))',
+            color: 'rgb(var(--t-ink))',
             fontSize: 13,
           }}
         >
@@ -312,11 +312,11 @@ function AccountSettings({ userId }: { userId: string }) {
             onClick={deleteAccount}
             disabled={!!pending}
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: 'var(--t-font-mono)',
               fontSize: 10,
               textTransform: 'uppercase',
               letterSpacing: '0.12em',
-              color: 'rgba(220,80,80,0.55)',
+              color: 'rgb(var(--t-danger))',
             }}
           >
             Delete my account
@@ -396,16 +396,16 @@ function EventReminders({ userId }: { userId: string }) {
             disabled={saving}
             onClick={toggle}
             className="relative rounded-full transition-colors"
-            style={{ width: 40, height: 24, background: on ? '#C8F25A' : 'rgba(255,255,255,0.12)' }}
+            style={{ width: 40, height: 24, background: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))' }}
           >
             <span
               className="absolute top-[3px] rounded-full transition-all"
-              style={{ width: 18, height: 18, left: on ? 19 : 3, background: on ? '#0A0A0B' : 'rgba(255,255,255,0.7)' }}
+              style={{ width: 18, height: 18, left: on ? 19 : 3, background: on ? 'rgb(var(--t-ground))' : 'rgb(var(--t-ink) / 0.7)' }}
             />
           </button>
         }
       />
-      <p className="py-3" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+      <p className="py-3" style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))', lineHeight: 1.5 }}>
         An email 2 days before each event, listing what's on, when and where. One email a day, whatever the number of children.
       </p>
     </>
@@ -419,12 +419,12 @@ function Section({ label, children }: { label: string; children: React.ReactNode
     <div className="mb-6">
       <div
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--t-font-mono)',
           fontSize: 9,
           fontWeight: 500,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
-          color: 'rgba(255,255,255,0.22)',
+          color: 'rgb(var(--t-ink-3))',
           marginBottom: 10,
         }}
       >
@@ -433,8 +433,8 @@ function Section({ label, children }: { label: string; children: React.ReactNode
       <div
         className="px-4"
         style={{
-          background: '#101012',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: 'rgb(var(--t-surface))',
+          border: '1px solid rgb(var(--t-line))',
           borderRadius: 18,
         }}
       >
@@ -448,16 +448,16 @@ function Row({ label, right, stack = false }: { label: string; right: React.Reac
   return (
     <div
       className={`py-3.5 ${stack ? 'flex flex-col gap-2' : 'flex items-center justify-between gap-3'}`}
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+      style={{ borderBottom: '1px solid rgb(var(--t-line))' }}
     >
       <div
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--t-font-mono)',
           fontSize: 9,
           fontWeight: 500,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
-          color: 'rgba(255,255,255,0.45)',
+          color: 'rgb(var(--t-ink-3))',
         }}
       >
         {label}
@@ -468,5 +468,5 @@ function Row({ label, right, stack = false }: { label: string; right: React.Reac
 }
 
 function Value({ children }: { children: React.ReactNode }) {
-  return <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)' }}>{children}</span>
+  return <span style={{ fontSize: 13, color: 'rgb(var(--t-ink))' }}>{children}</span>
 }

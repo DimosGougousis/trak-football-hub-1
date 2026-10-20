@@ -68,13 +68,17 @@ describe('TRAK-159: the coach calendar cards', () => {
     expect(label.style.color).toBe(hexToRgb(CANCELLED_COLOR))
     const stripe = card('Rained off').firstElementChild as HTMLElement
     expect(stripe.style.background).toBe(hexToRgb(CANCELLED_COLOR))
+    // TRAK-189: not faded as well. On the light theme a 0.7 fade drops the label to
+    // 3.8:1 and the details to 3.1:1 (axe, 19 Oct); red, label and stripe say it already.
+    expect(card('Rained off').style.opacity).not.toBe('0.7')
   }, 20_000)
 })
 
 describe('TRAK-159: one colour per type', () => {
-  it('training blue, match green, other orange, cancelled red (founders, 12 Oct; replaces 11 Oct\'s match red)', () => {
+  // Imad, 18 Oct (TRAK-189): on the light theme a match is purple, not the brand's green.
+  it('training blue, match purple, other orange, cancelled red (founders, 12 Oct; match purple, 18 Oct)', () => {
     expect(hue(EVENT_COLOR.training)).toBe('blue')
-    expect(hue(EVENT_COLOR.match)).toBe('green')
+    expect(hue(EVENT_COLOR.match)).toBe('purple')
     expect(hue(EVENT_COLOR.other)).toBe('orange')
     expect(hue(CANCELLED_COLOR)).toBe('red')
   })
@@ -91,7 +95,7 @@ function hexToRgb(hex: string): string {
 }
 
 /** The colour family a hex reads as, by its hue angle. */
-function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'other' {
+function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'purple' | 'other' {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
   if (d === 0) return 'other'
@@ -101,5 +105,6 @@ function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'other' {
   if (h < 40) return 'orange'
   if (h >= 90 && h < 160) return 'green'
   if (h >= 195 && h < 250) return 'blue'
+  if (h >= 250 && h < 300) return 'purple'
   return 'other'
 }
