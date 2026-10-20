@@ -60,6 +60,7 @@ export type EventRow = {
   ends_at?: string | null
   event_date?: string | null
   start_time?: string | null
+  end_time?: string | null
   venue?: string | null
   opponent?: string | null
   notes?: string | null
@@ -272,6 +273,35 @@ export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): stri
 export function clashMessage(error: unknown): string | null {
   const e = error as { code?: string, message?: string } | null
   return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
+}
+
+export type Clash = { title: string; start: string; end: string }
+
+const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+/** TRAK-218: the live event each draft would clash with if published, by the
+    database's rule (TRAK-158, refuse_event_overlap): the same coach's
+    published, not cancelled events on the same day whose times overlap.
+    Back-to-back is fine, no end counts as 90 minutes, and no start isn't
+    checked. Pass every one of the coach's events (all squads, as the rule is). */
+export function draftClashes(rows: EventRow[]): Map<string, Clash> {
+  const span = (r: EventRow) => {
+    const start = minutes(r.start_time!.slice(0, 5))
+    const end = r.end_time && r.end_time > r.start_time! ? minutes(r.end_time.slice(0, 5))
+      : r.ends_at ? start + Math.round((Date.parse(r.ends_at) - Date.parse(r.starts_at)) / 60_000)
+      : start + 90
+    return { start, end }
+  }
+  const timed = rows.filter(r => r.event_date && r.start_time && !isCancelled(r))
+  const live = timed.filter(r => r.published)
+    .sort((a, b) => a.start_time!.localeCompare(b.start_time!) || a.title.localeCompare(b.title))
+  const clashes = new Map<string, Clash>()
+  for (const draft of timed.filter(r => !r.published)) {
+    const d = span(draft)
+    const hit = live.find(e => e.event_date === draft.event_date && span(e).start < d.end && span(e).end > d.start)
+    if (hit) clashes.set(draft.id, { title: hit.title, start: hhmm(span(hit).start), end: hhmm(span(hit).end) })
+  }
+  return clashes
 }
 
 // TRAK-157: Arc's date picker speaks Date; forms keep YYYY-MM-DD (the

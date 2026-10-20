@@ -11,9 +11,9 @@ import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
+  CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
   isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
-  type EventForm, type EventKind, type EventRow, type Repeat,
+  type Clash, type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
 import { TRAINING_THEMES, catalogueLink, type TrainingTheme } from '@/lib/training-theme'
 import { FixtureImport } from '@/components/coach/FixtureImport'
@@ -183,6 +183,8 @@ type Sheet =
   // TRAK-168: the event just cancelled, offered to the team group, and what was cancelled.
   | { kind: 'cancelled'; row: EventRow; note: string }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
+  // TRAK-218: a series Publish the database refused; it stays until the coach closes it.
+  | { kind: 'notPublished'; count: number; weeks: ClashingWeek[]; refusal: string }
   | { kind: 'import' }
   | { kind: 'register'; row: EventRow }
 
@@ -252,6 +254,21 @@ function EventSummary({ form, repeat, noteProblem }: {
   </>
 }
 
+/** TRAK-218: the weeks of a refused series that clash, earliest first. */
+type ClashingWeek = { date: string; clash: Clash }
+function clashingWeeks(ids: string[], rows: EventRow[]): ClashingWeek[] {
+  const clashes = draftClashes(rows)
+  return rows.filter(r => ids.includes(r.id) && clashes.has(r.id))
+    .sort((a, b) => a.event_date!.localeCompare(b.event_date!))
+    .map(r => ({ date: r.event_date!, clash: clashes.get(r.id)! }))
+}
+const overlapLine = ({ date, clash }: ClashingWeek) => `${formatEventDay(date)} overlaps ${clash.title}, ${clash.start}–${clash.end}.`
+/** What to fix: the week's time, or the event it clashes with. */
+function fixLine(weeks: ClashingWeek[]) {
+  const titles = [...new Set(weeks.map(w => w.clash.title))]
+  return `Change ${weeks.length > 1 ? 'those weeks’ times' : 'that week’s time'}, or cancel ${titles.length === 1 ? titles[0] : 'what they overlap'}`
+}
+
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
   !!row?.series_id && !!row.event_date
 
@@ -280,6 +297,8 @@ export default function CoachSchedule() {
 
   // Data
   const [calEvents, setCalEvents] = useState<EventRow[]>([])
+  // Every squad's events: the overlap rule is per coach, not per squad (TRAK-218).
+  const [coachEvents, setCoachEvents] = useState<EventRow[]>([])
   const [sessions,  setSessions]  = useState<any[]>([])
   const [loadFailed, setLoadFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
@@ -287,8 +306,9 @@ export default function CoachSchedule() {
   const [sheet, setSheet] = useState<Sheet>({ kind: 'closed' })
   const [saving, setSaving] = useState(false)
 
-  const loadData = async () => {
-    if (!user) return
+  /** Reads the calendar; returns the coach's events, or null when the read failed. */
+  const loadData = async (): Promise<EventRow[] | null> => {
+    if (!user) return null
     const [ev, sess] = await Promise.all([
       supabase.from('coach_calendar_events')
         .select('*').eq('coach_user_id', user.id).order('starts_at'),
@@ -299,8 +319,13 @@ export default function CoachSchedule() {
     ])
     // A failed read is not an empty calendar (the J4 standard).
     setLoadFailed(!!ev.error || !!sess.error)
-    if (!ev.error) setCalEvents(((ev.data as EventRow[]) || []).filter(e => coachSquad.eventInSquad(e.squad)))
+    const events = ev.error ? null : (ev.data as EventRow[]) || []
+    if (events) {
+      setCoachEvents(events)
+      setCalEvents(events.filter(e => coachSquad.eventInSquad(e.squad)))
+    }
     if (!sess.error) setSessions((sess.data || []).filter(s => coachSquad.eventInSquad(s.squad)))
+    return events
   }
 
   useEffect(() => { loadData() }, [user, coachSquad.squad])
@@ -373,6 +398,8 @@ export default function CoachSchedule() {
     sessions.filter(s => s.event_id).map(s => [s.event_id as string, s.id as string])), [sessions])
 
   const venues = useMemo(() => savedVenues(calEvents), [calEvents])
+  // TRAK-218: each draft that would be refused says so, before Publish is tapped.
+  const clashes = useMemo(() => draftClashes(coachEvents), [coachEvents])
   // TRAK-129 (J8.6): fixtures already on the schedule are skipped on import.
   const fixtureKeys = useMemo(() => scheduleFixtureKeys(calEvents), [calEvents])
 
@@ -481,7 +508,14 @@ export default function CoachSchedule() {
       drafts, published later from the list. */
   const publishSaved = async (ids: string[]) => {
     const { data, error } = await supabase.from('coach_calendar_events').update({ published: true }).in('id', ids).select('id')
-    loadData()
+    const rows = await loadData()
+    // TRAK-218: one update, so a refusal publishes none of the series. Say
+    // which week clashes in a box that stays, not a toast that goes.
+    const refusal = clashMessage(error)
+    if (ids.length > 1 && refusal) {
+      setSheet({ kind: 'notPublished', count: ids.length, weeks: clashingWeeks(ids, rows ?? []), refusal })
+      return
+    }
     if (failed(error, data)) {
       toast.error(`Saved as ${ids.length > 1 ? 'drafts' : 'a draft'}, not published. ${clashMessage(error) ?? 'Tap Publish on the event to try again.'}`)
       return
@@ -602,7 +636,13 @@ export default function CoachSchedule() {
       : await query.eq('series_id', row.series_id).gte('event_date', row.event_date)
           .eq('published', false).eq('status', 'scheduled').select('id')
     if (failed(error, data)) {
-      setSheet({ ...sheet, error: clashMessage(error) ?? `Couldn't ${action} "${row.title}". Check your connection and try again.` })
+      // TRAK-218: a refused "this and following" publishes none; name the week that clashes.
+      const drafts = coachEvents.filter(r => r.series_id === row.series_id && r.event_date! >= row.event_date
+        && !r.published && r.status === 'scheduled')
+      const weeks = scope === 'following' && clashMessage(error) ? clashingWeeks(drafts.map(r => r.id), coachEvents) : []
+      setSheet({ ...sheet, error: weeks.length
+        ? `None of the ${drafts.length} drafts went out: ${weeks.map(overlapLine).join(' ')} ${fixLine(weeks)}, then publish again.`
+        : clashMessage(error) ?? `Couldn't ${action} "${row.title}". Check your connection and try again.` })
       return
     }
     setSheet({ kind: 'closed' })
@@ -750,6 +790,12 @@ export default function CoachSchedule() {
                           {cancelled ? 'Cancelled' : row.published ? 'Published' : 'Draft · only you see this'}
                         </span>
                       )}
+                      {row && !cancelled && clashes.has(row.id) && (() => {
+                        const c = clashes.get(row.id)!
+                        return <p className="text-[11px] mt-0.5 text-warning" style={font}>
+                          {`Clashes with ${c.title}, ${c.start}–${c.end}. Change the time to publish it.`}
+                        </p>
+                      })()}
                       {row?.published && !cancelled && user && <EventAbsences coachId={user.id} eventId={row.id} />}
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-0.5 text-ink-3" style={font}>{row.cancel_reason}</p>
@@ -1181,6 +1227,45 @@ export default function CoachSchedule() {
             <button onClick={() => setSheet({ kind: 'closed' })}
               className="w-full py-2 text-[13px] text-ink-2" style={font}>
               Not now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Not published: a refused series, until the coach closes it (TRAK-218) ── */}
+      {sheet.kind === 'notPublished' && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center"
+          style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
+          <div role="dialog" aria-label="Not published"
+            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            <span className="text-[16px] font-medium text-ink block" style={font}>Not published</span>
+            <p className="text-[12px] text-ink-2" style={font}>
+              None of the {sheet.count} events went out. They’re saved as drafts only you can see.
+            </p>
+            {sheet.weeks.length ? <>
+              <ul role="alert" className="space-y-1">
+                {sheet.weeks.map(w => <li key={w.date} className="text-[12px] text-danger" style={font}>{overlapLine(w)}</li>)}
+              </ul>
+              <p className="text-[12px] text-ink-2" style={font}>
+                {fixLine(sheet.weeks)}. Then tap Publish on the first week and choose This and following weeks.
+              </p>
+            </> : <p role="alert" className="text-[12px] text-danger" style={font}>{sheet.refusal}</p>}
+            {sheet.weeks[0] && (
+              <button onClick={() => {
+                const date = sheet.weeks[0].date
+                const [y, m] = date.split('-').map(Number)
+                setViewYear(y); setViewMonth(m - 1); setSelected(date)
+                setSheet({ kind: 'closed' })
+              }}
+                className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+                style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
+                Show {formatEventDay(sheet.weeks[0].date)}
+              </button>
+            )}
+            <button onClick={() => setSheet({ kind: 'closed' })}
+              className="w-full py-2 text-[13px] text-ink-2" style={font}>
+              Close
             </button>
           </div>
         </div>
