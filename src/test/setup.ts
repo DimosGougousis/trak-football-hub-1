@@ -37,3 +37,7 @@ globalThis.ResizeObserver ??= class {
 Element.prototype.scrollIntoView ??= function scrollIntoView() {}
 Element.prototype.hasPointerCapture ??= function hasPointerCapture() { return false }
 Element.prototype.releasePointerCapture ??= function releasePointerCapture() {}
+
+// TRAK-172: the assessment carousel's Next/Previous scroll its viewport, which
+// every browser Trak supports can do and jsdom can't.
+Element.prototype.scrollTo ??= function scrollTo() {}
