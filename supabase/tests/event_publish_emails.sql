@@ -131,6 +131,10 @@ SELECT pg_temp.p135check((SELECT count(*) = 9 AND bool_and(x->>'kind' = 'publish
 SELECT pg_temp.p135check((SELECT x->'event'->>'start_time' = '20:00:00' AND jsonb_array_length(x->'recipients') = 2
   FROM p135_claim, jsonb_array_elements(claimed) x WHERE x->'event'->>'title' = 'Training 10'),
  '2 the claimed notice carries the event as it is now, and both recipients');
+-- TRAK-190: a match email says the kit, so the email's fields carry it (now and before).
+SELECT pg_temp.p135check((SELECT (x->'event' ? 'kit') AND (x->'before' ? 'kit') AND NOT (x->'event' ? 'notes')
+  FROM p135_claim, jsonb_array_elements(claimed) x WHERE x->'event'->>'title' = 'Training 10'),
+ '2 the email fields carry the kit, and still no notes');
 SELECT pg_temp.p135check((SELECT x->'event'->>'status' = 'cancelled'
   FROM p135_claim, jsonb_array_elements(claimed) x WHERE x->'event'->>'title' = 'Training 11'),
  '2 the one cancelled inside the window reaches the sender as cancelled (it sends nothing)');
@@ -138,8 +142,8 @@ SELECT pg_temp.p135check((SELECT x->'event'->>'status' = 'cancelled'
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.p135_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.p135_results;
- IF n <> 26 THEN
-  RAISE EXCEPTION 'Event publish emails: % checks ran; expected exactly 26', n;
+ IF n <> 27 THEN
+  RAISE EXCEPTION 'Event publish emails: % checks ran; expected exactly 27', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Event publish emails failed',DETAIL=failures;

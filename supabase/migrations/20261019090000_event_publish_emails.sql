@@ -64,3 +64,20 @@ BEGIN
 END;
 $function$;
 REVOKE ALL ON FUNCTION trak_private.queue_event_change_notice() FROM PUBLIC, anon, authenticated;
+
+-- TRAK-190 (Kostas, 20 Oct): a match email says the kit, as the event page
+-- already does for families. Only the fields an email may print change: kit
+-- joins them. Notes and names stay out (event_change_emails.sql check).
+CREATE OR REPLACE FUNCTION trak_private.event_email_fields(e public.coach_calendar_events)
+RETURNS jsonb
+LANGUAGE sql IMMUTABLE
+SET search_path = ''
+AS $fn$
+  SELECT jsonb_build_object(
+    'title', e.title, 'event_type', e.event_type, 'opponent', e.opponent,
+    'home_away', e.home_away, 'status', e.status, 'starts_at', e.starts_at,
+    'event_date', e.event_date, 'start_time', e.start_time, 'end_time', e.end_time,
+    'meet_time', e.meet_time, 'venue', e.venue, 'cancel_reason', e.cancel_reason,
+    'kit', e.kit);
+$fn$;
+REVOKE ALL ON FUNCTION trak_private.event_email_fields(public.coach_calendar_events) FROM PUBLIC, anon, authenticated;
