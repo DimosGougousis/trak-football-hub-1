@@ -102,7 +102,7 @@ export function SplitButton({ label, actions, onClick, disabled, icon, variant =
       </button>
       <DropdownPrimitive.Trigger className={styles.trigger} type="button" aria-label={`${label} more actions`} disabled={disabled}><ChevronDown className={styles.chevron} size={16} strokeWidth={1.75} aria-hidden="true" /></DropdownPrimitive.Trigger>
     </div>
-    <DropdownPrimitive.Portal><DropdownPrimitive.Content className={styles.menu} sideOffset={4} align="end" collisionPadding={12} loop>
+    <DropdownPrimitive.Portal><DropdownPrimitive.Content className={`arc ${styles.menu}`} sideOffset={4} align="end" collisionPadding={12} loop>
       {actions.map((action, index) => <DropdownPrimitive.Item key={action.label} className={[styles.item, action.destructive ? styles.destructive : ""].filter(Boolean).join(" ")} style={{ "--i": index } as CSSProperties} disabled={action.disabled} onSelect={action.onSelect}>{action.icon ? <span className={styles.icon} aria-hidden="true">{action.icon}</span> : null}{action.label}</DropdownPrimitive.Item>)}
     </DropdownPrimitive.Content></DropdownPrimitive.Portal>
   </DropdownPrimitive.Root>;

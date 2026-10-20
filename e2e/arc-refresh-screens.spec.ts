@@ -268,6 +268,41 @@ test.describe('TRAK-182 coach screens', () => {
   })
 })
 
+// TRAK-220 (20 Oct live run): menus and the expanded assessment card were
+// see-through on the light theme. Arc's tokens live on `.arc`; a panel Radix
+// portals to <body> has no `.arc` ancestor unless it carries the class itself.
+test.describe('TRAK-220 Arc panels opened over the page', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
+  // The alpha of an element's computed background colour (0 = see-through).
+  const alpha = (css: string) => { const m = css.match(/rgba?\(([^)]+)\)/) ?? css.match(/oklch\(([^)]+)\)/) ?? css.match(/color\(([^)]+)\)/); if (!m) return 0; const slash = m[1].split('/'); if (slash[1]) return Number(slash[1].trim().replace('%', '')) / (slash[1].includes('%') ? 100 : 1); const parts = m[1].split(','); return parts.length === 4 ? Number(parts[3]) : 1 }
+  const background = (locator: import('@playwright/test').Locator) => locator.evaluate(el => getComputedStyle(el).backgroundColor)
+
+  test('the card menu, the expanded card and its backdrop are opaque', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/player/sq-2')
+    const card = page.getByRole('article').or(page.locator('[aria-label*="assessment, Bukayo Saka"]')).first()
+    await card.getByRole('button', { name: /more actions$/ }).click()
+    const menu = page.getByRole('menu')
+    await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
+    expect(alpha(await background(menu)), `menu background ${await background(menu)}`).toBeGreaterThan(0.9)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-card-menu.png') })
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+
+    await card.locator('h3 button').first().click()
+    const panel = page.getByRole('dialog')
+    await expect(panel.getByText('MESSAGE TO THE PLAYER')).toBeVisible()
+    expect(alpha(await background(panel)), `card panel background ${await background(panel)}`).toBeGreaterThan(0.9)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-card-expanded.png') })
+    await page.keyboard.press('Escape')
+    await expect(panel).toBeHidden()
+    expect(unexpected).toEqual([])
+  })
+})
+
 // Cancelled and Other must differ by shape even on the green selected day.
 // The backend dates the event by Dubai's day, so the page must be on Dubai's day
 // too: on UTC it picked yesterday from 20:00 to 24:00 UTC and found no mark.
