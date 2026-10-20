@@ -58,19 +58,19 @@ export default function CoachProfilePage() {
 
   return (
     <MobileShell>
-      <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
-        <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>Profile</span>
+      <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
+        <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>Profile</span>
       </div>
 
       <div className="pt-3.5 pb-4 space-y-2.5">
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
-          <div className="w-[72px] h-[72px] rounded-[22px] overflow-hidden bg-[#202024] border border-[rgba(200,242,90,0.18)] mx-auto mb-3 flex items-center justify-center">
+          <div className="w-[72px] h-[72px] rounded-[22px] overflow-hidden bg-raised border border-brand/[0.18] mx-auto mb-3 flex items-center justify-center">
             <span className="text-2xl font-semibold text-primary" aria-hidden="true">
               {(profile?.full_name || '?').charAt(0).toUpperCase()}
             </span>
           </div>
-          <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+          <p className="text-[20px] font-semibold text-ink tracking-tight" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
             {profile?.full_name || 'Coach'}
           </p>
           <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
@@ -80,12 +80,12 @@ export default function CoachProfilePage() {
                 club is the academy card below (TRAK-72 item 11): the typed
                 current_club is empty for staff Trak sets up. */}
             {details?.coach_role && (
-              <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                style={{ fontFamily: "'DM Mono', monospace" }}>{details.coach_role}</span>
+              <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+                style={{ fontFamily: 'var(--t-font-mono)' }}>{details.coach_role}</span>
             )}
             {details?.team && (
-              <span className="h-5 px-2.5 rounded-full bg-white/[0.06] border border-white/[0.07] text-[8px] font-medium tracking-[0.06em] uppercase text-white/45 inline-flex items-center"
-                style={{ fontFamily: "'DM Mono', monospace" }}>{details.team}</span>
+              <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+                style={{ fontFamily: 'var(--t-font-mono)' }}>{details.team}</span>
             )}
           </div>
         </div>
@@ -95,20 +95,20 @@ export default function CoachProfilePage() {
         <TrakCard>
           <MetadataLabel text="ACADEMY" />
           {orgStatus === 'loading' ? (
-            <p className="text-[13px] text-white/35 mt-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>···</p>
+            <p className="text-[13px] text-ink-3 mt-2" style={{ fontFamily: 'var(--t-font)' }}>···</p>
           ) : orgStatus === 'failed' ? (
             // Not offered the join form: we do not know that they are unlinked,
             // and inviting a coach who already has an academy to join one is
             // its own kind of wrong.
-            <p className="text-[12px] text-white/45 mt-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[12px] text-ink-3 mt-2" style={{ fontFamily: 'var(--t-font)' }}>
               Couldn't check your academy just now. Reload to try again.
             </p>
           ) : orgStatus === 'joined' ? (
-            <p className="text-[15px] text-white/[0.88] mt-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[15px] text-ink mt-2" style={{ fontFamily: 'var(--t-font)' }}>
               {orgName ?? 'Linked to your academy'}
             </p>
           ) : (
-            <p className="text-[12px] text-white/45 mt-2 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[12px] text-ink-3 mt-2 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
               You aren't linked to an academy yet. Your academy is set by Trak: ask
               your academy to add you.
             </p>
@@ -119,40 +119,40 @@ export default function CoachProfilePage() {
             (TRAK-72 item 10). */}
         <button
           onClick={() => navigate('/coach/manual')}
-          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}>
-              <IconHowItWorks size={16} color="#C8F25A" />
+              style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}>
+              <IconHowItWorks size={16} color="rgb(var(--t-brand))" />
             </div>
             <div>
               <MetadataLabel text="HOW TRAK WORKS" />
-              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[12px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 How to use Trak with your squad
               </p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/40" />
+          <ChevronRight size={18} className="text-ink-3" />
         </button>
 
         {/* Settings entry */}
         <button
           onClick={() => navigate('/settings')}
-          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
-              <SettingsIcon size={16} className="text-white/55" />
+            <div className="w-9 h-9 rounded-xl bg-raised flex items-center justify-center">
+              <SettingsIcon size={16} className="text-ink-2" />
             </div>
             <div>
               <MetadataLabel text="SETTINGS" />
-              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[12px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 Account, notifications, privacy
               </p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/40" />
+          <ChevronRight size={18} className="text-ink-3" />
         </button>
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />

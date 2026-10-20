@@ -15,7 +15,7 @@ export function CoachSquadSwitcher({ coachId, name }: { coachId: string | undefi
       <span className="sr-only">Squad</span>
       <select value={squad} onChange={e => setSquad(e.target.value)}
         className="appearance-none bg-transparent pr-6 text-[19px] font-semibold text-foreground/90 truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md"
-        style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+        style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
         {squads.map(s => <option key={s} value={s}>{s}</option>)}
       </select>
       <ChevronDown size={16} aria-hidden="true" className="pointer-events-none absolute right-0 text-foreground/60" />

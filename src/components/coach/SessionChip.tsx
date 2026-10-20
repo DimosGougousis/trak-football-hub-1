@@ -6,10 +6,10 @@ export function SessionChip({ active, onClick, children }: { active: boolean; on
     <button type="button" onClick={onClick} aria-pressed={active}
       className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors"
       style={{
-        background: active ? 'rgba(200,242,90,0.12)' : '#202024',
-        color: active ? '#C8F25A' : 'rgba(255,255,255,0.45)',
-        border: `1px solid ${active ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
-        fontFamily: "'DM Sans', sans-serif",
+        background: active ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-raised))',
+        color: active ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
+        border: `1px solid ${active ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+        fontFamily: 'var(--t-font)',
       }}>
       {children}
     </button>

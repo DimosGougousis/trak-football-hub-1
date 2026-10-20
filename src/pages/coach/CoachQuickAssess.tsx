@@ -317,7 +317,7 @@ export default function CoachQuickAssess() {
     return (
       <MobileShell>
         <div className="flex items-center justify-center h-[60vh]">
-          <div className="w-6 h-6 border-2 border-[#C8F25A] border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
         </div>
       </MobileShell>
     )
@@ -330,19 +330,19 @@ export default function CoachQuickAssess() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line"
             >
-              <ChevronLeft size={16} className="text-white/70" />
+              <ChevronLeft size={16} className="text-ink-2" />
             </button>
-            <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px]">
+            <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px]">
               Quick Assess
             </h1>
           </div>
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <p className="text-[15px] text-white/60">No players in your squad yet.</p>
+            <p className="text-[15px] text-ink-2">No players in your squad yet.</p>
             <button
               onClick={() => navigate('/coach/squad/add')}
-              className="px-5 py-2.5 rounded-[10px] bg-[#C8F25A] text-black text-sm font-bold"
+              className="px-5 py-2.5 rounded-[10px] bg-brand text-on-brand text-sm font-bold"
             >
               Add Players
             </button>
@@ -361,30 +361,30 @@ export default function CoachQuickAssess() {
           <div
             className="flex items-center justify-center w-[72px] h-[72px] rounded-full"
             style={{
-              background: 'rgba(200,242,90,0.12)',
-              border: '2px solid rgba(200,242,90,0.3)',
+              background: 'rgb(var(--t-brand) / 0.12)',
+              border: '2px solid rgb(var(--t-brand) / 0.3)',
             }}
           >
-            <Check size={36} style={{ color: '#C8F25A' }} />
+            <Check size={36} style={{ color: 'rgb(var(--t-brand))' }} />
           </div>
 
           <h2
             className="text-[24px] font-semibold"
-            style={{ color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: 'rgb(var(--t-ink))', fontFamily: 'var(--t-font)' }}
           >
             All done!
           </h2>
 
           <p
             className="text-[14px] text-center"
-            style={{ color: 'rgba(255,255,255,0.45)', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font)' }}
           >
             {assessedIds.size} assessed, {skippedIds.size} skipped
           </p>
 
           <button
             onClick={() => navigate('/coach/home')}
-            className="w-full max-w-[280px] py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm mt-4"
+            className="w-full max-w-[280px] py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm mt-4"
           >
             Back to Dashboard
           </button>
@@ -401,52 +401,52 @@ export default function CoachQuickAssess() {
         <div className="flex items-center gap-3 pt-6">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line"
           >
-            <ChevronLeft size={16} className="text-white/70" />
+            <ChevronLeft size={16} className="text-ink-2" />
           </button>
-          <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90">
+          <h1 className="flex-1 text-center text-[17px] font-semibold text-ink">
             Quick Assess
           </h1>
           <span
             className="text-[13px] font-medium w-[34px] text-right"
-            style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.35)' }}
+            style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
           >
             {displayIdx}/{total}
           </span>
         </div>
 
         {/* ---- 2. Progress bar ---- */}
-        <div className="h-[3px] rounded-full bg-white/[0.07] overflow-hidden">
+        <div className="h-[3px] rounded-full bg-raised overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${progressPct}%`, background: '#C8F25A' }}
+            style={{ width: `${progressPct}%`, background: 'rgb(var(--t-brand))' }}
           />
         </div>
 
         {/* ---- 3. Player card ---- */}
         {currentPlayer && (
           <div
-            className="flex items-center gap-3.5 p-4 rounded-[14px] border border-white/[0.06]"
-            style={{ background: '#101012' }}
+            className="flex items-center gap-3.5 p-4 rounded-[14px] border border-line"
+            style={{ background: 'rgb(var(--t-surface))' }}
           >
             {/* Initials avatar */}
             <div
               className="flex items-center justify-center w-[48px] h-[48px] rounded-[14px] text-[15px] font-bold shrink-0"
-              style={{ background: '#202024', color: '#C8F25A' }}
+              style={{ background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-brand))' }}
             >
               {initials(currentPlayer.player_name)}
             </div>
             <div className="min-w-0">
               <p
                 className="text-[18px] font-medium truncate"
-                style={{ color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans', sans-serif" }}
+                style={{ color: 'rgb(var(--t-ink))', fontFamily: 'var(--t-font)' }}
               >
                 {currentPlayer.player_name}
               </p>
               <p
                 className="text-[11px] mt-0.5 truncate"
-                style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.35)' }}
+                style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 {currentPlayer.position?.toUpperCase() ?? 'Player'}
                 {currentPlayer.squad_number ? ` \u00B7 #${currentPlayer.squad_number}` : ''}
@@ -456,7 +456,7 @@ export default function CoachQuickAssess() {
         )}
 
         {/* ---- 4. Sliders ---- */}
-        <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
+        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={onSlide(setWorkRate)} />
           <SliderInput label="Tactical"     value={tactical}     onChange={onSlide(setTactical)} />
           <SliderInput label="Attitude"     value={attitude}     onChange={onSlide(setAttitude)} />
@@ -467,19 +467,19 @@ export default function CoachQuickAssess() {
 
         {/* ---- 5. Overall band preview ---- */}
         <div
-          className="flex items-center justify-between px-4 py-3.5 rounded-[12px]"
+          className="trak-dark flex items-center justify-between px-4 py-3.5 rounded-[12px]"
           style={needsInput ? {
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'rgb(var(--t-raised))',
+            border: '1px solid rgb(var(--t-line))',
           } : {
-            background: overallCfg.bg,
+            background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
             boxShadow: `0 0 20px ${overallCfg.bg}`,
           }}
         >
           <span
             className="text-[9px] font-medium tracking-[0.12em] uppercase"
-            style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(255,255,255,0.4)' }}
+            style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
           >
             OVERALL
           </span>
@@ -488,7 +488,7 @@ export default function CoachQuickAssess() {
                 child that nothing supports yet — the same invention as saving
                 it. Held back until the coach has entered something. */}
             {needsInput ? (
-              <span className="text-[13px] text-white/30 font-medium">
+              <span className="text-[13px] text-ink-3 font-medium">
                 Not yet rated
               </span>
             ) : (
@@ -499,7 +499,7 @@ export default function CoachQuickAssess() {
                 >
                   {overallCfg.word}
                 </span>
-                <span className="text-[13px] text-white/40 font-medium">
+                <span className="text-[13px] text-ink-3 font-medium">
                   {(Math.round(avg * 10) / 10).toFixed(1)}
                 </span>
               </>
@@ -511,22 +511,22 @@ export default function CoachQuickAssess() {
         {!noteOpen ? (
           <button
             onClick={() => setNoteOpen(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-white/[0.06] text-white/35 text-[12px] font-medium w-full"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-line text-ink-3 text-[12px] font-medium w-full"
             style={{ background: 'transparent' }}
           >
-            <MessageSquare size={14} className="text-white/25" />
+            <MessageSquare size={14} className="text-ink-3" />
             Add note
           </button>
         ) : (
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <span
-                className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
-                style={{ fontFamily: "'DM Mono', monospace" }}
+                className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3"
+                style={{ fontFamily: 'var(--t-font-mono)' }}
               >
                 NOTE
               </span>
-              <span className="text-[10px] text-white/25">{note.length}/200</span>
+              <span className="text-[10px] text-ink-3">{note.length}/200</span>
             </div>
             <textarea
               value={note}
@@ -537,22 +537,22 @@ export default function CoachQuickAssess() {
               rows={2}
               autoFocus
               placeholder="Quick note about this player..."
-              className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none resize-none placeholder:text-white/20"
+              className="w-full px-4 py-3 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none resize-none placeholder:text-ink-3"
             />
           </div>
         )}
 
         {/* ---- 7. Action buttons ---- */}
         {consentWait && currentPlayer ? (
-          <div role="status" className="p-3 rounded-[12px] border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.06)]">
-            <p className="text-[13px] font-medium text-white/85">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
-            <p className="text-[12px] text-white/55 leading-relaxed mt-0.5">
+          <div role="status" className="p-3 rounded-[12px] border border-warning/[0.25] bg-warning/[0.06]">
+            <p className="text-[13px] font-medium text-ink">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
+            <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
               {waitText(waitReason, currentPlayer.player_name)}{' '}
               {waitReason === 'parent' ? 'Skip for now. If no parent is linked yet, the player can send the invite from their profile.' : 'Skip for now.'}
             </p>
           </div>
         ) : needsInput && (
-          <p className="text-[11px] text-white/35 leading-relaxed px-0.5">
+          <p className="text-[11px] text-ink-3 leading-relaxed px-0.5">
             First assessment for this player — move a slider to rate them, or
             Skip. Nothing is recorded until you do.
           </p>
@@ -563,8 +563,8 @@ export default function CoachQuickAssess() {
             className="flex-1 py-3.5 rounded-[10px] text-sm font-semibold transition-opacity active:scale-[0.97]"
             style={{
               background: 'transparent',
-              border: '1.5px solid rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.5)',
+              border: '1.5px solid rgb(var(--t-line))',
+              color: 'rgb(var(--t-ink-2))',
             }}
           >
             Skip
@@ -573,7 +573,7 @@ export default function CoachQuickAssess() {
             onClick={handleNext}
             disabled={saving || needsInput || consentWait}
             className="flex-[2] py-3.5 rounded-[10px] text-sm font-bold transition-opacity active:scale-[0.97] disabled:opacity-40"
-            style={{ background: '#C8F25A', color: '#000' }}
+            style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}
           >
             {saving ? 'Saving...' : 'Next \u2192'}
           </button>

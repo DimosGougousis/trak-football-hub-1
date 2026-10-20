@@ -48,27 +48,27 @@ export function TrainingHistory({
 
   return (
     <section aria-label="Training" className="mt-6">
-      <div className="text-[10px] tracking-[0.1em] uppercase text-white/35 mb-2" style={{ fontFamily: "'DM Mono', monospace" }}>
+      <div className="text-[10px] tracking-[0.1em] uppercase text-ink-3 mb-2" style={{ fontFamily: 'var(--t-font-mono)' }}>
         Training
       </div>
       {state.kind === 'loading' && (
-        <div role="status" aria-label="Loading training" className="h-12 rounded-[12px] bg-white/[0.04] animate-pulse" />
+        <div role="status" aria-label="Loading training" className="h-12 rounded-[12px] bg-raised animate-pulse" />
       )}
       {state.kind === 'failed' && (
         <LoadError what="your training" retrying={retrying} onRetry={() => { setRetrying(true); void load() }} />
       )}
       {state.kind === 'awaiting_consent' && (
-        <p className="text-[13px] text-white/60">{waitingText}</p>
+        <p className="text-[13px] text-ink-2">{waitingText}</p>
       )}
       {state.kind === 'ready' && state.rows.length === 0 && (
-        <p className="text-[13px] text-white/60">No training recorded yet.</p>
+        <p className="text-[13px] text-ink-2">No training recorded yet.</p>
       )}
       {state.kind === 'ready' && state.rows.length > 0 && (
         <ul className="space-y-2">
           {state.rows.map(row => (
             <li key={row.session_id}
-              className="rounded-[12px] border border-white/[0.07]"
-              style={{ background: '#101012' }}>
+              className="rounded-[12px] border border-line"
+              style={{ background: 'rgb(var(--t-surface))' }}>
               {assessmentHref ? <Link to={assessmentHref(row.session_id)} className="flex items-center justify-between gap-3 min-h-11 px-4 py-3 rounded-[12px] focus-visible:ring-2 focus-visible:ring-primary">
                 <TrainingRow row={row} />
               </Link> : <div className="flex items-center justify-between px-4 py-3"><TrainingRow row={row} /></div>}
@@ -83,9 +83,9 @@ export function TrainingHistory({
 function TrainingRow({ row }: { row: Row }) {
   return <>
     <div className="min-w-0">
-      <div className="text-[13px] text-white/85">{row.focus?.length ? row.focus.join(' · ') : 'Training'}</div>
-      <div className="text-[11px] text-white/40" style={{ fontFamily: "'DM Mono', monospace" }}>{formatParentDate(row.session_date)}</div>
+      <div className="text-[13px] text-ink">{row.focus?.length ? row.focus.join(' · ') : 'Training'}</div>
+      <div className="text-[11px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{formatParentDate(row.session_date)}</div>
     </div>
-    <span className="text-[11px] text-white/60 shrink-0">{ATTENDANCE[row.attendance] ?? row.attendance}</span>
+    <span className="text-[11px] text-ink-2 shrink-0">{ATTENDANCE[row.attendance] ?? row.attendance}</span>
   </>
 }

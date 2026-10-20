@@ -520,7 +520,8 @@ export default function PlayerEvolutionCard() {
   }
 
   return (
-    <>
+    // TRAK-189: the card is dark artwork; it keeps the dark look in the light app.
+    <div className="trak-dark bg-ground">
       <MobileShell>
         {/* Top bar */}
         <div className="pt-5 pb-3 flex items-center justify-center">
@@ -861,7 +862,7 @@ export default function PlayerEvolutionCard() {
 
         <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
       </MobileShell>
-    </>
+    </div>
   )
 }
 

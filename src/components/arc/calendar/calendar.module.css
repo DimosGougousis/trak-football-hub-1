@@ -37,7 +37,7 @@
 .day:active:not(:disabled)::before, .day:active:not(:disabled) .dayNumber, .monthBody:has(.day.selected:active:not(:disabled)) .highlightFill { scale: .94; transition-duration: var(--duration-fast), 100ms; transition-timing-function: var(--ease-standard); }
 /* Outside days dim their number, not the button, so a disc gliding onto one keeps its full strength. */
 .day.outside { color: var(--text-muted); }
-.day.outside:not(.selected) .dayNumber { opacity: .8; }
+/* Trak (TRAK-189): the muted colour already reads as another month; no extra fade, so it keeps 4.5:1. */
 /* Today is a small dot under the number. It takes the number's color, so it flips with it when the disc arrives. */
 .day.today .dayNumber::after { content: ""; position: absolute; top: calc(100% + 4px); left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
 .day.selected, .day.today { font-weight: 500; }
@@ -52,7 +52,9 @@
 
 /* Trak (TRAK-182): event dots under the day number. */
 .marks { position: absolute; bottom: 14%; left: 50%; display: flex; gap: 2px; translate: -50% 0; pointer-events: none; }
-.marks > span { width: 4px; height: 4px; border-radius: 50%; }
+/* Keep event colours readable over the brand-coloured selected day. */
+.selected .marks { background: var(--surface); border-radius: var(--radius-pill); box-shadow: 0 0 0 1px var(--surface); }
+.marks > span { box-sizing: border-box; width: 6px; height: 6px; border-radius: 50%; }
 
 /* Trak (TRAK-157): the title opens a twelve-month grid, labelled with years, so a date months away is two taps. */
 .titleButton { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: var(--radius-pill); background: transparent; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
