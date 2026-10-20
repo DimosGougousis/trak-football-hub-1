@@ -35,7 +35,9 @@ export interface ElasticSliderProps {
   className?: string;
 }
 
-type Drag = { pointer: number; grab: number; samples: { t: number; p: number }[]; detent: number | null; edge: number; type: string };
+type Drag = { pointer: number; grab: number; samples: { t: number; p: number }[]; detent: number | null; edge: number; type: string; start: number };
+/** A touch or pen press that has not yet shown whether it is a tap, a sideways drag or the start of a page scroll. */
+type Pending = { pointer: number; x: number; y: number; grabbed: boolean; type: string };
 
 const { spring, duration, blur } = motionTokens;
 const enterEase = [...motionTokens.ease.enter] as [number, number, number, number];
@@ -47,6 +49,8 @@ const thumbSpring = physical(spring.snappy);
 const snapBack = physical({ visualDuration: .5, bounce: .42 }, .05);
 /** Pixels the track may stretch past a limit, the pixel reach of a detent, and the speed a key press at a limit hits the wall with. */
 const STRETCH = 26, DETENT_PX = 7, BUMP_PX = 260;
+/** How far a finger travels before its direction decides between dragging the slider and scrolling the page. */
+const SLOP_PX = 8;
 /** iOS style resistance: each pixel past the limit gives less, and never more than `limit`. */
 const rubber = (distance: number, limit = STRETCH) => Math.sign(distance) * (1 - 1 / (Math.abs(distance) * .55 / limit + 1)) * limit;
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
@@ -82,6 +86,7 @@ export function ElasticSlider({ label, value, defaultValue, onValueChange, onVal
   const latest = useRef(current);
   const goal = useRef(pct(current));
   const drag = useRef<Drag | null>(null);
+  const pending = useRef<Pending | null>(null);
   const width = useRef(1);
   const lingerTimer = useRef<number | undefined>(undefined);
   const [dragging, setDragging] = useState(false);
@@ -176,16 +181,24 @@ export function ElasticSlider({ label, value, defaultValue, onValueChange, onVal
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (disabled || event.button !== 0 || !event.isPrimary) return;
+    const grabbed = !!(event.target as HTMLElement).closest("[data-thumb]");
+    // Capture now: capturing later, mid-gesture, makes the browser release its own touch capture and end the drag. Capture does not
+    // stop a vertical pan from scrolling; `touch-action` decides that.
+    event.currentTarget.setPointerCapture(event.pointerId);
+    // TRAK-221: the row lets vertical pans scroll the page, so a finger landing here may be scrolling. Touch and pen wait until the
+    // gesture shows itself as a tap or a sideways drag; moving the value on press changed ratings while the coach scrolled the form.
+    if (event.pointerType !== "mouse") { pending.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, grabbed, type: event.pointerType }; return; }
+    begin(event.pointerId, event.clientX, grabbed, event.pointerType, event.timeStamp);
+  }
+  function begin(pointer: number, clientX: number, grabbed: boolean, type: string, time: number) {
     const rect = trackRef.current?.getBoundingClientRect();
     if (!rect) return;
     width.current = rect.width || 1;
-    const at = ((event.clientX - rect.left) / width.current) * 100;
-    const grabbed = !!(event.target as HTMLElement).closest("[data-thumb]");
-    event.currentTarget.setPointerCapture(event.pointerId);
+    const at = ((clientX - rect.left) / width.current) * 100;
     const from = pos.get() + lag.get();
     lag.jump(0);
     pos.jump(from);
-    const state: Drag = { pointer: event.pointerId, grab: grabbed ? at - from : 0, samples: [], detent: null, edge: from, type: event.pointerType };
+    const state: Drag = { pointer, grab: grabbed ? at - from : 0, samples: [], detent: null, edge: from, type, start: latest.current };
     drag.current = state;
     setDragging(true);
     window.clearTimeout(lingerTimer.current);
@@ -193,23 +206,42 @@ export function ElasticSlider({ label, value, defaultValue, onValueChange, onVal
     thumbRef.current?.focus({ preventScroll: true });
     if (reduced) press.jump(1); else animate(press, 1, spring.snappy);
     // A grabbed thumb stays put under the finger; a pressed track pulls the thumb over on a spring.
-    follow(state, grabbed ? from + state.grab : at, event.timeStamp, true);
+    follow(state, grabbed ? from + state.grab : at, time, true);
   }
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
+    const wait = pending.current;
+    if (wait && wait.pointer === event.pointerId) {
+      const dx = event.clientX - wait.x, dy = event.clientY - wait.y;
+      if (Math.abs(dy) > SLOP_PX && Math.abs(dy) >= Math.abs(dx)) { pending.current = null; return; }
+      if (Math.abs(dx) <= SLOP_PX) return;
+      pending.current = null;
+      begin(wait.pointer, wait.x, wait.grabbed, wait.type, event.timeStamp);
+    }
     const state = drag.current;
     if (!state || state.pointer !== event.pointerId) return;
     const rect = trackRef.current?.getBoundingClientRect();
     if (!rect) return;
     follow(state, ((event.clientX - rect.left) / (rect.width || 1)) * 100, event.timeStamp);
   }
-  function onPointerEnd(event: PointerEvent<HTMLDivElement>) {
+  function onPointerUp(event: PointerEvent<HTMLDivElement>) {
+    const wait = pending.current;
+    // A touch that lifts without travelling is a tap: the value goes where the finger landed, as a press with a mouse does.
+    if (wait && wait.pointer === event.pointerId) { pending.current = null; begin(wait.pointer, wait.x, wait.grabbed, wait.type, event.timeStamp); }
+    onPointerEnd(event);
+  }
+  function onPointerCancel(event: PointerEvent<HTMLDivElement>) {
+    // The browser took the gesture (usually for scrolling): nothing was chosen, so the value goes back to where it started.
+    if (pending.current?.pointer === event.pointerId) { pending.current = null; return; }
+    onPointerEnd(event, true);
+  }
+  function onPointerEnd(event: PointerEvent<HTMLDivElement>, cancelled = false) {
     const state = drag.current;
     if (!state || state.pointer !== event.pointerId) return;
     drag.current = null;
     const samples = state.samples, first = samples[0], last = samples[samples.length - 1];
     const elapsed = last && first ? (last.t - first.t) / 1000 : 0;
-    const velocity = (elapsed > .008 && event.timeStamp - last!.t < 60 ? (last!.p - first!.p) / elapsed : 0) + lag.getVelocity();
-    const next = state.detent ?? snap(valueAt(state.edge));
+    const velocity = cancelled ? 0 : (elapsed > .008 && event.timeStamp - last!.t < 60 ? (last!.p - first!.p) / elapsed : 0) + lag.getVelocity();
+    const next = cancelled ? state.start : state.detent ?? snap(valueAt(state.edge));
     const from = pos.get() + lag.get(), target = pct(next);
     lag.jump(0);
     pos.jump(from);
@@ -224,7 +256,7 @@ export function ElasticSlider({ label, value, defaultValue, onValueChange, onVal
     setDragging(false);
     setLinger(true);
     lingerTimer.current = window.setTimeout(() => setLinger(false), 700);
-    onValueCommit?.(next);
+    if (!cancelled) onValueCommit?.(next);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -262,7 +294,7 @@ export function ElasticSlider({ label, value, defaultValue, onValueChange, onVal
     </div>
     <div className={styles.body}>
       {startIcon && <motion.span className={styles.start} style={{ x: startShift }} aria-hidden="true">{startIcon}</motion.span>}
-      <div className={styles.control} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onLostPointerCapture={onPointerEnd} onMouseDown={event => event.preventDefault()}>
+      <div className={styles.control} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onLostPointerCapture={event => onPointerEnd(event)} onMouseDown={event => event.preventDefault()}>
         <div ref={trackRef} className={styles.rail}>
           <motion.div className={styles.track} style={{ scaleX, scaleY, originX }}>
             <motion.div className={styles.fill} style={{ clipPath }} />
