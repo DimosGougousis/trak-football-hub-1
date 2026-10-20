@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { withAlpha } from '@/lib/with-alpha'
 
 interface Props {
   bandWord: string
@@ -38,23 +39,23 @@ export default function CardRevealModal({ bandWord, bandColor, newMatchCount, la
       {/* Full-screen overlay — tap anywhere to dismiss */}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center px-6"
-        style={{ background: 'rgba(0,0,0,0.88)' }}
+        style={{ background: 'rgb(var(--t-scrim) / 0.88)' }}
         onClick={onDismiss}
       >
         {/* Card */}
         <div
           className="w-full max-w-[300px] rounded-[28px] px-8 py-10 text-center"
           style={{
-            background: '#101012',
-            border: `1px solid ${bandColor}4D`,
+            background: 'rgb(var(--t-surface))',
+            border: `1px solid ${withAlpha(bandColor, 0.3)}`,
             animation: 'cardReveal 400ms cubic-bezier(0.16,1,0.3,1) forwards',
           }}
           onClick={e => e.stopPropagation()}
         >
           {/* Top label */}
           <p
-            className="text-[8px] tracking-[0.2em] uppercase text-white/30 mb-7"
-            style={{ fontFamily: "'DM Mono', monospace" }}
+            className="text-[8px] tracking-[0.2em] uppercase text-ink-3 mb-7"
+            style={{ fontFamily: 'var(--t-font-mono)' }}
           >
             YOUR CARD HAS BEEN UPDATED
           </p>
@@ -63,7 +64,7 @@ export default function CardRevealModal({ bandWord, bandColor, newMatchCount, la
           <p
             className="text-[64px] leading-none mb-7 transition-all duration-500"
             style={{
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--t-font)',
               fontWeight: 300,
               letterSpacing: '-0.04em',
               color: bandColor,
@@ -76,13 +77,13 @@ export default function CardRevealModal({ bandWord, bandColor, newMatchCount, la
           </p>
 
           {/* Divider */}
-          <div className="h-px mb-5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          <div className="h-px mb-5" style={{ background: 'rgb(var(--t-raised))' }} />
 
           {/* Match info */}
           <p
-            className="text-[11px] text-white/40 mb-8 transition-opacity duration-500"
+            className="text-[11px] text-ink-3 mb-8 transition-opacity duration-500"
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: 'var(--t-font-mono)',
               opacity: showDetails ? 1 : 0,
             }}
           >
@@ -91,9 +92,9 @@ export default function CardRevealModal({ bandWord, bandColor, newMatchCount, la
 
           {/* Tap cue */}
           <p
-            className="text-[8px] tracking-[0.14em] uppercase text-white/18 transition-opacity duration-500"
+            className="text-[8px] tracking-[0.14em] uppercase text-ink-3 transition-opacity duration-500"
             style={{
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: 'var(--t-font-mono)',
               opacity: showTap ? 1 : 0,
             }}
           >

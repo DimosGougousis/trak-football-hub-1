@@ -6,25 +6,26 @@ import {
   IconOverview, IconSquad, IconMatch, IconTraining,
   IconAssess, IconProgress, IconAward, IconParentLink, IconSessions, IconTips,
 } from '@/components/icons/TrakIcons'
+import { BAND_COLOR } from '@/lib/types'
 
 // ─── Atoms (defined first so they're available everywhere) ───────────────────
 
 function Rule({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2.5 rounded-[10px] p-3" style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.14)' }}>
-      <span className="text-[#C8F25A] flex-shrink-0 mt-0.5 text-[11px]">→</span>
-      <p className="text-[12px] text-white/60 leading-relaxed">{children}</p>
+    <div className="flex gap-2.5 rounded-[10px] p-3" style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.14)' }}>
+      <span className="text-brand flex-shrink-0 mt-0.5 text-[11px]">→</span>
+      <p className="text-[12px] text-ink-2 leading-relaxed">{children}</p>
     </div>
   )
 }
 
 function StatusRow({ label, color, dot, desc }: { label: string; color: string; dot: string; desc: string }) {
   return (
-    <div className="flex gap-2.5 items-start rounded-[10px] p-3" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.05)' }}>
+    <div className="flex gap-2.5 items-start rounded-[10px] p-3" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))' }}>
       <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: dot }} />
       <div>
         <span className="text-[11px] font-semibold" style={{ color }}>{label}</span>
-        <p className="text-[11px] text-white/45 leading-snug mt-0.5">{desc}</p>
+        <p className="text-[11px] text-ink-3 leading-snug mt-0.5">{desc}</p>
       </div>
     </div>
   )
@@ -32,12 +33,12 @@ function StatusRow({ label, color, dot, desc }: { label: string; color: string; 
 
 function MethodCard({ title, tag, tagColor, desc }: { title: string; tag: string; tagColor: string; desc: string }) {
   return (
-    <div className="rounded-[12px] p-3.5" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="rounded-[12px] p-3.5" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))' }}>
       <div className="flex items-center gap-2 mb-2">
-        <p className="text-[13px] font-medium text-white/80">{title}</p>
-        <span className="text-[9px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(200,242,90,0.08)', color: tagColor, fontFamily: "'DM Mono', monospace" }}>{tag}</span>
+        <p className="text-[13px] font-medium text-ink">{title}</p>
+        <span className="text-[9px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--t-brand) / 0.08)', color: tagColor, fontFamily: 'var(--t-font-mono)' }}>{tag}</span>
       </div>
-      <p className="text-[12px] text-white/50 leading-relaxed">{desc}</p>
+      <p className="text-[12px] text-ink-2 leading-relaxed">{desc}</p>
     </div>
   )
 }
@@ -46,7 +47,7 @@ function MethodCard({ title, tag, tagColor, desc }: { title: string; tag: string
 
 function ContentOverview() {
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-white/60">
+    <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
       <p>TRAK is a performance tracking platform for football coaches and their players. As a coach, you're the source of truth — your assessments and session logs drive every number your players see on their profile.</p>
       <p>Your players get a running record of their development: match ratings, coach assessments, awards, and an evolution card that tracks progress over time. Parents, if invited, get a read-only view of that same journey.</p>
       <Rule>Your data is yours. No other coach can see your squad, sessions, or assessments.</Rule>
@@ -56,13 +57,13 @@ function ContentOverview() {
 
 function ContentSquad() {
   return (
-    <div className="space-y-4 text-[13px] leading-relaxed text-white/60">
+    <div className="space-y-4 text-[13px] leading-relaxed text-ink-2">
       <p>Your squad is the list of players you coach. Each player can exist in two states:</p>
       <div className="space-y-2">
-        <StatusRow label="Unlinked" color="rgba(255,255,255,0.5)" dot="rgba(255,255,255,0.2)" desc="You've added the player's name and position. They appear in your squad but have no TRAK account yet." />
-        <StatusRow label="Linked" color="#C8F25A" dot="#C8F25A" desc="The player's account is connected to their place on your roster. Their match history, evolution card and passport are now live." />
+        <StatusRow label="Unlinked" color="rgb(var(--t-ink-2))" dot="rgb(var(--t-ink-3))" desc="You've added the player's name and position. They appear in your squad but have no TRAK account yet." />
+        <StatusRow label="Linked" color="rgb(var(--t-brand))" dot="rgb(var(--t-brand))" desc="The player's account is connected to their place on your roster. Their match history, evolution card and passport are now live." />
       </div>
-      <Rule>Go to <b className="text-white/80">Squad → +</b> to add a player. Name, position and age group is all you need.</Rule>
+      <Rule>Go to <b className="text-ink">Squad → +</b> to add a player. Name, position and age group is all you need.</Rule>
       <p>Once a player links their account, any assessments or match logs you create for them automatically appear in their profile.</p>
     </div>
   )
@@ -70,10 +71,10 @@ function ContentSquad() {
 
 function ContentMatches() {
   return (
-    <div className="space-y-4 text-[13px] leading-relaxed text-white/60">
-      <p>There are two ways to log a match, accessible from the <b className="text-white/80">Sessions</b> tab:</p>
-      <MethodCard title="Quick Match Log" tag="1–2 min" tagColor="#C8F25A" desc="Enter opponent, score, competition type (League / Cup / Friendly) and venue. Tick who played. TRAK calculates a rating for every linked player automatically based on their position and the result." />
-      <MethodCard title="Full Session Log" tag="5 min" tagColor="rgba(200,242,90,0.6)" desc="Adds notes, individual minutes played, and detailed attendance tracking. Best used for cup games or key fixtures you want a full record of." />
+    <div className="space-y-4 text-[13px] leading-relaxed text-ink-2">
+      <p>There are two ways to log a match, accessible from the <b className="text-ink">Sessions</b> tab:</p>
+      <MethodCard title="Quick Match Log" tag="1–2 min" tagColor="rgb(var(--t-brand))" desc="Enter opponent, score, competition type (League / Cup / Friendly) and venue. Tick who played. TRAK calculates a rating for every linked player automatically based on their position and the result." />
+      <MethodCard title="Full Session Log" tag="5 min" tagColor="rgb(var(--t-brand) / 0.6)" desc="Adds notes, individual minutes played, and detailed attendance tracking. Best used for cup games or key fixtures you want a full record of." />
       <Rule>The quick log is designed to be done at full time, pitch-side. Use it as your default.</Rule>
     </div>
   )
@@ -81,8 +82,8 @@ function ContentMatches() {
 
 function ContentTraining() {
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-white/60">
-      <p>Log training sessions from the <b className="text-white/80">Sessions</b> tab. Choose a session type (Fitness, Technical, Tactical, Conditioning or Mixed), add a title, and tick who attended.</p>
+    <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
+      <p>Log training sessions from the <b className="text-ink">Sessions</b> tab. Choose a session type (Fitness, Technical, Tactical, Conditioning or Mixed), add a title, and tick who attended.</p>
       <p>Training sessions don't generate ratings for players — they're an attendance and workload record. Coaches who use TRAK consistently build a full-season picture of who shows up and how hard they work.</p>
       <Rule>Session history is visible to club administrators (read-only). It's not shown to players or parents.</Rule>
     </div>
@@ -99,45 +100,45 @@ function ContentAssessments() {
     ['Coachability', 'Does the player implement feedback and improve?'],
   ]
   return (
-    <div className="space-y-4 text-[13px] leading-relaxed text-white/60">
+    <div className="space-y-4 text-[13px] leading-relaxed text-ink-2">
       <p>TRAK assessments use 6 dimensions rated 1–10:</p>
       <div className="grid grid-cols-2 gap-2">
         {dims.map(([dim, desc]) => (
-          <div key={dim} className="rounded-[10px] p-3" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-white/55 mb-1" style={{ fontFamily: "'DM Mono', monospace" }}>{dim}</p>
-            <p className="text-[11px] text-white/40 leading-snug">{desc}</p>
+          <div key={dim} className="rounded-[10px] p-3" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))' }}>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-ink-2 mb-1" style={{ fontFamily: 'var(--t-font-mono)' }}>{dim}</p>
+            <p className="text-[11px] text-ink-3 leading-snug">{desc}</p>
           </div>
         ))}
       </div>
       <p>The average of the 6 scores becomes the player's coach rating for that session. Over time these build into an overall band.</p>
       <Rule>Private notes you add to an assessment are coach-only. Players and parents never see them.</Rule>
-      <MethodCard title="Quick Assess" tag="30 sec" tagColor="#C8F25A" desc="Rate any player with a single overall flag (Standout, Good, Fair, Needs Work). Useful after training when you don't have time for the full form." />
+      <MethodCard title="Quick Assess" tag="30 sec" tagColor="rgb(var(--t-brand))" desc="Rate any player with a single overall flag (Standout, Good, Fair, Needs Work). Useful after training when you don't have time for the full form." />
     </div>
   )
 }
 
 function ContentRatings() {
   const bands = [
-    { band: 'Exceptional', range: '9.0 – 10.0', color: '#C8F25A' },
-    { band: 'Standout',    range: '8.0 – 8.9',  color: '#86efac' },
-    { band: 'Good',        range: '7.0 – 7.9',  color: '#4ade80' },
-    { band: 'Steady',      range: '6.0 – 6.9',  color: '#60a5fa' },
-    { band: 'Mixed',       range: '5.0 – 5.9',  color: '#fb923c' },
-    { band: 'Developing',  range: '0.0 – 4.9',  color: '#a78bfa' },
+    { band: 'Exceptional', range: '9.0 – 10.0', color: BAND_COLOR.Exceptional },
+    { band: 'Standout',    range: '8.0 – 8.9',  color: BAND_COLOR.Standout },
+    { band: 'Good',        range: '7.0 – 7.9',  color: BAND_COLOR.Good },
+    { band: 'Steady',      range: '6.0 – 6.9',  color: BAND_COLOR.Steady },
+    { band: 'Mixed',       range: '5.0 – 5.9',  color: BAND_COLOR.Mixed },
+    { band: 'Developing',  range: '0.0 – 4.9',  color: BAND_COLOR.Developing },
   ]
   return (
-    <div className="space-y-4 text-[13px] leading-relaxed text-white/60">
+    <div className="space-y-4 text-[13px] leading-relaxed text-ink-2">
       <p>Each assessment produces a score from 1–10. Match ratings are computed on the same scale, factoring in position, competition type, result and venue.</p>
-      <p>Scores translate into <b className="text-white/80">performance bands:</b></p>
+      <p>Scores translate into <b className="text-ink">performance bands:</b></p>
       <div className="space-y-1.5">
         {bands.map(b => (
-          <div key={b.band} className="flex items-center justify-between rounded-[8px] px-3 py-2" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div key={b.band} className="flex items-center justify-between rounded-[8px] px-3 py-2" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))' }}>
             <span className="text-[12px] font-medium" style={{ color: b.color }}>{b.band}</span>
-            <span className="text-[10px] text-white/35" style={{ fontFamily: "'DM Mono', monospace" }}>{b.range}</span>
+            <span className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{b.range}</span>
           </div>
         ))}
       </div>
-      <p>A player's <b className="text-white/80">OVR</b> is their rolling average across all assessments you've given them. It anchors their card tier: Bronze → Silver → Gold → Volt → Icon.</p>
+      <p>A player's <b className="text-ink">OVR</b> is their rolling average across all assessments you've given them. It anchors their card tier: Bronze → Silver → Gold → Volt → Icon.</p>
       <Rule>Consistent assessments build a more accurate picture. Aim to assess each player at least once a month.</Rule>
     </div>
   )
@@ -152,13 +153,13 @@ function ContentRecognition() {
     ['Top Scorer', 'Goals'],
   ]
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-white/60">
-      <p>From the <b className="text-white/80">Recognition</b> tab, you can award any player in your squad:</p>
+    <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
+      <p>From the <b className="text-ink">Recognition</b> tab, you can award any player in your squad:</p>
       <div className="space-y-1.5">
         {awards.map(([name, tag]) => (
-          <div key={tag} className="flex items-center gap-3 rounded-[8px] px-3 py-2.5" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <span className="text-[11px] text-white/75 flex-1">{name}</span>
-            <span className="text-[9px] font-medium tracking-[0.1em] uppercase px-2 py-0.5 rounded-full" style={{ background: 'rgba(200,242,90,0.1)', color: '#C8F25A', fontFamily: "'DM Mono', monospace" }}>{tag}</span>
+          <div key={tag} className="flex items-center gap-3 rounded-[8px] px-3 py-2.5" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))' }}>
+            <span className="text-[11px] text-ink flex-1">{name}</span>
+            <span className="text-[9px] font-medium tracking-[0.1em] uppercase px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--t-brand) / 0.1)', color: 'rgb(var(--t-brand))', fontFamily: 'var(--t-font-mono)' }}>{tag}</span>
           </div>
         ))}
       </div>
@@ -178,13 +179,13 @@ function ContentParents() {
     ['✗', 'Attendance records', false],
   ]
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-white/60">
+    <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
       <p>Parents join TRAK through an invite link the player sends them from their own profile. Once linked, the parent gets a read-only view of:</p>
       <div className="space-y-1.5">
         {items.map(([icon, label, allowed]) => (
           <div key={label} className="flex items-start gap-2.5">
-            <span className="mt-0.5 text-[11px] font-bold flex-shrink-0" style={{ color: allowed ? '#C8F25A' : 'rgba(255,255,255,0.25)' }}>{icon}</span>
-            <span className="text-[12px]" style={{ color: allowed ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.3)' }}>{label}</span>
+            <span className="mt-0.5 text-[11px] font-bold flex-shrink-0" style={{ color: allowed ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))' }}>{icon}</span>
+            <span className="text-[12px]" style={{ color: allowed ? 'rgb(var(--t-ink-2))' : 'rgb(var(--t-ink-3))' }}>{label}</span>
           </div>
         ))}
       </div>
@@ -195,9 +196,9 @@ function ContentParents() {
 
 function ContentSchedule() {
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-white/60">
-      <p>The <b className="text-white/80">Schedule</b> tab lets you plan upcoming sessions and matches. You can type a fixture list in plain text and TRAK's AI will parse it into calendar events automatically.</p>
-      <p>Events you mark as <b className="text-white/80">Published</b> become visible to your linked players and their parents. Unpublished events are coach-only drafts.</p>
+    <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
+      <p>The <b className="text-ink">Schedule</b> tab lets you plan upcoming sessions and matches. You can type a fixture list in plain text and TRAK's AI will parse it into calendar events automatically.</p>
+      <p>Events you mark as <b className="text-ink">Published</b> become visible to your linked players and their parents. Unpublished events are coach-only drafts.</p>
       <Rule>Published events appear on players' profiles the next time they open the app.</Rule>
     </div>
   )
@@ -211,14 +212,14 @@ function ContentTips() {
     ["Give out one award", "Recognition costs nothing and means everything. Start with a Player of the Week after your first match."],
   ]
   return (
-    <div className="space-y-3 text-[13px] leading-relaxed text-white/60">
+    <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
       <ol className="space-y-3 list-none">
         {steps.map(([title, desc], i) => (
           <li key={i} className="flex gap-3">
-            <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold text-black" style={{ background: '#C8F25A' }}>{i + 1}</span>
+            <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold text-on-brand" style={{ background: 'rgb(var(--t-brand))' }}>{i + 1}</span>
             <div>
-              <p className="text-[12px] font-medium text-white/75 mb-0.5">{title}</p>
-              <p className="text-[11px] text-white/45 leading-relaxed">{desc}</p>
+              <p className="text-[12px] font-medium text-ink mb-0.5">{title}</p>
+              <p className="text-[11px] text-ink-3 leading-relaxed">{desc}</p>
             </div>
           </li>
         ))}
@@ -260,29 +261,29 @@ function SectionCard({ section, open, onToggle }: { section: Section; open: bool
   return (
     <div
       className="rounded-[18px] overflow-hidden"
-      style={{ background: '#101012', border: `1px solid ${open ? 'rgba(200,242,90,0.2)' : 'rgba(255,255,255,0.07)'}` }}
+      style={{ background: 'rgb(var(--t-surface))', border: `1px solid ${open ? 'rgb(var(--t-brand) / 0.2)' : 'rgb(var(--t-line))'}` }}
     >
       <button onClick={onToggle} className="w-full flex items-center gap-3 p-4 text-left">
         <div
           className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0"
           style={{
-            background: open ? 'rgba(200,242,90,0.08)' : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${open ? 'rgba(200,242,90,0.18)' : 'rgba(255,255,255,0.07)'}`,
+            background: open ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
+            border: `1px solid ${open ? 'rgb(var(--t-brand) / 0.18)' : 'rgb(var(--t-line))'}`,
           }}
         >
-          <Icon size={16} color={open ? '#C8F25A' : 'rgba(255,255,255,0.45)'} />
+          <Icon size={16} color={open ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))'} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-medium text-white/88 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>{section.title}</p>
-          <p className="text-[11px] text-white/35 mt-0.5">{section.subtitle}</p>
+          <p className="text-[14px] font-medium text-ink leading-tight" style={{ fontFamily: 'var(--t-font)' }}>{section.title}</p>
+          <p className="text-[11px] text-ink-3 mt-0.5">{section.subtitle}</p>
         </div>
-        <span className="flex-shrink-0 text-white/30">
+        <span className="flex-shrink-0 text-ink-3">
           {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </span>
       </button>
 
       {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-white/[0.06]">
+        <div className="px-4 pb-4 pt-1 border-t border-line">
           <Content />
         </div>
       )}
@@ -299,23 +300,23 @@ export default function CoachManual() {
   return (
     <MobileShell>
       {/* Topbar */}
-      <div className="flex items-center gap-3 pt-3 pb-3 border-b border-white/[0.07] shrink-0">
+      <div className="flex items-center gap-3 pt-3 pb-3 border-b border-line shrink-0">
         <button
           onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
-          className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center flex-shrink-0"
+          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center flex-shrink-0"
           aria-label="Back"
         >
-          <ChevronLeft size={14} className="text-white/88" />
+          <ChevronLeft size={14} className="text-ink" />
         </button>
         <div>
-          <p className="text-[16px] font-medium text-white/88 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>How Trak works</p>
-          <p className="text-[10px] text-white/30" style={{ fontFamily: "'DM Mono', monospace" }}>{SECTIONS.length} SECTIONS</p>
+          <p className="text-[16px] font-medium text-ink leading-tight" style={{ fontFamily: 'var(--t-font)' }}>How Trak works</p>
+          <p className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{SECTIONS.length} SECTIONS</p>
         </div>
       </div>
 
       {/* Intro */}
-      <div className="mt-4 mb-3 rounded-[14px] px-4 py-3.5" style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.14)' }}>
-        <p className="text-[12px] text-white/55 leading-relaxed">
+      <div className="mt-4 mb-3 rounded-[14px] px-4 py-3.5" style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.14)' }}>
+        <p className="text-[12px] text-ink-2 leading-relaxed">
           Everything you need to get your squad up and running on TRAK. Tap any section to expand it.
         </p>
       </div>

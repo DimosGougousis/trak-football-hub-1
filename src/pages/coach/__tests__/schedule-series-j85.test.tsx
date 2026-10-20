@@ -230,6 +230,8 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.w1&select=id', body: { status: 'cancelled' } })
 
+    // TRAK-168: one cancelled week is offered to the team group; Done closes it.
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await userEvent.click(screen.getByRole('button', { name: 'Cancel Training' }))
     sheet = screen.getByRole('dialog', { name: 'Cancel event' })
@@ -249,6 +251,15 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     })
     // TRAK-135: each cancel asks for the families' email; the series is one email per person.
     await waitFor(() => expect(emailNudges).toBe(2))
+    // TRAK-168 (Imad, 18 Oct): the share is still offered, for this week's event
+    // only; the following weeks get no message.
+    const done = await screen.findByRole('dialog', { name: 'Event cancelled' })
+    // What the toast used to say stays: the cancel, and the drafts removed after it.
+    expect(done).toHaveTextContent('1 unpublished draft removed.')
+    const shared = within(done).getByRole('link', { name: /Share/ })
+    const text = decodeURIComponent(new URL(shared.getAttribute('href')!).searchParams.get('text')!)
+    expect(text).toContain('/event/w1')
+    expect(text.match(/trakfootball\.com\/event\//g)).toHaveLength(1)
   })
 
   it('publishes this and following draft weeks in one go', async () => {

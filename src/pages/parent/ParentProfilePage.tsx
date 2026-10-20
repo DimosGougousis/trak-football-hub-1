@@ -19,8 +19,8 @@ export default function ParentProfilePage() {
 
   return (
     <MobileShell>
-      <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
-        <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>Profile</span>
+      <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
+        <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>Profile</span>
       </div>
 
       <div className="pt-3.5 pb-4 space-y-2.5">
@@ -30,7 +30,7 @@ export default function ParentProfilePage() {
           <div className="flex justify-center mb-3">
             <Avatar name={profile?.full_name || 'Parent'} size="xl" className="arc" aria-hidden />
           </div>
-          <p className="text-[20px] font-semibold text-white/88 tracking-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+          <p className="text-[20px] font-semibold text-ink tracking-tight" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
             {profile?.full_name || 'Parent'}
           </p>
           {/* TRAK-73: the account, and how many children it follows. */}
@@ -59,40 +59,40 @@ export default function ParentProfilePage() {
         {/* How TRAK works link */}
         <button
           onClick={() => navigate('/how-it-works')}
-          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}>
-              <IconHowItWorks size={16} color="#C8F25A" />
+              style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}>
+              <IconHowItWorks size={16} color="rgb(var(--t-brand))" />
             </div>
             <div>
               <MetadataLabel text="HOW TRAK WORKS" />
-              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[12px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 Performance bands & rating engine
               </p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/40" />
+          <ChevronRight size={18} className="text-ink-3" />
         </button>
 
         {/* Settings entry */}
         <button
           onClick={() => navigate('/settings')}
-          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] text-left hover:bg-[#141416] transition-colors"
+          className="w-full flex items-center justify-between rounded-[18px] p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
-              <SettingsIcon size={16} className="text-white/55" />
+            <div className="w-9 h-9 rounded-xl bg-raised flex items-center justify-center">
+              <SettingsIcon size={16} className="text-ink-2" />
             </div>
             <div>
               <MetadataLabel text="SETTINGS" />
-              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[12px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 Account settings
               </p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/40" />
+          <ChevronRight size={18} className="text-ink-3" />
         </button>
       </div>
       <NavBar role="parent" activeTab={location.pathname} onNavigate={navigate} />

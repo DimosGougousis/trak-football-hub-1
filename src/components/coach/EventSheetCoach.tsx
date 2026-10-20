@@ -105,7 +105,7 @@ export function People({ heading, people }: { heading: string; people: Person[] 
       </button>
       {open && (
         <ul aria-label={heading} className="mt-3 space-y-2">
-          {people.map(p => <li key={p.id} className="text-[14px] text-white/85">{p.name}</li>)}
+          {people.map(p => <li key={p.id} className="text-[14px] text-ink">{p.name}</li>)}
         </ul>
       )}
     </>}
@@ -141,8 +141,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   const cancelled = event.status === 'cancelled'
   const canRegister = row && registerProblem(row) === null
   const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60'
-  const quiet = `${button} border border-white/15 text-white/85`
-  const heading = 'text-[15px] font-medium text-white/95 mb-2'
+  const quiet = `${button} border border-line-strong text-ink`
+  const heading = 'text-[15px] font-medium text-ink mb-2'
   const updated = updatedNote(event)
   // TRAK-182 (Imad, 16 Oct): once it has started, it's who attended, register or not.
   const past = !!squad.data?.came || (!!row && hasStarted(row))
@@ -150,17 +150,17 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   return (
     <div className="space-y-5">
       {details.isError ? (
-        <p role="alert" className="text-[13px] text-white/70">{details.error.message}</p>
+        <p role="alert" className="text-[13px] text-ink-2">{details.error.message}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {cancelled ? null : canRegister ? (
-            <button type="button" onClick={() => setRegistering(true)} className={`${button} bg-white text-black`}>
+            <button type="button" onClick={() => setRegistering(true)} className={`${button} bg-brand text-on-brand`}>
               {sessionId ? 'Edit register' : 'Take register'}
             </button>
           ) : row?.published ? (
-            <button type="button" disabled className={`${button} bg-white/10 text-white/80`}><Check size={16} aria-hidden="true" />Published</button>
+            <button type="button" disabled className={`${button} bg-raised text-ink`}><Check size={16} aria-hidden="true" />Published</button>
           ) : (
-            <button type="button" disabled={!row || publish.isPending} className={`${button} bg-white text-black`}
+            <button type="button" disabled={!row || publish.isPending} className={`${button} bg-brand text-on-brand`}
               onClick={() => row && (row.series_id ? navigate(`/coach/schedule?publish=${row.id}`) : publish.mutate(row))}>
               {publish.isPending ? 'Publishing…' : 'Publish'}
             </button>
@@ -187,7 +187,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
         </div>
       )}
 
-      {updated && <p className="text-[13px] text-white/50">{updated}</p>}
+      {updated && <p className="text-[13px] text-ink-2">{updated}</p>}
 
       {registering && row && (
         <TakeRegister eventId={row.id} coachId={coachId} sessionId={sessionId} squad={row.squad ?? null}
@@ -201,13 +201,13 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             {past ? 'Attended' : 'Attending'}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
           </h3>
           {!row.published ? (
-            <p className="text-[13px] text-white/60">Families see this once you publish.</p>
+            <p className="text-[13px] text-ink-2">Families see this once you publish.</p>
           ) : squad.isError ? (
-            <p role="alert" className="text-[13px] text-white/70">Couldn't load who's coming.{' '}
+            <p role="alert" className="text-[13px] text-ink-2">Couldn't load who's coming.{' '}
               <button type="button" className="underline" onClick={() => { void squad.refetch() }}>Retry</button></p>
-          ) : !squad.data ? <p role="status" className="text-[13px] text-white/50">Loading…</p>
+          ) : !squad.data ? <p role="status" className="text-[13px] text-ink-2">Loading…</p>
           : squad.data.coming.length + squad.data.away.length + squad.data.waiting.length === 0 ? (
-            <p className="text-[13px] text-white/60">No players in your squad yet.</p>
+            <p className="text-[13px] text-ink-2">No players in your squad yet.</p>
           ) : squad.data.came ? (
             <People heading="Attended" people={squad.data.came} />
           ) : <>
@@ -218,8 +218,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
                 {squad.data.away.map(p => (
                   <li key={p.id} className="flex items-center gap-3">
                     <Avatar name={p.name} size="sm" className="arc" aria-hidden />
-                    <span className="text-[14px] text-white/90">{p.name}</span>
-                    {p.reason && <span className="text-[12px] text-white/50 truncate">{p.reason}</span>}
+                    <span className="text-[14px] text-ink">{p.name}</span>
+                    {p.reason && <span className="text-[12px] text-ink-2 truncate">{p.reason}</span>}
                   </li>
                 ))}
               </ul>
@@ -227,7 +227,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           </>}
           {squad.data && squad.data.waiting.length > 0 && (
             // Kostas, 16 Oct: they are on Trak, waiting for consent (a parent's, or their own from the academy's consent age). A count, never names.
-            <p className="text-[12px] text-white/45 mt-4">{squad.data.waiting.length} not counted yet: waiting for consent</p>
+            <p className="text-[12px] text-ink-3 mt-4">{squad.data.waiting.length} not counted yet: waiting for consent</p>
           )}
         </section>
       )}

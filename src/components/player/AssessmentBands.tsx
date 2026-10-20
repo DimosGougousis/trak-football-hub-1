@@ -21,9 +21,9 @@ export function AssessmentBands({ scores }: { scores: AssessmentScores }) {
         const band = bandForScore(cat.score)
         return (
         <li key={cat.label} className="flex items-center gap-2">
-          <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-white/45"
-            style={{ fontFamily: "'DM Mono', monospace" }}>{cat.label}</span>
-          <div className="flex-1 h-1.5 rounded-full bg-[#202024] overflow-hidden">
+          <span className="w-[90px] flex-shrink-0 text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3"
+            style={{ fontFamily: 'var(--t-font-mono)' }}>{cat.label}</span>
+          <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
             <div className="h-full rounded-full transition-all duration-500"
               style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: band.color }} />
           </div>
