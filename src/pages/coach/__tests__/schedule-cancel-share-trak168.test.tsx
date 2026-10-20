@@ -68,7 +68,7 @@ describe('TRAK-168: right after Cancel event, Share to WhatsApp', () => {
   it('offers the cancellation message, with its reason and the event link, and nothing is sent until a chat is picked', async () => {
     await cancelWith('Pitch waterlogged')
     const done = await screen.findByRole('dialog', { name: 'Event cancelled' })
-    const link = within(done).getByRole('link', { name: /Share to WhatsApp/ })
+    const link = within(done).getByRole('link', { name: 'Share' })
     expect(link.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/) // no number: WhatsApp asks which chat
     expect(link).toHaveAttribute('target', '_blank')
     const text = shared(link)
@@ -83,7 +83,7 @@ describe('TRAK-168: right after Cancel event, Share to WhatsApp', () => {
 
   it('leaves out a reason that names a child', async () => {
     await cancelWith('Ade Okafor is ill')
-    const link = within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('link', { name: /Share to WhatsApp/ })
+    const link = within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('link', { name: 'Share' })
     expect(shared(link)).not.toMatch(/Ade|Okafor|is ill|Reason/)
     expect(shared(link)).toContain('CANCELLED')
   })
@@ -98,7 +98,7 @@ describe('TRAK-168: right after Cancel event, Share to WhatsApp', () => {
       { id: 'sq-3', age_group: 'U16', status: 'active', player_name: 'Cal Mensah' },
     ]))
     await cancelWith('')
-    const link = within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('link', { name: /Share to WhatsApp/ })
+    const link = within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('link', { name: 'Share' })
     expect(shared(link).split('\n')[0]).toBe('*❌ CANCELLED | U16 Match vs Synthetic Rovers (Away)*')
   })
 
@@ -107,7 +107,7 @@ describe('TRAK-168: right after Cancel event, Share to WhatsApp', () => {
     await cancelWith('Pitch waterlogged')
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't cancel the event")
     expect(screen.queryByRole('dialog', { name: 'Event cancelled' })).toBeNull()
-    expect(screen.queryByRole('link', { name: /Share to WhatsApp/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Share' })).toBeNull()
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Cancel event' })).toBeInTheDocument())
   })
 })

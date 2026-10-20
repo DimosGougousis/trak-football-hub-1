@@ -20,9 +20,9 @@ const PLAYERS = [
   { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Ade Okafor', position: 'Midfielder', created_at: '2026-09-01T00:00:00Z' },
   { id: 'sp-2', coach_user_id: COACH.id, player_name: 'Bo Lind', position: 'Defender', created_at: '2026-09-01T00:00:00Z' },
 ]
-// TRAK-197: Home lists its players in the Player overview, one row each.
+// TRAK-197: the overview lists the players, one row each (TRAK-211: on the Feedback tab).
 const homeRow = (name: string) => screen.queryByRole('button', { name: new RegExp(`^Open ${name}'s profile`) })
-// Home reads the squad, assessments, sessions and attendance before its rows show:
+// The overview reads the squad, assessments, sessions and attendance before its rows show:
 // over 1 s on GitHub's runner (#367's run, 19 Oct), so allow 5 s like the other coach waits.
 const HOME_LOAD = { timeout: 5000 }
 
@@ -48,7 +48,7 @@ function coachReads(players: typeof PLAYERS | [], gate?: Promise<void>) {
 
 afterEach(() => { cleanup(); forgetScreens() })
 
-describe('TRAK-180 switching between Home and Squad', () => {
+describe('TRAK-180 switching between Squad and the overview tab', () => {
   it('Squad says it is loading, never "being prepared", until its read answers', async () => {
     signInAs(COACH)
     let release!: () => void
@@ -68,13 +68,13 @@ describe('TRAK-180 switching between Home and Squad', () => {
     expect(await screen.findByText('Your squad is being prepared')).toBeInTheDocument()
   })
 
-  it('going back to Squad and to Home shows what they last showed at once, then refreshes', async () => {
+  it('going back to Squad and to Feedback shows what they last showed at once, then refreshes', async () => {
     signInAs(COACH)
     const user = userEvent.setup()
     coachReads(PLAYERS)
     renderApp('/coach/squad')
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
     await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull(), HOME_LOAD)
 
     // From here every squad read is held: only the memory can show players.
@@ -85,7 +85,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     expect(screen.queryByText('Your squad is being prepared')).toBeNull()
     expect(screen.queryByText(/Loading your squad/)).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
     expect(homeRow('Ade Okafor')).not.toBeNull()
     expect(screen.queryByText('Loading your players…')).toBeNull()
     release()
@@ -96,7 +96,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     signInAs(COACH)
     const user = userEvent.setup()
     coachReads(PLAYERS)
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull(), HOME_LOAD)
     await user.click(screen.getByRole('button', { name: /^Squad$/i }))
     expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
@@ -104,7 +104,7 @@ describe('TRAK-180 switching between Home and Squad', () => {
     // The assessments decide each level, so a failed read can't keep the old list.
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, () =>
       HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
-    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
     expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
     expect(homeRow('Ade Okafor')).toBeNull()
   }, 20_000)

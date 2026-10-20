@@ -68,7 +68,7 @@ export default function ClubProfile() {
       <div className="text-center mb-8 pt-2">
         <div
           className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-4 overflow-hidden flex items-center justify-center"
-          style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}
+          style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}
         >
           <span className="text-2xl font-semibold text-primary" aria-hidden="true">
               {(profile?.full_name || '?').charAt(0).toUpperCase()}
@@ -76,11 +76,11 @@ export default function ClubProfile() {
         </div>
         <p
           style={{
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--t-font)',
             fontSize: 20,
             fontWeight: 400,
             letterSpacing: '-0.02em',
-            color: 'rgba(255,255,255,0.88)',
+            color: 'rgb(var(--t-ink))',
           }}
         >
           {profile?.full_name || '—'}
@@ -88,14 +88,14 @@ export default function ClubProfile() {
         <span
           className="inline-flex items-center mt-2 h-5 px-2.5 rounded-full"
           style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: 'var(--t-font-mono)',
             fontSize: 8,
             fontWeight: 500,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: '#C8F25A',
-            background: 'rgba(200,242,90,0.08)',
-            border: '1px solid rgba(200,242,90,0.2)',
+            color: 'rgb(var(--t-brand))',
+            background: 'rgb(var(--t-brand) / 0.08)',
+            border: '1px solid rgb(var(--t-brand) / 0.2)',
           }}
         >
           Administrator
@@ -106,21 +106,21 @@ export default function ClubProfile() {
       {orgName && (
         <ClubCard className="p-5 mb-5">
           <SectionLabel>Academy</SectionLabel>
-          <div className="mt-2" style={{ fontSize: 20, fontWeight: 400, color: 'rgba(255,255,255,0.88)' }}>
+          <div className="mt-2" style={{ fontSize: 20, fontWeight: 400, color: 'rgb(var(--t-ink))' }}>
             {orgName}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="px-3 py-2" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>
+            <div className="px-3 py-2" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))', borderRadius: 12 }}>
+              <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgb(var(--t-ink-3))' }}>
                 Coaches
               </div>
-              <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2 }}>{coachCount}</div>
+              <div style={{ fontSize: 18, color: 'rgb(var(--t-ink))', marginTop: 2 }}>{coachCount}</div>
             </div>
-            <div className="px-3 py-2" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>
+            <div className="px-3 py-2" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))', borderRadius: 12 }}>
+              <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgb(var(--t-ink-3))' }}>
                 Players
               </div>
-              <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.88)', marginTop: 2 }}>{playerCount}</div>
+              <div style={{ fontSize: 18, color: 'rgb(var(--t-ink))', marginTop: 2 }}>{playerCount}</div>
             </div>
           </div>
         </ClubCard>
@@ -130,20 +130,20 @@ export default function ClubProfile() {
       {joinCode && (
         <ClubCard className="p-5 mb-5">
           <SectionLabel>Academy Join Code</SectionLabel>
-          <p className="mt-1" style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+          <p className="mt-1" style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))', lineHeight: 1.5 }}>
             Share this code with coaches so they can join your academy.
           </p>
           <button
             onClick={copyCode}
             className="mt-3 w-full flex items-center justify-between px-4 py-3 rounded-[12px] transition-colors"
-            style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.2)' }}
+            style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.2)' }}
           >
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 18, fontWeight: 500, color: '#C8F25A', letterSpacing: '0.08em' }}>
+            <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 18, fontWeight: 500, color: 'rgb(var(--t-brand))', letterSpacing: '0.08em' }}>
               TRK-{joinCode}
             </span>
             {copied
-              ? <Check size={18} style={{ color: '#C8F25A' }} />
-              : <Copy size={18} style={{ color: 'rgba(200,242,90,0.5)' }} />
+              ? <Check size={18} style={{ color: 'rgb(var(--t-brand))' }} />
+              : <Copy size={18} style={{ color: 'rgb(var(--t-brand) / 0.5)' }} />
             }
           </button>
         </ClubCard>
@@ -154,45 +154,45 @@ export default function ClubProfile() {
         <button
           onClick={() => navigate('/how-it-works')}
           className="w-full flex items-center justify-between rounded-[18px] p-4 text-left transition-colors"
-          style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
         >
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.18)' }}
+              style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}
             >
-              <IconHowItWorks size={16} color="#C8F25A" />
+              <IconHowItWorks size={16} color="rgb(var(--t-brand))" />
             </div>
             <div>
               <SectionLabel>HOW TRAK WORKS</SectionLabel>
-              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[12px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 Performance bands &amp; rating engine
               </p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/40" />
+          <ChevronRight size={18} className="text-ink-3" />
         </button>
 
         <button
           onClick={() => navigate('/settings')}
           className="w-full flex items-center justify-between rounded-[18px] p-4 text-left transition-colors"
-          style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
         >
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))' }}
             >
-              <SettingsIcon size={16} className="text-white/55" />
+              <SettingsIcon size={16} className="text-ink-2" />
             </div>
             <div>
               <SectionLabel>SETTINGS</SectionLabel>
-              <p className="text-[12px] text-white/55 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[12px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 Account, password, access
               </p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-white/40" />
+          <ChevronRight size={18} className="text-ink-3" />
         </button>
       </div>
 

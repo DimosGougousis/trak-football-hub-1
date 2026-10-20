@@ -20,9 +20,9 @@ function OptPill({ label, icon: Icon, active, onClick }: { label: string; icon?:
     <button onClick={onClick}
       className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors inline-flex items-center justify-center gap-1.5"
       style={{
-        background: active ? 'rgba(200,242,90,0.12)' : '#0d0d0f',
-        border: active ? '1.5px solid #C8F25A' : '1.5px solid rgba(255,255,255,0.06)',
-        color: active ? '#C8F25A' : 'rgba(255,255,255,0.55)',
+        background: active ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-surface))',
+        border: active ? '1.5px solid rgb(var(--t-brand))' : '1.5px solid rgb(var(--t-line))',
+        color: active ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-2))',
       }}>
       {Icon && <Icon size={14} />}
       {label}
@@ -80,10 +80,10 @@ export default function CoachAwardPlayer() {
         {/* Header */}
         <div className="flex items-center gap-3 pt-6">
           <button onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]">
-            <ChevronLeft size={16} className="text-white/70" />
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line">
+            <ChevronLeft size={16} className="text-ink-2" />
           </button>
-          <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px]">
+          <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px]">
             Give Award
           </h1>
         </div>
@@ -93,26 +93,26 @@ export default function CoachAwardPlayer() {
           <MetadataLabel text="PLAYER" />
           <div className="relative">
             <select value={playerId} onChange={e => setPlayerId(e.target.value)}
-              className="w-full px-4 py-3 pr-10 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none appearance-none">
+              className="w-full px-4 py-3 pr-10 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none appearance-none">
               <option value="">{selectedPlayer ? 'Change player...' : 'Select player...'}</option>
               {players.map(p => (
                 <option key={p.id} value={p.id}>{p.player_name}</option>
               ))}
             </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
           </div>
         </div>
 
         {/* Player card */}
         {selectedPlayer && (
-          <div className="flex items-center gap-3 p-3 rounded-[12px] bg-[#141416] border border-white/[0.06]">
+          <div className="flex items-center gap-3 p-3 rounded-[12px] bg-surface border border-line">
             <div className="flex items-center justify-center w-[38px] h-[38px] rounded-full text-[13px] font-bold shrink-0"
-              style={{ background: 'rgba(200,242,90,0.14)', color: '#C8F25A' }}>
+              style={{ background: 'rgb(var(--t-brand) / 0.14)', color: 'rgb(var(--t-brand))' }}>
               {selectedPlayer.player_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
             </div>
             <div>
-              <p className="text-[15px] font-medium text-white/90">{selectedPlayer.player_name}</p>
-              <p className="text-[11px] text-white/40">
+              <p className="text-[15px] font-medium text-ink">{selectedPlayer.player_name}</p>
+              <p className="text-[11px] text-ink-3">
                 {selectedPlayer.position?.toUpperCase() ?? 'Player'}
                 {selectedPlayer.shirt_number ? ` · #${selectedPlayer.shirt_number}` : ''}
               </p>
@@ -134,9 +134,9 @@ export default function CoachAwardPlayer() {
         {/* Selected award preview */}
         {selectedAward && (
           <div className="flex items-center gap-3 p-4 rounded-[14px]"
-            style={{ background: 'rgba(200,242,90,0.06)', border: '1px solid rgba(200,242,90,0.18)' }}>
-            <selectedAward.icon size={22} color="#C8F25A" />
-            <p className="text-[14px] font-semibold text-[#C8F25A]">{selectedAward.label}</p>
+            style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}>
+            <selectedAward.icon size={22} color="rgb(var(--t-brand))" />
+            <p className="text-[14px] font-semibold text-brand">{selectedAward.label}</p>
           </div>
         )}
 
@@ -149,7 +149,7 @@ export default function CoachAwardPlayer() {
             onChange={e => setAwardedFor(e.target.value)}
             maxLength={60}
             placeholder='e.g. "Week of 14 Apr" or "April 2026"'
-            className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none placeholder:text-white/20"
+            className="w-full px-4 py-3 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none placeholder:text-ink-3"
           />
         </div>
 
@@ -157,7 +157,7 @@ export default function CoachAwardPlayer() {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <MetadataLabel text="NOTE (OPTIONAL)" />
-            <span className="text-[10px] text-white/25">{note.length}/150</span>
+            <span className="text-[10px] text-ink-3">{note.length}/150</span>
           </div>
           <textarea
             value={note}
@@ -165,13 +165,13 @@ export default function CoachAwardPlayer() {
             maxLength={150}
             rows={2}
             placeholder="A short message to the player..."
-            className="w-full px-4 py-3 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none resize-none placeholder:text-white/20"
+            className="w-full px-4 py-3 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none resize-none placeholder:text-ink-3"
           />
         </div>
 
         {/* Save */}
         <button onClick={handleSave} disabled={!playerId || !awardType || saving}
-          className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-40 transition-opacity">
+          className="w-full py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm disabled:opacity-40 transition-opacity">
           {saving ? 'Saving...' : 'Give Award →'}
         </button>
       </div>

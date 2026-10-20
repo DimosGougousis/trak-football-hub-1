@@ -42,10 +42,10 @@ function TimeRow({ event }: { event: StripEvent }) {
   if (event.sessionId && !event.time) return null
   return (
     <div>
-      <p className="text-[13px] text-white/50">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
+      <p className="text-[13px] text-ink-2">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
       {event.time
-        ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-white/95">{event.time}</p>
-        : <p className="text-[17px] text-white/80 mt-1">Time to be confirmed</p>}
+        ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-ink">{event.time}</p>
+        : <p className="text-[17px] text-ink mt-1">Time to be confirmed</p>}
     </div>
   )
 }
@@ -83,7 +83,7 @@ export function EventSheet({ event, role, trigger, children }: {
     event.familyNote && !past ? ['Note', event.familyNote] : null,
   ] as ([string, ReactNode] | null)[]).filter((row): row is [string, ReactNode] => !!row)
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
-  const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgba(255,255,255,0.55)' : '#4ade80'
+  const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgb(var(--t-ink-2))' : 'rgb(var(--t-success))'
 
   return (
     <BottomSheet trigger={trigger} title={sheetTitle(event)} description={sheetPlace(event) ?? undefined}
@@ -93,15 +93,15 @@ export function EventSheet({ event, role, trigger, children }: {
         {status && (
           <p className="flex items-center gap-2 text-[14px]">
             <Icon size={16} aria-hidden="true" style={{ color }} />
-            <span className="font-medium text-white/95">{status.text}</span>
+            <span className="font-medium text-ink">{status.text}</span>
           </p>
         )}
         {rows.length > 0 && (
           <dl className="space-y-4 text-[14px]">
             {rows.map(([term, value]) => (
               <div key={term} className="flex gap-4">
-                <dt className="w-14 shrink-0 text-white/45">{term}</dt>
-                <dd className="min-w-0 text-white/85">{value}</dd>
+                <dt className="w-14 shrink-0 text-ink-3">{term}</dt>
+                <dd className="min-w-0 text-ink">{value}</dd>
               </div>
             ))}
           </dl>
@@ -116,7 +116,7 @@ export function EventSheet({ event, role, trigger, children }: {
         )}
         {children}
         {/* The coach's sheet places this between its buttons and Attending. */}
-        {role !== 'coach' && updated && <p className="text-[13px] text-white/50">{updated}</p>}
+        {role !== 'coach' && updated && <p className="text-[13px] text-ink-2">{updated}</p>}
       </div>
     </BottomSheet>
   )

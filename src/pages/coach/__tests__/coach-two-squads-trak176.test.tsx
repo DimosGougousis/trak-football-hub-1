@@ -81,7 +81,12 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     coachReads(TWO.map(p => ({ ...p, coach_user_id: 'coach-176-one', age_group: 'U14' })))
     renderApp('/coach/home')
     expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
-    await screen.findByText('Ade Okafor')
+    // TRAK-211: Home lists no players now. The Feedback tab's list shows the squads have answered.
+    await userEvent.click(screen.getByRole('button', { name: /^Feedback$/i }))
+    expect(await screen.findByText('Ade Okafor', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Squad' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /^Home$/i }))
+    expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Squad' })).toBeNull()
   })
 

@@ -8,6 +8,7 @@
  * the app never writes it.
  */
 import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { trainingThemeFrom, type TrainingTheme } from '@/lib/training-theme'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -15,16 +16,19 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
 /* TRAK-159: one colour per type, everywhere events show (the coach calendar,
    the Home strip, the family lists). Founders, 12 Oct, replacing 11 Oct's
    match red: training blue, match green, other orange, cancelled red.
-   Tailwind's 400 shades, which read on the dark theme. */
+   Light theme (TRAK-189): dark enough for a white page, and match moves to
+   purple (Imad, 18 Oct), since a green match read as the brand's buttons. A
+   blue-leaning purple, so it stays apart from training's blue with
+   deuteranopia; tournament, purple before, moves to teal. */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
-  training:   '#60a5fa',
-  match:      '#4ade80',
-  other:      '#fb923c',
-  tournament: '#c084fc',
+  training:   '#285EA3',
+  match:      '#7B2FBE',
+  other:      '#9C4516',
+  tournament: '#0F766E',
 }
-export const CANCELLED_COLOR = '#f87171'
+export const CANCELLED_COLOR = '#B42318'
 /** "No time set" on a card: a warning, unlike every type colour. */
-export const NO_TIME_COLOR = '#facc15'
+export const NO_TIME_COLOR = '#875100'
 export const DURATIONS = [60, 75, 90, 120] as const
 /** The family note fits one line on a phone; the database holds the same limit. */
 export const FAMILY_NOTE_MAX = 200
@@ -42,6 +46,8 @@ export type EventForm = {
   kit: string
   /** TRAK-161: what families read under Kit; '' for none. Not the coach-only notes. */
   familyNote: string
+  /** A training's catalogue theme; '' for none. Coach-only. */
+  theme: TrainingTheme | ''
 }
 
 export type EventRow = {
@@ -65,10 +71,11 @@ export type EventRow = {
   status?: string | null
   cancel_reason?: string | null
   series_id?: string | null
+  training_theme?: string | null
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '', theme: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -147,6 +154,7 @@ export function formToRow(form: EventForm) {
     // TRAK-161: kit and the family note on every kind of event.
     kit: form.kit.trim() || null,
     family_note: form.familyNote.trim() || null,
+    training_theme: form.kind === 'training' && form.theme ? form.theme : null,
   }
 }
 
@@ -170,6 +178,7 @@ export function rowToForm(row: EventRow): EventForm {
     homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : '',
     kit: row.kit ?? '',
     familyNote: row.family_note ?? '',
+    theme: trainingThemeFrom(row.training_theme),
   }
 }
 
