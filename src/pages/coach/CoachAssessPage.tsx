@@ -466,10 +466,13 @@ function CoachAssessmentForm() {
           // later. The assessment itself is saved, so keep its id: pressing save
           // again updates that row rather than creating a second one.
           console.error('Shared feedback save failed:', sharedError)
+          // TRAK-200: the scores saved above are published unless this is a draft,
+          // so the family can already see them; only a draft keeps everything back.
           toast.error(
-            `The scores${note.trim() ? ' and private note' : ''} are saved. Not saved: the message to ` +
-              `${firstName} (${sharedError.message}), so nothing new reached the family. ` +
-              `Your text is still here — try again.`,
+            (draft
+              ? `The scores${note.trim() ? ' and private note' : ''} are saved as a draft, so nothing reached the family. `
+              : `The scores${note.trim() ? ' and private note' : ''} are saved, and ${firstName} and their family can see the scores. `) +
+              `Not saved: the message to ${firstName} (${sharedError.message}). Your text is still here — try again.`,
             { duration: 12000 },
           )
           setExistingId(saved.id)
