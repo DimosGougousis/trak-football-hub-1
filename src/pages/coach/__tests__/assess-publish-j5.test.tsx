@@ -18,6 +18,7 @@ import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type { ReactNode } from 'react'
 
 // TRAK-176: coach screens read the coach's squads through the query cache.
@@ -39,7 +40,7 @@ interface Write { table: string; method: 'post' | 'patch'; body: Record<string, 
 let writes: Write[]
 // refuseNote: the private-note write is refused. sharedGone: an update to the
 // shared message matches no row (removed, or no longer this coach's).
-let faults: { refuseNote: boolean; sharedGone: boolean }
+let faults: { refuseNote: boolean; sharedGone: boolean; sharedFails?: boolean }
 let consent: { required: boolean; afterRefusal: boolean; refuseInsert: boolean; refused: boolean }
 
 function showForm() {
@@ -72,7 +73,7 @@ const assessed = () => writes.filter(w => w.table === 'coach_assessments').map(w
 beforeEach(() => {
   writes = []
   consent = { required: false, afterRefusal: false, refuseInsert: false, refused: false }
-  faults = { refuseNote: false, sharedGone: false }
+  faults = { refuseNote: false, sharedGone: false, sharedFails: false }
   server.use(
     http.get(endpoint('squad_players'), () => HttpResponse.json([
       { id: 'player-a', player_name: 'Alex Synthetic' },
@@ -96,6 +97,10 @@ beforeEach(() => {
         if (table === 'coach_assessments' && consent.refuseInsert) {
           consent.refused = true
           return HttpResponse.json(RLS_REFUSAL, { status: 403 })
+        }
+        // sharedFails: the message write fails after the assessment row has saved.
+        if (table === 'coach_shared_feedback' && faults.sharedFails) {
+          return HttpResponse.json({ message: 'Synthetic outage' }, { status: 503 })
         }
         if (table === 'coach_assessment_notes' && faults.refuseNote) {
           return HttpResponse.json(RLS_REFUSAL, { status: 403 })
@@ -428,5 +433,43 @@ describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, 
     await userEvent.click(screen.getByRole('button', { name: 'Unpublish message' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unpublish message' })).toBeEnabled())
     expect(screen.getByText(/Published\. Alex can read it now/)).toBeInTheDocument()
+  })
+})
+
+// Imad's handoff, 20 Oct: the scores save before the message. On Publish they are
+// visible to the family at once (TRAK-200), so a failed message must not say
+// "nothing new reached the family"; on Save draft they aren't, so it may.
+describe('J5: a failed message save says what the family can see', { timeout: 20_000 }, () => {
+  it('on Publish: the scores are already visible, so it never says nothing reached the family', async () => {
+    const error = vi.spyOn(toast, 'error')
+    faults.sharedFails = true
+    showForm()
+    await choose('player-b')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    await waitFor(() => expect(error).toHaveBeenCalled())
+    const said = String(error.mock.calls.at(-1)![0])
+    expect(assessed()[0].published_at).not.toBeNull()
+    expect(said).not.toMatch(/nothing new reached the family/)
+    expect(said).toMatch(/Bella and their family can see the scores/)
+    expect(said).toMatch(/Not saved: the message to Bella/)
+    error.mockRestore()
+  })
+
+  it('on Save draft: the scores stay hidden, so the family sees nothing yet', async () => {
+    const error = vi.spyOn(toast, 'error')
+    faults.sharedFails = true
+    showForm()
+    await choose('player-b')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+    await waitFor(() => expect(error).toHaveBeenCalled())
+    const said = String(error.mock.calls.at(-1)![0])
+    expect(assessed()[0].published_at).toBeNull()
+    expect(said).toMatch(/nothing reached the family/)
+    expect(said).toMatch(/Not saved: the message to Bella/)
+    error.mockRestore()
   })
 })
