@@ -8,6 +8,7 @@ import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS, appearanceLabel } from '@/lib/types'
 import { openable } from '@/lib/openable'
 import { ChevronLeft } from 'lucide-react'
+import { CoachAssessmentCard } from '@/components/coach/CoachAssessmentCard'
 
 function avgScore(a: any) {
   return (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
@@ -22,6 +23,7 @@ export default function CoachPlayerProfilePage() {
   const [player, setPlayer] = useState<any>(null)
   const [assessments, setAssessments] = useState<any[]>([])
   const [notesById, setNotesById] = useState<Record<string, string>>({})
+  const [messageById, setMessageById] = useState<Record<string, string>>({})
   // Whether each assessment's message reached the player. Undefined when the
   // read failed: then the page says nothing rather than "No message".
   const [messageSentById, setMessageSentById] = useState<Record<string, boolean> | undefined>({})
@@ -64,11 +66,12 @@ export default function CoachPlayerProfilePage() {
       const ids = list.map((a: any) => a.id)
       const [{ data: notes }, shared] = await Promise.all([
         supabase.from('coach_assessment_notes').select('assessment_id, note').in('assessment_id', ids),
-        supabase.from('coach_shared_feedback' as any).select('assessment_id, published_at').in('assessment_id', ids),
+        supabase.from('coach_shared_feedback' as any).select('assessment_id, body, published_at').in('assessment_id', ids),
       ])
       const map: Record<string, string> = {}
       notes?.forEach((n: any) => { map[n.assessment_id] = n.note })
       setNotesById(map)
+      if (!shared.error) setMessageById(Object.fromEntries(((shared.data ?? []) as any[]).map(f => [f.assessment_id, f.body])))
       if (shared.error) setMessageSentById(undefined)
       else setMessageSentById(Object.fromEntries(ids.map((assessmentId: string) =>
         [assessmentId, ((shared.data ?? []) as any[]).some(f => f.assessment_id === assessmentId && f.published_at != null)])))
@@ -173,43 +176,12 @@ export default function CoachPlayerProfilePage() {
             onRetry={() => { void loadAssessments() }} />
         )}
 
-        {/* Latest assessment */}
-        {latest && (
-          <div className="rounded-[18px] p-4 cursor-pointer active:scale-[0.99] transition-transform"
-            style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
-            {...openable(`Open latest assessment, ${shortDate(latest)}${latest.coach_sessions?.title ? `, ${latest.coach_sessions.title}` : ''}`,
-              () => openAssessment(latest.id))}>
-            <div className="flex items-center justify-between mb-3">
-              <MetadataLabel text="LATEST ASSESSMENT" />
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-white/22"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
-                  {new Date(latest.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                </span>
-                <BandPill band={scoreToBand(avgScore(latest))} />
-              </div>
-            </div>
-            {/* Scores */}
-            <div className="space-y-2.5 mt-1">
-              <CategoryBar label="Work Rate"    score={latest.work_rate}    />
-              <CategoryBar label="Technical"    score={latest.technical}    />
-              <CategoryBar label="Physical"     score={latest.physical}     />
-              <CategoryBar label="Coachability" score={latest.coachability} />
-              <CategoryBar label="Attitude"     score={latest.attitude}     />
-              <CategoryBar label="Tactical"     score={latest.tactical}     />
-            </div>
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-[11px] text-white/45">{latest.coach_sessions?.title ?? 'No session recorded'}</span>
-              {messageTag(latest)}
-            </div>
-            {notesById[latest.id] && (
-              <div className="mt-3">
-                <MetadataLabel text="PRIVATE NOTE · ONLY YOU" />
-                <p className="text-[11px] text-white/45 mt-1 italic"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}>"{notesById[latest.id]}"</p>
-              </div>
-            )}
-          </div>
+        {/* Latest assessment, as Arc's card (TRAK-200): Draft or Published, Publish on the card,
+            and the quick look with the opponent, the message and the private note. */}
+        {latest && user && (
+          <CoachAssessmentCard key={latest.id} assessment={latest}
+            message={messageById[latest.id]} messageFailed={messageSentById === undefined} note={notesById[latest.id]}
+            onChanged={published => setAssessments(list => list.map(a => a.id === latest.id ? { ...a, published_at: published ? new Date().toISOString() : null } : a))} />
         )}
 
         {/* Assessment history */}
@@ -237,6 +209,7 @@ export default function CoachPlayerProfilePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {a.published_at == null && <span className="text-[9px] text-muted-foreground">Draft</span>}
                     {messageTag(a)}
                     <span className="text-[11px] font-medium" style={{ color: bandColor }}>
                       {avgScore(a).toFixed(1)}
