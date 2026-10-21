@@ -137,6 +137,8 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     expect(writes[0].body).toHaveLength(8)
     expect(writes[1]).toMatchObject({ method: 'patch', body: { published: true } })
     expect(writes[1].query).toMatch(/^\?id=in\.\(written-0,written-1,/)
+    // TRAK-135: one nudge; the server makes one email per person for the 8 weeks.
+    await waitFor(() => expect(emailNudges).toBe(1))
   })
 
   // Imad's #263 review: the repeat controls hide for a match, but hiding them
@@ -275,6 +277,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
       query: `?series_id=eq.series-1&event_date=gte.${today}&published=eq.false&status=eq.scheduled&select=id`,
       body: { published: true },
     })
+    await waitFor(() => expect(emailNudges).toBe(1)) // TRAK-135
   })
 
   it('deletes only this draft week, never a published one', async () => {
