@@ -40,7 +40,8 @@ export function PlayerAlertsBell({ userId, events, assessment, assessmentLoadFai
   })
   if (!assessmentLoadFailed && assessment?.userId === userId) alerts.push({
     id: `assessment-${assessment.id}`, title: assessmentAlertTitle(assessment.coachName),
-    description: 'Your coach has published an assessment.', date: assessment.publishedAt,
+    // TRAK-226: the title already says who and what; this line says what's in it.
+    description: 'Your ratings and a message to read.', date: assessment.publishedAt,
     action: { label: 'Open assessment', onSelect: () => navigate(`/player/feedback/${assessment.id}`) },
   })
   alerts.sort((a, b) => (Date.parse(b.date ?? '') || 0) - (Date.parse(a.date ?? '') || 0))
