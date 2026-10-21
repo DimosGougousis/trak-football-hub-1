@@ -96,7 +96,7 @@ test('TRAK-189 player calendar contrast and cancelled ring on the selected day',
   await expect(cell).toBeVisible()
   const dot = cell.locator('span[aria-hidden="true"] > span')
   await expect(dot).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-  await expect(dot).toHaveCSS('border-color', 'rgb(180, 35, 24)')
+  await expect(dot).toHaveCSS('border-color', 'rgb(209, 36, 47)')
   await expect(dot).toHaveCSS('border-style', 'solid')
   await expect(page.getByRole('region', { name: 'Day' }).getByRole('button', { name: /Synthetic training.*Cancelled/ })).toBeVisible()
   await page.waitForLoadState('networkidle')

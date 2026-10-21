@@ -65,7 +65,7 @@ export default function ParentHome() {
                   {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
                 </p>}
                 {/* TRAK-163: the selected child's week, Monday to Sunday, under the header. */}
-                {selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} renderSheet={(event, trigger) => <EventSheet event={event} role="parent" trigger={trigger}>
+                {selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} absentFor={selectedChild.id} renderSheet={(event, trigger) => <EventSheet event={event} role="parent" trigger={trigger}>
                     <CantMakeIt key={selectedChild.id} event={event} child={selectedChild} />
                   </EventSheet>}
                   load={(from, to) => supabase.rpc('child_events', { p_child: selectedChild.id })

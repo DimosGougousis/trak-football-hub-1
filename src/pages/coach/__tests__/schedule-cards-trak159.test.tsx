@@ -75,11 +75,13 @@ describe('TRAK-159: the coach calendar cards', () => {
 })
 
 describe('TRAK-159: one colour per type', () => {
-  // Imad, 18 Oct (TRAK-189): on the light theme a match is purple, not the brand's green.
-  it('training blue, match purple, other orange, cancelled red (founders, 12 Oct; match purple, 18 Oct)', () => {
-    expect(hue(EVENT_COLOR.training)).toBe('blue')
-    expect(hue(EVENT_COLOR.match)).toBe('purple')
-    expect(hue(EVENT_COLOR.other)).toBe('orange')
+  // TRAK-231 (20 Oct live run): match magenta, training teal, other green,
+  // cancelled red; tournament blue. (Was blue/purple/orange, 12 and 18 Oct.)
+  it('training teal, match magenta, other green, tournament blue, cancelled red (20 Oct live run)', () => {
+    expect(hue(EVENT_COLOR.training)).toBe('teal')
+    expect(hue(EVENT_COLOR.match)).toBe('magenta')
+    expect(hue(EVENT_COLOR.other)).toBe('green')
+    expect(hue(EVENT_COLOR.tournament)).toBe('blue')
     expect(hue(CANCELLED_COLOR)).toBe('red')
   })
 
@@ -95,7 +97,7 @@ function hexToRgb(hex: string): string {
 }
 
 /** The colour family a hex reads as, by its hue angle. */
-function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'purple' | 'other' {
+function hue(hex: string): 'red' | 'orange' | 'green' | 'teal' | 'blue' | 'purple' | 'magenta' | 'other' {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
   if (d === 0) return 'other'
@@ -103,8 +105,10 @@ function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'purple' | 'oth
   h = (h * 60 + 360) % 360
   if (h < 15 || h >= 345) return 'red'
   if (h < 40) return 'orange'
-  if (h >= 90 && h < 160) return 'green'
+  if (h >= 60 && h < 160) return 'green'
+  if (h >= 160 && h < 195) return 'teal'
   if (h >= 195 && h < 250) return 'blue'
   if (h >= 250 && h < 300) return 'purple'
+  if (h >= 300 && h < 345) return 'magenta'
   return 'other'
 }

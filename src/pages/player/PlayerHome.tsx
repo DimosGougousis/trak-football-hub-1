@@ -432,7 +432,7 @@ export default function PlayerHome() {
         {details && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">
           {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
         </p>}
-        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger}>
+        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} absentFor={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger}>
           {reportsForSelf && <CantMakeIt event={event} child={{ id: user.id, name: 'you' }} self />}
         </EventSheet>}
           load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
