@@ -7,6 +7,7 @@ import type { Variants } from "motion/react";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import { Calendar, type CalendarDateMatcher } from "../calendar/calendar";
 import { motionTokens } from "../lib/motion-tokens";
+import { revealPanel, sideWithRoom } from "../lib/side-with-room";
 import styles from "./date-picker.module.css";
 
 export interface DatePickerProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "value" | "onChange"> {
@@ -44,11 +45,16 @@ const statusRise: Variants = {
   exit: { opacity: 0, y: "-0.3em", filter: `blur(${blur.subtle}px)`, transition: { duration: 0.14, ease: ease.standard } },
 };
 
+/** The calendar and its footer, about 400px tall: room it needs to open without covering what follows. */
+const CALENDAR_ROOM = 400;
+
 export function DatePicker({ label, value, onChange, description, placeholder = "Select a date", minDate, maxDate, disabledDates, locale = "en-US", format = { month: "short", day: "numeric", year: "numeric" }, showToday, clearable = true, id, className, disabled, ...buttonProps }: DatePickerProps) {
   const generatedId = useId();
   const controlId = id ?? generatedId;
   const hintId = description ? `${controlId}-description` : undefined;
   const [open, setOpen] = useState(false);
+  // TRAK-227: which side of the field the calendar opens on, chosen when it opens.
+  const [side, setSide] = useState<"top" | "bottom">("bottom");
   const [month, setMonth] = useState(monthStart(value ?? new Date()));
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -83,7 +89,7 @@ export function DatePicker({ label, value, onChange, description, placeholder = 
     setOpen(false);
   };
   /** The calendar always opens on the month of the current value, or today's month. */
-  const show = () => { window.clearTimeout(closeTimer.current); setMonth(monthStart(value ?? new Date())); setOpen(true); };
+  const show = () => { window.clearTimeout(closeTimer.current); setMonth(monthStart(value ?? new Date())); setSide(sideWithRoom(triggerRef.current, CALENDAR_ROOM)); setOpen(true); };
   /** A picked day lets the highlight glide onto it and the footer confirm it, then the calendar returns to the field. */
   const selectDate = (date: Date | undefined) => {
     onChange?.(date);
@@ -119,10 +125,10 @@ export function DatePicker({ label, value, onChange, description, placeholder = 
         <ChevronDown className={styles.chevron} size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
       <AnimatePresence>
-        {open && <motion.div ref={popoverRef} className={styles.popover} role="dialog" aria-label={`${label} calendar`} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}
-          initial={reduce ? { opacity: 0 } : { opacity: 0, y: -8, scale: .95 }}
+        {open && <motion.div ref={popoverRef} className={styles.popover} data-side={side} onAnimationComplete={() => revealPanel(popoverRef.current)} role="dialog" aria-label={`${label} calendar`} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); close(); } }}
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: side === "top" ? 8 : -8, scale: .95 }}
           animate={{ opacity: 1, y: 0, scale: 1, transition: reduce ? instant : { ...spring.snappy, opacity: { duration: duration.fast, ease: ease.enter } } }}
-          exit={{ opacity: 0, ...(reduce ? {} : { y: -6, scale: .97 }), transition: { duration: 0.14, ease: ease.standard } }}>
+          exit={{ opacity: 0, ...(reduce ? {} : { y: side === "top" ? 6 : -6, scale: .97 }), transition: { duration: 0.14, ease: ease.standard } }}>
           <Calendar value={value} onChange={selectDate} month={month} onMonthChange={setMonth} minDate={minDate} maxDate={maxDate} disabledDates={disabledDates} locale={locale} showToday={showToday} />
           <div className={styles.footer}>{clearable && <button type="button" onClick={() => selectDate(undefined)} disabled={!value}>Clear</button>}<span className={styles.status}><AnimatePresence initial={false}><motion.span key={time ?? "none"} variants={reduce ? valueFade : statusRise} initial="enter" animate="center" exit="exit">{value ? `Selected ${formatter.format(value)}` : "Choose a day"}</motion.span></AnimatePresence></span></div>
         </motion.div>}

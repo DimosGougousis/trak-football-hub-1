@@ -353,6 +353,43 @@ test.describe('TRAK-221 assessment sliders under a finger', () => {
   })
 })
 
+// TRAK-227 (20 Oct live run, S1): on a phone the event form's date calendar
+// dropped past the end of the sheet's scroll area, so the coach had to scroll
+// to see it and to get back to Next. Layout, so a real browser measures it.
+test.describe('TRAK-227 date and time pickers in the event form', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('the calendar and the time list open fully visible, and Next is reachable after a pick', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/schedule')
+    await page.getByRole('button', { name: 'Add event' }).click()
+    const sheet = page.getByRole('dialog', { name: 'New event' })
+    await sheet.getByRole('button', { name: 'Next', exact: true }).click()
+    // Fully inside every scroll area it sits in, and inside the screen.
+    const fullyVisible = (panel: import('@playwright/test').Locator) => panel.evaluate(el => {
+      const box = el.getBoundingClientRect()
+      let top = 0, bottom = innerHeight
+      for (let node = el.parentElement; node; node = node.parentElement) {
+        if (!['auto', 'scroll', 'hidden'].includes(getComputedStyle(node).overflowY)) continue
+        const r = node.getBoundingClientRect(); top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom)
+      }
+      return box.top >= top - 1 && box.bottom <= bottom + 1
+    })
+    await sheet.getByRole('button', { name: 'Date', exact: true }).click()
+    const calendar = page.getByRole('dialog', { name: /calendar$/ })
+    await expect.poll(() => fullyVisible(calendar)).toBe(true)
+    await calendar.locator('[data-date]:not([disabled])').last().click()
+    await expect(calendar).toBeHidden()
+    const next = sheet.getByRole('button', { name: 'Next', exact: true })
+    const box = (await next.boundingBox())!
+    expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('button')?.textContent?.trim(), [box.x + box.width / 2, box.y + box.height / 2])).toBe('Next')
+    await sheet.getByRole('button', { name: /^Start/ }).click()
+    await expect.poll(() => fullyVisible(page.getByRole('listbox'))).toBe(true)
+    expect(unexpected).toEqual([])
+  })
+})
+
 // Cancelled and Other must differ by shape even on the green selected day.
 // The backend dates the event by Dubai's day, so the page must be on Dubai's day
 // too: on UTC it picked yesterday from 20:00 to 24:00 UTC and found no mark.
