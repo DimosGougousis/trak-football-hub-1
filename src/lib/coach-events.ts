@@ -192,6 +192,19 @@ export const isCancelled = (row: Pick<EventRow, 'status'>) => row.status === 'ca
 /** Delete is only for a mistake nobody has seen: a draft never published. */
 export const canDelete = (row: Pick<EventRow, 'published' | 'status'>) => !row.published && !isCancelled(row)
 
+/** TRAK-230 (Kostas, 21 Oct, option A): once an event has started, what families were told is
+    fixed: no edit and no cancel, only its register or match log (refuse_started_event_change).
+    An old event with no start time locks when its day is over. */
+export function startedLocked(row: Pick<EventRow, 'starts_at' | 'start_time'>, now = Date.now()): boolean {
+  return Date.parse(row.starts_at) + (row.start_time ? 0 : 86_400_000) <= now
+}
+export const STARTED_LOCKED = "This event has started, so it can't be changed. Use its register or match log instead."
+/** The database's refusal of a change to a started event, said as it is. */
+export function lockedMessage(error: unknown): string | null {
+  const e = error as { code?: string, message?: string } | null
+  return e?.code === 'P0001' && e.message === STARTED_LOCKED ? e.message : null
+}
+
 /* TRAK-128 (J8.5): weekly repeat. A series is stored as one row per date, all
    sharing a series_id; no repeat rule is stored, so attendance, "can't make
    it" and cancelling stay per week. Dates are calendar dates (Dubai wall

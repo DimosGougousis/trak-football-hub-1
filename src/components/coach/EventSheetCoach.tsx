@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
 import { TakeRegister } from '@/components/coach/TakeRegister'
-import { clashMessage, type EventRow } from '@/lib/coach-events'
+import { clashMessage, startedLocked, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
@@ -162,7 +162,10 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               <ShareIcon size={18} />Share
             </ShareEventButton>
           )}
-          {!cancelled && <>
+          {/* TRAK-230 (Kostas, 21 Oct): once it has started, what families were told is fixed. */}
+          {!cancelled && row && startedLocked(row) ? (
+            <p className="basis-full text-[13px] text-ink-2">It has started, so its details are fixed.</p>
+          ) : !cancelled && <>
             <button type="button" onClick={() => navigate(`/coach/schedule?edit=${event.id}`)} className={quiet}>
               <Pencil size={16} aria-hidden="true" />Edit
             </button>

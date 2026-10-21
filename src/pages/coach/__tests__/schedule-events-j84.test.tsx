@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -84,8 +85,10 @@ async function open() {
 
 // Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
 describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 }, () => {
-  afterEach(() => { server.events.removeAllListeners() })
+  afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
   beforeEach(() => {
+    // TRAK-230: today's 16:00–18:30 events are still to come, so they can be edited.
+    atMorningToday()
     signInAs(COACH)
     fixtures()
   })
