@@ -18,6 +18,8 @@ const ALLOWED = new Set([
   'pages/player/PlayerEvolutionCard.tsx', // the player card's own artwork (parked)
   'pages/player/PlayerPassport.tsx',    // the passport's own artwork (parked)
   'components/trak/PitchDiagram.tsx',   // the pitch drawing
+  'lib/kit-templates.ts',               // squad kit palettes: the shirt colours themselves (TRAK-203)
+  'components/trak/kits/KitIllustration.tsx', // the kit drawing's fixed shading and seams (TRAK-203)
 ])
 const SKIP_DIRS = ['__tests__', 'stories', 'components/ui', 'components/arc']
 

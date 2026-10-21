@@ -94,6 +94,9 @@ export function authHandlers(): HttpHandler[] {
     // TRAK-133: Home and Settings ask whether this person has a calendar link.
     // None unless a test says so; the calendar tests register their own replies.
     http.post(`${SUPABASE_URL}/rest/v1/rpc/my_calendar_link`, () => HttpResponse.json([])),
+    // TRAK-203: the event form reads the coach's saved squad kits. None unless a
+    // test says so; the kit tests register their own replies.
+    http.get(`${SUPABASE_URL}/rest/v1/coach_team_kits`, () => HttpResponse.json([])),
     http.get(`${SUPABASE_URL}/auth/v1/user`, ({ request }) => {
       const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
       const user = authUserForToken(token)

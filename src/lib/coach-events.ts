@@ -8,6 +8,7 @@
  * the app never writes it.
  */
 import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { describeEventKit, readKitSnapshot, type EventKitSnapshot } from '@/lib/kit-templates'
 import { trainingThemeFrom, type TrainingTheme } from '@/lib/training-theme'
 
 export type EventKind = 'training' | 'match' | 'other'
@@ -48,6 +49,7 @@ export type EventForm = {
   opponent: string
   homeAway: '' | 'home' | 'away'
   kit: string
+  kitSnapshot?: EventKitSnapshot | null
   /** TRAK-161: what families read under Kit; '' for none. Not the coach-only notes. */
   familyNote: string
   /** A training's catalogue theme; '' for none. Coach-only. */
@@ -71,6 +73,7 @@ export type EventRow = {
   published: boolean
   meet_time?: string | null
   kit?: string | null
+  kit_snapshot?: unknown
   family_note?: string | null
   home_away?: string | null
   status?: string | null
@@ -80,7 +83,7 @@ export type EventRow = {
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '', theme: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', kitSnapshot: null, familyNote: '', theme: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -157,7 +160,8 @@ export function formToRow(form: EventForm) {
     opponent: isMatch ? form.opponent.trim() : null,
     home_away: isMatch && form.homeAway ? form.homeAway : null,
     // TRAK-161: kit and the family note on every kind of event.
-    kit: form.kit.trim() || null,
+    kit: form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || null,
+    kit_snapshot: form.kitSnapshot ? readKitSnapshot(form.kitSnapshot) : null,
     family_note: form.familyNote.trim() || null,
     training_theme: form.kind === 'training' && form.theme ? form.theme : null,
   }
@@ -182,6 +186,7 @@ export function rowToForm(row: EventRow): EventForm {
     opponent: row.opponent ?? '',
     homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : '',
     kit: row.kit ?? '',
+    kitSnapshot: readKitSnapshot(row.kit_snapshot),
     familyNote: row.family_note ?? '',
     theme: trainingThemeFrom(row.training_theme),
   }
