@@ -5,7 +5,7 @@ import { CalendarDays } from 'lucide-react'
 /**
  * TRAK-163 (Imad, 12 Oct): the top of every Home. Calendar on the left, the
  * person's name in the middle (the parent's child switcher), the bell on the
- * right. Coaches have no alerts yet, so their right slot stays empty.
+ * right. The coach's bell says who can't make it (TRAK-232).
  */
 export function HomeHeader({ calendarTo, center, right }: { calendarTo: string; center: ReactNode; right?: ReactNode }) {
   return (

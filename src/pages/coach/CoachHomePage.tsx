@@ -7,6 +7,7 @@ import { MobileShell, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { HomeHeader } from '@/components/trak/HomeHeader'
 import { CoachSquadSwitcher } from '@/components/coach/CoachSquadSwitcher'
+import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { remember, remembered } from '@/lib/screen-memory'
@@ -54,10 +55,13 @@ export default function CoachHomePage() {
 
   return (
     <MobileShell>
-      {/* TRAK-212: the "+" (QuickAdd) is pinned to the header's empty right slot. */}
+      {/* TRAK-233 (Imad, 21 Oct): the bell has the header's right slot, so the "+"
+          floats bottom right, as on every other coach tab. */}
       <div className="pt-3 pb-24">
-        {/* TRAK-163: the calendar is top left; TRAK-176: the squad switcher in the middle. */}
-        <HomeHeader calendarTo="/coach/schedule" center={<CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} />} />
+        {/* TRAK-163: the calendar is top left; TRAK-176: the squad switcher in the middle;
+            TRAK-232: the bell top right, as on parent and player Home (TRAK-233). */}
+        <HomeHeader calendarTo="/coach/schedule" center={<CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} />}
+          right={user && <CoachAlertsBell coachId={user.id} />} />
         {/* TRAK-196: one quiet line, as player and parent Home have it. */}
         {(line || seed?.line) && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">{line || seed?.line}</p>}
         {user && <CoachWeekStrip coachId={user.id} version={weekVersion} />}
@@ -78,7 +82,7 @@ export default function CoachHomePage() {
           </button>
         </div>
       </div>
-      <QuickAdd corner="top" onSaved={() => setWeekVersion(v => v + 1)} />
+      <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )
