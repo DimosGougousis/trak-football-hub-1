@@ -5,6 +5,7 @@ import type { Variants } from "motion/react";
 import { ChevronDown, Clock3 } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { motionTokens } from "../lib/motion-tokens";
+import { revealPanel, sideWithRoom } from "../lib/side-with-room";
 import styles from "./time-picker.module.css";
 
 export interface TimePickerProps {
@@ -44,6 +45,8 @@ export function TimePicker({ label, value, defaultValue = "09:00", onChange, des
   const centerOnOpen = useRef(false);
   const [internal, setInternal] = useState(defaultValue);
   const [open, setOpen] = useState(false);
+  // TRAK-227: the list opens upward from a field low on the screen.
+  const [side, setSide] = useState<"top" | "bottom">("bottom");
   const [activeIndex, setActiveIndex] = useState(-1);
   const selected = value ?? internal;
   const reduce = useReducedMotion();
@@ -72,6 +75,7 @@ export function TimePicker({ label, value, defaultValue = "09:00", onChange, des
     const selectedIndex = options.indexOf(selected || emptyAt || "");
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
     centerOnOpen.current = true;
+    setSide(sideWithRoom(rootRef.current?.querySelector("button") ?? null, 260));
     setOpen(true);
   };
   const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -97,8 +101,8 @@ export function TimePicker({ label, value, defaultValue = "09:00", onChange, des
         <span className={styles.valueText} aria-hidden="true"><AnimatePresence initial={false} custom={direction}><motion.span key={selected || "placeholder"} className={selected ? styles.value : styles.placeholder} custom={direction} variants={reduce ? valueFade : valueRoll} initial="enter" animate="center" exit="exit">{selected ? display(selected) : placeholder}</motion.span></AnimatePresence></span>
         <ChevronDown className={styles.chevron} size={16} aria-hidden="true" />
       </button>
-      <AnimatePresence initial={false}>{open && <motion.div id={`${id}-listbox`} className={styles.menu} role="listbox" aria-label={`${label} options`} 
-        initial={reduce ? { opacity: 0 } : { opacity: 0, y: -6, scale: .97 }}
+      <AnimatePresence initial={false}>{open && <motion.div id={`${id}-listbox`} className={styles.menu} data-side={side} onAnimationComplete={() => revealPanel(rootRef.current?.querySelector<HTMLElement>("[role=listbox]") ?? null)} role="listbox" aria-label={`${label} options`} 
+        initial={reduce ? { opacity: 0 } : { opacity: 0, y: side === "top" ? 6 : -6, scale: .97 }}
         animate={{ opacity: 1, y: 0, scale: 1, transition: reduce ? { duration: motionTokens.duration.instant } : { ...motionTokens.spring.snappy, opacity: { duration: motionTokens.duration.fast, ease: enter } } }}
         exit={{ opacity: 0, ...(reduce ? {} : { y: -4, scale: .98 }), transition: { duration: motionTokens.duration.instant, ease: standard } }}>
         {options.map((option, index) => <button ref={node => { optionRefs.current[index] = node; }} id={`${id}-option-${index}`} type="button" role="option" aria-selected={option === selected} data-active={activeIndex === index || undefined} className={styles.option} key={option} onPointerMove={() => { if (activeIndex !== index) setActiveIndex(index); }} onClick={() => choose(option)}>{display(option)}{option === selected && <span className={styles.dot} aria-hidden="true" />}</button>)}
