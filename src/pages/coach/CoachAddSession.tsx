@@ -156,6 +156,8 @@ export default function CoachAddSession() {
     eventId?: string | null, date?: string | null, opponent?: string | null, homeAway?: string | null, squad?: string | null
   } } | null)?.fromEvent ?? null)
   const eventId = fromEvent?.eventId ?? null
+  // An event with no opponent recorded still lets the coach type one.
+  const eventOpponent = eventId ? (fromEvent?.opponent?.trim() || null) : null
   // TRAK-176: a log of an event is for the event's squad; otherwise the squad
   // picked on Home. Null is the whole roster (a coach with one squad).
   const coachSquad = useCoachSquad(user?.id)
@@ -738,10 +740,14 @@ export default function CoachAddSession() {
             {/* Match header */}
             <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="OPPONENT" />
-              <input value={opponent} onChange={e => setOpponent(e.target.value)}
+              {/* TRAK-235: a log of a planned match is that match, so its opponent
+                  comes from the event; changing it belongs on the event. */}
+              <input value={opponent} onChange={e => { if (!eventOpponent) setOpponent(e.target.value) }}
+                aria-label="Opponent" readOnly={!!eventOpponent}
                 placeholder="Opponent name"
                 className="w-full bg-transparent text-[20px] text-ink placeholder-ink-3 outline-none mt-2"
                 style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }} />
+              {eventOpponent && <p className="mt-1 text-[12px] text-ink-3">From the planned match. To change it, edit the event.</p>}
 
               <div className="grid grid-cols-3 items-center gap-3 mt-5">
                 <div className="text-center">
