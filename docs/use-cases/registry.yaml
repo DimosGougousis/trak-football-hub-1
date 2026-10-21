@@ -468,17 +468,20 @@ use_cases:
       - A guardian can reset their no-email child's password and existing child sessions are invalidated, with an open device signing out within 30 seconds
     source: MVP Requirements
 
+  # spec_version 2 (Kostas, 21 Oct 2026): goals and assists start at 0. The
+  # empty "—" between the − and + buttons read as "− − +". Minutes are no
+  # longer asked (TRAK-198); position and age group are still never invented.
   - id: UC-C09
     actor: coach
     title: Log a match for the squad with no invented defaults
     requirement: J4
     status: pending
     tier: [1, 2]
-    spec_version: 1
+    spec_version: 2
     given: A signed-in coach with a squad
-    when: They log a match with date, opponent and result, and each child's position, minutes, goals and assists
+    when: They log a match with date, opponent and result, and each child's position, goals and assists
     then:
-      - Nothing about a child's minutes, goals or assists is pre-filled
+      - Nothing about a child's position or age group is invented; goals and assists start at 0, shown on every played row
       - A child whose guardian has not consented cannot be logged
       - A retry never creates a duplicate match, and a partial failure says what was and was not saved
     source: MVP Requirements

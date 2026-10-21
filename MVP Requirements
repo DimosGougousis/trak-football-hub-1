@@ -86,8 +86,9 @@ See TRAK-84, TRAK-103, TRAK-104, TRAK-107 and TRAK-117.
 
 ### J4 — Coach records a completed session
 
-- Match: date, opponent, result, and each child's position, minutes, goals and
-  assists, without invented defaults.
+- Match: date, opponent, result, and each child's position, goals and assists.
+  Position is never invented; goals and assists start at 0 (Kostas, 21 Oct
+  2026). Minutes are not asked (TRAK-198).
 - Training: date, type, attendance and session notes.
 - Every write checks active consent and the coach's academy assignment.
 - Retries must not duplicate records or silently lose entered data.

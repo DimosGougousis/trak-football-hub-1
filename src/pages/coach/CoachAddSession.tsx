@@ -43,17 +43,18 @@ type PlayerDetail = {
      hat-trick was stored as 2 and the only vocabulary the form had was the
      rating bucket. The bucket still exists — match-input-keys.ts — but it is
      now derived for the rating engine rather than being the thing recorded. */
-  goals:   number | null
-  assists: number | null
+  goals:   number
+  assists: number
   card:    CardType
 }
 
-/* Nothing about a child's match is pre-filled. This used to start every child
-   at 90 minutes, 0 goals and 0 assists, so a coach who only ticked "played"
-   saved numbers they never entered (MVP Requirements J4). */
+/* J4: no invented defaults for position or age group. Goals and assists start
+   at 0 (Kostas, 21 Oct): an empty "—" between the − and + buttons read as
+   "− − +", and 0 is what most children score. The coach sees the 0 on every
+   played row before saving. */
 const DEFAULT_DETAIL: PlayerDetail = {
   played: false, role: 'starter', position: null,
-  goals: null, assists: null, card: 'None',
+  goals: 0, assists: 0, card: 'None',
 }
 
 const MATCH_POSITIONS = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as const
@@ -80,8 +81,6 @@ function rosterAgeGroup(p: SquadPlayer): string | null {
 function missingFacts(p: SquadPlayer, d: PlayerDetail): string[] {
   const missing: string[] = []
   if (!d.position) missing.push('position')
-  if (d.goals === null) missing.push('goals')
-  if (d.assists === null) missing.push('assists')
   if (!rosterAgeGroup(p)) missing.push('age group on the roster')
   return missing
 }
@@ -353,19 +352,17 @@ export default function CoachAddSession() {
     .filter(p => details[p.id]?.played && stillNeeded(p, details[p.id]).length === 0)
     .filter(p => validateMatchInput({
       minutes: null,
-      goals:   details[p.id].goals as number,
-      assists: details[p.id].assists as number,
+      goals:   details[p.id].goals,
+      assists: details[p.id].assists,
       teamScore: scoreUs === '' ? undefined : Number(scoreUs),
     }).length > 0)
 
   const teamGoalsError = !isMatch ? null : teamGoalsViolation(
-    squad.filter(p => details[p.id]?.played && typeof details[p.id].goals === 'number')
-      .map(p => details[p.id].goals as number),
+    squad.filter(p => details[p.id]?.played).map(p => details[p.id].goals),
     scoreUs === '' ? undefined : Number(scoreUs),
   )
   const teamAssistsError = !isMatch ? null : teamAssistsViolation(
-    squad.filter(p => details[p.id]?.played && typeof details[p.id].assists === 'number')
-      .map(p => details[p.id].assists as number),
+    squad.filter(p => details[p.id]?.played).map(p => details[p.id].assists),
     scoreUs === '' ? undefined : Number(scoreUs),
   )
 
@@ -453,8 +450,8 @@ export default function CoachAddSession() {
       // Only the rows this save will write count: a player already written on
       // an earlier attempt is in the saved goals and assists already.
       const toWrite = linkedPlayers.filter(p => !loggedPlayerIds.has(p.linked_player_id!))
-      const newGoals = toWrite.reduce((sum, p) => sum + (details[p.id].goals ?? 0), 0)
-      const newAssists = toWrite.reduce((sum, p) => sum + (details[p.id].assists ?? 0), 0)
+      const newGoals = toWrite.reduce((sum, p) => sum + details[p.id].goals, 0)
+      const newAssists = toWrite.reduce((sum, p) => sum + details[p.id].assists, 0)
       const { data: clash, error: clashErr } = await supabase.rpc('coach_match_score_clash', {
         p_match_date: date,
         p_opponent: opponent.trim(),
@@ -567,8 +564,8 @@ export default function CoachAddSession() {
         // canSave guarantees every played row is complete; these never fall back.
         const position = d.position as string
         const minutes = null
-        const goals = d.goals as number
-        const assists = d.assists as number
+        const goals = d.goals
+        const assists = d.assists
         const pos = mapPosition(position)
         const computed_rating = computeMatchScore({
           position:        pos,
@@ -954,15 +951,15 @@ export default function CoachAddSession() {
                                   style={{ fontFamily: 'var(--t-font-mono)' }}>{label}</span>
                                 <button
                                   aria-label={`One fewer ${key} for ${p.player_name}`}
-                                  onClick={() => setDetail(p.id, { [key]: value === null ? 0 : Math.max(0, value - 1) })}
+                                  onClick={() => setDetail(p.id, { [key]: Math.max(0, value - 1) })}
                                   className="w-6 h-6 rounded-full bg-raised flex items-center justify-center text-ink-2 text-sm">−</button>
                                 <span className="w-8 text-center text-[13px] text-ink"
                                   style={{ fontFamily: 'var(--t-font-mono)' }}>
-                                  {value ?? '—'}
+                                  {value}
                                 </span>
                                 <button
                                   aria-label={`One more ${key} for ${p.player_name}`}
-                                  onClick={() => setDetail(p.id, { [key]: Math.min(max, (value ?? 0) + 1) })}
+                                  onClick={() => setDetail(p.id, { [key]: Math.min(max, value + 1) })}
                                   className="w-6 h-6 rounded-full bg-raised flex items-center justify-center text-ink-2 text-sm">+</button>
                               </div>
                             ))}
@@ -977,12 +974,12 @@ export default function CoachAddSession() {
                                 return (
                                   <p role="status" className="text-[10px] leading-snug text-warning pl-[52px]"
                                     style={{ fontFamily: 'var(--t-font)' }}>
-                                    Still needed: {missing.join(', ')}. Tap − for 0 goals or assists.
+                                    Still needed: {missing.join(', ')}.
                                   </p>
                                 )
                               }
                               const problems = validateMatchInput({
-                                minutes: null, goals: d.goals as number, assists: d.assists as number,
+                                minutes: null, goals: d.goals, assists: d.assists,
                                 teamScore: scoreUs === '' ? undefined : Number(scoreUs),
                               })
                               if (problems.length === 0) return null

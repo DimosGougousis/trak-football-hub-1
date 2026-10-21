@@ -3,7 +3,9 @@
  * and assists "with no invented defaults". The form used to start every child
  * at 90 minutes, 0 goals and 0 assists, and sent 'Midfielder' and 'U19+' when
  * the roster had no position or age, so ticking "played" alone saved a record
- * nobody entered.
+ * nobody entered. Minutes are no longer asked (TRAK-198); goals and assists
+ * start at 0 since 21 Oct (Kostas); position and age group are still never
+ * invented.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
@@ -60,13 +62,23 @@ const nextButton = () => screen.getByRole('button', { name: 'Next' })
 describe('J4: no invented match defaults', { timeout: 20_000 }, () => {
   beforeEach(() => signInAs(COACH))
 
-  it('ticking "played" alone cannot save: goals and assists start empty', async () => {
+  /* Goals and assists start at 0 (Kostas, 21 Oct): the empty "—" sat between
+     the − and + buttons and read as "− − +". 0 is what most children score,
+     and the coach sees it on every played row before saving. */
+  it('goals and assists start at 0, shown as 0 between the buttons, and save as 0', async () => {
     const calls = setup()
     await startMatch()
     expect(screen.queryByRole('spinbutton', { name: 'Minutes played by Ade Okafor' })).toBeNull()
-    expect(nextButton()).toBeDisabled()
-    expect(screen.getAllByText(/still needs? goals, assists/i).length).toBeGreaterThan(0)
-    expect(calls).toHaveLength(0)
+    const goals = screen.getByRole('button', { name: 'One fewer goals for Ade Okafor' }).nextElementSibling
+    const assists = screen.getByRole('button', { name: 'One fewer assists for Ade Okafor' }).nextElementSibling
+    expect(goals).toHaveTextContent(/^0$/)
+    expect(assists).toHaveTextContent(/^0$/)
+    expect(screen.queryByText('—')).toBeNull()
+    expect(screen.queryByText(/goals, assists/i)).toBeNull()
+    await waitFor(() => expect(nextButton()).toBeEnabled())
+    await saveLog('Save match')
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(calls[0]).toMatchObject({ p_goals: 0, p_assists: 0 })
   })
 
   it('saves exactly what the coach entered, including an explicit 0', async () => {
