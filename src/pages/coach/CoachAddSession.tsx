@@ -5,8 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel } from '@/components/trak'
-import { computeMatchScore } from '@/lib/rating-engine'
-import { goalsKey, assistsKey } from '@/lib/match-input-keys'
+import { matchRating } from '@/lib/match-rating'
 import { trackEvent } from '@/lib/telemetry'
 import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
 import { localTodayISO } from '@/lib/event-time'
@@ -83,14 +82,6 @@ function missingFacts(p: SquadPlayer, d: PlayerDetail): string[] {
   if (!d.position) missing.push('position')
   if (!rosterAgeGroup(p)) missing.push('age group on the roster')
   return missing
-}
-
-function mapPosition(raw: string | null) {
-  const p = (raw || '').toLowerCase()
-  if (p.includes('goalkeeper') || p === 'gk') return 'gk'
-  if (p.includes('defender')   || ['def','cb','lb','rb'].includes(p)) return 'def'
-  if (p.includes('attacker')   || ['att','cf','st','lw','rw'].includes(p)) return 'att'
-  return 'mid'
 }
 
 export default function CoachAddSession() {
@@ -566,28 +557,10 @@ export default function CoachAddSession() {
         const minutes = null
         const goals = d.goals
         const assists = d.assists
-        const pos = mapPosition(position)
-        const computed_rating = computeMatchScore({
-          position:        pos,
-          competition:     competition.toLowerCase() as 'league' | 'cup' | 'friendly',
-          venue:           venue.toLowerCase() as 'home' | 'away',
-          opponent:        opponent.trim(),
-          score_us:        Number(scoreUs)   || 0,
-          score_them:      Number(scoreThem) || 0,
-          minutes_played:  minutes,
-          card:            d.card.toLowerCase() as 'none' | 'yellow' | 'red',
-          body_condition:  'good',
-          self_rating:     'average',
-          position_inputs: {
-            /* Position-aware, and assists have their own scale. The engine
-               reads '1'/'2'/'3+' for an attacker's goals but '1'/'2+' for
-               everyone's assists, so one shared helper for both would send an
-               attacker's third assist as '3+' — a key the assists branch has
-               no case for, which pays exactly nothing. */
-            goals:   goalsKey(pos, goals),
-            assists: assistsKey(assists),
-          },
-          is_friendly: competition === 'Friendly',
+        const computed_rating = matchRating({
+          position, competition, venue, opponent,
+          scoreUs: Number(scoreUs) || 0, scoreThem: Number(scoreThem) || 0,
+          card: d.card, goals, assists,
         })
 
         // The error was discarded here. A rejection — a departed coach, a
