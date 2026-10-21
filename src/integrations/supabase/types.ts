@@ -517,6 +517,27 @@ export type Database = {
         }
         Relationships: []
       }
+      event_confirmations: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string
+          event_id: string
+          squad_player_id: string
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by: string
+          event_id: string
+          squad_player_id: string
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string
+          event_id?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           event_reminders: boolean
@@ -1006,6 +1027,28 @@ export type Database = {
       undo_cant_make_it: {
         Args: { p_event_id: string; p_child: string }
         Returns: undefined
+      }
+      confirm_event_attendance: {
+        Args: { p_event_id: string; p_squad_player_id: string }
+        Returns: undefined
+      }
+      unconfirm_event_attendance: {
+        Args: { p_event_id: string; p_squad_player_id: string }
+        Returns: undefined
+      }
+      coach_squad_season: {
+        Args: { p_from: string; p_to: string; p_squad?: string | null }
+        Returns: {
+          match_date: string
+          opponent: string | null
+          session_id: string | null
+          team_score: number
+          opponent_score: number
+          squad_player_id: string
+          minutes_played: number | null
+          goals: number
+          assists: number
+        }[]
       }
       record_parental_consent: {
         Args: {
