@@ -256,3 +256,36 @@ export function calendarFieldsFromInstant(
     start_time: known ? `${parts.time}:00` : null,
   }
 }
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const ACADEMY_ZONES: Record<number, string> = { 240: 'Dubai time', 180: 'Athens time', 120: 'Athens time' }
+
+/**
+ * TRAK-223 (20 Oct live run, S3): which clock an event's time is on, read from
+ * the event itself. Its date and time are the academy's wall clock (TRAK-175)
+ * and starts_at the instant, so the gap is the academy's UTC offset that day.
+ * The database allows two zones (organizations_time_zone_supported): Dubai is
+ * always +4, Athens +2 or +3. Trak keeps academy time on every screen; when
+ * this phone's clock differs that day, `here` says the time on it too.
+ */
+export function academyClock(event: { date: string; time: string | null; startsAt?: string | null }):
+  { zone: string; here: string | null } | null {
+  if (!event.time || !event.startsAt) return null
+  const instant = new Date(event.startsAt)
+  if (Number.isNaN(instant.getTime())) return null
+  const offset = Math.round((Date.parse(`${event.date}T${event.time}:00Z`) - instant.getTime()) / 60_000)
+  const zone = ACADEMY_ZONES[offset] ?? 'academy time'
+  if (-instant.getTimezoneOffset() === offset) return { zone, here: null }
+  const time = `${pad2(instant.getHours())}:${pad2(instant.getMinutes())}`
+  const day = instant.toLocaleDateString('en-CA') === event.date ? '' : `${instant.toLocaleDateString('en-GB', { weekday: 'short' })} `
+  return { zone, here: `${day}${time} on this phone` }
+}
+
+/** "45 min before kick-off" (or "before the start"): a meet time against its event's start, both academy time. */
+export function meetLead(meet: string, start: string, kind: string): string | null {
+  const minutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+  const lead = minutes(start) - minutes(meet)
+  if (!(lead > 0)) return null
+  const said = lead % 60 === 0 ? `${lead / 60} h` : lead > 60 ? `${Math.floor(lead / 60)} h ${lead % 60} min` : `${lead} min`
+  return `${said} before ${kind === 'match' ? 'kick-off' : 'the start'}`
+}
