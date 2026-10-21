@@ -14,6 +14,8 @@ import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { forgetScreens } from '@/lib/screen-memory'
 import { supabase } from '@/integrations/supabase/client'
+import { localTodayISO } from '@/lib/event-time'
+import { seasonWindow } from '@/lib/squad/season'
 
 // The app's query cache outlives a test, so each test is its own coach.
 let COACH = { id: 'coach-250-shell' }
@@ -322,5 +324,113 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
     renderApp('/coach/squad?tab=attributes')
     const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
     expect(await within(panel).findByText('No assessments in the last 6 weeks')).toBeInTheDocument()
+  })
+})
+
+// ---- Season tab (task 6) ---------------------------------------------------------------------
+const seasonRow = (match_date: string, opponent: string, session_id: string | null, team_score: number, opponent_score: number,
+  squad_player_id: string, minutes_played: number | null, goals = 0, assists = 0) =>
+  ({ match_date, opponent, session_id, team_score, opponent_score, squad_player_id, minutes_played, goals, assists })
+// Three matches: W 4-1, L 1-3 (its scorers add up to 0, not 1), W 2-0 with no minutes recorded.
+const SEASON_ROWS = [
+  seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'sq-leo', 48, 2), seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'sq-sami', 48, 2),
+  seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'sq-new', 19),
+  seasonRow('2026-09-12', 'Riverside U12', 's-2', 1, 3, 'sq-leo', 48), seasonRow('2026-09-12', 'Riverside U12', 's-2', 1, 3, 'sq-sami', 48),
+  seasonRow('2026-09-12', 'Riverside U12', 's-2', 1, 3, 'sq-new', 20),
+  seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-leo', null, 2), seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-sami', null),
+]
+const tile = (panel: HTMLElement, name: string) => within(panel).getByRole('group', { name })
+
+describe('TRAK-250: Season tab', { timeout: 20_000 }, () => {
+  it('season builds up from logged matches', async () => {
+    coachReads(SNAP_PLAYERS)
+    const asked: Record<string, unknown>[] = []
+    server.use(rpc('coach_squad_season', args => { asked.push(args); return SEASON_ROWS }))
+    renderApp('/coach/squad?tab=season')
+    const panel = await screen.findByRole('tabpanel', { name: 'Season' })
+
+    const window_ = seasonWindow(localTodayISO())
+    expect(await within(panel).findByRole('heading', { name: window_.label })).toBeInTheDocument()
+    expect(asked[0]).toEqual({ p_from: window_.from, p_to: window_.to, p_squad: null })
+    expect(await within(panel).findByText('3 matches · 1 without minutes, not counted')).toBeInTheDocument()
+    expect(within(tile(panel, 'Played')).getByText('3')).toBeInTheDocument()
+    expect(within(tile(panel, 'Won · drawn · lost')).getByText('2 · 0 · 1')).toBeInTheDocument()
+    expect(within(tile(panel, 'Goals for – against')).getByText('7 – 4')).toBeInTheDocument()
+    const balance = tile(panel, 'Minutes balance')
+    expect(balance).toHaveTextContent('41% → 100%')
+    expect(balance).toHaveTextContent('median 100%')
+
+    expect(within(panel).getByRole('img', { name: /How the season built up/ })).toBeInTheDocument()
+
+    // Lowest minutes first, and the child owed minutes is marked.
+    const rows = within(within(panel).getByRole('table')).getAllByRole('row').slice(1)
+    expect(rows[0]).toHaveTextContent('Newcomer R.')
+    expect(rows[0]).toHaveTextContent('minutes owed')
+    expect(rows[0]).toHaveTextContent('41%')
+    expect(within(rows[0]).getByRole('link', { name: 'Newcomer R.' })).toHaveAttribute('href', '/coach/player/sq-new')
+    expect(within(panel).getAllByText('minutes owed')).toHaveLength(1)
+
+    // The L 1-3 match has no scorer for its goal; the callout names it and links to its log.
+    const callout = within(panel).getByRole('status')
+    expect(callout).toHaveTextContent("Numbers don't add up: player goals total 6, match scores total 7.")
+    expect(within(callout).getByRole('link', { name: '12 Sep vs Riverside U12' })).toHaveAttribute('href', '/coach/sessions/s-2')
+    expect(within(callout).queryByRole('link', { name: /Parkview/ })).toBeNull()
+
+    const results = within(panel).getByRole('region', { name: 'Results' })
+    const items = within(results).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Lakeside U12')
+    expect(items[0]).toHaveTextContent('W')
+    expect(items[1]).toHaveTextContent('L')
+    expect(items[1]).toHaveTextContent('1–3')
+  })
+
+  it('empty season', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(rpc('coach_squad_season', () => []))
+    renderApp('/coach/squad?tab=season')
+    const panel = await screen.findByRole('tabpanel', { name: 'Season' })
+    expect(await within(panel).findByText('No matches logged this season yet')).toBeInTheDocument()
+    expect(within(panel).queryByText(/0%/)).toBeNull()
+    expect(within(panel).queryByRole('group', { name: 'Minutes balance' })).toBeNull()
+    expect(within(panel).queryByRole('table')).toBeNull()
+  })
+
+  it('a child with no minutes recorded shows a dash, never 0%', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(rpc('coach_squad_season', () => [seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-leo', null, 2)]))
+    renderApp('/coach/squad?tab=season')
+    const panel = await screen.findByRole('tabpanel', { name: 'Season' })
+    expect(await within(panel).findByText('1 match · 1 without minutes, not counted')).toBeInTheDocument()
+    expect(tile(panel, 'Minutes balance')).toHaveTextContent('—')
+    expect(within(panel).queryByText(/0%/)).toBeNull()
+    expect(within(panel).queryByText('minutes owed')).toBeNull()
+  })
+
+  it('a failed season read shows Try again inside the tab, never an empty season', async () => {
+    const user = userEvent.setup()
+    coachReads(SNAP_PLAYERS)
+    let failing = true
+    server.use(rpc('coach_squad_season', () => failing ? { status: 500, body: { message: 'unavailable' } } : SEASON_ROWS))
+    renderApp('/coach/squad?tab=season')
+    const panel = await screen.findByRole('tabpanel', { name: 'Season' })
+    expect(await within(panel).findByText("Couldn't load the season", undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(panel).queryByText('No matches logged this season yet')).toBeNull()
+    failing = false
+    await user.click(within(panel).getByRole('button', { name: 'Try again' }))
+    expect(await within(panel).findByText('3 matches · 1 without minutes, not counted')).toBeInTheDocument()
+    expect(within(panel).queryByText("Couldn't load the season")).toBeNull()
+  })
+
+  it('picking a squad asks for that squad only', async () => {
+    const user = userEvent.setup()
+    coachReads()
+    const asked: Record<string, unknown>[] = []
+    server.use(rpc('coach_squad_season', args => { asked.push(args); return [] }))
+    renderApp('/coach/squad?tab=season')
+    await within(await screen.findByRole('tabpanel', { name: 'Season' })).findByText('No matches logged this season yet')
+    expect(asked.at(-1)).toMatchObject({ p_squad: 'U10' })
+
+    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U12' }))
+    await waitFor(() => expect(asked.at(-1)).toMatchObject({ p_squad: 'U12' }))
   })
 })

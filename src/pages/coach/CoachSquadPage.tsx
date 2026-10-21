@@ -10,6 +10,7 @@ import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { SnapshotTab } from '@/components/coach/squad/SnapshotTab'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
+import { SeasonTab } from '@/components/coach/squad/SeasonTab'
 
 /* TRAK-250: Squad is a full-width coach workspace with four views of the same
    roster. The tab lives in the URL (?tab=), so a view can be linked and a
@@ -97,6 +98,7 @@ export default function CoachSquadPage() {
             : roster.players.length === 0 ? <PreparingSquad />
             : active === 'snapshot' ? <SnapshotTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
+            : active === 'season' ? <SeasonTab roster={roster} />
             : <Placeholder tab={active} />}
         </section>
       </div>

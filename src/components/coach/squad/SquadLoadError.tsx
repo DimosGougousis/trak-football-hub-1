@@ -1,7 +1,7 @@
 import { WifiOff } from 'lucide-react'
 
 /** A failed squad read: said as a failure with a way to retry, never shown as an empty squad. */
-export function SquadLoadError({ onRetry }: { onRetry: () => void }) {
+export function SquadLoadError({ onRetry, title = "Couldn't load your squad" }: { onRetry: () => void; title?: string }) {
   return (
     <div className="flex flex-col items-center text-center pt-14 px-6">
       <div
@@ -10,7 +10,7 @@ export function SquadLoadError({ onRetry }: { onRetry: () => void }) {
       >
         <WifiOff size={22} className="text-warning" strokeWidth={1.5} />
       </div>
-      <p className="text-[15px] text-ink-2 font-medium mb-1">Couldn't load your squad</p>
+      <p className="text-[15px] text-ink-2 font-medium mb-1">{title}</p>
       <p className="text-[12px] text-ink-3 leading-relaxed mb-5">
         {navigator.onLine
           ? "We couldn't reach Trak just now. Nothing has been lost — your squad is safe."
