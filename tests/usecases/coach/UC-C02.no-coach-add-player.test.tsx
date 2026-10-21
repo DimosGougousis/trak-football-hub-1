@@ -4,13 +4,18 @@ import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
 import { signInAs } from '../../support/session'
 import { server } from '../../msw/server'
-import { table, insertInto } from '../../msw/supabase'
+import { table, insertInto, rpc } from '../../msw/supabase'
 
-const COACH = { id: 'coach-1' }
+// TRAK-250: the Squad page reads through the app's query cache, which outlives a
+// test, so each test is its own coach.
+let COACH = { id: 'coach-1' }
+let n = 0
 
 function signedInCoach(squad: Record<string, unknown>[] = []) {
+  COACH = { id: `coach-uc-c02-${++n}` }
   signInAs(COACH)
   server.use(
+    rpc('coach_squad_player_consent_required', () => false),
     table('profiles', [
       { id: 'p-coach', user_id: COACH.id, role: 'coach', full_name: 'Coach Vasilis', nationality: 'GR' },
     ]),
@@ -38,8 +43,9 @@ useCase('UC-C02', () => {
     const heading = await screen.findByRole('heading', { name: 'Squad' })
     await screen.findByText('Nikos Papadopoulos')
 
-    // Today the top bar holds an unlabelled "+" that opens /coach/squad/add.
-    expect(heading.parentElement?.querySelectorAll('button')).toHaveLength(0)
+    // The header holds the view tabs, each with a name. It must hold no unlabelled "+" that opens /coach/squad/add.
+    const unlabelled = [...heading.parentElement!.querySelectorAll('button')].filter(b => !b.textContent?.trim() && !b.getAttribute('aria-label'))
+    expect(unlabelled).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /add player/i })).toBeNull()
   })
 

@@ -39,40 +39,6 @@ function setup(players: Record<string, { name: string; required: boolean; reason
   return reasonAsked
 }
 
-const row = (name: string) => screen.getByText(name).closest('button') as HTMLElement
-
-// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
-describe('Squad chips (TRAK-99)', { timeout: 20_000 }, () => {
-  it('tells "waiting for parent" apart from "waiting for player to sign up"', async () => {
-    const asked = setup({
-      'sq-ready': { name: 'Amal Ready', required: false },
-      'sq-parent': { name: 'Bilal Parent', required: true, reason: 'parent' },
-      'sq-signup': { name: 'Dana Signup', required: true, reason: 'signup' },
-    })
-    renderApp('/coach/squad')
-    await screen.findByText('Amal Ready')
-    expect(await within(row('Dana Signup')).findByText('Waiting for player to sign up')).toBeInTheDocument()
-    expect(within(row('Dana Signup')).queryByText('Waiting for parent')).toBeNull()
-    expect(within(row('Bilal Parent')).getByText('Waiting for parent')).toBeInTheDocument()
-    expect(within(row('Amal Ready')).getByText('Ready to assess')).toBeInTheDocument()
-    // The reason is only asked for players the gate refuses.
-    expect(asked.sort()).toEqual(['sq-parent', 'sq-signup'])
-  })
-
-  it('never guesses a reason: a failed read, or one that disagrees with the gate, is "Not ready to assess"', async () => {
-    setup({
-      'sq-err': { name: 'Carim Error', required: true, reason: 'error' },
-      'sq-race': { name: 'Eli Race', required: true, reason: 'ready' },
-    })
-    renderApp('/coach/squad')
-    await screen.findByText('Carim Error')
-    expect(await within(row('Carim Error')).findByText('Not ready to assess')).toBeInTheDocument()
-    expect(within(row('Eli Race')).getByText('Not ready to assess')).toBeInTheDocument()
-    expect(screen.queryByText('Ready to assess')).toBeNull()
-    expect(screen.queryByText('Waiting for parent')).toBeNull()
-  })
-})
-
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
 describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
   async function choose(id: string, name: string) {

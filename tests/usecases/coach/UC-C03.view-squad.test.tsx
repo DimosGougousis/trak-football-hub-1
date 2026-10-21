@@ -4,14 +4,19 @@ import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
 import { signInAs } from '../../support/session'
 import { server } from '../../msw/server'
-import { table, tableError } from '../../msw/supabase'
+import { table, tableError, rpc } from '../../msw/supabase'
 
-const COACH = { id: 'coach-1' }
+// TRAK-250: the Squad page reads through the app's query cache, which outlives a
+// test, so each test is its own coach and asks for its own squad.
+let COACH = { id: 'coach-1' }
+let n = 0
 
 function signedInCoach() {
+  COACH = { id: `coach-uc-c03-${++n}` }
   signInAs(COACH)
   server.use(
     table('coach_assessments', []),
+    rpc('coach_squad_player_consent_required', () => false),
     table('profiles', [
       { id: 'p-coach', user_id: COACH.id, role: 'coach', full_name: 'Coach Vasilis', nationality: 'GR' },
     ]),
@@ -38,8 +43,8 @@ useCase('UC-C03', () => {
     signedInCoach()
     server.use(table('squad_players', []))
 
-    // CoachSquadPage renders the empty-squad message from its initial
-    // `players = []` state, before the fetch resolves — so a plain
+    // An earlier version of the page rendered the empty-squad message from its initial
+    // `players = []` state, before the fetch resolved — so a plain
     // `findByText` here would pass immediately without ever observing the
     // mocked response, and would keep passing even if the fetch replaced
     // that state with real rows. Wait for the mocked response to land first
