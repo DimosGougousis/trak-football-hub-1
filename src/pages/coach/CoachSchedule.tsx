@@ -861,12 +861,14 @@ export default function CoachSchedule() {
                         <ShareIcon size={16} />
                       </ShareEventButton>
                     ))}
+                    {/* TRAK-185: a logged session opens to be corrected (a match's score and stats too). */}
                     {ev.source === 'session' && (
                       <button
-                        onClick={() => navigate('/coach/sessions/list')}
+                        onClick={() => navigate(`/coach/sessions/${ev.id}`)}
+                        aria-label={`Edit ${ev.title}`}
                         className="text-[9px] uppercase tracking-[0.08em] flex-shrink-0"
                         style={{ color: 'rgb(var(--t-ink-3))', ...mono }}>
-                        View
+                        Edit
                       </button>
                     )}
                   </div>
