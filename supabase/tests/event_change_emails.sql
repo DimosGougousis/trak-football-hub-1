@@ -97,17 +97,25 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id)
 UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.e135id(45);
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.e135id(100),'events') ON CONFLICT DO NOTHING;
 -- Coach A's events. 600 published in 5 days; 601 published in 5 days;
--- 602 published tomorrow; 603 a draft tomorrow (20:30); 604 published tomorrow (21:30);
--- 603/604 were "today" at 17:00, which failed after 13:00 UTC once a started
--- event became uneditable (TRAK-230);
+-- 602 published tomorrow; 603 a draft today; 604 published today;
 -- 605 published in 5 days; 606 a draft in 3 days. The three in 5 days have
 -- their own times: a coach's live events can't overlap (TRAK-158).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,venue,published)
  SELECT pg_temp.e135id(600+i), pg_temp.e135id(10), 'Training '||i, 'training',
   pg_temp.e135at(d, t0), pg_temp.e135day(d), t0, t1, 'Pitch 2', p
  FROM (VALUES (0,5,true,time '17:00',time '18:30'),(1,5,true,time '19:00',time '20:30'),(2,1,true,time '17:00',time '18:30'),
-              (3,1,false,time '20:30',time '21:00'),(4,1,true,time '21:30',time '22:00'),(5,5,true,time '15:00',time '16:30'),
+              (5,5,true,time '15:00',time '16:30'),
               (6,3,false,time '17:00',time '18:30')) v(i,d,p,t0,t1);
+-- 603 and 604 start an hour from now, so they haven't started whenever this runs:
+-- TRAK-230 locks a started event, and at a fixed 17:00 Dubai both were locked
+-- from 13:00 UTC on, failing every run after it. Late in the evening the hour
+-- falls on tomorrow, the same today-or-tomorrow email window, and neither
+-- check depends on which of the two days it is.
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,venue,published)
+ SELECT pg_temp.e135id(600+i), pg_temp.e135id(10), 'Training '||i, 'training',
+  soon, (soon AT TIME ZONE 'Asia/Dubai')::date, (soon AT TIME ZONE 'Asia/Dubai')::time, 'Pitch 2', p
+ FROM (SELECT date_trunc('minute', now() + interval '1 hour') AS soon) s,
+      (VALUES (3,false),(4,true)) v(i,p);
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published)
  VALUES (pg_temp.e135id(610),pg_temp.e135id(11),'B training','training',pg_temp.e135at(0,'17:00'),pg_temp.e135day(0),'17:00',true);
 
@@ -234,8 +242,10 @@ SELECT pg_temp.e135check(pg_temp.e135notices(602)='changed/pending,changed/sendi
 -- Coach A moves to academy Y; their squad rows stay in X. An event A
 -- publishes in Y and then cancels emails nobody: no X family reads it.
 UPDATE public.coach_details SET organization_id=pg_temp.e135id(101) WHERE user_id=pg_temp.e135id(10);
+-- In 2 days, a day with none of coach A's other events: today it could overlap
+-- 604, which starts an hour from whenever this runs (TRAK-158).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published,organization_id)
- VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(0,'20:00'),pg_temp.e135day(0),'20:00',true,pg_temp.e135id(101));
+ VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(2,'20:00'),pg_temp.e135day(2),'20:00',true,pg_temp.e135id(101));
 SELECT pg_temp.e135check((SELECT organization_id = pg_temp.e135id(101) FROM public.coach_calendar_events WHERE id = pg_temp.e135id(620))
   AND pg_temp.e135to(620) = 'none' AND pg_temp.e135to(600) = '020,024,026,030,031',
  '5 coach A''s event in academy Y emails none of their academy X families',pg_temp.e135to(620));
