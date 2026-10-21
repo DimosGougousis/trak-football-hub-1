@@ -12,6 +12,8 @@ import type { SquadRoster } from './useSquadRoster'
    own previous assessment. Coach-only: it is never shown to players or parents. */
 
 const RECENT_TRAININGS = 4
+const FETCH_TRAININGS = 12
+const DAY = 24 * 60 * 60 * 1000
 
 const bandIndex = (band: BandType) => BANDS.findIndex(b => b.word.toLowerCase() === band)
 const bandColor = (band: BandType) => BANDS[bandIndex(band)]?.color ?? BANDS[BANDS.length - 1].color
@@ -19,30 +21,52 @@ const bandWord = (band: BandType) => BANDS[bandIndex(band)]?.word ?? band
 
 type Session = { id: string; squad: string | null; session_date: string | null; session_type: string }
 type Mark = { session_id: string; squad_player_id: string; status: string }
+/** A training whose register was taken (someone is ticked present), and who was. */
+type Registered = { id: string; date: string; present: string[] }
 
 /** PostgREST value quoting, so a squad name with a comma or bracket cannot change the filter. */
 const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 
-/** This coach's last four trainings for the squad (or whole-roster ones), and how many each child did not attend. */
-async function loadMissed(coachId: string, squad: string | null): Promise<Record<string, number>> {
+/**
+ * This coach's last four trainings for the squad (or whole-roster ones) whose register was taken, newest first.
+ * Same rules as attendance-rate.ts: the register only stores who was present, so a training nobody was ticked
+ * at is not a miss for anyone.
+ */
+async function loadRegistered(coachId: string, squad: string | null): Promise<Registered[]> {
   let query = supabase.from('coach_sessions').select('id, squad, session_date, session_type')
     .eq('coach_user_id', coachId).eq('session_type', 'training')
   if (squad) query = query.or(`squad.is.null,squad.eq.${quoted(squad)}`)
-  const sessions = await query.order('session_date', { ascending: false }).limit(RECENT_TRAININGS)
+  const sessions = await query.order('session_date', { ascending: false }).limit(FETCH_TRAININGS)
   if (sessions.error) throw sessions.error
   const recent = ((sessions.data ?? []) as Session[])
-    .filter(s => s.session_type === 'training' && (squad === null || s.squad == null || s.squad === squad))
-    .sort((a, b) => (b.session_date ?? '').localeCompare(a.session_date ?? ''))
-    .slice(0, RECENT_TRAININGS)
-  if (recent.length === 0) return {}
+    .filter(s => s.session_type === 'training' && !!s.session_date && (squad === null || s.squad == null || s.squad === squad))
+  if (recent.length === 0) return []
 
-  const marks = await supabase.from('session_attendance').select('session_id, squad_player_id, status').in('session_id', recent.map(s => s.id))
+  const marks = await supabase.from('session_attendance').select('session_id, squad_player_id, status')
+    .in('session_id', recent.map(s => s.id)).eq('status', 'present')
   if (marks.error) throw marks.error
-  const inRecent = new Set(recent.map(s => s.id))
-  const missed: Record<string, number> = {}
+  const present = new Map<string, string[]>()
   for (const m of (marks.data ?? []) as Mark[]) {
-    if (!inRecent.has(m.session_id) || m.status === 'present') continue
-    missed[m.squad_player_id] = (missed[m.squad_player_id] ?? 0) + 1
+    if (m.status !== 'present') continue
+    const list = present.get(m.session_id)
+    if (list) list.push(m.squad_player_id)
+    else present.set(m.session_id, [m.squad_player_id])
+  }
+  return recent
+    .filter(s => (present.get(s.id)?.length ?? 0) > 0)
+    .sort((a, b) => b.session_date!.localeCompare(a.session_date!))
+    .slice(0, RECENT_TRAININGS)
+    .map(s => ({ id: s.id, date: s.session_date!, present: present.get(s.id)! }))
+}
+
+/** Per child, those registered trainings (from the day they joined the roster) at which they were not ticked present. */
+function missedCounts(registered: Registered[], players: { id: string; created_at: string | null }[]): Record<string, number> {
+  const missed: Record<string, number> = {}
+  for (const p of players) {
+    const joined = p.created_at ? Date.parse(p.created_at) : Number.NEGATIVE_INFINITY
+    // created_at is UTC and the date is the academy's day: joined by the end of that day.
+    const counted = registered.filter(r => joined < Date.parse(`${r.date}T00:00:00Z`) + DAY)
+    missed[p.id] = counted.filter(r => !r.present.includes(p.id)).length
   }
   return missed
 }
@@ -90,7 +114,7 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
 
   const trainings = useQuery({
     queryKey: ['coach', userId, 'squad-snapshot', 'missed', squad ?? 'all'],
-    queryFn: () => loadMissed(userId!, squad),
+    queryFn: () => loadRegistered(userId!, squad),
     enabled: !!userId,
   })
 
@@ -100,7 +124,8 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
       const size = (m: BandMove) => Math.abs(bandIndex(m.band) - bandIndex(m.previous!))
       return size(b) - size(a) || a.move - b.move
     }), [moves])
-  const steps = useMemo(() => nextSteps([...moves.values()], names, trainings.data ?? {}), [moves, names, trainings.data])
+  const missed = useMemo(() => missedCounts(trainings.data ?? [], players), [trainings.data, players])
+  const steps = useMemo(() => nextSteps([...moves.values()], names, missed), [moves, names, missed])
 
   const admitted = players.filter(p => !consentPending.has(p.id))
   const notAssessed = admitted.filter(p => !moves.has(p.id)).map(p => p.player_name)

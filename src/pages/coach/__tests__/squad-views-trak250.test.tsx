@@ -187,10 +187,11 @@ const SNAP_PLAYERS = [
 ]
 const TRAININGS = ['2026-10-05', '2026-10-08', '2026-10-12', '2026-10-15'].map((session_date, i) => (
   { id: `ses-${i}`, coach_user_id: 'x', session_type: 'training', squad: null, session_date, title: 'Training' }))
+// The register only stores who was ticked present: an absent child simply has no row.
+const present = (session: number, squad_player_id: string) => ({ id: `a-${squad_player_id}-${session}`, session_id: `ses-${session}`, squad_player_id, status: 'present' })
 const MARKS = [
-  ...[0, 1, 2].map(i => ({ id: `a-l${i}`, session_id: `ses-${i}`, squad_player_id: 'sq-leo', status: 'absent' })),
-  { id: 'a-l3', session_id: 'ses-3', squad_player_id: 'sq-leo', status: 'present' },
-  ...[0, 1, 2, 3].map(i => ({ id: `a-s${i}`, session_id: `ses-${i}`, squad_player_id: 'sq-sami', status: 'present' })),
+  present(3, 'sq-leo'),
+  ...[0, 1, 2, 3].map(i => present(i, 'sq-sami')),
 ]
 
 describe('TRAK-250: Snapshot tab', { timeout: 20_000 }, () => {
@@ -230,6 +231,21 @@ describe('TRAK-250: Snapshot tab', { timeout: 20_000 }, () => {
     const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
     expect(await within(panel).findByText(/0 assessed/)).toBeInTheDocument()
     expect(within(panel).getByText('No assessments yet')).toBeInTheDocument()
+  })
+
+  it('a training with no register taken is not a miss', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(
+      table('coach_assessments', [rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z')]),
+      // Two newer trainings nobody was ticked at; Leo missed only one of the four registered ones.
+      table('coach_sessions', [...TRAININGS, ...['2026-10-19', '2026-10-20'].map((session_date, i) =>
+        ({ id: `ses-${4 + i}`, coach_user_id: 'x', session_type: 'training', squad: null, session_date, title: 'Training' }))]),
+      table('session_attendance', [present(0, 'sq-leo'), present(3, 'sq-leo'), ...[0, 1, 2, 3].map(i => present(i, 'sq-sami'))]),
+    )
+    renderApp('/coach/squad')
+    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+    expect(await within(panel).findByText('Check in with Leo M.')).toBeInTheDocument()
+    expect(within(panel).queryByText(/a drop and missed sessions/)).toBeNull()
   })
 
   it('a failed attendance read keeps the bands and leaves out the missed-sessions wording', async () => {
