@@ -7,7 +7,11 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
   const user = { id: coach, email: 'coach@kits.invalid', email_confirmed_at: `${day}T00:00:00Z`, created_at: `${day}T00:00:00Z`,
     aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
-  const exp = Math.floor(Date.now() / 1000) + 3600
+  // The page's clock is fixed at 08:00 UTC below. The session must outlive that
+  // clock, not the real one: run before 07:00 UTC, an hour from now had already
+  // expired at 08:00 and the app refreshed its token in a loop.
+  const clockAt = new Date(`${day}T08:00:00Z`)
+  const exp = Math.floor(Math.max(Date.now(), clockAt.getTime()) / 1000) + 3600
   const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: coach, exp, role: 'authenticated' }]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
@@ -26,6 +30,8 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     if (path === '/auth/v1/user') return json(user)
     if (path === '/rest/v1/profiles') return json([{ id: coach, user_id: coach, role: 'coach', full_name: 'Synthetic Coach' }])
     if (path === '/rest/v1/coach_details') return json([{ user_id: coach, organization_id: 'org-203' }])
+    // TRAK-196: Home's quiet line names the academy.
+    if (path === '/rest/v1/organizations') return json([{ id: 'org-203', name: 'Synthetic Academy' }])
     if (path === '/rest/v1/squad_players') return json([
       { id: 'sp-203', coach_user_id: coach, player_name: 'Synthetic Player', status: 'active', age_group: 'U14', linked_player_id: null },
     ])
@@ -48,7 +54,7 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     unexpected.push(`${request.method()} ${path}`)
     return route.fulfill({ status: 500, body: 'Unmocked request blocked' })
   })
-  await page.clock.setFixedTime(new Date(`${day}T08:00:00Z`))
+  await page.clock.setFixedTime(clockAt)
   await page.goto('/coach/schedule')
   await page.getByRole('button', { name: 'Add event' }).click()
   const form = page.getByRole('dialog', { name: 'New event' })
