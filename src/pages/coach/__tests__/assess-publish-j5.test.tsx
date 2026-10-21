@@ -286,6 +286,25 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(assessed()).toEqual([expect.objectContaining({ published_at: expect.any(String) })])
   })
 
+  // TRAK-248: the family already sees this assessment's bands, but there's no
+  // message yet. Save draft on a new message must keep the bands where they are;
+  // only the message waits. Taking bands back is the card's Unpublish.
+  it('Save draft on a published assessment keeps its bands published', async () => {
+    server.use(
+      http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: '2026-09-20T19:00:00Z' }])),
+      http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([])),
+    )
+    showForm()
+    await choose('player-a')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+    await screen.findByText('Coach home')
+    expect(shared()).toEqual([expect.objectContaining({ body: 'Good pressing today', published_at: null })])
+    expect(assessed()).toHaveLength(1)
+    expect(assessed()[0]).not.toHaveProperty('published_at', null)
+  })
+
   // Kostas's #313 review: "Save draft" on a message the player has read would
   // un-send it. A published message gets one Save, which leaves it published;
   // taking it back stays Unpublish's job.
