@@ -289,3 +289,17 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getAllByText('Updated 3h ago.')).toHaveLength(1)
   })
 })
+
+// TRAK-225 (20 Oct live run, S4): a Google Maps link typed into the venue.
+describe('TRAK-225: a venue with a Maps link', () => {
+  it('opens that place, and shows the venue name without the raw link', async () => {
+    const user = userEvent.setup()
+    const url = 'https://maps.app.goo.gl/AbC123xyz'
+    renderStrip([event({ venue: `Rivals Park, ${url}` })], 'parent')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(within(sheet).getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', url)
+    expect(within(sheet).getByText('Rivals Park')).toBeInTheDocument()
+    expect(within(sheet).queryByText(/goo\.gl/)).toBeNull()
+  })
+})

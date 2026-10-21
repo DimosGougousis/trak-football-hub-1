@@ -29,6 +29,9 @@ import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
+import { EventKitField } from '@/components/trak/kits/EventKitField'
+import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
+import { describeEventKit } from '@/lib/kit-templates'
 import { withAlpha } from '@/lib/with-alpha'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
@@ -234,7 +237,7 @@ function EventSummary({ form, repeat, noteProblem }: {
     ['Length', `${form.duration} min`],
     ...(repeat?.on && form.kind !== 'match' && !repeatProblem(form, repeat)
       ? [['Repeats', `${repeat.days.map(d => WEEKDAYS[d]).join(', ')} until ${formatEventDay(repeat.until)}`] as [string, string]] : []),
-    ['Kit', form.kit.trim() || 'None'],
+    ['Kit', form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || 'None'],
     ['Note for families', form.familyNote.trim() || 'None'],
   ]
   return <>
@@ -246,6 +249,7 @@ function EventSummary({ form, repeat, noteProblem }: {
         </div>
       ))}
     </dl>
+    {form.kitSnapshot && <KitAnnouncement kit={form.kitSnapshot.design} slot={form.kitSnapshot.slot} animated={false} />}
     {noteProblem && (
       <p role="status" className="text-[11px] text-warning" style={font}>
         Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
@@ -1016,12 +1020,20 @@ export default function CoachSchedule() {
               )}
             </>}
 
+            {/* Keep the kit editor mounted between steps so unsaved colors survive Back. */}
+            <div hidden={sheet.step !== 2}>
+              {user && coachSquad.ready && <EventKitField
+                key={`${user.id}:${sheet.row ? sheet.row.squad ?? '' : coachSquad.squad ?? ''}`}
+                coachId={user.id} squad={sheet.row ? sheet.row.squad ?? null : coachSquad.squad}
+                value={sheet.form.kitSnapshot ?? null}
+                onChange={kitSnapshot => setForm({ kitSnapshot, kit: kitSnapshot ? describeEventKit(kitSnapshot) : '' })} />}
+            </div>
             {sheet.step === 2 && <>
               {/* TRAK-161: kit and a family note on every kind of event. */}
-              <Field label="Kit">
+              {!sheet.form.kitSnapshot && <Field label="Kit">
                 <input value={sheet.form.kit} onChange={e => setForm({ kit: e.target.value })}
                   placeholder={sheet.form.kind === 'match' ? 'e.g. Red shirts, black shorts' : 'e.g. Green bibs, shin guards'} className={inputClass} style={font} />
-              </Field>
+              </Field>}
 
               <div className="space-y-1">
                 <Field label="Note for families">
