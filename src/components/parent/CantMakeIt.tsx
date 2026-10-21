@@ -37,7 +37,8 @@ export function CantMakeIt({ event, child, self = false }: { event: PlayerEvent;
         : await supabase.rpc('undo_cant_make_it', { p_event_id: event.id, p_child: child.id })
       if (error) throw error
     },
-    onSuccess: () => { setWriting(false); setReason(''); return client.invalidateQueries({ queryKey: key }) },
+    // TRAK-231: the whole child's absences, so the week strip's marks follow too.
+    onSuccess: () => { setWriting(false); setReason(''); return client.invalidateQueries({ queryKey: ['parent', 'absence', child.id] }) },
   })
 
   if (event.status === 'cancelled' || event.date < new Date().toLocaleDateString('en-CA')) return null
