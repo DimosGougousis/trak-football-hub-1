@@ -559,10 +559,11 @@ export default function CoachSchedule() {
 
   // TRAK-182: the event sheet on Home sends Edit (?edit=<id>), Cancel
   // (?cancel=<id>) and a weekly series' Publish (?publish=<id>, which asks
-  // this week or following) here, to Schedule's own sheets.
+  // this week or following) here, to Schedule's own sheets. TRAK-232: the
+  // coach's bell sends ?event=<id>, which only opens that event's day.
   const [params, setParams] = useSearchParams()
   useEffect(() => {
-    const action = (['edit', 'publish', 'cancel', 'register'] as const).find(a => params.has(a))
+    const action = (['edit', 'publish', 'cancel', 'register', 'event'] as const).find(a => params.has(a))
     const row = action ? calEvents.find(r => r.id === params.get(action)) : undefined
     if (!row) return
     setParams({}, { replace: true })
@@ -576,7 +577,7 @@ export default function CoachSchedule() {
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     // The quick-add's Take register (TRAK-182 part 8): only when it can open.
     else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
-    else void publish(row)
+    else if (action === 'publish') void publish(row)
   }, [calEvents, params]) // eslint-disable-line react-hooks/exhaustive-deps -- once the rows load, and on a new link while here
 
   const confirmCancel = async () => {
