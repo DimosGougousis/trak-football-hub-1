@@ -56,6 +56,24 @@ describe('TRAK-177: a 15–17 player\'s own consent', () => {
     expect(String(calls[0].args.p_consent_text)).toMatch(/coaching records/)
   })
 
+  /* TRAK-135 (Kostas's wording, Imad agreed 21 Oct): a player who consents for
+     themselves gets event emails, so their own text says so, as the guardian's
+     does since TRAK-166. */
+  it('shows the events line in the player\'s own words and records its new version', async () => {
+    const eventsLine = "Events: my training and match schedule is shown in the app and, if I choose, in my phone's calendar through a private link. Trak emails me when an event is added, changed or cancelled, and again two days before it. I can turn the reminder off in Settings."
+    setup('player-own-17', { age: 17, consent_age: 15 })
+    renderApp('/player/home')
+    await userEvent.click(await screen.findByRole('button', { name: 'Details' }))
+    expect(screen.getByText(eventsLine, { exact: false })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: /I understand/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    expect(await screen.findByText(/Thanks, your coach can now record your progress/)).toBeInTheDocument()
+    expect(calls[0].args).toMatchObject({
+      p_notice_version: '2026-10-21.1-own',
+      p_consent_text: expect.stringContaining(eventsLine),
+    })
+  })
+
   it('lets the player decline, and says what that means', async () => {
     setup('player-own-16', { age: 16, consent_age: 15 })
     renderApp('/player/home')
