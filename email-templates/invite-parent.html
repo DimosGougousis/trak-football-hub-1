@@ -3,6 +3,10 @@
 {{ if eq (printf "%v" .Data.invited_as) "player" }}
   <p style="font-size:16px;margin:0 0 12px;">Hi{{ if .Data.child_first_name }} {{ .Data.child_first_name }}{{ end }},</p>
   <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">{{ if .Data.academy_name }}{{ .Data.academy_name }}{{ else }}Your academy{{ end }} has added you to Trak, where you'll see your coach's assessments and the matches you play.</p>
+{{ else if eq (printf "%v" .Data.invited_by) "player" }}
+  <p style="font-size:16px;margin:0 0 12px;">Hello,</p>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">{{ if .Data.player_first_name }}{{ .Data.player_first_name }}{{ else }}Your child{{ end }} has invited you to Trak as their parent or guardian.</p>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">On Trak, {{ if .Data.player_first_name }}{{ .Data.player_first_name }}'s{{ else }}your child's{{ end }} coach records assessments and matches. The coach can't record anything until you approve it, and you can withdraw at any time.</p>
 {{ else }}
   <p style="font-size:16px;margin:0 0 12px;">Hello,</p>
   <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">{{ if .Data.academy_name }}{{ .Data.academy_name }}{{ else }}Your academy{{ end }} has added you to Trak as {{ if .Data.child_first_name }}{{ .Data.child_first_name }}'s{{ else }}a child's{{ end }} parent or guardian.</p>
@@ -12,6 +16,6 @@
   <p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:0 0 16px;">{{ .Token }}</p>
   <p style="margin:0 0 24px;"><a href="{{ .SiteURL }}/auth/code?type=invite&email={{ .Email }}&redirect_to={{ .RedirectTo }}" style="background:#C8F25A;color:#0A0A0B;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600;display:inline-block;">Set up your account</a></p>
   <p style="font-size:13px;color:#444444;line-height:1.5;margin:0 0 12px;">Tap the button, then type the code. It works once and expires after an hour.</p>
-  <p style="font-size:12px;color:#666666;line-height:1.5;margin:24px 0 0;">You're receiving this because {{ if .Data.academy_name }}{{ .Data.academy_name }}{{ else }}your academy{{ end }} gave Trak this email address. If you weren't expecting it, ignore this email and nothing happens.</p>
+  <p style="font-size:12px;color:#666666;line-height:1.5;margin:24px 0 0;">You're receiving this because {{ if eq (printf "%v" .Data.invited_by) "player" }}{{ if .Data.player_first_name }}{{ .Data.player_first_name }}{{ else }}your child{{ end }}{{ else if .Data.academy_name }}{{ .Data.academy_name }}{{ else }}your academy{{ end }} gave Trak this email address. If you weren't expecting it, ignore this email and nothing happens.</p>
   <p style="font-size:12px;color:#666666;line-height:1.5;margin:8px 0 0;">To keep Trak emails out of spam, add <strong>noreply@trakfootball.com</strong> to your contacts.</p>
 </div>
