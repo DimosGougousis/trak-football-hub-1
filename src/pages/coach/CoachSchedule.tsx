@@ -11,7 +11,7 @@ import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
+  CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, lockedMessage, STARTED_LOCKED, startedLocked, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
   isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
   type Clash, type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
@@ -466,7 +466,7 @@ export default function CoachSchedule() {
       if (saved < targets.length) {
         // Saving again rewrites every week the same way, so it is safe to retry;
         // a week refused for a clash needs the time changed first.
-        const clash = results.map(r => clashMessage(r.error)).find(Boolean)
+        const clash = results.map(r => clashMessage(r.error) ?? lockedMessage(r.error)).find(Boolean)
         setSheet({ ...sheet, error: `Saved ${saved} of ${targets.length} weeks. ${clash ?? 'Check your connection and save again.'}` })
         return
       }
@@ -491,7 +491,7 @@ export default function CoachSchedule() {
     setSaving(false)
     // Errors keep what was typed and say what failed (the J4 standard). A
     // series is one insert, so it saves whole or not at all.
-    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? SAVE_FAILED }); return }
+    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? lockedMessage(error) ?? SAVE_FAILED }); return }
     setSheet({ kind: 'closed' })
     setSelected(form.date)
     if (publishNow && !editing?.published) return publishSaved(editing ? [editing.id] : data!.map(r => r.id))
@@ -566,7 +566,9 @@ export default function CoachSchedule() {
       const [y, m] = row.event_date.split('-').map(Number)
       setViewYear(y); setViewMonth(m - 1); setSelected(row.event_date)
     }
-    if (action === 'edit') openEdit(row)
+    // TRAK-230: a started event isn't edited or cancelled, whatever the link says.
+    if ((action === 'edit' || action === 'cancel') && startedLocked(row)) toast.error(STARTED_LOCKED)
+    else if (action === 'edit') openEdit(row)
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     // The quick-add's Take register (TRAK-182 part 8): only when it can open.
     else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
@@ -589,7 +591,7 @@ export default function CoachSchedule() {
       : await update.eq('id', row.id).select('id')
     if (failed(error, data)) {
       setSaving(false)
-      setSheet({ ...sheet, error: "Couldn't cancel the event. Check your connection and try again." })
+      setSheet({ ...sheet, error: lockedMessage(error) ?? "Couldn't cancel the event. Check your connection and try again." })
       return
     }
     // Zero drafts is normal here, so only an error counts as a failure.
@@ -823,9 +825,10 @@ export default function CoachSchedule() {
                     </div>
                     {row && !cancelled && (
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <button onClick={() => openEdit(row)} aria-label={`Edit ${row.title}`}>
+                        {/* TRAK-230: once started, what families were told is fixed. */}
+                        {!startedLocked(row) && <button onClick={() => openEdit(row)} aria-label={`Edit ${row.title}`}>
                           <Pencil size={14} color="rgb(var(--t-ink-2))" />
-                        </button>
+                        </button>}
                         {!row.published && (
                           <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium"
@@ -837,7 +840,7 @@ export default function CoachSchedule() {
                           <button onClick={() => deleteDraft(row)} aria-label={`Delete ${row.title}`}>
                             <Trash2 size={14} color="rgb(var(--t-ink-3))" />
                           </button>
-                        ) : (
+                        ) : !startedLocked(row) && (
                           <button onClick={() => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })}
                             aria-label={`Cancel ${row.title}`}>
                             <Ban size={14} color="rgb(var(--t-danger) / 0.8)" />
