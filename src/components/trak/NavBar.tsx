@@ -57,7 +57,8 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
     return (
       <nav
       ref={ref}
-      className="fixed bottom-0 w-full max-w-[430px] mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-line z-50"
+      // TRAK-199: as wide as a page; a rail on the left for a coach on a laptop (index.css).
+      className="trak-nav trak-page fixed bottom-0 w-full mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-line z-50"
       style={{
         background: 'rgb(var(--t-ground) / 0.96)',
         paddingBottom: 'max(8px, env(safe-area-inset-bottom))',

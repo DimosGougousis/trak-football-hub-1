@@ -159,7 +159,7 @@ function AccountSettings({ userId }: { userId: string }) {
 
   return (
     <div className="min-h-screen" style={{ background: 'rgb(var(--t-ground))', fontFamily: 'var(--t-font)' }}>
-      <div className="mx-auto max-w-[430px] px-5 pt-5 pb-12">
+      <div className="mx-auto trak-read px-5 pt-5 pb-12">
         {/* Header */}
         <div className="relative flex items-center justify-center mb-6 h-10">
           <button

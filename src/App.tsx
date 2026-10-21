@@ -10,6 +10,7 @@ import { RouteGuard } from "@/components/layout/RouteGuard";
 import { PlayerConsentWatcher } from "@/components/player/PlayerConsentWatcher";
 import { PlayerSessionWatcher } from "@/components/player/PlayerSessionWatcher";
 import { ParentConsentWatcher } from "@/components/parent/ParentConsentWatcher";
+import { CoachLayout } from "@/components/coach/CoachLayout";
 import { ErrorBoundary } from "@/components/trak/ErrorBoundary";
 import { ParkedScreen } from "@/components/trak/ParkedScreen";
 
@@ -112,6 +113,8 @@ const App = () => (
           {/* TRAK-104: signs out an open app whose session a password reset ended. */}
           <PlayerSessionWatcher />
           <ParentConsentWatcher />
+          {/* TRAK-199: a coach's screens use a tablet's or laptop's width. */}
+          <CoachLayout />
           {DevSwitcher && <DevSwitcher />}
           <Suspense fallback={<RouteFallback />}>
           <Routes>
