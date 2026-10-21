@@ -87,11 +87,13 @@ UPDATE public.squad_players SET status='coach_departed' WHERE id=pg_temp.r136id(
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.r136id(100),'events') ON CONFLICT DO NOTHING;
 -- Events. In 2 days: A's training 700 and match 701 (published, at 17:00 and
 -- 19:00: a coach's live events can't overlap, TRAK-158), A's cancelled 702,
--- A's draft 703, B's training 710. In 3 days: A's 704. Today: A's 705.
+-- A's draft 703, B's training 710. In 3 days: A's 704. Today: A's 705, at
+-- 23:59 (not started whenever the suite runs, bar that minute): section 4
+-- cancels it, and a started event can't be changed (TRAK-230).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,venue,published,status)
  SELECT pg_temp.r136id(id), pg_temp.r136id(coach), 'Reminder '||id, kind,
-  pg_temp.r136at(d, CASE WHEN id = 701 THEN time '19:00' ELSE time '17:00' END), pg_temp.r136day(d),
-  CASE WHEN id = 701 THEN time '19:00' ELSE time '17:00' END, 'Pitch 2', pub, st
+  pg_temp.r136at(d, CASE id WHEN 701 THEN time '19:00' WHEN 705 THEN time '23:59' ELSE time '17:00' END), pg_temp.r136day(d),
+  CASE id WHEN 701 THEN time '19:00' WHEN 705 THEN time '23:59' ELSE time '17:00' END, 'Pitch 2', pub, st
  FROM (VALUES (700,10,'training',2,true,'scheduled'),(701,10,'match',2,true,'scheduled'),
               (702,10,'training',2,true,'cancelled'),(703,10,'training',2,false,'scheduled'),
               (710,11,'training',2,true,'scheduled'),(704,10,'training',3,true,'scheduled'),
