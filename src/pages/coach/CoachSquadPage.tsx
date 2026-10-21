@@ -10,6 +10,7 @@ import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { SnapshotTab } from '@/components/coach/squad/SnapshotTab'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
+import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
 import { SeasonTab } from '@/components/coach/squad/SeasonTab'
 
 /* TRAK-250: Squad is a full-width coach workspace with four views of the same
@@ -98,8 +99,8 @@ export default function CoachSquadPage() {
             : roster.players.length === 0 ? <PreparingSquad />
             : active === 'snapshot' ? <SnapshotTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
-            : active === 'season' ? <SeasonTab roster={roster} />
-            : <Placeholder tab={active} />}
+            : active === 'availability' ? <AvailabilityTab roster={roster} />
+            : <SeasonTab roster={roster} />}
         </section>
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
@@ -118,15 +119,6 @@ function PreparingSquad() {
       </div>
       <p className="text-[15px] text-ink-2 font-medium mb-1">Your squad is being prepared</p>
       <p className="text-[12px] text-ink-3 leading-relaxed mb-5">Your academy will add players to this squad.</p>
-    </div>
-  )
-}
-
-/** Temporary: each tab's real panel replaces this one by one (TRAK-250 tasks 5-7). */
-function Placeholder({ tab }: { tab: TabId }) {
-  return (
-    <div className="pt-4">
-      <h2 className="sr-only">{TABS.find(t => t.id === tab)?.label}</h2>
     </div>
   )
 }

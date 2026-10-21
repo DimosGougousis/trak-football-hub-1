@@ -434,3 +434,277 @@ describe('TRAK-250: Season tab', { timeout: 20_000 }, () => {
     await waitFor(() => expect(asked.at(-1)).toMatchObject({ p_squad: 'U12' }))
   })
 })
+
+// ---- Availability tab (task 7) ---------------------------------------------------------------
+const AV_PLAYERS = [
+  { id: 'c1', coach_user_id: 'x', player_name: 'Zayd B.', position: 'Goalkeeper', shirt_number: 1, age_group: 'U10' },
+  { id: 'c2', coach_user_id: 'x', player_name: 'Rayan S.', position: 'Midfielder', shirt_number: 8, age_group: 'U10' },
+  { id: 'c3', coach_user_id: 'x', player_name: 'Leo M.', position: 'Defender', shirt_number: 4, age_group: 'U10' },
+  { id: 'c4', coach_user_id: 'x', player_name: 'Hamza Q.', position: 'Attacker', shirt_number: 9, age_group: 'U10' },
+]
+const MATCH_EVENT = {
+  id: 'ev-1', coach_user_id: 'x', squad: null, title: 'Match', event_type: 'match', published: true, status: 'scheduled',
+  starts_at: '2026-10-24T05:30:00Z', event_date: '2026-10-24', start_time: '09:30:00',
+  opponent: 'Marina FC U10', home_away: 'home', venue: 'Academy pitch 1',
+}
+const TRAINING_EVENT = {
+  id: 'ev-2', coach_user_id: 'x', squad: 'U10', title: 'Tuesday training', event_type: 'training', published: true, status: 'scheduled',
+  starts_at: '2026-10-27T14:00:00Z', event_date: '2026-10-27', start_time: null,
+  opponent: null, home_away: null, venue: null,
+}
+
+/** The coach's upcoming events, and what is recorded against them. Tests change `confirmed` between reads. */
+function availabilityReads(init: {
+  events?: Record<string, unknown>[]
+  confirmed?: Record<string, string[]>
+  absent?: Record<string, Record<string, unknown>[]>
+  season?: Record<string, unknown>[]
+} = {}) {
+  const state = {
+    confirmed: init.confirmed ?? ({} as Record<string, string[]>),
+    absent: init.absent ?? ({} as Record<string, Record<string, unknown>[]>),
+    absenceUrls: [] as string[],
+    confirmationUrls: [] as string[],
+  }
+  const eventOf = (request: Request) => new URL(request.url).searchParams.get('event_id')?.replace(/^eq\./, '') ?? ''
+  coachReads(AV_PLAYERS)
+  server.use(
+    table('coach_calendar_events', init.events ?? [MATCH_EVENT]),
+    http.get(`${SUPABASE_URL}/rest/v1/event_confirmations`, ({ request }) => {
+      state.confirmationUrls.push(request.url)
+      return HttpResponse.json((state.confirmed[eventOf(request)] ?? []).map(squad_player_id => ({ squad_player_id })))
+    }),
+    http.get(`${SUPABASE_URL}/rest/v1/event_absences`, ({ request }) => {
+      state.absenceUrls.push(request.url)
+      return HttpResponse.json(state.absent[eventOf(request)] ?? [])
+    }),
+    rpc('coach_squad_season', () => init.season ?? []),
+  )
+  return state
+}
+const column = (panel: HTMLElement, name: string) => within(panel).getByRole('region', { name })
+const columnLater = (panel: HTMLElement, name: string) => within(panel).findByRole('region', { name })
+const child = (panel: HTMLElement, col: string, name: RegExp) => within(column(panel, col)).queryByRole('button', { name })
+
+describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
+  it('availability splits confirmed and not confirmed', async () => {
+    const state = availabilityReads({
+      confirmed: { 'ev-1': ['c1'] },
+      absent: { 'ev-1': [{ squad_player_id: 'c2', reason: 'Dentist' }] },
+    })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+
+    expect(await within(panel).findByRole('heading', { name: 'Sat 24 Oct · vs Marina FC U10' })).toBeInTheDocument()
+    expect(panel).toHaveTextContent('Match')
+    expect(panel).toHaveTextContent('Kick-off 09:30 · Home · Academy pitch 1')
+
+    const zayd = await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })
+    expect(zayd).toHaveAttribute('aria-pressed', 'true')
+    expect(zayd).toHaveTextContent('Goalkeeper')
+    const rayan = child(panel, 'Not confirmed', /Rayan S\./)!
+    expect(rayan).toHaveAttribute('aria-pressed', 'false')
+    expect(rayan).toHaveTextContent("Reported can't make it")
+    expect(within(column(panel, 'Confirmed')).queryByText("Reported can't make it")).toBeNull()
+    expect(child(panel, 'Confirmed', /Rayan S\./)).toBeNull()
+
+    // The reason is never read, never rendered.
+    expect(panel).not.toHaveTextContent('Dentist')
+    expect(state.absenceUrls.length).toBeGreaterThan(0)
+    for (const url of [...state.absenceUrls, ...state.confirmationUrls]) {
+      expect(new URL(url).searchParams.get('select')).toBe('squad_player_id')
+    }
+
+    expect(panel).toHaveTextContent('1 confirmed · 3 not confirmed')
+    expect(panel).toHaveTextContent('Goalkeepers: Zayd B.')
+    expect(panel).toHaveTextContent("Confirmations come from your WhatsApp group; families don't see them in Trak.")
+    expect(within(panel).queryByRole('button', { name: /Remind/ })).toBeNull()
+  })
+
+  it('a confirmed goalkeeper with a reported absence is still confirmed, and shows the tag', async () => {
+    availabilityReads({ confirmed: { 'ev-1': ['c1'] }, absent: { 'ev-1': [{ squad_player_id: 'c1' }] } })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const zayd = await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })
+    await waitFor(() => expect(zayd).toHaveTextContent("Reported can't make it"))
+    expect(panel).toHaveTextContent('Goalkeepers: Zayd B.')
+    expect(within(panel).queryByText('No goalkeeper confirmed')).toBeNull()
+  })
+
+  it('tapping a child confirms them', async () => {
+    const user = userEvent.setup()
+    const state = availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
+    const calls: Record<string, unknown>[] = []
+    server.use(rpc('confirm_event_attendance', args => {
+      calls.push(args)
+      state.confirmed['ev-1'] = [...state.confirmed['ev-1'], String(args.p_squad_player_id)]
+      return null
+    }))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await user.click(await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ }))
+
+    await waitFor(() => expect(calls).toEqual([{ p_event_id: 'ev-1', p_squad_player_id: 'c3' }]))
+    await waitFor(() => expect(child(panel, 'Confirmed', /Leo M\./)).not.toBeNull())
+    expect(child(panel, 'Not confirmed', /Leo M\./)).toBeNull()
+    expect(panel).toHaveTextContent('2 confirmed · 2 not confirmed')
+  })
+
+  it('tapping a confirmed child takes the tick back', async () => {
+    const user = userEvent.setup()
+    const state = availabilityReads({ confirmed: { 'ev-1': ['c1', 'c3'] } })
+    const calls: Record<string, unknown>[] = []
+    server.use(rpc('unconfirm_event_attendance', args => {
+      calls.push(args)
+      state.confirmed['ev-1'] = state.confirmed['ev-1'].filter(id => id !== args.p_squad_player_id)
+      return null
+    }))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await user.click(await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Leo M\./ }))
+
+    await waitFor(() => expect(calls).toEqual([{ p_event_id: 'ev-1', p_squad_player_id: 'c3' }]))
+    await waitFor(() => expect(child(panel, 'Not confirmed', /Leo M\./)).not.toBeNull())
+  })
+
+  it('a refused confirm stays put', async () => {
+    const user = userEvent.setup()
+    availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
+    server.use(rpc('confirm_event_attendance', () => ({ status: 403, body: { message: 'This event has ended' } })))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await user.click(await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ }))
+
+    expect(await within(panel).findByRole('alert')).toHaveTextContent('This event has ended')
+    expect(child(panel, 'Not confirmed', /Leo M\./)).not.toBeNull()
+    expect(child(panel, 'Confirmed', /Leo M\./)).toBeNull()
+  })
+
+  it('no upcoming event', async () => {
+    availabilityReads({ events: [] })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    expect(await within(panel).findByText('No upcoming events')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: /schedule/i })).toHaveAttribute('href', '/coach/schedule')
+    expect(within(panel).queryByRole('region', { name: 'Confirmed' })).toBeNull()
+  })
+
+  it('an event for another squad is not offered', async () => {
+    availabilityReads({ events: [{ ...TRAINING_EVENT, squad: 'U12' }] })
+    // Two squads, so U10 is the one in view.
+    server.use(table('squad_players', [...AV_PLAYERS,
+      { id: 'c9', coach_user_id: 'x', player_name: 'Omar T.', position: 'Defender', shirt_number: 5, age_group: 'U12' }]))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    expect(await within(panel).findByText('No upcoming events')).toBeInTheDocument()
+  })
+
+  it('consent-pending child is not eligible', async () => {
+    availabilityReads()
+    server.use(rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'c4'))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Rayan S\./ })
+
+    expect(panel).toHaveTextContent(/Not eligible:\s*Hamza Q\./)
+    expect(within(panel).queryByRole('button', { name: /Hamza Q\./ })).toBeNull()
+    expect(within(column(panel, 'Confirmed')).queryByText(/Hamza/)).toBeNull()
+    expect(within(column(panel, 'Not confirmed')).queryByText(/Hamza/)).toBeNull()
+    expect(panel).toHaveTextContent('0 confirmed · 3 not confirmed')
+  })
+
+  it('warns when no goalkeeper is confirmed', async () => {
+    availabilityReads({ confirmed: { 'ev-1': ['c2'] } })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    expect(await within(panel).findByText('No goalkeeper confirmed')).toBeInTheDocument()
+    expect(within(panel).queryByText(/^Goalkeepers:/)).toBeNull()
+  })
+
+  it('steps through the upcoming events, each with its own confirmations', async () => {
+    const user = userEvent.setup()
+    availabilityReads({ events: [MATCH_EVENT, TRAINING_EVENT], confirmed: { 'ev-1': ['c1'], 'ev-2': ['c2', 'c3'] } })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await within(panel).findByRole('heading', { name: 'Sat 24 Oct · vs Marina FC U10' })
+    expect(within(panel).getByRole('button', { name: 'Previous event' })).toBeDisabled()
+
+    await user.click(within(panel).getByRole('button', { name: 'Next event' }))
+    expect(await within(panel).findByRole('heading', { name: 'Tue 27 Oct · Tuesday training' })).toBeInTheDocument()
+    expect(panel).toHaveTextContent('Training')
+    await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Rayan S\./ })
+    expect(child(panel, 'Confirmed', /Zayd B\./)).toBeNull()
+    expect(within(panel).getByRole('button', { name: 'Next event' })).toBeDisabled()
+
+    await user.click(within(panel).getByRole('button', { name: 'Previous event' }))
+    expect(await within(panel).findByRole('heading', { name: 'Sat 24 Oct · vs Marina FC U10' })).toBeInTheDocument()
+    await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })
+  })
+
+  const SEASON = [
+    seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'c1', 48), seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'c2', 19),
+    seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'c3', null),
+  ]
+
+  it("shows each child's season minutes for a match, a dash when not recorded, and who is owed minutes", async () => {
+    availabilityReads({ confirmed: { 'ev-1': ['c1'] }, season: SEASON })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await waitFor(() => expect(child(panel, 'Confirmed', /Zayd B\./)).toHaveTextContent('100%'))
+    await waitFor(() => expect(child(panel, 'Not confirmed', /Rayan S\./)).toHaveTextContent('40%'))
+    const leo = child(panel, 'Not confirmed', /Leo M\./)!
+    expect(leo).toHaveTextContent('—')
+    expect(leo).not.toHaveTextContent('0%')
+
+    const owed = within(panel).getByRole('region', { name: 'Minutes owed' })
+    expect(owed).toHaveTextContent('Rayan S. has played 40% of available minutes, the lowest in the squad.')
+  })
+
+  it('a training shows no minutes and no minutes owed', async () => {
+    availabilityReads({ events: [TRAINING_EVENT], confirmed: { 'ev-2': ['c1'] }, season: SEASON })
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })
+    await act(async () => { await new Promise(r => setTimeout(r, 100)) })
+    expect(panel).not.toHaveTextContent('%')
+    expect(within(panel).queryByRole('region', { name: 'Minutes owed' })).toBeNull()
+  })
+
+  it('without the season, availability still works and leaves out minutes', async () => {
+    availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
+    server.use(rpc('coach_squad_season', () => ({ status: 500, body: { message: 'unavailable' } })))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    expect(await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })).not.toHaveTextContent('%')
+    await act(async () => { await new Promise(r => setTimeout(r, 200)) })
+    expect(within(panel).queryByRole('region', { name: 'Minutes owed' })).toBeNull()
+    expect(within(panel).queryByText("Couldn't load your squad")).toBeNull()
+    expect(panel).not.toHaveTextContent('—')
+  })
+
+  it('a failed confirmations read shows Try again, never everyone as not confirmed', async () => {
+    const user = userEvent.setup()
+    const state = availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
+    let failing = true
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/event_confirmations`, () =>
+      failing ? HttpResponse.json({ message: 'unavailable' }, { status: 500 })
+        : HttpResponse.json(state.confirmed['ev-1'].map(squad_player_id => ({ squad_player_id })))))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    expect(await within(panel).findByText("Couldn't load confirmations", undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(panel).queryByRole('region', { name: 'Not confirmed' })).toBeNull()
+
+    failing = false
+    await user.click(within(panel).getByRole('button', { name: 'Try again' }))
+    expect(await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })).toBeInTheDocument()
+  })
+
+  it('a failed events read shows Try again, never "No upcoming events"', async () => {
+    availabilityReads()
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_calendar_events`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    expect(await within(panel).findByText("Couldn't load upcoming events", undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(panel).queryByText('No upcoming events')).toBeNull()
+  })
+})

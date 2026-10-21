@@ -1,0 +1,335 @@
+import { useMemo, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, ChevronLeft, ChevronRight, Circle, TriangleAlert } from 'lucide-react'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
+import { displayEventTime, localTodayISO, toInstant } from '@/lib/event-time'
+import { splitAvailability, type AvailPlayer } from '@/lib/squad/availability'
+import type { Tables } from '@/integrations/supabase/types'
+import { SquadLoadError } from './SquadLoadError'
+import { useSeason } from './useSeason'
+import type { SquadRoster } from './useSquadRoster'
+
+/* TRAK-250: Squad > Availability. Families confirm in the squad's WhatsApp group; the coach reads it
+   and ticks each child Confirmed here. Everyone else is Not confirmed, and a guardian's "Can't make it"
+   report is only a tag on the child, in whichever column. Coach-only: families never see any of it,
+   and the reason behind a report is never read. */
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const UPCOMING = 10
+const OWED_BELOW = 50
+
+type CalendarEvent = Pick<Tables<'coach_calendar_events'>,
+  'id' | 'squad' | 'title' | 'event_type' | 'starts_at' | 'event_date' | 'start_time' | 'opponent' | 'venue' | 'home_away'>
+
+/** PostgREST value quoting, so a squad name with a comma or bracket cannot change the filter. */
+const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+
+/** `2026-10-24` -> `Sat 24 Oct`, from the calendar date itself so no time zone can move the day. */
+function dayLabel(date: string) {
+  const [y, m, d] = date.split('-').map(Number)
+  if (!y || !m || !d) return ''
+  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]}`
+}
+
+/** This coach's next published, not-cancelled events from the start of today (confirming is allowed all day). */
+async function loadEvents(coachId: string, since: string, squad: string | null): Promise<CalendarEvent[]> {
+  let query = supabase.from('coach_calendar_events')
+    .select('id, squad, title, event_type, starts_at, event_date, start_time, opponent, venue, home_away')
+    .eq('coach_user_id', coachId).eq('published', true).neq('status', 'cancelled').gte('starts_at', since)
+  if (squad) query = query.or(`squad.is.null,squad.eq.${quoted(squad)}`)
+  const { data, error } = await query.order('starts_at', { ascending: true }).limit(UPCOMING)
+  if (error) throw error
+  return data ?? []
+}
+
+/** Only `squad_player_id` is ever selected: an absence's reason is not read here. */
+async function loadConfirmed(eventId: string): Promise<string[]> {
+  const { data, error } = await supabase.from('event_confirmations').select('squad_player_id').eq('event_id', eventId)
+  if (error) throw error
+  return (data ?? []).map(row => row.squad_player_id)
+}
+
+async function loadReportedAbsent(eventId: string): Promise<string[]> {
+  const { data, error } = await supabase.from('event_absences').select('squad_player_id').eq('event_id', eventId)
+  if (error) throw error
+  return (data ?? []).map(row => row.squad_player_id)
+}
+
+function Missing({ what }: { what: string }) {
+  return <><span aria-hidden>—</span><span className="sr-only">{what}</span></>
+}
+
+function Chip({ children, tone = 'raised' }: { children: ReactNode; tone?: 'raised' | 'brand' }) {
+  return (
+    <span className="inline-flex min-w-6 items-center justify-center rounded-full px-2.5 py-0.5 text-[12px] font-medium"
+      style={tone === 'brand'
+        ? { background: 'rgb(var(--t-brand) / 0.12)', color: 'rgb(var(--t-brand))' }
+        : { background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-ink))' }}>
+      {children}
+    </span>
+  )
+}
+
+function Card({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section aria-label={title} className="rounded-[14px] border border-line bg-surface p-4">
+      <h3 className="mb-2 text-[13px] font-medium text-ink-3">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+type Row = AvailPlayer & { absent: boolean }
+
+function ChildRow({ child, pressed, pct, showPct, busy, onToggle }: {
+  child: Row
+  pressed: boolean
+  /** `null` when the child has no minutes recorded. */
+  pct: number | null
+  showPct: boolean
+  busy: boolean
+  onToggle: () => void
+}) {
+  return (
+    <li>
+      <button type="button" aria-pressed={pressed} disabled={busy} onClick={onToggle}
+        className="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+        <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-raised text-[12px] font-medium text-ink">
+          {child.shirt ?? <Missing what="no shirt number" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-medium text-ink">{child.name}</span>
+          <span className="block truncate text-[11px] text-ink-3">{child.position ?? 'Position not set'}</span>
+          {child.absent && (
+            <span className="mt-1 inline-block rounded-[8px] px-2 py-0.5 text-[11px] font-medium text-ink"
+              style={{ background: 'rgb(var(--t-warning) / 0.18)' }}>Reported can't make it</span>
+          )}
+        </span>
+        {showPct && (
+          <span className="shrink-0 font-mono text-[11px]"
+            style={pct != null && pct < OWED_BELOW
+              ? { color: 'rgb(var(--t-warning))', fontWeight: 700 } : { color: 'rgb(var(--t-ink-3))' }}>
+            {pct == null ? <Missing what="minutes not recorded" /> : `${pct}%`}
+          </span>
+        )}
+        {pressed
+          ? <Check aria-hidden size={18} strokeWidth={2.25} className="shrink-0 text-brand" />
+          : <Circle aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-ink-3" />}
+      </button>
+    </li>
+  )
+}
+
+function Column({ title, note, rows, pressed, pcts, showPct, busy, onToggle }: {
+  title: string
+  note: string
+  rows: Row[]
+  pressed: boolean
+  pcts: Map<string, number | null> | undefined
+  showPct: boolean
+  busy: boolean
+  onToggle: (child: Row) => void
+}) {
+  const id = `availability-${title.toLowerCase().replace(/\s+/g, '-')}`
+  return (
+    <section aria-labelledby={id} className="min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface">
+      <div className="flex items-center justify-between gap-2 px-4 pt-4">
+        <h3 id={id} className="text-[15px] font-medium text-ink">{title}</h3>
+        <Chip>{rows.length}</Chip>
+      </div>
+      <p className="px-4 pt-1 text-[12px] text-ink-3">{note}</p>
+      {rows.length === 0 ? <p className="px-4 py-5 text-[13px] text-ink-3">No one here.</p> : (
+        <ul className="py-2">
+          {rows.map(row => (
+            <ChildRow key={row.id} child={row} pressed={pressed} busy={busy} showPct={showPct}
+              pct={pcts?.get(row.id) ?? null} onToggle={() => onToggle(row)} />
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
+  const { user } = useAuth()
+  const userId = user?.id
+  const client = useQueryClient()
+  const { players, consentPending, squad } = roster
+  const season = useSeason()
+  const [pick, setPick] = useState<string | null>(null)
+
+  const since = toInstant(localTodayISO()) ?? new Date().toISOString()
+  const events = useQuery({
+    queryKey: ['coach', userId, 'squad-availability', 'events', squad ?? 'all', since],
+    queryFn: () => loadEvents(userId!, since, squad),
+    enabled: !!userId,
+  })
+  const upcoming = useMemo(
+    () => (events.data ?? []).filter(e => e.squad == null || squad == null || e.squad === squad),
+    [events.data, squad],
+  )
+  const at = Math.max(0, upcoming.findIndex(e => e.id === pick))
+  const event = upcoming[at]
+  const eventId = event?.id
+
+  const confirmedKey = ['coach', userId, 'squad-availability', 'confirmed', eventId] as const
+  const confirmedQuery = useQuery({ queryKey: confirmedKey, queryFn: () => loadConfirmed(eventId!), enabled: !!userId && !!eventId })
+  const absentQuery = useQuery({
+    queryKey: ['coach', userId, 'squad-availability', 'absent', eventId],
+    queryFn: () => loadReportedAbsent(eventId!),
+    enabled: !!userId && !!eventId,
+  })
+
+  const toggle = useMutation({
+    mutationFn: async ({ eventId: ev, childId, confirm }: { eventId: string; childId: string; confirm: boolean }) => {
+      const args = { p_event_id: ev, p_squad_player_id: childId }
+      const { error } = confirm
+        ? await supabase.rpc('confirm_event_attendance', args)
+        : await supabase.rpc('unconfirm_event_attendance', args)
+      if (error) throw error
+    },
+    // The row only moves once the confirmations have been read again; a refusal leaves it where it was.
+    onSuccess: (_data, vars) => client.invalidateQueries({ queryKey: ['coach', userId, 'squad-availability', 'confirmed', vars.eventId] }),
+  })
+
+  const avail = useMemo<AvailPlayer[]>(
+    () => players.map(p => ({ id: p.id, name: p.player_name, shirt: p.shirt_number, position: p.position })),
+    [players],
+  )
+  const confirmedIds = useMemo(() => new Set(confirmedQuery.data ?? []), [confirmedQuery.data])
+  const absentIds = useMemo(() => new Set(absentQuery.data ?? []), [absentQuery.data])
+  const split = useMemo(
+    () => splitAvailability(avail, consentPending, confirmedIds, absentIds),
+    [avail, consentPending, confirmedIds, absentIds],
+  )
+
+  const isMatch = event?.event_type === 'match'
+  const pcts = useMemo(
+    () => (season.summary ? new Map(season.summary.players.map(p => [p.squadPlayerId, p.pct])) : undefined),
+    [season.summary],
+  )
+  // The child owed most minutes: the lowest recorded share among everyone who could play. Ties go to the first by name.
+  const owed = useMemo(() => {
+    if (!pcts) return null
+    let lowest: { name: string; pct: number } | null = null
+    for (const p of avail) {
+      const pct = pcts.get(p.id)
+      if (consentPending.has(p.id) || pct == null) continue
+      if (!lowest || pct < lowest.pct) lowest = { name: p.name, pct }
+    }
+    return lowest
+  }, [pcts, avail, consentPending])
+
+  if (events.error) return <SquadLoadError onRetry={() => { void events.refetch() }} title="Couldn't load upcoming events" />
+  if (events.isPending) return <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading upcoming events…</p>
+  if (!event) {
+    return (
+      <div className="pt-2">
+        <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">Availability</h2>
+        <div className="mt-5 rounded-[14px] border border-line bg-surface p-5">
+          <p className="text-[15px] font-medium text-ink-2">No upcoming events</p>
+          <p className="mt-1 text-[12px] text-ink-3">Publish a match or training and its confirmations appear here.</p>
+          <Link to="/coach/schedule"
+            className="mt-4 inline-flex min-h-11 items-center rounded-[10px] border border-line-strong px-4 text-[13px] font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            Open schedule
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const { date, time } = displayEventTime(event)
+  const what = isMatch ? (event.opponent ? `vs ${event.opponent}` : event.title) : event.title
+  const heading = [dayLabel(date), what].filter(Boolean).join(' · ')
+  const details = [
+    time ? `${isMatch ? 'Kick-off' : 'Starts'} ${time}` : '',
+    event.home_away === 'home' ? 'Home' : event.home_away === 'away' ? 'Away' : '',
+    event.venue ?? '',
+  ].filter(Boolean).join(' · ')
+
+  const step = (by: number) => { toggle.reset(); setPick(upcoming[at + by].id) }
+  const readError = confirmedQuery.error ?? absentQuery.error
+  const retry = () => { void confirmedQuery.refetch(); void absentQuery.refetch() }
+  const toggleChild = (child: Row) => toggle.mutate({ eventId: event.id, childId: child.id, confirm: !confirmedIds.has(child.id) })
+  const stepButton = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] border border-line-strong text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+
+  return (
+    <div className="pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <Chip tone="brand">{isMatch ? 'Match' : event.event_type === 'training' ? 'Training' : 'Event'}</Chip>
+          <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">{heading}</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] text-ink-3">{at + 1} of {upcoming.length}</span>
+          <button type="button" aria-label="Previous event" disabled={at === 0} onClick={() => step(-1)} className={stepButton}>
+            <ChevronLeft aria-hidden size={18} />
+          </button>
+          <button type="button" aria-label="Next event" disabled={at >= upcoming.length - 1} onClick={() => step(1)} className={stepButton}>
+            <ChevronRight aria-hidden size={18} />
+          </button>
+        </div>
+      </div>
+      {details && <p className="mt-1.5 font-mono text-[12px] text-ink-3">{details}</p>}
+
+      {toggle.error && (
+        <p role="alert" className="mt-3.5 rounded-[12px] px-4 py-3 text-[13px] text-ink"
+          style={{ background: 'rgb(var(--t-danger) / 0.1)', border: '1px solid rgb(var(--t-danger) / 0.35)' }}>
+          {toggle.error.message || "Couldn't update this confirmation. Try again."}
+        </p>
+      )}
+
+      {readError ? <SquadLoadError onRetry={retry} title="Couldn't load confirmations" />
+        : confirmedQuery.isPending || absentQuery.isPending
+          ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading confirmations…</p>
+          : (
+            <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start">
+              <div className="min-w-0 flex-1">
+                <div className="grid gap-3.5 md:grid-cols-2">
+                  <Column title="Confirmed" note="You marked these children as coming."
+                    rows={split.confirmed} pressed pcts={pcts} showPct={isMatch && !!pcts} busy={toggle.isPending} onToggle={toggleChild} />
+                  <Column title="Not confirmed" note="Not marked as coming yet."
+                    rows={split.notConfirmed} pressed={false} pcts={pcts} showPct={isMatch && !!pcts} busy={toggle.isPending} onToggle={toggleChild} />
+                </div>
+                {split.notEligible.length > 0 && (
+                  <div className="mt-3.5 rounded-[12px] px-4 py-3 text-[13px] text-ink"
+                    style={{ background: 'rgb(var(--t-warning) / 0.12)', border: '1px solid rgb(var(--t-warning) / 0.35)' }}>
+                    <b className="font-medium">Not eligible:</b>{' '}
+                    {split.notEligible.map(p => p.name).join(', ')} — consent pending, so {split.notEligible.length === 1 ? 'the family' : 'the families'} can't see or answer events yet.
+                  </div>
+                )}
+              </div>
+
+              <aside className="flex w-full flex-col gap-3.5 lg:w-[300px] lg:shrink-0">
+                <Card title="Squad for this event">
+                  <p className="text-[18px] font-medium text-ink">{split.confirmed.length} confirmed · {split.notConfirmed.length} not confirmed</p>
+                  {split.goalkeepers.length > 0 ? (
+                    <p className="mt-2 text-[13px] text-ink">Goalkeepers: {split.goalkeepers.map(g => g.name).join(', ')}</p>
+                  ) : (
+                    <p className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-ink">
+                      <TriangleAlert aria-hidden size={15} className="shrink-0 text-warning" />No goalkeeper confirmed
+                    </p>
+                  )}
+                </Card>
+                {isMatch && pcts && (
+                  <Card title="Minutes owed">
+                    {owed ? (
+                      <p className="text-[13px] text-ink">
+                        <b className="font-medium">{owed.name}</b> has played {owed.pct}% of available minutes, the lowest in the squad.
+                        {owed.pct < OWED_BELOW && ' Plan at least half the match.'}
+                      </p>
+                    ) : <p className="text-[13px] text-ink-3">No minutes recorded yet this season.</p>}
+                  </Card>
+                )}
+                <p className="rounded-[12px] border border-line bg-raised px-4 py-3 text-[13px] text-ink-2">
+                  Confirmations come from your WhatsApp group; families don't see them in Trak.
+                </p>
+              </aside>
+            </div>
+          )}
+    </div>
+  )
+}
