@@ -60,6 +60,7 @@ export type EventRow = {
   ends_at?: string | null
   event_date?: string | null
   start_time?: string | null
+  end_time?: string | null
   venue?: string | null
   opponent?: string | null
   notes?: string | null
@@ -191,6 +192,19 @@ export const isCancelled = (row: Pick<EventRow, 'status'>) => row.status === 'ca
 /** Delete is only for a mistake nobody has seen: a draft never published. */
 export const canDelete = (row: Pick<EventRow, 'published' | 'status'>) => !row.published && !isCancelled(row)
 
+/** TRAK-230 (Kostas, 21 Oct, option A): once an event has started, what families were told is
+    fixed: no edit and no cancel, only its register or match log (refuse_started_event_change).
+    An old event with no start time locks when its day is over. */
+export function startedLocked(row: Pick<EventRow, 'starts_at' | 'start_time'>, now = Date.now()): boolean {
+  return Date.parse(row.starts_at) + (row.start_time ? 0 : 86_400_000) <= now
+}
+export const STARTED_LOCKED = "This event has started, so it can't be changed. Use its register or match log instead."
+/** The database's refusal of a change to a started event, said as it is. */
+export function lockedMessage(error: unknown): string | null {
+  const e = error as { code?: string, message?: string } | null
+  return e?.code === 'P0001' && e.message === STARTED_LOCKED ? e.message : null
+}
+
 /* TRAK-128 (J8.5): weekly repeat. A series is stored as one row per date, all
    sharing a series_id; no repeat rule is stored, so attendance, "can't make
    it" and cancelling stay per week. Dates are calendar dates (Dubai wall
@@ -272,6 +286,35 @@ export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): stri
 export function clashMessage(error: unknown): string | null {
   const e = error as { code?: string, message?: string } | null
   return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
+}
+
+export type Clash = { title: string; start: string; end: string }
+
+const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+/** TRAK-218: the live event each draft would clash with if published, by the
+    database's rule (TRAK-158, refuse_event_overlap): the same coach's
+    published, not cancelled events on the same day whose times overlap.
+    Back-to-back is fine, no end counts as 90 minutes, and no start isn't
+    checked. Pass every one of the coach's events (all squads, as the rule is). */
+export function draftClashes(rows: EventRow[]): Map<string, Clash> {
+  const span = (r: EventRow) => {
+    const start = minutes(r.start_time!.slice(0, 5))
+    const end = r.end_time && r.end_time > r.start_time! ? minutes(r.end_time.slice(0, 5))
+      : r.ends_at ? start + Math.round((Date.parse(r.ends_at) - Date.parse(r.starts_at)) / 60_000)
+      : start + 90
+    return { start, end }
+  }
+  const timed = rows.filter(r => r.event_date && r.start_time && !isCancelled(r))
+  const live = timed.filter(r => r.published)
+    .sort((a, b) => a.start_time!.localeCompare(b.start_time!) || a.title.localeCompare(b.title))
+  const clashes = new Map<string, Clash>()
+  for (const draft of timed.filter(r => !r.published)) {
+    const d = span(draft)
+    const hit = live.find(e => e.event_date === draft.event_date && span(e).start < d.end && span(e).end > d.start)
+    if (hit) clashes.set(draft.id, { title: hit.title, start: hhmm(span(hit).start), end: hhmm(span(hit).end) })
+  }
+  return clashes
 }
 
 // TRAK-157: Arc's date picker speaks Date; forms keep YYYY-MM-DD (the

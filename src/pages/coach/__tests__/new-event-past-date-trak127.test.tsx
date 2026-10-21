@@ -15,8 +15,8 @@ import { eventStep } from '../../../../tests/support/event-steps'
  * back with New event and published it. It asked for no score, said
  * "Attending" for a game that was over, and offered Share and Cancel. Decided
  * (Imad, 16 Oct): New event is for what's coming; what already happened is
- * logged. A past date says so and offers the two logs. Today still works, and
- * an edit that keeps a past event's own date still saves.
+ * logged. A past date says so and offers the two logs. Today still works. A
+ * past event isn't edited at all (TRAK-230).
  */
 
 const COACH = { id: 'coach-127' }
@@ -111,14 +111,13 @@ describe('TRAK-127: New event is for what is coming', { timeout: 30_000 }, () =>
     expect(within(sheet).getByRole('button', { name: 'Publish' })).toBeEnabled()
   })
 
-  it("an edit that keeps a past event's own date still saves", async () => {
+  // TRAK-230 (Kostas, 21 Oct, option A) replaces "an edit that keeps a past event's own date
+  // still saves": once an event has started it isn't edited at all, only logged.
+  it("a past event isn't edited: Edit's link says it has started, and no form opens", async () => {
     // Home's event sheet hands Edit to Schedule this way (TRAK-182).
     renderApp('/coach/schedule?edit=old-1')
-    const sheet = await screen.findByRole('dialog', { name: 'Edit event' })
-    expect(within(sheet).queryByText(PASSED)).toBeNull()
-    await eventStep(sheet, 'Review')
-    expect(within(sheet).queryByText(PASSED)).toBeNull()
-    expect(within(sheet).getByRole('button', { name: 'Save changes' })).toBeEnabled()
+    expect(await screen.findByText("This event has started, so it can't be changed. Use its register or match log instead.")).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Edit event' })).toBeNull()
   })
 })
 

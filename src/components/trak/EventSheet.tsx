@@ -5,6 +5,8 @@ import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-rea
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { updatedNote } from '@/lib/alert-read-state'
+import { academyClock } from '@/lib/event-time'
+import { meetText } from '@/lib/player-events'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 
 /* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet. Imad's 16 Oct
@@ -40,12 +42,15 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
 function TimeRow({ event }: { event: StripEvent }) {
   // A logged session has no start time of its own; a logged match shows its event's kick-off (TRAK-182).
   if (event.sessionId && !event.time) return null
+  // TRAK-223: the academy's clock, and this phone's when it differs; the time itself stays the academy's.
+  const clock = academyClock(event)
   return (
     <div>
       <p className="text-[13px] text-ink-2">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
       {event.time
         ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-ink">{event.time}</p>
         : <p className="text-[17px] text-ink mt-1">Time to be confirmed</p>}
+      {event.time && clock && <p className="text-[13px] text-ink-2">{clock.zone}{clock.here ? ` · ${clock.here}` : ''}</p>}
     </div>
   )
 }
@@ -69,7 +74,7 @@ export function EventSheet({ event, role, trigger, children }: {
   const meet = past ? null : meetTime(event)
   const rows = ([
     cancelled && event.cancelReason ? ['Reason', event.cancelReason] : null,
-    meet ? ['Meet', meet] : null,
+    meet ? ['Meet', meetText(event, meet)] : null,
     event.venue ? ['Where', <>
       <span className="block">{event.venue}</span>
       {!cancelled && (

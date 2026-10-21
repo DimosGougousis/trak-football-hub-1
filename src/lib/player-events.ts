@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { displayEventTime } from './event-time'
+import { academyClock, displayEventTime, meetLead } from './event-time'
 
 /**
  * What a player sees of their squad's events (J8.7, TRAK-130).
@@ -110,6 +110,13 @@ export function eventHeading(event: PlayerEvent): string {
 export const eventDay = (event: PlayerEvent) => format(parseISO(event.date), 'EEE d MMM')
 /** The coach's time, or "Time to be confirmed": never midnight. */
 export const eventTime = (event: PlayerEvent) => event.time ?? 'Time to be confirmed'
+
+/** TRAK-223: "16:15 Athens time, 45 min before kick-off". The meet time is on the academy's clock, as the start is. */
+export function meetText(event: PlayerEvent, meet: string): string {
+  const zone = academyClock(event)?.zone
+  const lead = event.time ? meetLead(meet, event.time, event.kind) : null
+  return `${meet}${zone ? ` ${zone}` : ''}${lead ? `, ${lead}` : ''}`
+}
 
 // ── "Changed" until opened ──────────────────────────────────────────────────
 // Per device, like the parent bell (ParentAlertsBell): for each event, the

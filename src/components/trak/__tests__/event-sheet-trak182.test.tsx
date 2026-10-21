@@ -92,13 +92,16 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText(format(parseISO(day), 'EEE MMM d'))).toBeInTheDocument()
     expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
-    const meet = within(sheet).getByText('16:15')
+    // TRAK-223: the meet line says how long before kick-off it is.
+    const meet = within(sheet).getByText('16:15, 45 min before kick-off')
     expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
     expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
     expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    // TRAK-230: an event still to come is edited from here.
+    expect(within(sheet).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(patched).toEqual([{ published: true }]))
   })
@@ -182,6 +185,9 @@ describe('TRAK-182: the event sheet', () => {
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit.
+    expect(within(sheet).getByText('It has started, so its details are fixed.')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Edit' })).toBeNull()
     expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
     // Decided 16 Oct: a past event's sheet has no meet time and no family note; the kit stays.

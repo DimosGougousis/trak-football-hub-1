@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -64,7 +65,9 @@ async function open(title: string) {
 }
 
 describe('TRAK-158: an overlap is refused with the clash named', () => {
-  beforeEach(() => signInAs(COACH))
+  // TRAK-230: today's 18:00–20:00 events are still to come, so they can be edited.
+  beforeEach(() => { atMorningToday(); signInAs(COACH) })
+  afterEach(() => vi.useRealTimers())
 
   it('publishing a draft that overlaps says which event it clashes with', async () => {
     fixtures([DRAFT])
