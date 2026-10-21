@@ -325,11 +325,11 @@ export default function CoachAddSession() {
       return n
     })
 
-  const setAllStarters = () => {
-    const all: Record<string, PlayerDetail> = {}
-    squad.forEach(p => { all[p.id] = { ...DEFAULT_DETAIL, position: p.position, played: true, role: 'starter' } })
-    setDetails(all)
-  }
+  /* TRAK-222: marks everyone as played and changes nothing else. It used to
+     reset every row, so goals, assists and cards already entered were lost. */
+  const setAllPlayed = () =>
+    setDetails(prev => Object.fromEntries(squad.map(p =>
+      [p.id, { ...(prev[p.id] ?? { ...DEFAULT_DETAIL, position: p.position }), played: true }])))
 
   const clearAll = () => {
     const none: Record<string, PlayerDetail> = {}
@@ -820,10 +820,11 @@ export default function CoachAddSession() {
                   SQUAD · {playedCount} played
                 </span>
                 <div className="flex gap-3">
-                  <button onClick={setAllStarters}
+                  {/* TRAK-222: the log records no minutes, so the label doesn't promise 90. */}
+                  <button onClick={setAllPlayed}
                     className="text-[10px] tracking-[0.12em] uppercase text-brand"
                     style={{ fontFamily: 'var(--t-font-mono)' }}>
-                    ALL 90
+                    ALL PLAYED
                   </button>
                   <button onClick={clearAll}
                     className="text-[10px] tracking-[0.12em] uppercase text-ink-3"
