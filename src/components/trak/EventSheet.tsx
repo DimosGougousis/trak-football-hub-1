@@ -8,6 +8,8 @@ import { updatedNote } from '@/lib/alert-read-state'
 import { academyClock } from '@/lib/event-time'
 import { meetText } from '@/lib/player-events'
 import type { StripEvent } from '@/components/trak/WeekStrip'
+import { venueParts } from '@/lib/venue-link'
+
 
 /* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet. Imad's 16 Oct
    layout: the opponent (or the session's name) at top left with Home / Away /
@@ -72,13 +74,15 @@ export function EventSheet({ event, role, trigger, children }: {
   // what only mattered before it, the meet time and the note for families.
   const past = role === 'coach' && !!event.startsAt && Date.parse(event.startsAt) <= Date.now()
   const meet = past ? null : meetTime(event)
+  // TRAK-225: a pasted Maps link opens that place; the line shows the name without it.
+  const venue = event.venue ? venueParts(event.venue) : null
   const rows = ([
     cancelled && event.cancelReason ? ['Reason', event.cancelReason] : null,
     meet ? ['Meet', meetText(event, meet)] : null,
-    event.venue ? ['Where', <>
-      <span className="block">{event.venue}</span>
+    venue ? ['Where', <>
+      {venue.text && <span className="block">{venue.text}</span>}
       {!cancelled && (
-        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`} target="_blank" rel="noopener noreferrer"
+        <a href={venue.mapsUrl} target="_blank" rel="noopener noreferrer"
           className="-mb-3 -mt-1.5 inline-flex min-h-11 items-center gap-1.5 text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded-md">
           <MapPin size={14} aria-hidden="true" />Open in Maps
         </a>
