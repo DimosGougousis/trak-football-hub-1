@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { SnapshotTab } from '@/components/coach/squad/SnapshotTab'
+import { AttributesTab } from '@/components/coach/squad/AttributesTab'
 
 /* TRAK-250: Squad is a full-width coach workspace with four views of the same
    roster. The tab lives in the URL (?tab=), so a view can be linked and a
@@ -95,6 +96,7 @@ export default function CoachSquadPage() {
             : roster.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your squad…</p>
             : roster.players.length === 0 ? <PreparingSquad />
             : active === 'snapshot' ? <SnapshotTab roster={roster} />
+            : active === 'attributes' ? <AttributesTab roster={roster} />
             : <Placeholder tab={active} />}
         </section>
       </div>

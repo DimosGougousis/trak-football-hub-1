@@ -261,3 +261,66 @@ describe('TRAK-250: Snapshot tab', { timeout: 20_000 }, () => {
     expect(within(panel).queryByText(/a drop and missed sessions/)).toBeNull()
   })
 })
+
+// ---- Attributes tab (task 5) -----------------------------------------------------------------
+/** Noon, local time, on the Monday `weeksAgo` weeks before this week's Monday: always inside that heatmap week. */
+function mondayNoon(weeksAgo: number) {
+  const now = new Date()
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) - weeksAgo * 7, 12)
+  return d.toISOString()
+}
+const attrs = (squad_player_id: string, created_at: string, tactical: number) => ({
+  squad_player_id, coach_rating: 6, created_at, work_rate: 7, technical: 7, physical: 7, coachability: 7, attitude: 7, tactical,
+})
+const cellsOf = (panel: HTMLElement, attribute: string) =>
+  within(within(panel).getByRole('row', { name: new RegExp(`^${attribute}`) })).getAllByRole('cell')
+
+describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
+  it('attributes heatmap and focus', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(table('coach_assessments', [
+      attrs('sq-leo', mondayNoon(1), 4),
+      attrs('sq-leo', mondayNoon(0), 3),
+      attrs('sq-sami', mondayNoon(0), 8),
+    ]))
+    renderApp('/coach/squad?tab=attributes')
+    const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
+
+    const tactical = await waitFor(() => cellsOf(panel, 'Tactical'))
+    // Six weeks, then Range and Trend; the four weeks with nothing recorded read as a dash, never 0.
+    expect(tactical).toHaveLength(8)
+    for (const i of [0, 1, 2, 3]) expect(tactical[i]).toHaveTextContent('—')
+    expect(tactical[4]).toHaveTextContent('4.0')
+    expect(tactical[5]).toHaveTextContent('5.5')
+    expect(tactical[6]).toHaveTextContent('3–8')
+    expect(tactical[6]).toHaveTextContent('wide')
+    expect(tactical[7]).toHaveTextContent('↑ 1.5')
+    expect(within(panel).getAllByRole('columnheader').filter(h => /^\d{1,2} [A-Z][a-z]{2}$/.test(h.textContent ?? ''))).toHaveLength(6)
+
+    expect(cellsOf(panel, 'Work rate')[5]).toHaveTextContent('7.0')
+    expect(cellsOf(panel, 'Work rate')[6]).toHaveTextContent('narrow')
+
+    const focus = within(panel).getByRole('region', { name: 'Focus this week' })
+    expect(within(focus).getByRole('heading', { name: 'Tactical' })).toBeInTheDocument()
+    expect(focus).toHaveTextContent('Lowest average (5.5)')
+    expect(within(focus).getByRole('link', { name: 'Open Trainings →' })).toHaveAttribute('href', '/coach/trainings')
+    expect(within(panel).getByText('How to read the range')).toBeInTheDocument()
+    expect(within(panel).getByText(/Coach-only/)).toBeInTheDocument()
+  })
+
+  it('empty squad', async () => {
+    coachReads(SNAP_PLAYERS)
+    renderApp('/coach/squad?tab=attributes')
+    const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
+    expect(await within(panel).findByText('No assessments in the last 6 weeks')).toBeInTheDocument()
+    expect(within(panel).queryByRole('table')).toBeNull()
+  })
+
+  it('assessments older than six weeks are an empty heatmap, not zeros', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(table('coach_assessments', [attrs('sq-leo', mondayNoon(10), 4)]))
+    renderApp('/coach/squad?tab=attributes')
+    const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
+    expect(await within(panel).findByText('No assessments in the last 6 weeks')).toBeInTheDocument()
+  })
+})

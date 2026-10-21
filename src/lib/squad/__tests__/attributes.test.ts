@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { weekStarts, attributeHeatmap, focusAttribute, type AttributeRow } from '../attributes'
+import { weekStarts, attributeHeatmap, focusAttribute, heatAlpha, type AttributeRow } from '../attributes'
 import type { AssessmentRow } from '../snapshot'
 
 const WEEKS = weekStarts('2026-10-21')
@@ -85,5 +85,15 @@ describe('focusAttribute', () => {
   it('returns null when nothing is recorded', () => {
     expect(focusAttribute([])).toBeNull()
     expect(focusAttribute([ar('tactical', 'Tactical', [null, null], null)])).toBeNull()
+  })
+})
+
+describe("heatAlpha", () => {
+  it("grows from pale at 4 to strong at 8.4, clamped to 0.08..0.9", () => {
+    expect(heatAlpha(1)).toBe(0.08)
+    expect(heatAlpha(4)).toBe(0.08)
+    expect(heatAlpha(6.2)).toBeCloseTo(0.5, 5)
+    expect(heatAlpha(8.4)).toBe(0.9)
+    expect(heatAlpha(10)).toBe(0.9)
   })
 })
