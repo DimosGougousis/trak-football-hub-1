@@ -2,6 +2,7 @@ import { MapPin } from 'lucide-react'
 import { eventDay, eventHeading, eventTime, meetText, type PlayerEvent } from '@/lib/player-events'
 import { academyClock } from '@/lib/event-time'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
+import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
 import { withAlpha } from '@/lib/with-alpha'
 import { venueParts } from '@/lib/venue-link'
 
@@ -30,7 +31,7 @@ export function EventDetails({ event: e, changes = [] }: {
     ['Time', `${eventTime(e)}${clock ? ` ${clock.zone}` : ''}${clock?.here ? ` (${clock.here})` : ''}`],
     ...(e.meetTime ? [['Meet', meetText(e, e.meetTime)] as [string, string]] : []),
     ...(venue ? [['Venue', venue] as [string, string]] : []),
-    ...(e.kit ? [['Kit', e.kit] as [string, string]] : []),
+    ...(e.kit && !e.kitSnapshot ? [['Kit', e.kit] as [string, string]] : []),
     ...(e.familyNote ? [['Notes', e.familyNote] as [string, string]] : []),
   ]
   return (
@@ -65,6 +66,7 @@ export function EventDetails({ event: e, changes = [] }: {
           <MapPin size={14} aria-hidden="true" />Open in Maps
         </a>
       )}
+      {e.kitSnapshot && <KitAnnouncement kit={e.kitSnapshot.design} slot={e.kitSnapshot.slot} />}
     </div>
   )
 }
