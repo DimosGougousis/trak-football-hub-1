@@ -32,6 +32,28 @@ describe('bandMoves', () => {
   })
 })
 
+describe('bandMoves dropAfter', () => {
+  const seq = (...ratings: number[]) => ratings.map((r, i) => row('x', r, `2026-10-0${i + 1}T10:00:00Z`))
+
+  it('defaults to one lower step', () => {
+    expect(bandMoves(seq(6.5, 5)).get('x')!.move).toBe(-1)
+  })
+  it('with 2, a drop needs two lower steps in a row: Good, Steady, Mixed', () => {
+    const m = bandMoves(seq(7.5, 6.5, 5), 2).get('x')!
+    expect(m).toMatchObject({ band: 'mixed', previous: 'steady', move: -1 })
+  })
+  it('with 2, Good, Good, Mixed is not a drop', () => {
+    expect(bandMoves(seq(7.5, 7.2, 5), 2).get('x')!.move).toBe(0)
+  })
+  it('with 2, only two assessments with a drop is not a drop', () => {
+    const m = bandMoves(seq(6.5, 5), 2).get('x')!
+    expect(m).toMatchObject({ previous: 'steady', move: 0 })
+  })
+  it('a rise is still one step up whatever dropAfter is', () => {
+    expect(bandMoves(seq(5, 6.5), 2).get('x')!.move).toBe(1)
+  })
+})
+
 describe('bandSpread', () => {
   it('lists all seven bands in BANDS order with the children in each', () => {
     const moves = bandMoves([row('a', 9.5, '2026-10-01T10:00:00Z'), row('b', 5, '2026-10-01T10:00:00Z'), row('c', 5.5, '2026-10-01T10:00:00Z')])

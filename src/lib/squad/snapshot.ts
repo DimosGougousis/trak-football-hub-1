@@ -22,8 +22,13 @@ export type BandMove = { squadPlayerId: string; band: BandType; previous: BandTy
 // Position in BANDS: index 0 is Exceptional, so a lower index is a better band.
 const bandIndex = (band: BandType) => BANDS.findIndex(b => b.word.toLowerCase() === band)
 
-/** Each child's latest band against their own previous one. Rows in any order; null ratings are skipped. */
-export function bandMoves(rows: AssessmentRow[]): Map<string, BandMove> {
+/**
+ * Each child's latest band against their own previous one. Rows in any order; null ratings are skipped.
+ * A rise is one step up. A drop (`move: -1`) needs each of the child's last `dropAfter` assessment-to-assessment
+ * steps to have gone to a lower band, so it takes `dropAfter + 1` rated assessments; otherwise a lower latest
+ * band reads as `move: 0`. `previous` is always the immediately previous band.
+ */
+export function bandMoves(rows: AssessmentRow[], dropAfter: number = DROP_AFTER): Map<string, BandMove> {
   const byChild = new Map<string, AssessmentRow[]>()
   for (const row of rows) {
     if (row.coach_rating == null) continue
@@ -32,13 +37,22 @@ export function bandMoves(rows: AssessmentRow[]): Map<string, BandMove> {
     else byChild.set(row.squad_player_id, [row])
   }
 
+  const need = Math.max(1, Math.floor(dropAfter))
   const moves = new Map<string, BandMove>()
   for (const [id, list] of byChild) {
     list.sort((a, b) => a.created_at.localeCompare(b.created_at))
     const band = scoreToBand(list[list.length - 1].coach_rating as number)
     const previous = list.length > 1 ? scoreToBand(list[list.length - 2].coach_rating as number) : null
-    const diff = previous ? bandIndex(previous) - bandIndex(band) : 0
-    moves.set(id, { squadPlayerId: id, band, previous, move: diff > 0 ? 1 : diff < 0 ? -1 : 0 })
+    const idx = list.map(r => bandIndex(scoreToBand(r.coach_rating as number)))
+    const last = idx.length - 1
+    let move: BandMove['move'] = 0
+    if (last >= 1 && idx[last] < idx[last - 1]) move = 1
+    else if (last >= need) {
+      let dropped = true
+      for (let i = last; i > last - need; i--) if (idx[i] <= idx[i - 1]) dropped = false
+      if (dropped) move = -1
+    }
+    moves.set(id, { squadPlayerId: id, band, previous, move })
   }
   return moves
 }
