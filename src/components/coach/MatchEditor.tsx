@@ -8,8 +8,9 @@ import { matchRating } from '@/lib/match-rating'
    and each player's goals, assists and card, saved for every player at once by
    edit_logged_match, which applies the logging rules again (consent, the
    coach's own players, goals and assists add up). No notice to families: they
-   see the current score next time (Imad, 18 Oct). Removing a player ("Didn't
-   play") is part 2. */
+   see the current score next time (Imad, 18 Oct). Part 2: a player can be
+   marked "Didn't play"; they stay on the match, and the database keeps their
+   record out of every stat (mark_match_appearance). */
 
 type Card = 'None' | 'Yellow' | 'Red'
 interface Logged {
@@ -25,6 +26,8 @@ interface Logged {
   team_score: number
   opponent_score: number
   locked: boolean
+  /** false: marked "Didn't play" (TRAK-185 part 2). */
+  played: boolean
 }
 interface Entry { goals: number; assists: number; card: Card }
 
@@ -40,6 +43,9 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
   const [entries, setEntries] = useState<Record<string, Entry>>({})
   const [saving, setSaving] = useState(false)
   const [refusal, setRefusal] = useState<string | null>(null)
+  // What was last loaded or saved, so moving a player never drops unsaved numbers.
+  const [saved, setSaved] = useState('')
+  const [moving, setMoving] = useState(false)
 
   useEffect(() => {
     let superseded = false
@@ -48,11 +54,18 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
       if (superseded) return
       if (error) { setFailed(true); return }
       const logged = (data ?? []) as Logged[]
+      const first = logged.find(r => r.played !== false)
+      const next = {
+        us: first ? String(first.team_score) : '', them: first ? String(first.opponent_score) : '',
+        entries: Object.fromEntries(logged.map(r => [r.user_id, {
+          goals: r.goals ?? 0, assists: r.assists ?? 0, card: (r.card_received as Card | null) ?? 'None',
+        }])) as Record<string, Entry>,
+      }
       setRows(logged)
-      if (logged[0]) { setUs(String(logged[0].team_score)); setThem(String(logged[0].opponent_score)) }
-      setEntries(Object.fromEntries(logged.map(r => [r.user_id, {
-        goals: r.goals ?? 0, assists: r.assists ?? 0, card: (r.card_received as Card | null) ?? 'None',
-      }])))
+      setUs(next.us)
+      setThem(next.them)
+      setEntries(next.entries)
+      setSaved(JSON.stringify(next))
     })
     return () => { superseded = true }
   }, [sessionId, attempt])
@@ -73,8 +86,11 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
   }
 
   const teamScore = score(us), opponentScore = score(them)
-  const editable = rows.filter(r => !r.locked)
-  const locked = rows.filter(r => r.locked)
+  const played = rows.filter(r => r.played !== false)
+  const notPlayed = rows.filter(r => r.played === false)
+  const editable = played.filter(r => !r.locked)
+  const locked = played.filter(r => r.locked)
+  const dirty = JSON.stringify({ us, them, entries }) !== saved
   const goals = editable.reduce((n, r) => n + entries[r.user_id].goals, 0)
   const assists = editable.reduce((n, r) => n + entries[r.user_id].assists, 0)
   // The same rules the database applies, said before the coach taps Save.
@@ -90,7 +106,7 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
     if (problem || saving) return
     setSaving(true)
     setRefusal(null)
-    const players = rows!.map(r => {
+    const players = played.map(r => {
       const e = entries[r.user_id]
       return {
         user_id: r.user_id, goals: e.goals, assists: e.assists, card: e.card,
@@ -103,7 +119,23 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
     } as never)
     setSaving(false)
     if (error) { setRefusal(error.message); return }
+    setSaved(JSON.stringify({ us, them, entries }))
     toast.success('Match updated. Families see the new score next time they open it.')
+  }
+
+  // TRAK-185 part 2: "Didn't play" or back. The database keeps the record and
+  // checks the rules (the last player who played, an assessment, consent).
+  async function mark(r: Logged, didPlay: boolean) {
+    if (dirty || moving) return
+    setMoving(true)
+    setRefusal(null)
+    const { error } = await supabase.rpc('mark_match_appearance' as never, {
+      p_session_id: sessionId, p_user_id: r.user_id, p_played: didPlay,
+    } as never)
+    setMoving(false)
+    if (error) { setRefusal(error.message); return }
+    toast.success(didPlay ? `${r.player_name} is back on the match.` : `${r.player_name} is marked as not playing. It doesn't count in their stats.`)
+    setAttempt(n => n + 1)
   }
 
   const stepper = (r: Logged, key: 'goals' | 'assists') => {
@@ -142,10 +174,21 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
       </div>
 
       <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
-        <MetadataLabel text={`PLAYED · ${rows.length}`} />
+        <MetadataLabel text={`PLAYED · ${played.length}`} />
+        {dirty && played.length > 1 && <p className="text-[11px] text-ink-3">Save your changes first, then mark who didn't play.</p>}
         {editable.map(r => (
           <div key={r.user_id} className="space-y-2 pb-3 border-b border-line last:border-0 last:pb-0">
-            <p className="text-[14px] font-medium text-ink">{r.player_name}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[14px] font-medium text-ink">{r.player_name}</p>
+              {/* The last player who played stays: a match has at least one. */}
+              {played.length > 1 && (
+                <button type="button" onClick={() => void mark(r, false)} disabled={dirty || moving}
+                  aria-label={`Mark ${r.player_name} as didn't play`}
+                  className="min-h-9 px-3 rounded-full border border-line text-[12px] text-ink-2 disabled:opacity-40">
+                  Didn't play
+                </button>
+              )}
+            </div>
             {stepper(r, 'goals')}
             {stepper(r, 'assists')}
             <div role="group" aria-label={`Card for ${r.player_name}`} className="flex items-center gap-2">
@@ -164,6 +207,27 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
           <p key={r.user_id} className="text-[13px] text-ink-2">{r.player_name}: waiting for a parent, so not editable.</p>
         ))}
       </div>
+
+      {notPlayed.length > 0 && (
+        <div className="rounded-[18px] p-4 border border-line bg-surface space-y-3">
+          <MetadataLabel text={`DIDN'T PLAY · ${notPlayed.length}`} />
+          <p className="text-[11px] text-ink-3">On the match, but not counted in their stats.</p>
+          <ul aria-label="Didn't play" className="space-y-2">
+            {notPlayed.map(r => (
+              <li key={r.user_id} className="flex items-center justify-between gap-2">
+                <span className="text-[14px] text-ink">{r.player_name}</span>
+                {r.locked ? <span className="text-[12px] text-ink-3">Waiting for a parent</span> : (
+                  <button type="button" onClick={() => void mark(r, true)} disabled={dirty || moving}
+                    aria-label={`${r.player_name} played after all`}
+                    className="min-h-9 px-3 rounded-full border border-line text-[12px] text-ink-2 disabled:opacity-40">
+                    Played after all
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {problem && <p role="status" className="text-[12px] text-danger">{problem}</p>}
       {refusal && <p role="alert" className="text-[12px] text-danger">Not saved: {refusal}</p>}
