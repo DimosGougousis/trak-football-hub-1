@@ -245,8 +245,8 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await userEvent.click(screen.getByRole('button', { name: 'Publish Finishing' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.draft-1&select=id', body: { published: true } })
-    // Publishing isn't a change families need emailing about (TRAK-135).
-    expect(emailNudges).toBe(0)
+    // TRAK-135 (16 Oct): publishing emails families too, so the app asks the server to send.
+    await waitFor(() => expect(emailNudges).toBe(1))
   })
 
   // TRAK-182 (Imad's 7c): Review's Publish saves, then publishes what it saved.
@@ -263,7 +263,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect((writes[0].body as Record<string, unknown>[])[0]).toMatchObject({ published: false })
     expect(writes[1]).toMatchObject({ method: 'patch', query: '?id=in.(written)&select=id', body: { published: true } })
     expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
-    expect(emailNudges).toBe(0)
+    await waitFor(() => expect(emailNudges).toBe(1)) // TRAK-135
   })
 
   it('publishes a draft it edits, from Review', async () => {
@@ -275,6 +275,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.draft-1&select=id' })
     expect(writes[0].body).not.toHaveProperty('published')
     expect(writes[1]).toMatchObject({ method: 'patch', query: '?id=in.(draft-1)&select=id', body: { published: true } })
+    await waitFor(() => expect(emailNudges).toBe(1)) // TRAK-135
   })
 
   // A clash (TRAK-158) refuses the publish, not the save: the draft stays, said plainly.
@@ -291,6 +292,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await saveEventWith(screen.getByRole('dialog', { name: 'Edit event' }), 'Publish')
     expect(await screen.findByText(/Saved as a draft, not published\. This overlaps vs Synthetic Rovers/)).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(emailNudges).toBe(0) // TRAK-135: a refused publish emails nobody
   })
 
   it('edits a published event live, without touching published', async () => {
