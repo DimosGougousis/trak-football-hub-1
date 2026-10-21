@@ -119,6 +119,8 @@ beforeEach(() => {
         return HttpResponse.json([])
       })),
     http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, () => HttpResponse.json(false)),
+    // The Feedback and assessment overview reads registers and "Can't make it" (TRAK-197); none here.
+    ...['session_attendance', 'event_absences'].map(table => http.get(`${SUPABASE_URL}/rest/v1/${table}`, () => HttpResponse.json([]))),
   )
 })
 afterEach(() => cleanup())
@@ -131,6 +133,13 @@ const noteBox = () => screen.getByLabelText(/^Private note/i) as HTMLTextAreaEle
 const assessmentWrites = () => writes.filter(w => w.table === 'coach_assessments').map(w => [w.method, w.id])
 
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
+// TRAK-200: the latest assessment is Arc's card; Edit sits behind its split button's chevron.
+async function openLatest(user: ReturnType<typeof userEvent.setup>) {
+  const card = await screen.findByRole('article', { name: /assessment, / })
+  await user.click(within(card).getByRole('button', { name: /more actions$/ }))
+  await user.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+}
+
 describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeout: 20_000 }, () => {
   it("opens an older assessment from the player's history, with its scores, note and message", async () => {
     const user = userEvent.setup()
@@ -160,20 +169,20 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
   it("opens the player's latest assessment from its card", async () => {
     const user = userEvent.setup()
     renderApp('/coach/player/player-a')
-    await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
+    await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
     await toStep('Note')
     expect(noteBox().value).toBe('Assistant: strong first touch')
   })
 
-  // TRAK-179 (live run 3, 16 Oct): a recent assessment on coach Home opens the player, not the editor.
-  it("a recent assessment on coach home opens that player's profile, where the assessment opens", async () => {
+  // TRAK-179 (live run 3, 16 Oct): a player on coach Home opens the player, not the editor.
+  // TRAK-197: Recent assessments went; the overview row opens the profile (TRAK-211: on the Feedback tab).
+  it("a player in the overview opens that player's profile, where the assessment opens", async () => {
     const user = userEvent.setup()
-    renderApp('/coach/home')
-    // Manos has two recent assessments; the 21 Sep one belongs to the Youth match.
-    await user.click(await screen.findByRole('button', { name: /Open Manos Synthetic's profile, assessed 21 Sep/ }))
+    renderApp('/coach/feedback')
+    await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
-    await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
+    await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
   })
 
@@ -185,14 +194,14 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Academy/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
-    expect(await screen.findByRole('button', { name: /Open latest assessment/ })).toBeInTheDocument()
+    expect(await screen.findByRole('article', { name: /assessment, / })).toBeInTheDocument()
   })
 
-  it('Back from an assessment reached from coach home returns to that player', async () => {
+  it('Back from an assessment reached from the overview returns to that player', async () => {
     const user = userEvent.setup()
-    renderApp('/coach/home')
-    await user.click(await screen.findByRole('button', { name: /Open Manos Synthetic's profile, assessed 21 Sep/ }))
-    await user.click(await screen.findByRole('button', { name: /Open latest assessment/ }))
+    renderApp('/coach/feedback')
+    await user.click(await screen.findByRole('button', { name: /^Open Manos Synthetic's profile/ }))
+    await openLatest(user)
     expect(await screen.findByText(/Editing your assessment for vs Olympiacos Youth/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/player/player-a'))
@@ -234,7 +243,10 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     const row = await screen.findByRole('button', { name: /Open assessment .*vs Olympiacos Academy/ })
     expect(within(row).getByText('vs Olympiacos Academy')).toBeInTheDocument()
     expect(within(row).getByText('Message sent')).toBeInTheDocument()
-    const latest = screen.getByRole('button', { name: /Open latest assessment/ })
+    // TRAK-200: the latest card's quick look carries the message state and the private note.
+    const card = screen.getByRole('article', { name: /assessment, / })
+    await userEvent.click(within(card).getByRole('heading').querySelector('button')!)
+    const latest = await screen.findByRole('dialog')
     expect(within(latest).getByText(/No message/)).toBeInTheDocument()
     expect(within(latest).getByText(/Private note/i)).toBeInTheDocument()
     expect(within(latest).getByText(/Assistant: strong first touch/)).toBeInTheDocument()

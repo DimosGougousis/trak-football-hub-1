@@ -216,11 +216,11 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await page.getByRole('button', { name: 'Events', exact: true }).first().click()
         await expect(page.getByRole('heading', { name: 'Events', exact: true })).toBeVisible()
       } else if (role === 'player') {
-        await expect(page.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/matches')
+        await expect(page.getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/player/calendar')
         await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
         await page.getByRole('button', { name: /Alerts/ }).click()
         const panel = page.getByRole('dialog', { name: 'Alerts' })
-        await panel.getByRole('button', { name: /New coach assessment/ }).click()
+        await panel.getByRole('button', { name: /New assessment from / }).click()
         await expect(panel.getByRole('button', { name: 'Open assessment' })).toBeVisible()
         await expect.poll(() => panel.getByRole('button', { name: 'Open assessment' }).evaluate(button => {
           const frame = button.parentElement?.parentElement
@@ -245,7 +245,10 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await week.getByRole('button', { name: /Technical training/ }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
         await expect(sheet.getByRole('button', { name: 'Published' })).toBeDisabled()
-        await expect(sheet.getByRole('link', { name: 'Share to WhatsApp' })).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
+        // TRAK-168: "Share" opens the phone's share sheet where there is one, else WhatsApp's link.
+        const share = sheet.getByRole('link', { name: 'Share' }).or(sheet.getByRole('button', { name: 'Share' }))
+        await expect(share).toBeVisible()
+        if (await share.evaluate(el => el.tagName === 'A')) await expect(share).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
         await expect(sheet.getByRole('button', { name: 'Edit' })).toBeVisible()
         await expect(sheet.getByText('No players in your squad yet.')).toBeVisible()
         await expect(page).toHaveURL(/\/coach\/home$/)

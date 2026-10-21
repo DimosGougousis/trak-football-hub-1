@@ -1,3 +1,4 @@
+-- Renamed 21 Oct from 20261019065754 so it sorts after the migrations already on prod.
 -- TRAK-203 / J8: reusable squad kits and an independent design on each event.
 -- Only structured colors/patterns are stored; no uploads, URLs, names or logos.
 CREATE FUNCTION trak_private.valid_kit_design(value jsonb) RETURNS boolean

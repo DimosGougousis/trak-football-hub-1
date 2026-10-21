@@ -2,7 +2,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { followChild } from '@/test/follow-child'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
@@ -82,7 +82,10 @@ function installFamily() {
 }
 
 const MatchDetailProbe = () => <p>Match detail {useParams().id}</p>
-const EventPageProbe = () => <p>Event page {useParams().id}</p>
+const EventPageProbe = () => {
+  const from = (useLocation().state as { from?: string } | null)?.from
+  return <><p>Event page {useParams().id}</p><p>Opened from {from ?? 'nowhere'}</p></>
+}
 
 const clients: QueryClient[] = []
 function renderFamily(route = '/parent/home') {
@@ -225,7 +228,7 @@ describe('parent alerts bell', () => {
     expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     const sheet = await openAlerts()
     expect(within(sheet).getByText('vs Alex opposition · 0–0')).toBeInTheDocument()
-    expect(within(sheet).getByText('New coach assessment')).toBeInTheDocument()
+    expect(within(sheet).getByText(/^New assessment from /)).toBeInTheDocument()
     expect(within(sheet).queryByText('Player Of Week')).toBeNull()
     expect(within(sheet).queryByText(/teamwork/)).toBeNull()
     // TRAK-163: Arc's notification center. Closing keeps the count; Mark all read clears it.
@@ -258,7 +261,7 @@ describe('parent alerts bell', () => {
   it('a match alert opens that match; an assessment alert shows its bands', async () => {
     renderFamily()
     const sheet = await openAlerts()
-    await userEvent.click(within(sheet).getByRole('button', { name: /New coach assessment/ }))
+    await userEvent.click(within(sheet).getByRole('button', { name: /New assessment from / }))
     const bands = within(sheet).getByRole('region', { name: 'Assessment bands' })
     for (const label of ['Work Rate', 'Tactical', 'Attitude', 'Technical', 'Physical', 'Coachability']) {
       expect(within(bands).getByText(label)).toBeInTheDocument()
@@ -346,6 +349,8 @@ describe('J8.11 events in the parent alerts bell', () => {
     await userEvent.click(await within(sheet).findByRole('button', { name: /New: Training/ }))
     await userEvent.click(await within(sheet).findByRole('button', { name: 'Open event' }))
     expect(await screen.findByText('Event page event-Alex')).toBeInTheDocument()
+    // Live run, 19 Oct (Tarek): opened from Home's bell, the event page's Back returns to Home.
+    expect(screen.getByText('Opened from /parent/home')).toBeInTheDocument()
   })
 
   // TRAK-163 (Tarek's review): read state is per child (TRAK-74). Siblings on one

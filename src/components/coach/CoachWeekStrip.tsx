@@ -26,7 +26,7 @@ export function CoachWeekStrip({ coachId, version = 0 }: { coachId: string; vers
           {event.sessionId
             ? <>
                 <Link to={`/coach/sessions/${event.sessionId}`}
-                  className="flex min-h-11 w-full items-center justify-center rounded-xl bg-white/[0.08] text-[14px] font-medium text-white/90 focus-visible:ring-2 focus-visible:ring-primary">
+                  className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
                   Open session
                 </Link>
                 <LoggedAttendance sessionId={event.sessionId} coachId={coachId} />

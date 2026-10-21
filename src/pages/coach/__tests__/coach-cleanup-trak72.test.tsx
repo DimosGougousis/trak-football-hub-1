@@ -4,8 +4,7 @@
  * and router, with MSW standing in for Supabase.
  *
  *   1  no coach invite code on Home or Profile, and nothing writes one
- *   2  the squad tile says "Players"
- *   3  the Sessions tile opens session history
+ *   2, 3  the squad and Sessions tiles went with TRAK-197's Home rebuild
  *   5  no assessment count under a player's name
  *   9  the coach's age group sits next to their role
  *  10  "How Trak works", not "Coach manual", and it no longer tells coaches
@@ -39,6 +38,8 @@ function signedInCoach() {
     table('coach_sessions', [{ id: 's-1', coach_user_id: COACH.id }]),
     table('coach_assessment_notes', []),
     table('organizations', []),
+    // Feedback and assessment asks per child (TRAK-197, TRAK-211); everyone is confirmed here.
+    http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, () => HttpResponse.json(false)),
   )
 }
 
@@ -55,27 +56,18 @@ function profileWrites() {
 afterEach(() => { cleanup(); server.events.removeAllListeners() })
 
 describe('TRAK-72 coach Home', () => {
-  it('says Players, shows no invite code, and writes none', async () => {
+  it('shows no invite code, and writes none', async () => {
     signedInCoach()
     const writes = profileWrites()
     renderApp('/coach/home')
     // The file's first render loads coach Home cold; on a busy CI runner that
     // took over the default 1 s (run 36394909944, Imad on TRAK-72).
-    const tile = await screen.findByRole('button', { name: /^2\s*Players$/i }, { timeout: 5000 })
-    expect(tile).toBeInTheDocument()
+    expect(await screen.findByText('Head Coach · U15s', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText(/TRK-/)).toBeNull()
     expect(screen.queryByText(/tap to copy/i)).toBeNull()
     // Give any code generator the time it used to take, then check nothing wrote.
     await new Promise(resolve => setTimeout(resolve, 50))
     expect(writes).toEqual([])
-  })
-
-  it('the Sessions tile opens session history, not the log-a-session chooser', async () => {
-    signedInCoach()
-    renderApp('/coach/home')
-    // The tile, not the nav bar's Sessions tab: its name starts with the count.
-    await userEvent.click(await screen.findByRole('button', { name: /^\d+\s*Sessions$/i }, { timeout: 5000 }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/sessions/list'))
   })
 })
 
@@ -130,7 +122,7 @@ describe('TRAK-72 player page', () => {
   })
 })
 
-describe('TRAK-72 item 4: one Player overview', () => {
+describe('TRAK-72 item 4: one Player overview (TRAK-211: in Feedback and assessment)', () => {
   const ROSTER = [
     { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Alex Synthetic', linked_player_id: 'child-1', created_at: '2026-09-01T10:00:00Z' },
     { id: 'sp-2', coach_user_id: COACH.id, player_name: 'Bella Synthetic', linked_player_id: 'child-2', created_at: '2026-09-01T10:00:00Z' },
@@ -140,8 +132,8 @@ describe('TRAK-72 item 4: one Player overview', () => {
     signedInCoach()
     server.use(
       table('squad_players', ROSTER),
-      table('coach_sessions', [{ id: 's-1', coach_user_id: COACH.id, session_date: '2026-09-20', session_type: 'training' }]),
-      table('session_attendance', [{ squad_player_id: 'sp-1' }]),
+      table('coach_sessions', [{ id: 's-1', coach_user_id: COACH.id, session_date: '2026-09-20', session_type: 'training', event_id: null, squad: null }]),
+      table('session_attendance', [{ session_id: 's-1', squad_player_id: 'sp-1' }]),
       http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`, async ({ request }) => {
         const { p_squad_player_id } = await request.json() as { p_squad_player_id: string }
         return consent(p_squad_player_id)
@@ -149,39 +141,40 @@ describe('TRAK-72 item 4: one Player overview', () => {
     )
   }
 
+  // TRAK-197: the flag reads "Missed the last training", and a child waiting
+  // for a parent isn't listed at all (they can't be ticked or assessed).
   it('flags the consented child who missed training, never the one waiting for a parent', async () => {
     withLastTraining(id => HttpResponse.json(id === 'sp-3'))
-    renderApp('/coach/home')
-    const overview = await screen.findByRole('region', { name: 'Player overview' })
-    // Exactly one "missed" flag, on Bella's row. Cara may still be listed for
-    // another reason (no assessments yet), but never as missing a session she
-    // could not be ticked into; Alex was there.
-    await waitFor(() => expect(within(overview).getAllByText('Missed the last session')).toHaveLength(1))
-    const missedRow = within(overview).getByText('Missed the last session').closest('li') as HTMLElement
+    renderApp('/coach/feedback')
+    const overview = await screen.findByRole('region', { name: 'Feedback and assessment' })
+    await waitFor(() => expect(within(overview).getAllByText('Missed the last training')).toHaveLength(1))
+    const missedRow = within(overview).getByText('Missed the last training').closest('li') as HTMLElement
     expect(within(missedRow).getByText('Bella Synthetic')).toBeInTheDocument()
-    // The two old cards are one list now.
+    expect(within(overview).queryByText('Cara Waiting')).toBeNull()
+    // The two old cards are one list.
     expect(screen.queryByText(/^Needs Attention$/i)).toBeNull()
     expect(screen.queryByText(/^Most Improved$/i)).toBeNull()
   })
 
-  it('says it could not check, rather than flagging nobody, when a consent check fails', async () => {
+  it('says it could not load, rather than flagging nobody, when a consent check fails', async () => {
     withLastTraining(() => HttpResponse.json({ message: 'unavailable' }, { status: 500 }))
-    renderApp('/coach/home')
-    expect(await screen.findByText(/Couldn't check the last session's attendance/)).toBeInTheDocument()
-    expect(screen.queryByText('Missed the last session')).toBeNull()
+    renderApp('/coach/feedback')
+    expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
+    expect(screen.queryByText('Missed the last training')).toBeNull()
+    expect(screen.queryByText(/On track/)).toBeNull()
   })
 
-  // TRAK-180: Home starts a revisit from what it last showed, so a check that
+  // TRAK-180: the tab starts a revisit from what it last showed, so a check that
   // fails this time must take the last visit's flag with it.
   it("a revisit whose check fails shows no flag from the last visit", async () => {
     withLastTraining(id => HttpResponse.json(id === 'sp-3'))
-    renderApp('/coach/home')
-    await waitFor(() => expect(screen.getAllByText('Missed the last session')).toHaveLength(1))
+    renderApp('/coach/feedback')
+    await waitFor(() => expect(screen.getAllByText('Missed the last training')).toHaveLength(1))
     cleanup()
     withLastTraining(() => HttpResponse.json({ message: 'unavailable' }, { status: 500 }))
-    renderApp('/coach/home')
-    expect(await screen.findByText(/Couldn't check the last session's attendance/)).toBeInTheDocument()
-    expect(screen.queryByText('Missed the last session')).toBeNull()
+    renderApp('/coach/feedback')
+    expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
+    expect(screen.queryByText('Missed the last training')).toBeNull()
   })
 })
 
@@ -197,10 +190,11 @@ describe('TRAK-72 item 11: the club comes from the academy', () => {
     )
   }
 
+  // TRAK-196: one quiet line, the academy's name in it.
   it('Home shows the age group even though no club name was typed', async () => {
     coachInAcademy(null)
     renderApp('/coach/home')
-    expect(await screen.findByText('U15s')).toBeInTheDocument()
+    expect(await screen.findByText('Head Coach · Synthetic Academy FC · U15s')).toBeInTheDocument()
   })
 
   it('Profile names the academy and never shows a stale typed club', async () => {
@@ -214,7 +208,7 @@ describe('TRAK-72 item 11: the club comes from the academy', () => {
   it('Home never shows a stale typed club either', async () => {
     coachInAcademy('Old Typed Club')
     renderApp('/coach/home')
-    expect(await screen.findByText('U15s')).toBeInTheDocument()
+    expect(await screen.findByText('Head Coach · Synthetic Academy FC · U15s')).toBeInTheDocument()
     expect(screen.queryByText(/Old Typed Club/)).toBeNull()
   })
 })

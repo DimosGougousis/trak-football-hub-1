@@ -18,6 +18,15 @@ import { useLocation } from 'react-router-dom'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { Select } from '@/components/arc/select/select'
+import { APPEARANCE_LABEL } from '@/lib/types'
+
+/* TRAK-219 (20 Oct live run, S7): a match is offered only to a player its log
+   marks present, i.e. played (TRAK-100), so "Didn't play" would contradict the
+   log. A player who didn't play isn't assessed (Imad, 19 Oct, option A); the
+   match log carries that (TRAK-185). */
+const MATCH_APPEARANCES = ['started', 'sub'] as const
+type MatchAppearance = typeof MATCH_APPEARANCES[number]
 
 /** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
     and the private note get their own steps, so player-visible words never sit
@@ -38,31 +47,6 @@ function bandConfig(band: BandType) {
 }
 
 
-/* ---------- option pill ---------- */
-
-function OptPill({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors disabled:opacity-40"
-      style={{
-        background: active ? 'rgba(200,242,90,0.12)' : '#0d0d0f',
-        border: active ? '1.5px solid #C8F25A' : '1.5px solid rgba(255,255,255,0.06)',
-        color: active ? '#C8F25A' : 'rgba(255,255,255,0.55)',
-      }}
-    >
-      {label}
-    </button>
-  )
-}
 
 /* ========== main page ========== */
 
@@ -96,7 +80,8 @@ function CoachAssessmentForm() {
   const openId = new URLSearchParams(location.search).get('assessment')
   const [opened, setOpened] = useState<{ id: string; playerId: string; sessionId: string; createdAt: string; session: any | null } | null>(null)
   const [openState, setOpenState] = useState<'idle' | 'loading' | 'missing' | 'error'>(openId ? 'loading' : 'idle')
-  const [appearance, setAppearance] = useState<'started' | 'sub' | 'training'>('started')
+  // Imad, 19 Oct (J4, no invented defaults): nothing pre-picked; a match waits for the coach's choice.
+  const [appearance, setAppearance] = useState<MatchAppearance | null>(null)
   const [workRate, setWorkRate]         = useState(5)
   const [tactical, setTactical]         = useState(5)
   const [attitude, setAttitude]         = useState(5)
@@ -112,6 +97,8 @@ function CoachAssessmentForm() {
   // point of the two tables, and it has to be true in the UI as well.
   const [shared,          setShared]          = useState('')
   const [sharedPublished, setSharedPublished] = useState(false)
+  // TRAK-200: a draft assessment (published_at NULL) is the coach's alone, bands included.
+  const [assessmentPublished, setAssessmentPublished] = useState(false)
   const [sharedExists,    setSharedExists]    = useState(false)
   // The text the family can read right now, or null. J5: nothing reaches the
   // family until the coach presses Publish, so an edit to published text is a
@@ -191,16 +178,16 @@ function CoachAssessmentForm() {
     setExistingId(null)
     setWorkRate(5); setTactical(5); setAttitude(5)
     setTechnical(5); setPhysical(5); setCoachability(5)
-    setAppearance('started')
+    setAppearance(null)
     setNote(''); setNoteExists(false)
-    setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null)
+    setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null); setAssessmentPublished(false)
     setSaving(false)
     setLoadState({ scope, status: 'loading' })
     if (userId && playerId && (sessionId || openedRowId)) {
       void (async () => {
         try {
           const query = supabase.from('coach_assessments')
-            .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, session_id')
+            .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, session_id, published_at')
             .eq('coach_user_id', userId).eq('squad_player_id', playerId)
           const { data, error } = await (openedRowId ? query.eq('id', openedRowId) : query.eq('session_id', sessionId))
             .order('created_at', { ascending: false }).limit(1).abortSignal(controller.signal).maybeSingle()
@@ -221,10 +208,11 @@ function CoachAssessmentForm() {
             if (sharedResult.error) throw sharedResult.error
             const sf = sharedResult.data as { body: string; published_at: string | null } | null
             setExistingId(data.id)
+            setAssessmentPublished(data.published_at != null)
             setWorkRate(data.work_rate); setTactical(data.tactical)
             setAttitude(data.attitude); setTechnical(data.technical)
             setPhysical(data.physical); setCoachability(data.coachability)
-            setAppearance((data.appearance as 'started' | 'sub' | 'training') ?? 'started')
+            setAppearance(MATCH_APPEARANCES.includes(data.appearance as MatchAppearance) ? data.appearance as MatchAppearance : null)
             setNote(privateResult.data?.note ?? '')
             setNoteExists(privateResult.data != null)
             setShared(sf?.body ?? '')
@@ -362,6 +350,8 @@ function CoachAssessmentForm() {
      Unpublish is not a save: see handleUnpublish below. */
   const handleSave = async (draft = false) => {
     if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
+    // Option A (Imad, 19 Oct): a player who didn't play isn't assessed, even if Review is reached another way.
+    if (!isTraining && !appearance) return
     // Rewriting an unchanged, still-published message would re-stamp it and
     // mark it "new" for the player again. Leave it alone, unless it's being
     // taken back to a draft.
@@ -388,6 +378,9 @@ function CoachAssessmentForm() {
         coachability,
         // derived card stats
         ...cardStats,
+        // TRAK-200: Save draft hides the bands from the family; Publish shows them.
+        // An already published row keeps its date; a new one takes the database's now().
+        ...(draft ? { published_at: null } : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
       }
 
       const { data: saved, error: saveError } = existingId
@@ -477,10 +470,13 @@ function CoachAssessmentForm() {
           // later. The assessment itself is saved, so keep its id: pressing save
           // again updates that row rather than creating a second one.
           console.error('Shared feedback save failed:', sharedError)
+          // TRAK-200: the scores saved above are published unless this is a draft,
+          // so the family can already see them; only a draft keeps everything back.
           toast.error(
-            `The scores${note.trim() ? ' and private note' : ''} are saved. Not saved: the message to ` +
-              `${firstName} (${sharedError.message}), so nothing new reached the family. ` +
-              `Your text is still here — try again.`,
+            (draft
+              ? `The scores${note.trim() ? ' and private note' : ''} are saved as a draft, so nothing reached the family. `
+              : `The scores${note.trim() ? ' and private note' : ''} are saved, and ${firstName} and their family can see the scores. `) +
+              `Not saved: the message to ${firstName} (${sharedError.message}). Your text is still here — try again.`,
             { duration: 12000 },
           )
           setExistingId(saved.id)
@@ -563,10 +559,10 @@ function CoachAssessmentForm() {
 
   /* ---- render ---- */
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-[#0A0A0B]" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
       {/* ---- header: always visible, never scrolls ---- */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
         <button
           onClick={() => {
             // TRAK-179: back to the screen the coach came from (Squad, the
@@ -577,11 +573,11 @@ function CoachAssessmentForm() {
             navigate(fromPlayer ? `/coach/player/${fromPlayer}` : '/coach/home')
           }}
           aria-label="Back"
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-[#17171a] border border-white/[0.11]"
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line"
         >
-          <ChevronLeft size={16} className="text-white/70" />
+          <ChevronLeft size={16} className="text-ink-2" />
         </button>
-        <h1 className="flex-1 text-center text-[17px] font-semibold text-white/90 -ml-[34px] pointer-events-none">
+        <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px] pointer-events-none">
           Assessment
         </h1>
       </div>
@@ -594,9 +590,9 @@ function CoachAssessmentForm() {
 
         {/* Shown on every step: a refused save (consent withdrawn mid-edit) says why where the coach is. */}
         {selectedPlayer && consentWait ? (
-          <div role="status" className="p-3 rounded-[12px] border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.06)]">
-            <p className="text-[13px] font-medium text-white/85">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
-            <p className="text-[12px] text-white/55 leading-relaxed mt-0.5">
+          <div role="status" className="p-3 rounded-[12px] border border-warning/[0.25] bg-warning/[0.06]">
+            <p className="text-[13px] font-medium text-ink">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
+            <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
               {waitText(waitReason, selectedPlayer.player_name)}{' '}
               The form stays locked until then, and nothing about them is recorded.
             </p>
@@ -605,13 +601,13 @@ function CoachAssessmentForm() {
         {step === 0 && <>
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
-          <div className="flex items-center gap-3 p-3 rounded-[12px] bg-[#141416] border border-white/[0.06]">
+          <div className="flex items-center gap-3 p-3 rounded-[12px] bg-surface border border-line">
             <Avatar name={selectedPlayer.player_name} size="md" className="arc" aria-hidden />
             <div className="min-w-0">
-              <p className="text-[15px] font-medium text-white/90 truncate">
+              <p className="text-[15px] font-medium text-ink truncate">
                 {selectedPlayer.player_name}
               </p>
-              <p className="text-[11px] text-white/40 truncate">
+              <p className="text-[11px] text-ink-3 truncate">
                 {selectedPlayer.position?.toUpperCase() ?? 'Player'}
                 {selectedPlayer.club ? ` \u00B7 ${selectedPlayer.club}` : ''}
                 {selectedPlayer.age_group ? ` ${selectedPlayer.age_group}` : ''}
@@ -624,7 +620,7 @@ function CoachAssessmentForm() {
 
         {/* player selector dropdown */}
         <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
+          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
             PLAYER
           </span>
           <div className="relative">
@@ -633,7 +629,7 @@ function CoachAssessmentForm() {
               disabled={saving || choicesLoading}
               value={playerId}
               onChange={e => setPlayerId(e.target.value)}
-              className="w-full px-4 py-3 pr-10 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none appearance-none"
+              className="w-full px-4 py-3 pr-10 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none appearance-none"
             >
               <option value="">{selectedPlayer ? 'Change player...' : 'Select player...'}</option>
               {players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => (
@@ -642,7 +638,7 @@ function CoachAssessmentForm() {
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
           </div>
         </div>
 
@@ -650,30 +646,30 @@ function CoachAssessmentForm() {
             Outside the locked fieldset: the form stays locked until a session
             is chosen, so the coach must be able to choose one. */}
         <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
+          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
             SESSION
           </span>
           {openState === 'missing' || openState === 'error' ? (
-            <p role="alert" className="text-[12px] text-amber-300">
+            <p role="alert" className="text-[12px] text-warning">
               {openState === 'missing'
                 ? "We couldn't open that assessment. It may have been removed, or it isn't one of yours."
                 : "We couldn't open that assessment. Check your connection and try again."}
             </p>
           ) : null}
           {!choicesLoading && !choicesError && sessions.length === 0 && !(opened?.session && opened.playerId === playerId) ? (
-            <p role="status" className="text-[12px] text-white/55">
+            <p role="status" className="text-[12px] text-ink-2">
               No past sessions yet. Log the session first, then assess it.{' '}
-              <Link to="/coach/sessions" className="underline text-[#C8F25A]">Log a session</Link>
+              <Link to="/coach/sessions" className="underline text-brand">Log a session</Link>
             </p>
           ) : playerId && attendanceError ? (
-            <div role="alert" className="text-[12px] text-amber-300">
+            <div role="alert" className="text-[12px] text-warning">
               Couldn't load which sessions {firstName} was at.
               <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">Retry</button>
             </div>
           ) : !choicesLoading && !choicesError && attendanceReady && sessionOptions.length === 0 ? (
-            <p role="status" className="text-[12px] text-white/55">
+            <p role="status" className="text-[12px] text-ink-2">
               {firstName} isn't marked present at any past session. Log the session with them present, then assess it.{' '}
-              <Link to="/coach/sessions" className="underline text-[#C8F25A]">Log a session</Link>
+              <Link to="/coach/sessions" className="underline text-brand">Log a session</Link>
             </p>
           ) : (
             <div className="relative">
@@ -682,22 +678,22 @@ function CoachAssessmentForm() {
                 disabled={saving || choicesLoading || !playerId}
                 value={sessionId}
                 onChange={e => setSessionId(e.target.value)}
-                className="w-full px-4 py-3 pr-10 rounded-[10px] bg-[#0d0d0f] border border-white/[0.07] text-sm text-white/88 outline-none appearance-none"
+                className="w-full px-4 py-3 pr-10 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none appearance-none"
               >
                 <option value="" disabled>{playerId ? 'Select session...' : 'Choose a player first'}</option>
                 {sessionOptions.map(s => (
                   <option key={s.id} value={s.id}>{sessionLabel(s)}</option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
             </div>
           )}
           {existingId && formReady && selectedSession ? (
-            <p role="status" className="text-[11px] text-white/55">
+            <p role="status" className="text-[11px] text-ink-2">
               Editing your assessment for {sessionLabel(selectedSession)}
             </p>
           ) : existingId && formReady && openedRowId && opened ? (
-            <p role="status" className="text-[11px] text-white/55">
+            <p role="status" className="text-[11px] text-ink-2">
               Editing your assessment from {new Date(opened.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (no session recorded)
             </p>
           ) : null}
@@ -705,11 +701,11 @@ function CoachAssessmentForm() {
 
         {((playerId && (sessionId || openedRowId) && !formReady) || choicesError) && (
           (choicesError || (loadState.scope === scope && loadState.status === 'error')) ? (
-            <div role="alert" className="text-sm text-amber-300">
+            <div role="alert" className="text-sm text-warning">
               Could not load this assessment. Retry before editing or saving.
               <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">Retry</button>
             </div>
-          ) : <p role="status" className="text-sm text-white/50">Loading assessment…</p>
+          ) : <p role="status" className="text-sm text-ink-2">Loading assessment…</p>
         )}
         </>}
         {/* J5: a player waiting for a parent cannot be opened. If consent is
@@ -717,22 +713,18 @@ function CoachAssessmentForm() {
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
         {step === 0 && <>
-        {/* ---- 4. appearance selector ---- */}
-        {!isTraining && <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>
-            APPEARANCE
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            <OptPill label="Started" active={appearance === 'started'} onClick={() => setAppearance('started')} />
-            <OptPill label="Sub" active={appearance === 'sub'} onClick={() => setAppearance('sub')} />
-            <OptPill label="Training" active={appearance === 'training'} onClick={() => setAppearance('training')} />
-          </div>
+        {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started or Sub, for a
+            match the log has them playing (TRAK-219). A training isn't asked (TRAK-182). ---- */}
+        {!isTraining && <div className="arc">
+          <Select label="Appearance" placeholder="Choose" value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
+            options={MATCH_APPEARANCES.map(value => ({ value, label: APPEARANCE_LABEL[value] }))} />
+          {selectedSession && <p className="mt-2 text-sm text-muted-foreground">The match log has {firstName} as played.</p>}
         </div>}
 
         </>}
         {step === 1 && <>
         {/* ---- 5. sliders in dark container ---- */}
-        <div className="rounded-[14px] bg-[rgba(0,0,0,0.25)] p-[14px_16px] space-y-5">
+        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
@@ -743,14 +735,14 @@ function CoachAssessmentForm() {
 
         {/* ---- 6. overall band card (amber glow) ---- */}
         <div
-          className="flex flex-col items-center gap-2 py-5 rounded-[14px]"
+          className="trak-dark flex flex-col items-center gap-2 py-5 rounded-[14px]"
           style={{
-            background: overallCfg.bg,
+            background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
             boxShadow: `0 0 24px ${overallCfg.bg}`,
           }}
         >
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/40" style={{ fontFamily: "'DM Mono', monospace" }}>
+          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
             OVERALL BAND
           </span>
           <span
@@ -764,7 +756,7 @@ function CoachAssessmentForm() {
           >
             {overallCfg.word}
           </span>
-          <span className="text-[13px] text-white/50 font-medium">
+          <span className="text-[13px] text-ink-2 font-medium">
             {(Math.round(avg * 10) / 10).toFixed(1)}
           </span>
         </div>
@@ -779,14 +771,14 @@ function CoachAssessmentForm() {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <div>
-              <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/70" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-2" style={{ fontFamily: 'var(--t-font-mono)' }}>
                 Message to {firstName}
               </label>
-              <p className="text-[10px] text-white/45 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
                 Only {firstName} sees this.
               </p>
             </div>
-            <span className="text-[10px] text-white/25">{shared.length}/300</span>
+            <span className="text-[10px] text-ink-3">{shared.length}/300</span>
           </div>
           <textarea
             id="assess-message"
@@ -800,9 +792,9 @@ function CoachAssessmentForm() {
             // Blue: words the player reads. The private note is yellow and the
             // same size, so the two never look interchangeable (TRAK-72 item 7).
             data-tone="message"
-            className="w-full px-4 py-3 rounded-[10px] bg-white/[0.04] border border-white/25 text-sm text-white/88 outline-none resize-none placeholder:text-white/20 disabled:opacity-40"
+            className="w-full px-4 py-3 rounded-[10px] bg-raised border border-line-strong text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
           />
-          <p role="status" className="text-[10px] text-white/40" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p role="status" className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font)' }}>
             {liveUnchanged
               ? `Published. ${firstName} can read it now.`
               : sharedPublished
@@ -820,14 +812,14 @@ function CoachAssessmentForm() {
         <div className="space-y-1.5 pt-4">
           <div className="flex justify-between items-center">
             <div>
-              <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-amber-200/80" style={{ fontFamily: "'DM Mono', monospace" }}>
-                Private note <span className="text-white/25">— optional</span>
+              <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-warning" style={{ fontFamily: 'var(--t-font-mono)' }}>
+                Private note <span className="text-ink-3">— optional</span>
               </label>
-              <p className="text-[10px] text-white/45 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
                 Only you can see this.
               </p>
             </div>
-            <span className="text-[10px] text-white/25">{note.length}/300</span>
+            <span className="text-[10px] text-ink-3">{note.length}/300</span>
           </div>
           <textarea
             id="assess-note"
@@ -839,26 +831,26 @@ function CoachAssessmentForm() {
             rows={3}
             placeholder="e.g. First touch under pressure, positioning when defending set pieces"
             data-tone="private"
-            className="w-full px-4 py-3 rounded-[10px] bg-amber-300/[0.06] border border-amber-300/40 text-sm text-white/88 outline-none resize-none placeholder:text-white/20 disabled:opacity-40"
+            className="w-full px-4 py-3 rounded-[10px] bg-warning/[0.08] border border-warning/40 text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
           />
         </div>
 
         </>}
         {/* ---- 9. review and save (TRAK-182) ---- */}
         {step === 3 && <>
-          <dl className="rounded-[14px] border border-white/[0.07] divide-y divide-white/[0.06] text-[13px]">
+          <dl className="rounded-[14px] border border-line divide-y divide-line text-[13px]">
             {([
               ['Player', selectedPlayer?.player_name ?? ''],
               ['Session', selectedSession ? sessionLabel(selectedSession) : opened ? 'No session recorded' : ''],
-              ['Appearance', savedAppearance === 'started' ? 'Started' : savedAppearance === 'sub' ? 'Sub' : 'Training'],
+              ['Appearance', savedAppearance ? APPEARANCE_LABEL[savedAppearance] : ''],
               ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
               [`Message to ${firstName}`, message || 'None'],
-              ['Private note', <>{note.trim() || 'None'}<span className="block mt-0.5 text-[11px] text-white/40">Only you see this.</span></>],
+              ['Private note', <>{note.trim() || 'None'}<span className="block mt-0.5 text-[11px] text-ink-3">Only you see this.</span></>],
             ] as const).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
-                <dt className="w-28 shrink-0 text-white/45">{term}</dt>
-                <dd className="text-white/85 break-words min-w-0">{value}</dd>
+                <dt className="w-28 shrink-0 text-ink-3">{term}</dt>
+                <dd className="text-ink break-words min-w-0">{value}</dd>
               </div>
             ))}
           </dl>
@@ -873,7 +865,7 @@ function CoachAssessmentForm() {
             type="button"
             onClick={() => void handleUnpublish()}
             disabled={saving || !formReady}
-            className="w-full py-2.5 rounded-[10px] text-[11px] font-semibold text-white/50 border border-white/[0.07] disabled:opacity-30"
+            className="w-full py-2.5 rounded-[10px] text-[11px] font-semibold text-ink-2 border border-line disabled:opacity-30"
           >
             Unpublish message
           </button>
@@ -881,7 +873,7 @@ function CoachAssessmentForm() {
       </div>
 
       {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it. */}
-      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-white/[0.06]">
+      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
           <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
@@ -903,7 +895,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
             onClick={() => setStep(step - 1)}>Back</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait)}
+          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && !appearance))}
             onClick={() => setStep(step + 1)}>Next</Button>
         </>}
       </div>

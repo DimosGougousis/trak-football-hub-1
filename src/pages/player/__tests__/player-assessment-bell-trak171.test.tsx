@@ -40,26 +40,40 @@ describe('TRAK-171: published assessment in the player bell', () => {
     await screen.findByText('Keep pressing after losing the ball.')
     await userEvent.click(screen.getByRole('button', { name: 'Alerts, 1 unread' }))
     const panel = await screen.findByRole('dialog', { name: 'Alerts' })
-    await userEvent.click(within(panel).getByRole('button', { name: /New coach assessment/ }))
+    await userEvent.click(within(panel).getByRole('button', { name: /New assessment from / }))
     await userEvent.click(await within(panel).findByRole('button', { name: 'Open assessment' }))
     expect(await screen.findByRole('heading', { name: 'Coach feedback' })).toBeInTheDocument()
     expect(await screen.findByText('Keep pressing after losing the ball.')).toBeInTheDocument()
+  })
+
+  // TRAK-202: the title names the coach of that assessment, read by user_id.
+  it('the alert reads "New assessment from Coach <name>"', async () => {
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/profiles`, ({ request }) => {
+      const coach = new URL(request.url).searchParams.get('user_id') === 'eq.coach-1'
+      return HttpResponse.json([coach ? { user_id: 'coach-1', full_name: 'Angelos Basinas' }
+        : { user_id: 'player-bell', role: 'player', full_name: 'Synthetic Player' }])
+    }))
+    renderApp('/player/home')
+    await screen.findByText('Keep pressing after losing the ball.')
+    await userEvent.click(screen.getByRole('button', { name: 'Alerts, 1 unread' }))
+    const panel = await screen.findByRole('dialog', { name: 'Alerts' })
+    expect(within(panel).getByText('New assessment from Coach Angelos Basinas')).toBeInTheDocument()
   })
 
   it.each([{ rows: [] }, { rows: [{ body: '', published_at: '2026-10-13T10:00:00Z' }] },
     { rows: [{ body: 'Unpublished draft', published_at: null }] }])('does not alert for absent, empty or unpublished feedback: $rows', async ({ rows }) => {
     feedback = rows
     renderApp('/player/home')
-    await screen.findByText('LATEST COACH ASSESSMENT')
+    await screen.findByRole('region', { name: 'Latest coach assessment' })
     await userEvent.click(await screen.findByRole('button', { name: 'Alerts' }))
-    expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).queryByText('New coach assessment')).not.toBeInTheDocument()
+    expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).queryByText(/^New assessment from /)).not.toBeInTheDocument()
   })
 
   it('never shows the previous player’s assessment under another account', async () => {
     render(<MemoryRouter><PlayerAlertsBell userId="another-player" events={[]}
       assessment={{ userId: 'previous-player', id: 'private-assessment', publishedAt: '2026-10-13T10:00:00Z' }} /></MemoryRouter>)
     await userEvent.click(screen.getByRole('button', { name: 'Alerts' }))
-    expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).queryByText('New coach assessment')).not.toBeInTheDocument()
+    expect(within(await screen.findByRole('dialog', { name: 'Alerts' })).queryByText(/^New assessment from /)).not.toBeInTheDocument()
   })
 
   it('offers Retry if publication cannot be checked', async () => {
@@ -70,6 +84,6 @@ describe('TRAK-171: published assessment in the player bell', () => {
     const panel = await screen.findByRole('dialog', { name: 'Alerts' })
     expect(within(panel).getByText(/couldn't load assessment alerts/i)).toBeInTheDocument()
     expect(within(panel).getByRole('button', { name: 'Retry' })).toBeInTheDocument()
-    expect(within(panel).queryByText('New coach assessment')).not.toBeInTheDocument()
+    expect(within(panel).queryByText(/^New assessment from /)).not.toBeInTheDocument()
   })
 })

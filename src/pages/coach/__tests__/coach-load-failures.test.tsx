@@ -110,7 +110,8 @@ describe('a failed coach load is not an empty squad', () => {
     })
   })
 
-  describe('Home', () => {
+  // TRAK-211: Home's player overview is now the Feedback and assessment tab.
+  describe('Feedback and assessment', () => {
     /* The dashboard is the worst instance, because it does not render an empty
        list — it renders NUMBERS. Four independent loads each discarded their
        error, so a failed dashboard read "0 players · 0 total · 0 sessions":
@@ -120,33 +121,35 @@ describe('a failed coach load is not an empty squad', () => {
       signedInCoach()
       server.use(tableError('squad_players', 500, { message: 'upstream unavailable' }))
 
-      await requestSettled('/squad_players', () => renderApp('/coach/home'))
+      await requestSettled('/squad_players', () => renderApp('/coach/feedback'))
 
       expect(await screen.findByRole('alert')).toBeInTheDocument()
-      // The specific lie: a confident zero where the answer is "we could not ask".
-      expect(screen.queryByText('Players in squad')?.previousElementSibling?.textContent)
-        .not.toBe('0')
+      // The specific lie: an empty squad where the answer is "we could not ask".
+      expect(screen.queryByText('Your squad is being prepared')).not.toBeInTheDocument()
     })
 
-    it('does not claim "0 total" assessments when that read failed', async () => {
+    // TRAK-197: the assessments decide who is Urgent, so without them nobody
+    // may be called on track.
+    it('does not call anyone on track when the assessments read failed', async () => {
       signedInCoach()
       server.use(
         table('squad_players', [
           { id: 'sp-1', coach_user_id: COACH.id, player_name: 'Ade Okafor' },
         ]),
         tableError('coach_assessments', 500, { message: 'upstream unavailable' }),
+        table('coach_sessions', []),
       )
 
-      await requestSettled('/coach_assessments', () => renderApp('/coach/home'))
+      await requestSettled('/coach_assessments', () => renderApp('/coach/feedback'))
 
-      expect(await screen.findByRole('alert')).toBeInTheDocument()
-      expect(screen.queryByText(/^0 total$/)).not.toBeInTheDocument()
+      expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toBeInTheDocument()
+      expect(screen.queryByText(/On track/)).not.toBeInTheDocument()
+      expect(screen.queryByText('Ade Okafor')).not.toBeInTheDocument()
     })
 
-    it('still shows real zeros for a brand-new coach whose reads SUCCEED', async () => {
-      // The control, and it matters more here than on Sessions: a new coach
-      // genuinely has 0 players and 0 assessments on day one, and that is a
-      // true statement the screen must keep making.
+    it('still says the squad is empty for a brand-new coach whose reads SUCCEED', async () => {
+      // The control: a new coach genuinely has no players on day one, and that
+      // is a true statement the screen must keep making.
       signedInCoach()
       server.use(
         table('squad_players', []),
@@ -154,11 +157,10 @@ describe('a failed coach load is not an empty squad', () => {
         table('coach_sessions', []),
       )
 
-      await requestSettled('/squad_players', () => renderApp('/coach/home'))
+      await requestSettled('/squad_players', () => renderApp('/coach/feedback'))
 
-      expect(await screen.findByText('Players in squad')).toBeInTheDocument()
+      expect(await screen.findByText('Your squad is being prepared')).toBeInTheDocument()
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-      expect(screen.getByText('0 total')).toBeInTheDocument()
     })
   })
 

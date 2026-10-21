@@ -9,7 +9,11 @@ export type BandType = 'exceptional' | 'standout' | 'good' | 'steady' | 'mixed' 
 export type MedalType = 'first_match' | 'on_a_roll' | 'first_star' | 'ten_down' | 'most_improved' | 'self_aware'
 export type GoalCategory = 'performance' | 'consistency' | 'development' | 'personal'
 export type ProgressLevel = 'just_started' | 'making_progress' | 'nearly_there' | 'achieved'
-export type Appearance = 'started' | 'sub' | 'training'
+export type Appearance = 'started' | 'sub' | 'didnt_play' | 'training'
+/** How an assessment's appearance reads (pilot coach's item 13; Imad, 19 Oct: Started, Sub, Didn't play). */
+export const APPEARANCE_LABEL: Record<Appearance, string> = { started: 'Started', sub: 'Sub', didnt_play: "Didn't play", training: 'Training' }
+export const appearanceLabel = (value: string | null | undefined) =>
+  value ? APPEARANCE_LABEL[value as Appearance] ?? value : ''
 export type SelfRatingFlag = 'fair' | 'generous' | 'way off'
 
 export interface BandConfig {
@@ -29,8 +33,13 @@ export const BANDS: BandConfig[] = [
   { word: 'Steady',      color: '#60a5fa', bg: 'rgba(96,165,250,0.13)',  border: 'rgba(96,165,250,0.24)',  minScore: 6 },
   { word: 'Mixed',       color: '#fb923c', bg: 'rgba(251,146,60,0.13)',  border: 'rgba(251,146,60,0.24)',  minScore: 4 },
   { word: 'Developing',  color: '#a78bfa', bg: 'rgba(167,139,250,0.13)', border: 'rgba(167,139,250,0.24)', minScore: 2 },
-  { word: 'Difficult',   color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
+  { word: 'Difficult',   color: 'rgba(255,255,255,0.55)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
 ]
+
+/** TRAK-189: each band's colour by name, from BANDS, for the few places that
+ *  name a band directly. Every band keeps its own colour so they tell apart. */
+export const BAND_COLOR = Object.fromEntries(BANDS.map(b => [b.word, b.color])) as
+  Record<'Exceptional' | 'Standout' | 'Good' | 'Steady' | 'Mixed' | 'Developing' | 'Difficult', string>
 
 // The one way to turn a band into its colours. Before this existed, seven call
 // sites each wrote `BANDS.find(b => b.word.toLowerCase() === band)` with their

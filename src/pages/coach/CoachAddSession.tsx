@@ -39,7 +39,6 @@ type PlayerDetail = {
   /* J4: "no invented defaults". null means the coach has not said. Position
      starts from the roster (a fact, not a guess) and can be changed per match. */
   position: string | null
-  minutes: number | null
   /* Exact counts. These were once `0 | 1 | 2` with 2 meaning "2+", so a
      hat-trick was stored as 2 and the only vocabulary the form had was the
      rating bucket. The bucket still exists — match-input-keys.ts — but it is
@@ -53,7 +52,7 @@ type PlayerDetail = {
    at 90 minutes, 0 goals and 0 assists, so a coach who only ticked "played"
    saved numbers they never entered (MVP Requirements J4). */
 const DEFAULT_DETAIL: PlayerDetail = {
-  played: false, role: 'starter', position: null, minutes: null,
+  played: false, role: 'starter', position: null,
   goals: null, assists: null, card: 'None',
 }
 
@@ -77,11 +76,10 @@ function rosterAgeGroup(p: SquadPlayer): string | null {
 }
 
 /** What still has to be entered before this child's match can be saved.
- *  The quick match log doesn't ask minutes (TRAK-198). */
-function missingFacts(p: SquadPlayer, d: PlayerDetail, askMinutes = true): string[] {
+ *  No log asks minutes (TRAK-198; pilot coach's item 13, Imad 18 Oct). */
+function missingFacts(p: SquadPlayer, d: PlayerDetail): string[] {
   const missing: string[] = []
   if (!d.position) missing.push('position')
-  if (askMinutes && d.minutes === null) missing.push('minutes')
   if (d.goals === null) missing.push('goals')
   if (d.assists === null) missing.push('assists')
   if (!rosterAgeGroup(p)) missing.push('age group on the roster')
@@ -117,13 +115,11 @@ export default function CoachAddSession() {
   const [type,  setType]  = useState<'training' | 'match' | 'other'>(
     () => (quick || window.location.pathname.endsWith('/sessions/quick') ? 'match' : 'training'),
   )
-  /* TRAK-198 (16 Oct live-run call): the quick match log asks goals, assists
-     and cards only; grassroots coaches don't know minutes. Quick is
-     /sessions/quick (the chooser, Log match from an event) and the "+" menu's
-     hand-over. Its matches save minutes as NULL, "not recorded"; the full log
-     still asks them. */
-  const [askMinutes] = useState(() => !(quick || window.location.pathname.endsWith('/sessions/quick')))
-  const stillNeeded = (p: SquadPlayer, d: PlayerDetail) => missingFacts(p, d, askMinutes)
+  /* TRAK-198 (16 Oct live-run call): grassroots coaches don't know minutes, so
+     the match log asks goals, assists and cards only, and saves minutes as NULL,
+     "not recorded". Since 18 Oct (pilot coach's item 13, Imad) that is every
+     log, the full one included. */
+  const stillNeeded = missingFacts
   const [title, setTitle] = useState('')
   // TRAK-127: New event's "log it instead" hands over the past day it was given.
   const [date,  setDate]  = useState(() => quick?.date
@@ -288,12 +284,12 @@ export default function CoachAddSession() {
 
   // Under each player list: why nobody is offered, or who is left out and why.
   const rosterNote = rosterFailed ? (
-    <p role="alert" className="text-[12px] text-white/55 px-4 py-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <p role="alert" className="text-[12px] text-ink-2 px-4 py-3" style={{ fontFamily: 'var(--t-font)' }}>
       Couldn't load your squad.{' '}
-      <button type="button" onClick={() => { if (coachSquad.failed) coachSquad.retry(); setRosterAttempt(n => n + 1) }} className="underline text-[#C8F25A]">Retry</button>
+      <button type="button" onClick={() => { if (coachSquad.failed) coachSquad.retry(); setRosterAttempt(n => n + 1) }} className="underline text-brand">Retry</button>
     </p>
   ) : notReady.length > 0 && (
-    <p className="text-[11px] text-white/40 px-4 py-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <p className="text-[11px] text-ink-3 px-4 py-3" style={{ fontFamily: 'var(--t-font)' }}>
       Not recorded until a parent approves: {notReady.join(', ')}
     </p>
   )
@@ -354,7 +350,7 @@ export default function CoachAddSession() {
   const impossibleRecords = !isMatch ? [] : squad
     .filter(p => details[p.id]?.played && stillNeeded(p, details[p.id]).length === 0)
     .filter(p => validateMatchInput({
-      minutes: askMinutes ? details[p.id].minutes as number : null,
+      minutes: null,
       goals:   details[p.id].goals as number,
       assists: details[p.id].assists as number,
       teamScore: scoreUs === '' ? undefined : Number(scoreUs),
@@ -568,7 +564,7 @@ export default function CoachAddSession() {
         const d = details[p.id]
         // canSave guarantees every played row is complete; these never fall back.
         const position = d.position as string
-        const minutes = askMinutes ? d.minutes as number : null
+        const minutes = null
         const goals = d.goals as number
         const assists = d.assists as number
         const pos = mapPosition(position)
@@ -705,13 +701,13 @@ export default function CoachAddSession() {
   return (
     <MobileShell>
       {/* Topbar */}
-      <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
+      <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
         <button onClick={() => navigate(-1)} aria-label="Back"
-          className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center">
-          <ChevronLeft size={14} className="text-white/88" />
+          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center">
+          <ChevronLeft size={14} className="text-ink" />
         </button>
-        <span className="text-[16px] font-medium text-white/88"
-          style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <span className="text-[16px] font-medium text-ink"
+          style={{ fontFamily: 'var(--t-font)' }}>
           Full Session
         </span>
         <div className="w-[34px]" />
@@ -724,7 +720,7 @@ export default function CoachAddSession() {
         </div>
 
         {/* Session type */}
-        {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="TYPE" />
           <div className="flex gap-2 mt-3">
             {(['training', 'match', 'other'] as const).map(t => (
@@ -740,48 +736,48 @@ export default function CoachAddSession() {
           <>
             {step === 0 && <>
             {/* Match header */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="OPPONENT" />
               <input value={opponent} onChange={e => setOpponent(e.target.value)}
                 placeholder="Opponent name"
-                className="w-full bg-transparent text-[20px] text-white/88 placeholder-white/20 outline-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }} />
+                className="w-full bg-transparent text-[20px] text-ink placeholder-ink-3 outline-none mt-2"
+                style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }} />
 
               <div className="grid grid-cols-3 items-center gap-3 mt-5">
                 <div className="text-center">
-                  <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 mb-2"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>US</span>
+                  <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>US</span>
                   <input inputMode="numeric" value={scoreUs}
                     onChange={e => setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="0"
-                    className="w-full bg-[#0A0A0B] border border-white/[0.07] rounded-[12px] py-3 text-center text-[28px] text-white/88 placeholder-white/20 outline-none"
-                    style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                    className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                    style={{ fontFamily: 'var(--t-font)' }} />
                 </div>
                 <div className="text-center">
-                  <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/30 mb-2"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>RESULT</span>
+                  <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>RESULT</span>
                   <div className="w-full py-3 rounded-[12px] text-center text-[28px]"
                     style={{
-                      fontFamily: "'DM Sans', sans-serif",
-                      color: result === 'W' ? '#C8F25A' : result === 'L' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.6)',
+                      fontFamily: 'var(--t-font)',
+                      color: result === 'W' ? 'rgb(var(--t-brand))' : result === 'L' ? 'rgb(var(--t-ink-3))' : 'rgb(var(--t-ink-2))',
                     }}>
                     {result || '–'}
                   </div>
                 </div>
                 <div className="text-center">
-                  <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 mb-2"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>THEM</span>
+                  <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>THEM</span>
                   <input inputMode="numeric" value={scoreThem}
                     onChange={e => setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="0"
-                    className="w-full bg-[#0A0A0B] border border-white/[0.07] rounded-[12px] py-3 text-center text-[28px] text-white/88 placeholder-white/20 outline-none"
-                    style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                    className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                    style={{ fontFamily: 'var(--t-font)' }} />
                 </div>
               </div>
             </div>
 
             {/* Competition + venue */}
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
+            <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="COMPETITION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -801,7 +797,7 @@ export default function CoachAddSession() {
             </div>
 
             {/* Date: the same Arc picker as Log training (TRAK-157, Imad 17 Oct: one picker everywhere). */}
-            <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
               <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
                 maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
@@ -810,33 +806,33 @@ export default function CoachAddSession() {
             </>}
 
             {/* ── Per-player section ─────────────────────────────────────────── */}
-            {step === 1 && <div className="rounded-[18px] border border-white/[0.07] bg-[#101012] overflow-hidden">
+            {step === 1 && <div className="rounded-[18px] border border-line bg-surface overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-4 pt-4 pb-3">
-                <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                   SQUAD · {playedCount} played
                 </span>
                 <div className="flex gap-3">
                   <button onClick={setAllStarters}
-                    className="text-[10px] tracking-[0.12em] uppercase text-[#C8F25A]"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>
+                    className="text-[10px] tracking-[0.12em] uppercase text-brand"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>
                     ALL 90
                   </button>
                   <button onClick={clearAll}
-                    className="text-[10px] tracking-[0.12em] uppercase text-white/35"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>
+                    className="text-[10px] tracking-[0.12em] uppercase text-ink-3"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>
                     CLEAR
                   </button>
                 </div>
               </div>
 
               {rosterEmpty ? (
-                <p role="status" className="px-4 pb-4 text-[12px] text-white/40">
+                <p role="status" className="px-4 pb-4 text-[12px] text-ink-3">
                   {rosterEmptyText}
                 </p>
               ) : (
-                <div className="divide-y divide-white/[0.05]">
+                <div className="divide-y divide-line">
                   {squad.map(p => {
                     const d = details[p.id] ?? DEFAULT_DETAIL
                     const isExpanded = expanded.has(p.id)
@@ -850,20 +846,20 @@ export default function CoachAddSession() {
                             onClick={() => togglePlayed(p.id)}
                             className="flex-shrink-0 w-[22px] h-[22px] rounded-full border transition-all"
                             style={{
-                              background: d.played ? '#C8F25A' : 'transparent',
-                              borderColor: d.played ? '#C8F25A' : 'rgba(255,255,255,0.2)',
+                              background: d.played ? 'rgb(var(--t-brand))' : 'transparent',
+                              borderColor: d.played ? 'rgb(var(--t-brand))' : 'rgb(var(--t-line-strong))',
                             }}
                             aria-label={d.played ? 'Remove' : 'Mark played'}
                           >
                             {d.played && (
-                              <span style={{ display: 'block', textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#000', lineHeight: '22px' }}>✓</span>
+                              <span style={{ display: 'block', textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'rgb(var(--t-on-brand))', lineHeight: '22px' }}>✓</span>
                             )}
                           </button>
 
                           {/* Name + position */}
                           <div className="flex-1 min-w-0">
                             <p className="text-[13px] truncate"
-                              style={{ color: d.played ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.45)', fontFamily: "'DM Sans', sans-serif" }}>
+                              style={{ color: d.played ? 'rgb(var(--t-ink))' : 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font)' }}>
                               {p.player_name}
                             </p>
                           </div>
@@ -872,15 +868,11 @@ export default function CoachAddSession() {
                           {d.played && (
                             <div className="flex items-center gap-2 flex-shrink-0">
                               {d.position && (
-                                <span className="text-[8px] tracking-[0.08em] uppercase text-white/30 px-1.5 py-0.5 rounded-full"
-                                  style={{ background: 'rgba(255,255,255,0.05)', fontFamily: "'DM Mono', monospace" }}>
+                                <span className="text-[8px] tracking-[0.08em] uppercase text-ink-3 px-1.5 py-0.5 rounded-full"
+                                  style={{ background: 'rgb(var(--t-raised))', fontFamily: 'var(--t-font-mono)' }}>
                                   {d.position}
                                 </span>
                               )}
-                              {askMinutes && <span className="text-[10px] text-white/40"
-                                style={{ fontFamily: "'DM Mono', monospace" }}>
-                                {d.minutes === null ? '—' : `${d.minutes}'`}
-                              </span>}
                             </div>
                           )}
 
@@ -889,7 +881,7 @@ export default function CoachAddSession() {
                             <button onClick={() => toggleExpanded(p.id)}
                               aria-label={`Details for ${p.player_name}`} aria-expanded={isExpanded}
                               className="flex-shrink-0 w-6 h-6 flex items-center justify-center"
-                              style={{ color: 'rgba(255,255,255,0.3)' }}>
+                              style={{ color: 'rgb(var(--t-ink-3))' }}>
                               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
                           )}
@@ -898,59 +890,44 @@ export default function CoachAddSession() {
                         {/* Expanded detail */}
                         {d.played && isExpanded && (
                           <div className="px-4 pb-4 space-y-3"
-                            style={{ background: 'rgba(0,0,0,0.25)' }}>
+                            style={{ background: 'rgb(var(--t-raised))' }}>
 
-                            {/* Role + Minutes on same line */}
+                            {/* Role (minutes are no longer asked: TRAK-198, item 13) */}
                             <div className="flex items-center gap-4">
                               {/* Role */}
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 mr-0.5"
-                                  style={{ fontFamily: "'DM Mono', monospace" }}>ROLE</span>
+                                <span className="text-[8px] tracking-[0.1em] uppercase text-ink-3 mr-0.5"
+                                  style={{ fontFamily: 'var(--t-font-mono)' }}>ROLE</span>
                                 {(['starter', 'sub'] as const).map(r => (
                                   <button key={r} onClick={() => setDetail(p.id, { role: r })}
                                     className="px-2.5 py-1 rounded-full text-[10px] transition-colors"
                                     style={{
-                                      background: d.role === r ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.04)',
-                                      color: d.role === r ? '#C8F25A' : 'rgba(255,255,255,0.4)',
-                                      border: `1px solid ${d.role === r ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                                      fontFamily: "'DM Sans', sans-serif",
+                                      background: d.role === r ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-raised))',
+                                      color: d.role === r ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
+                                      border: `1px solid ${d.role === r ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                                      fontFamily: 'var(--t-font)',
                                     }}>
                                     {r.charAt(0).toUpperCase() + r.slice(1)}
                                   </button>
                                 ))}
                               </div>
 
-                              {/* Minutes: typed, not stepped from a guessed 90. Match
-                                  length differs by age group, so there is no honest default. */}
-                              {askMinutes && <label className="flex items-center gap-2 ml-auto">
-                                <span className="text-[8px] tracking-[0.1em] uppercase text-white/30"
-                                  style={{ fontFamily: "'DM Mono', monospace" }}>MINS</span>
-                                <input
-                                  type="number" inputMode="numeric"
-                                  min={MATCH_LIMITS.minutesMin} max={MATCH_LIMITS.minutesMax}
-                                  aria-label={`Minutes played by ${p.player_name}`}
-                                  placeholder="—"
-                                  value={d.minutes ?? ''}
-                                  onChange={e => setDetail(p.id, { minutes: e.target.value === '' ? null : Number(e.target.value) })}
-                                  className="w-14 h-7 rounded-[8px] bg-white/[0.06] text-center text-[13px] text-white/88 outline-none placeholder:text-white/30"
-                                  style={{ fontFamily: "'DM Mono', monospace" }} />
-                              </label>}
                             </div>
 
                             {/* Position for this match. Starts from the roster; required. */}
                             <div className="flex items-center gap-2">
-                              <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 w-[44px] flex-shrink-0"
-                                style={{ fontFamily: "'DM Mono', monospace" }}>POS</span>
+                              <span className="text-[8px] tracking-[0.1em] uppercase text-ink-3 w-[44px] flex-shrink-0"
+                                style={{ fontFamily: 'var(--t-font-mono)' }}>POS</span>
                               <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Position for ${p.player_name}`}>
                                 {MATCH_POSITIONS.map(pos => (
                                   <button key={pos} type="button" aria-pressed={d.position === pos}
                                     onClick={() => setDetail(p.id, { position: pos })}
                                     className="px-2 py-1 rounded-full text-[10px] transition-colors"
                                     style={{
-                                      background: d.position === pos ? 'rgba(200,242,90,0.12)' : 'rgba(255,255,255,0.04)',
-                                      color: d.position === pos ? '#C8F25A' : 'rgba(255,255,255,0.4)',
-                                      border: `1px solid ${d.position === pos ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                                      fontFamily: "'DM Sans', sans-serif",
+                                      background: d.position === pos ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-raised))',
+                                      color: d.position === pos ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
+                                      border: `1px solid ${d.position === pos ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                                      fontFamily: 'var(--t-font)',
                                     }}>
                                     {pos}
                                   </button>
@@ -966,20 +943,20 @@ export default function CoachAddSession() {
                               { label: 'ASSISTS', key: 'assists' as const, value: d.assists, max: MATCH_LIMITS.assistsMax },
                             ]).map(({ label, key, value, max }) => (
                               <div key={key} className="flex items-center gap-2">
-                                <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 w-[44px] flex-shrink-0"
-                                  style={{ fontFamily: "'DM Mono', monospace" }}>{label}</span>
+                                <span className="text-[8px] tracking-[0.1em] uppercase text-ink-3 w-[44px] flex-shrink-0"
+                                  style={{ fontFamily: 'var(--t-font-mono)' }}>{label}</span>
                                 <button
                                   aria-label={`One fewer ${key} for ${p.player_name}`}
                                   onClick={() => setDetail(p.id, { [key]: value === null ? 0 : Math.max(0, value - 1) })}
-                                  className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50 text-sm">−</button>
-                                <span className="w-8 text-center text-[13px] text-white/88"
-                                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                                  className="w-6 h-6 rounded-full bg-raised flex items-center justify-center text-ink-2 text-sm">−</button>
+                                <span className="w-8 text-center text-[13px] text-ink"
+                                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                                   {value ?? '—'}
                                 </span>
                                 <button
                                   aria-label={`One more ${key} for ${p.player_name}`}
                                   onClick={() => setDetail(p.id, { [key]: Math.min(max, (value ?? 0) + 1) })}
-                                  className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50 text-sm">+</button>
+                                  className="w-6 h-6 rounded-full bg-raised flex items-center justify-center text-ink-2 text-sm">+</button>
                               </div>
                             ))}
 
@@ -991,20 +968,20 @@ export default function CoachAddSession() {
                               const missing = stillNeeded(p, d)
                               if (missing.length > 0) {
                                 return (
-                                  <p role="status" className="text-[10px] leading-snug text-[rgb(251,191,36)] pl-[52px]"
-                                    style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                                  <p role="status" className="text-[10px] leading-snug text-warning pl-[52px]"
+                                    style={{ fontFamily: 'var(--t-font)' }}>
                                     Still needed: {missing.join(', ')}. Tap − for 0 goals or assists.
                                   </p>
                                 )
                               }
                               const problems = validateMatchInput({
-                                minutes: askMinutes ? d.minutes as number : null, goals: d.goals as number, assists: d.assists as number,
+                                minutes: null, goals: d.goals as number, assists: d.assists as number,
                                 teamScore: scoreUs === '' ? undefined : Number(scoreUs),
                               })
                               if (problems.length === 0) return null
                               return (
-                                <p role="alert" className="text-[10px] leading-snug text-[#F2705A] pl-[52px]"
-                                  style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                                <p role="alert" className="text-[10px] leading-snug text-danger pl-[52px]"
+                                  style={{ fontFamily: 'var(--t-font)' }}>
                                   {problems[0].message}
                                 </p>
                               )
@@ -1012,29 +989,29 @@ export default function CoachAddSession() {
 
                             {/* Card */}
                             <div className="flex items-center gap-2">
-                              <span className="text-[8px] tracking-[0.1em] uppercase text-white/30 w-[44px] flex-shrink-0"
-                                style={{ fontFamily: "'DM Mono', monospace" }}>CARD</span>
+                              <span className="text-[8px] tracking-[0.1em] uppercase text-ink-3 w-[44px] flex-shrink-0"
+                                style={{ fontFamily: 'var(--t-font-mono)' }}>CARD</span>
                               <div className="flex gap-1.5">
                                 {(['None', 'Yellow', 'Red'] as const).map(c => (
                                   <button key={c} onClick={() => setDetail(p.id, { card: c })}
                                     className="px-2.5 py-1 rounded-full text-[10px] transition-colors"
                                     style={{
                                       background: d.card === c
-                                        ? c === 'Yellow' ? 'rgba(251,191,36,0.14)'
-                                        : c === 'Red'    ? 'rgba(239,68,68,0.14)'
-                                        : 'rgba(200,242,90,0.12)'
-                                        : 'rgba(255,255,255,0.04)',
+                                        ? c === 'Yellow' ? 'rgb(var(--t-warning) / 0.14)'
+                                        : c === 'Red'    ? 'rgb(var(--t-danger) / 0.14)'
+                                        : 'rgb(var(--t-brand) / 0.12)'
+                                        : 'rgb(var(--t-raised))',
                                       color: d.card === c
-                                        ? c === 'Yellow' ? '#fbbf24'
-                                        : c === 'Red'    ? '#ef4444'
-                                        : '#C8F25A'
-                                        : 'rgba(255,255,255,0.4)',
+                                        ? c === 'Yellow' ? 'rgb(var(--t-warning))'
+                                        : c === 'Red'    ? 'rgb(var(--t-danger))'
+                                        : 'rgb(var(--t-brand))'
+                                        : 'rgb(var(--t-ink-3))',
                                       border: `1px solid ${d.card === c
-                                        ? c === 'Yellow' ? 'rgba(251,191,36,0.3)'
-                                        : c === 'Red'    ? 'rgba(239,68,68,0.3)'
-                                        : 'rgba(200,242,90,0.3)'
-                                        : 'rgba(255,255,255,0.07)'}`,
-                                      fontFamily: "'DM Sans', sans-serif",
+                                        ? c === 'Yellow' ? 'rgb(var(--t-warning) / 0.3)'
+                                        : c === 'Red'    ? 'rgb(var(--t-danger) / 0.3)'
+                                        : 'rgb(var(--t-brand) / 0.3)'
+                                        : 'rgb(var(--t-line))'}`,
+                                      fontFamily: 'var(--t-font)',
                                     }}>
                                     {c}
                                   </button>
@@ -1053,19 +1030,19 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Match notes */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="MATCH NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="How did the match go? Key moments, things to work on…"
-                className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                className="w-full bg-transparent text-[14px] text-ink placeholder-ink-3 outline-none resize-none mt-2"
+                style={{ fontFamily: 'var(--t-font)' }} />
             </div>}
           </>
         ) : type === 'training' ? (
           /* ── TRAINING ──────────────────────────────────────────────────────── */
           <>
             {/* Session focus — required */}
-            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -1079,15 +1056,15 @@ export default function CoachAddSession() {
                       })}
                       className="text-left px-3 py-2.5 rounded-[12px] transition-colors"
                       style={{
-                        background: on ? 'rgba(200,242,90,0.10)' : 'rgba(0,0,0,0.3)',
-                        border: `1px solid ${on ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                        background: on ? 'rgb(var(--t-brand) / 0.10)' : 'rgb(var(--t-raised))',
+                        border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
                       }}>
                       <p className="text-[13px] font-medium"
-                        style={{ color: on ? '#C8F25A' : 'rgba(255,255,255,0.78)', fontFamily: "'DM Sans', sans-serif" }}>
+                        style={{ color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink))', fontFamily: 'var(--t-font)' }}>
                         {key}
                       </p>
                       <p className="text-[9px] mt-0.5"
-                        style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'DM Mono', monospace", letterSpacing: '0.04em' }}>
+                        style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.04em' }}>
                         {sub}
                       </p>
                     </button>
@@ -1097,7 +1074,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Duration + Intensity on one card, on the Notes step (TRAK-182, live run 3: four steps, as a match) */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -1117,21 +1094,21 @@ export default function CoachAddSession() {
                       className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors"
                       style={{
                         background: trainingIntensity === lvl
-                          ? lvl === 'High'   ? 'rgba(239,68,68,0.12)'
-                          : lvl === 'Medium' ? 'rgba(251,191,36,0.12)'
-                          : 'rgba(96,165,250,0.12)'
-                          : '#202024',
+                          ? lvl === 'High'   ? 'rgb(var(--t-danger) / 0.12)'
+                          : lvl === 'Medium' ? 'rgb(var(--t-warning) / 0.12)'
+                          : 'rgb(var(--t-info) / 0.12)'
+                          : 'rgb(var(--t-raised))',
                         color: trainingIntensity === lvl
-                          ? lvl === 'High'   ? '#ef4444'
-                          : lvl === 'Medium' ? '#fbbf24'
-                          : '#60a5fa'
-                          : 'rgba(255,255,255,0.45)',
+                          ? lvl === 'High'   ? 'rgb(var(--t-danger))'
+                          : lvl === 'Medium' ? 'rgb(var(--t-warning))'
+                          : 'rgb(var(--t-info))'
+                          : 'rgb(var(--t-ink-3))',
                         border: `1px solid ${trainingIntensity === lvl
-                          ? lvl === 'High'   ? 'rgba(239,68,68,0.3)'
-                          : lvl === 'Medium' ? 'rgba(251,191,36,0.3)'
-                          : 'rgba(96,165,250,0.3)'
-                          : 'rgba(255,255,255,0.07)'}`,
-                        fontFamily: "'DM Sans', sans-serif",
+                          ? lvl === 'High'   ? 'rgb(var(--t-danger) / 0.3)'
+                          : lvl === 'Medium' ? 'rgb(var(--t-warning) / 0.3)'
+                          : 'rgb(var(--t-info) / 0.3)'
+                          : 'rgb(var(--t-line))'}`,
+                        fontFamily: 'var(--t-font)',
                       }}>
                       {lvl}
                     </button>
@@ -1141,39 +1118,39 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Optional theme / title */}
-            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
-                className="w-full bg-transparent text-[15px] text-white/88 placeholder-white/20 outline-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                className="w-full bg-transparent text-[15px] text-ink placeholder-ink-3 outline-none mt-2"
+                style={{ fontFamily: 'var(--t-font)' }} />
             </div>}
 
             {/* Date: Arc's picker, as the event form (TRAK-157, 16 Oct: the native box was too big). Days after today can't be picked. */}
-            {step === 0 && <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {step === 0 && <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
               <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
                 maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
             {/* Attendance */}
-            {step === 1 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 1 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                   ATTENDED · {present.length}/{squad.length}
                 </span>
                 <div className="flex gap-3">
                   <button onClick={() => setAttended(new Set(squad.map(p => p.id)))}
-                    className="text-[10px] tracking-[0.12em] uppercase text-[#C8F25A]"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>ALL</button>
+                    className="text-[10px] tracking-[0.12em] uppercase text-brand"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>ALL</button>
                   <button onClick={() => setAttended(new Set())}
-                    className="text-[10px] tracking-[0.12em] uppercase text-white/35"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>NONE</button>
+                    className="text-[10px] tracking-[0.12em] uppercase text-ink-3"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>NONE</button>
                 </div>
               </div>
               {rosterEmpty ? (
-                <p role="status" className="text-[12px] text-white/40 py-2">{rosterEmptyText}</p>
+                <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {squad.map(p => {
@@ -1183,10 +1160,10 @@ export default function CoachAddSession() {
                         onClick={() => setAttended(prev => { const n = new Set(prev); if (n.has(p.id)) { n.delete(p.id) } else { n.add(p.id) } return n })}
                         className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
                         style={{
-                          background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
-                          border: `1px solid ${on ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                          color: on ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
-                          fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                          background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
+                          border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                          color: on ? 'rgb(var(--t-ink))' : 'rgb(var(--t-ink-2))',
+                          fontFamily: 'var(--t-font)', fontSize: 13,
                         }}>
                         {p.player_name}
                       </button>
@@ -1198,49 +1175,49 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Notes */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="SESSION NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="What went well? What needs more work next session?"
-                className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                className="w-full bg-transparent text-[14px] text-ink placeholder-ink-3 outline-none resize-none mt-2"
+                style={{ fontFamily: 'var(--t-font)' }} />
             </div>}
           </>
         ) : (
           /* ── OTHER ─────────────────────────────────────────────────────────── */
           <>
-            {step === 0 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="TITLE" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Gym, Video Analysis, Team Talk…"
-                className="w-full bg-transparent text-[16px] text-white/88 placeholder-white/20 outline-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                className="w-full bg-transparent text-[16px] text-ink placeholder-ink-3 outline-none mt-2"
+                style={{ fontFamily: 'var(--t-font)' }} />
             </div>}
 
             {/* Date: the same Arc picker as Log training (TRAK-157). */}
-            {step === 0 && <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {step === 0 && <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
               <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
                 maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
-            {step === 1 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 1 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-white/45"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
+                <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
                   ATTENDED · {present.length}/{squad.length}
                 </span>
                 <div className="flex gap-3">
                   <button onClick={() => setAttended(new Set(squad.map(p => p.id)))}
-                    className="text-[10px] tracking-[0.12em] uppercase text-[#C8F25A]"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>ALL</button>
+                    className="text-[10px] tracking-[0.12em] uppercase text-brand"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>ALL</button>
                   <button onClick={() => setAttended(new Set())}
-                    className="text-[10px] tracking-[0.12em] uppercase text-white/35"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>NONE</button>
+                    className="text-[10px] tracking-[0.12em] uppercase text-ink-3"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}>NONE</button>
                 </div>
               </div>
               {rosterEmpty ? (
-                <p role="status" className="text-[12px] text-white/40 py-2">{rosterEmptyText}</p>
+                <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {squad.map(p => {
@@ -1250,10 +1227,10 @@ export default function CoachAddSession() {
                         onClick={() => setAttended(prev => { const n = new Set(prev); if (n.has(p.id)) { n.delete(p.id) } else { n.add(p.id) } return n })}
                         className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
                         style={{
-                          background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
-                          border: `1px solid ${on ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                          color: on ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
-                          fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                          background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
+                          border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                          color: on ? 'rgb(var(--t-ink))' : 'rgb(var(--t-ink-2))',
+                          fontFamily: 'var(--t-font)', fontSize: 13,
                         }}>
                         {p.player_name}
                       </button>
@@ -1264,24 +1241,24 @@ export default function CoachAddSession() {
               {rosterNote}
             </div>}
 
-            {step === 2 && <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="Optional…"
-                className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2"
-                style={{ fontFamily: "'DM Sans', sans-serif" }} />
+                className="w-full bg-transparent text-[14px] text-ink placeholder-ink-3 outline-none resize-none mt-2"
+                style={{ fontFamily: 'var(--t-font)' }} />
             </div>}
           </>
         )}
 
         {/* Review: everything the save writes, before it is written. */}
         {step === review && (
-          <dl className="rounded-[18px] border border-white/[0.07] bg-[#101012] divide-y divide-white/[0.06] text-[13px]"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <dl className="rounded-[18px] border border-line bg-surface divide-y divide-line text-[13px]"
+            style={{ fontFamily: 'var(--t-font)' }}>
             {summary.map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
-                <dt className="w-24 shrink-0 text-white/45">{term}</dt>
-                <dd className="flex-1 min-w-0 text-white/85 break-words">{value}</dd>
+                <dt className="w-24 shrink-0 text-ink-3">{term}</dt>
+                <dd className="flex-1 min-w-0 text-ink break-words">{value}</dd>
               </div>
             ))}
           </dl>
@@ -1289,9 +1266,9 @@ export default function CoachAddSession() {
         {/* Why Save is off when the roster is the reason, with its Retry, here
             too: it used to show only on the step that lists the players (Tarek, #317). */}
         {step === review && (rosterFailed || rosterLoading) && (
-          <div className="rounded-[18px] border border-white/[0.07] bg-[#101012]">
+          <div className="rounded-[18px] border border-line bg-surface">
             {rosterFailed ? rosterNote : (
-              <p role="status" className="text-[12px] text-white/55 px-4 py-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>Loading your squad…</p>
+              <p role="status" className="text-[12px] text-ink-2 px-4 py-3" style={{ fontFamily: 'var(--t-font)' }}>Loading your squad…</p>
             )}
           </div>
         )}
@@ -1299,35 +1276,35 @@ export default function CoachAddSession() {
 
       {/* Sticky save */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
-        style={{ background: 'linear-gradient(180deg,rgba(10,10,11,0) 0%,#0A0A0B 35%)' }}>
+        style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {(step === 0 || step === review) && futureDate && (
-          <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p role="alert" className="text-[11px] text-center text-warning mb-2"
+            style={{ fontFamily: 'var(--t-font)' }}>
             A session can't be dated in the future. Log it once it has happened.
           </p>
         )}
         {(stepName === 'Squad' || step === review) && teamGoalsError && (
-          <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p role="alert" className="text-[11px] text-center text-warning mb-2"
+            style={{ fontFamily: 'var(--t-font)' }}>
             {teamGoalsError}
           </p>
         )}
         {(stepName === 'Squad' || step === review) && teamAssistsError && (
-          <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p role="alert" className="text-[11px] text-center text-warning mb-2"
+            style={{ fontFamily: 'var(--t-font)' }}>
             {teamAssistsError}
           </p>
         )}
         {(stepName === 'Squad' || step === review) && incompleteRecords.length > 0 && (
-          <p role="status" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p role="status" className="text-[11px] text-center text-warning mb-2"
+            style={{ fontFamily: 'var(--t-font)' }}>
             {incompleteRecords.length === 1
               ? `${incompleteRecords[0].player_name} still needs ${stillNeeded(incompleteRecords[0], details[incompleteRecords[0].id]).join(', ')}.`
               : `${incompleteRecords.length} players still need their match details.`}
           </p>
         )}
         {step === 0 && firstStepMissing && (
-          <p role="status" className="text-[11px] text-center text-white/45 mb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+          <p role="status" className="text-[11px] text-center text-ink-3 mb-2" style={{ fontFamily: 'var(--t-font)' }}>
             {firstStepMissing}
           </p>
         )}

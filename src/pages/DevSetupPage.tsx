@@ -267,19 +267,19 @@ export default function DevSetupPage() {
     s === 'done' ? '[done]' : s === 'error' ? '[err]' : s === 'running' ? '...' : '·'
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] flex flex-col items-center justify-start px-5 py-10 max-w-md mx-auto">
+    <div className="min-h-screen bg-ground flex flex-col items-center justify-start px-5 py-10 max-w-md mx-auto">
       <div className="w-full mb-8">
-        <p className="text-[9px] font-medium tracking-[0.12em] text-white/30 uppercase mb-1" style={{ fontFamily: "'DM Mono', monospace" }}>Dev only</p>
-        <h1 className="text-[26px] font-light text-white/90 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>
+        <p className="text-[9px] font-medium tracking-[0.12em] text-ink-3 uppercase mb-1" style={{ fontFamily: 'var(--t-font-mono)' }}>Dev only</p>
+        <h1 className="text-[26px] font-light text-ink leading-tight" style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
           Seed test accounts
         </h1>
-        <p className="text-[12px] text-white/40 mt-1">
+        <p className="text-[12px] text-ink-3 mt-1">
           Creates coach / player / parent accounts with realistic sample data. Safe to run multiple times.
         </p>
       </div>
 
       <div className="w-full rounded-[14px] p-4 mb-5 space-y-1"
-        style={{ background: 'rgba(200,242,90,0.05)', border: '1px solid rgba(200,242,90,0.15)' }}>
+        style={{ background: 'rgb(var(--t-brand) / 0.05)', border: '1px solid rgb(var(--t-brand) / 0.15)' }}>
         {[
           { role: 'Coach',  email: 'coach@trak.dev' },
           { role: 'Player', email: 'player@trak.dev' },
@@ -287,21 +287,21 @@ export default function DevSetupPage() {
           { role: 'Admin',  email: 'club@trak.dev'   },
         ].map(a => (
           <div key={a.role} className="flex justify-between text-[12px]">
-            <span className="text-white/50">{a.role}</span>
-            <span className="text-[#C8F25A]/70" style={{ fontFamily: "'DM Mono', monospace" }}>{a.email}</span>
+            <span className="text-ink-2">{a.role}</span>
+            <span className="text-brand/70" style={{ fontFamily: 'var(--t-font-mono)' }}>{a.email}</span>
           </div>
         ))}
       </div>
 
       {steps.length > 0 && (
         <div className="w-full rounded-[14px] p-4 mb-5 space-y-2"
-          style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}>
+          style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
           {steps.map(s => (
             <div key={s.label} className="flex items-start gap-2 text-[12px]">
               <span className="flex-shrink-0 w-4">{iconFor(s.status)}</span>
               <div>
-                <span className="text-white/70">{s.label}</span>
-                {s.detail && <p className="text-[10px] text-white/35 mt-0.5">{s.detail}</p>}
+                <span className="text-ink-2">{s.label}</span>
+                {s.detail && <p className="text-[10px] text-ink-3 mt-0.5">{s.detail}</p>}
               </div>
             </div>
           ))}
@@ -310,24 +310,24 @@ export default function DevSetupPage() {
 
       {done ? (
         <div className="w-full space-y-2">
-          <div className="text-center py-3 text-[14px] font-semibold text-[#C8F25A]">All done!</div>
+          <div className="text-center py-3 text-[14px] font-semibold text-brand">All done!</div>
           <button onClick={() => navigate('/')}
-            className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm">
+            className="w-full py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm">
             Go to app →
           </button>
         </div>
       ) : (
         <button onClick={run} disabled={running}
-          className="w-full py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50 transition-opacity">
+          className="w-full py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm disabled:opacity-50 transition-opacity">
           {running ? 'Setting up...' : 'Run Setup →'}
         </button>
       )}
 
-      <p className="text-[10px] text-white/20 mt-4 text-center" style={{ fontFamily: "'DM Mono', monospace" }}>
+      <p className="text-[10px] text-ink-3 mt-4 text-center" style={{ fontFamily: 'var(--t-font-mono)' }}>
         Note: Disable "Confirm email" in Supabase Auth settings if sign-up fails
       </p>
 
-      <button onClick={() => navigate('/')} className="mt-3 text-[11px] text-white/25 hover:text-white/50">
+      <button onClick={() => navigate('/')} className="mt-3 text-[11px] text-ink-3 hover:text-ink-2">
         ← Back to landing
       </button>
     </div>

@@ -15,6 +15,8 @@ import { fetchWaitReason } from '@/lib/wait-reason'
 import type { Tables } from '@/integrations/supabase/types'
 import { remember, remembered } from '@/lib/screen-memory'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { useQuery } from '@tanstack/react-query'
+import { loadTrainingAttendance } from '@/lib/attendance-rate'
 
 // TRAK-180: what Squad last showed a coach (see screen-memory).
 type SquadMemory = { players: any[]; assessments: Record<string, number>; consent: Record<string, ConsentStatus> }
@@ -33,12 +35,12 @@ const POSITIONS = [
 type ConsentStatus = 'ready' | 'waiting' | 'signup' | 'player' | 'notReady' | 'unknown'
 
 const CONSENT_CHIP: Record<ConsentStatus, { label: string; color: string; bg: string }> = {
-  ready:    { label: 'Ready to assess',               color: '#C8F25A',             bg: 'rgba(200,242,90,0.10)' },
-  waiting:  { label: 'Waiting for parent',            color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
-  signup:   { label: 'Waiting for player to sign up', color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
-  player:   { label: 'Waiting for player to agree',   color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
-  notReady: { label: 'Not ready to assess',           color: 'rgb(251,191,36)',     bg: 'rgba(251,191,36,0.10)' },
-  unknown:  { label: 'Status unknown',                color: 'rgba(255,255,255,0.45)', bg: 'rgba(255,255,255,0.06)' },
+  ready:    { label: 'Ready to assess',               color: 'rgb(var(--t-brand))',             bg: 'rgb(var(--t-brand) / 0.10)' },
+  waiting:  { label: 'Waiting for parent',            color: 'rgb(var(--t-warning))',     bg: 'rgb(var(--t-warning) / 0.10)' },
+  signup:   { label: 'Waiting for player to sign up', color: 'rgb(var(--t-warning))',     bg: 'rgb(var(--t-warning) / 0.10)' },
+  player:   { label: 'Waiting for player to agree',   color: 'rgb(var(--t-warning))',     bg: 'rgb(var(--t-warning) / 0.10)' },
+  notReady: { label: 'Not ready to assess',           color: 'rgb(var(--t-warning))',     bg: 'rgb(var(--t-warning) / 0.10)' },
+  unknown:  { label: 'Status unknown',                color: 'rgb(var(--t-ink-3))', bg: 'rgb(var(--t-raised))' },
 }
 
 /** The gate first, the same predicate the RLS policy evaluates; the reason only for a player it refuses. */
@@ -164,8 +166,8 @@ export default function CoachSquadPage() {
       {/* TRAK-182 (Imad's 6d/6g): a squad directory built from Arc's free parts:
           search, filters, avatar rows, and a player panel in a bottom sheet. */}
       <div className="flex items-baseline justify-between px-5 pt-4 pb-1 shrink-0">
-        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-white/95">Squad</h1>
-        {inView.length > 0 && <p className="text-[13px] text-white/45">{squad ? `${squad} · ` : ''}{inView.length} {inView.length === 1 ? 'player' : 'players'}</p>}
+        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Squad</h1>
+        {inView.length > 0 && <p className="text-[13px] text-ink-3">{squad ? `${squad} · ` : ''}{inView.length} {inView.length === 1 ? 'player' : 'players'}</p>}
       </div>
 
       {players.length > 0 && (
@@ -196,46 +198,46 @@ export default function CoachSquadPage() {
           <div className="flex flex-col items-center text-center pt-14 px-6">
             <div
               className="w-14 h-14 rounded-[16px] flex items-center justify-center mb-4"
-              style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)' }}
+              style={{ background: 'rgb(var(--t-warning) / 0.08)', border: '1px solid rgb(var(--t-warning) / 0.15)' }}
             >
-              <WifiOff size={22} className="text-[rgb(251,191,36)]" strokeWidth={1.5} />
+              <WifiOff size={22} className="text-warning" strokeWidth={1.5} />
             </div>
-            <p className="text-[15px] text-white/70 font-medium mb-1">Couldn't load your squad</p>
-            <p className="text-[12px] text-white/35 leading-relaxed mb-5">
+            <p className="text-[15px] text-ink-2 font-medium mb-1">Couldn't load your squad</p>
+            <p className="text-[12px] text-ink-3 leading-relaxed mb-5">
               {navigator.onLine
                 ? "We couldn't reach Trak just now. Nothing has been lost — your squad is safe."
                 : 'You appear to be offline. Nothing has been lost — your squad is safe.'}
             </p>
             <button
               onClick={() => setRetry(r => r + 1)}
-              className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-black"
-              style={{ background: '#C8F25A' }}
+              className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-on-brand"
+              style={{ background: 'rgb(var(--t-brand))' }}
             >
               Try again
             </button>
           </div>
         ) : !loaded ? (
-          <p role="status" className="pt-14 text-center text-[13px] text-white/45">Loading your squad…</p>
+          <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your squad…</p>
         ) : filtered.length === 0 ? (
           players.length === 0 ? (
             <div className="flex flex-col items-center text-center pt-14 px-6">
               <div
                 className="w-14 h-14 rounded-[16px] flex items-center justify-center mb-4"
-                style={{ background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.15)' }}
+                style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.15)' }}
               >
-                <Users size={22} className="text-[#C8F25A]" strokeWidth={1.5} />
+                <Users size={22} className="text-brand" strokeWidth={1.5} />
               </div>
-              <p className="text-[15px] text-white/70 font-medium mb-1">Your squad is being prepared</p>
-              <p className="text-[12px] text-white/35 leading-relaxed mb-5">
+              <p className="text-[15px] text-ink-2 font-medium mb-1">Your squad is being prepared</p>
+              <p className="text-[12px] text-ink-3 leading-relaxed mb-5">
                 Your academy will add players to this squad.
               </p>
             </div>
           ) : (
             <div className="pt-8 text-center">
-              <p className="text-[13px] text-white/45 mb-2">{search ? 'No players match that search.' : 'No players match that filter.'}</p>
+              <p className="text-[13px] text-ink-3 mb-2">{search ? 'No players match that search.' : 'No players match that filter.'}</p>
               <button
                 onClick={clearFilters}
-                className="text-[11px] text-[#C8F25A]"
+                className="text-[11px] text-brand"
               >
                 Clear filters
               </button>
@@ -249,11 +251,11 @@ export default function CoachSquadPage() {
                 <li key={p.id}>
                   <PlayerPanel player={p} age={ageLabel(p)} score={score} status={consent[p.id]} trigger={
                     <button type="button"
-                      className="w-full flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03] transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
+                      className="w-full flex items-center gap-3 py-3 border-b border-line active:bg-raised transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
                       <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-white/[0.9] truncate">{p.player_name}</p>
-                        <p className="text-[12px] text-white/45 mt-0.5 truncate">{metaLine(p, ageLabel(p))}</p>
+                        <p className="text-[14px] font-medium text-ink truncate">{p.player_name}</p>
+                        <p className="text-[12px] text-ink-3 mt-0.5 truncate">{metaLine(p, ageLabel(p))}</p>
                         {consent[p.id] && <StatusChip status={consent[p.id]} />}
                       </div>
                       {score !== null && <BandPill band={scoreToBand(score)} />}
@@ -283,6 +285,21 @@ function StatusChip({ status }: { status: ConsentStatus }) {
     style={{ color: chip.color, background: chip.bg }}>{chip.label}</span>
 }
 
+/** TRAK-182 (Imad, 18 Oct; pilot coach's item 15): training attendance, read when the panel opens.
+    Nothing while loading, on a failed read, before any training counts (never a false 0%), or for a
+    child waiting for a parent (they can't be ticked). Same rules as the Feedback and assessment tab (TRAK-211). */
+function AttendanceLine({ player }: { player: SquadRow }) {
+  const { user } = useAuth()
+  const rate = useQuery({
+    queryKey: ['coach', user?.id, 'attendance', player.id],
+    enabled: Boolean(user && player.created_at),
+    queryFn: () => loadTrainingAttendance(user!.id, { id: player.id, created_at: player.created_at!, age_group: player.age_group }),
+  })
+  if (!rate.data) return null
+  return <p className="text-[13px] text-ink-2"><span className="text-ink">Attendance {rate.data.percent}%</span>
+    {' · '}<span>{rate.data.attended} of {rate.data.total} trainings</span></p>
+}
+
 /** The player panel: who they are, the status chip (whether they can be assessed), their band, and where to go next. */
 function PlayerPanel({ player, age, score, status, trigger }: {
   player: SquadRow; age: string | null; score: number | null; status: ConsentStatus | undefined; trigger: JSX.Element
@@ -296,16 +313,17 @@ function PlayerPanel({ player, age, score, status, trigger }: {
         <div className="flex items-center gap-4">
           <Avatar name={name} size="lg" className="arc" aria-hidden />
           <div className="space-y-1">
-            {status ? <StatusChip status={status} /> : <p className="text-[13px] text-white/50">Checking status…</p>}
-            <div className="flex items-center gap-2 text-[13px] text-white/60">
+            {status ? <StatusChip status={status} /> : <p className="text-[13px] text-ink-2">Checking status…</p>}
+            <div className="flex items-center gap-2 text-[13px] text-ink-2">
               {score !== null ? <>Latest band <BandPill band={scoreToBand(score)} /></> : 'Not assessed yet'}
             </div>
+            {status === 'ready' && <AttendanceLine player={player} />}
           </div>
         </div>
         <div className="flex gap-2">
-          <button type="button" disabled={status !== 'ready'} className={`${button} bg-white text-black`}
+          <button type="button" disabled={status !== 'ready'} className={`${button} bg-brand text-on-brand`}
             onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}>Assess</button>
-          <button type="button" className={`${button} border border-white/15 text-white/85`}
+          <button type="button" className={`${button} border border-line-strong text-ink`}
             onClick={() => navigate(`/coach/player/${player.id}`)}>Open profile</button>
         </div>
       </div>

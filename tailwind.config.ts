@@ -14,9 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ['"DM Sans"', 'sans-serif'],
-        body: ['"DM Sans"', 'sans-serif'],
-        mono: ['"DM Mono"', 'monospace'],
+        // TRAK-189: one font setting (src/index.css --t-font / --t-font-mono).
+        heading: ['var(--t-font)'],
+        body: ['var(--t-font)'],
+        mono: ['var(--t-font-mono)'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -52,6 +53,24 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // TRAK-189: Trak's role colours (src/index.css --t-*), with /alpha.
+        "ground": "rgb(var(--t-ground) / <alpha-value>)",
+        "surface": "rgb(var(--t-surface) / <alpha-value>)",
+        "raised": "rgb(var(--t-raised) / <alpha-value>)",
+        "ink": "rgb(var(--t-ink) / <alpha-value>)",
+        "ink-2": "rgb(var(--t-ink-2) / <alpha-value>)",
+        "ink-3": "rgb(var(--t-ink-3) / <alpha-value>)",
+        "line": "rgb(var(--t-line) / <alpha-value>)",
+        "line-strong": "rgb(var(--t-line-strong) / <alpha-value>)",
+        "brand": "rgb(var(--t-brand) / <alpha-value>)",
+        "on-brand": "rgb(var(--t-on-brand) / <alpha-value>)",
+        "on-bright": "rgb(var(--t-on-bright) / <alpha-value>)",
+        "scrim": "rgb(var(--t-scrim) / <alpha-value>)",
+        "danger": "rgb(var(--t-danger) / <alpha-value>)",
+        "success": "rgb(var(--t-success) / <alpha-value>)",
+        "info": "rgb(var(--t-info) / <alpha-value>)",
+        "warning": "rgb(var(--t-warning) / <alpha-value>)",
+        "accent-orange": "rgb(var(--t-orange) / <alpha-value>)",
         "coach-orange": "hsl(var(--coach-orange))",
         "training-blue": "hsl(var(--training-blue))",
         gold: "hsl(var(--gold))",

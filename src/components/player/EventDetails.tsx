@@ -1,6 +1,8 @@
-import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
+import { eventDay, eventHeading, eventTime, meetText, type PlayerEvent } from '@/lib/player-events'
+import { academyClock } from '@/lib/event-time'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
+import { withAlpha } from '@/lib/with-alpha'
 
 /**
  * Every detail of one event (TRAK-130), shared by the player's and the
@@ -17,37 +19,39 @@ export function EventDetails({ event: e, changes = [] }: {
   // TRAK-161: home or away sits on the venue line, "Olympiacos Stadium (Away)".
   const side = e.kind === 'match' && e.homeAway ? (e.homeAway === 'home' ? 'Home' : 'Away') : null
   const venue = e.venue && side ? `${e.venue} (${side})` : e.venue ?? side
+  // TRAK-223: "17:00 Athens time (19:00 on this phone)": the academy's clock, named.
+  const clock = academyClock(e)
   const rows: [string, string][] = [
     ['Date', eventDay(e)],
-    ['Time', eventTime(e)],
-    ...(e.meetTime ? [['Meet', e.meetTime] as [string, string]] : []),
+    ['Time', `${eventTime(e)}${clock ? ` ${clock.zone}` : ''}${clock?.here ? ` (${clock.here})` : ''}`],
+    ...(e.meetTime ? [['Meet', meetText(e, e.meetTime)] as [string, string]] : []),
     ...(venue ? [['Venue', venue] as [string, string]] : []),
     ...(e.kit && !e.kitSnapshot ? [['Kit', e.kit] as [string, string]] : []),
     ...(e.familyNote ? [['Notes', e.familyNote] as [string, string]] : []),
   ]
   return (
     <div className="space-y-4">
-      <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-white/50' : 'text-white/90'}`}>{eventHeading(e)}</h1>
+      <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{eventHeading(e)}</h1>
       {changes.length > 0 && (
         <div role="status" aria-label="What changed" className="rounded-[14px] px-4 py-3 border border-primary/40">
           <p className="text-[13px] font-semibold text-primary">Changed since you last looked</p>
           <ul className="mt-1 space-y-0.5">
-            {changes.map(line => <li key={line} className="text-[13px] text-white/80">{line}</li>)}
+            {changes.map(line => <li key={line} className="text-[13px] text-ink">{line}</li>)}
           </ul>
         </div>
       )}
       {cancelled && (
-        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${CANCELLED_COLOR}80` }}>
+        <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${withAlpha(CANCELLED_COLOR, 0.5)}` }}>
           <p className="text-[13px] font-semibold" style={{ color: CANCELLED_COLOR }}>This event is cancelled.</p>
-          {e.cancelReason && <p className="text-[13px] text-white/70 mt-1">{e.cancelReason}</p>}
+          {e.cancelReason && <p className="text-[13px] text-ink-2 mt-1">{e.cancelReason}</p>}
         </div>
       )}
-      <ul aria-label="Event details" className="rounded-[18px] divide-y divide-white/[0.06]"
-        style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <ul aria-label="Event details" className="rounded-[18px] divide-y divide-line"
+        style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
         {rows.map(([label, value]) => (
           <li key={label} className="flex justify-between gap-4 px-4 py-3 text-[13px]">
-            <span className="text-white/45">{label}</span>
-            <span className="text-white/85 text-right">{value}</span>
+            <span className="text-ink-3">{label}</span>
+            <span className="text-ink text-right">{value}</span>
           </li>
         ))}
       </ul>

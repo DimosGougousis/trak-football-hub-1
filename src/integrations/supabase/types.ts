@@ -214,6 +214,7 @@ export type Database = {
           impact: number
           organization_id: string | null
           physical: number
+          published_at: string | null
           private_note: string | null
           session_id: string | null
           spirit: number
@@ -238,6 +239,7 @@ export type Database = {
           impact?: number
           organization_id?: string | null
           physical?: number
+          published_at?: string | null
           private_note?: string | null
           session_id?: string | null
           spirit?: number
@@ -262,6 +264,7 @@ export type Database = {
           impact?: number
           organization_id?: string | null
           physical?: number
+          published_at?: string | null
           private_note?: string | null
           session_id?: string | null
           spirit?: number
@@ -305,6 +308,7 @@ export type Database = {
           kit: string | null
           kit_snapshot: Json | null
           family_note: string | null
+          training_theme: string | null
           meet_time: string | null
           notes: string | null
           opponent: string | null
@@ -334,6 +338,7 @@ export type Database = {
           kit?: string | null
           kit_snapshot?: Json | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -363,6 +368,7 @@ export type Database = {
           kit?: string | null
           kit_snapshot?: Json | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null

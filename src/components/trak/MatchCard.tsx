@@ -21,24 +21,24 @@ export function MatchCard({ opponent, date, scoreUs, scoreThem, band, competitio
   const result = scoreUs != null && scoreThem != null
     ? (scoreUs > scoreThem ? 'W' : scoreUs < scoreThem ? 'L' : 'D')
     : null
-  const resultColor = result === 'W' ? '#4ade80' : result === 'L' ? '#f87171' : '#fbbf24'
+  const resultColor = result === 'W' ? 'rgb(var(--t-success))' : result === 'L' ? 'rgb(var(--t-danger))' : 'rgb(var(--t-warning))'
 
   return (
     <button
       onClick={onClick}
       className="w-full flex items-center justify-between rounded-[12px] px-4 py-3 text-left active:scale-[0.99] transition-transform"
-      style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.07)' }}
+      style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
     >
       <div className="flex-1 min-w-0 mr-3">
-        <p className="text-[13px] font-medium text-white/88 truncate">{opponent}</p>
-        <p className="text-[9px] text-white/[0.28] mt-[3px] tracking-[0.05em]"
-          style={{ fontFamily: "'DM Mono', monospace" }}>
+        <p className="text-[13px] font-medium text-ink truncate">{opponent}</p>
+        <p className="text-[9px] text-ink-3 mt-[3px] tracking-[0.05em]"
+          style={{ fontFamily: 'var(--t-font-mono)' }}>
           {formattedDate}{competition ? ` · ${competition}` : ''}
         </p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         {result && (
-          <span className="text-[10px] font-semibold" style={{ color: resultColor, fontFamily: "'DM Mono', monospace" }}>
+          <span className="text-[10px] font-semibold" style={{ color: resultColor, fontFamily: 'var(--t-font-mono)' }}>
             {result} {scoreUs}–{scoreThem}
           </span>
         )}

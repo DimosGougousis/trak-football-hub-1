@@ -5,6 +5,8 @@ import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-rea
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { updatedNote } from '@/lib/alert-read-state'
+import { academyClock } from '@/lib/event-time'
+import { meetText } from '@/lib/player-events'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
 
@@ -41,12 +43,15 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
 function TimeRow({ event }: { event: StripEvent }) {
   // A logged session has no start time of its own; a logged match shows its event's kick-off (TRAK-182).
   if (event.sessionId && !event.time) return null
+  // TRAK-223: the academy's clock, and this phone's when it differs; the time itself stays the academy's.
+  const clock = academyClock(event)
   return (
     <div>
-      <p className="text-[13px] text-white/50">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
+      <p className="text-[13px] text-ink-2">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
       {event.time
-        ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-white/95">{event.time}</p>
-        : <p className="text-[17px] text-white/80 mt-1">Time to be confirmed</p>}
+        ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-ink">{event.time}</p>
+        : <p className="text-[17px] text-ink mt-1">Time to be confirmed</p>}
+      {event.time && clock && <p className="text-[13px] text-ink-2">{clock.zone}{clock.here ? ` · ${clock.here}` : ''}</p>}
     </div>
   )
 }
@@ -70,7 +75,7 @@ export function EventSheet({ event, role, trigger, children }: {
   const meet = past ? null : meetTime(event)
   const rows = ([
     cancelled && event.cancelReason ? ['Reason', event.cancelReason] : null,
-    meet ? ['Meet', meet] : null,
+    meet ? ['Meet', meetText(event, meet)] : null,
     event.venue ? ['Where', <>
       <span className="block">{event.venue}</span>
       {!cancelled && (
@@ -84,7 +89,7 @@ export function EventSheet({ event, role, trigger, children }: {
     event.familyNote && !past ? ['Note', event.familyNote] : null,
   ] as ([string, ReactNode] | null)[]).filter((row): row is [string, ReactNode] => !!row)
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
-  const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgba(255,255,255,0.55)' : '#4ade80'
+  const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgb(var(--t-ink-2))' : 'rgb(var(--t-success))'
 
   return (
     <BottomSheet trigger={trigger} title={sheetTitle(event)} description={sheetPlace(event) ?? undefined}
@@ -94,15 +99,15 @@ export function EventSheet({ event, role, trigger, children }: {
         {status && (
           <p className="flex items-center gap-2 text-[14px]">
             <Icon size={16} aria-hidden="true" style={{ color }} />
-            <span className="font-medium text-white/95">{status.text}</span>
+            <span className="font-medium text-ink">{status.text}</span>
           </p>
         )}
         {rows.length > 0 && (
           <dl className="space-y-4 text-[14px]">
             {rows.map(([term, value]) => (
               <div key={term} className="flex gap-4">
-                <dt className="w-14 shrink-0 text-white/45">{term}</dt>
-                <dd className="min-w-0 text-white/85">{value}</dd>
+                <dt className="w-14 shrink-0 text-ink-3">{term}</dt>
+                <dd className="min-w-0 text-ink">{value}</dd>
               </div>
             ))}
           </dl>
@@ -118,7 +123,7 @@ export function EventSheet({ event, role, trigger, children }: {
         )}
         {children}
         {/* The coach's sheet places this between its buttons and Attending. */}
-        {role !== 'coach' && updated && <p className="text-[13px] text-white/50">{updated}</p>}
+        {role !== 'coach' && updated && <p className="text-[13px] text-ink-2">{updated}</p>}
       </div>
     </BottomSheet>
   )

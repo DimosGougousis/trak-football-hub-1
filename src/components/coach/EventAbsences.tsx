@@ -30,11 +30,11 @@ export function EventAbsences({ coachId, eventId }: { coachId: string; eventId: 
     queryFn: ({ signal }) => fetchAbsences(signal),
   })
   // A failed read must not look like "everyone is coming".
-  if (query.isError) return <p className="text-[11px] mt-0.5 text-white/45">Couldn't load who can't make it.</p>
+  if (query.isError) return <p className="text-[11px] mt-0.5 text-ink-3">Couldn't load who can't make it.</p>
   const names = query.data?.get(eventId)
   if (!names?.length) return null
   return (
-    <p className="text-[11px] mt-0.5 text-white/70" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <p className="text-[11px] mt-0.5 text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>
       {names.length} can't make it: {[...names].sort().join(', ')}
     </p>
   )

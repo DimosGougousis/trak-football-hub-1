@@ -27,7 +27,7 @@ const READ_RPCS = ['my_consent_status', 'my_session_is_live', 'get_children_awai
 // Unlabelled buttons are the screens' icon-only Back (navigate(-1)); every
 // handler that writes, calls AI, shares or copies is guarded and listed in the
 // audit on the PR, and each screen's own actions are asserted below.
-const NAVIGATION = /^(|DEV|Back|Home|Squad|Sessions|Profile|Matches|Card|Alerts|Overview|Squads|Radar|Coaches|Previous month|Next month|Week|Month|Season|All|U\d+s?|\d{1,2}|HOW TRAK WORKS.*|SETTINGS.*|Close|×)$/i
+const NAVIGATION = /^(|DEV|Back|Home|Squad|Feedback|Sessions|Profile|Matches|Card|Alerts|Overview|Squads|Radar|Coaches|Previous month|Next month|Week|Month|Season|All|U\d+s?|\d{1,2}|HOW TRAK WORKS.*|SETTINGS.*|Close|×)$/i
 
 let sequence = 0
 let role = 'coach'
@@ -174,6 +174,7 @@ describe('TRAK-85 parked screens: actions say "Coming soon" and send nothing', (
     expect(share).not.toHaveBeenCalled()
     expect(clipboard).not.toHaveBeenCalled()
     expect(canvas).not.toHaveBeenCalled()
-    expect(await screen.findAllByText(COMING_SOON_DETAIL)).not.toHaveLength(0)
+    // 4 s like the waits above: under the full suite's load 1 s was too short (TRAK-211's gate runs).
+    expect(await screen.findAllByText(COMING_SOON_DETAIL, {}, { timeout: 4000 })).not.toHaveLength(0)
   }, 20000)
 })

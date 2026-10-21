@@ -42,12 +42,14 @@ const PlayerHome = lazy(() => import("./pages/player/PlayerHome"));
 const PlayerMatches = lazy(() => import("./pages/player/PlayerMatches"));
 const PlayerMatchDetail = lazy(() => import("./pages/player/PlayerMatchDetail"));
 const PlayerEvent = lazy(() => import("./pages/player/PlayerEvent"));
+const PlayerCalendar = lazy(() => import("./pages/player/PlayerCalendar"));
 const PlayerProfilePage = lazy(() => import("./pages/player/PlayerProfilePage"));
 const PlayerFeedback = lazy(() => import("./pages/player/PlayerFeedback"));
 const HowTrakWorks = lazy(() => import("./pages/HowTrakWorks"));
 
 const CoachHomePage = lazy(() => import("./pages/coach/CoachHomePage"));
 const CoachSquadPage = lazy(() => import("./pages/coach/CoachSquadPage"));
+const CoachFeedbackPage = lazy(() => import("./pages/coach/CoachFeedbackPage"));
 const CoachAssessPage = lazy(() => import("./pages/coach/CoachAssessPage"));
 const CoachSessionsPage = lazy(() => import("./pages/coach/CoachSessionsPage"));
 const CoachAddSession = lazy(() => import("./pages/coach/CoachAddSession"));
@@ -56,6 +58,7 @@ const CoachSessionEdit = lazy(() => import("./pages/coach/CoachSessionEdit"));
 const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
 const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
 const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
+const TrainingsPage = lazy(() => import("./pages/TrainingsPage"));
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
@@ -93,7 +96,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const RouteFallback = () => <div className="min-h-screen bg-[#0A0A0B]" />;
+const RouteFallback = () => <div className="min-h-screen bg-ground" />;
 
 const App = () => (
   <ErrorBoundary>
@@ -130,10 +133,12 @@ const App = () => (
             <Route path="/player/matches" element={<RouteGuard allowedRole="player"><PlayerMatches /></RouteGuard>} />
             <Route path="/player/match/:id" element={<RouteGuard allowedRole="player"><PlayerMatchDetail /></RouteGuard>} />
             <Route path="/player/event/:id" element={<RouteGuard allowedRole="player"><PlayerEvent /></RouteGuard>} />
+            <Route path="/player/calendar" element={<RouteGuard allowedRole="player"><PlayerCalendar /></RouteGuard>} />
             <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><ParkedScreen><PlayerPassport /></ParkedScreen></RouteGuard>} />
             <Route path="/player/evolution" element={<RouteGuard allowedRole="player"><ParkedScreen><PlayerEvolutionCard /></ParkedScreen></RouteGuard>} />
             <Route path="/player/feedback/:assessmentId" element={<RouteGuard allowedRole="player"><PlayerFeedback /></RouteGuard>} />
+            <Route path="/player/trainings" element={<RouteGuard allowedRole="player"><TrainingsPage role="player" /></RouteGuard>} />
             <Route path="/how-it-works" element={<HowTrakWorks />} />
 
             {/* Coach routes */}
@@ -141,6 +146,7 @@ const App = () => (
             <Route path="/coach/squad" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
             <Route path="/coach/squad/add" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/squad" replace /></RouteGuard>} />
             <Route path="/coach/assess" element={<RouteGuard allowedRole="coach"><CoachAssessPage /></RouteGuard>} />
+            <Route path="/coach/feedback" element={<RouteGuard allowedRole="coach"><CoachFeedbackPage /></RouteGuard>} />
             <Route path="/coach/feedback/:assessmentId" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachReviewFeedback /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><CoachSessionsChooser /></RouteGuard>} />
             <Route path="/coach/sessions/list" element={<RouteGuard allowedRole="coach"><CoachSessionsPage /></RouteGuard>} />
@@ -155,6 +161,7 @@ const App = () => (
             {/* TRAK-102: a history row opens its session; training and other are editable. */}
             <Route path="/coach/sessions/:id" element={<RouteGuard allowedRole="coach"><CoachSessionEdit /></RouteGuard>} />
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
+            <Route path="/coach/trainings" element={<RouteGuard allowedRole="coach"><TrainingsPage role="coach" /></RouteGuard>} />
             <Route path="/coach/manual" element={<CoachManual />} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/assess" replace /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
