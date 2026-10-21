@@ -175,3 +175,73 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     expect(screen.queryByText('Nia Rehearsal')).toBeNull()
   })
 })
+
+// ---- Snapshot tab (task 4) -------------------------------------------------------------------
+const rating = (squad_player_id: string, coach_rating: number, created_at: string) => ({
+  squad_player_id, coach_rating, created_at, work_rate: 5, technical: 5, physical: 5, coachability: 5, attitude: 5, tactical: 5,
+})
+const SNAP_PLAYERS = [
+  { id: 'sq-leo', coach_user_id: 'x', player_name: 'Leo M.', position: 'Midfielder', shirt_number: 8, age_group: 'U12' },
+  { id: 'sq-sami', coach_user_id: 'x', player_name: 'Sami K.', position: 'Attacker', shirt_number: 9, age_group: 'U12' },
+  { id: 'sq-new', coach_user_id: 'x', player_name: 'Newcomer R.', position: 'Defender', shirt_number: 3, age_group: 'U12' },
+]
+const TRAININGS = ['2026-10-05', '2026-10-08', '2026-10-12', '2026-10-15'].map((session_date, i) => (
+  { id: `ses-${i}`, coach_user_id: 'x', session_type: 'training', squad: null, session_date, title: 'Training' }))
+const MARKS = [
+  ...[0, 1, 2].map(i => ({ id: `a-l${i}`, session_id: `ses-${i}`, squad_player_id: 'sq-leo', status: 'absent' })),
+  { id: 'a-l3', session_id: 'ses-3', squad_player_id: 'sq-leo', status: 'present' },
+  ...[0, 1, 2, 3].map(i => ({ id: `a-s${i}`, session_id: `ses-${i}`, squad_player_id: 'sq-sami', status: 'present' })),
+]
+
+describe('TRAK-250: Snapshot tab', { timeout: 20_000 }, () => {
+  it('snapshot shows spread, moves and next steps', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(
+      table('coach_assessments', [
+        rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z'),
+        rating('sq-sami', 8.2, '2026-09-01T10:00:00Z'), rating('sq-sami', 9.1, '2026-10-01T10:00:00Z'),
+      ]),
+      table('coach_sessions', TRAININGS),
+      table('session_attendance', MARKS),
+    )
+    renderApp('/coach/squad')
+    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+
+    expect(await within(panel).findByText(/2 assessed/)).toBeInTheDocument()
+    const mixed = within(panel).getByRole('group', { name: 'Mixed' })
+    const chip = within(mixed).getByText(/Leo M\./).closest('li')!
+    expect(chip).toHaveTextContent('↓')
+    expect(within(panel).getByRole('group', { name: 'Exceptional' })).toHaveTextContent('Sami K.')
+    expect(within(panel).getByRole('img', { name: /Band spread/ })).toBeInTheDocument()
+
+    const changes = within(panel).getByRole('region', { name: 'Changes since last assessment' })
+    expect(within(changes).getByText('Leo M.', { exact: false, selector: 'p' })).toBeInTheDocument()
+    const open = within(changes).getByRole('link', { name: /Open profile.*Leo M\./ })
+    expect(open).toHaveAttribute('href', '/coach/player/sq-leo')
+
+    expect(await within(panel).findByText('Talk to Leo M.: a drop and missed sessions.')).toBeInTheDocument()
+    // The child without an assessment is still on screen.
+    expect(within(panel).getByText('Newcomer R.')).toBeInTheDocument()
+  })
+
+  it('empty squad', async () => {
+    coachReads(SNAP_PLAYERS)
+    renderApp('/coach/squad')
+    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+    expect(await within(panel).findByText(/0 assessed/)).toBeInTheDocument()
+    expect(within(panel).getByText('No assessments yet')).toBeInTheDocument()
+  })
+
+  it('a failed attendance read keeps the bands and leaves out the missed-sessions wording', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(
+      table('coach_assessments', [rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z')]),
+      http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })),
+    )
+    renderApp('/coach/squad')
+    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+    expect(await within(panel).findByText('Check in with Leo M.')).toBeInTheDocument()
+    expect(within(panel).getByRole('group', { name: 'Mixed' })).toHaveTextContent('Leo M.')
+    expect(within(panel).queryByText(/a drop and missed sessions/)).toBeNull()
+  })
+})

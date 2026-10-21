@@ -6,8 +6,9 @@ import { Avatar } from '@/components/arc/avatar/avatar'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { NavBar } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
-import { useSquadRoster, type SquadRoster } from '@/components/coach/squad/useSquadRoster'
+import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
+import { SnapshotTab } from '@/components/coach/squad/SnapshotTab'
 
 /* TRAK-250: Squad is a full-width coach workspace with four views of the same
    roster. The tab lives in the URL (?tab=), so a view can be linked and a
@@ -93,7 +94,8 @@ export default function CoachSquadPage() {
           {roster.error ? <SquadLoadError onRetry={roster.retry} />
             : roster.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your squad…</p>
             : roster.players.length === 0 ? <PreparingSquad />
-            : <Placeholder tab={active} roster={roster} />}
+            : active === 'snapshot' ? <SnapshotTab roster={roster} />
+            : <Placeholder tab={active} />}
         </section>
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
@@ -116,16 +118,11 @@ function PreparingSquad() {
   )
 }
 
-/** Temporary: each tab's real panel replaces this one by one (TRAK-250 tasks 4-7). */
-function Placeholder({ tab, roster }: { tab: TabId; roster: SquadRoster }) {
+/** Temporary: each tab's real panel replaces this one by one (TRAK-250 tasks 5-7). */
+function Placeholder({ tab }: { tab: TabId }) {
   return (
     <div className="pt-4">
       <h2 className="sr-only">{TABS.find(t => t.id === tab)?.label}</h2>
-      {tab === 'snapshot' && (
-        <ul className="space-y-1">
-          {roster.players.map(p => <li key={p.id} className="text-[14px] text-ink">{p.player_name}</li>)}
-        </ul>
-      )}
     </div>
   )
 }
