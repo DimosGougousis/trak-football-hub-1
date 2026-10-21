@@ -716,6 +716,8 @@ export default function CoachSchedule() {
 
         {loadFailed && <LoadError what="your calendar" onRetry={retry} retrying={retrying} />}
 
+        {/* TRAK-252: on a coach's laptop the month and the chosen day stand side by side. */}
+        <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
         {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
         <div className="arc rounded-[18px] border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
           <div className="flex justify-center px-2 pt-2">
@@ -884,6 +886,7 @@ export default function CoachSchedule() {
               })}
             </div>
           )}
+        </div>
         </div>
       </div>
 

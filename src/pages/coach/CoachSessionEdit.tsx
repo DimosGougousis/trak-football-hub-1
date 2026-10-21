@@ -343,7 +343,7 @@ export default function CoachSessionEdit() {
           {shown.length === 0 ? (
             <p role="status" className="text-[12px] text-ink-3 py-2">No players can be recorded yet.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
               {shown.map(r => {
                 const on = present.has(r.id)
                 const fixed = !r.ready || locked(r)

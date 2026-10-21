@@ -162,7 +162,7 @@ export default function CoachSquadPage() {
   const clearFilters = () => { setPosFilter('All'); setQuery('') }
 
   return (
-    <MobileShell>
+    <MobileShell width="wide">
       {/* TRAK-182 (Imad's 6d/6g): a squad directory built from Arc's free parts:
           search, filters, avatar rows, and a player panel in a bottom sheet. */}
       <div className="flex items-baseline justify-between px-5 pt-4 pb-1 shrink-0">
@@ -244,7 +244,8 @@ export default function CoachSquadPage() {
             </div>
           )
         ) : (
-          <ul>
+          // TRAK-252: side by side on a coach's tablet (2) or laptop (3).
+          <ul className="tablet:grid tablet:grid-cols-2 tablet:gap-x-6 laptop:grid-cols-3">
             {filtered.map(p => {
               const score = assessments[p.id] ?? p.overall_score ?? null
               return (

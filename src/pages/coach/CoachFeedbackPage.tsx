@@ -114,7 +114,7 @@ export default function CoachFeedbackPage() {
   const retry = () => { if (coachSquad.failed) coachSquad.retry(); setAttempt(n => n + 1) }
 
   return (
-    <MobileShell>
+    <MobileShell width="wide">
       <div className="px-5 pt-4 pb-40">
         <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Feedback and assessment</h1>
         {/* TRAK-176: the coach's squads, when there are two or more; the pick is shared with Home and Squad. */}
@@ -144,7 +144,8 @@ export default function CoachFeedbackPage() {
             // Everyone left is waiting for a parent: nothing can be said about them yet.
             <p className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>Your players are waiting for a parent's approval.</p>
           ) : (
-            <ul className="flex flex-col gap-2">
+            // TRAK-252: side by side on a coach's tablet (2) or laptop (3).
+            <ul className="flex flex-col gap-2 tablet:grid tablet:grid-cols-2 laptop:grid-cols-3">
               {overview.rows.map(row => (
                 <li key={row.playerId}
                   className="flex items-center gap-3 rounded-[10px] py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"

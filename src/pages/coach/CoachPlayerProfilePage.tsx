@@ -128,7 +128,7 @@ export default function CoachPlayerProfilePage() {
   )
 
   return (
-    <div className="flex flex-col mx-auto trak-page bg-ground" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto trak-wide bg-ground" style={{ height: '100dvh' }}>
       {/* Header — always visible, never scrolls */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
@@ -177,6 +177,10 @@ export default function CoachPlayerProfilePage() {
             onRetry={() => { void loadAssessments() }} />
         )}
 
+        {/* TRAK-252: on a coach's laptop the latest assessment and the history stand side by side.
+            Only when there is one of them, so a page with neither keeps its spacing. */}
+        {((latest && user) || assessments.length > 1) && (
+        <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
         {/* Latest assessment, as Arc's card (TRAK-200): Draft or Published, Publish on the card,
             and the quick look with the opponent, the message and the private note. */}
         {latest && user && (
@@ -221,6 +225,9 @@ export default function CoachPlayerProfilePage() {
               )
             })}
           </div>
+        )}
+
+        </div>
         )}
 
         {/* Action buttons. TRAK-85 (Imad, 16 Oct): no Award button while awards

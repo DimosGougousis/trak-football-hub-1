@@ -1130,7 +1130,7 @@ export default function CoachAddSession() {
               {rosterEmpty ? (
                 <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
                   {squad.map(p => {
                     const on = attended.has(p.id)
                     return (
@@ -1197,7 +1197,7 @@ export default function CoachAddSession() {
               {rosterEmpty ? (
                 <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
                   {squad.map(p => {
                     const on = attended.has(p.id)
                     return (

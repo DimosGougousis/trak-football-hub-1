@@ -1,7 +1,7 @@
 /**
  * TRAK-199 (tablet and laptop, coach only): every coach screen takes its width
- * from one setting in src/index.css (--page-w, --read-w, --sheet-w, --rail-w;
- * .trak-page, .trak-read, .trak-page-bar and Tailwind max-w-sheet). A 430 px
+ * from one setting in src/index.css (--page-w, --read-w, --wide-w, --sheet-w, --rail-w;
+ * .trak-page, .trak-read, .trak-wide, .trak-page-bar and Tailwind max-w-sheet). A 430 px
  * written into a coach screen keeps it a phone column on an iPad or a laptop:
  * this fails on a new one, naming the file and line. The wider values apply
  * only to a signed-in coach (html[data-layout="coach"]) on a screen at least

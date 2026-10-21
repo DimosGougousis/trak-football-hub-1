@@ -171,12 +171,14 @@
     --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
     --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
 
-    /* TRAK-199: how wide a page (.trak-page), a page of text or a form (.trak-read)
-       and a bottom sheet (max-w-sheet) are, and the laptop rail beside them. A
-       phone's 430 px for everyone; a coach's screens widen on a tablet or a
-       laptop, below. app-width-setting.test.ts fails on a 430px in a coach screen. */
+    /* TRAK-199: how wide a page (.trak-page), a page of text or a form (.trak-read),
+       a list or calendar page (.trak-wide, TRAK-252) and a bottom sheet (max-w-sheet)
+       are, and the laptop rail beside them. A phone's 430 px for everyone; a
+       coach's screens widen on a tablet or a laptop, below.
+       app-width-setting.test.ts fails on a 430px in a coach screen. */
     --page-w: 430px;
     --read-w: 430px;
+    --wide-w: 430px;
     --sheet-w: 430px;
     --rail-w: 0px;
 
@@ -260,15 +262,16 @@
    Arc bottom sheet's width; pages of text or forms at 640 px, so a line stays
    readable. */
 @media (min-width: 768px) and (min-height: 500px) {
-  :root[data-layout="coach"] { --page-w: 720px; --read-w: 640px; --sheet-w: 36rem; }
+  :root[data-layout="coach"] { --page-w: 720px; --read-w: 640px; --wide-w: 720px; --sheet-w: 36rem; }
 }
 
 /* Tablet sideways and laptop: the bottom bar becomes a side menu on the left
    (TRAK-254: TRAK, "+ Create", the tabs in words, Profile at the bottom), and the
-   pages sit to its right. Pages without the bar keep the same place. The same
-   query as SIDE_MENU_QUERY in src/lib/side-menu-screen.ts. */
+   pages sit to its right. Pages without the bar keep the same place. Lists and
+   the calendar (.trak-wide, TRAK-252) take up to 1,100 px. The same query as
+   SIDE_MENU_QUERY in src/lib/side-menu-screen.ts. */
 @media (min-width: 1024px) and (min-height: 500px) {
-  :root[data-layout="coach"] { --rail-w: 232px; }
+  :root[data-layout="coach"] { --rail-w: 232px; --wide-w: 1100px; }
   :root[data-layout="coach"] body { padding-left: var(--rail-w); }
   :root[data-layout="coach"] .trak-nav {
     top: 0; right: auto; bottom: 0; left: 0;
@@ -333,6 +336,7 @@
      (the "+", a bottom save bar), so those line up with the page on any screen. */
   .trak-page { --col-w: var(--page-w); max-width: var(--col-w); }
   .trak-read { --col-w: var(--read-w); max-width: var(--col-w); }
+  .trak-wide { --col-w: var(--wide-w); max-width: var(--col-w); }
   /* A bar fixed to the bottom of a page: centred on the page, right of the rail. */
   .trak-page-bar { left: calc(50% + var(--rail-w) / 2); max-width: var(--col-w, var(--page-w)); }
 
