@@ -524,6 +524,7 @@ export default function CoachSchedule() {
       toast.error(`Saved as ${ids.length > 1 ? 'drafts' : 'a draft'}, not published. ${clashMessage(error) ?? 'Tap Publish on the event to try again.'}`)
       return
     }
+    askToEmailFamilies() // TRAK-135: publishing emails families too
     toast.success(ids.length > 1 ? `Published ${ids.length} events to the squad` : 'Published to the squad')
   }
 
@@ -541,6 +542,7 @@ export default function CoachSchedule() {
     const { data, error } = await supabase.from('coach_calendar_events')
       .update({ published: true }).eq('id', row.id).select('id')
     if (failed(error, data)) { toast.error(clashMessage(error) ?? `Couldn't publish "${row.title}". Try again.`); return }
+    askToEmailFamilies() // TRAK-135
     loadData()
     toast.success('Published to the squad')
   }
@@ -559,10 +561,11 @@ export default function CoachSchedule() {
 
   // TRAK-182: the event sheet on Home sends Edit (?edit=<id>), Cancel
   // (?cancel=<id>) and a weekly series' Publish (?publish=<id>, which asks
-  // this week or following) here, to Schedule's own sheets.
+  // this week or following) here, to Schedule's own sheets. TRAK-232: the
+  // coach's bell sends ?event=<id>, which only opens that event's day.
   const [params, setParams] = useSearchParams()
   useEffect(() => {
-    const action = (['edit', 'publish', 'cancel', 'register'] as const).find(a => params.has(a))
+    const action = (['edit', 'publish', 'cancel', 'register', 'event'] as const).find(a => params.has(a))
     const row = action ? calEvents.find(r => r.id === params.get(action)) : undefined
     if (!row) return
     setParams({}, { replace: true })
@@ -576,7 +579,7 @@ export default function CoachSchedule() {
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     // The quick-add's Take register (TRAK-182 part 8): only when it can open.
     else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
-    else void publish(row)
+    else if (action === 'publish') void publish(row)
   }, [calEvents, params]) // eslint-disable-line react-hooks/exhaustive-deps -- once the rows load, and on a new link while here
 
   const confirmCancel = async () => {
@@ -652,6 +655,7 @@ export default function CoachSchedule() {
       return
     }
     setSheet({ kind: 'closed' })
+    if (action === 'publish') askToEmailFamilies() // TRAK-135: the series is one email per person
     loadData()
     const n = data!.length
     toast.success(action === 'publish'
