@@ -162,6 +162,12 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               <ShareIcon size={18} />Share
             </ShareEventButton>
           )}
+          {/* TRAK-185: a logged match is corrected from its event (score, goals, assists, cards). */}
+          {!cancelled && row?.event_type === 'match' && sessionId && (
+            <button type="button" onClick={() => navigate(`/coach/sessions/${sessionId}`)} className={quiet}>
+              <Pencil size={16} aria-hidden="true" />Edit match
+            </button>
+          )}
           {/* TRAK-230 (Kostas, 21 Oct): once it has started, what families were told is fixed. */}
           {!cancelled && row && startedLocked(row) ? (
             <p className="basis-full text-[13px] text-ink-2">It has started, so its details are fixed.</p>

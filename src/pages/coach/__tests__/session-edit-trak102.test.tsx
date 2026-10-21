@@ -255,9 +255,11 @@ describe('TRAK-102: a coach opens and corrects a saved training session', () => 
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
   })
 
-  it('a logged match opens read-only', async () => {
+  // TRAK-185: a match logged before matches were linked to their session stays as it is.
+  it('a logged match from before edits existed opens read-only', async () => {
+    server.use(rpc('logged_match', () => []))
     renderApp('/coach/sessions/match-1')
-    expect(await screen.findByText(/A logged match can't be edited yet/, undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText(/logged before matches could be edited/, undefined, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.getByText('vs Live Check United')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()
   })

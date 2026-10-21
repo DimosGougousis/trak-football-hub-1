@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, LoadError } from '@/components/trak'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
+import { MatchEditor } from '@/components/coach/MatchEditor'
 import { localTodayISO } from '@/lib/event-time'
 import { dateAsDay, dayAsDate } from '@/lib/coach-events'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
@@ -18,8 +19,8 @@ import {
 /* J4 (TRAK-102): open a saved session and correct it. A coach who missed the
    note or an attendance tick used to have to log a second session, which the
    family then saw twice. Training and other sessions are editable: date,
-   focus/title, notes, attendance. A match opens read-only; editing a logged
-   match (score, scorers) is out of scope for TRAK-102. */
+   focus/title, notes, attendance. A logged match opens MatchEditor (TRAK-185):
+   its score and each player's goals, assists and card. */
 
 type Session = {
   id: string
@@ -230,7 +231,7 @@ export default function CoachSessionEdit() {
         <ChevronLeft size={14} className="text-ink" />
       </button>
       <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>
-        {isMatch ? 'Match' : 'Edit session'}
+        {isMatch ? 'Edit match' : 'Edit session'}
       </span>
       <div className="w-[34px]" />
     </div>
@@ -254,21 +255,12 @@ export default function CoachSessionEdit() {
   }
 
   if (isMatch) {
-    const attended = rows.filter(r => r.saved === 'present').map(r => r.name)
+    // TRAK-185 part 1: a logged match is corrected here (score, goals, assists, cards).
     return (
       <MobileShell>
         {header}
-        <div className="pt-5 pb-24 space-y-5">
-          <div className="rounded-[18px] p-4 border border-line bg-surface">
-            <p className="text-[16px] text-ink">{session.title}</p>
-            <p className="text-[11px] text-ink-3 mt-1" style={{ fontFamily: 'var(--t-font-mono)' }}>{session.session_date}</p>
-            {session.notes && <p className="text-[13px] text-ink-2 mt-3 whitespace-pre-line">{session.notes}</p>}
-          </div>
-          <div className="rounded-[18px] p-4 border border-line bg-surface">
-            <MetadataLabel text={`PLAYED · ${attended.length}`} />
-            <p className="text-[13px] text-ink-2 mt-2">{attended.length ? attended.join(', ') : 'Nobody recorded.'}</p>
-          </div>
-          <p className="text-[12px] text-ink-3">A logged match can't be edited yet.</p>
+        <div className="pt-5 pb-24">
+          <MatchEditor sessionId={session.id} title={session.title} date={session.session_date} />
         </div>
       </MobileShell>
     )
