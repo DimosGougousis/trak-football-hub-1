@@ -298,7 +298,7 @@ export default function CoachManual() {
   const [openId, setOpenId] = useState<string | null>('overview')
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {/* Topbar */}
       <div className="flex items-center gap-3 pt-3 pb-3 border-b border-line shrink-0">
         <button

@@ -893,7 +893,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.row ? 'Edit event' : 'New event'}
-            className="w-full max-w-[430px] rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
+            className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: '85vh', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>
@@ -1117,7 +1117,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Cancel event"
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Cancel {sheet.row.title}?</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -1152,7 +1152,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Event cancelled"
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Event cancelled</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -1177,7 +1177,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Import fixtures"
-            className="w-full max-w-[430px] max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>Import fixtures</span>
@@ -1199,7 +1199,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Take register"
-            className="w-full max-w-[430px] max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[16px] font-medium text-ink" style={font}>
@@ -1224,7 +1224,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.action === 'publish' ? 'Publish event' : 'Delete draft'}
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {sheet.action === 'publish' ? 'Publish' : 'Delete'} {sheet.row.title}, {formatEventDay(sheet.row.event_date!)}
@@ -1258,7 +1258,7 @@ export default function CoachSchedule() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
           <div role="dialog" aria-label="Not published"
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Not published</span>
             <p className="text-[12px] text-ink-2" style={font}>

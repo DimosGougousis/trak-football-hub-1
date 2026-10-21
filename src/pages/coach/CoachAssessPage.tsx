@@ -560,7 +560,7 @@ function CoachAssessmentForm() {
 
   /* ---- render ---- */
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto trak-read bg-ground" style={{ height: '100dvh' }}>
       {/* ---- header: always visible, never scrolls ---- */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
@@ -873,8 +873,9 @@ function CoachAssessmentForm() {
         ) : null}
       </div>
 
-      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it. */}
-      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
+      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it.
+          TRAK-199: beside a laptop's rail there is no bar, so no room (trak-bar-room). */}
+      <div className="trak-bar-room arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
           <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>

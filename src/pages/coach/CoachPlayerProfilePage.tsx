@@ -127,7 +127,7 @@ export default function CoachPlayerProfilePage() {
   )
 
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto trak-page bg-ground" style={{ height: '100dvh' }}>
       {/* Header — always visible, never scrolls */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
