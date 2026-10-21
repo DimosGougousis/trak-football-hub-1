@@ -57,8 +57,8 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
         title={page.title}
         src={lib ? `${page.src}?${new URLSearchParams({ lib })}` : page.src}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-        className="block w-full border-0 bg-surface"
-        style={{ height: 'calc(100dvh - 186px)' }}
+        // TRAK-199: beside a coach's laptop rail there is no bottom bar, so the frame runs to the bottom (index.css).
+        className="trak-trainings-frame block w-full h-[calc(100dvh-186px)] border-0 bg-surface"
       />
 
       <NavBar role={role} activeTab={`/${role}/trainings`} onNavigate={navigate} />

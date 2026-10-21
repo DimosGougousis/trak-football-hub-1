@@ -239,7 +239,7 @@ export default function CoachSessionEdit() {
 
   if (status !== 'ready' || !session) {
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5">
           {status === 'failed' ? (
@@ -257,7 +257,7 @@ export default function CoachSessionEdit() {
   if (isMatch) {
     // TRAK-185 part 1: a logged match is corrected here (score, goals, assists, cards).
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5 pb-24">
           <MatchEditor sessionId={session.id} title={session.title} date={session.session_date} />
@@ -267,7 +267,7 @@ export default function CoachSessionEdit() {
   }
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {header}
       <div className="pt-5 pb-32 space-y-5">
         {isTraining ? (
@@ -381,7 +381,7 @@ export default function CoachSessionEdit() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
+      <div className="trak-page-bar fixed bottom-0 -translate-x-1/2 w-full px-5 pb-5 pt-3"
         style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {futureDate && (
           <p role="alert" className="text-[11px] text-center text-warning mb-2">

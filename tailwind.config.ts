@@ -86,6 +86,10 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      // TRAK-199: a bottom sheet's width (src/index.css --sheet-w).
+      maxWidth: {
+        sheet: "var(--sheet-w)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

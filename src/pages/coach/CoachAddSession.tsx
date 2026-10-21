@@ -674,7 +674,7 @@ export default function CoachAddSession() {
 
   // ── UI ────────────────────────────────────────────────────────────────────────
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {/* Topbar */}
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
         <button onClick={() => navigate(-1)} aria-label="Back"
@@ -1255,7 +1255,7 @@ export default function CoachAddSession() {
       </div>
 
       {/* Sticky save */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
+      <div className="trak-page-bar fixed bottom-0 -translate-x-1/2 w-full px-5 pb-5 pt-3"
         style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {(step === 0 || step === review) && futureDate && (
           <p role="alert" className="text-[11px] text-center text-warning mb-2"

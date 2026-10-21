@@ -199,10 +199,12 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
   const round = face === 'closed' || face === 'done'
   const top = corner === 'top'
   // At the top it lines up with the header's 44 px corner slot (the shell's 20 px
-  // gutter, the header's 12 px top padding) and opens downward.
+  // gutter, the header's 12 px top padding) and opens downward. TRAK-199: the
+  // page's edge is wherever its column (--col-w) ends, right of the laptop rail.
+  const edge = '(100vw - var(--rail-w) - var(--col-w, var(--page-w))) / 2'
   const position = top
-    ? { right: 'max(20px, calc((100vw - 430px) / 2 + 20px))', top: 'calc(12px + env(safe-area-inset-top))' }
-    : { right: 'max(16px, calc((100vw - 430px) / 2 + 16px))', bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))` }
+    ? { right: `max(20px, calc(${edge} + 20px))`, top: 'calc(12px + env(safe-area-inset-top))' }
+    : { right: `max(16px, calc(${edge} + 16px))`, bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))` }
   const item = 'flex w-full min-h-11 items-center gap-3 rounded-[12px] px-3 text-left text-[15px] text-ink hover:bg-raised focus-visible:bg-raised focus-visible:outline-none active:scale-[0.98] transition-transform'
 
   return <>

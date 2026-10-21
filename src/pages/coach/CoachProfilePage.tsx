@@ -57,7 +57,7 @@ export default function CoachProfilePage() {
   }, [user])
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
         <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>Profile</span>
       </div>
