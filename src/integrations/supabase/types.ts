@@ -306,7 +306,9 @@ export type Database = {
           home_away: string | null
           id: string
           kit: string | null
+          kit_snapshot: Json | null
           family_note: string | null
+          training_theme: string | null
           meet_time: string | null
           notes: string | null
           opponent: string | null
@@ -334,7 +336,9 @@ export type Database = {
           home_away?: string | null
           id?: string
           kit?: string | null
+          kit_snapshot?: Json | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -362,7 +366,9 @@ export type Database = {
           home_away?: string | null
           id?: string
           kit?: string | null
+          kit_snapshot?: Json | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -378,6 +384,39 @@ export type Database = {
           venue?: string | null
         }
         Relationships: []
+      }
+      coach_team_kits: {
+        Row: {
+          id: string
+          coach_user_id: string
+          organization_id: string
+          squad: string
+          kits: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          coach_user_id: string
+          organization_id?: string
+          squad?: string
+          kits: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          coach_user_id?: string
+          organization_id?: string
+          squad?: string
+          kits?: Json
+          updated_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "coach_team_kits_organization_id_fkey"
+          columns: ["organization_id"]
+          isOneToOne: false
+          referencedRelation: "organizations"
+          referencedColumns: ["id"]
+        }]
       }
       coach_details: {
         Row: {
@@ -867,6 +906,7 @@ export type Database = {
           meet_time: string | null
           venue: string | null
           kit: string | null
+          kit_snapshot: Json | null
           opponent: string | null
           home_away: string | null
           status: string

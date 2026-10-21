@@ -26,7 +26,7 @@ describe('toPlayerEvent', () => {
   it('reads every field the player sees, with times as the coach typed them', () => {
     expect(toPlayerEvent(ROW)).toEqual({
       id: 'ev-1', kind: 'match', title: 'League match', date: '2026-11-14', time: '10:00', meetTime: '09:15',
-      venue: 'Rivals Park', kit: 'White', opponent: 'Rivals FC', homeAway: 'away',
+      venue: 'Rivals Park', kit: 'White', kitSnapshot: null, opponent: 'Rivals FC', homeAway: 'away',
       status: 'scheduled', cancelReason: null, sequence: 2, updatedAt: null, familyNote: null, startsAt: '2026-11-14T06:00:00Z',
     })
   })

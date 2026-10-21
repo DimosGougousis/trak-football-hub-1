@@ -92,13 +92,16 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText(format(parseISO(day), 'EEE MMM d'))).toBeInTheDocument()
     expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
-    const meet = within(sheet).getByText('16:15')
+    // TRAK-223: the meet line says how long before kick-off it is.
+    const meet = within(sheet).getByText('16:15, 45 min before kick-off')
     expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
     expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
-    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    // TRAK-230: an event still to come is edited from here.
+    expect(within(sheet).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     // TRAK-135: publishing emails families, so the app asks the server to send.
     let nudges = 0
     server.use(http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => { nudges++; return HttpResponse.json({ accepted: true }, { status: 202 }) }))
@@ -135,7 +138,7 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).queryByText('Published.')).toBeNull()
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     // J8.16's pre-written message, with the event's own link, not a bare link to paste.
-    const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
+    const share = await within(sheet).findByRole('link', { name: 'Share' })
     const text = decodeURIComponent(share.getAttribute('href')!.replace('https://wa.me/?text=', ''))
     expect(text).toContain('U14 Match vs Rivals FC')
     expect(text).toContain('https://trakfootball.com/event/ev-1')
@@ -175,7 +178,7 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(within(sheet).getByRole('list', { name: 'Attended' })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Bukayo Saka'])
     expect(within(sheet).getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
-    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
   })
 
   it('offers no Cancel once a match has started (a match has no register)', async () => {
@@ -186,7 +189,10 @@ describe('TRAK-182: the event sheet', () => {
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
-    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit.
+    expect(within(sheet).getByText('It has started, so its details are fixed.')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
     // Decided 16 Oct: a past event's sheet has no meet time and no family note; the kit stays.
     expect(within(sheet).queryByText('Meet')).toBeNull()
@@ -279,11 +285,25 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     const updated = within(sheet).getByText('Updated 3h ago.')
-    const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
+    const share = await within(sheet).findByRole('link', { name: 'Share' })
     expect(share.querySelector('svg')).not.toBeNull()
     const attending = await within(sheet).findByRole('heading', { name: /^Attending/ })
     expect(share.compareDocumentPosition(updated) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(updated.compareDocumentPosition(attending) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getAllByText('Updated 3h ago.')).toHaveLength(1)
+  })
+})
+
+// TRAK-225 (20 Oct live run, S4): a Google Maps link typed into the venue.
+describe('TRAK-225: a venue with a Maps link', () => {
+  it('opens that place, and shows the venue name without the raw link', async () => {
+    const user = userEvent.setup()
+    const url = 'https://maps.app.goo.gl/AbC123xyz'
+    renderStrip([event({ venue: `Rivals Park, ${url}` })], 'parent')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(within(sheet).getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', url)
+    expect(within(sheet).getByText('Rivals Park')).toBeInTheDocument()
+    expect(within(sheet).queryByText(/goo\.gl/)).toBeNull()
   })
 })

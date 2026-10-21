@@ -64,7 +64,7 @@ function fixtures() {
   )
 }
 
-const shareLink = (title: string) => screen.queryByRole('link', { name: `Share ${title} to WhatsApp` })
+const shareLink = (title: string) => screen.queryByRole('link', { name: `Share ${title}` })
 const sharedText = (link: HTMLElement) => {
   const href = link.getAttribute('href') ?? ''
   expect(href.startsWith('https://wa.me/?text=')).toBe(true)
@@ -77,7 +77,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
   it('pre-writes a published match for the group: squad, time, venue, meet time, kit', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers to WhatsApp' })
+    const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers' })
     await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 Match vs Synthetic Rovers \(Away\)\*/))
     const text = sharedText(link)
         expect(text).toContain('Venue: Rovers Park')
@@ -91,7 +91,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
   it('shares a cancellation with its reason', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share Training to WhatsApp' })
+    const link = await screen.findByRole('link', { name: 'Share Training' })
     // The reason waits for the squad's names (the child-name check).
     await waitFor(() => expect(sharedText(link)).toContain('Reason: Pitch closed'))
     expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/)
@@ -100,16 +100,16 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
   it('offers nothing to share for a draft only the coach can see', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    await screen.findByRole('link', { name: 'Share vs Synthetic Rovers to WhatsApp' })
+    await screen.findByRole('link', { name: 'Share vs Synthetic Rovers' })
     expect(shareLink('Finishing')).toBeNull()
   })
 
   it('never puts a child\'s name or a coach note in the message', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers to WhatsApp' })
+    const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers' })
     await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 /))
-    for (const l of screen.getAllByRole('link', { name: /to WhatsApp$/ })) {
+    for (const l of screen.getAllByRole('link', { name: /^Share / })) {
       expect(sharedText(l)).not.toMatch(/Omar|Lucas|Zara|bench/)
     }
   })
@@ -117,7 +117,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
   it('leaves out a cancel reason that names a child on the squad, and still shares the cancellation', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share Recovery to WhatsApp' })
+    const link = await screen.findByRole('link', { name: 'Share Recovery' })
     await waitFor(() => expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/))
     expect(sharedText(link)).not.toMatch(/Reason:|Lucas/)
   })
@@ -126,7 +126,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     fixtures()
     server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share Training to WhatsApp' })
+    const link = await screen.findByRole('link', { name: 'Share Training' })
     await waitFor(() => expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| Squad Training\*/))
     expect(sharedText(link)).not.toContain('Reason:')
   })
@@ -139,7 +139,7 @@ describe('J8.16: Share to WhatsApp on the coach schedule', () => {
     server.use(table('profiles', [{ id: 'p-off', user_id: OFF.id, role: 'coach', full_name: 'Coach Off', invite_code: 'EFGH' }]))
     renderApp('/coach/schedule')
     expect(await screen.findByRole('note', { name: 'This screen is coming soon' })).toBeInTheDocument()
-    const button = await screen.findByRole('button', { name: 'Share vs Synthetic Rovers to WhatsApp' })
+    const button = await screen.findByRole('button', { name: 'Share vs Synthetic Rovers' })
     expect(button).not.toHaveAttribute('href')
     await userEvent.click(button)
     expect(await screen.findByText('This will be available in a future update.')).toBeInTheDocument()

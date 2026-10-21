@@ -21,7 +21,11 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { Select } from '@/components/arc/select/select'
 import { APPEARANCE_LABEL } from '@/lib/types'
 
-const MATCH_APPEARANCES = ['started', 'sub', 'didnt_play'] as const
+/* TRAK-219 (20 Oct live run, S7): a match is offered only to a player its log
+   marks present, i.e. played (TRAK-100), so "Didn't play" would contradict the
+   log. A player who didn't play isn't assessed (Imad, 19 Oct, option A); the
+   match log carries that (TRAK-185). */
+const MATCH_APPEARANCES = ['started', 'sub'] as const
 type MatchAppearance = typeof MATCH_APPEARANCES[number]
 
 /** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
@@ -347,7 +351,7 @@ function CoachAssessmentForm() {
   const handleSave = async (draft = false) => {
     if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
     // Option A (Imad, 19 Oct): a player who didn't play isn't assessed, even if Review is reached another way.
-    if (!isTraining && (!appearance || appearance === 'didnt_play')) return
+    if (!isTraining && !appearance) return
     // Rewriting an unchanged, still-published message would re-stamp it and
     // mark it "new" for the player again. Leave it alone, unless it's being
     // taken back to a draft.
@@ -466,10 +470,13 @@ function CoachAssessmentForm() {
           // later. The assessment itself is saved, so keep its id: pressing save
           // again updates that row rather than creating a second one.
           console.error('Shared feedback save failed:', sharedError)
+          // TRAK-200: the scores saved above are published unless this is a draft,
+          // so the family can already see them; only a draft keeps everything back.
           toast.error(
-            `The scores${note.trim() ? ' and private note' : ''} are saved. Not saved: the message to ` +
-              `${firstName} (${sharedError.message}), so nothing new reached the family. ` +
-              `Your text is still here — try again.`,
+            (draft
+              ? `The scores${note.trim() ? ' and private note' : ''} are saved as a draft, so nothing reached the family. `
+              : `The scores${note.trim() ? ' and private note' : ''} are saved, and ${firstName} and their family can see the scores. `) +
+              `Not saved: the message to ${firstName} (${sharedError.message}). Your text is still here — try again.`,
             { duration: 12000 },
           )
           setExistingId(saved.id)
@@ -706,14 +713,12 @@ function CoachAssessmentForm() {
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
         {step === 0 && <>
-        {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started, Sub or Didn't play,
-            for a match. A training is a training (TRAK-182), so it isn't asked. ---- */}
+        {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started or Sub, for a
+            match the log has them playing (TRAK-219). A training isn't asked (TRAK-182). ---- */}
         {!isTraining && <div className="arc">
           <Select label="Appearance" placeholder="Choose" value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
             options={MATCH_APPEARANCES.map(value => ({ value, label: APPEARANCE_LABEL[value] }))} />
-          {/* Imad, 19 Oct (option A): there's nothing to assess when a player didn't play, so it ends here and saves nothing.
-              The match record carries "Didn't play" (TRAK-185). */}
-          {appearance === 'didnt_play' && <p role="status" className="mt-2 text-sm text-muted-foreground">A player who didn't play isn't assessed.</p>}
+          {selectedSession && <p className="mt-2 text-sm text-muted-foreground">The match log has {firstName} as played.</p>}
         </div>}
 
         </>}
@@ -890,7 +895,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
             onClick={() => setStep(step - 1)}>Back</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && (!appearance || appearance === 'didnt_play')))}
+          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && !appearance))}
             onClick={() => setStep(step + 1)}>Next</Button>
         </>}
       </div>

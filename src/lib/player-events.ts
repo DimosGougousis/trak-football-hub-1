@@ -1,5 +1,6 @@
 import { format, parseISO } from 'date-fns'
-import { displayEventTime } from './event-time'
+import { academyClock, displayEventTime, meetLead } from './event-time'
+import { readKitSnapshot, type EventKitSnapshot } from './kit-templates'
 
 /**
  * What a player sees of their squad's events (J8.7, TRAK-130).
@@ -33,6 +34,7 @@ export interface PlayerEvent {
   meetTime: string | null
   venue: string | null
   kit: string | null
+  kitSnapshot?: EventKitSnapshot | null
   opponent: string | null
   homeAway: 'home' | 'away' | null
   status: 'scheduled' | 'cancelled'
@@ -77,6 +79,7 @@ export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null 
     meetTime: clock(row[EVENT_COLUMNS.meetTime]),
     venue: text(row.venue),
     kit: text(row[EVENT_COLUMNS.kit]),
+    kitSnapshot: readKitSnapshot(row.kit_snapshot),
     opponent: text(row.opponent),
     homeAway: homeAway === 'home' || homeAway === 'away' ? homeAway : null,
     status: row[EVENT_COLUMNS.status] === 'cancelled' ? 'cancelled' : 'scheduled',
@@ -110,6 +113,13 @@ export function eventHeading(event: PlayerEvent): string {
 export const eventDay = (event: PlayerEvent) => format(parseISO(event.date), 'EEE d MMM')
 /** The coach's time, or "Time to be confirmed": never midnight. */
 export const eventTime = (event: PlayerEvent) => event.time ?? 'Time to be confirmed'
+
+/** TRAK-223: "16:15 Athens time, 45 min before kick-off". The meet time is on the academy's clock, as the start is. */
+export function meetText(event: PlayerEvent, meet: string): string {
+  const zone = academyClock(event)?.zone
+  const lead = event.time ? meetLead(meet, event.time, event.kind) : null
+  return `${meet}${zone ? ` ${zone}` : ''}${lead ? `, ${lead}` : ''}`
+}
 
 // ── "Changed" until opened ──────────────────────────────────────────────────
 // Per device, like the parent bell (ParentAlertsBell): for each event, the

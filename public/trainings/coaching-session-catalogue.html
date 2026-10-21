@@ -265,6 +265,9 @@ $("reset").onclick = () => {
   ["q", "age", "fmt", "skill"].forEach(id => $(id).value = "");
   render();
 };
+// New event's theme link opens the catalogue on that library (?lib=).
+const asked = new URLSearchParams(location.search).get("lib");
+if (LIBS.some(l => l.name === asked)) state.lib = asked;
 render();
 </script>
 </body>

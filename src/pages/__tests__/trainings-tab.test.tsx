@@ -173,3 +173,36 @@ describe('Trainings pages ship as static files', () => {
     expect(header('/trainings/(.*)', 'X-Frame-Options')).toBe('SAMEORIGIN')
   })
 })
+
+describe('the catalogue opens on a theme from New event', () => {
+  const { JSDOM, VirtualConsole } = createRequire(import.meta.url)('jsdom')
+  const html = readFileSync(resolve(__dirname, '../../../public/trainings/coaching-session-catalogue.html'), 'utf8')
+  const DEFENDING = 'Tactical – Defending'
+
+  function open(query: string) {
+    const errors: unknown[] = []
+    const virtualConsole = new VirtualConsole()
+    virtualConsole.on('jsdomError', (e: unknown) => errors.push(e))
+    const dom = new JSDOM(html, { url: `http://localhost${CATALOGUE}${query}`, runScripts: 'dangerously', virtualConsole })
+    const selected = dom.window.document.querySelector('.track-btn[aria-selected="true"]') as HTMLElement | null
+    return { errors, lib: selected?.dataset.lib }
+  }
+
+  it('the Trainings tab hands the theme to the catalogue page', async () => {
+    coach()
+    renderApp(`/coach/trainings?lib=${encodeURIComponent(DEFENDING)}`)
+    const frame = await screen.findByTitle('Coaching Session Catalogue')
+    expect(frame).toHaveAttribute('src', `${CATALOGUE}?lib=Tactical+%E2%80%93+Defending`)
+  }, 20_000)
+
+  it('the catalogue selects that library', () => {
+    const { errors, lib } = open(`?lib=${encodeURIComponent(DEFENDING)}`)
+    expect(errors).toEqual([])
+    expect(lib).toBe(DEFENDING)
+  })
+
+  it('an unknown or missing library shows every session', () => {
+    expect(open('?lib=Nope').lib).toBe('')
+    expect(open('').lib).toBe('')
+  })
+})

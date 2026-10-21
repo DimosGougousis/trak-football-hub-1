@@ -84,7 +84,8 @@ export default function CoachSessionsChooser() {
         </button>
       </div>
 
-      <NavBar role="coach" activeTab="/coach/sessions" onNavigate={navigate} />
+      {/* No Sessions tab: this page is opened from Home, so Home stays marked. */}
+      <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

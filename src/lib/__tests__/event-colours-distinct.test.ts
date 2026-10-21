@@ -43,10 +43,11 @@ const SCREENS = { surface: token('surface'), ground: token('ground') }
 const COLOURS = { ...EVENT_COLOR, cancelled: CANCELLED_COLOR, noTime: NO_TIME_COLOR }
 
 describe('event colours on the light theme (TRAK-189)', () => {
-  it('a match is purple: blue more than red, never green', () => {
+  // TRAK-231 (20 Oct live run) replaces 18 Oct's purple with magenta.
+  it('a match is magenta: red and blue both well above green', () => {
     const [r, g, b] = hex(EVENT_COLOR.match)
-    expect(b).toBeGreaterThan(r)
-    expect(r).toBeGreaterThan(g)
+    expect(r - g).toBeGreaterThan(0.3)
+    expect(b - g).toBeGreaterThan(0.3)
   })
 
   it('every event colour reads as text on cards and on the screen (4.5:1)', () => {

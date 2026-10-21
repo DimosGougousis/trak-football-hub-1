@@ -5,7 +5,11 @@ import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-rea
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { updatedNote } from '@/lib/alert-read-state'
+import { academyClock } from '@/lib/event-time'
+import { meetText } from '@/lib/player-events'
 import type { StripEvent } from '@/components/trak/WeekStrip'
+import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
+import { venueParts } from '@/lib/venue-link'
 
 /* TRAK-182 (Imad, 15 Oct): an event opens in Arc's bottom sheet. Imad's 16 Oct
    layout: the opponent (or the session's name) at top left with Home / Away /
@@ -40,12 +44,15 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
 function TimeRow({ event }: { event: StripEvent }) {
   // A logged session has no start time of its own; a logged match shows its event's kick-off (TRAK-182).
   if (event.sessionId && !event.time) return null
+  // TRAK-223: the academy's clock, and this phone's when it differs; the time itself stays the academy's.
+  const clock = academyClock(event)
   return (
     <div>
       <p className="text-[13px] text-ink-2">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
       {event.time
         ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-ink">{event.time}</p>
         : <p className="text-[17px] text-ink mt-1">Time to be confirmed</p>}
+      {event.time && clock && <p className="text-[13px] text-ink-2">{clock.zone}{clock.here ? ` · ${clock.here}` : ''}</p>}
     </div>
   )
 }
@@ -67,19 +74,21 @@ export function EventSheet({ event, role, trigger, children }: {
   // what only mattered before it, the meet time and the note for families.
   const past = role === 'coach' && !!event.startsAt && Date.parse(event.startsAt) <= Date.now()
   const meet = past ? null : meetTime(event)
+  // TRAK-225: a pasted Maps link opens that place; the line shows the name without it.
+  const venue = event.venue ? venueParts(event.venue) : null
   const rows = ([
     cancelled && event.cancelReason ? ['Reason', event.cancelReason] : null,
-    meet ? ['Meet', meet] : null,
-    event.venue ? ['Where', <>
-      <span className="block">{event.venue}</span>
+    meet ? ['Meet', meetText(event, meet)] : null,
+    venue ? ['Where', <>
+      {venue.text && <span className="block">{venue.text}</span>}
       {!cancelled && (
-        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`} target="_blank" rel="noopener noreferrer"
+        <a href={venue.mapsUrl} target="_blank" rel="noopener noreferrer"
           className="-mb-3 -mt-1.5 inline-flex min-h-11 items-center gap-1.5 text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded-md">
           <MapPin size={14} aria-hidden="true" />Open in Maps
         </a>
       )}
     </>] : null,
-    event.kit ? ['Kit', event.kit] : null,
+    event.kit && !event.kitSnapshot ? ['Kit', event.kit] : null,
     event.familyNote && !past ? ['Note', event.familyNote] : null,
   ] as ([string, ReactNode] | null)[]).filter((row): row is [string, ReactNode] => !!row)
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
@@ -87,7 +96,7 @@ export function EventSheet({ event, role, trigger, children }: {
 
   return (
     <BottomSheet trigger={trigger} title={sheetTitle(event)} description={sheetPlace(event) ?? undefined}
-      aside={format(parseISO(event.date), 'EEE MMM d')} detents={[0.62, 0.92]} className="arc">
+      aside={format(parseISO(event.date), 'EEE MMM d')} detents={[0.62, 0.92]} initialDetent={event.kitSnapshot ? 1 : 0} className="arc">
       <div className="space-y-5 pb-4">
         <TimeRow event={event} />
         {status && (
@@ -106,6 +115,7 @@ export function EventSheet({ event, role, trigger, children }: {
             ))}
           </dl>
         )}
+        {event.kitSnapshot && <KitAnnouncement kit={event.kitSnapshot.design} slot={event.kitSnapshot.slot} />}
         {/* Kostas's #310 review: the full page (Add to calendar, every detail) stays one tap away. */}
         {role !== 'coach' && (
           // TRAK-182: the page's Back returns here in one step.

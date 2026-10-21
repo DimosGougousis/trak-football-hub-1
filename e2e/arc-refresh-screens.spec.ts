@@ -56,6 +56,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(req.postDataJSON()?.p_squad_player_id === 'sq-5')
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
+    if (path === '/rest/v1/coach_team_kits') return json([])
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
@@ -69,7 +70,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
 
 test.describe('TRAK-182 coach screens', () => {
   test.use({ timezoneId: 'Asia/Dubai' })
-  test('TRAK-189 coach Home attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
+  // TRAK-211: the attention levels moved from Home to the Feedback and assessment tab.
+  test('TRAK-189 coach Feedback attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await coachBackend(context, unexpected)
@@ -82,27 +84,27 @@ test.describe('TRAK-182 coach screens', () => {
         created_at: new Date(Date.now() - days * 86400_000).toISOString(),
       }))),
     }))
-    await page.goto('/coach/home')
-    const overview = page.getByRole('region', { name: 'Player overview' })
+    await page.goto('/coach/feedback')
+    const overview = page.getByRole('region', { name: 'Feedback and assessment' })
     for (const level of ['Urgent', 'Warning', 'On track']) {
       await expect(overview.getByText(level, { exact: true }).first()).toBeVisible()
     }
-    await expect(page.getByRole('button', { name: 'Assess a player', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Log a match or training', exact: true })).toBeVisible()
     await page.waitForLoadState('networkidle')
     await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') })
     const violations = await page.evaluate(async () => {
       const axe = (window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: unknown[] }> } }).axe
       return (await axe.run({ runOnly: ['color-contrast'] })).violations
     })
-    await page.screenshot({ path: testInfo.outputPath('coach-home-attention-contrast.png'), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath('coach-feedback-attention-contrast.png'), fullPage: true })
     expect(violations).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 
   for (const [name, path, ready] of [
-    ['home', '/coach/home', 'Hugo Lloris'],
+    // TRAK-211: Home lists no players; they are on the Feedback and assessment tab.
+    ['home', '/coach/home', 'Assess a player'],
+    ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
     ['player', '/coach/player/sq-2', 'Bukayo Saka'],
@@ -224,7 +226,7 @@ test.describe('TRAK-182 coach screens', () => {
     await sheet.getByRole('button', { name: /^Kickoff\b/ }).click()
     await page.getByRole('listbox').getByRole('option', { name: '4:00 PM' }).click()
     await sheet.getByRole('button', { name: 'Next' }).click()
-    await sheet.getByLabel('Kit').fill('Red shirts, black shorts')
+    await sheet.getByRole('textbox', { name: 'Kit', exact: true }).fill('Red shirts, black shorts')
     await sheet.getByRole('button', { name: 'Next' }).click()
     await expect(sheet.getByRole('button', { name: 'Publish' })).toBeVisible()
     await expect(sheet.getByRole('button', { name: 'Save draft' })).toBeVisible()
@@ -264,6 +266,128 @@ test.describe('TRAK-182 coach screens', () => {
     await page.screenshot({ path: testInfo.outputPath('coach-assess-review.png'), fullPage: true })
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
+  })
+})
+
+// TRAK-220 (20 Oct live run): menus and the expanded assessment card were
+// see-through on the light theme. Arc's tokens live on `.arc`; a panel Radix
+// portals to <body> has no `.arc` ancestor unless it carries the class itself.
+test.describe('TRAK-220 Arc panels opened over the page', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
+  // The alpha of an element's computed background colour (0 = see-through).
+  const alpha = (css: string) => { const m = css.match(/rgba?\(([^)]+)\)/) ?? css.match(/oklch\(([^)]+)\)/) ?? css.match(/color\(([^)]+)\)/); if (!m) return 0; const slash = m[1].split('/'); if (slash[1]) return Number(slash[1].trim().replace('%', '')) / (slash[1].includes('%') ? 100 : 1); const parts = m[1].split(','); return parts.length === 4 ? Number(parts[3]) : 1 }
+  const background = (locator: import('@playwright/test').Locator) => locator.evaluate(el => getComputedStyle(el).backgroundColor)
+
+  test('the card menu, the expanded card and its backdrop are opaque', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/player/sq-2')
+    const card = page.getByRole('article').or(page.locator('[aria-label*="assessment, Bukayo Saka"]')).first()
+    await card.getByRole('button', { name: /more actions$/ }).click()
+    const menu = page.getByRole('menu')
+    await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
+    expect(alpha(await background(menu)), `menu background ${await background(menu)}`).toBeGreaterThan(0.9)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-card-menu.png') })
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+
+    await card.locator('h3 button').first().click()
+    const panel = page.getByRole('dialog')
+    await expect(panel.getByText('MESSAGE TO THE PLAYER')).toBeVisible()
+    expect(alpha(await background(panel)), `card panel background ${await background(panel)}`).toBeGreaterThan(0.9)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('coach-card-expanded.png') })
+    await page.keyboard.press('Escape')
+    await expect(panel).toBeHidden()
+    expect(unexpected).toEqual([])
+  })
+})
+
+// TRAK-221 (20 Oct live run): scrolling the assessment with a finger that
+// lands on a slider changed that rating. Real touches through Chromium's touch
+// input, so the browser's own scroll, cancel and capture rules apply (jsdom
+// has none of them).
+test.describe('TRAK-221 assessment sliders under a finger', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('a vertical swipe scrolls without changing a rating; a tap and a sideways drag still set one', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/assess')
+    await page.getByRole('combobox', { name: 'Player' }).selectOption({ label: 'Bukayo Saka' })
+    await page.getByRole('combobox', { name: 'Session' }).selectOption({ index: 1 })
+    await page.getByRole('button', { name: 'Next' }).click()
+    const cdp = await context.newCDPSession(page)
+    const finger = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+    const row = async (name: string) => {
+      const slider = page.getByRole('slider', { name })
+      await slider.scrollIntoViewIfNeeded()
+      const box = (await slider.locator('xpath=ancestor::div[contains(@class, "control")][1]').boundingBox())!
+      return { slider, box, y: box.y + box.height / 2 }
+    }
+
+    // Vertical swipe starting at 85% across Work Rate: no rating moves.
+    const work = await row('Work Rate')
+    const before = await page.getByRole('slider').evaluateAll(all => all.map(s => s.getAttribute('aria-valuenow')))
+    const x = work.box.x + work.box.width * 0.85
+    await finger('touchStart', x, work.y)
+    for (let i = 1; i <= 12; i++) { await finger('touchMove', x, work.y - i * 15); await page.waitForTimeout(16) }
+    await finger('touchEnd')
+    await page.waitForTimeout(400)
+    expect(await page.getByRole('slider').evaluateAll(all => all.map(s => s.getAttribute('aria-valuenow')))).toEqual(before)
+
+    // A tap near the right end sets a high rating.
+    const tactical = await row('Tactical')
+    await page.touchscreen.tap(tactical.box.x + tactical.box.width * 0.95, tactical.y)
+    await expect(tactical.slider).toHaveAttribute('aria-valuenow', '10')
+
+    // A sideways drag from the middle to the left end sets the lowest.
+    const attitude = await row('Attitude')
+    const from = attitude.box.x + attitude.box.width * 0.5
+    await finger('touchStart', from, attitude.y)
+    for (let i = 1; i <= 12; i++) { await finger('touchMove', from - i * attitude.box.width * 0.05, attitude.y + i); await page.waitForTimeout(16) }
+    await finger('touchEnd')
+    await expect(attitude.slider).toHaveAttribute('aria-valuenow', '0')
+    expect(unexpected).toEqual([])
+  })
+})
+
+// TRAK-227 (20 Oct live run, S1): on a phone the event form's date calendar
+// dropped past the end of the sheet's scroll area, so the coach had to scroll
+// to see it and to get back to Next. Layout, so a real browser measures it.
+test.describe('TRAK-227 date and time pickers in the event form', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('the calendar and the time list open fully visible, and Next is reachable after a pick', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/schedule')
+    await page.getByRole('button', { name: 'Add event' }).click()
+    const sheet = page.getByRole('dialog', { name: 'New event' })
+    await sheet.getByRole('button', { name: 'Next', exact: true }).click()
+    // Fully inside every scroll area it sits in, and inside the screen.
+    const fullyVisible = (panel: import('@playwright/test').Locator) => panel.evaluate(el => {
+      const box = el.getBoundingClientRect()
+      let top = 0, bottom = innerHeight
+      for (let node = el.parentElement; node; node = node.parentElement) {
+        if (!['auto', 'scroll', 'hidden'].includes(getComputedStyle(node).overflowY)) continue
+        const r = node.getBoundingClientRect(); top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom)
+      }
+      return box.top >= top - 1 && box.bottom <= bottom + 1
+    })
+    await sheet.getByRole('button', { name: 'Date', exact: true }).click()
+    const calendar = page.getByRole('dialog', { name: /calendar$/ })
+    await expect.poll(() => fullyVisible(calendar)).toBe(true)
+    await calendar.locator('[data-date]:not([disabled])').last().click()
+    await expect(calendar).toBeHidden()
+    const next = sheet.getByRole('button', { name: 'Next', exact: true })
+    const box = (await next.boundingBox())!
+    expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('button')?.textContent?.trim(), [box.x + box.width / 2, box.y + box.height / 2])).toBe('Next')
+    await sheet.getByRole('button', { name: /^Start/ }).click()
+    await expect.poll(() => fullyVisible(page.getByRole('listbox'))).toBe(true)
+    expect(unexpected).toEqual([])
   })
 })
 

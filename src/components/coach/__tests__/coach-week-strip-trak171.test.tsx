@@ -6,6 +6,7 @@ import { CoachWeekStrip } from '../CoachWeekStrip'
 import { weekDays } from '@/components/trak/WeekStrip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { KIT_COLLECTIONS, snapshotKit } from '@/lib/kit-templates'
 
 // TRAK-176: coach screens read the coach's squads through the query cache.
 function queries() {
@@ -151,6 +152,19 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     expect(within(sheet).getByText('18:00')).toBeInTheDocument()
     expect(within(sheet).getByText(/Rovers Park/)).toBeInTheDocument()
     expect(within(sheet).getByText('White shirts')).toBeInTheDocument()
+    expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
+  })
+
+  it('keeps the selected kit illustration when a planned match becomes a logged match', async () => {
+    database.read.mockImplementation(async table => ok(table === 'coach_calendar_events'
+      ? [{ ...planned(), id: 'planned-kit', event_type: 'match', title: 'vs Synthetic United', opponent: 'Synthetic United',
+        kit_snapshot: snapshotKit(KIT_COLLECTIONS[0].kits, 'alternate') }]
+      : table === 'coach_sessions' ? [{ ...session('logged-kit', 'vs Synthetic United', 'match'), event_id: 'planned-kit' }] : []))
+    render(strip(), queries())
+    await chooseMonday()
+    fireEvent.click(await screen.findByRole('button', { name: /Synthetic United/ }))
+    const sheet = await screen.findByRole('dialog', { name: /Synthetic United/ })
+    expect(within(sheet).getByRole('heading', { name: 'Alternate kit' })).toBeInTheDocument()
     expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
   })
 

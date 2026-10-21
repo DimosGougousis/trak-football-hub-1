@@ -1,0 +1,437 @@
+{
+  "version": 1,
+  "collections": [
+    {
+      "id": "burgundy-gold",
+      "name": "Burgundy & gold",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#781D32",
+          "secondary": "#F5F3EC",
+          "trim": "#CBA654",
+          "shorts": "#F5F3EC",
+          "socks": "#781D32"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#781D32",
+          "trim": "#781D32",
+          "shorts": "#781D32",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#182D50",
+          "secondary": "#CBA654",
+          "trim": "#CBA654",
+          "shorts": "#182D50",
+          "socks": "#182D50"
+        }
+      },
+      "assets": {
+        "home": "/kits/burgundy-gold/home.svg",
+        "away": "/kits/burgundy-gold/away.svg",
+        "alternate": "/kits/burgundy-gold/alternate.svg"
+      }
+    },
+    {
+      "id": "royal-white",
+      "name": "Royal & white",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#245BC4",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#F5F3EC",
+          "socks": "#245BC4"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#245BC4",
+          "trim": "#245BC4",
+          "shorts": "#245BC4",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#F4DF48",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#F4DF48",
+          "socks": "#F4DF48"
+        }
+      },
+      "assets": {
+        "home": "/kits/royal-white/home.svg",
+        "away": "/kits/royal-white/away.svg",
+        "alternate": "/kits/royal-white/alternate.svg"
+      }
+    },
+    {
+      "id": "forest-white",
+      "name": "Forest & white",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "hoops",
+          "shirt": "#226348",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#F5F3EC",
+          "socks": "#226348"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#226348",
+          "trim": "#226348",
+          "shorts": "#226348",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#24272C",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#24272C",
+          "socks": "#24272C"
+        }
+      },
+      "assets": {
+        "home": "/kits/forest-white/home.svg",
+        "away": "/kits/forest-white/away.svg",
+        "alternate": "/kits/forest-white/alternate.svg"
+      }
+    },
+    {
+      "id": "red-white",
+      "name": "Red & white",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "stripes",
+          "shirt": "#D93642",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#F5F3EC",
+          "socks": "#D93642"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#D93642",
+          "trim": "#D93642",
+          "shorts": "#D93642",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#182D50",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#182D50",
+          "socks": "#182D50"
+        }
+      },
+      "assets": {
+        "home": "/kits/red-white/home.svg",
+        "away": "/kits/red-white/away.svg",
+        "alternate": "/kits/red-white/alternate.svg"
+      }
+    },
+    {
+      "id": "sky-navy",
+      "name": "Sky & navy",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#76BDE8",
+          "secondary": "#F5F3EC",
+          "trim": "#182D50",
+          "shorts": "#F5F3EC",
+          "socks": "#76BDE8"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#76BDE8",
+          "trim": "#76BDE8",
+          "shorts": "#76BDE8",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#7151AC",
+          "secondary": "#182D50",
+          "trim": "#182D50",
+          "shorts": "#7151AC",
+          "socks": "#7151AC"
+        }
+      },
+      "assets": {
+        "home": "/kits/sky-navy/home.svg",
+        "away": "/kits/sky-navy/away.svg",
+        "alternate": "/kits/sky-navy/alternate.svg"
+      }
+    },
+    {
+      "id": "amber-black",
+      "name": "Amber & black",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#EDB52D",
+          "secondary": "#F5F3EC",
+          "trim": "#24272C",
+          "shorts": "#F5F3EC",
+          "socks": "#EDB52D"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#EDB52D",
+          "trim": "#EDB52D",
+          "shorts": "#EDB52D",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#596779",
+          "secondary": "#24272C",
+          "trim": "#24272C",
+          "shorts": "#596779",
+          "socks": "#596779"
+        }
+      },
+      "assets": {
+        "home": "/kits/amber-black/home.svg",
+        "away": "/kits/amber-black/away.svg",
+        "alternate": "/kits/amber-black/alternate.svg"
+      }
+    },
+    {
+      "id": "orange-navy",
+      "name": "Orange & navy",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#ED762B",
+          "secondary": "#F5F3EC",
+          "trim": "#182D50",
+          "shorts": "#F5F3EC",
+          "socks": "#ED762B"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#ED762B",
+          "trim": "#ED762B",
+          "shorts": "#ED762B",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#9AD8BE",
+          "secondary": "#182D50",
+          "trim": "#182D50",
+          "shorts": "#9AD8BE",
+          "socks": "#9AD8BE"
+        }
+      },
+      "assets": {
+        "home": "/kits/orange-navy/home.svg",
+        "away": "/kits/orange-navy/away.svg",
+        "alternate": "/kits/orange-navy/alternate.svg"
+      }
+    },
+    {
+      "id": "purple-white",
+      "name": "Purple & white",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#7151AC",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#F5F3EC",
+          "socks": "#7151AC"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#7151AC",
+          "trim": "#7151AC",
+          "shorts": "#7151AC",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#182D50",
+          "secondary": "#F5F3EC",
+          "trim": "#F5F3EC",
+          "shorts": "#182D50",
+          "socks": "#182D50"
+        }
+      },
+      "assets": {
+        "home": "/kits/purple-white/home.svg",
+        "away": "/kits/purple-white/away.svg",
+        "alternate": "/kits/purple-white/alternate.svg"
+      }
+    },
+    {
+      "id": "teal-navy",
+      "name": "Teal & navy",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#19888B",
+          "secondary": "#F5F3EC",
+          "trim": "#182D50",
+          "shorts": "#F5F3EC",
+          "socks": "#19888B"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#19888B",
+          "trim": "#19888B",
+          "shorts": "#19888B",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#F17C72",
+          "secondary": "#182D50",
+          "trim": "#182D50",
+          "shorts": "#F17C72",
+          "socks": "#F17C72"
+        }
+      },
+      "assets": {
+        "home": "/kits/teal-navy/home.svg",
+        "away": "/kits/teal-navy/away.svg",
+        "alternate": "/kits/teal-navy/alternate.svg"
+      }
+    },
+    {
+      "id": "black-white",
+      "name": "Black & white",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "stripes",
+          "shirt": "#24272C",
+          "secondary": "#F5F3EC",
+          "trim": "#B8BEC8",
+          "shorts": "#F5F3EC",
+          "socks": "#24272C"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#24272C",
+          "trim": "#24272C",
+          "shorts": "#24272C",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#C4EB60",
+          "secondary": "#B8BEC8",
+          "trim": "#B8BEC8",
+          "shorts": "#C4EB60",
+          "socks": "#C4EB60"
+        }
+      },
+      "assets": {
+        "home": "/kits/black-white/home.svg",
+        "away": "/kits/black-white/away.svg",
+        "alternate": "/kits/black-white/alternate.svg"
+      }
+    },
+    {
+      "id": "navy-gold",
+      "name": "Navy & gold",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "chest-band",
+          "shirt": "#182D50",
+          "secondary": "#F5F3EC",
+          "trim": "#CBA654",
+          "shorts": "#F5F3EC",
+          "socks": "#182D50"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#182D50",
+          "trim": "#182D50",
+          "shorts": "#182D50",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#C5E5ED",
+          "secondary": "#CBA654",
+          "trim": "#CBA654",
+          "shorts": "#C5E5ED",
+          "socks": "#C5E5ED"
+        }
+      },
+      "assets": {
+        "home": "/kits/navy-gold/home.svg",
+        "away": "/kits/navy-gold/away.svg",
+        "alternate": "/kits/navy-gold/alternate.svg"
+      }
+    },
+    {
+      "id": "pink-black",
+      "name": "Pink & black",
+      "kits": {
+        "version": 1,
+        "home": {
+          "pattern": "solid",
+          "shirt": "#ED94BC",
+          "secondary": "#F5F3EC",
+          "trim": "#24272C",
+          "shorts": "#F5F3EC",
+          "socks": "#ED94BC"
+        },
+        "away": {
+          "pattern": "solid",
+          "shirt": "#F5F3EC",
+          "secondary": "#ED94BC",
+          "trim": "#ED94BC",
+          "shorts": "#ED94BC",
+          "socks": "#F5F3EC"
+        },
+        "alternate": {
+          "pattern": "solid",
+          "shirt": "#50CBCC",
+          "secondary": "#24272C",
+          "trim": "#24272C",
+          "shorts": "#50CBCC",
+          "socks": "#50CBCC"
+        }
+      },
+      "assets": {
+        "home": "/kits/pink-black/home.svg",
+        "away": "/kits/pink-black/away.svg",
+        "alternate": "/kits/pink-black/alternate.svg"
+      }
+    }
+  ]
+}

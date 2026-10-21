@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, Share2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO } from '@/lib/event-time'
@@ -11,10 +11,11 @@ import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, clashMessage, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
+  CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, lockedMessage, STARTED_LOCKED, startedLocked, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
   isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
-  type EventForm, type EventKind, type EventRow, type Repeat,
+  type Clash, type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
+import { TRAINING_THEMES, catalogueLink, type TrainingTheme } from '@/lib/training-theme'
 import { FixtureImport } from '@/components/coach/FixtureImport'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { Calendar } from '@/components/arc/calendar/calendar'
@@ -23,12 +24,15 @@ import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
 import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '@/lib/fixture-import'
 import type { Fixture } from '@/lib/fixtures-csv'
-import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareUrl } from '@/lib/event-share'
+import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
+import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
+import { EventKitField } from '@/components/trak/kits/EventKitField'
+import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
+import { describeEventKit } from '@/lib/kit-templates'
 import { withAlpha } from '@/lib/with-alpha'
-import { ON_WHATSAPP_GREEN, WHATSAPP_GREEN } from '@/lib/fixed-colours'
 
 /* TRAK-127 (J8.4): the coach creates, edits and cancels events. A save is a
    draft only the coach sees; Publish sends it to families (Imad, 9 Oct). Once
@@ -122,6 +126,42 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+/** A training's theme: the catalogue's seven libraries, and a link into it. */
+function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange: (theme: TrainingTheme) => void }) {
+  const picked = TRAINING_THEMES.find(t => t.key === theme)
+  return (
+    <div className="space-y-2">
+      <span id="training-theme" className="block text-[9px] tracking-[0.1em] uppercase text-ink-3" style={mono}>Theme</span>
+      <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 gap-2">
+        {TRAINING_THEMES.map(t => {
+          const on = t.key === theme
+          return (
+            <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
+              style={{
+                background: on ? withAlpha(TYPE_COLOR.training, 0.1) : 'rgb(var(--t-ground))',
+                border: `1px solid ${on ? withAlpha(TYPE_COLOR.training, 0.33) : 'rgb(var(--t-line))'}`,
+                ...font,
+              }}>
+              <input type="radio" name="training-theme" value={t.key} checked={on} onChange={() => onChange(t.key)}
+                className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: TYPE_COLOR.training }} />
+              <span className="min-w-0">
+                <span className="block text-[13px] leading-tight" style={{ color: on ? TYPE_COLOR.training : 'rgb(var(--t-ink))' }}>{t.label}</span>
+                <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      {/* A new tab, so the event being set up stays as it is. */}
+      <a href={catalogueLink(theme)} target="_blank" rel="noopener"
+        className="inline-flex items-center gap-1.5 text-[12px]" style={{ color: TYPE_COLOR.training, ...font }}>
+        {picked ? `Find ${picked.label} sessions in the Trainings Catalogue` : 'Browse all sessions in the Trainings Catalogue'}
+        <ExternalLink size={12} aria-hidden />
+      </a>
+    </div>
+  )
+}
+
 /** The meet-time list opens half an hour before the start: the usual gap. */
 function halfHourBefore(time: string) {
   if (!time) return '17:00'
@@ -146,6 +186,8 @@ type Sheet =
   // TRAK-168: the event just cancelled, offered to the team group, and what was cancelled.
   | { kind: 'cancelled'; row: EventRow; note: string }
   | { kind: 'series'; action: 'publish' | 'delete'; row: EventRow; error: string | null }
+  // TRAK-218: a series Publish the database refused; it stays until the coach closes it.
+  | { kind: 'notPublished'; count: number; weeks: ClashingWeek[]; refusal: string }
   | { kind: 'import' }
   | { kind: 'register'; row: EventRow }
 
@@ -185,6 +227,7 @@ function EventSummary({ form, repeat, noteProblem }: {
 }) {
   const rows: [string, string][] = [
     ['Type', TYPE_LABEL[form.kind]],
+    ...(form.kind === 'training' ? [['Theme', TRAINING_THEMES.find(t => t.key === form.theme)?.label ?? 'Not set'] as [string, string]] : []),
     ...(form.kind === 'match' ? [['Opponent', form.opponent.trim() + (form.homeAway ? ` (${form.homeAway === 'home' ? 'Home' : 'Away'})` : '')] as [string, string]] : []),
     ['Title', eventTitle(form)],
     ['Venue', form.venue.trim() || 'Not set'],
@@ -194,7 +237,7 @@ function EventSummary({ form, repeat, noteProblem }: {
     ['Length', `${form.duration} min`],
     ...(repeat?.on && form.kind !== 'match' && !repeatProblem(form, repeat)
       ? [['Repeats', `${repeat.days.map(d => WEEKDAYS[d]).join(', ')} until ${formatEventDay(repeat.until)}`] as [string, string]] : []),
-    ['Kit', form.kit.trim() || 'None'],
+    ['Kit', form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || 'None'],
     ['Note for families', form.familyNote.trim() || 'None'],
   ]
   return <>
@@ -206,12 +249,28 @@ function EventSummary({ form, repeat, noteProblem }: {
         </div>
       ))}
     </dl>
+    {form.kitSnapshot && <KitAnnouncement kit={form.kitSnapshot.design} slot={form.kitSnapshot.slot} animated={false} />}
     {noteProblem && (
       <p role="status" className="text-[11px] text-warning" style={font}>
         Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
       </p>
     )}
   </>
+}
+
+/** TRAK-218: the weeks of a refused series that clash, earliest first. */
+type ClashingWeek = { date: string; clash: Clash }
+function clashingWeeks(ids: string[], rows: EventRow[]): ClashingWeek[] {
+  const clashes = draftClashes(rows)
+  return rows.filter(r => ids.includes(r.id) && clashes.has(r.id))
+    .sort((a, b) => a.event_date!.localeCompare(b.event_date!))
+    .map(r => ({ date: r.event_date!, clash: clashes.get(r.id)! }))
+}
+const overlapLine = ({ date, clash }: ClashingWeek) => `${formatEventDay(date)} overlaps ${clash.title}, ${clash.start}–${clash.end}.`
+/** What to fix: the week's time, or the event it clashes with. */
+function fixLine(weeks: ClashingWeek[]) {
+  const titles = [...new Set(weeks.map(w => w.clash.title))]
+  return `Change ${weeks.length > 1 ? 'those weeks’ times' : 'that week’s time'}, or cancel ${titles.length === 1 ? titles[0] : 'what they overlap'}`
 }
 
 const inSeries = (row: EventRow | null): row is EventRow & { series_id: string; event_date: string } =>
@@ -242,6 +301,8 @@ export default function CoachSchedule() {
 
   // Data
   const [calEvents, setCalEvents] = useState<EventRow[]>([])
+  // Every squad's events: the overlap rule is per coach, not per squad (TRAK-218).
+  const [coachEvents, setCoachEvents] = useState<EventRow[]>([])
   const [sessions,  setSessions]  = useState<any[]>([])
   const [loadFailed, setLoadFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
@@ -249,8 +310,9 @@ export default function CoachSchedule() {
   const [sheet, setSheet] = useState<Sheet>({ kind: 'closed' })
   const [saving, setSaving] = useState(false)
 
-  const loadData = async () => {
-    if (!user) return
+  /** Reads the calendar; returns the coach's events, or null when the read failed. */
+  const loadData = async (): Promise<EventRow[] | null> => {
+    if (!user) return null
     const [ev, sess] = await Promise.all([
       supabase.from('coach_calendar_events')
         .select('*').eq('coach_user_id', user.id).order('starts_at'),
@@ -261,8 +323,13 @@ export default function CoachSchedule() {
     ])
     // A failed read is not an empty calendar (the J4 standard).
     setLoadFailed(!!ev.error || !!sess.error)
-    if (!ev.error) setCalEvents(((ev.data as EventRow[]) || []).filter(e => coachSquad.eventInSquad(e.squad)))
+    const events = ev.error ? null : (ev.data as EventRow[]) || []
+    if (events) {
+      setCoachEvents(events)
+      setCalEvents(events.filter(e => coachSquad.eventInSquad(e.squad)))
+    }
     if (!sess.error) setSessions((sess.data || []).filter(s => coachSquad.eventInSquad(s.squad)))
+    return events
   }
 
   useEffect(() => { loadData() }, [user, coachSquad.squad])
@@ -335,6 +402,8 @@ export default function CoachSchedule() {
     sessions.filter(s => s.event_id).map(s => [s.event_id as string, s.id as string])), [sessions])
 
   const venues = useMemo(() => savedVenues(calEvents), [calEvents])
+  // TRAK-218: each draft that would be refused says so, before Publish is tapped.
+  const clashes = useMemo(() => draftClashes(coachEvents), [coachEvents])
   // TRAK-129 (J8.6): fixtures already on the schedule are skipped on import.
   const fixtureKeys = useMemo(() => scheduleFixtureKeys(calEvents), [calEvents])
 
@@ -401,7 +470,7 @@ export default function CoachSchedule() {
       if (saved < targets.length) {
         // Saving again rewrites every week the same way, so it is safe to retry;
         // a week refused for a clash needs the time changed first.
-        const clash = results.map(r => clashMessage(r.error)).find(Boolean)
+        const clash = results.map(r => clashMessage(r.error) ?? lockedMessage(r.error)).find(Boolean)
         setSheet({ ...sheet, error: `Saved ${saved} of ${targets.length} weeks. ${clash ?? 'Check your connection and save again.'}` })
         return
       }
@@ -426,7 +495,7 @@ export default function CoachSchedule() {
     setSaving(false)
     // Errors keep what was typed and say what failed (the J4 standard). A
     // series is one insert, so it saves whole or not at all.
-    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? SAVE_FAILED }); return }
+    if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? lockedMessage(error) ?? SAVE_FAILED }); return }
     setSheet({ kind: 'closed' })
     setSelected(form.date)
     if (publishNow && !editing?.published) return publishSaved(editing ? [editing.id] : data!.map(r => r.id))
@@ -443,7 +512,14 @@ export default function CoachSchedule() {
       drafts, published later from the list. */
   const publishSaved = async (ids: string[]) => {
     const { data, error } = await supabase.from('coach_calendar_events').update({ published: true }).in('id', ids).select('id')
-    loadData()
+    const rows = await loadData()
+    // TRAK-218: one update, so a refusal publishes none of the series. Say
+    // which week clashes in a box that stays, not a toast that goes.
+    const refusal = clashMessage(error)
+    if (ids.length > 1 && refusal) {
+      setSheet({ kind: 'notPublished', count: ids.length, weeks: clashingWeeks(ids, rows ?? []), refusal })
+      return
+    }
     if (failed(error, data)) {
       toast.error(`Saved as ${ids.length > 1 ? 'drafts' : 'a draft'}, not published. ${clashMessage(error) ?? 'Tap Publish on the event to try again.'}`)
       return
@@ -496,7 +572,9 @@ export default function CoachSchedule() {
       const [y, m] = row.event_date.split('-').map(Number)
       setViewYear(y); setViewMonth(m - 1); setSelected(row.event_date)
     }
-    if (action === 'edit') openEdit(row)
+    // TRAK-230: a started event isn't edited or cancelled, whatever the link says.
+    if ((action === 'edit' || action === 'cancel') && startedLocked(row)) toast.error(STARTED_LOCKED)
+    else if (action === 'edit') openEdit(row)
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     // The quick-add's Take register (TRAK-182 part 8): only when it can open.
     else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
@@ -519,7 +597,7 @@ export default function CoachSchedule() {
       : await update.eq('id', row.id).select('id')
     if (failed(error, data)) {
       setSaving(false)
-      setSheet({ ...sheet, error: "Couldn't cancel the event. Check your connection and try again." })
+      setSheet({ ...sheet, error: lockedMessage(error) ?? "Couldn't cancel the event. Check your connection and try again." })
       return
     }
     // Zero drafts is normal here, so only an error counts as a failure.
@@ -566,7 +644,13 @@ export default function CoachSchedule() {
       : await query.eq('series_id', row.series_id).gte('event_date', row.event_date)
           .eq('published', false).eq('status', 'scheduled').select('id')
     if (failed(error, data)) {
-      setSheet({ ...sheet, error: clashMessage(error) ?? `Couldn't ${action} "${row.title}". Check your connection and try again.` })
+      // TRAK-218: a refused "this and following" publishes none; name the week that clashes.
+      const drafts = coachEvents.filter(r => r.series_id === row.series_id && r.event_date! >= row.event_date
+        && !r.published && r.status === 'scheduled')
+      const weeks = scope === 'following' && clashMessage(error) ? clashingWeeks(drafts.map(r => r.id), coachEvents) : []
+      setSheet({ ...sheet, error: weeks.length
+        ? `None of the ${drafts.length} drafts went out: ${weeks.map(overlapLine).join(' ')} ${fixLine(weeks)}, then publish again.`
+        : clashMessage(error) ?? `Couldn't ${action} "${row.title}". Check your connection and try again.` })
       return
     }
     setSheet({ kind: 'closed' })
@@ -715,6 +799,12 @@ export default function CoachSchedule() {
                           {cancelled ? 'Cancelled' : row.published ? 'Published' : 'Draft · only you see this'}
                         </span>
                       )}
+                      {row && !cancelled && clashes.has(row.id) && (() => {
+                        const c = clashes.get(row.id)!
+                        return <p className="text-[11px] mt-0.5 text-warning" style={font}>
+                          {`Clashes with ${c.title}, ${c.start}–${c.end}. Change the time to publish it.`}
+                        </p>
+                      })()}
                       {row?.published && !cancelled && user && <EventAbsences coachId={user.id} eventId={row.id} />}
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-0.5 text-ink-3" style={font}>{row.cancel_reason}</p>
@@ -742,9 +832,10 @@ export default function CoachSchedule() {
                     </div>
                     {row && !cancelled && (
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <button onClick={() => openEdit(row)} aria-label={`Edit ${row.title}`}>
+                        {/* TRAK-230: once started, what families were told is fixed. */}
+                        {!startedLocked(row) && <button onClick={() => openEdit(row)} aria-label={`Edit ${row.title}`}>
                           <Pencil size={14} color="rgb(var(--t-ink-2))" />
-                        </button>
+                        </button>}
                         {!row.published && (
                           <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium"
@@ -756,7 +847,7 @@ export default function CoachSchedule() {
                           <button onClick={() => deleteDraft(row)} aria-label={`Delete ${row.title}`}>
                             <Trash2 size={14} color="rgb(var(--t-ink-3))" />
                           </button>
-                        ) : (
+                        ) : !startedLocked(row) && (
                           <button onClick={() => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })}
                             aria-label={`Cancel ${row.title}`}>
                             <Ban size={14} color="rgb(var(--t-danger) / 0.8)" />
@@ -764,18 +855,18 @@ export default function CoachSchedule() {
                         )}
                       </div>
                     )}
-                    {/* TRAK-139 (J8.16): WhatsApp's own share link. Trak sends
-                        nothing; the coach picks the group. Drafts have nothing
-                        to share yet. */}
+                    {/* TRAK-139 (J8.16), TRAK-168: Share opens the phone's share sheet (Viber
+                        or WhatsApp; WhatsApp's link without one). Trak sends nothing; the
+                        coach picks the group. Drafts have nothing to share yet. */}
                     {row?.published && (parked ? (
-                      <button onClick={comingSoon} aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
-                        <Share2 size={14} color="rgb(var(--t-ink-2))" />
+                      <button onClick={comingSoon} aria-label={`Share ${row.title}`} className="flex-shrink-0 text-ink-2">
+                        <ShareIcon size={16} />
                       </button>
                     ) : (
-                      <a href={whatsAppShareUrl(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames })} target="_blank" rel="noopener noreferrer"
-                        aria-label={`Share ${row.title} to WhatsApp`} className="flex-shrink-0">
-                        <Share2 size={14} color={WHATSAPP_GREEN} />
-                      </a>
+                      <ShareEventButton text={whatsAppShareText(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames })}
+                        aria-label={`Share ${row.title}`} className="flex-shrink-0 text-brand">
+                        <ShareIcon size={16} />
+                      </ShareEventButton>
                     ))}
                     {ev.source === 'session' && (
                       <button
@@ -828,6 +919,10 @@ export default function CoachSchedule() {
                   </Chip>
                 ))}
               </div>
+
+              {sheet.form.kind === 'training' && (
+                <ThemeChoice theme={sheet.form.theme} onChange={theme => setForm({ theme })} />
+              )}
 
               {sheet.form.kind === 'match' && (
                 <>
@@ -926,12 +1021,20 @@ export default function CoachSchedule() {
               )}
             </>}
 
+            {/* Keep the kit editor mounted between steps so unsaved colors survive Back. */}
+            <div hidden={sheet.step !== 2}>
+              {user && coachSquad.ready && <EventKitField
+                key={`${user.id}:${sheet.row ? sheet.row.squad ?? '' : coachSquad.squad ?? ''}`}
+                coachId={user.id} squad={sheet.row ? sheet.row.squad ?? null : coachSquad.squad}
+                value={sheet.form.kitSnapshot ?? null}
+                onChange={kitSnapshot => setForm({ kitSnapshot, kit: kitSnapshot ? describeEventKit(kitSnapshot) : '' })} />}
+            </div>
             {sheet.step === 2 && <>
               {/* TRAK-161: kit and a family note on every kind of event. */}
-              <Field label="Kit">
+              {!sheet.form.kitSnapshot && <Field label="Kit">
                 <input value={sheet.form.kit} onChange={e => setForm({ kit: e.target.value })}
                   placeholder={sheet.form.kind === 'match' ? 'e.g. Red shirts, black shorts' : 'e.g. Green bibs, shin guards'} className={inputClass} style={font} />
-              </Field>
+              </Field>}
 
               <div className="space-y-1">
                 <Field label="Note for families">
@@ -1052,13 +1155,11 @@ export default function CoachSchedule() {
             <p className="text-[12px] text-ink-2" style={font}>
               {sheet.note} Let the team group know.
             </p>
-            {/* Nothing is sent until the coach picks a chat in WhatsApp. */}
-            <a href={whatsAppShareUrl(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
-              target="_blank" rel="noopener noreferrer"
-              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2"
-              style={{ background: WHATSAPP_GREEN, color: ON_WHATSAPP_GREEN }}>
-              <Share2 size={16} aria-hidden="true" />Share to WhatsApp
-            </a>
+            {/* Nothing is sent until the coach picks a chat (the phone's share sheet, or WhatsApp's link). */}
+            <ShareEventButton text={whatsAppShareText(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
+              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2 bg-brand text-on-brand">
+              <ShareIcon size={18} />Share
+            </ShareEventButton>
             <button onClick={() => setSheet({ kind: 'closed' })}
               className="w-full py-2 text-[13px] text-ink-2" style={font}>
               Done
@@ -1144,6 +1245,45 @@ export default function CoachSchedule() {
             <button onClick={() => setSheet({ kind: 'closed' })}
               className="w-full py-2 text-[13px] text-ink-2" style={font}>
               Not now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Not published: a refused series, until the coach closes it (TRAK-218) ── */}
+      {sheet.kind === 'notPublished' && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center"
+          style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
+          <div role="dialog" aria-label="Not published"
+            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            <span className="text-[16px] font-medium text-ink block" style={font}>Not published</span>
+            <p className="text-[12px] text-ink-2" style={font}>
+              None of the {sheet.count} events went out. They’re saved as drafts only you can see.
+            </p>
+            {sheet.weeks.length ? <>
+              <ul role="alert" className="space-y-1">
+                {sheet.weeks.map(w => <li key={w.date} className="text-[12px] text-danger" style={font}>{overlapLine(w)}</li>)}
+              </ul>
+              <p className="text-[12px] text-ink-2" style={font}>
+                {fixLine(sheet.weeks)}. Then tap Publish on the first week and choose This and following weeks.
+              </p>
+            </> : <p role="alert" className="text-[12px] text-danger" style={font}>{sheet.refusal}</p>}
+            {sheet.weeks[0] && (
+              <button onClick={() => {
+                const date = sheet.weeks[0].date
+                const [y, m] = date.split('-').map(Number)
+                setViewYear(y); setViewMonth(m - 1); setSelected(date)
+                setSheet({ kind: 'closed' })
+              }}
+                className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+                style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
+                Show {formatEventDay(sheet.weeks[0].date)}
+              </button>
+            )}
+            <button onClick={() => setSheet({ kind: 'closed' })}
+              className="w-full py-2 text-[13px] text-ink-2" style={font}>
+              Close
             </button>
           </div>
         </div>

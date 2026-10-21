@@ -18,7 +18,8 @@ import { supabase } from '@/integrations/supabase/client'
  *
  * TRAK-197 rebuilt Home around the Player overview; the counts went, the rule
  * stays: until the reads answer, no empty squad and no "on track"; a failed
- * read says so, and never shows an earlier answer as this one.
+ * read says so, and never shows an earlier answer as this one. TRAK-211 moved
+ * the overview to the Feedback and assessment tab, and the rule with it.
  */
 // A fresh coach each test: the app's query cache (squads, TRAK-176) outlives a test.
 let n = 0
@@ -32,9 +33,9 @@ const ASSESSMENTS = [
   { id: 'a-2', squad_player_id: 'sp-2', coach_rating: 6, created_at: '2026-09-19T10:00:00Z' },
 ]
 
-const overview = () => screen.getByRole('region', { name: 'Player overview' })
-// The first look waits for the lazy Home to load.
-const region = () => screen.findByRole('region', { name: 'Player overview' }, { timeout: 5000 })
+const overview = () => screen.getByRole('region', { name: 'Feedback and assessment' })
+// The first look waits for the lazy tab to load.
+const region = () => screen.findByRole('region', { name: 'Feedback and assessment' }, { timeout: 5000 })
 
 function coachHome() {
   return [
@@ -49,7 +50,7 @@ function coachHome() {
 beforeEach(() => { COACH = { id: `coach-92-${++n}` } })
 afterEach(() => cleanup())
 
-describe('TRAK-92 coach Home while loading', { timeout: 20_000 }, () => {
+describe('TRAK-92 coach Feedback and assessment while loading', { timeout: 20_000 }, () => {
   it('claims no empty squad and nobody on track until the reads answer, then shows the players', async () => {
     signInAs(COACH)
     let release!: () => void
@@ -68,7 +69,7 @@ describe('TRAK-92 coach Home while loading', { timeout: 20_000 }, () => {
       hold('coach_sessions', []),
     )
 
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     // The squads come first (TRAK-176): until they answer, nothing else is asked.
     await waitFor(() => expect([...asked]).toEqual(['squad_players']), { timeout: 5000 })
 
@@ -82,7 +83,6 @@ describe('TRAK-92 coach Home while loading', { timeout: 20_000 }, () => {
 
     expect(await within(await region()).findByText('Ade Okafor')).toBeInTheDocument()
     expect(within(overview()).getByText('Bo Lind')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Assess a player' })).toBeInTheDocument()
     expect(screen.queryByText('Your squad is being prepared')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
   })
@@ -116,7 +116,7 @@ describe('TRAK-92 coach Home while loading', { timeout: 20_000 }, () => {
       }),
     )
 
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     // The first load answers: an empty squad.
     expect(await screen.findByText('Your squad is being prepared', {}, { timeout: 5000 })).toBeInTheDocument()
 
@@ -151,7 +151,7 @@ describe('TRAK-92 coach Home while loading', { timeout: 20_000 }, () => {
         : HttpResponse.json(PLAYERS)),
     )
 
-    renderApp('/coach/home')
+    renderApp('/coach/feedback')
     const alert = await within(await region()).findByRole('alert', {}, { timeout: 5000 })
     expect(alert).toHaveTextContent("Couldn't load your players.")
     expect(screen.queryByText('Loading your players…')).toBeNull()

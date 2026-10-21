@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -79,8 +80,10 @@ async function open() {
 
 // Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
 describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
-  afterEach(() => { server.events.removeAllListeners() })
+  afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
   beforeEach(() => {
+    // TRAK-230: this week's 18:00 training is still to come, so it can be edited.
+    atMorningToday()
     signInAs(COACH)
     fixtures()
   })

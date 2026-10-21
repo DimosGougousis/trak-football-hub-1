@@ -8,6 +8,8 @@
  * the app never writes it.
  */
 import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
+import { describeEventKit, readKitSnapshot, type EventKitSnapshot } from '@/lib/kit-templates'
+import { trainingThemeFrom, type TrainingTheme } from '@/lib/training-theme'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -18,14 +20,18 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
    Light theme (TRAK-189): dark enough for a white page, and match moves to
    purple (Imad, 18 Oct), since a green match read as the brand's buttons. A
    blue-leaning purple, so it stays apart from training's blue with
-   deuteranopia; tournament, purple before, moves to teal. */
+   deuteranopia; tournament, purple before, moves to teal.
+   TRAK-231 (20 Oct live run): match magenta, training teal, other green,
+   cancelled a brighter red with a hollow dot; tournament takes the blue. The
+   green is the lightest that still reads as text on the light screens (4.5:1)
+   and stays apart from the brand's forest green (event-colours-distinct). */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
-  training:   '#285EA3',
-  match:      '#7B2FBE',
-  other:      '#9C4516',
-  tournament: '#0F766E',
+  training:   '#00796B',
+  match:      '#9C1C8C',
+  other:      '#62790A',
+  tournament: '#3B5BBD',
 }
-export const CANCELLED_COLOR = '#B42318'
+export const CANCELLED_COLOR = '#D1242F'
 /** "No time set" on a card: a warning, unlike every type colour. */
 export const NO_TIME_COLOR = '#875100'
 export const DURATIONS = [60, 75, 90, 120] as const
@@ -43,8 +49,11 @@ export type EventForm = {
   opponent: string
   homeAway: '' | 'home' | 'away'
   kit: string
+  kitSnapshot?: EventKitSnapshot | null
   /** TRAK-161: what families read under Kit; '' for none. Not the coach-only notes. */
   familyNote: string
+  /** A training's catalogue theme; '' for none. Coach-only. */
+  theme: TrainingTheme | ''
 }
 
 export type EventRow = {
@@ -57,21 +66,24 @@ export type EventRow = {
   ends_at?: string | null
   event_date?: string | null
   start_time?: string | null
+  end_time?: string | null
   venue?: string | null
   opponent?: string | null
   notes?: string | null
   published: boolean
   meet_time?: string | null
   kit?: string | null
+  kit_snapshot?: unknown
   family_note?: string | null
   home_away?: string | null
   status?: string | null
   cancel_reason?: string | null
   series_id?: string | null
+  training_theme?: string | null
 }
 
 export function blankForm(date: string): EventForm {
-  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', familyNote: '' }
+  return { kind: 'training', title: '', date, time: '', duration: 90, venue: '', meetTime: '', opponent: '', homeAway: '', kit: '', kitSnapshot: null, familyNote: '', theme: '' }
 }
 
 const minutes = (hhmm: string) => {
@@ -148,8 +160,10 @@ export function formToRow(form: EventForm) {
     opponent: isMatch ? form.opponent.trim() : null,
     home_away: isMatch && form.homeAway ? form.homeAway : null,
     // TRAK-161: kit and the family note on every kind of event.
-    kit: form.kit.trim() || null,
+    kit: form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || null,
+    kit_snapshot: form.kitSnapshot ? readKitSnapshot(form.kitSnapshot) : null,
     family_note: form.familyNote.trim() || null,
+    training_theme: form.kind === 'training' && form.theme ? form.theme : null,
   }
 }
 
@@ -172,7 +186,9 @@ export function rowToForm(row: EventRow): EventForm {
     opponent: row.opponent ?? '',
     homeAway: row.home_away === 'home' || row.home_away === 'away' ? row.home_away : '',
     kit: row.kit ?? '',
+    kitSnapshot: readKitSnapshot(row.kit_snapshot),
     familyNote: row.family_note ?? '',
+    theme: trainingThemeFrom(row.training_theme),
   }
 }
 
@@ -184,6 +200,19 @@ export const isCancelled = (row: Pick<EventRow, 'status'>) => row.status === 'ca
 
 /** Delete is only for a mistake nobody has seen: a draft never published. */
 export const canDelete = (row: Pick<EventRow, 'published' | 'status'>) => !row.published && !isCancelled(row)
+
+/** TRAK-230 (Kostas, 21 Oct, option A): once an event has started, what families were told is
+    fixed: no edit and no cancel, only its register or match log (refuse_started_event_change).
+    An old event with no start time locks when its day is over. */
+export function startedLocked(row: Pick<EventRow, 'starts_at' | 'start_time'>, now = Date.now()): boolean {
+  return Date.parse(row.starts_at) + (row.start_time ? 0 : 86_400_000) <= now
+}
+export const STARTED_LOCKED = "This event has started, so it can't be changed. Use its register or match log instead."
+/** The database's refusal of a change to a started event, said as it is. */
+export function lockedMessage(error: unknown): string | null {
+  const e = error as { code?: string, message?: string } | null
+  return e?.code === 'P0001' && e.message === STARTED_LOCKED ? e.message : null
+}
 
 /* TRAK-128 (J8.5): weekly repeat. A series is stored as one row per date, all
    sharing a series_id; no repeat rule is stored, so attendance, "can't make
@@ -266,6 +295,35 @@ export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): stri
 export function clashMessage(error: unknown): string | null {
   const e = error as { code?: string, message?: string } | null
   return e?.code === 'P0001' && e.message?.startsWith('This overlaps ') ? e.message : null
+}
+
+export type Clash = { title: string; start: string; end: string }
+
+const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+/** TRAK-218: the live event each draft would clash with if published, by the
+    database's rule (TRAK-158, refuse_event_overlap): the same coach's
+    published, not cancelled events on the same day whose times overlap.
+    Back-to-back is fine, no end counts as 90 minutes, and no start isn't
+    checked. Pass every one of the coach's events (all squads, as the rule is). */
+export function draftClashes(rows: EventRow[]): Map<string, Clash> {
+  const span = (r: EventRow) => {
+    const start = minutes(r.start_time!.slice(0, 5))
+    const end = r.end_time && r.end_time > r.start_time! ? minutes(r.end_time.slice(0, 5))
+      : r.ends_at ? start + Math.round((Date.parse(r.ends_at) - Date.parse(r.starts_at)) / 60_000)
+      : start + 90
+    return { start, end }
+  }
+  const timed = rows.filter(r => r.event_date && r.start_time && !isCancelled(r))
+  const live = timed.filter(r => r.published)
+    .sort((a, b) => a.start_time!.localeCompare(b.start_time!) || a.title.localeCompare(b.title))
+  const clashes = new Map<string, Clash>()
+  for (const draft of timed.filter(r => !r.published)) {
+    const d = span(draft)
+    const hit = live.find(e => e.event_date === draft.event_date && span(e).start < d.end && span(e).end > d.start)
+    if (hit) clashes.set(draft.id, { title: hit.title, start: hhmm(span(hit).start), end: hhmm(span(hit).end) })
+  }
+  return clashes
 }
 
 // TRAK-157: Arc's date picker speaks Date; forms keep YYYY-MM-DD (the
