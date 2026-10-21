@@ -6,9 +6,9 @@ import { server } from '../../../../tests/msw/server'
 import { table, rpc } from '../../../../tests/msw/supabase'
 
 /**
- * TRAK-212: on coach Home the "+" sits in the header's empty top-right slot,
- * fixed, so it stays in reach however far the page scrolls. Schedule has its
- * own controls up there, so its "+" stays above the tab bar.
+ * TRAK-212 put the "+" in coach Home's empty top-right slot. TRAK-233 (Imad,
+ * 21 Oct) gave that slot to the coach's bell (TRAK-232), so the "+" floats
+ * bottom right on Home too, as on every other coach tab.
  */
 
 const COACH = { id: 'coach-corner' }
@@ -30,11 +30,12 @@ beforeEach(() => {
 const corner = async () => (await screen.findByRole('button', { name: 'Quick add' })).closest<HTMLElement>('[data-quick-add]')!
 
 describe('TRAK-212: where the quick-add "+" sits', { timeout: 20_000 }, () => {
-  it('is pinned to the top right on coach Home', async () => {
+  it('floats bottom right on coach Home, where the bell has the top right', async () => {
     renderApp('/coach/home')
     const box = await corner()
-    expect(box).toHaveAttribute('data-corner', 'top')
+    expect(box).toHaveAttribute('data-corner', 'bottom')
     expect(box).toHaveClass('fixed')
+    expect(await screen.findByRole('button', { name: /^Alerts/ })).toBeInTheDocument()
   })
 
   it('stays above the tab bar on Schedule', async () => {
