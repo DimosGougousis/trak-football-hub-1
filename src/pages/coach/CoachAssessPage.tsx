@@ -380,7 +380,8 @@ function CoachAssessmentForm() {
         ...cardStats,
         // TRAK-200: Save draft hides the bands from the family; Publish shows them.
         // An already published row keeps its date; a new one takes the database's now().
-        ...(draft ? { published_at: null } : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
+        // TRAK-248: Save draft never takes back bands the family already sees; that's Unpublish.
+        ...(draft ? (assessmentPublished ? {} : { published_at: null }) : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
       }
 
       const { data: saved, error: saveError } = existingId
