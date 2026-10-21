@@ -4,14 +4,16 @@
  * each tab's own tests are appended as the tab lands.
  */
 import { it, expect, describe, beforeEach, afterEach } from 'vitest'
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { forgetScreens } from '@/lib/screen-memory'
+import { supabase } from '@/integrations/supabase/client'
 
 // The app's query cache outlives a test, so each test is its own coach.
 let COACH = { id: 'coach-250-shell' }
@@ -107,5 +109,69 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     await screen.findByRole('tabpanel', { name: 'Snapshot' })
     expect(screen.queryByRole('searchbox', { name: 'Search players' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Quick add' })).toBeNull()
+  })
+
+  // TRAK-79 / UC-X02 (from the retired squad-load-failure-refresh test): a same-account token
+  // refresh must not replace a failure with an empty squad.
+  it('keeps a load failure on screen, not an empty squad, across a token refresh', async () => {
+    const user = userEvent.setup()
+    coachReads()
+    let failing = true
+    server.use(
+      http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () =>
+        failing ? HttpResponse.json({ message: 'synthetic failure' }, { status: 500 }) : HttpResponse.json(PLAYERS)),
+      http.post(`${SUPABASE_URL}/auth/v1/token`, () => {
+        const previous = JSON.parse(localStorage.getItem('sb-test-auth-token')!)
+        const refreshed = structuredClone(previous.user)
+        return HttpResponse.json({ ...previous, user: refreshed, access_token: registerAuthUser(refreshed),
+          expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600 })
+      }),
+    )
+    renderApp('/coach/squad')
+    await screen.findByText("Couldn't load your squad", undefined, { timeout: 5000 })
+    failing = false
+    await act(async () => { const { error } = await supabase.auth.refreshSession(); expect(error).toBeNull() })
+    await act(async () => { await new Promise(r => setTimeout(r, 100)) })
+    expect(screen.getByText("Couldn't load your squad")).toBeInTheDocument()
+    expect(screen.queryByText('Your squad is being prepared')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await within(await screen.findByRole('tabpanel', { name: 'Snapshot' })).findByText('Nia Rehearsal')).toBeInTheDocument()
+  })
+
+  // TRAK-79 (from the retired squad-consent-status test): another coach signing in on this
+  // device never sees the first coach's children, not even while their own read is pending.
+  it("a different coach never sees the previous coach's players", async () => {
+    coachReads()
+    renderApp('/coach/squad')
+    await within(await screen.findByRole('tabpanel', { name: 'Snapshot' })).findByText('Nia Rehearsal')
+    cleanup()
+
+    const second = { id: `${COACH.id}-other` }
+    signInAs(second)
+    let release!: () => void
+    const held = new Promise<void>(r => { release = r })
+    server.use(
+      table('profiles', [{ id: 'p2', user_id: second.id, role: 'coach', full_name: 'Other Coach', nationality: 'AE' }]),
+      http.get(`${SUPABASE_URL}/rest/v1/squad_players`, async () => {
+        await held
+        return HttpResponse.json([{ id: 'sq-zed', coach_user_id: second.id, player_name: 'Zed Rehearsal', position: 'Attacker', shirt_number: 9, age_group: 'U14' }])
+      }),
+    )
+    renderApp('/coach/squad')
+    await screen.findByRole('tab', { name: 'Snapshot' })
+    await screen.findByRole('status')
+    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
+    release()
+    expect(await screen.findByText('Zed Rehearsal')).toBeInTheDocument()
+    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
+  })
+
+  // A failed consent check is a failed read: the squad is never listed as if every child could be assessed.
+  it('a failed consent check shows Try again, never the children as ready', async () => {
+    coachReads()
+    server.use(rpc('coach_squad_player_consent_required', () => ({ status: 500, body: { message: 'synthetic failure' } })))
+    renderApp('/coach/squad')
+    expect(await screen.findByText("Couldn't load your squad", undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
   })
 })

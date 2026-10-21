@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,6 +12,7 @@ import type { AssessmentRow } from '@/lib/squad/snapshot'
  * the squad picked; consent and assessments are asked for that roster only.
  * A failed read is an `error`, never an empty squad.
  */
+const NONE: never[] = []
 const ROOT = (userId: string | undefined) => ['coach', userId, 'squad-roster'] as const
 
 async function loadPlayers(coachId: string): Promise<Tables<'squad_players'>[]> {
@@ -49,13 +51,17 @@ export function useSquadRoster() {
 
   const all = useQuery({ queryKey: [...ROOT(userId), 'players'], queryFn: () => loadPlayers(userId!), enabled: !!userId })
   // Until the squads are known the squad in view is a guess, so nothing is shown (no flash of every squad).
-  const players = ready && all.data ? all.data.filter(p => inSquad(p.age_group)) : []
-  const ids = players.map(p => p.id).sort()
+  // Memoized on the data, so the returned values keep their identity between renders and tabs can use them as deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `inSquad` is a new function each render and depends only on `squad`
+  const players = useMemo(() => (ready && all.data ? all.data.filter(p => inSquad(p.age_group)) : NONE), [ready, all.data, squad])
+  const ids = useMemo(() => players.map(p => p.id).sort(), [players])
   const idsKey = ids.join(',')
   const dependent = !!userId && ready && all.isSuccess
 
   const consent = useQuery({ queryKey: [...ROOT(userId), 'consent', idsKey], queryFn: () => loadConsentPending(ids), enabled: dependent })
   const assessments = useQuery({ queryKey: [...ROOT(userId), 'assessments', idsKey], queryFn: () => loadAssessments(ids), enabled: dependent })
+
+  const consentPending = useMemo(() => new Set(consent.data ?? NONE), [consent.data])
 
   const error = (failed ? new Error("Couldn't load your squads") : null) ?? all.error ?? consent.error ?? assessments.error ?? null
 
@@ -64,8 +70,8 @@ export function useSquadRoster() {
     squads,
     setSquad,
     players,
-    consentPending: new Set(consent.data ?? []),
-    assessments: assessments.data ?? [],
+    consentPending,
+    assessments: assessments.data ?? NONE,
     /** True until every read has answered; a failed read is `error`, not pending. */
     isPending: !error && (!ready || all.isPending || consent.isPending || assessments.isPending),
     error,

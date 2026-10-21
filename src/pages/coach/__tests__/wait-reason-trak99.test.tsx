@@ -12,6 +12,7 @@ import { assessStep, nextButton, saveAssessment } from '../../../../tests/suppor
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { WAIT_TITLE, waitText } from '@/lib/wait-reason'
 
 const COACH = { id: 'coach-1' }
 type Reason = 'parent' | 'signup' | 'ready' | 'error'
@@ -77,5 +78,14 @@ describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
     await waitFor(() => expect(notice).toHaveTextContent('Not ready to assess yet'))
     expect(notice).not.toHaveTextContent(/Waiting for (a parent|the player)/)
     expect(nextButton()).toBeDisabled()
+  })
+})
+
+// TRAK-177: at an academy whose consent age is 15, the coach waits for a 15-17 player
+// to agree for themselves, and the assess screen (CoachAssessPage, CoachQuickAssess) says so.
+describe('Assessment notice for a player who must agree themselves (TRAK-177)', () => {
+  it('explains it on the assess screen', () => {
+    expect(WAIT_TITLE.player).toBe('Waiting for the player to agree')
+    expect(waitText('player', 'Nikos')).toBe("You can assess Nikos once they've signed up and agreed for themselves.")
   })
 })
