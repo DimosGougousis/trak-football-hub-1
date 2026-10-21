@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { isGuardianCreatedChild } from '@/lib/child-login'
 import { relativeLabel } from '@/lib/alert-read-state'
 import {
-  CALENDAR_APP_LABEL, calendarApps, createCalendarLink, feedLinks, fetchCalendarLink, openCalendarLink,
+  CALENDAR_APP_LABEL, calendarApps, createCalendarLink, feedLinks, fetchCalendarLink, startCalendarHandoff,
   revokeCalendarLink, type CalendarApp, type FeedLinks,
 } from '@/lib/calendar-link'
 
@@ -42,6 +42,8 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // TRAK-228: the browser blocked the calendar's tab; a link to tap instead.
+  const [blocked, setBlocked] = useState<{ url: string; label: string } | null>(null)
   // Compact (the Home card): the device's own calendar, the rest on request.
   const [showOthers, setShowOthers] = useState(!compact)
   const [first, ...others] = calendarApps(typeof navigator === 'undefined' ? '' : navigator.userAgent)
@@ -58,14 +60,19 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
     }
   }
 
-  async function add(pick: (l: FeedLinks) => string) {
+  // TRAK-228: Apple's link opens the Calendar app; the others are web pages,
+  // opened in their own tab so Trak stays open.
+  async function add(pick: (l: FeedLinks) => string, label: string, web: boolean) {
     if (busy) return
+    const handoff = startCalendarHandoff(web)
     setBusy(true)
     setError(null)
+    setBlocked(null)
     const l = await linksForThisVisit()
     setBusy(false)
-    if (!l) return
-    openCalendarLink(pick(l))
+    if (!l) { handoff.cancel(); return }
+    const url = pick(l)
+    if (!handoff.go(url)) { setBlocked({ url, label }); return }
     onAdded?.()
   }
 
@@ -86,7 +93,7 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
   }
 
   const button = (app: CalendarApp, primary = false) => (
-    <button key={app} type="button" disabled={busy} onClick={() => void add(l => l[app])}
+    <button key={app} type="button" disabled={busy} onClick={() => void add(l => l[app], CALENDAR_APP_LABEL[app], app !== 'apple')}
       className="w-full py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-60"
       style={{ ...font, background: primary ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))', color: primary ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink))' }}>
       Add to {CALENDAR_APP_LABEL[app]}
@@ -102,7 +109,7 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
       ) : <>
       <p className="pt-1 text-[11px] text-ink-3" style={font}>Other calendar</p>
       {others.map(app => button(app))}
-      <button type="button" disabled={busy} onClick={() => void add(l => l.outlookWork)}
+      <button type="button" disabled={busy} onClick={() => void add(l => l.outlookWork, 'Outlook', true)}
         className="w-full py-2.5 rounded-[12px] text-[13px] disabled:opacity-60"
         style={{ ...font, background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-ink))' }}>
         Add to Outlook (work or school)
@@ -112,6 +119,11 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
         {copied ? 'Link copied' : 'Copy calendar link'}
       </button>
       </>}
+      {blocked && <p className="text-[12px] text-ink-2" style={font}>
+        Your browser stopped the new tab.{' '}
+        <a href={blocked.url} target="_blank" rel="noopener noreferrer" onClick={() => onAdded?.()}
+          className="font-medium text-brand underline">Open {blocked.label}</a>
+      </p>}
       {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
     </div>
   )

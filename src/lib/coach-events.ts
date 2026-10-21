@@ -20,14 +20,18 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
    Light theme (TRAK-189): dark enough for a white page, and match moves to
    purple (Imad, 18 Oct), since a green match read as the brand's buttons. A
    blue-leaning purple, so it stays apart from training's blue with
-   deuteranopia; tournament, purple before, moves to teal. */
+   deuteranopia; tournament, purple before, moves to teal.
+   TRAK-231 (20 Oct live run): match magenta, training teal, other green,
+   cancelled a brighter red with a hollow dot; tournament takes the blue. The
+   green is the lightest that still reads as text on the light screens (4.5:1)
+   and stays apart from the brand's forest green (event-colours-distinct). */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
-  training:   '#285EA3',
-  match:      '#7B2FBE',
-  other:      '#9C4516',
-  tournament: '#0F766E',
+  training:   '#00796B',
+  match:      '#9C1C8C',
+  other:      '#62790A',
+  tournament: '#3B5BBD',
 }
-export const CANCELLED_COLOR = '#B42318'
+export const CANCELLED_COLOR = '#D1242F'
 /** "No time set" on a card: a warning, unlike every type colour. */
 export const NO_TIME_COLOR = '#875100'
 export const DURATIONS = [60, 75, 90, 120] as const
