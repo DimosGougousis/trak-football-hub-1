@@ -71,7 +71,15 @@ SELECT pg_temp.ga_assert(pg_temp.ga_applies(11) IS TRUE, 'a Greek 14-year-old st
 SELECT pg_temp.ga_assert(pg_temp.ga_applies(12) IS TRUE, 'a UAE 16-year-old still needs the guardian (consent age 18)');
 SELECT pg_temp.ga_assert(pg_temp.ga_applies(13) IS TRUE, 'no date of birth counts as needing the guardian');
 SELECT pg_temp.ga_assert(pg_temp.ga_applies(14) IS FALSE, 'another guardian''s child: nothing to say');
+-- TRAK-234 (20 Oct live run, S8): Home's consent bar asks for the children on this
+-- list. A 16-year-old who consents himself was on it, and a guardian's approval at
+-- 16 doesn't count, so "Approval saved" came back as the same prompt. Not any more.
+SELECT pg_temp.ga_assert((SELECT array_agg(player_user_id ORDER BY player_user_id) FROM public.get_children_awaiting_consent())
+  = ARRAY[pg_temp.ga(11), pg_temp.ga(12), pg_temp.ga(13)],
+  'TRAK-234 the guardian is asked for the 14-year-old, the UAE 16-year-old and the one with no birthday, not the Greek 16-year-old');
 SELECT pg_temp.ga_as(21);
+SELECT pg_temp.ga_assert(NOT EXISTS (SELECT 1 FROM public.get_children_awaiting_consent()),
+  'TRAK-234 the other guardian is asked for nobody: their Greek 16-year-old consents himself');
 SELECT pg_temp.ga_assert(pg_temp.ga_applies(11) IS FALSE, 'a child who isn''t yours: nothing to say');
 SELECT pg_temp.ga_assert(pg_temp.ga_applies(14) IS FALSE, 'the other guardian''s Greek 16-year-old consents himself too');
 RESET ROLE;
