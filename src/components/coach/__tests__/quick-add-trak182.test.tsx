@@ -57,14 +57,13 @@ async function openMenu() {
 const closed = () => waitFor(() => expect(screen.getByRole('button', { name: 'Quick add' })).toHaveAttribute('aria-expanded', 'false'))
 
 describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
+  // TRAK-265 (Imad, 22 Oct): Arc's Action morph. The "+" grows into the menu, which has its title and a close button.
   it('opens a menu that arrow keys move through, and Escape returns to the "+"', async () => {
     const menu = await openMenu()
     const items = within(menu).getAllByRole('menuitem').map(i => i.textContent)
     expect(items).toEqual(['Log training', 'Log match', 'Assess player', 'New event'])
-    // A tap opens it with no row lit (Arc's glass menu); the arrows start at the top.
-    await waitFor(() => expect(menu).toHaveFocus())
-    // Focus follows the lit row on the next frame.
-    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('button', { name: 'Close quick add' })).toBeInTheDocument()
+    // Opening focuses the first action; the arrows wrap.
     await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log training' })).toHaveFocus())
     await userEvent.keyboard('{ArrowDown}')
     await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log match' })).toHaveFocus())
@@ -83,21 +82,25 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
   })
 
   // Imad, 16 Oct: an X to leave a form, and Back to the menu. TRAK-259: the "+" itself closes the menu.
-  it('the "+" closes the menu; X closes a form; Back returns from a form to the menu', async () => {
+  it('X closes the menu and a form; Back returns from a form to the menu; Escape steps back', async () => {
     await openMenu()
-    await userEvent.click(screen.getByRole('button', { name: 'Quick add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close quick add' }))
     await closed()
 
     await userEvent.click(screen.getByRole('button', { name: 'Quick add' }))
     const menu = await screen.findByRole('menu', { name: 'Quick add' })
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log match' }))
     const form = await screen.findByRole('dialog', { name: 'Log a match' })
-    await userEvent.click(within(form).getByRole('button', { name: 'Back to Create' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Quick add' })).toHaveAttribute('aria-expanded', 'true'))
-    await userEvent.click(within(screen.getByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
+    await userEvent.click(within(form).getByRole('button', { name: 'Back to quick add' }))
+    await userEvent.click(within(await screen.findByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
     const event = await screen.findByRole('dialog', { name: 'New event' })
-    await userEvent.click(within(event).getByRole('button', { name: 'Close quick add' }))
+    // Escape goes back to the menu, then folds it into the "+".
+    await userEvent.keyboard('{Escape}')
+    expect(await screen.findByRole('menu', { name: 'Quick add' })).toBeInTheDocument()
+    await userEvent.click(within(screen.getByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'New event' })).getByRole('button', { name: 'Close quick add' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New event' })).toBeNull())
+    expect(event).not.toBeInTheDocument()
     await closed()
   })
 

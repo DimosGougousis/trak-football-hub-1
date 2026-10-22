@@ -71,7 +71,6 @@ function markTiming(collapsed: boolean, reduce: boolean): Transition {
 const rise: Variants = {
   hidden: { opacity: 0, y: 8, filter: `blur(${motionTokens.blur.soft}px)` },
   shown: { opacity: 1, y: 0, filter: "blur(0px)" },
-  gone: { opacity: 0, y: -6, filter: `blur(${motionTokens.blur.subtle}px)` },
 };
 
 function RailTip({ enabled, label, note, children }: { enabled: boolean; label: string; note?: string; children: ReactElement }) {
@@ -295,7 +294,8 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
             <nav className={styles.crumbs} aria-label="Breadcrumb">
               <ol>
                 <li className={styles.crumbRoot}>{brand.name}</li>
-                <li className={styles.crumbCurrent} aria-current="page"><AnimatePresence mode="popLayout" initial={false}><motion.span key={title} variants={rise} initial="hidden" animate="shown" exit="gone" transition={swap}>{title}</motion.span></AnimatePresence></li>
+                {/* Trak: the new title rises in; the old one leaves at once. A lazy page's suspense interrupted the exit, so old titles stayed. */}
+                <li className={styles.crumbCurrent} aria-current="page"><motion.span key={title} variants={rise} initial="hidden" animate="shown" transition={swap}>{title}</motion.span></li>
               </ol>
             </nav>
             {actions && <div className={styles.actions}>{actions}</div>}
