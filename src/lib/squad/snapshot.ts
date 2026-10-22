@@ -67,24 +67,3 @@ export function bandSpread(moves: Map<string, BandMove>): { band: BandType; ids:
     return { band, ids: all.filter(m => m.band === band).map(m => m.squadPlayerId) }
   })
 }
-
-function joinNames(names: string[]): string {
-  if (names.length <= 1) return names[0] ?? ''
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-}
-
-/** Plain-language coach prompts: drops first (a talk when sessions were also missed), then the rises together. */
-export function nextSteps(moves: BandMove[], names: Record<string, string>, missedLast4: Record<string, number>): string[] {
-  const nameOf = (id: string) => names[id] ?? 'this player'
-  const steps: string[] = []
-  for (const m of moves) {
-    if (m.move !== -1) continue
-    const name = nameOf(m.squadPlayerId)
-    steps.push((missedLast4[m.squadPlayerId] ?? 0) >= 3
-      ? `Talk to ${name}: a drop and missed sessions.`
-      : `Check in with ${name}${name.endsWith('.') ? '' : '.'}`)
-  }
-  const risers = moves.filter(m => m.move === 1).map(m => nameOf(m.squadPlayerId))
-  if (risers.length > 0) steps.push(`Tell ${joinNames(risers)} what they did well.`)
-  return steps
-}
