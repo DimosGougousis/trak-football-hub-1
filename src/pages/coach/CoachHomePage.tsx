@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
@@ -63,6 +64,17 @@ export default function CoachHomePage() {
     if (user && line) remember<HomeMemory>('coach-home', user.id, { line })
   }, [user, line])
 
+  // The coach's "Needs you" switch (Settings, TRAK-261): on unless turned off. A switch that can't be read shows the cards.
+  const needsYouSwitch = useQuery({
+    queryKey: ['coach', user?.id, 'needs-you'],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('notification_settings').select('needs_you').eq('user_id', user!.id).maybeSingle()
+      if (error) throw error
+      return data?.needs_you ?? true
+    },
+  })
+
   const loaded = !roster.isPending && !roster.error
   const shape = useMemo(() => loaded ? squadShape(roster.assessments, localTodayISO(), iso => localParts(iso).date) : null,
     [loaded, roster.assessments])
@@ -95,13 +107,14 @@ export default function CoachHomePage() {
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
           <SquadShape squadLabel={squadLabel} shape={shape} failed={!!roster.error} onRetry={roster.retry} />
         </div>
-        <div className={wide ? 'mt-6' : 'mt-5'}>
+        {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
+        {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-6' : 'mt-5'}>
           <NeedsYou items={cards} failed={!!roster.error} onRetry={roster.retry}
             onOpen={item => item.kind === 'draft'
               // TRAK-200: the profile's assessment card says Draft and has Publish.
               ? navigate(`/coach/player/${item.playerId}`)
               : navigate('/coach/assess', { state: { preselectedPlayerId: item.playerId } })} />
-        </div>
+        </div>}
       </div>
       <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />
       {user && <CoachOnboarding open={onboarding} onOpenChange={closeOnboarding} club={details?.academy ?? 'Your academy'}

@@ -27,7 +27,7 @@ const TRAININGS = ['2026-11-23', '2026-11-16', '2026-11-09', '2026-11-02']
   .map((session_date, i) => ({ id: `t${i + 1}`, coach_user_id: COACH.id, session_type: 'training', session_date, event_id: i === 0 ? 'e1' : null, squad: null }))
 
 type Row = Record<string, unknown>
-function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[]; present?: [string, string][]; absences?: Row[]; details?: Row }) {
+function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[]; present?: [string, string][]; absences?: Row[]; details?: Row; settings?: Row[] }) {
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Angelos Basinas', invite_code: 'ABCD' }]),
     table('coach_details', [over.details ?? { user_id: COACH.id, coach_role: 'Head Coach', team: 'U16s', organization_id: 'org-1' }]),
@@ -38,6 +38,7 @@ function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[];
     table('session_attendance', (over.present ?? []).map(([session_id, squad_player_id]) => ({ session_id, squad_player_id }))),
     table('event_absences', over.absences ?? []),
     table('coach_calendar_events', []),
+    table('notification_settings', over.settings ?? []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
   )
@@ -190,6 +191,14 @@ describe('TRAK-262: coach Home', () => {
     expect(within(needs).queryByRole('button', { name: /Bo Lind/ })).toBeNull()
     await userEvent.click(card)
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
+  })
+
+  it('Needs you leaves Home when the coach turns it off in Settings', async () => {
+    home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'), settings: [{ user_id: COACH.id, event_reminders: true, needs_you: false, cant_make_it_alerts: true }] })
+    renderApp('/coach/home')
+    expect(await screen.findByText(/No assessments this month or last/, {}, { timeout: 5000 })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('region', { name: /Needs you/ })).toBeNull())
+    expect(screen.queryByRole('button', { name: /Ade Okafor/ })).toBeNull()
   })
 
   it("a draft families can't see yet has its own card, which opens the player", async () => {
