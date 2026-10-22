@@ -52,15 +52,16 @@ $$;
 
 -- ── Fixtures ───────────────────────────────────────────────────────────────
 -- Academy D (100, admin 1): coach 10, child 21, parent 31.
--- Academy A (101, admin 2): coach 11, child 20, parent 30.
+-- Academy A (101, admin 2): coach 11, child 20, parent 30; coach 12 holds section 3's "from now"
+-- events, so they can never overlap coach 11's fixed-date ones (22, 27, 28 Oct).
 INSERT INTO auth.users(id,email,email_confirmed_at)
  SELECT pg_temp.tz175id(n), 'synthetic-'||n||'@timezone175.invalid', now()
- FROM unnest(ARRAY[1,2,10,11,20,21,30,31]) n;
+ FROM unnest(ARRAY[1,2,10,11,12,20,21,30,31]) n;
 INSERT INTO public.profiles(user_id,role,full_name)
  SELECT pg_temp.tz175id(n),
-  CASE WHEN n IN (1,2) THEN 'club' WHEN n IN (10,11) THEN 'coach' WHEN n BETWEEN 20 AND 29 THEN 'player' ELSE 'parent' END::public.user_role,
+  CASE WHEN n IN (1,2) THEN 'club' WHEN n IN (10,11,12) THEN 'coach' WHEN n BETWEEN 20 AND 29 THEN 'player' ELSE 'parent' END::public.user_role,
   'Synthetic '||n
- FROM unnest(ARRAY[1,2,10,11,20,21,30,31]) n;
+ FROM unnest(ARRAY[1,2,10,11,12,20,21,30,31]) n;
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.tz175id(100),pg_temp.tz175id(1),'Clock Academy D','TZ175D'),
  (pg_temp.tz175id(101),pg_temp.tz175id(2),'Clock Academy A','TZ175A');
@@ -87,14 +88,16 @@ SELECT pg_temp.tz175check((SELECT time_zone = 'Asia/Dubai' FROM public.organizat
 -- The fixtures below are the operator's: nobody signed in.
 SELECT set_config('request.jwt.claims', '', true);
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES
- (pg_temp.tz175id(10),pg_temp.tz175id(100),'U15'),(pg_temp.tz175id(11),pg_temp.tz175id(101),'U14');
+ (pg_temp.tz175id(10),pg_temp.tz175id(100),'U15'),(pg_temp.tz175id(11),pg_temp.tz175id(101),'U14'),
+ (pg_temp.tz175id(12),pg_temp.tz175id(101),'U14');
 INSERT INTO public.player_details(user_id,date_of_birth)
  SELECT pg_temp.tz175id(n), current_date - interval '13 years' FROM unnest(ARRAY[20,21]) n;
 INSERT INTO public.player_parent_links(player_user_id,parent_user_id) VALUES
  (pg_temp.tz175id(20),pg_temp.tz175id(30)),(pg_temp.tz175id(21),pg_temp.tz175id(31));
 INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id) VALUES
  (pg_temp.tz175id(40),pg_temp.tz175id(11),'Synthetic 20',pg_temp.tz175id(20)),
- (pg_temp.tz175id(41),pg_temp.tz175id(10),'Synthetic 21',pg_temp.tz175id(21));
+ (pg_temp.tz175id(41),pg_temp.tz175id(10),'Synthetic 21',pg_temp.tz175id(21)),
+ (pg_temp.tz175id(42),pg_temp.tz175id(12),'Synthetic 20',pg_temp.tz175id(20));
 INSERT INTO public.academy_features(organization_id,feature) VALUES
  (pg_temp.tz175id(100),'events'),(pg_temp.tz175id(101),'events') ON CONFLICT DO NOTHING;
 SET LOCAL ROLE authenticated;
@@ -156,21 +159,27 @@ SELECT pg_temp.tz175check(trak_private.academy_today(pg_temp.tz175id(101), '2026
 
 -- ── 3. The register and "can't make it" go by the Athens clock ───────────
 -- 920 starts in 30 minutes in Athens. Read as Dubai, the same 17:xx would
--- already be an hour or two ago. 921 was 3 hours ago.
+-- already be an hour or two ago. 921 was 3 hours ago. They are coach 12's: run between
+-- 12:00 and 18:30 UTC on 22 Oct they overlapped coach 11's "Athens Thu" (the 22 Oct CI
+-- failure), and on 27 and 28 Oct they would hit "Athens Tue" and "Athens Wed".
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published)
- SELECT pg_temp.tz175id(n), pg_temp.tz175id(11), 'Athens soon '||n, 'training', now(),
+ SELECT pg_temp.tz175id(n), pg_temp.tz175id(12), 'Athens soon '||n, 'training', now(),
   pg_temp.tz175athens(k)::date, date_trunc('minute', pg_temp.tz175athens(k))::time, true
  FROM (VALUES (920, 30), (921, -180)) v(n, k);
 SET LOCAL ROLE authenticated;
-SELECT pg_temp.tz175actor(11);
-SELECT pg_temp.tz175refused(format('SELECT public.take_event_register(%L, ARRAY[%L]::uuid[])', pg_temp.tz175id(920), pg_temp.tz175id(40)),
+SELECT pg_temp.tz175actor(12);
+SELECT pg_temp.tz175refused(format('SELECT public.take_event_register(%L, ARRAY[%L]::uuid[])', pg_temp.tz175id(920), pg_temp.tz175id(42)),
  '3 the register is still shut 30 minutes before an Athens start','P0001','once the event has started');
-SELECT pg_temp.tz175refused(format('SELECT public.take_event_register(%L, ARRAY[%L]::uuid[])', pg_temp.tz175id(921), pg_temp.tz175id(40)),
+SELECT pg_temp.tz175refused(format('SELECT public.take_event_register(%L, ARRAY[%L]::uuid[])', pg_temp.tz175id(921), pg_temp.tz175id(42)),
  '3 and opens once it has started, for a coach who can only read their own academy',NULL);
 SELECT pg_temp.tz175actor(30);
 SELECT pg_temp.tz175refused(format('SELECT public.report_cant_make_it(%L, %L)', pg_temp.tz175id(920), pg_temp.tz175id(20)),
  '3 a parent can still say "can''t make it" 30 minutes before an Athens start',NULL);
 RESET ROLE;
+-- Their date is the run's own; gone before section 5 counts reminders by date (27 Oct).
+DELETE FROM public.event_absences WHERE event_id IN (pg_temp.tz175id(920), pg_temp.tz175id(921));
+DELETE FROM public.coach_sessions WHERE event_id IN (pg_temp.tz175id(920), pg_temp.tz175id(921));
+DELETE FROM public.coach_calendar_events WHERE id IN (pg_temp.tz175id(920), pg_temp.tz175id(921));
 
 -- ── 4. Overlaps: an end known only as an instant is read in Athens ───────
 -- 930: 17:00 with no end time, one hour long as an instant (the app's
