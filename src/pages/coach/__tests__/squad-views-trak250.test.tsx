@@ -1,6 +1,7 @@
 /**
- * TRAK-250: Squad is a tabbed coach workspace (Snapshot, Attributes, Availability,
- * Games Statistics) with one shared roster read. This file holds the shell tests;
+ * TRAK-250: Squad is a coach workspace with views of one shared roster read. TRAK-263:
+ * Players replaced Snapshot; the views (Players, Attributes, Availability, Games) sit on
+ * Arc's glass segmented control. This file holds the shell tests;
  * each tab's own tests are appended as the tab lands.
  */
 import { it, expect, describe, beforeEach, afterEach, vi } from 'vitest'
@@ -10,7 +11,7 @@ import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
-import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { table, rpc, rpcRows, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { forgetScreens } from '@/lib/screen-memory'
 import { supabase } from '@/integrations/supabase/client'
@@ -47,43 +48,44 @@ function coachReads(players: Record<string, unknown>[] = PLAYERS) {
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
     rpc('coach_squad_season', () => []),
+    // TRAK-263: the Players view's profile facts (TRAK-260).
+    table('squad_player_profiles', []),
+    rpcRows('coach_player_birth_dates', []),
   )
 }
 
 beforeEach(() => { localStorage.clear(); COACH = { id: `coach-250-shell-${++n}` }; signInAs(COACH) })
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
 
-const tab = (name: string) => screen.findByRole('tab', { name })
-const panelNames = (panel: HTMLElement) => within(panel).getAllByRole('listitem').map(li => li.textContent).sort()
+const tab = (name: string) => screen.findByRole('radio', { name })
+// The view's own region, named after it.
+const view = (name: string) => screen.findByRole('region', { name })
 
 describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
-  it('opens on Snapshot and keeps the tab in the URL', async () => {
+  it('opens on Players and keeps the view in the URL', async () => {
     const user = userEvent.setup()
     coachReads()
     renderApp('/coach/squad')
-    expect(await tab('Snapshot')).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tablist', { name: 'Squad views' })).toBeInTheDocument()
-    expect(await screen.findByRole('tabpanel', { name: 'Snapshot' })).toBeInTheDocument()
+    expect(await tab('Players')).toHaveAttribute('aria-checked', 'true')
+    expect(await view('Players')).toBeInTheDocument()
 
-    expect(within(screen.getByRole('tablist', { name: 'Squad views' })).getAllByRole('tab').map(t => t.textContent)).toEqual(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
-    await user.click(screen.getByRole('tab', { name: 'Games Statistics' }))
-    expect(screen.getByRole('tab', { name: 'Games Statistics' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(screen.getByRole('radiogroup', { name: 'Squad view' })).getAllByRole('radio').map(t => t.textContent)).toEqual(['Players', 'Attributes', 'Availability', 'Games'])
+    await user.click(screen.getByRole('radio', { name: 'Games' }))
+    expect(screen.getByRole('radio', { name: 'Games' })).toHaveAttribute('aria-checked', 'true')
     expect(window.location.search).toContain('tab=games')
-    expect(await screen.findByRole('tabpanel', { name: 'Games Statistics' })).toBeInTheDocument()
+    expect(await view('Games')).toBeInTheDocument()
 
     cleanup()
     renderApp('/coach/squad?tab=attributes')
-    expect(await tab('Attributes')).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: 'Snapshot' })).toHaveAttribute('aria-selected', 'false')
+    expect(await tab('Attributes')).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Players' })).toHaveAttribute('aria-checked', 'false')
 
-    cleanup()
-    renderApp('/coach/squad?tab=nonsense')
-    expect(await tab('Snapshot')).toHaveAttribute('aria-selected', 'true')
-
-    // "season" is no longer a tab id.
-    cleanup()
-    renderApp('/coach/squad?tab=season')
-    expect(await tab('Snapshot')).toHaveAttribute('aria-selected', 'true')
+    // Snapshot left (TRAK-263); an old link to it, or nonsense, opens Players.
+    for (const old of ['snapshot', 'nonsense', 'season']) {
+      cleanup()
+      renderApp(`/coach/squad?tab=${old}`)
+      expect(await tab('Players')).toHaveAttribute('aria-checked', 'true')
+    }
   })
 
   it('squad picker scopes every tab', async () => {
@@ -91,12 +93,15 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     coachReads()
     renderApp('/coach/squad')
     // Two squads: the first (U10) shows until the coach picks the other.
-    const first = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+    const first = await view('Players')
     await within(first).findByText('Nia Rehearsal')
     expect(within(first).queryByText('Theo Rehearsal')).toBeNull()
 
     await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U12' }))
-    await waitFor(() => expect(panelNames(screen.getByRole('tabpanel', { name: 'Snapshot' }))).toEqual(['Ida Rehearsal', 'Theo Rehearsal']))
+    const players = () => within(within(screen.getByRole('region', { name: 'Players' })).getByRole('list', { name: 'Players' }))
+    await waitFor(() => expect(players().getAllByRole('listitem')).toHaveLength(2))
+    expect(players().getByText('Ida Rehearsal')).toBeInTheDocument()
+    expect(players().getByText('Theo Rehearsal')).toBeInTheDocument()
     expect(screen.queryByText('Nia Rehearsal')).toBeNull()
   })
 
@@ -112,7 +117,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
 
     failing = false
     await user.click(screen.getByRole('button', { name: 'Try again' }))
-    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+    const panel = await screen.findByRole('region', { name: 'Players' })
     expect(await within(panel).findByText('Nia Rehearsal')).toBeInTheDocument()
     expect(screen.queryByText("Couldn't load your squad")).toBeNull()
   })
@@ -123,11 +128,10 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     expect(await screen.findByText('Your squad is being prepared')).toBeInTheDocument()
   })
 
-  it('the old directory is gone', async () => {
+  it("the only \"+\" is the coach's frame's", async () => {
     coachReads()
     renderApp('/coach/squad')
-    await screen.findByRole('tabpanel', { name: 'Snapshot' })
-    expect(screen.queryByRole('searchbox', { name: 'Search players' })).toBeNull()
+    await view('Players')
     // TRAK-259: the only "+" is the coach's frame's, in the glass tab bar.
     expect(screen.getAllByRole('button', { name: 'Quick add' })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Quick add' }).closest('nav')).toHaveAttribute('aria-label', 'Coach')
@@ -157,7 +161,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     expect(screen.getByText("Couldn't load your squad")).toBeInTheDocument()
     expect(screen.queryByText('Your squad is being prepared')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await within(await screen.findByRole('tabpanel', { name: 'Snapshot' })).findByText('Nia Rehearsal')).toBeInTheDocument()
+    expect(await within(await screen.findByRole('region', { name: 'Players' })).findByText('Nia Rehearsal')).toBeInTheDocument()
   })
 
   // TRAK-79 (from the retired squad-consent-status test): another coach signing in on this
@@ -165,7 +169,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
   it("a different coach never sees the previous coach's players", async () => {
     coachReads()
     renderApp('/coach/squad')
-    await within(await screen.findByRole('tabpanel', { name: 'Snapshot' })).findByText('Nia Rehearsal')
+    await within(await screen.findByRole('region', { name: 'Players' })).findByText('Nia Rehearsal')
     cleanup()
 
     const second = { id: `${COACH.id}-other` }
@@ -180,7 +184,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
       }),
     )
     renderApp('/coach/squad')
-    await screen.findByRole('tab', { name: 'Snapshot' })
+    await screen.findByRole('radio', { name: 'Players' })
     await screen.findByRole('status')
     expect(screen.queryByText('Nia Rehearsal')).toBeNull()
     release()
@@ -198,7 +202,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
   })
 })
 
-// ---- Snapshot tab (task 4) -------------------------------------------------------------------
+// ---- Players view (TRAK-263, replacing Snapshot) --------------------------------------------------
 const rating = (squad_player_id: string, coach_rating: number, created_at: string) => ({
   squad_player_id, coach_rating, created_at, work_rate: 5, technical: 5, physical: 5, coachability: 5, attitude: 5, tactical: 5,
 })
@@ -207,94 +211,113 @@ const SNAP_PLAYERS = [
   { id: 'sq-sami', coach_user_id: 'x', player_name: 'Sami K.', position: 'Attacker', shirt_number: 9, age_group: 'U12' },
   { id: 'sq-new', coach_user_id: 'x', player_name: 'Newcomer R.', position: 'Defender', shirt_number: 3, age_group: 'U12' },
 ]
-const TRAININGS = ['2026-10-05', '2026-10-08', '2026-10-12', '2026-10-15'].map((session_date, i) => (
-  { id: `ses-${i}`, coach_user_id: 'x', session_type: 'training', squad: null, session_date, title: 'Training' }))
-// The register only stores who was ticked present: an absent child simply has no row.
-const present = (session: number, squad_player_id: string) => ({ id: `a-${squad_player_id}-${session}`, session_id: `ses-${session}`, squad_player_id, status: 'present' })
-const MARKS = [
-  present(3, 'sq-leo'),
-  ...[0, 1, 2, 3].map(i => present(i, 'sq-sami')),
-]
+const playerList = (panel: HTMLElement) => within(within(panel).getByRole('list', { name: 'Players' }))
+const row = (panel: HTMLElement, name: string) => within(panel).getByRole('button', { name: new RegExp(`^${name}`) })
 
-describe('TRAK-250: Snapshot tab', { timeout: 20_000 }, () => {
-  it('snapshot shows spread, moves and next steps', async () => {
+describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
+  it('lists every roster player with their band and move, and the squad band bar', async () => {
     coachReads(SNAP_PLAYERS)
-    server.use(
-      table('coach_assessments', [
-        rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z'),
-        rating('sq-sami', 8.2, '2026-09-01T10:00:00Z'), rating('sq-sami', 9.1, '2026-10-01T10:00:00Z'),
-      ]),
-      table('coach_sessions', TRAININGS),
-      table('session_attendance', MARKS),
-    )
+    server.use(table('coach_assessments', [
+      rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z'),
+      rating('sq-sami', 8.2, '2026-09-01T10:00:00Z'), rating('sq-sami', 9.1, '2026-10-01T10:00:00Z'),
+    ]))
     renderApp('/coach/squad')
-    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
-
-    expect(await within(panel).findByText(/2 assessed/)).toBeInTheDocument()
-    const mixed = within(panel).getByRole('group', { name: 'Mixed' })
-    const chip = within(mixed).getByText(/Leo M\./).closest('li')!
-    expect(chip).toHaveTextContent('↓')
-    expect(within(panel).getByRole('group', { name: 'Exceptional' })).toHaveTextContent('Sami K.')
-    expect(within(panel).getByRole('img', { name: /Band spread/ })).toBeInTheDocument()
-
-    const changes = within(panel).getByRole('region', { name: 'Changes since last assessment' })
-    expect(within(changes).getByText('Leo M.', { exact: false, selector: 'p' })).toBeInTheDocument()
-    const open = within(changes).getByRole('link', { name: /Open profile.*Leo M\./ })
-    expect(open).toHaveAttribute('href', '/coach/player/sq-leo')
-
-    expect(await within(panel).findByText('Talk to Leo M.: a drop and missed sessions.')).toBeInTheDocument()
-    // The child without an assessment is still on screen.
-    expect(within(panel).getByText('Newcomer R.')).toBeInTheDocument()
+    const panel = await view('Players')
+    await within(panel).findByText('Leo M.')
+    expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3)
+    expect(row(panel, 'Leo M.')).toHaveTextContent('Mixed')
+    expect(within(row(panel, 'Leo M.')).getByLabelText('down')).toBeInTheDocument()
+    expect(within(row(panel, 'Sami K.')).getByLabelText('up')).toBeInTheDocument()
+    expect(row(panel, 'Newcomer R.')).toHaveTextContent('Not assessed')
+    expect(within(panel).getByText(/2 of 3 assessed · ↑ 1 up and ↓ 1 down/)).toBeInTheDocument()
+    // Nobody is picked until the coach taps a row.
+    expect(within(panel).getByText('Pick a player to see their profile.')).toBeInTheDocument()
   })
 
-  it("every name in the band columns and chips links to the child's profile", async () => {
-    coachReads(SNAP_PLAYERS)
-    server.use(
-      table('coach_assessments', [rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z')]),
-      rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'sq-sami'),
-    )
-    renderApp('/coach/squad')
-    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
-    const mixed = await within(panel).findByRole('group', { name: 'Mixed' })
-    expect(within(mixed).getByRole('link', { name: /Leo M\./ })).toHaveAttribute('href', '/coach/player/sq-leo')
-    expect(within(panel).getByRole('link', { name: 'Newcomer R.' })).toHaveAttribute('href', '/coach/player/sq-new')
-    expect(within(panel).getByRole('link', { name: 'Sami K.' })).toHaveAttribute('href', '/coach/player/sq-sami')
-  })
-
-  it('empty squad', async () => {
+  it('filters by position, with counts, and searches by name or shirt number', async () => {
+    const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     renderApp('/coach/squad')
-    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
-    expect(await within(panel).findByText(/0 assessed/)).toBeInTheDocument()
-    expect(within(panel).getByText('No assessments yet')).toBeInTheDocument()
+    const panel = await view('Players')
+    await within(panel).findByText('Leo M.')
+    await user.click(within(panel).getByRole('button', { name: 'Attackers, 1' }))
+    await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(1))
+    expect(playerList(panel).getByText('Sami K.')).toBeInTheDocument()
+    await user.click(within(panel).getByRole('button', { name: 'All, 3' }))
+    await user.type(within(panel).getByRole('searchbox'), '3')
+    await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(1))
+    expect(playerList(panel).getByText('Newcomer R.')).toBeInTheDocument()
   })
 
-  it('a training with no register taken is not a miss', async () => {
+  it("a player's profile: foot, nationality, born from the roster, traits and the season so far", async () => {
+    const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     server.use(
       table('coach_assessments', [rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z')]),
-      // Two newer trainings nobody was ticked at; Leo missed only one of the four registered ones.
-      table('coach_sessions', [...TRAININGS, ...['2026-10-19', '2026-10-20'].map((session_date, i) =>
-        ({ id: `ses-${4 + i}`, coach_user_id: 'x', session_type: 'training', squad: null, session_date, title: 'Training' }))]),
-      table('session_attendance', [present(0, 'sq-leo'), present(3, 'sq-leo'), ...[0, 1, 2, 3].map(i => present(i, 'sq-sami'))]),
+      table('squad_player_profiles', [{ squad_player_id: 'sq-leo', preferred_foot: 'left', nationality: 'Greece', traits: ['Places shots', 'Plays one-twos'] }]),
+      rpcRows('coach_player_birth_dates', [{ squad_player_id: 'sq-leo', date_of_birth: '2012-01-01' }]),
     )
     renderApp('/coach/squad')
-    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
-    expect(await within(panel).findByText('Check in with Leo M.')).toBeInTheDocument()
-    expect(within(panel).queryByText(/a drop and missed sessions/)).toBeNull()
+    const panel = await view('Players')
+    await user.click(await within(panel).findByRole('button', { name: /^Leo M\./ }))
+    const about = await within(panel).findByRole('region', { name: 'About Leo' })
+    expect(await within(about).findByText('Left')).toBeInTheDocument()
+    expect(within(about).getByText('Greece')).toBeInTheDocument()
+    expect(within(about).getByText(/^1\/1\/2012 · \d+ years old$/)).toBeInTheDocument()
+    expect(within(within(about).getByRole('list', { name: "Leo's traits" })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Places shots', 'Plays one-twos'])
+    expect(within(panel).getByText(/Average of 2 assessments since 1 July/)).toBeInTheDocument()
   })
 
-  it('a failed attendance read keeps the bands and leaves out the missed-sessions wording', async () => {
+  it('the coach edits traits from the fixed list; picking one of a pair unpicks the other', async () => {
+    const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
+    const saved: Record<string, unknown>[] = []
     server.use(
-      table('coach_assessments', [rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z')]),
-      http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })),
+      table('squad_player_profiles', [{ squad_player_id: 'sq-sami', preferred_foot: null, nationality: null, traits: ['Dives into tackles'] }]),
+      http.post(`${SUPABASE_URL}/rest/v1/squad_player_profiles`, async ({ request }) => {
+        saved.push(await request.json() as Record<string, unknown>)
+        return new HttpResponse(null, { status: 201 })
+      }),
     )
     renderApp('/coach/squad')
-    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
-    expect(await within(panel).findByText('Check in with Leo M.')).toBeInTheDocument()
-    expect(within(panel).getByRole('group', { name: 'Mixed' })).toHaveTextContent('Leo M.')
-    expect(within(panel).queryByText(/a drop and missed sessions/)).toBeNull()
+    const panel = await view('Players')
+    await user.click(await within(panel).findByRole('button', { name: /^Sami K\./ }))
+    await user.click(await within(panel).findByRole('button', { name: 'Edit profile' }))
+    const sheet = await screen.findByRole('dialog', { name: "Sami's profile" })
+    expect(within(sheet).getByRole('button', { name: 'Dives into tackles' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(sheet).getByRole('button', { name: 'Does not dive into tackles' }))
+    expect(within(sheet).getByRole('button', { name: 'Dives into tackles' })).toHaveAttribute('aria-pressed', 'false')
+    await user.click(within(sheet).getByRole('button', { name: 'Right' }))
+    await user.selectOptions(within(sheet).getByRole('combobox', { name: 'Nationality' }), 'Greece')
+    await user.click(within(sheet).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0]).toEqual({ squad_player_id: 'sq-sami', preferred_foot: 'right', nationality: 'Greece', traits: ['Does not dive into tackles'] })
+  })
+
+  it('a player waiting for consent is listed, says so, and has nothing to record', async () => {
+    const user = userEvent.setup()
+    coachReads(SNAP_PLAYERS)
+    server.use(rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'sq-new'))
+    renderApp('/coach/squad')
+    const panel = await view('Players')
+    await within(panel).findByText('Newcomer R.')
+    expect(row(panel, 'Newcomer R.')).toHaveTextContent('Waiting for consent')
+    expect(within(panel).getByText(/0 of 2 assessed/)).toBeInTheDocument()
+    await user.click(row(panel, 'Newcomer R.'))
+    expect(await within(panel).findByText(/Newcomer is waiting for consent/)).toBeInTheDocument()
+    expect(within(panel).queryByRole('button', { name: 'Edit profile' })).toBeNull()
+  })
+
+  it("a failed profile read says so, never \"Not set\", and keeps the squad on screen", async () => {
+    const user = userEvent.setup()
+    coachReads(SNAP_PLAYERS)
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_player_profiles`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
+    renderApp('/coach/squad')
+    const panel = await view('Players')
+    await user.click(await within(panel).findByRole('button', { name: /^Leo M\./ }))
+    expect(await within(panel).findByRole('button', { name: 'Retry' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(panel).queryByText('Not set')).toBeNull()
+    expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3)
   })
 })
 
@@ -320,7 +343,7 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
       attrs('sq-sami', mondayNoon(0), 8),
     ]))
     renderApp('/coach/squad?tab=attributes')
-    const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
+    const panel = await screen.findByRole('region', { name: 'Attributes' })
 
     const tactical = await waitFor(() => cellsOf(panel, 'Tactical'))
     // Six weeks, then Range and Trend; the four weeks with nothing recorded read as a dash, never 0.
@@ -347,7 +370,7 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
   it('empty squad', async () => {
     coachReads(SNAP_PLAYERS)
     renderApp('/coach/squad?tab=attributes')
-    const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
+    const panel = await screen.findByRole('region', { name: 'Attributes' })
     expect(await within(panel).findByText('No assessments in the last 6 weeks')).toBeInTheDocument()
     expect(within(panel).queryByRole('table')).toBeNull()
   })
@@ -356,7 +379,7 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
     coachReads(SNAP_PLAYERS)
     server.use(table('coach_assessments', [attrs('sq-leo', mondayNoon(10), 4)]))
     renderApp('/coach/squad?tab=attributes')
-    const panel = await screen.findByRole('tabpanel', { name: 'Attributes' })
+    const panel = await screen.findByRole('region', { name: 'Attributes' })
     expect(await within(panel).findByText('No assessments in the last 6 weeks')).toBeInTheDocument()
   })
 })
@@ -375,7 +398,7 @@ const SEASON_ROWS = [
   seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-leo', null, 2), seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-sami', null),
 ]
 const tile = (panel: HTMLElement, name: string) => within(panel).getByRole('group', { name })
-const GAMES = 'Games Statistics'
+const GAMES = 'Games'
 const seasonLine = (matches: string) => `${seasonWindow(localTodayISO()).label} · ${matches}`
 /** Nothing about minutes played, in any wording, and no percentage. */
 function noMinutes(el: HTMLElement) {
@@ -390,10 +413,10 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     const asked: Record<string, unknown>[] = []
     server.use(rpc('coach_squad_season', args => { asked.push(args); return SEASON_ROWS }))
     renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('tabpanel', { name: GAMES })
+    const panel = await screen.findByRole('region', { name: GAMES })
 
     const window_ = seasonWindow(localTodayISO())
-    expect(await within(panel).findByRole('heading', { name: GAMES })).toBeInTheDocument()
+    expect(await within(panel).findByRole('heading', { name: 'Games Statistics' })).toBeInTheDocument()
     expect(asked[0]).toEqual({ p_from: window_.from, p_to: window_.to, p_squad: null })
     expect(await within(panel).findByText(seasonLine('3 matches'))).toBeInTheDocument()
     expect(within(panel).getAllByRole('group').map(g => g.getAttribute('aria-label')))
@@ -439,7 +462,7 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
       rpc('coach_squad_season', () => SEASON_ROWS.filter(r => r.squad_player_id !== 'sq-new')),
     )
     renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('tabpanel', { name: GAMES })
+    const panel = await screen.findByRole('region', { name: GAMES })
     const table_ = await within(panel).findByRole('table')
     const rows = within(table_).getAllByRole('row').slice(1)
     expect(rows).toHaveLength(3)
@@ -454,7 +477,7 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     coachReads(SNAP_PLAYERS)
     server.use(rpc('coach_squad_season', () => SEASON_ROWS))
     renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('tabpanel', { name: GAMES })
+    const panel = await screen.findByRole('region', { name: GAMES })
     const record = await within(panel).findByRole('list', { name: 'Record after each match (won–drawn–lost)' })
     const items = within(record).getAllByRole('listitem')
     expect(items.map(i => i.textContent)).toEqual(['5 Sep 1–0–0', '12 Sep 1–0–1', '19 Sep 2–0–1'])
@@ -464,7 +487,7 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     coachReads(SNAP_PLAYERS)
     server.use(rpc('coach_squad_season', () => []))
     renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('tabpanel', { name: GAMES })
+    const panel = await screen.findByRole('region', { name: GAMES })
     expect(await within(panel).findByText('No matches logged this season yet')).toBeInTheDocument()
     expect(within(panel).getByText(seasonLine('0 matches'))).toBeInTheDocument()
     expect(within(panel).queryByRole('table')).toBeNull()
@@ -475,7 +498,7 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     coachReads(SNAP_PLAYERS)
     server.use(rpc('coach_squad_season', () => [seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-leo', null, 2)]))
     renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('tabpanel', { name: GAMES })
+    const panel = await screen.findByRole('region', { name: GAMES })
     expect(await within(panel).findByText(seasonLine('1 match'))).toBeInTheDocument()
     const leo = within(within(panel).getByRole('table')).getAllByRole('row')[1]
     expect(within(leo).getAllByRole('cell').map(c => c.textContent)).toEqual(['8', '1', '2', '0'])
@@ -488,7 +511,7 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     let failing = true
     server.use(rpc('coach_squad_season', () => failing ? { status: 500, body: { message: 'unavailable' } } : SEASON_ROWS))
     renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('tabpanel', { name: GAMES })
+    const panel = await screen.findByRole('region', { name: GAMES })
     expect(await within(panel).findByText("Couldn't load the season", undefined, { timeout: 5000 })).toBeInTheDocument()
     expect(within(panel).queryByText('No matches logged this season yet')).toBeNull()
     failing = false
@@ -503,7 +526,7 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     const asked: Record<string, unknown>[] = []
     server.use(rpc('coach_squad_season', args => { asked.push(args); return [] }))
     renderApp('/coach/squad?tab=games')
-    await within(await screen.findByRole('tabpanel', { name: GAMES })).findByText('No matches logged this season yet')
+    await within(await screen.findByRole('region', { name: GAMES })).findByText('No matches logged this season yet')
     expect(asked.at(-1)).toMatchObject({ p_squad: 'U10' })
 
     await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U12' }))
@@ -570,7 +593,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
       absent: { 'ev-1': [{ squad_player_id: 'c2', reason: 'Dentist' }] },
     })
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
 
     expect(await within(panel).findByRole('heading', { name: 'Sat 24 Oct · vs Marina FC U10' })).toBeInTheDocument()
     expect(panel).toHaveTextContent('Match')
@@ -601,7 +624,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
   it('a confirmed goalkeeper with a reported absence is still confirmed, and shows the tag', async () => {
     availabilityReads({ confirmed: { 'ev-1': ['c1'] }, absent: { 'ev-1': [{ squad_player_id: 'c1' }] } })
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     const zayd = await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })
     await waitFor(() => expect(zayd).toHaveTextContent("Reported can't make it"))
     expect(panel).toHaveTextContent('Goalkeepers: Zayd B.')
@@ -618,7 +641,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
       return null
     }))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     await user.click(await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ }))
 
     await waitFor(() => expect(calls).toEqual([{ p_event_id: 'ev-1', p_squad_player_id: 'c3' }]))
@@ -635,7 +658,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
       return null
     }))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     const leo = await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ })
     act(() => leo.focus())
     await user.keyboard('{Enter}')
@@ -657,7 +680,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
       return HttpResponse.json(null)
     }))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     await user.click(await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ }))
     const rayan = child(panel, 'Not confirmed', /Rayan S\./)!
     await waitFor(() => expect(rayan).toHaveAttribute('aria-disabled', 'true'))
@@ -677,7 +700,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
       return null
     }))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     await user.click(await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Leo M\./ }))
 
     await waitFor(() => expect(calls).toEqual([{ p_event_id: 'ev-1', p_squad_player_id: 'c3' }]))
@@ -689,7 +712,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
     server.use(rpc('confirm_event_attendance', () => ({ status: 403, body: { message: 'This event has ended' } })))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     await user.click(await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ }))
 
     expect(await within(panel).findByRole('alert')).toHaveTextContent('This event has ended')
@@ -700,7 +723,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
   it('no upcoming event', async () => {
     availabilityReads({ events: [] })
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText('No upcoming events')).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: /schedule/i })).toHaveAttribute('href', '/coach/schedule')
     expect(within(panel).queryByRole('region', { name: 'Confirmed' })).toBeNull()
@@ -712,7 +735,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     server.use(table('squad_players', [...AV_PLAYERS,
       { id: 'c9', coach_user_id: 'x', player_name: 'Omar T.', position: 'Defender', shirt_number: 5, age_group: 'U12' }]))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText('No upcoming events')).toBeInTheDocument()
   })
 
@@ -720,7 +743,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     availabilityReads()
     server.use(rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'c4'))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Rayan S\./ })
 
     expect(panel).toHaveTextContent(/Not eligible:\s*Hamza Q\./)
@@ -733,7 +756,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
   it('warns when no goalkeeper is confirmed', async () => {
     availabilityReads({ confirmed: { 'ev-1': ['c2'] } })
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText('No goalkeeper confirmed')).toBeInTheDocument()
     expect(within(panel).queryByText(/^Goalkeepers:/)).toBeNull()
   })
@@ -742,7 +765,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     const user = userEvent.setup()
     availabilityReads({ events: [MATCH_EVENT, TRAINING_EVENT], confirmed: { 'ev-1': ['c1'], 'ev-2': ['c2', 'c3'] } })
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     await within(panel).findByRole('heading', { name: 'Sat 24 Oct · vs Marina FC U10' })
     expect(within(panel).getByRole('button', { name: 'Previous event' })).toBeDisabled()
 
@@ -768,7 +791,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     it(`shows no minutes or percentages for ${what}, and does not read the season`, async () => {
       const state = availabilityReads({ events: [event], confirmed: { [eventId]: ['c1'] }, season: SEASON })
       renderApp('/coach/squad?tab=availability')
-      const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+      const panel = await screen.findByRole('region', { name: 'Availability' })
       await within(await columnLater(panel, 'Confirmed')).findByRole('button', { name: /Zayd B\./ })
       await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Rayan S\./ })
       await act(async () => { await new Promise(r => setTimeout(r, 100)) })
@@ -787,7 +810,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
       failing ? HttpResponse.json({ message: 'unavailable' }, { status: 500 })
         : HttpResponse.json(state.confirmed['ev-1'].map(squad_player_id => ({ squad_player_id })))))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText("Couldn't load confirmations", undefined, { timeout: 5000 })).toBeInTheDocument()
     expect(within(panel).queryByRole('region', { name: 'Not confirmed' })).toBeNull()
 
@@ -800,7 +823,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     availabilityReads()
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_calendar_events`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
     renderApp('/coach/squad?tab=availability')
-    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText("Couldn't load upcoming events", undefined, { timeout: 5000 })).toBeInTheDocument()
     expect(within(panel).queryByText('No upcoming events')).toBeNull()
   })

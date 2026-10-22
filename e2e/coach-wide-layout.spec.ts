@@ -19,6 +19,8 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-wide199-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
+  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   await context.route('**/*', async route => {
     const req = route.request(), url = new URL(req.url())
     if (url.origin === 'http://127.0.0.1:4189') return route.continue()
@@ -72,7 +74,7 @@ for (const [label, width, height, pageWidth] of [
 ] as const) {
   test(`coach Home on ${label}: the page, and the glass tab bar with the "+" under it`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
-    await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Squad shape' })).toBeVisible()
 
     // TRAK-259: Home, Squad and Library, with the "+" merged in at the right; no Calendar, Feedback or Profile tab.
     const bar = page.getByRole('tablist', { name: 'Coach' })
@@ -99,7 +101,7 @@ for (const [label, width, height, pageWidth] of [
 
 test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top right, the page beside it', async ({ page, context }, testInfo) => {
   const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
-  await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Squad shape' })).toBeVisible()
 
   // TRAK-259: Arc's sidebar rail. The club, then Home, Calendar, Squad, Library; Settings and the coach at the bottom.
   const sidebar = page.getByRole('navigation', { name: 'Your academy' })
@@ -111,6 +113,7 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   expect(last.y + last.height).toBeGreaterThan(900 - 140)
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
   expect(first.x).toBeLessThan(240)
+  await page.waitForTimeout(600) // let the radar draw in for the screenshot
   await page.screenshot({ path: testInfo.outputPath('coach-home-1440.png') })
   // "+ Create" at the top right, after the bell; it opens the same menu.
   const create = page.getByRole('button', { name: 'Create' })
@@ -121,9 +124,12 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 
-  const shell = await box(page, '.trak-page')
-  expect(Math.round(shell.width)).toBe(720)
+  // TRAK-262: Home takes the wide column on a laptop, the week and Squad shape side by side.
+  const shell = await box(page, '.trak-wide')
+  expect(Math.round(shell.width)).toBe(1100)
   expect(Math.round(shell.x + shell.width / 2)).toBe(240 + (1440 - 240) / 2)
+  const [week, shape] = [(await page.getByRole('region', { name: 'This week' }).boundingBox())!, (await page.getByRole('region', { name: 'Squad shape' }).boundingBox())!]
+  expect(shape.x).toBeGreaterThan(week.x + week.width - 1)
   expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
@@ -174,36 +180,42 @@ test("a player's Home keeps the phone column on a laptop", async ({ page, contex
   expect(unexpected).toEqual([])
 })
 
-// TRAK-250 (Dimos, 22 Oct: tabs only): Squad is a tabbed coach workspace in place
-// of TRAK-252's list. On a tablet or a laptop it uses the room: the four tabs, a
-// page wider than the phone column, and Snapshot's band columns side by side.
-const BAND_WORDS = ['Exceptional', 'Standout', 'Good', 'Steady', 'Mixed', 'Developing', 'Difficult']
-// [screen, width, height, rail, band columns]
-for (const [label, width, height, rail, columns] of [
-  ['an upright tablet', 820, 1180, 0, 4],
-  ['a laptop', 1440, 900, 240, 7],
+// TRAK-250: Squad is a coach workspace of views. TRAK-263 (Imad, 22 Oct): Players (Arc's team
+// directory) replaced Snapshot, and the views sit on Arc's glass segmented control. On a tablet
+// or a laptop it uses the room: a page wider than the phone column, the profile beside the list.
+// [screen, width, height, rail]
+for (const [label, width, height, rail] of [
+  ['an upright tablet', 820, 1180, 0],
+  ['a laptop', 1440, 900, 240],
 ] as const) {
-  test(`coach Squad on ${label}: the four tabs across a wide page, Snapshot's bands in ${columns} columns, no sheet`, async ({ page, context }) => {
+  test(`coach Squad on ${label}: the four views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
-    const tabs = page.getByRole('tablist', { name: 'Squad views' }).getByRole('tab')
-    await expect(tabs).toHaveText(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
-    await expect(page.getByRole('heading', { name: 'Squad snapshot' })).toBeVisible()
+    const views = page.getByRole('radiogroup', { name: 'Squad view' }).getByRole('radio')
+    await expect(views).toHaveText(['Players', 'Attributes', 'Availability', 'Games'])
+    const playersView = page.getByRole('region', { name: 'Players', exact: true })
+    await expect(playersView.getByRole('list', { name: 'Players' }).getByRole('listitem').first()).toBeVisible()
 
     // The wide page, right of the side menu on a laptop: no 430 px column.
-    const panel = await box(page, '#squad-panel')
+    const panel = (await playersView.boundingBox())!
     expect(Math.round(panel.width)).toBe(Math.min(1280, width - rail) - 64)
     expect(Math.round(panel.x)).toBeGreaterThanOrEqual(rail)
 
-    // Every band is a column; on a laptop all seven stand in one row.
-    const lefts = new Set<number>()
-    for (const word of BAND_WORDS) lefts.add(Math.round((await page.getByRole('group', { name: word }).boundingBox())!.x))
-    expect(lefts.size).toBe(columns)
+    // Picking a player opens their profile beside the list.
+    const first = playersView.getByRole('list', { name: 'Players' }).getByRole('button').first()
+    const name = players[0].player_name
+    await first.click()
+    // The profile is the article named after the player (their assessment cards are articles too).
+    const profile = playersView.getByRole('article', { name: new RegExp(`^${name},`) })
+    await expect(profile.getByRole('heading', { level: 3, name })).toBeVisible()
+    expect((await profile.boundingBox())!.x).toBeGreaterThan((await first.boundingBox())!.x + (await first.boundingBox())!.width - 1)
+    await page.waitForTimeout(600) // let the radar draw in for the screenshot
+    await page.screenshot({ path: testInfo.outputPath(`coach-squad-${width}.png`) })
 
-    // Each tab opens in place: no Arc sheet, and no read the backend does not answer.
-    for (const name of ['Attributes', 'Availability', 'Games Statistics', 'Snapshot']) {
-      await tabs.filter({ hasText: name }).click()
-      await expect(tabs.filter({ hasText: name })).toHaveAttribute('aria-selected', 'true')
-      await expect(page.getByRole('tabpanel').getByText(/^(Loading|Checking) /)).toHaveCount(0)
+    // Each view opens in place: no Arc sheet, and no read the backend does not answer.
+    for (const name of ['Attributes', 'Availability', 'Games', 'Players']) {
+      await views.filter({ hasText: name }).click()
+      await expect(views.filter({ hasText: name })).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByRole('region', { name, exact: true }).getByText(/^(Loading|Checking) /)).toHaveCount(0)
       await expect(page.getByRole('dialog')).toHaveCount(0)
     }
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)

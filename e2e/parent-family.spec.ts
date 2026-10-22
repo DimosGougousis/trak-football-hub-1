@@ -137,6 +137,8 @@ test.describe('TRAK-171 Home follow-ups', () => {
         .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
       await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
         { access_token: token, refresh_token: 'synthetic-home171-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+      // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
+      await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
       const event = (child: string) => ({ id: `event-${child}`, title: child === ids.sibling ? 'Sibling training' : 'Technical training',
         event_type: 'training', event_date: day, start_time: '18:00:00', starts_at: `${day}T14:00:00Z`,
         status: 'scheduled', published: true, venue: 'Synthetic pitch', sequence: 0, coach_user_id: ids.coach })
@@ -179,7 +181,8 @@ test.describe('TRAK-171 Home follow-ups', () => {
         if (url.pathname === '/rest/v1/rpc/my_session_is_live' || url.pathname === '/rest/v1/rpc/feature_on') return json(true)
         if (['get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup', 'get_player_invites_for_current_user', 'family_training_history', 'my_calendar_link'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])
         if (url.pathname === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
-        if (['matches', 'player_details', 'coach_details', 'recognition_awards', 'session_attendance', 'event_absences'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+        // TRAK-262: notification_settings is coach Home's Needs you switch (no row: on).
+        if (['matches', 'player_details', 'coach_details', 'recognition_awards', 'session_attendance', 'event_absences', 'notification_settings'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
         unexpected.push(`${req.method()} ${url.pathname}`)
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
       })
@@ -237,7 +240,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
         // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too. Open
         // session goes to its record, and Back comes back to Home, not to the
         // sessions history.
-        await week.getByRole('button', { name: /Logged.*Logged set pieces/ }).click()
+        // TRAK-262: the coach's week picks an event on a tap; Details opens its sheet.
+        await week.getByRole('button', { name: /Logged set pieces/ }).click()
+        await week.getByRole('button', { name: 'Details' }).click()
         const logged = page.getByRole('dialog', { name: 'Logged set pieces' })
         await expect(logged.getByText('Logged.')).toBeVisible()
         await logged.getByRole('link', { name: 'Open session' }).click()
@@ -245,6 +250,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await page.getByRole('button', { name: 'Back' }).click()
         await expect(page).toHaveURL(/\/coach\/home$/)
         await week.getByRole('button', { name: /Technical training/ }).click()
+        await week.getByRole('button', { name: 'Details' }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
         await expect(sheet.getByRole('button', { name: 'Published' })).toBeDisabled()
         // TRAK-168: "Share" opens the phone's share sheet where there is one, else WhatsApp's link.
