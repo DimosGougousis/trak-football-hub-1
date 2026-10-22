@@ -112,11 +112,10 @@ describe('TRAK-211: the Feedback and assessment tab', { timeout: 20_000 }, () =>
     expect(within(overview()).queryByRole('link')).toBeNull()
   })
 
-  it('is a coach tab, and its heading says Feedback and assessment', async () => {
+  // TRAK-259 (Imad, 22 Oct): Feedback left the coach's nav; the page still opens.
+  it('opens by its address, and its heading says Feedback and assessment', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
-    renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: /^Feedback$/i }, { timeout: 5000 }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/feedback'))
+    renderApp('/coach/feedback')
     expect(await screen.findByRole('heading', { level: 1, name: 'Feedback and assessment' }, { timeout: 5000 })).toBeInTheDocument()
     expect(await within(await region()).findByText('Ade Okafor')).toBeInTheDocument()
   })

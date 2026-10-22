@@ -65,7 +65,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     expect(screen.getByRole('tablist', { name: 'Squad views' })).toBeInTheDocument()
     expect(await screen.findByRole('tabpanel', { name: 'Snapshot' })).toBeInTheDocument()
 
-    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
+    expect(within(screen.getByRole('tablist', { name: 'Squad views' })).getAllByRole('tab').map(t => t.textContent)).toEqual(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
     await user.click(screen.getByRole('tab', { name: 'Games Statistics' }))
     expect(screen.getByRole('tab', { name: 'Games Statistics' })).toHaveAttribute('aria-selected', 'true')
     expect(window.location.search).toContain('tab=games')
@@ -128,7 +128,9 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     renderApp('/coach/squad')
     await screen.findByRole('tabpanel', { name: 'Snapshot' })
     expect(screen.queryByRole('searchbox', { name: 'Search players' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Quick add' })).toBeNull()
+    // TRAK-259: the only "+" is the coach's frame's, in the glass tab bar.
+    expect(screen.getAllByRole('button', { name: 'Quick add' })).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Quick add' }).closest('nav')).toHaveAttribute('aria-label', 'Coach')
   })
 
   // TRAK-79 / UC-X02 (from the retired squad-load-failure-refresh test): a same-account token
