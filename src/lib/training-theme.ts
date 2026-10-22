@@ -22,8 +22,7 @@ export function trainingThemeFrom(value: string | null | undefined): TrainingThe
   return TRAINING_THEMES.find(t => t.key === value)?.key ?? ''
 }
 
-/** The Trainings tab's catalogue, opened on a theme's library when there is one. */
+/** The coach's Library, opened on a theme's library when there is one (TRAK-264: a theme's key is its library's address). */
 export function catalogueLink(theme: TrainingTheme | '' | null | undefined): string {
-  const library = TRAINING_THEMES.find(t => t.key === theme)?.library
-  return library ? `/coach/trainings?${new URLSearchParams({ lib: library })}` : '/coach/trainings'
+  return TRAINING_THEMES.some(t => t.key === theme) ? `/coach/trainings/${theme}` : '/coach/trainings'
 }
