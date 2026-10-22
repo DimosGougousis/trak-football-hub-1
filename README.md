@@ -43,7 +43,7 @@ Without nvm, install Node 22 some other way. npm refuses a different Node major 
 
 ### Squad views demo (local only)
 
-`supabase/seeds/squad_views_demo.sql` fills a **local** Supabase stack with three months of one U10 squad (Rehearsal FC, coach Rami A., synthetic children) for the coach's Squad tab: Snapshot, Attributes, Availability and Season. Never run it against the shared project.
+`supabase/seeds/squad_views_demo.sql` fills a **local** Supabase stack with three months of one U10 squad (Rehearsal FC, coach Rami A., synthetic children) for the coach's Squad tab: Snapshot, Attributes, Availability and Games Statistics. Never run it against the shared project.
 
 ```bash
 npx --yes supabase@latest start      # needs Docker

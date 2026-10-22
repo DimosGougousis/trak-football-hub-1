@@ -1,4 +1,4 @@
-# Squad tab: Snapshot, Attributes, Availability, Season — design
+# Squad tab: Snapshot, Attributes, Availability, Games Statistics — design
 
 Date: 21 Oct 2026 · Owner: Dimos (PM) · Source mockups: `Squad-Management-Mockups.html`
 (screens 3–6 and the desktop top nav; synthetic Rehearsal FC data).
@@ -7,7 +7,7 @@ Date: 21 Oct 2026 · Owner: Dimos (PM) · Source mockups: `Squad-Management-Mock
 
 A coach needs to know where the squad stands and what to prepare. That means
 who moved band, which attribute to train next, who is coming on Saturday, and
-whether minutes are shared fairly. Today `/coach/squad` is a phone directory
+how the season's games are going. Today `/coach/squad` is a phone directory
 with search, filters and a player panel. Dimos has called that list obsolete.
 `/coach/squad` becomes a wide, coach-only workspace with four tabs, built from
 data Trak already records plus one new coach-written field: availability
@@ -18,8 +18,8 @@ Coaches use these screens only on a tablet or in a web browser.
 ## Goals
 
 - `/coach/squad` shows a top tab bar, as in the mockup's desktop header, with
-  **Snapshot · Attributes · Availability · Season**. Snapshot is the default.
-  The open tab lives in the URL (`?tab=snapshot|attributes|availability|season`),
+  **Snapshot · Attributes · Availability · Games Statistics**. Snapshot is the
+  default. The open tab lives in the URL (`?tab=snapshot|attributes|availability|games`),
   so a reload or a shared link keeps it.
 - Layout targets tablet (≥768px) and desktop (up to the mockup's 1280px
   content width). It is not held to the 430px phone column, the same way
@@ -51,7 +51,9 @@ Coaches use these screens only on a tablet or in a web browser.
   assessment (mockup caption).
 - Showing or asking for a reason for an absence. The database may hold one
   from "Can't make it", but the coach view never displays it.
-- Treating "not recorded" as zero, for minutes or anything else.
+- Treating "not recorded" as zero.
+- Minutes played, in any form (balance, share of available minutes, minutes
+  owed). Trak does not capture minutes played (Dimos, 22 Oct).
 - Writing synthetic data, or any development SQL, to the shared production
   Supabase project. PR previews use that backend too (AGENTS.md).
 - Inventing data the database doesn't hold, such as a match format, to fill a
@@ -62,7 +64,7 @@ Coaches use these screens only on a tablet or in a web browser.
 The search field, the position and age filters, the consent chips, the player
 bottom sheet and `QuickAdd` on this screen all go. Where a coach still needs
 a player, the tabs link to the existing `/coach/player/:id` profile (child
-names in Snapshot and Season are links). Assessing still starts from Home or
+names in Snapshot and Games Statistics are links). Assessing still starts from Home or
 `/coach/assess`. Tests that assert the old list are replaced. The TRAK-180
 screen-memory key `coach-squad` is no longer written.
 
@@ -125,8 +127,7 @@ the app, so the coach's tick decides)*.
   type chip (Match or Training), date, opponent, and a mono line with
   kick-off, home/away and venue. Only fields the event holds are shown.
 - **Two columns:** Confirmed and Not confirmed, each with a count chip. Rows
-  show shirt number, name, position, and for matches the child's
-  season-minutes %. Tapping a row toggles Confirmed. The control is a button
+  show shirt number, name and position. Tapping a row toggles Confirmed. The control is a button
   with a visible state, works by keyboard, and has a min-height of 44px.
   A "Confirm all" shortcut is up to the builder.
 - **Not eligible:** children waiting for consent are listed in a warning
@@ -135,8 +136,6 @@ the app, so the coach's tick decides)*.
 - **Squad card:** "N confirmed · M not confirmed", the goalkeepers among the
   confirmed, and a warning when no goalkeeper is confirmed. There is no
   "need 10" line: events store no match format *(my call)*.
-- **Minutes owed:** for matches, the confirmed or not-confirmed child with the
-  lowest season-minutes %, taken from the Season calculation.
 - Callout: "Confirmations come from your WhatsApp group; families don't see
   them in Trak."
 - Confirming is allowed until the end of the event's day in the academy's
@@ -167,30 +166,25 @@ the app, so the coach's tick decides)*.
 - `registry.yaml`: add a use case for coach-marked confirmation under J8,
   pending, then run `npm run uc:report`.
 
-## Tab 4 — Season (mockup screen 6) — the season builds up
+## Tab 4 — Games Statistics (mockup screen 6, was Season) — the season builds up
 
 "Builds up" means every figure accumulates from the season's first match to
 today and grows as the coach logs matches. Nothing is a fixed snapshot.
 
-- **Season window:** 1 July to 30 June, so the heading reads "Season 2026–27"
-  *(my call: Trak has no season setting, see `age-group.ts`; 1 July keeps the
-  3-month demo inside one season)*.
-- **Tiles:** Played · W–D–L · Goals for–against · Minutes balance (lowest% →
-  highest%, median).
+- **Heading:** "Games Statistics", with the sub-line "Season 2026–27 · N
+  matches" ("1 match" for one).
+- **Season window:** 1 July to 30 June *(my call: Trak has no season setting,
+  see `age-group.ts`; 1 July keeps the 3-month demo inside one season)*.
+- **Tiles:** Played · Won · drawn · lost · Goals for – against.
 - **Running chart** below the tiles: cumulative goals for and against and the
   W/D/L record by match date, so the build-up is visible *(my call on the
   form; keep it a simple line chart in the app's existing charting
   library)*.
-- **Per-player table**, sorted by minutes % ascending: number, name (links to
-  profile), appearances, minutes, % of available (bar, with a "minutes owed"
-  chip under 50%), goals, assists. Goals and assists are muted, so minutes
-  lead.
-- **Available minutes** for a match = the highest `minutes_played` recorded
-  for anyone in that match, since Trak doesn't store match length *(my
-  call)*. Matches where nobody's minutes were recorded (quick log, TRAK-198)
-  count for appearances, goals and results but not minutes. A line shows
-  "N matches without minutes, not counted". A child with no counted matches
-  shows "—", not 0%.
+- **Per-player table**, sorted by appearances (most first), then name:
+  number, name (links to profile), appearances, goals, assists. A roster
+  child with no appearances shows 0; a consent-pending child is left out.
+- Every logged match counts for appearances, goals and results, whether or
+  not minutes were entered when it was logged.
 - **Results** list: W/D/L chip, opponent, date, score, newest first.
 - **"Numbers don't add up" callout:** when a match's player goals don't sum to
   its team score, name the match and link to its session
@@ -206,8 +200,9 @@ today and grows as the coach logs matches. Nothing is a fixed snapshot.
   read function, e.g. `coach_squad_season(p_from date, p_to date, p_squad
   text)`, applying the rules above and returning one row per child per match:
   match date, opponent, session id (nullable), team score, opponent score,
-  squad_player_id, minutes, goals, assists. Read `matches` only, not
-  `session_attendance`, so nothing is double-counted. Test the scoping under
+  squad_player_id, minutes (unused by the views since 22 Oct), goals,
+  assists. Read `matches` only, not `session_attendance`, so nothing is
+  double-counted. Test the scoping under
   real roles: another academy's coach, a colleague's logs, a player's own
   logs and the other squad are all excluded.
 - The "Numbers don't add up" link opens `/coach/sessions/:id` when the match
@@ -233,8 +228,8 @@ today and grows as the coach logs matches. Nothing is a fixed snapshot.
 ## Delivery
 
 - Issue **TRAK-250: Squad**. One branch and one PR covering the migration
-  (confirmations plus the Season read), the four tabs, the local seed and the
-  registry entry.
+  (confirmations plus the season read for Games Statistics), the four tabs,
+  the local seed and the registry entry.
 - **Straight swap** (Dimos, 21 Oct): the phone Squad list goes away when this
   merges. There is no feature switch and no parallel old page. The old
   page's tests are replaced.
