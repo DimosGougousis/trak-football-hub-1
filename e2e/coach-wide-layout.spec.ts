@@ -19,8 +19,6 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-wide199-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
-  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
-  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   await context.route('**/*', async route => {
     const req = route.request(), url = new URL(req.url())
     if (url.origin === 'http://127.0.0.1:4189') return route.continue()

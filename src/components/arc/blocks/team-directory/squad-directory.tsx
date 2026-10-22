@@ -5,6 +5,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { ArrowDown, ArrowUp, Search, X } from "lucide-react";
 import { Avatar } from "../../avatar/avatar";
+import { GlassSegmented } from "../../glass-segmented/glass-segmented";
 import { motionTokens } from "../../lib/motion-tokens";
 import { BANDS } from "@/lib/types";
 import styles from "./squad-directory.module.css";
@@ -25,11 +26,12 @@ export interface SquadPlayer {
   move: -1 | 0 | 1;
   /** Trak: waiting for consent, so nothing can be recorded about them yet. */
   waiting?: boolean;
+  /** Trak (TRAK-266): what the coach still owes this player, as a badge in the colour key. */
+  flag?: ReactNode;
 }
 
 const FILTERS = ["All", "GK", "DEF", "MID", "ATT"] as const;
 type Filter = (typeof FILTERS)[number];
-const FILTER_NAME: Record<Filter, string> = { All: "All", GK: "Goalkeepers", DEF: "Defenders", MID: "Midfielders", ATT: "Attackers" };
 
 export function BandChip({ band, move = 0, waiting = false }: { band: string | null; move?: -1 | 0 | 1; waiting?: boolean }) {
   const config = BANDS.find(entry => entry.word === band);
@@ -95,14 +97,10 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
       </label>
     </header>
 
-    <div className={styles.filters} role="group" aria-label="Filter by position">
-      {FILTERS.map(item => {
-        const count = item === "All" ? players.length : players.filter(player => player.group === item).length;
-        return <button key={item} type="button" aria-pressed={filter === item} aria-label={`${FILTER_NAME[item]}, ${count}`} onClick={() => setFilter(item)}>
-          {filter === item && <motion.span layoutId={`${uid}-filter`} className={styles.filterHighlight} transition={reduce ? { duration: 0 } : motionTokens.spring.morph} aria-hidden="true" />}
-          <span className={styles.filterLabel} aria-hidden="true">{item}<span className={styles.filterCount}>{count}</span></span>
-        </button>;
-      })}
+    {/* Trak (TRAK-266, Imad, 22 Oct): the position filters as they were before #420, on Arc's glass segmented control. */}
+    <div className={styles.filters}>
+      <GlassSegmented label="Filter by position" size="sm" fullWidth value={filter} onValueChange={value => setFilter(value as Filter)}
+        options={FILTERS.map(item => ({ value: item, label: item }))} />
     </div>
     {summary && <div className={styles.summary}>{summary}</div>}
 
@@ -119,6 +117,7 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
                   {isSelected && <RowHighlight layoutId={`${uid}-row-${filter}-${needle}`} reduce={Boolean(reduce)} />}
                   <Avatar name={player.name} />
                   <span className={styles.personText}><span className={styles.personName}>{player.name}</span><span className={styles.personRole}>{player.position}{player.shirt != null ? ` · #${player.shirt}` : ""}</span></span>
+                  {player.flag}
                   <BandChip band={player.band} move={player.move} waiting={player.waiting} />
                 </button>
               </motion.li>;

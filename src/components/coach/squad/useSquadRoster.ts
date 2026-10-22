@@ -43,7 +43,7 @@ async function loadAssessments(ids: string[]): Promise<AssessmentRow[]> {
   return (data ?? []).map(row => ({ ...row, created_at: row.created_at ?? '' }))
 }
 
-/** `everySquad`: TRAK-262's All pill on Home, every squad without changing the squad picked. */
+/** `everySquad`: the All pill on Home and Squad (TRAK-262, TRAK-266), every squad without changing the squad picked. */
 export function useSquadRoster({ everySquad = false }: { everySquad?: boolean } = {}) {
   const { user } = useAuth()
   const userId = user?.id
@@ -68,12 +68,11 @@ export function useSquadRoster({ everySquad = false }: { everySquad?: boolean } 
   const error = (failed ? new Error("Couldn't load your squads") : null) ?? all.error ?? consent.error ?? assessments.error ?? null
 
   return {
-    squad,
+    /** The squad in view: none when every squad is (TRAK-266's All), so a view asks for them all. */
+    squad: everySquad ? null : squad,
     squads,
     setSquad,
     players,
-    /** Every current player in every squad, picked or not. */
-    playerCount: all.data?.length ?? 0,
     consentPending,
     assessments: assessments.data ?? NONE,
     /** True until every read has answered; a failed read is `error`, not pending. */

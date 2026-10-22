@@ -229,16 +229,16 @@ describe('TRAK-262: coach Home', () => {
     expect(within(bands).getByText('Standout').parentElement).toHaveTextContent('Standout 2')
   })
 
-  it('All shows every squad on Home without changing the squad picked elsewhere', async () => {
+  it('opens on All, every squad, and a squad tapped is remembered without changing what All shows', async () => {
     home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
-    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     renderApp('/coach/home')
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByRole('button', { name: /Bo Lind/ })).toBeInTheDocument()
-    expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'All' }))
     expect(await within(needs).findByRole('button', { name: /Ade Okafor/ })).toBeInTheDocument()
+    expect(within(needs).getByRole('button', { name: /Bo Lind/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Head Coach · Synthetic Athens · All squads')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'U16' }))
+    await waitFor(() => expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull())
     expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16')
   })
 
@@ -246,7 +246,7 @@ describe('TRAK-262: coach Home', () => {
     home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     renderApp('/coach/home')
-    expect(await screen.findByText('Head Coach · Synthetic Athens · U16', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText('Head Coach · Synthetic Athens · All squads', {}, { timeout: 5000 })).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'U14' }))
     expect(await screen.findByText('Head Coach · Synthetic Athens · U14')).toBeInTheDocument()
   })

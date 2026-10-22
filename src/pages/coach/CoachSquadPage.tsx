@@ -1,14 +1,15 @@
-import { LayoutGroup } from 'motion/react'
+import { useState } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import { Avatar } from '@/components/arc/avatar/avatar'
-import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { NavBar } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCoachSquad } from '@/lib/coach-squad'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { PlayersTab } from '@/components/coach/squad/PlayersTab'
+import { SquadPills } from '@/components/coach/home/SquadPills'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
 import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
 import { GamesTab } from '@/components/coach/squad/GamesTab'
@@ -27,12 +28,16 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export default function CoachSquadPage() {
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
+  const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const location = useLocation()
   const [params, setParams] = useSearchParams()
   const active: TabId = TABS.find(t => t.id === params.get('tab'))?.id ?? 'players'
-  const roster = useSquadRoster()
+  // TRAK-266 (Imad, 22 Oct): Squad opens on All, as Home does.
+  const [allPicked, setEverySquad] = useState(true)
+  const everySquad = allPicked && coachSquad.squads.length >= 2
+  const roster = useSquadRoster({ everySquad })
   const choose = (id: string) => setParams({ tab: id }, { replace: true })
 
   return (
@@ -45,13 +50,9 @@ export default function CoachSquadPage() {
             <GlassSegmented label="Squad view" value={active} onValueChange={choose} fullWidth
               options={TABS.map(t => ({ value: t.id, label: t.label }))} />
           </div>
-          {roster.squad && roster.squads.length >= 2 && (
-            <LayoutGroup id="age">
-              <div className="arc flex">
-                <SegmentedControl label="Squad" value={roster.squad} onValueChange={roster.setSquad}
-                  options={roster.squads.map(age => ({ value: age, label: age }))} />
-              </div>
-            </LayoutGroup>
+          {coachSquad.squad && coachSquad.squads.length >= 2 && (
+            <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
+              onChange={pick => { setEverySquad(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
           )}
           <Avatar name={profile?.full_name || 'Coach'} size="md" className="arc ml-auto" aria-hidden />
         </header>

@@ -74,7 +74,7 @@ describe('settings controls reflect supported behavior', () => {
       expect(await screen.findByRole('switch', { name: 'Event reminders' })).toBeChecked()
       expect(screen.getAllByRole('switch')).toHaveLength(1)
     } else if (role === 'coach') {
-      expect(await screen.findByRole('switch', { name: "Can't make it alerts" })).toBeChecked()
+      expect(await screen.findByRole('switch', { name: "Can't make it" })).toBeChecked()
       expect(await screen.findByRole('switch', { name: 'Needs you' })).toBeChecked()
       expect(screen.getAllByRole('switch')).toHaveLength(2)
     } else {
@@ -236,7 +236,7 @@ describe("Settings on Arc's settings page", () => {
     mount()
     fireEvent.click(await screen.findByRole('switch', { name: 'Needs you' }))
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Needs you' })).not.toBeChecked())
-    expect(screen.getByRole('switch', { name: "Can't make it alerts" })).toBeChecked()
+    expect(screen.getByRole('switch', { name: "Can't make it" })).toBeChecked()
     expect(saves).toEqual([{ user_id: 'settings-user', needs_you: false }])
     expect(state.success).toHaveBeenCalledWith('Needs you off')
   })

@@ -110,7 +110,7 @@ const byAppsThenName = (names: Map<string, string>) => (a: PlayerSeason, b: Play
 const noMatches = (squadPlayerId: string): PlayerSeason => ({ squadPlayerId, apps: 0, goals: 0, assists: 0 })
 
 export function GamesTab({ roster }: { roster: SquadRoster }) {
-  const { window, summary, isPending, error, retry } = useSeason()
+  const { window, summary, isPending, error, retry } = useSeason(roster.squad)
   const { players, consentPending } = roster
 
   const known = useMemo(() => new Map(players.map(p => [p.id, p])), [players])

@@ -22,14 +22,10 @@
 .clearSlot button { display: grid; width: 24px; height: 24px; place-items: center; border: 0; border-radius: 50%; padding: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
 
 /* Position filter: one shared highlight slides between segments. */
-.filters { display: flex; gap: 2px; overflow-x: auto; padding: 0 16px 12px; scrollbar-width: none; }
+.filters { display: flex; padding: 0 16px 12px; }
+/* Trak (TRAK-266): the glass filters share the row on a phone, and stop at a readable width on a laptop. */
+.filters > * { width: 100%; max-width: 440px; }
 .filters::-webkit-scrollbar { display: none; }
-.filters button { position: relative; isolation: isolate; display: inline-flex; height: 32px; flex: none; align-items: center; border: 0; border-radius: var(--radius-pill); padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard); }
-@media (hover: hover) and (pointer: fine) { .filters button:hover { color: var(--foreground); } }
-.filters button[aria-pressed="true"] { color: var(--foreground); }
-.filterHighlight { position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: var(--surface-muted); }
-.filterLabel { display: inline-flex; align-items: baseline; gap: 6px; }
-.filterCount { color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
 .summary { padding: 0 20px 14px; border-bottom: 1px solid var(--border); }
 .filters + .body { border-top: 1px solid var(--border); }
 
@@ -75,5 +71,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .search, .filters button, .personRow { transition: none; }
+  .search, .personRow { transition: none; }
 }
