@@ -12,6 +12,7 @@ import { playerAttention, type AttentionLevel, type AttentionRow } from '@/lib/p
 import { localTodayISO } from '@/lib/event-time'
 import { openable } from '@/lib/openable'
 import { remember, remembered } from '@/lib/screen-memory'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 
 /* TRAK-211: who needs attention moved off coach Home into its own coach tab,
    "Feedback and assessment". It lists every player, most urgent first, on the
@@ -40,6 +41,9 @@ export default function CoachFeedbackPage() {
   const overview = answered && answered.squad === coachSquad.squad ? answered : null
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  // TRAK-252: on a laptop the list is a table, with a filter by level.
+  const asTable = useSideMenuScreen()
+  const [show, setShow] = useState<'all' | AttentionLevel>('all')
 
   useEffect(() => {
     if (!user) return
@@ -114,7 +118,7 @@ export default function CoachFeedbackPage() {
   const retry = () => { if (coachSquad.failed) coachSquad.retry(); setAttempt(n => n + 1) }
 
   return (
-    <MobileShell>
+    <MobileShell width="wide">
       <div className="px-5 pt-4 pb-40">
         <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Feedback and assessment</h1>
         {/* TRAK-176: the coach's squads, when there are two or more; the pick is shared with Home and Squad. */}
@@ -144,7 +148,11 @@ export default function CoachFeedbackPage() {
             // Everyone left is waiting for a parent: nothing can be said about them yet.
             <p className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>Your players are waiting for a parent's approval.</p>
           ) : (
-            <ul className="flex flex-col gap-2">
+            asTable ? <FeedbackTable rows={overview.rows} show={show} onShow={setShow}
+              onOpen={id => navigate(`/coach/player/${id}`)}
+              onAssess={id => navigate('/coach/assess', { state: { preselectedPlayerId: id } })} /> :
+            // TRAK-252: two columns on a coach's upright tablet.
+            <ul className="flex flex-col gap-2 tablet:grid tablet:grid-cols-2">
               {overview.rows.map(row => (
                 <li key={row.playerId}
                   className="flex items-center gap-3 rounded-[10px] py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
@@ -172,5 +180,63 @@ export default function CoachFeedbackPage() {
       <QuickAdd />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
+  )
+}
+
+/** TRAK-252: the same rows as a table on a coach's laptop, most urgent first, with
+ *  a filter by level and an Assess button on each row. */
+function FeedbackTable({ rows, show, onShow, onOpen, onAssess }: {
+  rows: AttentionRow[]; show: 'all' | AttentionLevel; onShow: (level: 'all' | AttentionLevel) => void
+  onOpen: (playerId: string) => void; onAssess: (playerId: string) => void
+}) {
+  const count = (level: AttentionLevel) => rows.filter(row => row.level === level).length
+  const options = [
+    { value: 'all', label: `All ${rows.length}` },
+    ...(Object.keys(LEVEL) as AttentionLevel[]).map(level => ({ value: level, label: `${LEVEL[level].word} ${count(level)}` })),
+  ]
+  const shown = show === 'all' ? rows : rows.filter(row => row.level === show)
+  return (
+    <div className="space-y-3">
+      <LayoutGroup id="feedback-level">
+        <div className="arc flex">
+          <SegmentedControl label="Show" value={show} onValueChange={value => onShow(value as 'all' | AttentionLevel)} options={options} />
+        </div>
+      </LayoutGroup>
+      <table className="w-full text-left" style={{ fontFamily: 'var(--t-font)' }}>
+        <thead>
+          <tr className="text-[11px] uppercase tracking-[0.08em] text-ink-3">
+            <th className="font-medium py-2 pr-3">Player</th>
+            <th className="font-medium py-2 pr-3">Status</th>
+            <th className="font-medium py-2 pr-3">Why</th>
+            <th className="py-2"><span className="sr-only">Assess</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map(row => (
+            <tr key={row.playerId} className="border-t border-line hover:bg-raised">
+              <td className="py-2.5 pr-3">
+                <button type="button" onClick={() => onOpen(row.playerId)} aria-label={`Open ${row.name}'s profile`}
+                  className="flex items-center gap-3 text-left text-[13px] font-medium text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
+                  <Avatar name={row.name} size="sm" className="arc flex-shrink-0" aria-hidden />
+                  {row.name}
+                </button>
+              </td>
+              <td className="py-2.5 pr-3">
+                <span className="text-[11px] font-medium uppercase tracking-[0.08em]" style={{ fontFamily: 'var(--t-font-mono)', color: LEVEL[row.level].color }}>
+                  {LEVEL[row.level].word}
+                </span>
+              </td>
+              <td className="py-2.5 pr-3 text-[12px] text-ink-2">{row.reasons.join(' · ')}</td>
+              <td className="py-2.5 text-right">
+                <button type="button" onClick={() => onAssess(row.playerId)}
+                  className="rounded-[10px] px-3 py-1.5 text-[12px] font-medium border border-line text-ink hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  Assess
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }

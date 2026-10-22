@@ -37,7 +37,8 @@ export default function CoachSessionsChooser() {
       </div>
 
       {/* Centered choices */}
-      <div className="flex-1 flex flex-col justify-center py-6 gap-4">
+      {/* TRAK-252: side by side on a coach's tablet or laptop. */}
+      <div className="flex-1 flex flex-col justify-center py-6 gap-4 tablet:grid tablet:grid-cols-2">
         {/* Quick Match Log */}
         <button
           onClick={() => navigate('/coach/sessions/quick')}
