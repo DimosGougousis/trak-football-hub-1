@@ -38,6 +38,13 @@
 /* Outside days dim their number, not the button, so a disc gliding onto one keeps its full strength. */
 .day.outside { color: var(--text-muted); }
 /* Trak (TRAK-189): the muted colour already reads as another month; no extra fade, so it keeps 4.5:1. */
+/* Trak (TRAK-256): another month's days also sit on a shaded square, and the first of them names its month,
+   so 1 November never reads as 1 October. The shade darkens whatever is behind it, so it shows on the white
+   Schedule card and on a date picker's grey panel alike (the muted number keeps 4.5:1 on both). A selected
+   one shows the disc instead. */
+.day.outside:not(.selected) { border-radius: 10px; background: var(--surface-muted); background: color-mix(in srgb, var(--foreground) 5%, transparent); }
+.monthLabel { position: absolute; top: 3px; left: 0; right: 0; color: var(--text-secondary); font-size: 9px; font-weight: 600; letter-spacing: .06em; line-height: 1; text-align: center; text-transform: uppercase; pointer-events: none; }
+.day.outside:disabled .monthLabel { opacity: .5; }
 /* Today is a small dot under the number. It takes the number's color, so it flips with it when the disc arrives. */
 .day.today .dayNumber::after { content: ""; position: absolute; top: calc(100% + 4px); left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
 .day.selected, .day.today { font-weight: 500; }
