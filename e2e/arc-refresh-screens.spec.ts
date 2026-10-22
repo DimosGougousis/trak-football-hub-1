@@ -151,7 +151,8 @@ test.describe('TRAK-182 coach screens', () => {
     expect(errors).toEqual([])
   })
 
-  // TRAK-182 part 8: the quick-add's four faces: "+", menu, form, check.
+  // TRAK-182 part 8: the quick-add's faces: "+", menu, form, saved. TRAK-259: the "+" is Arc's glass menu in the
+  // phone's glass tab bar; the form opens above it, and a toast says the draft is saved.
   test('coach quick add, its four states', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
@@ -167,7 +168,8 @@ test.describe('TRAK-182 coach screens', () => {
       // motion's springs run in JavaScript: wait until the surface stops moving.
       let last = ''
       for (let i = 0; i < 20; i++) {
-        const box = JSON.stringify(await page.locator('[data-quick-add] > div').first().boundingBox())
+        const box = await page.evaluate(() => JSON.stringify((document.querySelector('[data-quick-add]') ?? document.querySelector('[role="menu"]')
+          ?? document.querySelector('[data-quick-add-trigger]'))?.getBoundingClientRect()))
         if (box === last) return
         last = box; await page.waitForTimeout(80)
       }
@@ -199,10 +201,11 @@ test.describe('TRAK-182 coach screens', () => {
     expect(listBox!.y).toBeGreaterThanOrEqual(0)
     await list.getByRole('option', { name: '5:00 PM' }).click()
     await form.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeAttached()
+    await expect(page.getByText('Draft saved. Publish it from Schedule.')).toBeVisible()
     await page.waitForTimeout(300)
     await page.screenshot({ path: testInfo.outputPath('quick-add-4-check.png') })
-    await expect(page.getByRole('button', { name: 'Quick add' })).toBeVisible({ timeout: 3000 })
+    await expect(form).toHaveCount(0, { timeout: 3000 })
+    await expect(page.getByRole('button', { name: 'Quick add', exact: true })).toHaveAttribute('aria-expanded', 'false')
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

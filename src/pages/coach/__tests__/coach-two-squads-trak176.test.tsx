@@ -76,13 +76,12 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     // Another coach: the app's query cache outlives a test, and would hold the first one's squads.
     signInAs({ id: 'coach-176-one' })
     coachReads(TWO.map(p => ({ ...p, coach_user_id: 'coach-176-one', age_group: 'U14' })))
-    renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
-    // TRAK-211: Home lists no players now. The Feedback tab's list shows the squads have answered.
-    await userEvent.click(screen.getByRole('button', { name: /^Feedback$/i }))
+    // TRAK-211: Home lists no players now. The Feedback page's list shows the squads have answered
+    // (TRAK-259: it left the nav, so it opens by its address).
+    renderApp('/coach/feedback')
     expect(await screen.findByText('Ade Okafor', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Squad' })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: /^Home$/i }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
     expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Squad' })).toBeNull()
   })

@@ -1,8 +1,8 @@
 /**
- * TRAK-254 (step 1 of the coach laptop plan): on a laptop a coach's tabs stand
- * in a side menu with words, the TRAK name and a Calendar tab. Off a laptop, and
- * for players and parents, the bottom bar is today's: no Calendar, no name, and a
- * side-menu-only bar renders nothing.
+ * TRAK-254 gave a coach on a laptop a side menu inside NavBar. TRAK-259 (Imad,
+ * 22 Oct) moved every coach's nav into the coach's frame (CoachFrame), so NavBar
+ * renders nothing for a coach; players and parents keep today's bottom bar on
+ * every screen. The frame's own tests are coach-frame-trak259.test.tsx.
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -18,20 +18,14 @@ afterEach(() => { cleanup(); window.matchMedia = realMatchMedia })
 
 const tabs = () => screen.getAllByRole('button').map(button => button.textContent)
 
-describe('NavBar side menu', () => {
-  it("is today's bottom bar for a coach off a laptop", () => {
-    screenIs(false)
-    render(<NavBar role="coach" activeTab="/coach/home" onNavigate={vi.fn()} />)
-    expect(tabs()).toEqual(['Home', 'Squad', 'Feedback', 'Trainings', 'Profile'])
-    expect(screen.queryByText('TRAK')).toBeNull()
-  })
-
-  it('gives a coach on a laptop the TRAK name and the Calendar, marked on its page', () => {
-    screenIs(true)
-    render(<NavBar role="coach" activeTab="/coach/schedule" onNavigate={vi.fn()} />)
-    expect(tabs()).toEqual(['Home', 'Calendar', 'Squad', 'Feedback', 'Trainings', 'Profile'])
-    expect(screen.getByText('TRAK')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Calendar' }).getAttribute('aria-current')).toBe('page')
+describe('NavBar', () => {
+  it('renders nothing for a coach, on a phone or a laptop (the frame has their nav)', () => {
+    for (const laptop of [false, true]) {
+      screenIs(laptop)
+      const { container } = render(<NavBar role="coach" activeTab="/coach/home" onNavigate={vi.fn()} />)
+      expect(container.innerHTML).toBe('')
+      cleanup()
+    }
   })
 
   it("keeps a player's and a parent's bar on a laptop", () => {
@@ -42,15 +36,5 @@ describe('NavBar side menu', () => {
     render(<NavBar role="parent" activeTab="/parent/home" onNavigate={vi.fn()} />)
     expect(tabs()).toEqual(['Home', 'Events', 'Profile'])
     expect(screen.queryByText('TRAK')).toBeNull()
-  })
-
-  it('shows a side-menu-only bar on a laptop and nothing elsewhere', () => {
-    screenIs(false)
-    const phone = render(<NavBar role="coach" sideMenuOnly activeTab="/coach/profile" onNavigate={vi.fn()} />)
-    expect(phone.container.innerHTML).toBe('')
-    cleanup()
-    screenIs(true)
-    render(<NavBar role="coach" sideMenuOnly activeTab="/coach/profile" onNavigate={vi.fn()} />)
-    expect(screen.getByRole('navigation')).toBeTruthy()
   })
 })
