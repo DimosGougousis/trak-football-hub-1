@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { BandPill } from '@/components/trak'
 import { BANDS, type BandType } from '@/lib/types'
 import { bandMoves, bandSpread, nextSteps, type BandMove } from '@/lib/squad/snapshot'
+import { quoted } from '@/lib/squad/format'
+import { Card } from './parts'
 import type { SquadRoster } from './useSquadRoster'
 
 /* TRAK-250: Squad > Snapshot. Each child's latest band, compared only with their
@@ -23,9 +25,6 @@ type Session = { id: string; squad: string | null; session_date: string | null; 
 type Mark = { session_id: string; squad_player_id: string; status: string }
 /** A training whose register was taken (someone is ticked present), and who was. */
 type Registered = { id: string; date: string; present: string[] }
-
-/** PostgREST value quoting, so a squad name with a comma or bracket cannot change the filter. */
-const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 
 /**
  * This coach's last four trainings for the squad (or whole-roster ones) whose register was taken, newest first.
@@ -81,23 +80,23 @@ function Arrow({ move }: { move: BandMove['move'] }) {
   )
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  const id = `snapshot-${title.toLowerCase().replace(/[^a-z]+/g, '-')}`
-  return (
-    <section aria-labelledby={id} className="rounded-[14px] border border-line bg-surface p-4">
-      <h3 id={id} className="text-[13px] font-medium text-ink mb-3">{title}</h3>
-      {children}
-    </section>
-  )
-}
+const profileHref = (id: string) => `/coach/player/${id}`
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
-function NameChips({ title, names }: { title: string; names: string[] }) {
-  if (names.length === 0) return null
+function NameChips({ title, players }: { title: string; players: { id: string; player_name: string }[] }) {
+  if (players.length === 0) return null
   return (
     <div className="mt-5">
       <h3 className="text-[12px] font-medium text-ink-3 mb-2">{title}</h3>
       <ul className="flex flex-wrap gap-2">
-        {names.map(name => <li key={name} className="rounded-[8px] bg-raised px-2.5 py-1.5 text-[13px] text-ink">{name}</li>)}
+        {players.map(p => (
+          <li key={p.id}>
+            <Link to={profileHref(p.id)}
+              className={`inline-flex min-h-11 items-center rounded-[8px] bg-raised px-2.5 text-[13px] text-ink ${FOCUS_RING}`}>
+              {p.player_name}
+            </Link>
+          </li>
+        ))}
       </ul>
     </div>
   )
@@ -128,8 +127,8 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
   const steps = useMemo(() => nextSteps([...moves.values()], names, missed), [moves, names, missed])
 
   const admitted = players.filter(p => !consentPending.has(p.id))
-  const notAssessed = admitted.filter(p => !moves.has(p.id)).map(p => p.player_name)
-  const notAdmitted = players.filter(p => consentPending.has(p.id)).map(p => p.player_name)
+  const notAssessed = admitted.filter(p => !moves.has(p.id))
+  const notAdmitted = players.filter(p => consentPending.has(p.id))
   const assessed = moves.size
 
   return (
@@ -166,9 +165,12 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
                   {s.ids.length === 0 ? <p className="mt-2.5 text-[12px] text-ink-3" aria-hidden>—</p> : (
                     <ul className="mt-2.5 flex flex-col gap-1">
                       {s.ids.map(id => (
-                        <li key={id} className="flex items-center justify-between gap-1 rounded-[8px] bg-raised px-2 py-1.5 text-[13px] text-ink">
-                          <span className="min-w-0 truncate">{names[id] ?? 'This player'}</span>
-                          <Arrow move={moves.get(id)!.move} />
+                        <li key={id}>
+                          <Link to={profileHref(id)}
+                            className={`flex min-h-11 items-center justify-between gap-1 rounded-[8px] bg-raised px-2 text-[13px] text-ink ${FOCUS_RING}`}>
+                            <span className="min-w-0 truncate">{names[id] ?? 'This player'}</span>
+                            <Arrow move={moves.get(id)!.move} />
+                          </Link>
                         </li>
                       ))}
                     </ul>
@@ -193,8 +195,8 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
                           <BandPill band={m.band} />
                         </div>
                       </div>
-                      <Link to={`/coach/player/${m.squadPlayerId}`}
-                        className="inline-flex min-h-11 items-center rounded-[10px] border border-line-strong px-3 text-[13px] font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      <Link to={profileHref(m.squadPlayerId)}
+                        className={`inline-flex min-h-11 items-center rounded-[10px] border border-line-strong px-3 text-[13px] font-medium text-ink ${FOCUS_RING}`}>
                         Open profile<span className="sr-only"> for {names[m.squadPlayerId] ?? 'this player'}</span>
                       </Link>
                     </li>
@@ -219,8 +221,8 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
         </>
       )}
 
-      <NameChips title="Not assessed yet" names={notAssessed} />
-      <NameChips title="Not yet admitted" names={notAdmitted} />
+      <NameChips title="Not assessed yet" players={notAssessed} />
+      <NameChips title="Not yet admitted" players={notAdmitted} />
 
       <p className="mt-6 text-[12px] text-ink-3">
         Each child is compared only with their own previous assessment. Coach-only; never shown to players or parents as a ranking.

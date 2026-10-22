@@ -1,7 +1,9 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { PlayerSeason, SeasonMatch } from '@/lib/squad/season'
+import type { PlayerSeason, SeasonMatch, seasonSummary } from '@/lib/squad/season'
+import { dayMonth as dayLabel, OWED_BELOW } from '@/lib/squad/format'
+import { Card, Missing } from './parts'
 import { SquadLoadError } from './SquadLoadError'
 import { useSeason } from './useSeason'
 import type { SquadRoster } from './useSquadRoster'
@@ -9,17 +11,10 @@ import type { SquadRoster } from './useSquadRoster'
 /* TRAK-250: Squad > Season. Everything builds up from the matches the coach has logged, from the
    season's first match. Minutes come first, goals second. Coach-only: never shown to players or parents. */
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const OWED_BELOW = 50
+type Running = ReturnType<typeof seasonSummary>['running'][number]
 
-/** `2026-10-17` -> `17 Oct`. Not locale-formatted, so it reads the same on every device. */
-const dayLabel = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}`
 const matchLabel = (m: SeasonMatch) => (m.opponent ? `${dayLabel(m.date)} vs ${m.opponent}` : dayLabel(m.date))
 const logHref = (m: SeasonMatch) => (m.sessionId ? `/coach/sessions/${m.sessionId}` : '/coach/sessions/list')
-
-function Missing() {
-  return <><span aria-hidden>—</span><span className="sr-only">not recorded</span></>
-}
 
 function Tile({ label, children, note }: { label: string; children: ReactNode; note?: string }) {
   return (
@@ -31,16 +26,22 @@ function Tile({ label, children, note }: { label: string; children: ReactNode; n
   )
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+const record = (p: Running) => `${p.w}–${p.d}–${p.l}`
+
+/** The chart's hover card: the totals after that match, and the won–drawn–lost record. */
+function RunningTip({ active, payload }: { active?: boolean; payload?: { payload: Running }[] }) {
+  const point = active ? payload?.[0]?.payload : undefined
+  if (!point) return null
   return (
-    <section aria-label={title} className="rounded-[14px] border border-line bg-surface p-4">
-      <h3 className="text-[13px] font-medium text-ink mb-3">{title}</h3>
-      {children}
-    </section>
+    <div className="rounded-[10px] border border-line bg-raised px-3 py-2 text-[12px] text-ink">
+      <p className="font-medium">{dayLabel(point.date)}</p>
+      <p>Goals for {point.goalsFor} · against {point.goalsAgainst}</p>
+      <p>Record {record(point)} <span className="text-ink-3">(won–drawn–lost)</span></p>
+    </div>
   )
 }
 
-function RunningChart({ running }: { running: { date: string; goalsFor: number; goalsAgainst: number }[] }) {
+function RunningChart({ running }: { running: Running[] }) {
   return (
     <Card title="How the season built up">
       <div role="img" aria-label="How the season built up: goals for and against, added up match by match" className="h-[220px] w-full">
@@ -50,8 +51,7 @@ function RunningChart({ running }: { running: { date: string; goalsFor: number; 
             <XAxis dataKey="date" tickFormatter={dayLabel} tick={{ fill: 'rgb(var(--t-ink-3))', fontSize: 11 }}
               axisLine={{ stroke: 'rgb(var(--t-line))' }} tickLine={false} />
             <YAxis allowDecimals={false} tick={{ fill: 'rgb(var(--t-ink-3))', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <Tooltip labelFormatter={label => dayLabel(String(label))}
-              contentStyle={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', borderRadius: 10, fontSize: 12 }} />
+            <Tooltip content={<RunningTip />} />
             <Line name="Goals for" dataKey="goalsFor" type="monotone" stroke="rgb(var(--t-brand))" strokeWidth={2.5}
               dot={{ r: 3 }} isAnimationActive={false} />
             <Line name="Goals against" dataKey="goalsAgainst" type="monotone" stroke="rgb(var(--t-ink-3))" strokeWidth={2}
@@ -63,6 +63,14 @@ function RunningChart({ running }: { running: { date: string; goalsFor: number; 
         <span><span aria-hidden style={{ color: 'rgb(var(--t-brand))' }}>●</span> Goals for</span>
         <span><span aria-hidden style={{ color: 'rgb(var(--t-ink-3))' }}>●</span> Goals against</span>
       </p>
+      <p id="season-record" className="mt-3 text-[12px] font-medium text-ink-3">Record after each match (won–drawn–lost)</p>
+      <ol aria-labelledby="season-record" className="mt-1.5 flex flex-wrap gap-1.5">
+        {running.map((p, i) => (
+          <li key={i} className="rounded-[8px] bg-raised px-2 py-1 text-[11px] text-ink">
+            <span className="text-ink-3">{dayLabel(p.date)}</span> {record(p)}
+          </li>
+        ))}
+      </ol>
     </Card>
   )
 }
@@ -111,22 +119,29 @@ function PlayerRow({ season, name, number }: { season: PlayerSeason; name: strin
   )
 }
 
+/** Lowest share of available minutes first; children with no share last; then by name. */
 const byMinutesThenName = (names: Map<string, string>) => (a: PlayerSeason, b: PlayerSeason) => {
-  if (a.pct === null && b.pct === null) return 0
-  if (a.pct === null) return 1
-  if (b.pct === null) return -1
-  return a.pct - b.pct || (names.get(a.squadPlayerId) ?? '').localeCompare(names.get(b.squadPlayerId) ?? '')
+  const byPct = a.pct === null || b.pct === null ? Number(a.pct === null) - Number(b.pct === null) : a.pct - b.pct
+  return byPct || (names.get(a.squadPlayerId) ?? '').localeCompare(names.get(b.squadPlayerId) ?? '')
 }
+
+/** A roster child with no match rows yet: no appearances, nothing recorded. */
+const noMatches = (squadPlayerId: string): PlayerSeason =>
+  ({ squadPlayerId, apps: 0, minutes: null, available: null, pct: null, goals: 0, assists: 0 })
 
 export function SeasonTab({ roster }: { roster: SquadRoster }) {
   const { window, summary, isPending, error, retry } = useSeason()
-  const { players } = roster
+  const { players, consentPending } = roster
 
   const known = useMemo(() => new Map(players.map(p => [p.id, p])), [players])
+  // Every eligible child on the roster has a row, played or not; a consent-pending child is left out.
   const sorted = useMemo(() => {
     const names = new Map(players.map(p => [p.id, p.player_name]))
-    return [...(summary?.players ?? [])].sort(byMinutesThenName(names))
-  }, [summary, players])
+    const played = summary?.players ?? []
+    const seen = new Set(played.map(p => p.squadPlayerId))
+    const unplayed = players.filter(p => !consentPending.has(p.id) && !seen.has(p.id)).map(p => noMatches(p.id))
+    return [...played, ...unplayed].sort(byMinutesThenName(names))
+  }, [summary, players, consentPending])
 
   if (error) return <SquadLoadError onRetry={retry} title="Couldn't load the season" />
   if (isPending || !summary) return <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading the season…</p>

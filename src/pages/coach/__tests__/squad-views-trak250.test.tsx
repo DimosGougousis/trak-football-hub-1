@@ -3,7 +3,7 @@
  * Availability) with one shared roster read. This file holds the shell tests;
  * each tab's own tests are appended as the tab lands.
  */
-import { it, expect, describe, beforeEach, afterEach } from 'vitest'
+import { it, expect, describe, beforeEach, afterEach, vi } from 'vitest'
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -16,6 +16,17 @@ import { forgetScreens } from '@/lib/screen-memory'
 import { supabase } from '@/integrations/supabase/client'
 import { localTodayISO } from '@/lib/event-time'
 import { seasonWindow } from '@/lib/squad/season'
+
+// jsdom lays nothing out, so recharts' ResponsiveContainer would measure 0×0 and warn. A fixed size instead.
+vi.mock('recharts', async importOriginal => {
+  const recharts = await importOriginal<typeof import('recharts')>()
+  const { cloneElement } = await import('react')
+  return {
+    ...recharts,
+    ResponsiveContainer: ({ children }: { children: React.ReactElement }) =>
+      <div style={{ width: 800, height: 220 }}>{cloneElement(children, { width: 800, height: 220 } as never)}</div>,
+  }
+})
 
 // The app's query cache outlives a test, so each test is its own coach.
 let COACH = { id: 'coach-250-shell' }
@@ -35,6 +46,7 @@ function coachReads(players: Record<string, unknown>[] = PLAYERS) {
     table('coach_sessions', []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
+    rpc('coach_squad_season', () => []),
   )
 }
 
@@ -227,6 +239,20 @@ describe('TRAK-250: Snapshot tab', { timeout: 20_000 }, () => {
     expect(within(panel).getByText('Newcomer R.')).toBeInTheDocument()
   })
 
+  it("every name in the band columns and chips links to the child's profile", async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(
+      table('coach_assessments', [rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z')]),
+      rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'sq-sami'),
+    )
+    renderApp('/coach/squad')
+    const panel = await screen.findByRole('tabpanel', { name: 'Snapshot' })
+    const mixed = await within(panel).findByRole('group', { name: 'Mixed' })
+    expect(within(mixed).getByRole('link', { name: /Leo M\./ })).toHaveAttribute('href', '/coach/player/sq-leo')
+    expect(within(panel).getByRole('link', { name: 'Newcomer R.' })).toHaveAttribute('href', '/coach/player/sq-new')
+    expect(within(panel).getByRole('link', { name: 'Sami K.' })).toHaveAttribute('href', '/coach/player/sq-sami')
+  })
+
   it('empty squad', async () => {
     coachReads(SNAP_PLAYERS)
     renderApp('/coach/squad')
@@ -382,6 +408,39 @@ describe('TRAK-250: Season tab', { timeout: 20_000 }, () => {
     expect(items[0]).toHaveTextContent('W')
     expect(items[1]).toHaveTextContent('L')
     expect(items[1]).toHaveTextContent('1–3')
+  })
+
+  it('a roster child with no match rows appears with 0 apps and dashes; a consent-pending one does not', async () => {
+    coachReads([...SNAP_PLAYERS,
+      { id: 'sq-wait', coach_user_id: 'x', player_name: 'Waiting W.', position: 'Defender', shirt_number: 5, age_group: 'U12' }])
+    server.use(
+      rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'sq-wait'),
+      rpc('coach_squad_season', () => SEASON_ROWS.filter(r => r.squad_player_id !== 'sq-new')),
+    )
+    renderApp('/coach/squad?tab=season')
+    const panel = await screen.findByRole('tabpanel', { name: 'Season' })
+    const table_ = await within(panel).findByRole('table')
+    const rows = within(table_).getAllByRole('row').slice(1)
+    expect(rows).toHaveLength(3)
+    const newcomer = rows.find(r => r.textContent?.includes('Newcomer R.'))!
+    expect(newcomer).toBe(rows[2])
+    const cells = within(newcomer).getAllByRole('cell')
+    expect(cells[1]).toHaveTextContent('0')
+    expect(cells[2]).toHaveTextContent('—')
+    expect(cells[3]).toHaveTextContent('—')
+    expect(newcomer).not.toHaveTextContent('%')
+    expect(newcomer).not.toHaveTextContent('minutes owed')
+    expect(within(table_).queryByText('Waiting W.')).toBeNull()
+  })
+
+  it('the running chart shows the won-drawn-lost record after each match', async () => {
+    coachReads(SNAP_PLAYERS)
+    server.use(rpc('coach_squad_season', () => SEASON_ROWS))
+    renderApp('/coach/squad?tab=season')
+    const panel = await screen.findByRole('tabpanel', { name: 'Season' })
+    const record = await within(panel).findByRole('list', { name: 'Record after each match (won–drawn–lost)' })
+    const items = within(record).getAllByRole('listitem')
+    expect(items.map(i => i.textContent)).toEqual(['5 Sep 1–0–0', '12 Sep 1–0–1', '19 Sep 2–0–1'])
   })
 
   it('empty season', async () => {
@@ -550,6 +609,46 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     expect(panel).toHaveTextContent('2 confirmed · 2 not confirmed')
   })
 
+  it('confirming by keyboard keeps focus on the child, now in Confirmed, and says so', async () => {
+    const user = userEvent.setup()
+    const state = availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
+    server.use(rpc('confirm_event_attendance', args => {
+      state.confirmed['ev-1'] = [...state.confirmed['ev-1'], String(args.p_squad_player_id)]
+      return null
+    }))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    const leo = await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ })
+    act(() => leo.focus())
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(child(panel, 'Confirmed', /Leo M\./)).not.toBeNull())
+    await waitFor(() => expect(document.activeElement).toBe(child(panel, 'Confirmed', /Leo M\./)))
+    expect(within(panel).getByText('Leo M. confirmed')).toBeInTheDocument()
+  })
+
+  it('while a toggle is pending the buttons stay focusable and ignore taps', async () => {
+    const user = userEvent.setup()
+    availabilityReads({ confirmed: { 'ev-1': ['c1'] } })
+    let release!: () => void
+    const held = new Promise<void>(r => { release = r })
+    const calls: unknown[] = []
+    server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/confirm_event_attendance`, async ({ request }) => {
+      calls.push(await request.json())
+      await held
+      return HttpResponse.json(null)
+    }))
+    renderApp('/coach/squad?tab=availability')
+    const panel = await screen.findByRole('tabpanel', { name: 'Availability' })
+    await user.click(await within(await columnLater(panel, 'Not confirmed')).findByRole('button', { name: /Leo M\./ }))
+    const rayan = child(panel, 'Not confirmed', /Rayan S\./)!
+    await waitFor(() => expect(rayan).toHaveAttribute('aria-disabled', 'true'))
+    expect(rayan).not.toBeDisabled()
+    await user.click(rayan)
+    expect(calls).toHaveLength(1)
+    release()
+  })
+
   it('tapping a confirmed child takes the tick back', async () => {
     const user = userEvent.setup()
     const state = availabilityReads({ confirmed: { 'ev-1': ['c1', 'c3'] } })
@@ -658,6 +757,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
 
     const owed = within(panel).getByRole('region', { name: 'Minutes owed' })
     expect(owed).toHaveTextContent('Rayan S. has played 40% of available minutes, the lowest in the squad.')
+    expect(owed).not.toHaveTextContent('Plan at least half')
   })
 
   it('a training shows no minutes and no minutes owed', async () => {
@@ -680,6 +780,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     expect(within(panel).queryByRole('region', { name: 'Minutes owed' })).toBeNull()
     expect(within(panel).queryByText("Couldn't load your squad")).toBeNull()
     expect(panel).not.toHaveTextContent('—')
+    expect(await within(panel).findByText("Minutes this season couldn't be loaded.", undefined, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('a failed confirmations read shows Try again, never everyone as not confirmed', async () => {

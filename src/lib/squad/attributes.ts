@@ -83,7 +83,7 @@ export function heatAlpha(value: number): number {
   return Math.max(0.08, Math.min(0.9, (value - 4) / 4.4))
 }
 
-const latestAverage =(row: AttributeRow) => {
+const latestAverage = (row: AttributeRow) => {
   for (let i = row.weeks.length - 1; i >= 0; i--) {
     const v = row.weeks[i]
     if (v !== null) return v

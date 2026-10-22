@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, Circle, TriangleAlert } from 'lucide-react'
@@ -6,7 +6,9 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { displayEventTime, localTodayISO, toInstant } from '@/lib/event-time'
 import { splitAvailability, type AvailPlayer } from '@/lib/squad/availability'
+import { OWED_BELOW, quoted, weekdayDayMonth as dayLabel } from '@/lib/squad/format'
 import type { Tables } from '@/integrations/supabase/types'
+import { Card, Missing } from './parts'
 import { SquadLoadError } from './SquadLoadError'
 import { useSeason } from './useSeason'
 import type { SquadRoster } from './useSquadRoster'
@@ -16,23 +18,10 @@ import type { SquadRoster } from './useSquadRoster'
    report is only a tag on the child, in whichever column. Coach-only: families never see any of it,
    and the reason behind a report is never read. */
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const UPCOMING = 10
-const OWED_BELOW = 50
 
 type CalendarEvent = Pick<Tables<'coach_calendar_events'>,
   'id' | 'squad' | 'title' | 'event_type' | 'starts_at' | 'event_date' | 'start_time' | 'opponent' | 'venue' | 'home_away'>
-
-/** PostgREST value quoting, so a squad name with a comma or bracket cannot change the filter. */
-const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-
-/** `2026-10-24` -> `Sat 24 Oct`, from the calendar date itself so no time zone can move the day. */
-function dayLabel(date: string) {
-  const [y, m, d] = date.split('-').map(Number)
-  if (!y || !m || !d) return ''
-  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]}`
-}
 
 /** This coach's next published, not-cancelled events from the start of today (confirming is allowed all day). */
 async function loadEvents(coachId: string, since: string, squad: string | null): Promise<CalendarEvent[]> {
@@ -58,10 +47,6 @@ async function loadReportedAbsent(eventId: string): Promise<string[]> {
   return (data ?? []).map(row => row.squad_player_id)
 }
 
-function Missing({ what }: { what: string }) {
-  return <><span aria-hidden>—</span><span className="sr-only">{what}</span></>
-}
-
 function Chip({ children, tone = 'raised' }: { children: ReactNode; tone?: 'raised' | 'brand' }) {
   return (
     <span className="inline-flex min-w-6 items-center justify-center rounded-full px-2.5 py-0.5 text-[12px] font-medium"
@@ -73,16 +58,10 @@ function Chip({ children, tone = 'raised' }: { children: ReactNode; tone?: 'rais
   )
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section aria-label={title} className="rounded-[14px] border border-line bg-surface p-4">
-      <h3 className="mb-2 text-[13px] font-medium text-ink-3">{title}</h3>
-      {children}
-    </section>
-  )
-}
-
 type Row = AvailPlayer & { absent: boolean }
+
+/** Stable per child, so focus can follow the child into the other column. */
+const childButtonId = (childId: string) => `availability-child-${childId}`
 
 function ChildRow({ child, pressed, pct, showPct, busy, onToggle }: {
   child: Row
@@ -95,8 +74,10 @@ function ChildRow({ child, pressed, pct, showPct, busy, onToggle }: {
 }) {
   return (
     <li>
-      <button type="button" aria-pressed={pressed} disabled={busy} onClick={onToggle}
-        className="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+      {/* aria-disabled, not disabled, while a toggle is pending: a disabled button would drop keyboard focus. */}
+      <button type="button" id={childButtonId(child.id)} aria-pressed={pressed} aria-disabled={busy || undefined}
+        onClick={() => { if (!busy) onToggle() }}
+        className="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised aria-disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
         <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-raised text-[12px] font-medium text-ink">
           {child.shirt ?? <Missing what="no shirt number" />}
         </span>
@@ -160,6 +141,8 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
   const { players, consentPending, squad } = roster
   const season = useSeason()
   const [pick, setPick] = useState<string | null>(null)
+  // The last toggle that landed: announced politely, and focus follows the child to its new column.
+  const [moved, setMoved] = useState<{ childId: string; text: string } | null>(null)
 
   const since = toInstant(localTodayISO()) ?? new Date().toISOString()
   const events = useQuery({
@@ -184,7 +167,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
   })
 
   const toggle = useMutation({
-    mutationFn: async ({ eventId: ev, childId, confirm }: { eventId: string; childId: string; confirm: boolean }) => {
+    mutationFn: async ({ eventId: ev, childId, confirm }: { eventId: string; childId: string; name: string; confirm: boolean }) => {
       const args = { p_event_id: ev, p_squad_player_id: childId }
       const { error } = confirm
         ? await supabase.rpc('confirm_event_attendance', args)
@@ -192,8 +175,14 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
       if (error) throw error
     },
     // The row only moves once the confirmations have been read again; a refusal leaves it where it was.
-    onSuccess: (_data, vars) => client.invalidateQueries({ queryKey: ['coach', userId, 'squad-availability', 'confirmed', vars.eventId] }),
+    onSuccess: async (_data, vars) => {
+      await client.invalidateQueries({ queryKey: ['coach', userId, 'squad-availability', 'confirmed', vars.eventId] })
+      setMoved({ childId: vars.childId, text: `${vars.name} ${vars.confirm ? 'confirmed' : 'not confirmed'}` })
+    },
   })
+  useEffect(() => {
+    if (moved) document.getElementById(childButtonId(moved.childId))?.focus()
+  }, [moved])
 
   const avail = useMemo<AvailPlayer[]>(
     () => players.map(p => ({ id: p.id, name: p.player_name, shirt: p.shirt_number, position: p.position })),
@@ -250,10 +239,13 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     event.venue ?? '',
   ].filter(Boolean).join(' · ')
 
-  const step = (by: number) => { toggle.reset(); setPick(upcoming[at + by].id) }
+  const step = (by: number) => { toggle.reset(); setMoved(null); setPick(upcoming[at + by].id) }
   const readError = confirmedQuery.error ?? absentQuery.error
   const retry = () => { void confirmedQuery.refetch(); void absentQuery.refetch() }
-  const toggleChild = (child: Row) => toggle.mutate({ eventId: event.id, childId: child.id, confirm: !confirmedIds.has(child.id) })
+  const toggleChild = (child: Row) => {
+    if (toggle.isPending) return
+    toggle.mutate({ eventId: event.id, childId: child.id, name: child.name, confirm: !confirmedIds.has(child.id) })
+  }
   const stepButton = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] border border-line-strong text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
   return (
@@ -274,6 +266,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
         </div>
       </div>
       {details && <p className="mt-1.5 font-mono text-[12px] text-ink-3">{details}</p>}
+      <p role="status" aria-live="polite" className="sr-only">{moved?.text ?? ''}</p>
 
       {toggle.error && (
         <p role="alert" className="mt-3.5 rounded-[12px] px-4 py-3 text-[13px] text-ink"
@@ -304,7 +297,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
               </div>
 
               <aside className="flex w-full flex-col gap-3.5 lg:w-[300px] lg:shrink-0">
-                <Card title="Squad for this event">
+                <Card title="Squad for this event" muted>
                   <p className="text-[18px] font-medium text-ink">{split.confirmed.length} confirmed · {split.notConfirmed.length} not confirmed</p>
                   {split.goalkeepers.length > 0 ? (
                     <p className="mt-2 text-[13px] text-ink">Goalkeepers: {split.goalkeepers.map(g => g.name).join(', ')}</p>
@@ -315,14 +308,16 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
                   )}
                 </Card>
                 {isMatch && pcts && (
-                  <Card title="Minutes owed">
+                  <Card title="Minutes owed" muted>
                     {owed ? (
                       <p className="text-[13px] text-ink">
                         <b className="font-medium">{owed.name}</b> has played {owed.pct}% of available minutes, the lowest in the squad.
-                        {owed.pct < OWED_BELOW && ' Plan at least half the match.'}
                       </p>
                     ) : <p className="text-[13px] text-ink-3">No minutes recorded yet this season.</p>}
                   </Card>
+                )}
+                {isMatch && season.error && (
+                  <p className="rounded-[12px] border border-line bg-surface px-4 py-3 text-[13px] text-ink-3">Minutes this season couldn't be loaded.</p>
                 )}
                 <p className="rounded-[12px] border border-line bg-raised px-4 py-3 text-[13px] text-ink-2">
                   Confirmations come from your WhatsApp group; families don't see them in Trak.

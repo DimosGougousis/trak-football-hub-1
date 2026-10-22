@@ -2,17 +2,15 @@ import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { localParts, localTodayISO } from '@/lib/event-time'
 import { attributeHeatmap, focusAttribute, heatAlpha, weekStarts, type AttributeRow } from '@/lib/squad/attributes'
+import { dayMonth } from '@/lib/squad/format'
+import { Card, Missing } from './parts'
 import type { SquadRoster } from './useSquadRoster'
 
 /* TRAK-250: Squad > Attributes. The six assessment attributes averaged across the squad, week by week,
    with the spread of each child's latest value. Coach-only: it is never shown to players or parents. */
 
 const WEEKS = 6
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const dateOf = (iso: string) => localParts(iso).date
-
-/** `2026-10-20` -> `20 Oct`. Not locale-formatted, so the heading reads the same on every device. */
-const weekLabel = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]}`
 
 /** Shade of a recorded value: the brand token at an opacity that grows with the value. */
 function shade(value: number) {
@@ -27,10 +25,6 @@ const CELL = 'flex min-h-11 min-w-[52px] flex-col items-center justify-center ro
 
 function Cell({ children, style }: { children: ReactNode; style?: React.CSSProperties }) {
   return <td className="p-[3px]"><div className={CELL} style={style}>{children}</div></td>
-}
-
-function Missing() {
-  return <><span aria-hidden>—</span><span className="sr-only">not recorded</span></>
 }
 
 function Trend({ trend }: { trend: number | null }) {
@@ -68,15 +62,6 @@ function Row({ row, focus }: { row: AttributeRow; focus: boolean }) {
   )
 }
 
-function Aside({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section aria-label={title} className="rounded-[14px] border border-line bg-surface p-4">
-      <p className="text-[12px] font-medium text-ink-3">{title}</p>
-      {children}
-    </section>
-  )
-}
-
 export function AttributesTab({ roster }: { roster: SquadRoster }) {
   const { assessments } = roster
   const weeks = useMemo(() => weekStarts(localTodayISO(), WEEKS), [])
@@ -106,7 +91,7 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
                   <tr>
                     <td />
                     {weeks.map(w => (
-                      <th key={w} scope="col" className="py-1 text-center text-[12px] font-medium text-ink-3">{weekLabel(w)}</th>
+                      <th key={w} scope="col" className="py-1 text-center text-[12px] font-medium text-ink-3">{dayMonth(w)}</th>
                     ))}
                     <th scope="col" className="py-1 text-center text-[12px] font-medium text-ink-3">Range</th>
                     <th scope="col" className="py-1 text-center text-[12px] font-medium text-ink-3">Trend</th>
@@ -130,11 +115,11 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
                 Open Trainings →
               </Link>
             </section>
-            <Aside title="How to read the range">
-              <p className="mt-1.5 text-[13px] text-ink-2">
+            <Card title="How to read the range" muted>
+              <p className="text-[13px] text-ink-2">
                 An average of 5 where everyone scores 5 needs a squad drill. An average of 5 where half score 2 and half score 8 needs groups.
               </p>
-            </Aside>
+            </Card>
             <p className="rounded-[10px] bg-raised p-3 text-[12px] text-ink-3">
               Coach-only. Players see their own six bars; this squad view is never shown to players or parents.
             </p>

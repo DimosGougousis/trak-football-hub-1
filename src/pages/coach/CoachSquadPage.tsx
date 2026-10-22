@@ -57,7 +57,8 @@ export default function CoachSquadPage() {
             role="tablist"
             aria-label="Squad views"
             onKeyDown={onKeyDown}
-            className="order-last md:order-none flex w-full md:w-auto gap-6 overflow-x-auto border-b border-line md:border-b-0"
+            // Below md the tabs scroll sideways under a rule; from md they sit in the header with nothing to scroll or clip a focus ring.
+            className="order-last md:order-none flex w-full md:w-auto gap-6 overflow-x-auto overflow-y-hidden border-b border-line md:overflow-visible md:border-b-0"
           >
             {TABS.map(t => {
               const selected = t.id === active
@@ -71,7 +72,7 @@ export default function CoachSquadPage() {
                   aria-controls="squad-panel"
                   tabIndex={selected ? 0 : -1}
                   onClick={() => choose(t.id)}
-                  className="min-h-11 -mb-px border-b-2 px-0.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                  className="min-h-11 -mb-px md:mb-0 border-b-2 px-0.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                   style={{
                     borderColor: selected ? 'rgb(var(--t-brand))' : 'transparent',
                     color: selected ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
