@@ -14,6 +14,8 @@ export type AssessmentRow = {
   coachability: number
   attitude: number
   tactical: number
+  /** TRAK-200: null while it's the coach's draft. */
+  published_at?: string | null
 }
 
 /** `move` is 1 when the child went up the BANDS list (towards Exceptional), -1 when down. */

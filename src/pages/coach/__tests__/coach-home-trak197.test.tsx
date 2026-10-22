@@ -27,7 +27,7 @@ const TRAININGS = ['2026-11-23', '2026-11-16', '2026-11-09', '2026-11-02']
   .map((session_date, i) => ({ id: `t${i + 1}`, coach_user_id: COACH.id, session_type: 'training', session_date, event_id: i === 0 ? 'e1' : null, squad: null }))
 
 type Row = Record<string, unknown>
-function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[]; present?: [string, string][]; absences?: Row[]; details?: Row }) {
+function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[]; present?: [string, string][]; absences?: Row[]; details?: Row; settings?: Row[] }) {
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Angelos Basinas', invite_code: 'ABCD' }]),
     table('coach_details', [over.details ?? { user_id: COACH.id, coach_role: 'Head Coach', team: 'U16s', organization_id: 'org-1' }]),
@@ -38,6 +38,7 @@ function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[];
     table('session_attendance', (over.present ?? []).map(([session_id, squad_player_id]) => ({ session_id, squad_player_id }))),
     table('event_absences', over.absences ?? []),
     table('coach_calendar_events', []),
+    table('notification_settings', over.settings ?? []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
   )
@@ -167,26 +168,78 @@ describe('TRAK-211: the Feedback and assessment tab', { timeout: 20_000 }, () =>
   })
 })
 
-describe('TRAK-197: two quick actions', () => {
-  it('Assess a player opens the assessment; Log a match or training opens the log chooser', async () => {
+// TRAK-262 (Imad, 22 Oct): the two quick-action cards left Home (the "+" has both); Needs you, Squad shape and the
+// squad pills came. The full player overview stays the Feedback tab's.
+describe('TRAK-262: coach Home', () => {
+  it('has no Assess a player or Log a match card: the "+" covers both', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
     renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: 'Assess a player' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
-    cleanup()
-    renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: 'Log a match or training' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/sessions'))
+    expect(await screen.findByRole('heading', { name: 'Squad shape' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Assess a player' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Log a match or training' })).toBeNull()
+    expect(screen.queryByRole('region', { name: /Player overview|Feedback and assessment/ })).toBeNull()
   })
 
-  // TRAK-211: Home lists no players now; the overview is the Feedback tab's.
-  it('stand without the player overview on Home', async () => {
+  it('Needs you has a card for a player never assessed after 3 weeks, which opens Assess for them', async () => {
+    home({ players: [player('a', 'Ade Okafor'), player('b', 'Bo Lind')], present: cameToAll('a', 'b'),
+      assessments: [{ squad_player_id: 'b', coach_user_id: COACH.id, created_at: daysAgo(1), published_at: daysAgo(1), coach_rating: 7,
+        work_rate: 7, technical: 7, physical: 7, coachability: 7, attitude: 7, tactical: 7 }] })
+    renderApp('/coach/home')
+    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
+    const card = await within(needs).findByRole('button', { name: /Ade Okafor/ })
+    expect(card).toHaveTextContent('Never assessed, 5 weeks in the squad')
+    expect(within(needs).queryByRole('button', { name: /Bo Lind/ })).toBeNull()
+    await userEvent.click(card)
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
+  })
+
+  it('Needs you leaves Home when the coach turns it off in Settings', async () => {
+    home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'), settings: [{ user_id: COACH.id, event_reminders: true, needs_you: false, cant_make_it_alerts: true }] })
+    renderApp('/coach/home')
+    expect(await screen.findByText(/No assessments this month or last/, {}, { timeout: 5000 })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('region', { name: /Needs you/ })).toBeNull())
+    expect(screen.queryByRole('button', { name: /Ade Okafor/ })).toBeNull()
+  })
+
+  it("a draft families can't see yet has its own card, which opens the player", async () => {
+    home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'),
+      assessments: [{ squad_player_id: 'a', coach_user_id: COACH.id, created_at: daysAgo(1), published_at: null, coach_rating: 7,
+        work_rate: 7, technical: 7, physical: 7, coachability: 7, attitude: 7, tactical: 7 }] })
+    renderApp('/coach/home')
+    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
+    const card = await within(needs).findByRole('button', { name: /Finish draft/ })
+    await userEvent.click(card)
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/player/a'))
+  })
+
+  it('Squad shape says so when nothing was assessed this month or last', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
     renderApp('/coach/home')
-    expect(await screen.findByRole('button', { name: 'Assess a player' }, { timeout: 5000 })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Log a match or training' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: /Player overview|Feedback and assessment/ })).toBeNull()
-    expect(screen.queryByText('Ade Okafor')).toBeNull()
+    expect(await screen.findByText(/No assessments this month or last/, {}, { timeout: 5000 })).toBeInTheDocument()
+  })
+
+  it('Squad shape counts each player in their band', async () => {
+    const rating = { work_rate: 8, technical: 8, physical: 8, coachability: 8, attitude: 8, tactical: 8 }
+    home({ players: [player('a', 'Ade Okafor'), player('b', 'Bo Lind')], present: cameToAll('a', 'b'), assessments: [
+      { squad_player_id: 'a', coach_user_id: COACH.id, created_at: daysAgo(2), published_at: daysAgo(2), coach_rating: 8.2, ...rating },
+      { squad_player_id: 'b', coach_user_id: COACH.id, created_at: daysAgo(3), published_at: daysAgo(3), coach_rating: 8.4, ...rating },
+    ] })
+    renderApp('/coach/home')
+    const bands = await screen.findByRole('list', { name: 'Players per band' }, { timeout: 5000 })
+    expect(within(bands).getByText('Standout').parentElement).toHaveTextContent('Standout 2')
+  })
+
+  it('All shows every squad on Home without changing the squad picked elsewhere', async () => {
+    home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
+    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    renderApp('/coach/home')
+    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
+    expect(await within(needs).findByRole('button', { name: /Bo Lind/ })).toBeInTheDocument()
+    expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'All' }))
+    expect(await within(needs).findByRole('button', { name: /Ade Okafor/ })).toBeInTheDocument()
+    expect(screen.getByText('Head Coach · Synthetic Athens · All squads')).toBeInTheDocument()
+    expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16')
   })
 
   it('the quiet line follows the squad picked in the header', async () => {
@@ -194,7 +247,7 @@ describe('TRAK-197: two quick actions', () => {
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     renderApp('/coach/home')
     expect(await screen.findByText('Head Coach · Synthetic Athens · U16', {}, { timeout: 5000 })).toBeInTheDocument()
-    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Squad' }), 'U14')
+    await userEvent.click(await screen.findByRole('button', { name: 'U14' }))
     expect(await screen.findByText('Head Coach · Synthetic Athens · U14')).toBeInTheDocument()
   })
 })

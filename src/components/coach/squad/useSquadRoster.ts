@@ -36,14 +36,15 @@ async function loadAssessments(ids: string[]): Promise<AssessmentRow[]> {
   if (ids.length === 0) return []
   const { data, error } = await supabase
     .from('coach_assessments')
-    .select('squad_player_id, coach_rating, created_at, work_rate, technical, physical, coachability, attitude, tactical')
+    .select('squad_player_id, coach_rating, created_at, work_rate, technical, physical, coachability, attitude, tactical, published_at')
     .in('squad_player_id', ids)
     .order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []).map(row => ({ ...row, created_at: row.created_at ?? '' }))
 }
 
-export function useSquadRoster() {
+/** `everySquad`: TRAK-262's All pill on Home, every squad without changing the squad picked. */
+export function useSquadRoster({ everySquad = false }: { everySquad?: boolean } = {}) {
   const { user } = useAuth()
   const userId = user?.id
   const client = useQueryClient()
@@ -52,8 +53,9 @@ export function useSquadRoster() {
   const all = useQuery({ queryKey: [...ROOT(userId), 'players'], queryFn: () => loadPlayers(userId!), enabled: !!userId })
   // Until the squads are known the squad in view is a guess, so nothing is shown (no flash of every squad).
   // Memoized on the data, so the returned values keep their identity between renders and tabs can use them as deps.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `inSquad` is a new function each render and depends only on `squad`
-  const players = useMemo(() => (ready && all.data ? all.data.filter(p => inSquad(p.age_group)) : NONE), [ready, all.data, squad])
+  const players = useMemo(() => (ready && all.data ? all.data.filter(p => everySquad || inSquad(p.age_group)) : NONE),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `inSquad` is a new function each render and depends only on `squad`
+    [ready, all.data, squad, everySquad])
   const ids = useMemo(() => players.map(p => p.id).sort(), [players])
   const idsKey = ids.join(',')
   const dependent = !!userId && ready && all.isSuccess
@@ -70,6 +72,8 @@ export function useSquadRoster() {
     squads,
     setSquad,
     players,
+    /** Every current player in every squad, picked or not. */
+    playerCount: all.data?.length ?? 0,
     consentPending,
     assessments: assessments.data ?? NONE,
     /** True until every read has answered; a failed read is `error`, not pending. */

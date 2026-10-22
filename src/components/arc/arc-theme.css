@@ -112,6 +112,11 @@
   --shadow-resting: 0 1px 2px hsl(0 0% 0% / .06);
   --shadow-raised: 0 8px 22px hsl(0 0% 0% / .08);
   --shadow-floating: 0 22px 55px hsl(0 0% 0% / .14);
+  /* Chart series (Arc Pro radar chart): the child first in Trak green, then the squad in Trak's blue. */
+  --series-1: rgb(var(--t-brand));
+  --series-2: rgb(var(--t-info));
+  --series-3: rgb(var(--t-warning));
+  --series-4: rgb(var(--t-danger));
   --font-display: inherit;
   --font-body: inherit;
 }
