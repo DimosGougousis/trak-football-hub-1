@@ -6,6 +6,7 @@ import { fetchWaitReason, WAIT_TITLE, waitText, type WaitReason } from '@/lib/wa
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { MobileShell, BandPill, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SliderInput } from '@/components/trak/SliderInput'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
@@ -380,7 +381,8 @@ function CoachAssessmentForm() {
         ...cardStats,
         // TRAK-200: Save draft hides the bands from the family; Publish shows them.
         // An already published row keeps its date; a new one takes the database's now().
-        ...(draft ? { published_at: null } : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
+        // TRAK-248: Save draft never takes back bands the family already sees; that's Unpublish.
+        ...(draft ? (assessmentPublished ? {} : { published_at: null }) : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
       }
 
       const { data: saved, error: saveError } = existingId
@@ -559,7 +561,7 @@ function CoachAssessmentForm() {
 
   /* ---- render ---- */
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto trak-read bg-ground" style={{ height: '100dvh' }}>
       {/* ---- header: always visible, never scrolls ---- */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
@@ -723,8 +725,8 @@ function CoachAssessmentForm() {
 
         </>}
         {step === 1 && <>
-        {/* ---- 5. sliders in dark container ---- */}
-        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
+        {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
+        <div className="rounded-[14px] bg-surface border border-line p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
@@ -733,9 +735,9 @@ function CoachAssessmentForm() {
           <SliderInput label="Coachability" value={coachability} onChange={setCoachability} disabled={!formReady || saving || consentWait} />
         </div>
 
-        {/* ---- 6. overall band card (amber glow) ---- */}
+        {/* ---- 6. overall band card, in the band's light tint (TRAK-229) ---- */}
         <div
-          className="trak-dark flex flex-col items-center gap-2 py-5 rounded-[14px]"
+          className="flex flex-col items-center gap-2 py-5 rounded-[14px]"
           style={{
             background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
@@ -749,7 +751,7 @@ function CoachAssessmentForm() {
             className="inline-flex items-center justify-center px-5 rounded-full text-[16px] font-semibold"
             style={{
               height: 36,
-              color: overallCfg.color,
+              color: overallCfg.text,
               background: overallCfg.bg,
               border: `1.5px solid ${overallCfg.border}`,
             }}
@@ -872,8 +874,9 @@ function CoachAssessmentForm() {
         ) : null}
       </div>
 
-      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it. */}
-      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
+      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it.
+          TRAK-199: beside a laptop's rail there is no bar, so no room (trak-bar-room). */}
+      <div className="trak-bar-room arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
           <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
@@ -901,6 +904,8 @@ function CoachAssessmentForm() {
       </div>
 
       {/* ---- 10. bottom nav ---- */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/assess" onNavigate={p => navigate(p)} />
     </div>
   )

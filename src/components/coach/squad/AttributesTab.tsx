@@ -80,7 +80,7 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
           <p className="mt-1 text-[12px] text-ink-3">Once you assess a child, their attributes appear here, week by week.</p>
         </div>
       ) : (
-        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="mt-5 grid gap-4 laptop:grid-cols-[minmax(0,1fr)_300px]">
           {/* The table scrolls inside its card, never the page. Nothing focusable sits in it, so no ring is clipped. */}
           <div className="min-w-0 rounded-[14px] border border-line bg-surface p-2.5">
             <div tabIndex={0} role="region" aria-label="Attribute heatmap"

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
-import { MobileShell } from '@/components/trak'
+import { MobileShell, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   IconOverview, IconSquad, IconMatch, IconTraining,
   IconAssess, IconProgress, IconAward, IconParentLink, IconSessions, IconTips,
 } from '@/components/icons/TrakIcons'
-import { BAND_COLOR } from '@/lib/types'
+import { BAND_TEXT } from '@/lib/types'
 
 // ─── Atoms (defined first so they're available everywhere) ───────────────────
 
@@ -119,12 +121,12 @@ function ContentAssessments() {
 
 function ContentRatings() {
   const bands = [
-    { band: 'Exceptional', range: '9.0 – 10.0', color: BAND_COLOR.Exceptional },
-    { band: 'Standout',    range: '8.0 – 8.9',  color: BAND_COLOR.Standout },
-    { band: 'Good',        range: '7.0 – 7.9',  color: BAND_COLOR.Good },
-    { band: 'Steady',      range: '6.0 – 6.9',  color: BAND_COLOR.Steady },
-    { band: 'Mixed',       range: '5.0 – 5.9',  color: BAND_COLOR.Mixed },
-    { band: 'Developing',  range: '0.0 – 4.9',  color: BAND_COLOR.Developing },
+    { band: 'Exceptional', range: '9.0 – 10.0', color: BAND_TEXT.Exceptional },
+    { band: 'Standout',    range: '8.0 – 8.9',  color: BAND_TEXT.Standout },
+    { band: 'Good',        range: '7.0 – 7.9',  color: BAND_TEXT.Good },
+    { band: 'Steady',      range: '6.0 – 6.9',  color: BAND_TEXT.Steady },
+    { band: 'Mixed',       range: '5.0 – 5.9',  color: BAND_TEXT.Mixed },
+    { band: 'Developing',  range: '0.0 – 4.9',  color: BAND_TEXT.Developing },
   ]
   return (
     <div className="space-y-4 text-[13px] leading-relaxed text-ink-2">
@@ -295,10 +297,11 @@ function SectionCard({ section, open, onToggle }: { section: Section; open: bool
 
 export default function CoachManual() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [openId, setOpenId] = useState<string | null>('overview')
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {/* Topbar */}
       <div className="flex items-center gap-3 pt-3 pb-3 border-b border-line shrink-0">
         <button
@@ -332,6 +335,11 @@ export default function CoachManual() {
           />
         ))}
       </div>
+      {/* TRAK-254: a coach on a laptop keeps the side menu here (anyone can open this page). */}
+      {profile?.role === 'coach' && <>
+        <QuickAdd sideMenuOnly />
+        <NavBar role="coach" sideMenuOnly activeTab="/coach/profile" onNavigate={navigate} />
+      </>}
     </MobileShell>
   )
 }

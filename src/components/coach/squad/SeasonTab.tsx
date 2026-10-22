@@ -162,7 +162,7 @@ export function SeasonTab({ roster }: { roster: SquadRoster }) {
         </div>
       ) : (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3.5 laptop:grid-cols-4">
             <Tile label="Played">{matches.length}</Tile>
             <Tile label="Won · drawn · lost">{record.w} · {record.d} · {record.l}</Tile>
             <Tile label="Goals for – against">{summary.goalsFor} – {summary.goalsAgainst}</Tile>
@@ -192,7 +192,7 @@ export function SeasonTab({ roster }: { roster: SquadRoster }) {
 
           <div className="mt-4"><RunningChart running={summary.running} /></div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="mt-4 grid gap-4 laptop:grid-cols-[minmax(0,1fr)_300px]">
             <section aria-label="Players" className="min-w-0 rounded-[14px] border border-line bg-surface p-2.5">
               <div tabIndex={0} role="region" aria-label="Player minutes table"
                 className="overflow-x-auto rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">

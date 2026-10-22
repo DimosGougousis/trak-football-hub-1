@@ -3,7 +3,8 @@ import { Avatar } from '@/components/arc/avatar/avatar'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError} from '@/components/trak'
+import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS, appearanceLabel } from '@/lib/types'
 import { openable } from '@/lib/openable'
@@ -15,8 +16,9 @@ function avgScore(a: any) {
 }
 
 
-export default function CoachPlayerProfilePage() {
-  const { id } = useParams()
+/** TRAK-252: a squad player's page body. `embedded`: inside Squad's side panel on a
+ *  laptop, without the page's header, Back and side menu. */
+export function CoachPlayerOverview({ id, embedded = false }: { id: string | undefined; embedded?: boolean }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -80,6 +82,14 @@ export default function CoachPlayerProfilePage() {
 
   useEffect(() => { void loadPlayer(); void loadAssessments() }, [loadPlayer, loadAssessments])
 
+  if (embedded && playerState !== 'found') return (
+    <div className="px-1 py-6 text-center">
+      {playerState === 'loading' ? <p role="status" className="text-[13px] text-ink-3">Loading…</p>
+        : playerState === 'failed' ? <LoadError what="this player" onRetry={() => { setPlayerState('loading'); void loadPlayer() }} />
+        : <p className="text-[14px] text-ink-2">We couldn't find that player.</p>}
+    </div>
+  )
+
   if (playerState === 'loading') return (
     <MobileShell>
       <div className="flex items-center justify-center h-[60vh]">
@@ -126,8 +136,110 @@ export default function CoachPlayerProfilePage() {
     </span>
   )
 
+  // The page's body; on a laptop, Squad shows it beside the list (TRAK-252).
+  const content = (<>
+
+    {/* Player identity */}
+    <div className="flex items-center gap-4 py-2">
+      <Avatar name={player.player_name} size="lg" className="arc" aria-hidden />
+      <div>
+        <p className="text-[22px] font-light text-ink leading-tight"
+          style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
+          {player.player_name}
+        </p>
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          {player.position && (
+            <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+              style={{ fontFamily: 'var(--t-font-mono)' }}>{player.position}</span>
+          )}
+          {player.shirt_number && (
+            <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
+              style={{ fontFamily: 'var(--t-font-mono)' }}>#{player.shirt_number}</span>
+          )}
+          {/* No assessment count here (TRAK-72 item 5). A failed read still
+              shows its own error card below. */}
+        </div>
+      </div>
+    </div>
+
+    {/* The player stays on screen. Losing the whole page because one of
+        two reads failed would be the same over-correction avoided on Home:
+        the coach can still see who they opened. */}
+    {assessmentsFailed && (
+      <LoadError what="this player's assessments"
+        onRetry={() => { void loadAssessments() }} />
+    )}
+
+    {/* TRAK-252: on a coach's laptop the latest assessment and the history stand side by side.
+        Only when there is one of them, so a page with neither keeps its spacing. */}
+    {((latest && user) || assessments.length > 1) && (
+    <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
+    {/* Latest assessment, as Arc's card (TRAK-200): Draft or Published, Publish on the card,
+        and the quick look with the opponent, the message and the private note. */}
+    {latest && user && (
+      <CoachAssessmentCard key={latest.id} assessment={latest}
+        message={messageById[latest.id]} messageFailed={messageSentById === undefined} note={notesById[latest.id]}
+        onChanged={published => setAssessments(list => list.map(a => a.id === latest.id ? { ...a, published_at: published ? new Date().toISOString() : null } : a))} />
+    )}
+
+    {/* Assessment history */}
+    {assessments.length > 1 && (
+      <div className="space-y-2">
+        <MetadataLabel text="ASSESSMENT HISTORY" />
+        {assessments.slice(1).map(a => {
+          const band = scoreToBand(avgScore(a))
+          // TRAK-229: the score in its band's readable shade, on a light row.
+          const bandColor = BANDS.find(b => b.word.toLowerCase() === band)?.text
+          return (
+            <div key={a.id} className="flex items-center justify-between rounded-[12px] px-4 py-3 cursor-pointer active:scale-[0.99] transition-transform"
+              style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
+              {...openable(`Open assessment from ${new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}${a.coach_sessions?.title ? `, ${a.coach_sessions.title}` : ''}`,
+                () => openAssessment(a.id))}>
+              <div>
+                <p className="text-[12px] text-ink-2"
+                  style={{ fontFamily: 'var(--t-font-mono)' }}>
+                  {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                </p>
+                {a.coach_sessions?.title && (
+                  <p className="text-[11px] text-ink-2 mt-0.5">{a.coach_sessions.title}</p>
+                )}
+                {a.appearance && (
+                  <p className="text-[10px] text-ink-3 mt-0.5">{appearanceLabel(a.appearance)}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {a.published_at == null && <span className="text-[9px] text-muted-foreground">Draft</span>}
+                {messageTag(a)}
+                <span className="text-[11px] font-medium" style={{ color: bandColor }}>
+                  {avgScore(a).toFixed(1)}
+                </span>
+                <BandPill band={band} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )}
+
+    </div>
+    )}
+
+    {/* Action buttons. TRAK-85 (Imad, 16 Oct): no Award button while awards
+        are parked; /coach/award stays a parked route, and it comes back here
+        when awards are unparked. */}
+    <div className="flex gap-2 pt-1">
+      <button
+        onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}
+        className="flex-1 py-3.5 rounded-[10px] bg-brand text-on-brand font-bold text-sm active:scale-[0.97] transition-transform">
+        Assess {player.player_name.split(' ')[0]} →
+      </button>
+    </div>
+  </>)
+
+  if (embedded) return <div className="space-y-4">{content}</div>
+
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto trak-wide bg-ground" style={{ height: '100dvh' }}>
       {/* Header — always visible, never scrolls */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
@@ -144,95 +256,16 @@ export default function CoachPlayerProfilePage() {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-28 space-y-4">
-
-        {/* Player identity */}
-        <div className="flex items-center gap-4 py-2">
-          <Avatar name={player.player_name} size="lg" className="arc" aria-hidden />
-          <div>
-            <p className="text-[22px] font-light text-ink leading-tight"
-              style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.02em' }}>
-              {player.player_name}
-            </p>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {player.position && (
-                <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
-                  style={{ fontFamily: 'var(--t-font-mono)' }}>{player.position}</span>
-              )}
-              {player.shirt_number && (
-                <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
-                  style={{ fontFamily: 'var(--t-font-mono)' }}>#{player.shirt_number}</span>
-              )}
-              {/* No assessment count here (TRAK-72 item 5). A failed read still
-                  shows its own error card below. */}
-            </div>
-          </div>
-        </div>
-
-        {/* The player stays on screen. Losing the whole page because one of
-            two reads failed would be the same over-correction avoided on Home:
-            the coach can still see who they opened. */}
-        {assessmentsFailed && (
-          <LoadError what="this player's assessments"
-            onRetry={() => { void loadAssessments() }} />
-        )}
-
-        {/* Latest assessment, as Arc's card (TRAK-200): Draft or Published, Publish on the card,
-            and the quick look with the opponent, the message and the private note. */}
-        {latest && user && (
-          <CoachAssessmentCard key={latest.id} assessment={latest}
-            message={messageById[latest.id]} messageFailed={messageSentById === undefined} note={notesById[latest.id]}
-            onChanged={published => setAssessments(list => list.map(a => a.id === latest.id ? { ...a, published_at: published ? new Date().toISOString() : null } : a))} />
-        )}
-
-        {/* Assessment history */}
-        {assessments.length > 1 && (
-          <div className="space-y-2">
-            <MetadataLabel text="ASSESSMENT HISTORY" />
-            {assessments.slice(1).map(a => {
-              const band = scoreToBand(avgScore(a))
-              const bandColor = BANDS.find(b => b.word.toLowerCase() === band)?.color
-              return (
-                <div key={a.id} className="trak-dark flex items-center justify-between rounded-[12px] px-4 py-3 cursor-pointer active:scale-[0.99] transition-transform"
-                  style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
-                  {...openable(`Open assessment from ${new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}${a.coach_sessions?.title ? `, ${a.coach_sessions.title}` : ''}`,
-                    () => openAssessment(a.id))}>
-                  <div>
-                    <p className="text-[12px] text-ink-2"
-                      style={{ fontFamily: 'var(--t-font-mono)' }}>
-                      {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
-                    </p>
-                    {a.coach_sessions?.title && (
-                      <p className="text-[11px] text-ink-2 mt-0.5">{a.coach_sessions.title}</p>
-                    )}
-                    {a.appearance && (
-                      <p className="text-[10px] text-ink-3 mt-0.5">{appearanceLabel(a.appearance)}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {a.published_at == null && <span className="text-[9px] text-muted-foreground">Draft</span>}
-                    {messageTag(a)}
-                    <span className="text-[11px] font-medium" style={{ color: bandColor }}>
-                      {avgScore(a).toFixed(1)}
-                    </span>
-                    <BandPill band={band} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Action buttons. TRAK-85 (Imad, 16 Oct): no Award button while awards
-            are parked; /coach/award stays a parked route, and it comes back here
-            when awards are unparked. */}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}
-            className="flex-1 py-3.5 rounded-[10px] bg-brand text-on-brand font-bold text-sm active:scale-[0.97] transition-transform">
-            Assess {player.player_name.split(' ')[0]} →
-          </button>
-        </div>
+        {content}
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/squad" onNavigate={navigate} />
     </div>
   )
+}
+
+export default function CoachPlayerProfilePage() {
+  const { id } = useParams()
+  return <CoachPlayerOverview id={id} />
 }

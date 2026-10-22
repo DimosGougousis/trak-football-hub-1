@@ -4,6 +4,7 @@ import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, TrakCard, MetadataLabel } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { IconHowItWorks } from '@/components/icons/TrakIcons'
 
 export default function CoachProfilePage() {
@@ -57,7 +58,7 @@ export default function CoachProfilePage() {
   }, [user])
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
         <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>Profile</span>
       </div>
@@ -155,6 +156,8 @@ export default function CoachProfilePage() {
           <ChevronRight size={18} className="text-ink-3" />
         </button>
       </div>
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
   )

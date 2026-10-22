@@ -118,7 +118,7 @@ export function ParentAssessmentBands({ assessment }: { assessment: ParentAssess
           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden="true">
             {rated && <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(10, category.score)) * 10}%`, backgroundColor: band?.color }} />}
           </div>
-          <span className="text-xs w-20 text-right text-muted-foreground" style={band ? { color: band.color } : undefined}>{band?.word ?? 'Not assessed'}</span>
+          <span className="text-xs w-20 text-right text-muted-foreground" style={band ? { color: band.text } : undefined}>{band?.word ?? 'Not assessed'}</span>
         </div>
       })}
     </div>

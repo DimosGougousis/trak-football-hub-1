@@ -49,7 +49,7 @@ export default function CoachSquadPage() {
 
   return (
     <div className="min-h-screen bg-ground pb-24">
-      <div className="mx-auto w-full max-w-[1280px] px-5 md:px-8">
+      <div className="mx-auto w-full max-w-[1280px] px-5 tablet:px-8">
         <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
           <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Squad</h1>
           <div
@@ -57,8 +57,8 @@ export default function CoachSquadPage() {
             role="tablist"
             aria-label="Squad views"
             onKeyDown={onKeyDown}
-            // Below md the tabs scroll sideways under a rule; from md they sit in the header with nothing to scroll or clip a focus ring.
-            className="order-last md:order-none flex w-full md:w-auto gap-6 overflow-x-auto overflow-y-hidden border-b border-line md:overflow-visible md:border-b-0"
+            // On a phone the tabs scroll sideways under a rule; on a coach's tablet or laptop (TRAK-252 screens) they sit in the header with nothing to scroll or clip a focus ring.
+            className="order-last tablet:order-none flex w-full tablet:w-auto gap-6 overflow-x-auto overflow-y-hidden border-b border-line tablet:overflow-visible tablet:border-b-0"
           >
             {TABS.map(t => {
               const selected = t.id === active
@@ -72,7 +72,7 @@ export default function CoachSquadPage() {
                   aria-controls="squad-panel"
                   tabIndex={selected ? 0 : -1}
                   onClick={() => choose(t.id)}
-                  className="min-h-11 -mb-px md:mb-0 border-b-2 px-0.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                  className="min-h-11 -mb-px tablet:mb-0 border-b-2 px-0.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
                   style={{
                     borderColor: selected ? 'rgb(var(--t-brand))' : 'transparent',
                     color: selected ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',

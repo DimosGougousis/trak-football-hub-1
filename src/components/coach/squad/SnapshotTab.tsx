@@ -155,7 +155,7 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
                 <div key={s.band} style={{ flexGrow: s.ids.length, background: bandColor(s.band), borderRight: '2px solid rgb(var(--t-surface))' }} />
               ))}
             </div>
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <div className="mt-4 grid grid-cols-2 tablet:grid-cols-4 laptop:grid-cols-7 gap-2.5">
               {spread.map(s => (
                 <div key={s.band} role="group" aria-label={bandWord(s.band)} className="min-w-0">
                   <div className="flex items-center justify-between gap-1">
@@ -180,7 +180,7 @@ export function SnapshotTab({ roster }: { roster: SquadRoster }) {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="mt-4 grid gap-4 laptop:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Card title="Changes since last assessment">
               {moved.length === 0 ? <p className="text-[13px] text-ink-3">No band has changed since the last assessment.</p> : (
                 <ul className="divide-y divide-line">

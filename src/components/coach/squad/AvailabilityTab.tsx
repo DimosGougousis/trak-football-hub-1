@@ -279,9 +279,9 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
         : confirmedQuery.isPending || absentQuery.isPending
           ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading confirmations…</p>
           : (
-            <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="mt-4 flex flex-col gap-4 laptop:flex-row laptop:items-start">
               <div className="min-w-0 flex-1">
-                <div className="grid gap-3.5 md:grid-cols-2">
+                <div className="grid gap-3.5 tablet:grid-cols-2">
                   <Column title="Confirmed" note="You marked these children as coming."
                     rows={split.confirmed} pressed pcts={pcts} showPct={isMatch && !!pcts} busy={toggle.isPending} onToggle={toggleChild} />
                   <Column title="Not confirmed" note="Not marked as coming yet."
@@ -296,7 +296,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
                 )}
               </div>
 
-              <aside className="flex w-full flex-col gap-3.5 lg:w-[300px] lg:shrink-0">
+              <aside className="flex w-full flex-col gap-3.5 laptop:w-[300px] laptop:shrink-0">
                 <Card title="Squad for this event" muted>
                   <p className="text-[18px] font-medium text-ink">{split.confirmed.length} confirmed · {split.notConfirmed.length} not confirmed</p>
                   {split.goalkeepers.length > 0 ? (
