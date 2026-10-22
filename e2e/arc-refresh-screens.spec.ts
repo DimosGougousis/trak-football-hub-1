@@ -62,6 +62,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-263: the Players view's profile facts (TRAK-260).
     if (path === '/rest/v1/squad_player_profiles') return json([])
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
+    // TRAK-261: the coach's notification switches (the bell's "Can't make it alerts"); no row means on.
+    if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path.startsWith('/rest/v1/rpc/')) return json([])
