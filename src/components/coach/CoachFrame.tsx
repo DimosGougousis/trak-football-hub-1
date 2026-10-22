@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { BookOpen, CalendarDays, House, Settings, Users } from 'lucide-react'
+import { CalendarDays, House, Settings, Users } from 'lucide-react'
+import { PitchIcon } from '@/components/icons/PitchIcon'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Avatar } from '@/components/arc/avatar/avatar'
@@ -75,7 +76,8 @@ function Framed({ userId, name }: { userId: string; name: string }) {
     many
       ? { id: 'squads', label: 'Squads', icon: Users, children: coachSquad.squads.map(squad => ({ id: `squad:${squad}`, label: squad })) }
       : { id: 'squad', label: 'Squad', icon: Users },
-    { id: 'library', label: 'Library', icon: BookOpen },
+    // TRAK-265: Imad's pitch icon.
+    { id: 'library', label: 'Library', icon: PitchIcon },
   ]
   const active = screen === 'squad' && many && coachSquad.squad ? `squad:${coachSquad.squad}` : screen ?? ''
   const select = (id: string) => {
@@ -99,7 +101,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
         items={[
           { value: 'home', label: 'Home', icon: <House /> },
           { value: 'squad', label: 'Squad', icon: <Users /> },
-          { value: 'library', label: 'Library', icon: <BookOpen /> },
+          { value: 'library', label: 'Library', icon: <PitchIcon /> },
         ]}
         actionNode={<CoachCreate placement="bar" onSaved={saved} />} />
     </div>}
