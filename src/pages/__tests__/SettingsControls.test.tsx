@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../../tests/msw/server'
 import { SUPABASE_URL, rpc, table } from '../../../tests/msw/supabase'
 import Settings from '../Settings'
+import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
 
 type Role = 'player' | 'coach' | 'parent' | 'club'
 const state = vi.hoisted(() => ({
@@ -55,7 +56,8 @@ afterEach(cleanup)
 
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(<QueryClientProvider client={client}><MemoryRouter><Settings /></MemoryRouter></QueryClientProvider>)
+  // TRAK-261: a parent's Family and Consent read the family, as in the app.
+  return render(<QueryClientProvider client={client}><MemoryRouter><ParentChildrenProvider><Settings /></ParentChildrenProvider></MemoryRouter></QueryClientProvider>)
 }
 
 describe('settings controls reflect supported behavior', () => {
@@ -66,14 +68,18 @@ describe('settings controls reflect supported behavior', () => {
     const legacy = JSON.stringify({ notifyMatchUpdates: false, passportVisibility: 'link' })
     localStorage.setItem('trak.settings.v1', legacy)
     mount()
-    // The only switch is J8.13's reminder setting, read from the database for
-    // a parent or a player (TRAK-136); old browser values never set it.
+    // The switches are read from the database, never from old browser values: J8.13's reminder
+    // setting for a parent or a player (TRAK-136), a coach's two in-app switches (TRAK-261).
     if (role === 'parent' || role === 'player') {
       expect(await screen.findByRole('switch', { name: 'Event reminders' })).toBeChecked()
       expect(screen.getAllByRole('switch')).toHaveLength(1)
+    } else if (role === 'coach') {
+      expect(await screen.findByRole('switch', { name: "Can't make it alerts" })).toBeChecked()
+      expect(await screen.findByRole('switch', { name: 'Needs you' })).toBeChecked()
+      expect(screen.getAllByRole('switch')).toHaveLength(2)
     } else {
       expect(screen.queryByRole('switch')).not.toBeInTheDocument()
-      expect(screen.queryByText('Notifications')).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Notifications' })).not.toBeInTheDocument()
     }
     expect(screen.queryByText('Who can see my passport')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Anyone with link' })).not.toBeInTheDocument()
@@ -87,8 +93,11 @@ describe('settings controls reflect supported behavior', () => {
     if (role === 'player') expect(screen.queryByDisplayValue('8')).toBeNull()
     // TRAK-72 item 11: the academy's name, shown read-only.
     if (role === 'coach') await screen.findByText('Test Academy')
-    // TRAK-73: a parent's linked children moved to the Profile tab, like the player's (TRAK-71).
-    if (role === 'parent') expect(screen.queryByText('Linked children component')).toBeNull()
+    // TRAK-261 (Imad, 22 Oct): a parent's family and consent are in Settings too.
+    if (role === 'parent') {
+      expect(screen.getByRole('heading', { name: 'Family' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Consent' })).toBeInTheDocument()
+    }
     expect(localStorage.getItem('trak.settings.v1')).toBe(legacy)
   })
 
@@ -97,10 +106,10 @@ describe('settings controls reflect supported behavior', () => {
     mount()
     if (role === 'player' || role === 'parent') {
       expect(await screen.findByText('Not added yet')).toBeInTheDocument()
-      expect(screen.getByText('Calendar')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Calendar' })).toBeInTheDocument()
     } else {
       await screen.findByRole('button', { name: 'Sign out' })
-      expect(screen.queryByText('Calendar')).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Calendar' })).toBeNull()
       expect(screen.queryByText('Not added yet')).toBeNull()
     }
   })
@@ -161,20 +170,23 @@ describe('settings controls reflect supported behavior', () => {
         : HttpResponse.json({ user_id: 'settings-user', full_name: 'Revised Name' })
     }))
     mount()
-    fireEvent.click(screen.getByRole('button', { name: 'Settings User' }))
-    const draft = screen.getByDisplayValue('Settings User')
+    // TRAK-261: the name is a field; the save bar appears once it changes.
+    const draft = screen.getByRole('textbox', { name: 'Full name' })
+    expect(draft).toHaveValue('Settings User')
+    expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()
     fireEvent.change(draft, { target: { value: ' Revised Name ' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(state.error).toHaveBeenCalledWith('Could not save name'))
     expect(draft).toBeInTheDocument()
     expect(draft).toHaveValue(' Revised Name ')
     expect(state.success).not.toHaveBeenCalled()
 
     fail = false
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(state.success).toHaveBeenCalledWith('Name updated'))
     expect(requests).toEqual([{ full_name: 'Revised Name' }, { full_name: 'Revised Name' }])
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Full name' })).toHaveValue('Revised Name')
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument())
   })
 
   // TRAK-103: a player's name is the academy's roster name. The database
@@ -183,18 +195,50 @@ describe('settings controls reflect supported behavior', () => {
     const renames: unknown[] = []
     server.use(http.patch(`${SUPABASE_URL}/rest/v1/profiles`, async ({ request }) => { renames.push(await request.json()); return HttpResponse.json({}) }))
     mount()
-    expect(await screen.findByText('Settings User')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Settings User' })).toBeNull()
-    expect(screen.getByText('Your academy sets your name.')).toBeInTheDocument()
+    expect((await screen.findAllByText('Settings User')).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('textbox', { name: 'Full name' })).toBeNull()
+    expect(screen.getAllByText('Your academy sets your name.').length).toBeGreaterThan(0)
     expect(renames).toEqual([])
   })
 
   it.each<Role>(['parent', 'coach'])('CONTROL a %s can still edit their name', async role => {
     state.role = role
     mount()
-    fireEvent.click(await screen.findByRole('button', { name: 'Settings User' }))
-    expect(screen.getByDisplayValue('Settings User')).toBeInTheDocument()
+    expect(await screen.findByRole('textbox', { name: 'Full name' })).toHaveValue('Settings User')
     expect(screen.queryByText('Your academy sets your name.')).toBeNull()
+  })
+})
+
+// TRAK-261 (Imad, 22 Oct): Arc's settings page, each role exactly its sections; Billing became How Trak works.
+describe("Settings on Arc's settings page", () => {
+  it.each<[Role, string[]]>([
+    ['coach', ['Profile', 'Club', 'Notifications', 'How Trak works', 'Account']],
+    ['parent', ['Profile', 'Family', 'Consent', 'Notifications', 'Calendar', 'How Trak works', 'Account']],
+    ['player', ['Profile', 'Notifications', 'Calendar', 'How Trak works', 'Account']],
+    ['club', ['Profile', 'Access', 'How Trak works', 'Account']],
+  ])('a %s sees exactly their sections', async (role, sections) => {
+    state.role = role
+    mount()
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' })
+    expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(sections)
+    for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Read how Trak works' })).toHaveAttribute('href', '/how-it-works')
+  })
+
+  it("a coach's switches each save their own column and nothing else", async () => {
+    state.role = 'coach'
+    const saves: Record<string, unknown>[] = []
+    server.use(http.post(`${SUPABASE_URL}/rest/v1/notification_settings`, async ({ request }) => {
+      const body = await request.json() as Record<string, unknown>
+      saves.push(body)
+      return HttpResponse.json(body, { status: 201 })
+    }))
+    mount()
+    fireEvent.click(await screen.findByRole('switch', { name: 'Needs you' }))
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Needs you' })).not.toBeChecked())
+    expect(screen.getByRole('switch', { name: "Can't make it alerts" })).toBeChecked()
+    expect(saves).toEqual([{ user_id: 'settings-user', needs_you: false }])
+    expect(state.success).toHaveBeenCalledWith('Needs you off')
   })
 })
 

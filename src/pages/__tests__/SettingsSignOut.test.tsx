@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Settings from '../Settings';
 
 const state = vi.hoisted(() => ({ authenticated: true, signOut: vi.fn() }));
@@ -23,7 +24,7 @@ function tree() {
     <Route path="/" element={<h1>Signed out landing</h1>} />
   </Routes></MemoryRouter>);
 }
-function mount() { return render(tree()); }
+function mount() { return render(<QueryClientProvider client={new QueryClient()}>{tree()}</QueryClientProvider>); }
 
 describe('Settings sign-out outcome', () => {
   it('stays on Settings when the account could not be signed out', async () => {

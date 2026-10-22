@@ -53,9 +53,20 @@ export function CoachAlertsBell({ coachId }: { coachId: string }) {
     queryFn: ({ signal }) => fetchAbsenceAlerts(coachId, today, signal),
     enabled: eventsOn,
   })
+  // TRAK-261: the coach's "Can't make it alerts" switch in Settings; on unless turned off. An unread switch shows them.
+  const switchOn = useQuery({
+    queryKey: ['coach', coachId, 'cant-make-it-alerts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('notification_settings').select('cant_make_it_alerts').eq('user_id', coachId).maybeSingle()
+      if (error) throw error
+      return data?.cant_make_it_alerts ?? true
+    },
+    enabled: eventsOn,
+  })
   if (!eventsOn) return null
 
-  const alerts: BellAlert[] = (query.data ?? []).map(alert => ({
+  // Shown once the switch is known, so a coach who turned them off never sees them flash in.
+  const alerts: BellAlert[] = (switchOn.data === true || switchOn.isError ? query.data ?? [] : []).map(alert => ({
     id: `absence-${alert.eventId}-${alert.squadPlayerId}`,
     title: `${alert.firstName} can't make it`,
     description: `${alert.event}, ${alert.day}`,

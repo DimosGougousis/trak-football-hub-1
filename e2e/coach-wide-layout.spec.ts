@@ -129,21 +129,28 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   expect(errors).toEqual([])
 })
 
-test("a coach's Settings sits in the frame on a laptop; on a phone it keeps no bottom bar", async ({ page, context }) => {
+test("a coach's Settings sits in the frame on a laptop; on a phone it keeps no bottom bar", async ({ page, context }, testInfo) => {
   await open(page, context, 'coach', '/settings', 1440, 900)
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Your academy' }).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByRole('navigation', { name: 'Your academy' })).toHaveCount(0)
   await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('coach-settings-390.png'), fullPage: true })
 })
 
-test("a coach's form and Settings keep a reading column on a laptop", async ({ page, context }) => {
+// TRAK-261: a coach's Settings is Arc's settings page, its section menu beside the sections, in the wide column.
+test("a coach's Settings is Arc's settings page in the wide column on a laptop", async ({ page, context }, testInfo) => {
   const { unexpected } = await open(page, context, 'coach', '/settings', 1440, 900)
-  await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
-  const column = await box(page, '.trak-read')
-  expect(Math.round(column.width)).toBe(640)
+  await expect(page.getByRole('textbox', { name: 'Full name' })).toHaveValue('Synthetic Coach')
+  const column = await box(page, '.trak-wide')
   expect(Math.round(column.x + column.width / 2)).toBe(240 + (1440 - 240) / 2)
+  const menu = (await page.getByRole('navigation', { name: 'Settings sections' }).boundingBox())!
+  const profile = (await page.getByRole('heading', { name: 'Profile', exact: true }).boundingBox())!
+  expect(profile.x).toBeGreaterThan(menu.x + menu.width)
+  await expect(page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button')).toHaveText(['Profile', 'Club', 'Notifications', 'How Trak works', 'Account'])
+  await page.screenshot({ path: testInfo.outputPath('coach-settings-1440.png') })
+  expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
 })
 

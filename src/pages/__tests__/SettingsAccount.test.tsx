@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import Settings from '../Settings'
 import { PlayerConnections } from '@/components/player/PlayerConnections'
+import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
 
 const messages = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { success: messages.success, error: messages.error, warning: vi.fn() } }))
@@ -103,28 +104,31 @@ afterEach(() => { cleanup(); client.clear(); vi.restoreAllMocks() })
 
 function mount() {
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/settings']}><AuthProvider>
-    <Controls /><Routes><Route path="/settings" element={<Settings />} /><Route path="/" element={<h1>Signed out landing</h1>} /></Routes>
+    {/* TRAK-261: a parent's Family and Consent read the family, as in the app. */}
+    <ParentChildrenProvider><Controls /><Routes><Route path="/settings" element={<Settings />} /><Route path="/" element={<h1>Signed out landing</h1>} /></Routes></ParentChildrenProvider>
   </AuthProvider></MemoryRouter></QueryClientProvider>)
 }
 function mountConnections() {
   return render(<QueryClientProvider client={client}><MemoryRouter><AuthProvider><PlayerConnections /></AuthProvider></MemoryRouter></QueryClientProvider>)
 }
-async function ready() { await screen.findByRole('button', { name: 'Synthetic Parent A' }) }
+// TRAK-261: the name is a field (Arc's settings page); a change brings the save bar.
+const nameField = () => screen.getByRole('textbox', { name: 'Full name' })
+async function ready() { await screen.findByDisplayValue('Synthetic Parent A') }
 async function switchToB() {
   fireEvent.click(screen.getByRole('button', { name: 'Sign in B' }))
   await waitFor(() => expect(screen.getByTestId('identity')).toHaveTextContent('b:b'))
-  await screen.findByRole('button', { name: 'Synthetic Parent B' })
+  await screen.findByDisplayValue('Synthetic Parent B')
 }
 const chooseName = (value: string) => {
-  fireEvent.click(screen.getByRole('button', { name: 'Synthetic Parent A' }))
-  fireEvent.change(screen.getByDisplayValue('Synthetic Parent A'), { target: { value } })
+  fireEvent.change(nameField(), { target: { value } })
 }
+const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
 describe('Settings with real AuthProvider, route guard and Supabase SDK', () => {
   it('refreshes the visible/context name only after an acknowledged write', async () => {
     mount(); await ready(); chooseName(' Revised Synthetic A ')
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await screen.findByRole('button', { name: 'Revised Synthetic A' })
+    save()
+    await waitFor(() => expect(nameField()).toHaveValue('Revised Synthetic A'))
     await waitFor(() => expect(screen.getByTestId('context-name')).toHaveTextContent('Revised Synthetic A'))
     expect(requests.filter(r => r.method === 'PATCH')).toEqual([{ method: 'PATCH', path: 'profiles', authorization: 'Bearer token-a', body: { full_name: 'Revised Synthetic A' } }])
     await waitFor(() => expect(messages.success).toHaveBeenCalledWith('Name updated'))
@@ -138,13 +142,13 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
       return rowResponse(request, { ...profiles.a })
     }))
     mount(); await ready(); chooseName('Retry Synthetic A')
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    save()
     await waitFor(() => expect(messages.error).toHaveBeenCalledWith('Could not save name'))
     expect(screen.getByDisplayValue('Retry Synthetic A')).toBeInTheDocument()
     expect(messages.success).not.toHaveBeenCalled()
     fail = false
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await screen.findByRole('button', { name: 'Retry Synthetic A' })
+    save()
+    await screen.findByText('Changes saved')
     await waitFor(() => expect(messages.success).toHaveBeenCalledWith('Name updated'))
   })
 
@@ -185,7 +189,8 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     expect(screen.queryByText('Late A academy')).not.toBeInTheDocument()
     failB = false
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    await screen.findByText('B academy')
+    // The academy shows in the Club section and under the coach's name.
+    expect((await screen.findAllByText('B academy')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -281,8 +286,8 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     expect(screen.queryByPlaceholderText('Club name')).toBeNull()
     expect(screen.queryByRole('combobox')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()
-    // The only input left on the page is the display name, and only while editing it.
-    expect(screen.queryByRole('textbox')).toBeNull()
+    // The only input left on the page is the display name (TRAK-261: always a field, saved by the save bar).
+    expect(screen.getAllByRole('textbox')).toEqual([nameField()])
     expect(requests.filter(r => r.path === 'coach_details')).toEqual([])
   })
 
@@ -301,10 +306,10 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
       expect(request.headers.get('Authorization')).toBe('Bearer token-a'); started = true
       await held.promise; return rowResponse(request, { ...profiles.a, full_name: 'Late A name' })
     }))
-    mount(); await ready(); chooseName('Late A name'); fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    mount(); await ready(); chooseName('Late A name'); save()
     await waitFor(() => expect(started).toBe(true)); await switchToB()
     await act(async () => { held.resolve(); await held.promise; await new Promise(resolve => setTimeout(resolve, 20)) })
-    expect(screen.getByRole('button', { name: 'Synthetic Parent B' })).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Synthetic Parent B')).toBeInTheDocument()
     expect(messages.success).not.toHaveBeenCalled()
     expect(messages.error).not.toHaveBeenCalled()
   })
@@ -322,7 +327,7 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     profiles.a.avatar_url = 'https://photos.test.invalid/retained.jpg'
     profiles.a.full_name = 'Refreshed Synthetic A'
     fireEvent.click(screen.getByRole('button', { name: 'Refresh profile' }))
-    await screen.findByRole('button', { name: 'Refreshed Synthetic A' })
+    await screen.findByDisplayValue('Refreshed Synthetic A')
     await switchToB()
     expect(container.querySelector('input[type="file"]')).toBeNull()
     expect(screen.queryByAltText('Profile')).not.toBeInTheDocument()
@@ -342,7 +347,7 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     await act(async () => { held.resolve(); await held.promise; await new Promise(resolve => setTimeout(resolve, 20)) })
     expect(requests.filter(r => r.path === 'logout')).toEqual([])
     expect((await supabase.auth.getSession()).data.session?.user.id).toBe('b')
-    expect(screen.getByRole('button', { name: 'Synthetic Parent B' })).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Synthetic Parent B')).toBeInTheDocument()
     expect(messages.error).not.toHaveBeenCalled()
   })
 
@@ -362,7 +367,7 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
       ? HttpResponse.json({ message: 'offline' }, { status: 500 }) : new HttpResponse(null, { status: 204 })))
     mount(); await ready(); fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     await waitFor(() => expect(messages.error).toHaveBeenCalled())
-    expect(screen.getByRole('button', { name: 'Synthetic Parent A' })).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Synthetic Parent A')).toBeInTheDocument()
     expect((await supabase.auth.getSession()).data.session?.user.id).toBe('a')
     fail = false; fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     await screen.findByRole('heading', { name: 'Signed out landing' })
