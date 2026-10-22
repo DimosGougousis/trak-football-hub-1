@@ -7,17 +7,18 @@ export const BandPill = memo(
     return (
       <span
         ref={ref}
-        className="trak-dark inline-flex items-center px-3 py-1 text-xs font-medium rounded-full"
+        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full"
         style={{
-          color: config.color,
-          // Tarek, 17 Oct: the band colours read on a dark pill, as on the dark app.
-          background: `linear-gradient(${config.bg}, ${config.bg}), rgb(var(--t-surface))`,
+          // TRAK-229: the band's light tint with a dot in its colour; the word in Trak's ink.
+          color: 'rgb(var(--t-ink))',
+          background: config.bg,
           border: `1px solid ${config.border}`,
           fontFamily: 'var(--t-font)',
           fontWeight: 400,
           letterSpacing: '-0.03em',
         }}
       >
+        <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.color }} />
         {config.word}
       </span>
     )

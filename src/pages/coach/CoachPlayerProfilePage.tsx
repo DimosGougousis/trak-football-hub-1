@@ -188,9 +188,10 @@ export function CoachPlayerOverview({ id, embedded = false }: { id: string | und
         <MetadataLabel text="ASSESSMENT HISTORY" />
         {assessments.slice(1).map(a => {
           const band = scoreToBand(avgScore(a))
-          const bandColor = BANDS.find(b => b.word.toLowerCase() === band)?.color
+          // TRAK-229: the score in its band's readable shade, on a light row.
+          const bandColor = BANDS.find(b => b.word.toLowerCase() === band)?.text
           return (
-            <div key={a.id} className="trak-dark flex items-center justify-between rounded-[12px] px-4 py-3 cursor-pointer active:scale-[0.99] transition-transform"
+            <div key={a.id} className="flex items-center justify-between rounded-[12px] px-4 py-3 cursor-pointer active:scale-[0.99] transition-transform"
               style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
               {...openable(`Open assessment from ${new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}${a.coach_sessions?.title ? `, ${a.coach_sessions.title}` : ''}`,
                 () => openAssessment(a.id))}>

@@ -143,9 +143,9 @@ export default function PlayerProfilePage() {
           )}
         </div>
 
-        {/* Coach Assessments: the six metrics in their band colours, on a dark card (TRAK-189). */}
+        {/* Coach Assessments: the six metrics in their band colours, on a light card (TRAK-229). */}
         {assessmentCategories.length > 0 && (
-          <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
+          <div className="rounded-[18px] p-4 border border-line bg-surface">
             <MetadataLabel text="COACH ASSESSMENTS" />
             <div className="mt-3 space-y-2">
               {assessmentCategories.map(cat => {
@@ -157,7 +157,7 @@ export default function PlayerProfilePage() {
                     <div className="flex-1 h-[5px] rounded-full bg-raised overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: bandInfo.color }} />
                     </div>
-                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: bandInfo.color }}>
+                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: bandInfo.text }}>
                       {bandInfo.word}
                     </span>
                   </div>
@@ -175,7 +175,7 @@ export default function PlayerProfilePage() {
                           <span className="text-[12px] text-ink-2">
                             {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: band.color }}>
+                          <span className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: band.text }}>
                             {band.word}<ChevronRight size={14} className="text-ink-3" />
                           </span>
                         </button>

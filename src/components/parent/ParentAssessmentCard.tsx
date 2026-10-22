@@ -9,7 +9,8 @@ export function ParentAssessmentCard({ assessment, active = true, showOpenLink =
   /** Where Open assessment goes; the parent's page unless given (the player's is /player/feedback/:id). */
   openHref?: string
 }) {
-  return <div className="trak-dark rounded-xl bg-card border border-border p-5">
+  // TRAK-229: a light card like the rest; the bands carry their own colours.
+  return <div className="rounded-xl bg-card border border-border p-5">
     <div className="flex items-center justify-between gap-2 mb-4">
       <p className="min-w-0 text-sm text-foreground">{formatParentDate(assessment.created_at)}</p>
       <ParentRating rating={assessment.coach_rating} missing="Not assessed" />

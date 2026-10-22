@@ -78,7 +78,8 @@ function FeedbackMessage({ account, assessmentId }: { account: { id: string } | 
         {state.status === 'empty' && <p className="text-muted-foreground">Your coach is still writing your feedback.</p>}
         {state.status === 'ready' && <p className="whitespace-pre-wrap break-words rounded-2xl border border-border bg-card p-5 leading-relaxed text-foreground">{state.body}</p>}
         {(state.status === 'ready' || state.status === 'empty') && state.scores &&
-          <section className="trak-dark rounded-2xl border border-border bg-card p-5"><AssessmentBands scores={state.scores} /></section>}
+          // TRAK-229: a light card like the rest; the bands carry their own colours.
+          <section className="rounded-2xl border border-border bg-card p-5"><AssessmentBands scores={state.scores} /></section>}
       </main>
     </MobileShell>
   )

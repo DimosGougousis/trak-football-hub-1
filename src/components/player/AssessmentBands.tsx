@@ -27,7 +27,7 @@ export function AssessmentBands({ scores }: { scores: AssessmentScores }) {
             <div className="h-full rounded-full transition-all duration-500"
               style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: band.color }} />
           </div>
-          <span className="text-[11px] flex-shrink-0 w-[72px] text-right" style={{ color: band.color }}>
+          <span className="text-[11px] flex-shrink-0 w-[72px] text-right" style={{ color: band.text }}>
             {band.word}
           </span>
         </li>
