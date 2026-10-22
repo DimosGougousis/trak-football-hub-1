@@ -130,13 +130,12 @@ export const sizeOf = (session: LibrarySession) =>
 const WEEK: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 }
 export const weekOf = (session: LibrarySession) => WEEK[session.programme_week] ?? 0
 
-/** "Ages 12–16 · 14 players · 44×30-yard pitch · 5 steps": what a coach checks before picking a session. */
+/** "Ages 12–16 · 14 players · 44×30-yard pitch": what a coach checks before picking a session. */
 export function factsLine(session: LibrarySession) {
   return [
     session.ages.length ? session.ages.map(ageLabel).join(', ') : 'Every age',
     playersOf(session) ?? sizeOf(session),
     pitchOf(session),
-    session.drill_steps ? `${session.drill_steps} steps` : '',
   ].filter(Boolean).join(' · ')
 }
 

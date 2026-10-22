@@ -97,7 +97,7 @@ describe('TRAK-264: the coach\'s Library', { timeout: 20_000 }, () => {
     renderApp('/coach/trainings/session/pressing-and-covering-session-read-and-react')
     expect(await screen.findByRole('heading', { level: 1, name: 'Read and react' })).toBeInTheDocument()
     expect(screen.getByText('Pressing and covering session')).toBeInTheDocument()
-    expect(screen.getByText('Ages 12–16 · 14 players · 44×30-yard pitch · 5 steps')).toBeInTheDocument()
+    expect(screen.getByText('Ages 12–16 · 14 players · 44×30-yard pitch')).toBeInTheDocument()
     expect(link('Back to Defending')).toHaveAttribute('href', '/coach/trainings/defending')
 
     const learn = screen.getByRole('heading', { name: 'Players will learn to' }).nextElementSibling as HTMLElement
@@ -108,9 +108,7 @@ describe('TRAK-264: the coach\'s Library', { timeout: 20_000 }, () => {
     expect(within(kit).getAllByRole('listitem').map(li => li.textContent)).toEqual([
       '44×30-yard pitch', '14 players', 'Mini-goals', 'Flat cones', 'Spots or flat markers', 'Bibs',
     ])
-    expect(link('Video')).toHaveAttribute('target', '_blank')
-    expect(link('Plan')).toHaveAttribute('href', expect.stringMatching(/^https:\/\/cdn\.englandfootball\.com\//))
-    expect(link('Open the original')).toHaveAttribute('href', 'https://learn.englandfootball.com/sessions/resources/2026/Pressing-and-covering-session-read-and-react')
+    expect(screen.getByText('From England Football Learning, 23 Feb 2026. © The FA')).toBeInTheDocument()
 
     expect(link(/^Press and cover to defend\s*This is week 1 of 6/)).toHaveAttribute('href', '/coach/trainings/programme/session-programme-press-and-cover-to-defend')
     expect(screen.getByText('This one').closest('li')).toHaveTextContent('1Read and reactThis one')
@@ -169,6 +167,25 @@ describe('TRAK-264: the coach\'s Library', { timeout: 20_000 }, () => {
     expect(within(sessions).getByRole('button', { name: /Read and react/ })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(panel).getByRole('button', { name: 'Close' }))
     await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Read and react' })).toBeNull())
+  })
+
+  it('never sends the coach to another website: every link stays in Trak (Kostas, 22 Oct)', async () => {
+    const pages: [string, string][] = [
+      ['/coach/trainings', 'Library'],
+      ['/coach/trainings/defending', 'Defending'],
+      ['/coach/trainings/session/pressing-and-covering-session-read-and-react', 'Read and react'],
+      ['/coach/trainings/programme/session-programme-press-and-cover-to-defend', 'Press and cover to defend'],
+      ['/coach/trainings/programmes', 'Library'],
+    ]
+    for (const [path, heading] of pages) {
+      const { unmount } = renderApp(path)
+      await screen.findByRole('heading', { level: 1, name: heading })
+      for (const a of screen.getAllByRole('link')) {
+        expect(a.getAttribute('href'), `${path}: ${a.textContent}`).toMatch(/^\//)
+        expect(a).not.toHaveAttribute('target')
+      }
+      unmount()
+    }
   })
 
   it('an unknown library or session goes back to the Library', async () => {

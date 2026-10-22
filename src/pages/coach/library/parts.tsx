@@ -16,8 +16,6 @@ export const SearchIcon = ({ size = 22 }: { size?: number }) => icon(size, <><ci
 export const ChevronRight = ({ size = 20 }: { size?: number }) => icon(size, <path d="m9 6 6 6-6 6" />)
 export const ChevronLeft = ({ size = 22 }: { size?: number }) => icon(size, <path d="m15 6-6 6 6 6" />, 2.2)
 export const CloseIcon = ({ size = 16 }: { size?: number }) => icon(size, <path d="M6 6l12 12M18 6 6 18" />, 2.4)
-const VideoIcon = () => icon(18, <><circle cx="12" cy="12" r="9" /><path d="m10 8.5 5.5 3.5-5.5 3.5z" fill="currentColor" /></>)
-const PlanIcon = () => icon(18, <><path d="M14 3H6v18h12V7z" /><path d="M14 3v4h4" /></>)
 const PitchIcon = ({ size = 26 }: { size?: number }) => icon(size, <><rect x="3" y="5" width="18" height="14" rx="1.5" /><path d="M12 5v14" /><circle cx="12" cy="12" r="2.5" /></>, 1.8)
 
 /** A round button at the top of a page: on a coloured header (`onColour`) or a pale one. */
@@ -109,7 +107,7 @@ export function SessionRow({ session, current = false }: { session: LibrarySessi
 /** A six-week programme in a list, as a small album. */
 export function ProgrammeRow({ programme, tinted = false, showLibrary = false }: { programme: LibrarySession; tinted?: boolean; showLibrary?: boolean }) {
   const library = libraryOf(programme)
-  const line = [showLibrary ? library.label : 'Six-week programme', `${programme.drill_steps} steps`, programme.ages.length === 0 ? 'every age' : '']
+  const line = [showLibrary ? library.label : 'Six-week programme', programme.ages.length === 0 ? 'every age' : '']
   return (
     <Link to={sessionPath(programme)} className="flex h-[72px] min-w-0 items-center gap-3 rounded-[8px] px-2.5"
       style={tinted ? { background: 'rgb(var(--t-raised))' } : undefined}>
@@ -123,21 +121,14 @@ export function ProgrammeRow({ programme, tinted = false, showLibrary = false }:
   )
 }
 
-const pillLink = 'flex h-11 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-medium text-ink'
-
-/** Everything a session says: its facts, its links, what players learn, the kit, and its programme. */
+/** Everything a session says: what players learn, the kit, and its programme. Kostas, 22 Oct: nothing
+ *  in the Library sends the coach to another website, so the FA's video, PDF and page aren't linked. */
 export function SessionDetail({ session, compact = false }: { session: LibrarySession; compact?: boolean }) {
   const library = libraryOf(session)
   const programme = programmeOf(session)
   const h2 = compact ? 'text-[17px]' : 'text-[20px] tablet:text-[22px]'
   return (
     <div className={compact ? 'grid gap-4' : 'grid gap-6 tablet:grid-cols-2 tablet:gap-x-8'}>
-      {(session.video || session.pdf) && (
-        <div className={`flex flex-wrap gap-2 ${compact ? '' : 'tablet:col-span-2'}`}>
-          {session.video && <a href={session.video} target="_blank" rel="noopener noreferrer" className={pillLink} style={{ borderColor: 'rgb(var(--t-line))' }}><VideoIcon />Video</a>}
-          {session.pdf && <a href={session.pdf} target="_blank" rel="noopener noreferrer" className={pillLink} style={{ borderColor: 'rgb(var(--t-line))' }}><PlanIcon />Plan</a>}
-        </div>
-      )}
       <div className="grid gap-6">
         {session.objectives.length > 0 && (
           <section>
@@ -173,7 +164,7 @@ export function SessionDetail({ session, compact = false }: { session: LibrarySe
         </section>
       )}
       <p className={`text-[12px] text-ink-3 ${compact ? '' : 'tablet:col-span-2'}`}>
-        From England Football Learning, {session.published} · <a href={session.url} target="_blank" rel="noopener noreferrer" className="underline">Open the original</a>
+        From England Football Learning, {session.published}. © The FA
       </p>
     </div>
   )

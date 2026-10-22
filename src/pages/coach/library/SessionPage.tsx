@@ -62,7 +62,7 @@ export function ProgrammePage() {
               <h1 className={name}>{titleParts(programme).title}</h1>
               <p className="mt-2 flex items-center gap-2 text-[14px] font-medium text-ink">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: library.colour }} />
-                {library.label} · {ages} · {programme.drill_steps} steps
+                {library.label} · {ages}
               </p>
               <p className="mt-2 text-[15px] leading-snug text-ink-2">{programme.summary}</p>
             </div>
