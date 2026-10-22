@@ -74,7 +74,7 @@ function ContentSquad() {
 function ContentMatches() {
   return (
     <div className="space-y-4 text-[13px] leading-relaxed text-ink-2">
-      <p>There are two ways to log a match. On Home, tap <b className="text-ink">Log a match or training</b>, or tap the <b className="text-ink">+</b> at the top:</p>
+      <p>There are two ways to log a match. On Home's week, a match that has kicked off offers <b className="text-ink">Log it</b>; or tap the <b className="text-ink">+</b>:</p>
       <MethodCard title="Quick Match Log" tag="1–2 min" tagColor="rgb(var(--t-brand))" desc="Enter opponent, score, competition type (League / Cup / Friendly) and venue. Tick who played. TRAK calculates a rating for every linked player automatically based on their position and the result." />
       <MethodCard title="Full Session Log" tag="5 min" tagColor="rgb(var(--t-brand) / 0.6)" desc="Adds notes, individual minutes played, and detailed attendance tracking. Best used for cup games or key fixtures you want a full record of." />
       <Rule>The quick log is designed to be done at full time, pitch-side. Use it as your default.</Rule>
@@ -85,7 +85,7 @@ function ContentMatches() {
 function ContentTraining() {
   return (
     <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
-      <p>Log training sessions the same way: <b className="text-ink">Log a match or training</b> on Home, or the <b className="text-ink">+</b>. Choose a session type (Fitness, Technical, Tactical, Conditioning or Mixed), add a title, and tick who attended.</p>
+      <p>Log training sessions with the <b className="text-ink">+</b>, or take the register from Home's week once a training has started. Choose a session type (Fitness, Technical, Tactical, Conditioning or Mixed), add a title, and tick who attended.</p>
       <p>Training sessions don't generate ratings for players — they're an attendance and workload record. Coaches who use TRAK consistently build a full-season picture of who shows up and how hard they work.</p>
       <Rule>Session history is visible to club administrators (read-only). It's not shown to players or parents.</Rule>
     </div>

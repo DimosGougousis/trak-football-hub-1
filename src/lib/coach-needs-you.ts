@@ -1,0 +1,50 @@
+import { format } from 'date-fns'
+import { playerAttention } from '@/lib/player-attention'
+
+export interface NeedsYouItem {
+  /** The squad row. */
+  playerId: string
+  name: string
+  /** "Midfielder · #8", or empty. */
+  detail: string
+  kind: 'assess' | 'draft'
+  /** "Never assessed, 3 weeks in the squad" */
+  reason: string
+  urgent: boolean
+}
+
+/**
+ * TRAK-262 (Imad, 22 Oct): Home's Needs you. Every admitted player TRAK-197's rule flags for assessment (none for 2+
+ * weeks, or never after 2 weeks in the squad), most urgent first; then a card per player with a draft assessment
+ * families can't see yet. Trainings aren't counted here: the cards are about assessing. A player waiting for a
+ * parent is left out, as nothing can be recorded about them.
+ */
+export function needsYou({ players, waitingForParent, assessments, now }: {
+  players: { id: string; player_name: string; created_at: string | null; position?: string | null; shirt_number?: number | null }[]
+  waitingForParent: Set<string>
+  assessments: { squad_player_id: string; created_at: string; published_at?: string | null }[]
+  now: number
+}): NeedsYouItem[] {
+  const detail = (p: (typeof players)[number]) => [p.position, p.shirt_number != null ? `#${p.shirt_number}` : null].filter(Boolean).join(' · ')
+  const byId = new Map(players.map(p => [p.id, p]))
+  const assess: NeedsYouItem[] = playerAttention({
+    roster: players, waitingForParent, assessments, trainings: [], present: new Map(), absenceReasons: new Map(), now,
+  }).filter(row => row.level !== 'on-track').map(row => ({
+    playerId: row.playerId, name: row.name, detail: detail(byId.get(row.playerId)!), kind: 'assess', reason: row.reasons[0], urgent: row.level === 'urgent',
+  }))
+
+  const drafts = new Map<string, string[]>()
+  for (const a of assessments) {
+    if (a.published_at !== null || !a.created_at || !byId.has(a.squad_player_id) || waitingForParent.has(a.squad_player_id)) continue
+    drafts.set(a.squad_player_id, [...(drafts.get(a.squad_player_id) ?? []), a.created_at])
+  }
+  const draft = [...drafts].map(([id, dates]): NeedsYouItem => {
+    const latest = format(new Date(dates.sort().at(-1)!), 'd MMM')
+    return {
+      playerId: id, name: byId.get(id)!.player_name, detail: detail(byId.get(id)!), kind: 'draft', urgent: false,
+      reason: dates.length === 1 ? `Draft from ${latest}: families can't see it yet` : `${dates.length} drafts, the latest from ${latest}: families can't see them yet`,
+    }
+  }).sort((a, b) => a.name.localeCompare(b.name))
+
+  return [...assess, ...draft]
+}

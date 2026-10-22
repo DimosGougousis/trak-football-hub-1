@@ -68,6 +68,12 @@ async function chooseMonday() {
   fireEvent.click(await screen.findByRole('button', { name: new RegExp(name) }))
 }
 
+// TRAK-262: tapping an event picks it; Details opens its sheet.
+async function openDetails(name: RegExp) {
+  fireEvent.click(await screen.findByRole('button', { name }))
+  fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+}
+
 describe('TRAK-171: coach Home week includes logged sessions', () => {
   beforeEach(() => {
     database.read.mockReset()
@@ -88,7 +94,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too, which says
     // so and links to its saved record (it used to jump straight there).
     for (const [title, id] of [['Logged training', 'saved-training'], ['Logged match', 'saved-match']]) {
-      fireEvent.click(await screen.findByRole('button', { name: new RegExp(title) }))
+      await openDetails(new RegExp(title))
       const sheet = await screen.findByRole('dialog', { name: title })
       expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
       expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', `/coach/sessions/${id}`)
@@ -111,7 +117,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     render(strip(), queries())
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't load this week/i)
-    expect(screen.queryByText('Nothing planned.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nothing planned')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
     sessionsFailed = false
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
@@ -133,7 +139,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     expect(trigger).toHaveTextContent(/Logged/)
     expect(trigger).not.toHaveTextContent(/18:00|Time to be confirmed/)
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
-    fireEvent.click(trigger)
+    await openDetails(/Completed training/)
     const sheet = await screen.findByRole('dialog', { name: 'Completed training' })
     expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', '/coach/sessions/completed-training')
     expect(within(sheet).queryByText(/18:00|Time to be confirmed/)).not.toBeInTheDocument()
@@ -146,7 +152,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       : []))
     render(strip(), queries())
     await chooseMonday()
-    fireEvent.click(await screen.findByRole('button', { name: /vs Rovers/ }))
+    await openDetails(/vs Rovers/)
     const sheet = await screen.findByRole('dialog', { name: /Rovers/ })
     expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('18:00')).toBeInTheDocument()
@@ -162,7 +168,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       : table === 'coach_sessions' ? [{ ...session('logged-kit', 'vs Synthetic United', 'match'), event_id: 'planned-kit' }] : []))
     render(strip(), queries())
     await chooseMonday()
-    fireEvent.click(await screen.findByRole('button', { name: /Synthetic United/ }))
+    await openDetails(/Synthetic United/)
     const sheet = await screen.findByRole('dialog', { name: /Synthetic United/ })
     expect(within(sheet).getByRole('heading', { name: 'Alternate kit' })).toBeInTheDocument()
     expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
@@ -201,7 +207,9 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
 
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Moved completed training/ })).not.toBeInTheDocument()
-    expect(screen.getByText('Nothing planned.')).toBeInTheDocument()
+    // The day left behind can still be leaving; Monday's own list is the one that counts.
+    const list = screen.getByRole('list', { name: `Events on ${format(parseISO(monday), 'EEEE d MMMM')}` })
+    expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
   })
 
   it('TRAK-176: with two squads, the week shows the squad picked and whole-roster events only', async () => {
