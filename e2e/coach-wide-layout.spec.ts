@@ -70,66 +70,72 @@ for (const [label, width, height, pageWidth] of [
   ['a phone turned sideways', 844, 390, 430],
   ['an upright tablet', 820, 1180, 720],
 ] as const) {
-  test(`coach Home on ${label}: the page and the bottom bar share one column`, async ({ page, context }) => {
+  test(`coach Home on ${label}: the page, and the glass tab bar with the "+" under it`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
     await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
 
-    // TRAK-254: no side-menu-only Calendar tab off a laptop.
-    await expect(page.locator('nav.trak-nav button')).toHaveText([/Home/i, /Squad/i, /Feedback/i, /Trainings/i, /Profile/i])
+    // TRAK-259: Home, Squad and Library, with the "+" merged in at the right; no Calendar, Feedback or Profile tab.
+    const bar = page.getByRole('tablist', { name: 'Coach' })
+    await expect(bar.getByRole('tab')).toHaveText(['Home', 'Squad', 'Library'])
     const shell = await box(page, '.trak-page')
     expect(Math.round(shell.width)).toBe(pageWidth)
     expect(Math.round(shell.x + shell.width / 2)).toBe(Math.round(width / 2))
-    const nav = await box(page, 'nav.trak-nav')
-    expect([Math.round(nav.x), Math.round(nav.width), Math.round(nav.y + nav.height)]).toEqual([Math.round(shell.x), pageWidth, height])
-    // The "+" keeps 16 px from the page's right edge.
-    const plus = await box(page, '[data-quick-add]')
-    expect(Math.round(shell.x + shell.width - (plus.x + plus.width))).toBe(16)
+    const nav = (await page.getByRole('navigation', { name: 'Coach' }).boundingBox())!
+    const plus = (await page.getByRole('button', { name: 'Quick add' }).boundingBox())!
+    // The bar floats above the bottom edge, centred, with the "+" beside it inside the screen.
+    expect(nav.y + nav.height).toBeLessThan(height)
+    expect(Math.abs(nav.x + nav.width / 2 - width / 2)).toBeLessThanOrEqual(1)
+    expect(plus.x).toBeGreaterThan((await bar.boundingBox())!.x)
+    expect(plus.x + plus.width).toBeLessThanOrEqual(width)
+    // The avatar (top left) opens the side menu; the calendar sits beside the bell.
+    await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Calendar' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`coach-home-${width}.png`) })
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 }
 
-test('coach Home on a laptop: a side menu with words on the left, the page beside it', async ({ page, context }) => {
+test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top right, the page beside it', async ({ page, context }, testInfo) => {
   const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
   await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
 
-  const nav = await box(page, 'nav.trak-nav')
-  expect([nav.x, nav.y, nav.width, nav.height].map(Math.round)).toEqual([0, 0, 232, 900])
-  // TRAK-254: the tabs in words, one under the other, with the Calendar; Profile at the bottom.
-  await expect(page.locator('nav.trak-nav')).toContainText('TRAK')
-  const tabs = page.locator('nav.trak-nav button')
-  await expect(tabs).toHaveText(['Home', 'Calendar', 'Squad', 'Feedback', 'Trainings', 'Profile'])
-  const [first, second] = [(await tabs.nth(0).boundingBox())!, (await tabs.nth(1).boundingBox())!]
-  expect(second.y).toBeGreaterThan(first.y + first.height - 1)
-  expect(first.x).toBe(second.x)
-  const profile = (await tabs.last().boundingBox())!
-  expect(profile.y + profile.height).toBeGreaterThan(900 - 60)
-  // "+ Create" at the top of the side menu, above the tabs; it opens the same menu.
-  const create = page.getByRole('button', { name: 'Quick add' })
+  // TRAK-259: Arc's sidebar rail. The club, then Home, Calendar, Squad, Library; Settings and the coach at the bottom.
+  const sidebar = page.getByRole('navigation', { name: 'Your academy' })
+  const rows = sidebar.getByRole('button')
+  await expect(rows).toHaveText(['Home', 'Calendar', 'Squad', 'Library', 'Settings'])
+  const rail = await sidebar.evaluate(el => el.closest('[id$="-sidebar"]')!.getBoundingClientRect().toJSON() as DOMRect)
+  expect([rail.x, rail.y, rail.width, rail.height].map(Math.round)).toEqual([0, 0, 240, 900])
+  const [first, last] = [(await rows.first().boundingBox())!, (await rows.last().boundingBox())!]
+  expect(last.y + last.height).toBeGreaterThan(900 - 140)
+  await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
+  expect(first.x).toBeLessThan(240)
+  await page.screenshot({ path: testInfo.outputPath('coach-home-1440.png') })
+  // "+ Create" at the top right, after the bell; it opens the same menu.
+  const create = page.getByRole('button', { name: 'Create' })
   const createBox = (await create.boundingBox())!
-  expect(createBox.x + createBox.width).toBeLessThanOrEqual(232)
-  expect(createBox.y + createBox.height).toBeLessThan(first.y)
-  await expect(create).toContainText('Create')
+  expect(createBox.x + createBox.width).toBeGreaterThan(1440 - 40)
+  expect(createBox.y).toBeLessThan(60)
   await create.click()
   await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
+  await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 
   const shell = await box(page, '.trak-page')
   expect(Math.round(shell.width)).toBe(720)
-  expect(Math.round(shell.x + shell.width / 2)).toBe(232 + (1440 - 232) / 2)
+  expect(Math.round(shell.x + shell.width / 2)).toBe(240 + (1440 - 240) / 2)
   expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
 })
 
-test('a coach page without the bottom bar keeps the side menu on a laptop, not on a phone', async ({ page, context }) => {
+test("a coach's Settings sits in the frame on a laptop; on a phone it keeps no bottom bar", async ({ page, context }) => {
   await open(page, context, 'coach', '/settings', 1440, 900)
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
-  await expect(page.locator('nav.trak-nav')).toBeVisible()
-  await expect(page.locator('nav.trak-nav button[aria-current="page"]')).toHaveText('Profile')
+  await expect(page.getByRole('navigation', { name: 'Your academy' }).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.locator('nav.trak-nav')).toHaveCount(0)
-  await expect(page.locator('[data-quick-add]')).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Your academy' })).toHaveCount(0)
+  await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 })
 
 test("a coach's form and Settings keep a reading column on a laptop", async ({ page, context }) => {
@@ -137,7 +143,7 @@ test("a coach's form and Settings keep a reading column on a laptop", async ({ p
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
   const column = await box(page, '.trak-read')
   expect(Math.round(column.width)).toBe(640)
-  expect(Math.round(column.x + column.width / 2)).toBe(232 + (1440 - 232) / 2)
+  expect(Math.round(column.x + column.width / 2)).toBe(240 + (1440 - 240) / 2)
   expect(unexpected).toEqual([])
 })
 
@@ -168,7 +174,7 @@ const BAND_WORDS = ['Exceptional', 'Standout', 'Good', 'Steady', 'Mixed', 'Devel
 // [screen, width, height, rail, band columns]
 for (const [label, width, height, rail, columns] of [
   ['an upright tablet', 820, 1180, 0, 4],
-  ['a laptop', 1440, 900, 232, 7],
+  ['a laptop', 1440, 900, 240, 7],
 ] as const) {
   test(`coach Squad on ${label}: the four tabs across a wide page, Snapshot's bands in ${columns} columns, no sheet`, async ({ page, context }) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)

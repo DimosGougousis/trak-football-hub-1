@@ -51,6 +51,13 @@ describe.each([
     signIn()
     renderApp(path)
     await screen.findByRole('heading', { name: 'Trainings' })
+    if (_role === 'coach') {
+      // TRAK-259: a coach's bar is the frame's glass tab bar, where Trainings is Library.
+      const bar = await screen.findByRole('tablist', { name: 'Coach' })
+      expect(within(bar).getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true')
+      expect(within(bar).getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'false')
+      return
+    }
     expect(navTab('Trainings')).toHaveAttribute('aria-current', 'page')
     expect(navTab('Home')).not.toHaveAttribute('aria-current')
   }, 20_000)

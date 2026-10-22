@@ -47,10 +47,16 @@ function coachReads(players: typeof PLAYERS | [], gate?: Promise<void>) {
 
 afterEach(() => { cleanup(); forgetScreens() })
 
+// TRAK-259: Feedback left the coach's nav; Home is the glass tab bar's, and Back returns to Feedback.
+const toHome = () => userEvent.click(screen.getByRole('tab', { name: 'Home' }))
+const backToFeedback = async () => {
+  window.history.back()
+  await waitFor(() => expect(window.location.pathname).toBe('/coach/feedback'))
+}
+
 describe('TRAK-180 switching between Home and the overview tab', () => {
   it('going back to Feedback shows what it last showed at once, then refreshes', async () => {
     signInAs(COACH)
-    const user = userEvent.setup()
     coachReads(PLAYERS)
     renderApp('/coach/feedback')
     await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull(), HOME_LOAD)
@@ -58,10 +64,10 @@ describe('TRAK-180 switching between Home and the overview tab', () => {
     // From here every squad read is held: only the memory can show players.
     let release!: () => void
     coachReads(PLAYERS, new Promise<void>(resolve => { release = resolve }))
-    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await toHome()
     await screen.findByRole('heading', { name: 'Coach Vasilis' })
 
-    await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
+    await backToFeedback()
     expect(homeRow('Ade Okafor')).not.toBeNull()
     expect(screen.queryByText('Loading your players…')).toBeNull()
     release()
@@ -70,17 +76,16 @@ describe('TRAK-180 switching between Home and the overview tab', () => {
 
   it("a revisit whose assessments read fails doesn't show the last visit's players", async () => {
     signInAs(COACH)
-    const user = userEvent.setup()
     coachReads(PLAYERS)
     renderApp('/coach/feedback')
     await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull(), HOME_LOAD)
-    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await toHome()
     await screen.findByRole('heading', { name: 'Coach Vasilis' })
 
     // The assessments decide each level, so a failed read can't keep the old list.
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, () =>
       HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
-    await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
+    await backToFeedback()
     expect(await screen.findByText(/Couldn't load your players/)).toBeInTheDocument()
     expect(homeRow('Ade Okafor')).toBeNull()
   }, 20_000)

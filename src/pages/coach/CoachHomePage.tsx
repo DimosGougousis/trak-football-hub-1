@@ -10,6 +10,8 @@ import { CoachSquadSwitcher } from '@/components/coach/CoachSquadSwitcher'
 import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { remember, remembered } from '@/lib/screen-memory'
 
 /* TRAK-197 (Kostas's 16 Oct list, items 9 + 10): coach Home is the week, then
@@ -27,6 +29,7 @@ export default function CoachHomePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const coachSquad = useCoachSquad(user?.id)
+  const wide = useSideMenuScreen()
   // TRAK-182 part 8: a quick-add draft shows in the week at once.
   const [weekVersion, setWeekVersion] = useState(0)
   // TRAK-180: a revisit starts from the line Home last showed this coach.
@@ -60,8 +63,13 @@ export default function CoachHomePage() {
       <div className="pt-3 pb-24">
         {/* TRAK-163: the calendar is top left; TRAK-176: the squad switcher in the middle;
             TRAK-232: the bell top right, as on parent and player Home (TRAK-233). */}
-        <HomeHeader calendarTo="/coach/schedule" center={<CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} />}
-          right={user && <CoachAlertsBell coachId={user.id} />} />
+        {/* TRAK-259: on a phone the avatar opens the menu and the calendar sits beside the bell; a
+            laptop has both in the frame (the sidebar, the top bar). */}
+        {wide
+          ? <div className="mb-3 flex justify-center"><CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} /></div>
+          : <HomeHeader calendarTo="/coach/schedule" left={<CoachMenuButton name={profile?.full_name || 'Coach'} />}
+            center={<CoachSquadSwitcher coachId={user?.id} name={profile?.full_name || 'Coach'} />}
+            right={user && <CoachAlertsBell coachId={user.id} />} />}
         {/* TRAK-196: one quiet line, as player and parent Home have it. */}
         {(line || seed?.line) && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">{line || seed?.line}</p>}
         {user && <CoachWeekStrip coachId={user.id} version={weekVersion} />}
