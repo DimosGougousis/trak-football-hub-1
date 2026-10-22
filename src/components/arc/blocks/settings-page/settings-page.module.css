@@ -1,0 +1,74 @@
+/* Arc Pro (uiarc.dev): adapted from the Settings page block; licensed source, not covered by this repository's licence. See src/components/arc/PRO.md. */
+.root { container-type: inline-size; width: min(100%, 980px); min-width: 0; margin-inline: auto; color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); }
+/* Trak: one page, every section on it; the window scrolls and the menu stays beside it. */
+.settings { position: relative; display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); overflow: clip; }
+
+/* Sidebar: a quiet tinted column. The section in view is the only raised thing in it. */
+.sidebar { position: sticky; top: 72px; display: flex; min-width: 0; flex-direction: column; gap: 16px; align-self: start; border-right: 1px solid var(--border); padding: 16px 8px 8px; background: color-mix(in oklab, var(--surface-muted) 50%, var(--surface)); min-height: 100%; }
+.sidebarHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 12px; }
+.sidebarHead h1 { margin: 0; font-size: var(--text-base); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); outline: none; }
+.navList { display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.navItem { position: relative; isolation: isolate; display: flex; width: 100%; min-height: 36px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+.navItem > svg { flex: none; color: var(--text-muted); transition: color var(--duration-fast) var(--ease-standard); }
+.navItem[aria-current], .navItem[aria-current] > svg { color: var(--foreground); }
+@media (hover: hover) and (pointer: fine) {
+  .navItem:hover, .navItem:hover > svg { color: var(--foreground); }
+  .navItem:not([aria-current]):hover { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); }
+}
+.navItem:not([aria-current]):focus-visible { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); color: var(--foreground); }
+.highlight { position: absolute; z-index: -1; inset: 0; border: 1px solid var(--border); border-radius: inherit; background: var(--surface); box-shadow: var(--shadow-resting); }
+.navLabel { flex: 1; min-width: 0; white-space: nowrap; }
+.navDot { flex: none; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--accent); }
+
+/* Content: every section, one after another. */
+.main { position: relative; min-width: 0; padding: 8px 32px 24px; }
+.pane { max-width: 600px; padding: 24px 0; scroll-margin-top: 72px; }
+.pane + .pane { border-top: 1px solid var(--border-subtle); }
+.paneHead { margin-bottom: 16px; }
+.paneHead h2 { margin: 0; font-family: var(--font-body); font-size: var(--text-base); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); outline: none; }
+.paneHead p { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+
+.rows > * + * { border-top: 1px solid var(--border-subtle); }
+.row { display: grid; min-height: 52px; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 16px; padding: 10px 0; }
+.rowLabel { color: var(--text-secondary); font-size: var(--text-sm); }
+.rowValue { min-width: 0; font-size: var(--text-sm); }
+
+/* Floating unsaved-changes bar, held above the bottom of the window while the page scrolls. */
+.dock { position: sticky; z-index: 5; bottom: 20px; display: flex; justify-content: center; padding-inline: 16px; pointer-events: none; }
+.bar { display: flex; max-width: 100%; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface); box-shadow: var(--shadow-floating); pointer-events: auto; }
+.barContent { position: relative; display: flex; flex: none; align-items: center; }
+.barEdit { display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 16px; white-space: nowrap; }
+.barCount { display: inline-flex; align-items: baseline; margin-right: 12px; font-size: var(--text-sm); font-weight: 500; font-variant-numeric: tabular-nums; }
+.barSaved { display: flex; height: 40px; align-items: center; gap: 8px; padding: 0 16px 0 14px; font-size: var(--text-sm); font-weight: 500; white-space: nowrap; }
+.barSaved svg { flex: none; color: var(--success); }
+
+/* Counters take on the size of the copy around them. */
+.inherit > span { color: inherit; font: inherit; letter-spacing: inherit; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@container (max-width: 719px) {
+  .settings { grid-template-columns: minmax(0, 1fr); }
+  /* Trak: on a phone the menu is a row of sections that stays at the top as the page scrolls. */
+  .sidebar { top: 0; z-index: 6; gap: 8px; min-height: 0; border-right: 0; border-bottom: 1px solid var(--border); padding: 10px 0 8px; background: color-mix(in oklab, var(--surface) 92%, transparent); backdrop-filter: blur(12px); }
+  .sidebarHead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .navList { flex-direction: row; gap: 2px; overflow-x: auto; padding: 2px 8px; scrollbar-width: none; }
+  .navList::-webkit-scrollbar { display: none; }
+  .navList > li { flex: none; }
+  .navItem { min-height: 36px; gap: 6px; padding: 0 14px; }
+  .navItem > svg { display: none; }
+  .main { padding: 0 20px 24px; }
+  .pane { scroll-margin-top: 64px; }
+  .row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  /* On a phone the bar sits above the glass tab bar. */
+  .dock { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); padding-bottom: 12px; }
+}
+@container (max-width: 460px) {
+  .unsaved, .long { display: none; }
+  .barEdit { padding-left: 16px; }
+  .barCount { margin-right: 6px; }
+  .dock { padding-inline: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navItem, .navItem > svg { transition: none; }
+}

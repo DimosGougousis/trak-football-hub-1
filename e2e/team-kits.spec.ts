@@ -53,6 +53,8 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     // TRAK-262: notification_settings is coach Home's Needs you switch (no row: on).
     if (['coach_sessions', 'coach_assessments', 'event_absences', 'session_attendance', 'coach_shared_feedback', 'matches', 'recognition_awards', 'notification_settings'].some(t => path === `/rest/v1/${t}`)) return json([])
     if (path === '/rest/v1/telemetry_events') return json(null)
+    // TRAK-261: the coach's notification switches (the bell's "Can't make it alerts"); no row means on.
+    if (path === '/rest/v1/notification_settings') return json([])
     // TRAK-135 (#369): Publish asks the server to send the families' emails, fire-and-forget,
     // so whether it lands before the test ends is timing; expect it either way.
     if (path === '/functions/v1/send-event-emails') return json({ accepted: true })
