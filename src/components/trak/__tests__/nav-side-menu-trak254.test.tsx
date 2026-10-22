@@ -29,9 +29,10 @@ describe('NavBar side menu', () => {
   it('gives a coach on a laptop the TRAK name and the Calendar, marked on its page', () => {
     screenIs(true)
     render(<NavBar role="coach" activeTab="/coach/schedule" onNavigate={vi.fn()} />)
-    expect(tabs()).toEqual(['Home', 'Calendar', 'Squad', 'Feedback', 'Trainings', 'Profile'])
+    // TRAK-255: the coach's Calendar is called Schedule.
+    expect(tabs()).toEqual(['Home', 'Schedule', 'Squad', 'Feedback', 'Trainings', 'Profile'])
     expect(screen.getByText('TRAK')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Calendar' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('button', { name: 'Schedule' }).getAttribute('aria-current')).toBe('page')
   })
 
   it("keeps a player's and a parent's bar on a laptop", () => {

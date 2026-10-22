@@ -7,10 +7,16 @@ import { CalendarDays } from 'lucide-react'
  * person's name in the middle (the parent's child switcher), the bell on the
  * right. The coach's bell says who can't make it (TRAK-232).
  */
-export function HomeHeader({ calendarTo, center, right }: { calendarTo: string; center: ReactNode; right?: ReactNode }) {
+export function HomeHeader({ calendarTo, calendarLabel = 'Calendar', center, right }: {
+  calendarTo: string
+  /** TRAK-255: the coach's is called Schedule. */
+  calendarLabel?: string
+  center: ReactNode
+  right?: ReactNode
+}) {
   return (
     <header className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 mb-3">
-      <Link to={calendarTo} aria-label="Calendar"
+      <Link to={calendarTo} aria-label={calendarLabel}
         className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center border border-border bg-card text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         <CalendarDays size={19} strokeWidth={1.75} aria-hidden="true" />
       </Link>

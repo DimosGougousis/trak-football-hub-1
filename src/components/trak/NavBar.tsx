@@ -36,8 +36,8 @@ function getNavItems(role: Role): NavItem[] {
   ]
   if (role === 'coach') return [
     { label: 'Home', path: '/coach/home', Icon: IconHome },
-    // TRAK-254: on a phone the Calendar is behind Home's calendar icon.
-    { label: 'Calendar', path: '/coach/schedule', Icon: IconCalendar, sideMenuOnly: true },
+    // TRAK-254: on a phone the Schedule is behind Home's calendar icon. TRAK-255: called Schedule.
+    { label: 'Schedule', path: '/coach/schedule', Icon: IconCalendar, sideMenuOnly: true },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
     { label: 'Feedback', path: '/coach/feedback', Icon: IconAssess },  // TRAK-211: Feedback and assessment
     // No Sessions tab: Home's "Log a match or training" and the "+" reach it.
