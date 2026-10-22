@@ -6,3 +6,11 @@
 export const WHATSAPP_GREEN = '#25D366'
 /** Text on a WhatsApp-green button (TRAK-168's Share to WhatsApp after Cancel): black, 11:1. */
 export const ON_WHATSAPP_GREEN = '#000000'
+/** TRAK-264: the Library's tiles, headers and pictures sit on a library's colour (an assessment
+ *  band's readable shade, lib/types.ts, which stays the same in every theme): white on it, 4.5:1 or more. */
+export const ON_LIBRARY = '#FFFFFF'
+/** The thin rings drawn on a library's colour. */
+export const ON_LIBRARY_RING = 'rgb(255 255 255 / 0.3)'
+/** A round button on a library's colour, and on its pale tint. */
+export const ON_LIBRARY_BUTTON = 'rgb(0 0 0 / 0.22)'
+export const ON_TINT_BUTTON = 'rgb(255 255 255 / 0.7)'
