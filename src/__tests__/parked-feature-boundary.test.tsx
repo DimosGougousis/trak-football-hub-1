@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -136,7 +136,7 @@ describe('retained coach entry points', () => {
     expect(screen.queryByRole('button', { name: /add players to your squad/i })).toBeNull()
     cleanup()
     renderApp('/coach/home')
-    expect(await screen.findByRole('button', { name: 'Assess a player' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Squad shape' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /add players to your squad/i })).toBeNull()
     // TRAK-72: the coach invite code is gone from Home.
     expect(screen.queryByText(/TRK-/)).toBeNull()
@@ -147,7 +147,9 @@ describe('retained coach entry points', () => {
       { id: 'synthetic-roster', coach_user_id: account, player_name: 'Synthetic Player', linked_player_id: 'synthetic-player' },
     ])))
     renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: 'Assess a player' }))
+    // TRAK-262: Home's Assess card left; the "+" has Assess player.
+    await userEvent.click(await screen.findByRole('button', { name: 'Quick add' }))
+    await userEvent.click(within(await screen.findByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'Assess player' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
     expect(await screen.findByRole('heading', { name: 'Assessment' })).toBeInTheDocument()
     expect(screen.queryByText('Quick Assess')).toBeNull()
