@@ -99,7 +99,8 @@ test('coach Home on a laptop: a side menu with words on the left, the page besid
   // TRAK-254: the tabs in words, one under the other, with the Calendar; Profile at the bottom.
   await expect(page.locator('nav.trak-nav')).toContainText('TRAK')
   const tabs = page.locator('nav.trak-nav button')
-  await expect(tabs).toHaveText(['Home', 'Calendar', 'Squad', 'Feedback', 'Trainings', 'Profile'])
+  // TRAK-255: the coach's Calendar is called Schedule.
+  await expect(tabs).toHaveText(['Home', 'Schedule', 'Squad', 'Feedback', 'Trainings', 'Profile'])
   const [first, second] = [(await tabs.nth(0).boundingBox())!, (await tabs.nth(1).boundingBox())!]
   expect(second.y).toBeGreaterThan(first.y + first.height - 1)
   expect(first.x).toBe(second.x)

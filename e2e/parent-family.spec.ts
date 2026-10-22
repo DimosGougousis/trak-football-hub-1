@@ -257,8 +257,10 @@ test.describe('TRAK-171 Home follow-ups', () => {
         // TRAK-182: Schedule's month is Arc's calendar, with today's two entries counted.
         await page.keyboard.press('Escape')
         await expect(sheet).toHaveCount(0)
-        await page.getByRole('link', { name: 'Calendar' }).click()
-        await expect(page.getByRole('gridcell', { name: /, 2 events$/ })).toHaveAttribute('aria-selected', 'true')
+        // TRAK-255: the coach's is called Schedule, and a day with a started event that has no
+        // register yet also says "needs you" (by the time of day this runs).
+        await page.getByRole('link', { name: 'Schedule' }).click()
+        await expect(page.getByRole('gridcell', { name: /, 2 events(, needs you)?$/ })).toHaveAttribute('aria-selected', 'true')
         await page.screenshot({ path: testInfo.outputPath('coach-schedule-month.png'), fullPage: true })
       }
       expect(errors).toEqual([])
