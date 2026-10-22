@@ -16,6 +16,9 @@ function signedInCoach() {
   signInAs(COACH)
   server.use(
     table('coach_assessments', []),
+    // The Squad page's other tabs read these too: answered empty, never unhandled.
+    table('coach_sessions', []),
+    rpc('coach_squad_season', () => []),
     rpc('coach_squad_player_consent_required', () => false),
     table('profiles', [
       { id: 'p-coach', user_id: COACH.id, role: 'coach', full_name: 'Coach Vasilis', nationality: 'GR' },

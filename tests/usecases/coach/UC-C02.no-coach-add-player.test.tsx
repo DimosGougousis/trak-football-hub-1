@@ -21,6 +21,9 @@ function signedInCoach(squad: Record<string, unknown>[] = []) {
     ]),
     table('squad_players', squad),
     table('coach_assessments', []),
+    // The Squad page's other tabs read these too: answered empty, never unhandled.
+    table('coach_sessions', []),
+    rpc('coach_squad_season', () => []),
   )
 }
 
