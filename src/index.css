@@ -263,22 +263,47 @@
   :root[data-layout="coach"] { --page-w: 720px; --read-w: 640px; --sheet-w: 36rem; }
 }
 
-/* Tablet sideways and laptop: the bottom bar's tabs stand in a rail on the left,
-   and the pages sit to its right. Pages without the bar keep the same place. */
+/* Tablet sideways and laptop: the bottom bar becomes a side menu on the left
+   (TRAK-254: TRAK, "+ Create", the tabs in words, Profile at the bottom), and the
+   pages sit to its right. Pages without the bar keep the same place. The same
+   query as SIDE_MENU_QUERY in src/lib/side-menu-screen.ts. */
 @media (min-width: 1024px) and (min-height: 500px) {
-  :root[data-layout="coach"] { --rail-w: 96px; }
+  :root[data-layout="coach"] { --rail-w: 232px; }
   :root[data-layout="coach"] body { padding-left: var(--rail-w); }
   :root[data-layout="coach"] .trak-nav {
     top: 0; right: auto; bottom: 0; left: 0;
     width: var(--rail-w); max-width: none; margin: 0; transform: none;
-    flex-direction: column; justify-content: flex-start; gap: 12px;
-    padding-top: 24px; padding-right: 0; padding-left: 0;
+    flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 4px;
+    padding-top: 20px; padding-right: 16px; padding-left: 16px;
     border-top-width: 0; border-right-width: 1px;
   }
+  :root[data-layout="coach"] .trak-nav > button { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; }
+  :root[data-layout="coach"] .trak-nav > button:last-child { margin-top: auto; }
+  :root[data-layout="coach"] .trak-nav-label { font-family: var(--t-font); font-size: 15px; letter-spacing: 0; text-transform: none; }
+  :root[data-layout="coach"] .trak-nav-dot { display: none; }
   /* With no bottom bar, the room kept for it goes: Assess's Back and Next sit at
      the bottom, and the Trainings frame runs down to it (below its 105 px header). */
   :root[data-layout="coach"] .trak-bar-room { margin-bottom: 0; }
   :root[data-layout="coach"] .trak-trainings-frame { height: calc(100dvh - 105px); }
+
+  /* TRAK-254: easier to read on a laptop. Each fixed text size a coach screen uses
+     is two pixels larger (titles a little more), Arc's text sizes follow, and grey
+     supporting text is one step darker. A phone keeps today's sizes. */
+  :root[data-layout="coach"] { --t-ink-3: 74 82 78; }
+  :root[data-layout="coach"] .arc { --text-xs: .875rem; --text-sm: 1rem; --text-base: 1.0625rem; }
+  :root[data-layout="coach"] .text-xs { font-size: .875rem; }
+  :root[data-layout="coach"] .text-sm { font-size: 1rem; }
+  :root[data-layout="coach"] .text-\[8px\] { font-size: 10px; }
+  :root[data-layout="coach"] .text-\[9px\] { font-size: 11px; }
+  :root[data-layout="coach"] .text-\[10px\] { font-size: 12px; }
+  :root[data-layout="coach"] .text-\[11px\] { font-size: 13px; }
+  :root[data-layout="coach"] .text-\[12px\] { font-size: 14px; }
+  :root[data-layout="coach"] .text-\[13px\] { font-size: 15px; }
+  :root[data-layout="coach"] .text-\[14px\] { font-size: 16px; }
+  :root[data-layout="coach"] .text-\[15px\] { font-size: 17px; }
+  :root[data-layout="coach"] .text-\[16px\] { font-size: 18px; }
+  :root[data-layout="coach"] .text-\[17px\] { font-size: 19px; }
+  :root[data-layout="coach"] .text-\[22px\] { font-size: 26px; }
 }
 
 @layer base {
@@ -310,6 +335,12 @@
   .trak-read { --col-w: var(--read-w); max-width: var(--col-w); }
   /* A bar fixed to the bottom of a page: centred on the page, right of the rail. */
   .trak-page-bar { left: calc(50% + var(--rail-w) / 2); max-width: var(--col-w, var(--page-w)); }
+
+  /* The bottom bar's tab names; a coach's laptop side menu sets them in words (above). */
+  .trak-nav-label { font-family: var(--t-font-mono); font-weight: 500; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+  /* TRAK-254: only in a coach's laptop side menu: the name, and the room "+ Create" sits in. */
+  .trak-nav-wordmark { font-family: var(--t-font); font-weight: 600; font-size: 17px; letter-spacing: .18em; color: rgb(var(--t-ink)); padding: 2px 12px 0; height: 36px; flex: none; }
+  .trak-nav-create-slot { height: 56px; flex: none; }
 
   /* Section labels: DM Mono, 9px, 500, uppercase, spaced */
   .section-label {

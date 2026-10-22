@@ -13,6 +13,7 @@ import SegmentedControl from '@/components/arc/segmented-control/segmented-contr
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 
 /* TRAK-182 part 8 (Imad, 15 Oct; plan 8a–8g): a "+" above the tab bar that
    becomes a menu, then the shortest form that makes a real record, then a
@@ -72,10 +73,19 @@ function useKeyboardInset() {
 
 /** Where the "+" sits. "top" is Home's header corner, the slot a coach's
  *  bell would take (HomeHeader), so it stays in reach however far the page
- *  scrolls; other tabs have their own controls there and keep "bottom". */
-type Corner = 'top' | 'bottom'
+ *  scrolls; other tabs have their own controls there and keep "bottom".
+ *  "side" (TRAK-254): "+ Create" at the top of a coach's side menu on a laptop. */
+type Corner = 'top' | 'bottom' | 'side'
 
-export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void; corner?: Corner }) {
+/** TRAK-254: on a laptop the "+" is "+ Create" in the side menu. `sideMenuOnly`: a
+ *  page that has no "+" on a phone shows it there only. */
+export function QuickAdd({ onSaved, corner = 'bottom', sideMenuOnly = false }: { onSaved?: () => void; corner?: Exclude<Corner, 'side'>; sideMenuOnly?: boolean }) {
+  const sideMenu = useSideMenuScreen()
+  if (sideMenuOnly && !sideMenu) return null
+  return <QuickAddSurface onSaved={onSaved} corner={sideMenu ? 'side' : corner} />
+}
+
+function QuickAddSurface({ onSaved, corner }: { onSaved?: () => void; corner: Corner }) {
   const { user } = useAuth()
   // TRAK-176: a new event belongs to the squad picked; wait until the squads are known.
   const coachSquad = useCoachSquad(user?.id)
@@ -197,12 +207,16 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
   }
 
   const round = face === 'closed' || face === 'done'
-  const top = corner === 'top'
+  const side = corner === 'side'
+  // The side menu's "+ Create" opens downward, as the header corner's does.
+  const top = corner === 'top' || side
   // At the top it lines up with the header's 44 px corner slot (the shell's 20 px
   // gutter, the header's 12 px top padding) and opens downward. TRAK-199: the
   // page's edge is wherever its column (--col-w) ends, right of the laptop rail.
   const edge = '(100vw - var(--rail-w) - var(--col-w, var(--page-w))) / 2'
-  const position = top
+  const position = side
+    ? { left: '16px', top: '64px' }
+    : top
     ? { right: `max(20px, calc(${edge} + 20px))`, top: 'calc(12px + env(safe-area-inset-top))' }
     : { right: `max(16px, calc(${edge} + 16px))`, bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))` }
   const item = 'flex w-full min-h-11 items-center gap-3 rounded-[12px] px-3 text-left text-[15px] text-ink hover:bg-raised focus-visible:bg-raised focus-visible:outline-none active:scale-[0.98] transition-transform'
@@ -210,7 +224,8 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
   return <>
     {/* Room under the last row, so the "+" never covers it. */}
     {!top && <div aria-hidden="true" className="h-16" />}
-    <div data-quick-add data-corner={corner} className="fixed z-40 pointer-events-none" style={position}>
+    {/* In the side menu it sits above the menu (z-50), below a sheet (z-70). */}
+    <div data-quick-add data-corner={corner} className={`fixed ${side ? 'z-[60]' : 'z-40'} pointer-events-none`} style={position}>
       <LayoutGroup>
         <motion.div ref={surface} layout={!reduced} onKeyDown={onKeyDown}
           role={face === 'event' || face === 'match' ? 'dialog' : undefined}
@@ -219,14 +234,14 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
           // Clip (never "hidden", which focus can scroll) while the shape morphs; a
           // form lets its pickers out, and at the bottom they open upward: opening
           // down ran off the screen (Imad, 16 Oct). At the top they open down as usual.
-          style={{ borderRadius: round ? (top ? 22 : 28) : 22, originX: 1, originY: top ? 0 : 1 }}
+          style={{ borderRadius: round ? (side ? 12 : top ? 22 : 28) : 22, originX: side ? 0 : 1, originY: top ? 0 : 1 }}
           className={`arc pointer-events-auto border border-line shadow-[0_12px_40px_rgba(0,0,0,0.5)]
             bg-surface/90 backdrop-blur-xl [@media(prefers-reduced-transparency:reduce)]:bg-surface [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none
             ${top ? '' : `[&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
             [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left`}
             [&_[aria-label$=calendar]]:bg-raised [&_[role=listbox]]:bg-raised
             ${face === 'event' || face === 'match' ? 'overflow-visible' : 'overflow-clip'}
-            ${round ? (top ? 'w-11 h-11' : 'w-14 h-14') : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
+            ${round ? (side ? 'w-[200px] h-11' : top ? 'w-11 h-11' : 'w-14 h-14') : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div key={face} initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}
@@ -238,7 +253,8 @@ export function QuickAdd({ onSaved, corner = 'bottom' }: { onSaved?: () => void;
                   // it would take focus back from the menu's first item.
                   onPointerDown={() => setFace('menu')} onMouseDown={e => e.preventDefault()} onClick={() => setFace('menu')} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFace('menu') } }}
                   className="flex w-full h-full items-center justify-center bg-primary text-on-brand active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink">
-                  <Plus size={24} strokeWidth={2.2} aria-hidden="true" />
+                  <Plus size={side ? 18 : 24} strokeWidth={2.2} aria-hidden="true" />
+                  {side && <span className="ml-2 text-[15px] font-medium" style={{ fontFamily: 'var(--t-font)' }}>Create</span>}
                 </button>
               )}
 

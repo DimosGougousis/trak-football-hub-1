@@ -4,7 +4,8 @@ import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel } from '@/components/trak'
+import { MobileShell, MetadataLabel, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { matchRating } from '@/lib/match-rating'
 import { trackEvent } from '@/lib/telemetry'
 import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
@@ -1304,6 +1305,9 @@ export default function CoachAddSession() {
           </>}
         </div>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

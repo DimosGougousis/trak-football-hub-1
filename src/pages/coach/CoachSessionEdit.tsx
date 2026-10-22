@@ -4,7 +4,8 @@ import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel, LoadError } from '@/components/trak'
+import { MobileShell, MetadataLabel, LoadError, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { MatchEditor } from '@/components/coach/MatchEditor'
 import { localTodayISO } from '@/lib/event-time'
@@ -398,6 +399,9 @@ export default function CoachSessionEdit() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

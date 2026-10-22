@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { Plus } from 'lucide-react'
 import { useCoachSquad } from '@/lib/coach-squad'
 
@@ -126,6 +127,8 @@ export default function CoachSessionsPage() {
       </div>
 
       {/* No Sessions tab: History is opened from Home, so Home stays marked. */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )

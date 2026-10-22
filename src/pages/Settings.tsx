@@ -9,6 +9,8 @@ import { assertSettingsAccount, getSettingsAccount } from '@/lib/settings-accoun
 import { supabase } from '@/integrations/supabase/client'
 import { isTechnicalChildAddress, childUsername } from '@/lib/child-login'
 import { CalendarSettings } from '@/components/trak/AddToCalendar'
+import { NavBar } from '@/components/trak/NavBar'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { OwnConsentSettings } from '@/components/player/OwnConsentCard'
 
 const nameSchema = z
@@ -323,6 +325,11 @@ function AccountSettings({ userId }: { userId: string }) {
           </button>
         </div>
       </div>
+      {/* TRAK-254: a coach on a laptop keeps the side menu here; a phone, a player and a parent see no change. */}
+      {profile?.role === 'coach' && <>
+        <QuickAdd sideMenuOnly />
+        <NavBar role="coach" sideMenuOnly activeTab="/coach/profile" onNavigate={navigate} />
+      </>}
     </div>
   )
 }
