@@ -2,26 +2,26 @@ import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PlayerSeason, SeasonMatch, seasonSummary } from '@/lib/squad/season'
-import { dayMonth as dayLabel, OWED_BELOW } from '@/lib/squad/format'
+import { dayMonth as dayLabel } from '@/lib/squad/format'
 import { Card, Missing } from './parts'
 import { SquadLoadError } from './SquadLoadError'
 import { useSeason } from './useSeason'
 import type { SquadRoster } from './useSquadRoster'
 
-/* TRAK-250: Squad > Season. Everything builds up from the matches the coach has logged, from the
-   season's first match. Minutes come first, goals second. Coach-only: never shown to players or parents. */
+/* TRAK-250: Squad > Games Statistics (renamed from Season). Everything builds up from the matches the
+   coach has logged this season (1 July to 30 June), from its first match. Trak does not capture minutes
+   played (Dimos, 22 Oct), so nothing here shows them. Coach-only: never shown to players or parents. */
 
 type Running = ReturnType<typeof seasonSummary>['running'][number]
 
 const matchLabel = (m: SeasonMatch) => (m.opponent ? `${dayLabel(m.date)} vs ${m.opponent}` : dayLabel(m.date))
 const logHref = (m: SeasonMatch) => (m.sessionId ? `/coach/sessions/${m.sessionId}` : '/coach/sessions/list')
 
-function Tile({ label, children, note }: { label: string; children: ReactNode; note?: string }) {
+function Tile({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div role="group" aria-label={label} className="rounded-[14px] border border-line bg-surface p-4">
       <p className="text-[12px] font-medium text-ink-3">{label}</p>
       <p className="mt-1 text-[26px] font-medium leading-tight tracking-[-0.01em] text-ink">{children}</p>
-      {note && <p className="mt-0.5 text-[12px] text-ink-3">{note}</p>}
     </div>
   )
 }
@@ -86,7 +86,6 @@ function ResultChip({ result }: { result: SeasonMatch['result'] }) {
 }
 
 function PlayerRow({ season, name, number }: { season: PlayerSeason; name: string | undefined; number: number | null | undefined }) {
-  const owed = season.pct !== null && season.pct < OWED_BELOW
   return (
     <tr className="border-t border-line">
       <td className="px-3 py-2.5 text-[13px] text-ink-3">{number ?? <Missing />}</td>
@@ -95,41 +94,22 @@ function PlayerRow({ season, name, number }: { season: PlayerSeason; name: strin
           <Link to={`/coach/player/${season.squadPlayerId}`}
             className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{name}</Link>
         ) : 'This player'}
-        {owed && (
-          <span className="ml-2 inline-block rounded-[8px] px-2 py-0.5 align-middle text-[11px] font-medium text-ink"
-            style={{ background: 'rgb(var(--t-warning) / 0.18)' }}>minutes owed</span>
-        )}
       </th>
       <td className="px-3 py-2.5 text-center text-[13px] text-ink-2">{season.apps}</td>
-      <td className="px-3 py-2.5 text-right text-[13px] text-ink-2">{season.minutes === null ? <Missing /> : season.minutes}</td>
-      <td className="px-3 py-2.5">
-        {season.pct === null ? <div className="text-right text-[13px] text-ink-3"><Missing /></div> : (
-          <div className="flex items-center gap-2">
-            <div aria-hidden className="h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-raised">
-              <div className="h-full rounded-full"
-                style={{ width: `${Math.min(100, season.pct)}%`, background: owed ? 'rgb(var(--t-warning))' : 'rgb(var(--t-brand))' }} />
-            </div>
-            <span className="w-10 text-right text-[13px] text-ink">{season.pct}%</span>
-          </div>
-        )}
-      </td>
       <td className="px-3 py-2.5 text-center text-[13px] text-ink-3">{season.goals}</td>
       <td className="px-3 py-2.5 text-center text-[13px] text-ink-3">{season.assists}</td>
     </tr>
   )
 }
 
-/** Lowest share of available minutes first; children with no share last; then by name. */
-const byMinutesThenName = (names: Map<string, string>) => (a: PlayerSeason, b: PlayerSeason) => {
-  const byPct = a.pct === null || b.pct === null ? Number(a.pct === null) - Number(b.pct === null) : a.pct - b.pct
-  return byPct || (names.get(a.squadPlayerId) ?? '').localeCompare(names.get(b.squadPlayerId) ?? '')
-}
+/** Most appearances first, then by name. */
+const byAppsThenName = (names: Map<string, string>) => (a: PlayerSeason, b: PlayerSeason) =>
+  b.apps - a.apps || (names.get(a.squadPlayerId) ?? '').localeCompare(names.get(b.squadPlayerId) ?? '')
 
-/** A roster child with no match rows yet: no appearances, nothing recorded. */
-const noMatches = (squadPlayerId: string): PlayerSeason =>
-  ({ squadPlayerId, apps: 0, minutes: null, available: null, pct: null, goals: 0, assists: 0 })
+/** A roster child with no match rows yet: no appearances. */
+const noMatches = (squadPlayerId: string): PlayerSeason => ({ squadPlayerId, apps: 0, goals: 0, assists: 0 })
 
-export function SeasonTab({ roster }: { roster: SquadRoster }) {
+export function GamesTab({ roster }: { roster: SquadRoster }) {
   const { window, summary, isPending, error, retry } = useSeason()
   const { players, consentPending } = roster
 
@@ -140,19 +120,18 @@ export function SeasonTab({ roster }: { roster: SquadRoster }) {
     const played = summary?.players ?? []
     const seen = new Set(played.map(p => p.squadPlayerId))
     const unplayed = players.filter(p => !consentPending.has(p.id) && !seen.has(p.id)).map(p => noMatches(p.id))
-    return [...played, ...unplayed].sort(byMinutesThenName(names))
+    return [...played, ...unplayed].sort(byAppsThenName(names))
   }, [summary, players, consentPending])
 
   if (error) return <SquadLoadError onRetry={retry} title="Couldn't load the season" />
   if (isPending || !summary) return <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading the season…</p>
 
-  const { matches, record, minutes, matchesWithoutMinutes, mismatches } = summary
-  const sub = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`
-    + (matchesWithoutMinutes > 0 ? ` · ${matchesWithoutMinutes} without minutes, not counted` : '')
+  const { matches, record, mismatches } = summary
+  const sub = `${window.label} · ${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`
 
   return (
     <div className="pt-2">
-      <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">{window.label}</h2>
+      <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">Games Statistics</h2>
       <p className="mt-1 text-[12px] text-ink-3">{sub}</p>
 
       {matches.length === 0 ? (
@@ -162,15 +141,10 @@ export function SeasonTab({ roster }: { roster: SquadRoster }) {
         </div>
       ) : (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3.5 laptop:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3.5 tablet:grid-cols-3">
             <Tile label="Played">{matches.length}</Tile>
             <Tile label="Won · drawn · lost">{record.w} · {record.d} · {record.l}</Tile>
             <Tile label="Goals for – against">{summary.goalsFor} – {summary.goalsAgainst}</Tile>
-            <Tile label="Minutes balance" note={minutes ? `lowest → highest · median ${minutes.median}%` : undefined}>
-              {minutes ? (
-                <>{minutes.lowest}% <span className="text-[15px] font-medium text-ink-3">→ {minutes.highest}%</span></>
-              ) : <Missing />}
-            </Tile>
           </div>
 
           {mismatches.length > 0 && (
@@ -194,17 +168,15 @@ export function SeasonTab({ roster }: { roster: SquadRoster }) {
 
           <div className="mt-4 grid gap-4 laptop:grid-cols-[minmax(0,1fr)_300px]">
             <section aria-label="Players" className="min-w-0 rounded-[14px] border border-line bg-surface p-2.5">
-              <div tabIndex={0} role="region" aria-label="Player minutes table"
+              <div tabIndex={0} role="region" aria-label="Player games table"
                 className="overflow-x-auto rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
-                <table className="w-full min-w-[620px] border-collapse">
-                  <caption className="sr-only">Each child's season, lowest share of available minutes first</caption>
+                <table className="w-full min-w-[360px] border-collapse">
+                  <caption className="sr-only">Each child's season, most appearances first</caption>
                   <thead>
                     <tr className="text-[12px] font-medium text-ink-3">
                       <th scope="col" className="px-3 py-2 text-left">#</th>
                       <th scope="col" className="px-3 py-2 text-left">Player</th>
                       <th scope="col" className="px-3 py-2 text-center">Apps</th>
-                      <th scope="col" className="px-3 py-2 text-right">Minutes</th>
-                      <th scope="col" className="w-[220px] px-3 py-2 text-left">% of available</th>
                       <th scope="col" className="px-3 py-2 text-center">Goals</th>
                       <th scope="col" className="px-3 py-2 text-center">Assists</th>
                     </tr>
@@ -238,9 +210,7 @@ export function SeasonTab({ roster }: { roster: SquadRoster }) {
         </>
       )}
 
-      <p className="mt-6 text-[12px] text-ink-3">
-        Minutes are measured against the most minutes anyone played in that match. Coach-only; never shown to players or parents.
-      </p>
+      <p className="mt-6 text-[12px] text-ink-3">Coach-only; never shown to players or parents.</p>
     </div>
   )
 }

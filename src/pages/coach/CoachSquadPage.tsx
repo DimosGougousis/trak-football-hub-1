@@ -11,7 +11,7 @@ import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { SnapshotTab } from '@/components/coach/squad/SnapshotTab'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
 import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
-import { SeasonTab } from '@/components/coach/squad/SeasonTab'
+import { GamesTab } from '@/components/coach/squad/GamesTab'
 
 /* TRAK-250: Squad is a full-width coach workspace with four views of the same
    roster. The tab lives in the URL (?tab=), so a view can be linked and a
@@ -20,7 +20,7 @@ const TABS = [
   { id: 'snapshot', label: 'Snapshot' },
   { id: 'attributes', label: 'Attributes' },
   { id: 'availability', label: 'Availability' },
-  { id: 'season', label: 'Season' },
+  { id: 'games', label: 'Games Statistics' },
 ] as const
 type TabId = typeof TABS[number]['id']
 
@@ -101,7 +101,7 @@ export default function CoachSquadPage() {
             : active === 'snapshot' ? <SnapshotTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
             : active === 'availability' ? <AvailabilityTab roster={roster} />
-            : <SeasonTab roster={roster} />}
+            : <GamesTab roster={roster} />}
         </section>
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />

@@ -8,7 +8,7 @@ import { seasonSummary, seasonWindow, type SeasonRow } from '@/lib/squad/season'
 
 /**
  * TRAK-250: this season's matches for the squad in view (1 July to 30 June), built from the
- * coach's own match logs. The Season tab shows them; Availability reads each child's `pct`.
+ * coach's own match logs, for the Games Statistics tab.
  * A failed read is an `error`, never an empty season. `summary` stays undefined until the read answers.
  */
 async function loadSeason(from: string, to: string, squad: string | null): Promise<SeasonRow[]> {

@@ -6,17 +6,17 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { displayEventTime, localTodayISO, toInstant } from '@/lib/event-time'
 import { splitAvailability, type AvailPlayer } from '@/lib/squad/availability'
-import { OWED_BELOW, quoted, weekdayDayMonth as dayLabel } from '@/lib/squad/format'
+import { quoted, weekdayDayMonth as dayLabel } from '@/lib/squad/format'
 import type { Tables } from '@/integrations/supabase/types'
 import { Card, Missing } from './parts'
 import { SquadLoadError } from './SquadLoadError'
-import { useSeason } from './useSeason'
 import type { SquadRoster } from './useSquadRoster'
 
 /* TRAK-250: Squad > Availability. Families confirm in the squad's WhatsApp group; the coach reads it
    and ticks each child Confirmed here. Everyone else is Not confirmed, and a guardian's "Can't make it"
    report is only a tag on the child, in whichever column. Coach-only: families never see any of it,
-   and the reason behind a report is never read. */
+   and the reason behind a report is never read. Trak does not capture minutes played (Dimos, 22 Oct),
+   so no child shows a share of minutes here. */
 
 const UPCOMING = 10
 
@@ -63,12 +63,9 @@ type Row = AvailPlayer & { absent: boolean }
 /** Stable per child, so focus can follow the child into the other column. */
 const childButtonId = (childId: string) => `availability-child-${childId}`
 
-function ChildRow({ child, pressed, pct, showPct, busy, onToggle }: {
+function ChildRow({ child, pressed, busy, onToggle }: {
   child: Row
   pressed: boolean
-  /** `null` when the child has no minutes recorded. */
-  pct: number | null
-  showPct: boolean
   busy: boolean
   onToggle: () => void
 }) {
@@ -89,13 +86,6 @@ function ChildRow({ child, pressed, pct, showPct, busy, onToggle }: {
               style={{ background: 'rgb(var(--t-warning) / 0.18)' }}>Reported can't make it</span>
           )}
         </span>
-        {showPct && (
-          <span className="shrink-0 font-mono text-[11px]"
-            style={pct != null && pct < OWED_BELOW
-              ? { color: 'rgb(var(--t-warning))', fontWeight: 700 } : { color: 'rgb(var(--t-ink-3))' }}>
-            {pct == null ? <Missing what="minutes not recorded" /> : `${pct}%`}
-          </span>
-        )}
         {pressed
           ? <Check aria-hidden size={18} strokeWidth={2.25} className="shrink-0 text-brand" />
           : <Circle aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-ink-3" />}
@@ -104,13 +94,11 @@ function ChildRow({ child, pressed, pct, showPct, busy, onToggle }: {
   )
 }
 
-function Column({ title, note, rows, pressed, pcts, showPct, busy, onToggle }: {
+function Column({ title, note, rows, pressed, busy, onToggle }: {
   title: string
   note: string
   rows: Row[]
   pressed: boolean
-  pcts: Map<string, number | null> | undefined
-  showPct: boolean
   busy: boolean
   onToggle: (child: Row) => void
 }) {
@@ -125,8 +113,7 @@ function Column({ title, note, rows, pressed, pcts, showPct, busy, onToggle }: {
       {rows.length === 0 ? <p className="px-4 py-5 text-[13px] text-ink-3">No one here.</p> : (
         <ul className="py-2">
           {rows.map(row => (
-            <ChildRow key={row.id} child={row} pressed={pressed} busy={busy} showPct={showPct}
-              pct={pcts?.get(row.id) ?? null} onToggle={() => onToggle(row)} />
+            <ChildRow key={row.id} child={row} pressed={pressed} busy={busy} onToggle={() => onToggle(row)} />
           ))}
         </ul>
       )}
@@ -139,7 +126,6 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
   const userId = user?.id
   const client = useQueryClient()
   const { players, consentPending, squad } = roster
-  const season = useSeason()
   const [pick, setPick] = useState<string | null>(null)
   // The last toggle that landed: announced politely, and focus follows the child to its new column.
   const [moved, setMoved] = useState<{ childId: string; text: string } | null>(null)
@@ -196,21 +182,6 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
   )
 
   const isMatch = event?.event_type === 'match'
-  const pcts = useMemo(
-    () => (season.summary ? new Map(season.summary.players.map(p => [p.squadPlayerId, p.pct])) : undefined),
-    [season.summary],
-  )
-  // The child owed most minutes: the lowest recorded share among everyone who could play. Ties go to the first by name.
-  const owed = useMemo(() => {
-    if (!pcts) return null
-    let lowest: { name: string; pct: number } | null = null
-    for (const p of avail) {
-      const pct = pcts.get(p.id)
-      if (consentPending.has(p.id) || pct == null) continue
-      if (!lowest || pct < lowest.pct) lowest = { name: p.name, pct }
-    }
-    return lowest
-  }, [pcts, avail, consentPending])
 
   if (events.error) return <SquadLoadError onRetry={() => { void events.refetch() }} title="Couldn't load upcoming events" />
   if (events.isPending) return <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading upcoming events…</p>
@@ -283,9 +254,9 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
               <div className="min-w-0 flex-1">
                 <div className="grid gap-3.5 tablet:grid-cols-2">
                   <Column title="Confirmed" note="You marked these children as coming."
-                    rows={split.confirmed} pressed pcts={pcts} showPct={isMatch && !!pcts} busy={toggle.isPending} onToggle={toggleChild} />
+                    rows={split.confirmed} pressed busy={toggle.isPending} onToggle={toggleChild} />
                   <Column title="Not confirmed" note="Not marked as coming yet."
-                    rows={split.notConfirmed} pressed={false} pcts={pcts} showPct={isMatch && !!pcts} busy={toggle.isPending} onToggle={toggleChild} />
+                    rows={split.notConfirmed} pressed={false} busy={toggle.isPending} onToggle={toggleChild} />
                 </div>
                 {split.notEligible.length > 0 && (
                   <div className="mt-3.5 rounded-[12px] px-4 py-3 text-[13px] text-ink"
@@ -307,18 +278,6 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
                     </p>
                   )}
                 </Card>
-                {isMatch && pcts && (
-                  <Card title="Minutes owed" muted>
-                    {owed ? (
-                      <p className="text-[13px] text-ink">
-                        <b className="font-medium">{owed.name}</b> has played {owed.pct}% of available minutes, the lowest in the squad.
-                      </p>
-                    ) : <p className="text-[13px] text-ink-3">No minutes recorded yet this season.</p>}
-                  </Card>
-                )}
-                {isMatch && season.error && (
-                  <p className="rounded-[12px] border border-line bg-surface px-4 py-3 text-[13px] text-ink-3">Minutes this season couldn't be loaded.</p>
-                )}
                 <p className="rounded-[12px] border border-line bg-raised px-4 py-3 text-[13px] text-ink-2">
                   Confirmations come from your WhatsApp group; families don't see them in Trak.
                 </p>

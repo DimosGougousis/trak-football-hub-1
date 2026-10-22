@@ -1,3 +1,5 @@
+/* TRAK-250: a squad's season of logged matches. Trak does not capture minutes played
+   (Dimos, 22 Oct), so the RPC's minutes_played column is never read. */
 export type SeasonRow = {
   match_date: string
   opponent: string | null
@@ -5,7 +7,6 @@ export type SeasonRow = {
   team_score: number
   opponent_score: number
   squad_player_id: string
-  minutes_played: number | null
   goals: number
   assists: number
 }
@@ -30,26 +31,17 @@ export type SeasonMatch = {
   for: number
   against: number
   result: 'W' | 'D' | 'L'
-  availableMinutes: number | null
   scorerGoals: number
 }
 
 export type PlayerSeason = {
   squadPlayerId: string
   apps: number
-  minutes: number | null
-  available: number | null
-  pct: number | null
   goals: number
   assists: number
 }
 
 const matchKey = (r: SeasonRow) => `${r.match_date}|${r.opponent ?? ''}`
-
-function median(sorted: number[]): number {
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
-}
 
 export function seasonSummary(rows: SeasonRow[]): {
   matches: SeasonMatch[]
@@ -57,8 +49,6 @@ export function seasonSummary(rows: SeasonRow[]): {
   record: { w: number; d: number; l: number }
   goalsFor: number
   goalsAgainst: number
-  minutes: { lowest: number; highest: number; median: number } | null
-  matchesWithoutMinutes: number
   running: { date: string; goalsFor: number; goalsAgainst: number; w: number; d: number; l: number }[]
   mismatches: SeasonMatch[]
 } {
@@ -73,7 +63,6 @@ export function seasonSummary(rows: SeasonRow[]): {
 
   const matches: SeasonMatch[] = [...grouped.entries()].map(([key, list]) => {
     const first = list[0]
-    const minutes = list.map(r => r.minutes_played).filter((m): m is number => m !== null)
     const result: SeasonMatch['result'] =
       first.team_score > first.opponent_score ? 'W' : first.team_score < first.opponent_score ? 'L' : 'D'
     return {
@@ -84,34 +73,19 @@ export function seasonSummary(rows: SeasonRow[]): {
       for: first.team_score,
       against: first.opponent_score,
       result,
-      availableMinutes: minutes.length > 0 ? Math.max(...minutes) : null,
       scorerGoals: list.reduce((sum, r) => sum + r.goals, 0),
     }
   }).sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key))
 
-  const availableByMatch = new Map(matches.map(m => [m.key, m.availableMinutes]))
-
   const perPlayer = new Map<string, PlayerSeason>()
   for (const row of rows) {
-    const p = perPlayer.get(row.squad_player_id) ?? {
-      squadPlayerId: row.squad_player_id, apps: 0, minutes: null, available: null, pct: null, goals: 0, assists: 0,
-    }
+    const p = perPlayer.get(row.squad_player_id) ?? { squadPlayerId: row.squad_player_id, apps: 0, goals: 0, assists: 0 }
     p.apps += 1
     p.goals += row.goals
     p.assists += row.assists
-    const matchAvailable = availableByMatch.get(matchKey(row)) ?? null
-    if (row.minutes_played !== null) {
-      p.minutes = (p.minutes ?? 0) + row.minutes_played
-      if (matchAvailable !== null) p.available = (p.available ?? 0) + matchAvailable
-    }
     perPlayer.set(row.squad_player_id, p)
   }
-  const players = [...perPlayer.values()].map(p => ({
-    ...p,
-    pct: p.minutes !== null && p.available ? Math.round((p.minutes / p.available) * 100) : null,
-  }))
-
-  const pcts = players.map(p => p.pct).filter((v): v is number => v !== null).sort((a, b) => a - b)
+  const players = [...perPlayer.values()]
 
   const record = { w: 0, d: 0, l: 0 }
   let goalsFor = 0
@@ -129,8 +103,6 @@ export function seasonSummary(rows: SeasonRow[]): {
     record,
     goalsFor,
     goalsAgainst,
-    minutes: pcts.length > 0 ? { lowest: pcts[0], highest: pcts[pcts.length - 1], median: median(pcts) } : null,
-    matchesWithoutMinutes: matches.filter(m => m.availableMinutes === null).length,
     running,
     mismatches: matches.filter(m => m.scorerGoals !== m.for),
   }

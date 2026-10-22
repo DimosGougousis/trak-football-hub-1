@@ -1,8 +1,5 @@
 /* TRAK-250: small pure helpers the Squad tabs share. */
 
-/** Below this share of available minutes a child is owed minutes (Season chip, Availability colour). */
-export const OWED_BELOW = 50
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 

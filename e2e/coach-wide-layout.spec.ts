@@ -173,7 +173,7 @@ for (const [label, width, height, rail, columns] of [
   test(`coach Squad on ${label}: the four tabs across a wide page, Snapshot's bands in ${columns} columns, no sheet`, async ({ page, context }) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
     const tabs = page.getByRole('tablist', { name: 'Squad views' }).getByRole('tab')
-    await expect(tabs).toHaveText(['Snapshot', 'Attributes', 'Availability', 'Season'])
+    await expect(tabs).toHaveText(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
     await expect(page.getByRole('heading', { name: 'Squad snapshot' })).toBeVisible()
 
     // The wide page, right of the side menu on a laptop: no 430 px column.
@@ -187,7 +187,7 @@ for (const [label, width, height, rail, columns] of [
     expect(lefts.size).toBe(columns)
 
     // Each tab opens in place: no Arc sheet, and no read the backend does not answer.
-    for (const name of ['Attributes', 'Availability', 'Season', 'Snapshot']) {
+    for (const name of ['Attributes', 'Availability', 'Games Statistics', 'Snapshot']) {
       await tabs.filter({ hasText: name }).click()
       await expect(tabs.filter({ hasText: name })).toHaveAttribute('aria-selected', 'true')
       await expect(page.getByRole('tabpanel').getByText(/^(Loading|Checking) /)).toHaveCount(0)
