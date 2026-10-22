@@ -17,6 +17,8 @@ import { remember, remembered } from '@/lib/screen-memory'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useQuery } from '@tanstack/react-query'
 import { loadTrainingAttendance } from '@/lib/attendance-rate'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import { CoachPlayerOverview } from '@/pages/coach/CoachPlayerProfilePage'
 
 // TRAK-180: what Squad last showed a coach (see screen-memory).
 type SquadMemory = { players: any[]; assessments: Record<string, number>; consent: Record<string, ConsentStatus> }
@@ -68,6 +70,9 @@ export default function CoachSquadPage() {
   const [query, setQuery] = useState('')
   const [loadFailed, setLoadFailed] = useState(false)
   const [retry, setRetry] = useState(0)
+  // TRAK-252: on a laptop the list and the chosen player's page stand side by side.
+  const sideBySide = useSideMenuScreen()
+  const [chosenId, setChosenId] = useState<string | null>(null)
   // The account and Retry count of the last squad read that finished. A run
   // for the same pair is a background refresh (see the load below).
   const loadedFor = useRef<{ userId: string; retry: number } | null>(seed && user ? { userId: user.id, retry: 0 } : null)
@@ -160,6 +165,7 @@ export default function CoachSquadPage() {
     return posMatch && searchMatch
   })
   const clearFilters = () => { setPosFilter('All'); setQuery('') }
+  const chosen = sideBySide ? (filtered.find(p => p.id === chosenId) ?? filtered[0] ?? null) : null
 
   return (
     <MobileShell width="wide">
@@ -170,6 +176,9 @@ export default function CoachSquadPage() {
         {inView.length > 0 && <p className="text-[13px] text-ink-3">{squad ? `${squad} · ` : ''}{inView.length} {inView.length === 1 ? 'player' : 'players'}</p>}
       </div>
 
+      {/* TRAK-252: on a coach's laptop the list stands on the left and the chosen player beside it. */}
+      <div className="laptop:grid laptop:grid-cols-[380px_minmax(0,1fr)] laptop:gap-6 laptop:items-start">
+      <div className="min-w-0">
       {players.length > 0 && (
         <div className="arc px-5 pt-2 pb-3 space-y-3 shrink-0 [&_label]:sr-only">
           <SearchField label="Search players" placeholder="Name or shirt number" value={query} onValueChange={setQuery} />
@@ -244,29 +253,46 @@ export default function CoachSquadPage() {
             </div>
           )
         ) : (
-          // TRAK-252: side by side on a coach's tablet (2) or laptop (3).
-          <ul className="tablet:grid tablet:grid-cols-2 tablet:gap-x-6 laptop:grid-cols-3">
+          // TRAK-252: two columns on a coach's upright tablet; one list beside the player on a laptop.
+          <ul className="tablet:grid tablet:grid-cols-2 tablet:gap-x-6 laptop:block">
             {filtered.map(p => {
               const score = assessments[p.id] ?? p.overall_score ?? null
+              const row = (
+                <button type="button"
+                  {...(sideBySide ? { onClick: () => setChosenId(p.id), 'aria-current': chosen?.id === p.id ? 'true' as const : undefined } : {})}
+                  className={`w-full flex items-center gap-3 py-3 border-b border-line active:bg-raised transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md${sideBySide ? ` px-2 hover:bg-raised${chosen?.id === p.id ? ' bg-brand/[0.06]' : ''}` : ''}`}>
+                  <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-medium text-ink truncate">{p.player_name}</p>
+                    <p className="text-[12px] text-ink-3 mt-0.5 truncate">{metaLine(p, ageLabel(p))}</p>
+                    {consent[p.id] && <StatusChip status={consent[p.id]} />}
+                  </div>
+                  {score !== null && <BandPill band={scoreToBand(score)} />}
+                </button>
+              )
               return (
                 <li key={p.id}>
-                  <PlayerPanel player={p} age={ageLabel(p)} score={score} status={consent[p.id]} trigger={
-                    <button type="button"
-                      className="w-full flex items-center gap-3 py-3 border-b border-line active:bg-raised transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md">
-                      <Avatar name={p.player_name || '?'} size="md" className="arc" aria-hidden />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-ink truncate">{p.player_name}</p>
-                        <p className="text-[12px] text-ink-3 mt-0.5 truncate">{metaLine(p, ageLabel(p))}</p>
-                        {consent[p.id] && <StatusChip status={consent[p.id]} />}
-                      </div>
-                      {score !== null && <BandPill band={scoreToBand(score)} />}
-                    </button>
-                  } />
+                  {/* On a phone or tablet a tap opens the player's card from the bottom. */}
+                  {sideBySide ? row : <PlayerPanel player={p} age={ageLabel(p)} score={score} status={consent[p.id]} trigger={row} />}
                 </li>
               )
             })}
           </ul>
         )}
+      </div>
+      </div>
+
+      {/* The chosen player's page: their status, then the same body as /coach/player/:id. */}
+      {chosen && (
+        <aside aria-label={`${chosen.player_name || 'Player'}'s page`}
+          className="sticky top-4 mt-2 rounded-[18px] border border-line bg-surface p-5 max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-3 mb-3 border-b border-line">
+            {consent[chosen.id] ? <StatusChip status={consent[chosen.id]} /> : <p className="text-[13px] text-ink-2">Checking status…</p>}
+            {consent[chosen.id] === 'ready' && <AttendanceLine player={chosen} />}
+          </div>
+          <CoachPlayerOverview key={chosen.id} id={chosen.id} embedded />
+        </aside>
+      )}
       </div>
 
       <QuickAdd />

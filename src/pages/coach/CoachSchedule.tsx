@@ -687,7 +687,7 @@ export default function CoachSchedule() {
   }
 
   return (
-    <MobileShell>
+    <MobileShell width="wide">
       <div className="pt-3 pb-28 space-y-4">
 
         {/* Header */}
@@ -721,7 +721,8 @@ export default function CoachSchedule() {
         {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
         <div className="arc rounded-[18px] border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
           <div className="flex justify-center px-2 pt-2">
-            <Calendar locale="en-GB" showToday
+            {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
+            <Calendar locale="en-GB" showToday className="laptop:!w-full"
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
               month={new Date(viewYear, viewMonth, 1)}
               onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
