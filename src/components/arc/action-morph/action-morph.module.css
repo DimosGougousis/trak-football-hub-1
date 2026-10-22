@@ -1,0 +1,78 @@
+/* Arc Pro (uiarc.dev): adapted from the Action morph component; licensed source, not covered by this repository's licence. See src/components/arc/PRO.md. */
+/* The root holds the button's place; the shape floats from the same corner and grows away from it over the page.
+   Trak: the open shape is Arc's glass menu material (Imad, 22 Oct). */
+.root {
+  --glass-fill: color-mix(in oklab, var(--surface) 62%, transparent);
+  --glass-edge: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --glass-shine: rgb(255 255 255 / .5);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 10px 28px -8px rgb(0 0 0 / .2), 0 28px 60px -20px rgb(0 0 0 / .24);
+  --glass-pill: color-mix(in oklab, var(--accent) 16%, rgb(255 255 255 / .55));
+  position: relative; z-index: 40; width: 100%; height: 100%; color: var(--foreground); font-family: var(--font-body); font-size: var(--text-sm); letter-spacing: var(--tracking-body); line-height: var(--leading-body);
+}
+:global(:root[data-theme="dark"]) .root {
+  --glass-fill: color-mix(in oklab, var(--surface) 56%, transparent);
+  --glass-edge: rgb(255 255 255 / .1);
+  --glass-shine: rgb(255 255 255 / .12);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 12px 32px -8px rgb(0 0 0 / .5), 0 28px 64px -20px rgb(0 0 0 / .55);
+  --glass-pill: color-mix(in oklab, var(--accent) 26%, rgb(255 255 255 / .08));
+}
+
+/* One shape for every state. Closed it is the button; open it is the glass surface. */
+.shape { position: absolute; right: 0; bottom: 0; overflow: clip; transform-origin: 100% 100%; }
+.root[data-anchor="top"] .shape { top: 0; bottom: auto; transform-origin: 100% 0; }
+.root:not([data-view="fab"]) .shape {
+  border: 1px solid var(--glass-edge); background: var(--glass-fill);
+  box-shadow: inset 0 1px 0 var(--glass-shine), var(--glass-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(1.7); backdrop-filter: blur(24px) saturate(1.7);
+}
+/* Trak: open, the glass is thicker, and a form nearly solid, so what's behind never reads through. Inside a bar
+   that blurs itself (a laptop's top bar), the shape's own blur can't reach the page below. */
+.root[data-view="menu"] .shape { --glass-fill: color-mix(in oklab, var(--surface) 90%, transparent); }
+.root[data-view="face"] .shape { --glass-fill: var(--surface); }
+/* At the top the closed button is a glass pill of its own; in the tab bar the bar's bubble is behind it. */
+.root[data-anchor="top"][data-view="fab"] .shape {
+  border: 1px solid var(--glass-edge); background: var(--glass-fill);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 1px 2px rgb(0 0 0 / .06), 0 6px 16px -6px rgb(0 0 0 / .18);
+  -webkit-backdrop-filter: blur(24px) saturate(1.7); backdrop-filter: blur(24px) saturate(1.7);
+}
+
+/* Every face hangs from the shape's corner at its own natural size. */
+.face { position: absolute; right: 0; bottom: 0; box-sizing: border-box; transform-origin: 100% 100%; }
+.root[data-anchor="top"] .face { top: 0; bottom: auto; transform-origin: 100% 0; }
+.face[inert] { pointer-events: none; }
+
+.fabFace { width: var(--fab-w, 56px); height: var(--fab-h, 56px); }
+.fab { display: inline-flex; width: 100%; height: 100%; align-items: center; justify-content: center; gap: 6px; padding: 0 14px; border: 0; border-radius: inherit; background: transparent; color: inherit; cursor: pointer; font: inherit; font-weight: 500; white-space: nowrap; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.root[data-anchor="bottom"] .fab { padding: 0; }
+
+.menuFace { display: grid; width: min(16.5rem, calc(100vw - 2rem)); gap: 2px; padding: 6px; }
+.formFace { width: min(22rem, calc(100vw - 2rem)); padding: 6px 10px 12px; }
+
+.header { display: flex; min-height: 40px; align-items: center; gap: var(--space-1); padding-left: 10px; }
+.form .header { padding-left: 0; margin-bottom: 6px; }
+.title { min-width: 0; flex: 1; margin: 0; overflow: hidden; color: var(--foreground); font-size: var(--text-sm); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.form .title { padding-left: 2px; }
+.iconButton { display: grid; width: 36px; height: 36px; flex: none; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-secondary); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
+.iconButton:focus-visible { background: color-mix(in oklab, var(--foreground) 7%, transparent); color: var(--foreground); }
+
+.menu { position: relative; display: grid; gap: 2px; }
+/* The glass menu's pill glides between rows. */
+.highlight { position: absolute; top: 0; right: 0; left: 0; border-radius: 14px; background: var(--glass-pill); box-shadow: inset 0 1px 0 rgb(255 255 255 / .5); pointer-events: none; }
+.item { position: relative; display: flex; min-height: 44px; align-items: center; gap: var(--space-3); padding: 9px 12px; border: 0; border-radius: 14px; background: transparent; color: inherit; cursor: pointer; font: inherit; text-align: left; outline: none; -webkit-tap-highlight-color: transparent; }
+.itemIcon { display: grid; width: 20px; height: 20px; flex: none; place-items: center; color: var(--text-secondary); transition: color var(--duration-fast) var(--ease-standard); }
+.itemIcon > svg { width: 18px; height: 18px; }
+.item:focus-visible .itemIcon { color: var(--foreground); }
+.itemText { display: grid; min-width: 0; flex: 1; gap: 1px; }
+.itemLabel { font-weight: 500; }
+.itemDescription { color: var(--text-secondary); font-size: var(--text-xs); }
+
+@media (hover: hover) and (pointer: fine) {
+  .iconButton:hover { background: color-mix(in oklab, var(--foreground) 7%, transparent); color: var(--foreground); }
+  .item:hover .itemIcon { color: var(--foreground); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .root:not([data-view="fab"]) .shape, .root[data-anchor="top"] .shape { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  .root:not([data-view="fab"]) .shape { border-color: var(--border-strong); }
+}

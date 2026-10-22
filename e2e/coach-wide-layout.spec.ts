@@ -119,7 +119,9 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   expect(createBox.x + createBox.width).toBeGreaterThan(1440 - 40)
   expect(createBox.y).toBeLessThan(60)
   await create.click()
-  await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
+  // TRAK-265: Arc's Action morph; the button grows into the menu, titled "Create", with a close button.
+  await expect(page.getByRole('menu', { name: 'Create' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Close create' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 
   // TRAK-262: Home takes the wide column on a laptop, the week and Squad shape side by side.
@@ -251,3 +253,48 @@ for (const [label, width, height, beside] of [['an upright tablet', 820, 1180, f
     expect(unexpected).toEqual([])
   })
 }
+
+// TRAK-265 (Imad, 22 Oct): the "+" is Arc's Action morph; the phone's sidebar sheet works; one title in the breadcrumb.
+test('the "+" grows into its menu with a close button, and Escape folds it back', async ({ page, context }, testInfo) => {
+  for (const [width, height, name] of [[390, 844, 'Quick add'], [1440, 900, 'Create']] as const) {
+    const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
+    await page.getByRole('button', { name, exact: true }).click()
+    const menu = page.getByRole('menu', { name })
+    await expect(menu.getByRole('menuitem')).toHaveText(['Log training', 'Log match', 'Assess player', 'New event'])
+    await expect(page.getByRole('button', { name: `Close ${name.toLowerCase()}` })).toBeVisible()
+    await menu.getByRole('menuitem', { name: 'New event' }).click()
+    const form = page.getByRole('dialog', { name: 'New event' })
+    await expect(form.getByRole('button', { name: 'Save draft' })).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`coach-create-${width}.png`) })
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu', { name })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
+    await expect(page.getByRole('menu', { name })).toHaveCount(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  }
+})
+
+test("a phone's sidebar sheet takes a tap: the row opens its page and the sheet closes", async ({ page, context }) => {
+  const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 390, 844)
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  const sheet = page.getByRole('navigation', { name: 'Your academy' })
+  await sheet.getByRole('button', { name: 'Squad', exact: true }).click()
+  await expect(page).toHaveURL(/\/coach\/squad$/)
+  await expect(page.getByRole('navigation', { name: 'Your academy' })).toHaveCount(0)
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
+test("a laptop's breadcrumb names the page, one title after several moves", async ({ page, context }) => {
+  const { errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
+  const side = page.getByRole('navigation', { name: 'Your academy' })
+  for (const name of ['Squad', 'Calendar', 'Library', 'Home']) {
+    await side.getByRole('button', { name, exact: true }).click()
+    await page.waitForTimeout(300)
+  }
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveText(/^Your academy\s*\/?\s*Home$/)
+  expect(errors).toEqual([])
+})
