@@ -1,7 +1,9 @@
 import { forwardRef } from 'react'
 import type { Role } from '@/lib/types'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import {
   IconHome,
+  IconCalendar,
   IconLog,
   IconGoals,
   IconRecognition,
@@ -20,6 +22,8 @@ interface NavItem {
   label: string
   path: string
   Icon: IconComponent
+  /** Only in a coach's side menu on a laptop (TRAK-254); a phone reaches it another way. */
+  sideMenuOnly?: boolean
 }
 
 function getNavItems(role: Role): NavItem[] {
@@ -32,6 +36,8 @@ function getNavItems(role: Role): NavItem[] {
   ]
   if (role === 'coach') return [
     { label: 'Home', path: '/coach/home', Icon: IconHome },
+    // TRAK-254: on a phone the Calendar is behind Home's calendar icon.
+    { label: 'Calendar', path: '/coach/schedule', Icon: IconCalendar, sideMenuOnly: true },
     { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
     { label: 'Feedback', path: '/coach/feedback', Icon: IconAssess },  // TRAK-211: Feedback and assessment
     // No Sessions tab: Home's "Log a match or training" and the "+" reach it.
@@ -49,15 +55,21 @@ interface NavBarProps {
   role: Role
   activeTab: string
   onNavigate: (path: string) => void
+  /** TRAK-254: a page with no bottom bar on a phone still has the side menu on a laptop. */
+  sideMenuOnly?: boolean
 }
 
 export const NavBar = forwardRef<HTMLElement, NavBarProps>(
-  function NavBar({ role, activeTab, onNavigate }, ref) {
-    const items = getNavItems(role)
+  function NavBar({ role, activeTab, onNavigate, sideMenuOnly = false }, ref) {
+    // TRAK-254: a coach on a laptop gets the side menu (index.css): the TRAK name,
+    // room for "+ Create" (QuickAdd sits there), and the Calendar.
+    const sideMenu = useSideMenuScreen() && role === 'coach'
+    const items = getNavItems(role).filter(item => sideMenu || !item.sideMenuOnly)
+    if (sideMenuOnly && !sideMenu) return null
     return (
       <nav
       ref={ref}
-      // TRAK-199: as wide as a page; a rail on the left for a coach on a laptop (index.css).
+      // TRAK-199: as wide as a page; TRAK-254: the side menu for a coach on a laptop (index.css).
       className="trak-nav trak-page fixed bottom-0 w-full mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-line z-50"
       style={{
         background: 'rgb(var(--t-ground) / 0.96)',
@@ -65,6 +77,10 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
         willChange: 'auto',
       }}
     >
+      {sideMenu && <>
+        <span className="trak-nav-wordmark">TRAK</span>
+        <span aria-hidden="true" className="trak-nav-create-slot" />
+      </>}
       {items.map(item => {
         // TRAK-186: a tab stays marked on every page under it (Squad → a player).
         const isActive = activeTab === item.path || activeTab.startsWith(`${item.path}/`)
@@ -81,21 +97,12 @@ export const NavBar = forwardRef<HTMLElement, NavBarProps>(
             }}
           >
             <Icon size={20} color={isActive ? ACTIVE_COLOR : DEFAULT_COLOR} />
-            <span
-              style={{
-                fontFamily: 'var(--t-font-mono)',
-                fontWeight: 500,
-                fontSize: '9px',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase' as const,
-                color: isActive ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
-              }}
-            >
+            <span className="trak-nav-label" style={{ color: isActive ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))' }}>
               {item.label}
             </span>
             {isActive && (
               <span
-                className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                className="trak-nav-dot absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
                 style={{ background: 'rgb(var(--t-brand))' }}
               />
             )}

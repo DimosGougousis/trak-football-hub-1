@@ -58,6 +58,8 @@ for (const [label, width, height, pageWidth] of [
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
     await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
 
+    // TRAK-254: no side-menu-only Calendar tab off a laptop.
+    await expect(page.locator('nav.trak-nav button')).toHaveText([/Home/i, /Squad/i, /Feedback/i, /Trainings/i, /Profile/i])
     const shell = await box(page, '.trak-page')
     expect(Math.round(shell.width)).toBe(pageWidth)
     expect(Math.round(shell.x + shell.width / 2)).toBe(Math.round(width / 2))
@@ -72,26 +74,46 @@ for (const [label, width, height, pageWidth] of [
   })
 }
 
-test('coach Home on a laptop: the tabs stand in a rail on the left, the page beside it', async ({ page, context }) => {
+test('coach Home on a laptop: a side menu with words on the left, the page beside it', async ({ page, context }) => {
   const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
   await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
 
   const nav = await box(page, 'nav.trak-nav')
-  expect([nav.x, nav.y, nav.width, nav.height].map(Math.round)).toEqual([0, 0, 96, 900])
-  // The same five tabs, one under the other.
+  expect([nav.x, nav.y, nav.width, nav.height].map(Math.round)).toEqual([0, 0, 232, 900])
+  // TRAK-254: the tabs in words, one under the other, with the Calendar; Profile at the bottom.
+  await expect(page.locator('nav.trak-nav')).toContainText('TRAK')
   const tabs = page.locator('nav.trak-nav button')
-  await expect(tabs).toHaveText([/Home/i, /Squad/i, /Feedback/i, /Trainings/i, /Profile/i])
+  await expect(tabs).toHaveText(['Home', 'Calendar', 'Squad', 'Feedback', 'Trainings', 'Profile'])
   const [first, second] = [(await tabs.nth(0).boundingBox())!, (await tabs.nth(1).boundingBox())!]
   expect(second.y).toBeGreaterThan(first.y + first.height - 1)
+  expect(first.x).toBe(second.x)
+  const profile = (await tabs.last().boundingBox())!
+  expect(profile.y + profile.height).toBeGreaterThan(900 - 60)
+  // "+ Create" at the top of the side menu, above the tabs; it opens the same menu.
+  const create = page.getByRole('button', { name: 'Quick add' })
+  const createBox = (await create.boundingBox())!
+  expect(createBox.x + createBox.width).toBeLessThanOrEqual(232)
+  expect(createBox.y + createBox.height).toBeLessThan(first.y)
+  await expect(create).toContainText('Create')
+  await create.click()
+  await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
 
   const shell = await box(page, '.trak-page')
   expect(Math.round(shell.width)).toBe(720)
-  expect(Math.round(shell.x + shell.width / 2)).toBe(96 + (1440 - 96) / 2)
-  const plus = await box(page, '[data-quick-add]')
-  expect(Math.round(shell.x + shell.width - (plus.x + plus.width))).toBe(16)
+  expect(Math.round(shell.x + shell.width / 2)).toBe(232 + (1440 - 232) / 2)
   expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
+})
+
+test('a coach page without the bottom bar keeps the side menu on a laptop, not on a phone', async ({ page, context }) => {
+  await open(page, context, 'coach', '/settings', 1440, 900)
+  await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
+  await expect(page.locator('nav.trak-nav')).toBeVisible()
+  await expect(page.locator('nav.trak-nav button[aria-current="page"]')).toHaveText('Profile')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.locator('nav.trak-nav')).toHaveCount(0)
+  await expect(page.locator('[data-quick-add]')).toHaveCount(0)
 })
 
 test("a coach's form and Settings keep a reading column on a laptop", async ({ page, context }) => {
@@ -99,7 +121,7 @@ test("a coach's form and Settings keep a reading column on a laptop", async ({ p
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
   const column = await box(page, '.trak-read')
   expect(Math.round(column.width)).toBe(640)
-  expect(Math.round(column.x + column.width / 2)).toBe(96 + (1440 - 96) / 2)
+  expect(Math.round(column.x + column.width / 2)).toBe(232 + (1440 - 232) / 2)
   expect(unexpected).toEqual([])
 })
 

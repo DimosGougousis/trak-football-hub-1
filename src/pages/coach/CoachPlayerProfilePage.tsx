@@ -3,7 +3,8 @@ import { Avatar } from '@/components/arc/avatar/avatar'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError} from '@/components/trak'
+import { MobileShell, MetadataLabel, CategoryBar, BandPill, LoadError, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS, appearanceLabel } from '@/lib/types'
 import { openable } from '@/lib/openable'
@@ -233,6 +234,9 @@ export default function CoachPlayerProfilePage() {
           </button>
         </div>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/squad" onNavigate={navigate} />
     </div>
   )
 }

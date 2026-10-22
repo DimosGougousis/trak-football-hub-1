@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
-import { MobileShell } from '@/components/trak'
+import { MobileShell, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   IconOverview, IconSquad, IconMatch, IconTraining,
   IconAssess, IconProgress, IconAward, IconParentLink, IconSessions, IconTips,
@@ -295,6 +297,7 @@ function SectionCard({ section, open, onToggle }: { section: Section; open: bool
 
 export default function CoachManual() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const [openId, setOpenId] = useState<string | null>('overview')
 
   return (
@@ -332,6 +335,11 @@ export default function CoachManual() {
           />
         ))}
       </div>
+      {/* TRAK-254: a coach on a laptop keeps the side menu here (anyone can open this page). */}
+      {profile?.role === 'coach' && <>
+        <QuickAdd sideMenuOnly />
+        <NavBar role="coach" sideMenuOnly activeTab="/coach/profile" onNavigate={navigate} />
+      </>}
     </MobileShell>
   )
 }

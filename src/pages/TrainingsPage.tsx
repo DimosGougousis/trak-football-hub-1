@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 
 /* The two training pages are static HTML in public/trainings, kept exactly as
    designed (white, their own fonts and scripts). vercel.json lets only
@@ -57,10 +58,12 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
         title={page.title}
         src={lib ? `${page.src}?${new URLSearchParams({ lib })}` : page.src}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-        // TRAK-199: beside a coach's laptop rail there is no bottom bar, so the frame runs to the bottom (index.css).
+        // TRAK-199: beside a coach's laptop side menu there is no bottom bar, so the frame runs to the bottom (index.css).
         className="trak-trainings-frame block w-full h-[calc(100dvh-186px)] border-0 bg-surface"
       />
 
+      {/* TRAK-254: "+ Create" in a coach's side menu on a laptop. */}
+      {role === 'coach' && <QuickAdd sideMenuOnly />}
       <NavBar role={role} activeTab={`/${role}/trainings`} onNavigate={navigate} />
     </div>
   )

@@ -6,6 +6,7 @@ import { fetchWaitReason, WAIT_TITLE, waitText, type WaitReason } from '@/lib/wa
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { MobileShell, BandPill, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SliderInput } from '@/components/trak/SliderInput'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
@@ -903,6 +904,8 @@ function CoachAssessmentForm() {
       </div>
 
       {/* ---- 10. bottom nav ---- */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/assess" onNavigate={p => navigate(p)} />
     </div>
   )

@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { ChevronLeft, History } from 'lucide-react'
 import { IconMatch, IconSessions } from '@/components/icons/TrakIcons'
 
@@ -85,6 +86,8 @@ export default function CoachSessionsChooser() {
       </div>
 
       {/* No Sessions tab: this page is opened from Home, so Home stays marked. */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
