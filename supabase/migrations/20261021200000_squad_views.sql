@@ -56,6 +56,7 @@ BEGIN
     SELECT 1 FROM public.squad_players sp
     WHERE sp.id = p_squad_player_id
       AND sp.coach_user_id = v_event.coach_user_id
+      AND sp.organization_id IS NOT DISTINCT FROM v_event.organization_id
       AND sp.status <> 'coach_departed'
       AND (v_event.squad IS NULL OR sp.age_group = v_event.squad)
   ) THEN

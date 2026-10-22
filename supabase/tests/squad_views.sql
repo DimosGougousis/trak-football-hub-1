@@ -93,7 +93,8 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,linked_player_id,a
 
 -- A1's events: 700 ev (U10, published, in 2 days); 701 cancelled; 702 draft;
 -- 703 yesterday; 704 U12; 705 U10 that started at today's midnight in Dubai
--- (started, not ended: still confirmable on the day).
+-- (started, not ended: still confirmable on the day); 706 (below) U10 but
+-- pinned to academy B.
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published,squad) VALUES
  (pg_temp.svid(700),pg_temp.svid(10),'U10 training','training',now(),(now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date,time '17:00',true,'U10'),
  (pg_temp.svid(701),pg_temp.svid(10),'U10 cancelled','training',now(),(now() AT TIME ZONE 'Asia/Dubai' + interval '3 days')::date,time '17:00',true,'U10'),
@@ -102,6 +103,15 @@ INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,start
  (pg_temp.svid(704),pg_temp.svid(10),'U12 training','training',now(),(now() AT TIME ZONE 'Asia/Dubai' + interval '5 days')::date,time '17:00',true,'U12'),
  (pg_temp.svid(705),pg_temp.svid(10),'U10 today','training',now(),(now() AT TIME ZONE 'Asia/Dubai')::date,time '00:00',true,'U10');
 UPDATE public.coach_calendar_events SET status='cancelled' WHERE id=pg_temp.svid(701);
+-- 706: A1's U10 event pinned to academy B, as one made before a move between
+-- academies is (stamp_calendar_event pins the academy). Written with triggers
+-- off, since no app path makes it today.
+SET LOCAL session_replication_role = replica;
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published,squad,organization_id) VALUES
+ (pg_temp.svid(706),pg_temp.svid(10),'U10 other academy','training',
+  ((now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date + time '17:00') AT TIME ZONE 'Asia/Dubai',
+  (now() AT TIME ZONE 'Asia/Dubai' + interval '2 days')::date,time '17:00',true,'U10',pg_temp.svid(101));
+SET LOCAL session_replication_role = origin;
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.svactor(30);
@@ -146,6 +156,7 @@ SELECT pg_temp.svrefused(pg_temp.svconfirm(702,40),'SV06 an unpublished event is
 SELECT pg_temp.svrefused(pg_temp.svconfirm(703,40),'SV06 yesterday''s event is refused','42501','has ended');
 SELECT pg_temp.svrefused(pg_temp.svunconfirm(703,40),'SV06 an unconfirm after the event''s day is refused too','42501','has ended');
 SELECT pg_temp.svrefused(pg_temp.svconfirm(704,40),'SV06 a U10 child on a U12 event is refused','42501','not in this event''s squad');
+SELECT pg_temp.svrefused(pg_temp.svconfirm(706,40),'SV11 a child of another academy than the event''s is refused','42501','not in this event''s squad');
 RESET ROLE;
 -- Switched off, then back on as the fixture had it. (A savepoint would roll
 -- the recorded result back with the switch.)
@@ -212,7 +223,7 @@ SELECT pg_temp.svcheck(NOT has_function_privilege('anon','public.confirm_event_a
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.sv_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.sv_results;
- IF n <> 36 THEN RAISE EXCEPTION 'Squad views: % checks ran; expected exactly 36', n; END IF;
+ IF n <> 37 THEN RAISE EXCEPTION 'Squad views: % checks ran; expected exactly 37', n; END IF;
  IF failures IS NOT NULL THEN RAISE EXCEPTION USING MESSAGE='Squad views failed',DETAIL=failures; END IF;
  RAISE NOTICE 'Squad views: % checks passed',n;
 END $$;
