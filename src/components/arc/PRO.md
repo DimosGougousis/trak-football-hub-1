@@ -8,7 +8,7 @@ Arc's free components only). Don't copy them out of Trak or publish them on thei
 Each person who edits these files needs their own Arc Pro seat (a team plan covers up to 10).
 Keep the notice line at the top of every file.
 
-- `glass-menu/`
+- `action-morph/`
 - `glass-segmented/`
 - `glass-tabbar/`
 - `radar-chart/`

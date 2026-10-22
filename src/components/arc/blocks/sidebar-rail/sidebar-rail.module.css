@@ -62,8 +62,8 @@
 .actions { display: flex; flex: none; align-items: center; gap: 8px; }
 .content { flex: 1; min-width: 0; }
 
-/* The sheet: the same sidebar sliding in over a scrim. */
-.scrim { position: absolute; inset: 0; z-index: 25; background: oklch(0% 0 0 / .3); -webkit-tap-highlight-color: transparent; }
+/* The sheet: the same sidebar sliding in over a scrim. Trak (TRAK-265): the scrim stays under the sheet, or the sheet can't be tapped. */
+.scrim { position: absolute; inset: 0; z-index: 20; background: oklch(0% 0 0 / .3); -webkit-tap-highlight-color: transparent; }
 .floatScrim { z-index: 2; cursor: pointer; }
 :global(:root[data-theme="dark"]) .scrim { background: oklch(0% 0 0 / .5); }
 .sheet { position: absolute; top: 0; bottom: 0; left: 0; z-index: 21; display: flex; width: min(288px, calc(100% - 40px)); flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); overscroll-behavior: contain; touch-action: pan-y; border-right: 1px solid var(--border); border-radius: 0 16px 16px 0; background: var(--rail); box-shadow: var(--shadow-floating); outline: none; }
