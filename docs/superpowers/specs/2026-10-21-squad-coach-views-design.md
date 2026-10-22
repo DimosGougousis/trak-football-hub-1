@@ -139,8 +139,9 @@ the app, so the coach's tick decides)*.
   lowest season-minutes %, taken from the Season calculation.
 - Callout: "Confirmations come from your WhatsApp group; families don't see
   them in Trak."
-- Confirming is allowed until the event ends (`ends_at`, or the end of the
-  event's day when no end is set), so the coach can fix it on the day.
+- Confirming is allowed until the end of the event's day in the academy's
+  time zone (the event's `ends_at` is not used), so the coach can fix it on
+  the day.
 
 **Backend (new migration; applied history unchanged).**
 
@@ -261,8 +262,8 @@ today and grows as the coach logs matches. Nothing is a fixed snapshot.
 Component split, query keys, chart library choice among existing deps, exact
 copy beyond the mockup's, "Confirm all", and test layout. Events with no
 squad follow the existing family rule (`squad IS NULL OR age_group = squad`).
-The event deadline uses `event_date`/`end_time` in the academy's time zone,
-as `absence_target` does. "Missed trainings" in Snapshot means 3 of the last
-4. The Focus button opens the Trainings catalogue without a filter unless a
+Confirming is allowed until the end of the event's day in the academy's time
+zone (the event's `ends_at` is not used). "Missed trainings" in Snapshot
+means 3 of the last 4. The Focus button opens the Trainings catalogue without a filter unless a
 library matches the attribute exactly (Tactical has three, so it has no
 filter).

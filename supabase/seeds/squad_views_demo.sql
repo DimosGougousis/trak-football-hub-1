@@ -417,9 +417,11 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
   RESET ROLE;
 
-  -- The RPCs refuse once the match has started, so a late rerun leaves these
-  -- as they are. Once Leo's absence exists the step has run: a second report
-  -- would only move its reported_at.
+  -- Stopping at kick-off is this seed's own choice, so a late rerun leaves
+  -- these as they are: report_cant_make_it refuses from kick-off, while
+  -- confirm_event_attendance allows until the end of the match's day. Once
+  -- Leo's absence exists the step has run: a second report would only move
+  -- its reported_at.
   SELECT now() < starts_at INTO v_open FROM public.coach_calendar_events WHERE id = v_match;
   v_open := v_open AND NOT EXISTS (SELECT 1 FROM public.event_absences
                                    WHERE event_id = v_match AND squad_player_id = pg_temp.sv(5, 5));

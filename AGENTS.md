@@ -42,6 +42,7 @@ explicitly open; an issue being Done does not prove a newer requirement passed.
 | Database client and generated types | `src/integrations/supabase/` |
 | Rating and bands | `src/lib/rating-engine.ts`, `src/lib/types.ts` (`BANDS`) |
 | Shared UI | `src/components/trak/` |
+| Squad views (Snapshot, Attributes, Availability, Season) | `src/pages/coach/CoachSquadPage.tsx`, `src/components/coach/squad/`, `src/lib/squad/` |
 | Backend permissions and RPCs | `supabase/migrations/` in filename order |
 | Pilot operations and recovery | `docs/pilot-runbook.md`, `docs/release/s5-restore-rehearsal.md` |
 | Use-case contracts | `docs/use-cases/registry.yaml`, `docs/use-cases/OPEN-QUESTIONS.md` |
@@ -69,6 +70,9 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   wording changes. Family reads follow active consent; the known gap is a
   withdrawn child's own attendance (TRAK-147). Squad events follow consent
   since J8.2 (TRAK-125, #254). A published event is cancelled, never deleted.
+- Availability confirmations are coach-marked from the squad's WhatsApp group
+  (`event_confirmations`, TRAK-250). Families never read them, and the coach
+  view never shows an absence reason.
 
 ## Local work and checks
 
