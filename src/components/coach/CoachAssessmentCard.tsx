@@ -65,9 +65,9 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
 
   const edit = { label: 'Edit', onSelect: () => navigate(`/coach/assess?assessment=${assessment.id}`) }
   return (
-    // TRAK-189: the six band bars keep their bright colours, which only read on a dark card.
+    // TRAK-229: a light Arc card like the rest; each bar carries its band's colour.
     <Card
-      className="arc trak-dark"
+      className="arc"
       aria-label={`${label} assessment${playerName ? `, ${playerName}` : ''}, ${date}`}
       title={label}
       description={playerName}

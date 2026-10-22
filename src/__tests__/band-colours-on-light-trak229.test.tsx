@@ -1,9 +1,10 @@
 /**
- * TRAK-189 (Tarek, 17 Oct): the rating bands keep their own bright colours so
- * a player's six metrics tell apart at a glance, which only reads on a dark
- * card. A band colour on the light page is 1.2–2.7:1 (axe, 18 Oct, on How Trak
- * Works and the player's Coach Assessments), so every element painted in a band
- * colour must sit inside a `.trak-dark` card.
+ * TRAK-229 (Kostas, 22 Oct, option A): the bands have colours made for Trak's
+ * light screens, so assessments sit on light cards like everything else. This
+ * replaces TRAK-189's dark cards: no element painted in a band colour may sit
+ * inside a `.trak-dark` card, and a band word written in colour uses the band's
+ * readable `text` shade, never the lighter bar colour (Good, Mixed and friends
+ * are 3:1 for bars but under 4.5:1 for small text).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
@@ -17,13 +18,19 @@ import { BANDS } from '@/lib/types'
 
 const PLAYER = { id: 'player-bands-189' }
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
-const BAND_RGB = new Set(BANDS.map(b => b.color).filter(c => c.startsWith('#')).map(rgb))
+const BAND_RGB = new Set(BANDS.flatMap(b => [b.color, b.text]).map(rgb))
+// Bar colours too light for small text: a word in one of these is the bug.
+const BAR_ONLY = new Set(BANDS.filter(b => b.color !== b.text).map(b => rgb(b.color)))
 
-/** Every element whose text or fill is a band colour, and whether it sits on a dark card. */
+/** Every element whose text or fill is a band colour; whether it sits on a dark card; whether its text is a bar-only colour. */
 function bandPainted() {
   return [...document.body.querySelectorAll<HTMLElement>('[style]')]
     .filter(el => BAND_RGB.has(el.style.color) || BAND_RGB.has(el.style.backgroundColor) || BAND_RGB.has(el.style.background))
-    .map(el => ({ text: (el.textContent || el.outerHTML).trim().slice(0, 40), dark: !!el.closest('.trak-dark') }))
+    .map(el => ({ text: (el.textContent || el.outerHTML).trim().slice(0, 40), dark: !!el.closest('.trak-dark'), faint: BAR_ONLY.has(el.style.color) }))
+}
+const onLight = (painted: ReturnType<typeof bandPainted>) => {
+  expect(painted.filter(p => p.dark)).toEqual([])
+  expect(painted.filter(p => p.faint)).toEqual([])
 }
 
 beforeEach(() => {
@@ -44,7 +51,7 @@ beforeEach(() => {
 })
 afterEach(() => cleanup())
 
-describe('TRAK-189: band colours only on dark cards', () => {
+describe('TRAK-229: band colours on light cards, words in readable shades', () => {
   it.each([false, true])('player Home season bands (has matches: %s)', async hasMatches => {
     if (hasMatches) server.use(table('matches', [6.5, 6.5, 5.5].map((rating, i) => ({
       id: `match-${i}`, user_id: PLAYER.id, opponent: 'Synthetic Rovers', competition: 'Friendly',
@@ -62,7 +69,7 @@ describe('TRAK-189: band colours only on dark cards', () => {
     }
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(0)
-    expect(painted.filter(p => !p.dark)).toEqual([])
+    onLight(painted)
   })
 
   it('How Trak Works: the band list and the band words', async () => {
@@ -70,7 +77,7 @@ describe('TRAK-189: band colours only on dark cards', () => {
     await screen.findByText('PERFORMANCE BANDS')
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(6)
-    expect(painted.filter(p => !p.dark)).toEqual([])
+    onLight(painted)
   })
 
   it("the coach's assessment card on a player's profile (TRAK-200's Arc card)", () => {
@@ -78,7 +85,7 @@ describe('TRAK-189: band colours only on dark cards', () => {
       work_rate: 9, tactical: 6, attitude: 8, technical: 5, physical: 7, coachability: 3 }} /></MemoryRouter>)
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(6)
-    expect(painted.filter(p => !p.dark)).toEqual([])
+    onLight(painted)
   })
 
   it("the player's Coach Assessments", async () => {
@@ -87,6 +94,6 @@ describe('TRAK-189: band colours only on dark cards', () => {
     await screen.findByText('Exceptional')
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(6)
-    expect(painted.filter(p => !p.dark)).toEqual([])
+    onLight(painted)
   })
 })

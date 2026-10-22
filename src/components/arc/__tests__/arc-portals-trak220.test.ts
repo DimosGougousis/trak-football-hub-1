@@ -25,7 +25,7 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
     const portalling = readdirSync(ARC, { withFileTypes: true }).filter(entry => entry.isDirectory())
       .flatMap(dir => readdirSync(join(ARC, dir.name)).filter(f => f.endsWith('.tsx')).map(f => `${dir.name}/${f}`))
       .filter(file => /\.Portal\b/.test(source(file)))
-    // The bottom sheet takes its class from callers; they pass "arc" (EventSheet, CoachSquadPage).
+    // The bottom sheet takes its class from callers; they pass "arc" (EventSheet).
     expect(portalling.sort()).toEqual(['bottom-sheet/bottom-sheet.tsx', 'card/card.tsx', 'dropdown-menu/dropdown-menu.tsx',
       'notification-center/notification-center.tsx', 'select/select.tsx', 'split-button/split-button.tsx'])
   })
@@ -35,7 +35,7 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
       .filter(file => file.endsWith('.tsx') && !file.includes('__tests__') && !file.startsWith('components/arc/'))
       .map(file => `src/${file}`)
       .filter(file => readFileSync(join(process.cwd(), file), 'utf8').includes('<BottomSheet'))
-    expect(files.sort()).toEqual(['src/components/trak/EventSheet.tsx', 'src/pages/coach/CoachSquadPage.tsx'])
+    expect(files.sort()).toEqual(['src/components/trak/EventSheet.tsx'])
     for (const file of files) {
       const sheets = readFileSync(join(process.cwd(), file), 'utf8').match(/<BottomSheet\b[^>]*>/gs) ?? []
       expect(sheets.length, file).toBeGreaterThan(0)

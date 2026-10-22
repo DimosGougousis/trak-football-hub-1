@@ -61,18 +61,15 @@ beforeEach(() => { inserted = []; sessionsInserted = []; signInAs(COACH) })
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
 
 describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
-  it('Home offers the squads, and Squad shows only the one picked', async () => {
+  it('Home offers the squads, and remembers the one picked', async () => {
     coachReads(TWO)
     renderApp('/coach/home')
     const pick = await screen.findByRole('combobox', { name: 'Squad' })
     expect(pick).toHaveValue('U14')
     expect(within(pick).getAllByRole('option').map(o => o.textContent)).toEqual(['U14', 'U16'])
     await userEvent.selectOptions(pick, 'U16')
-    cleanup()
-    // Remembered on this device.
-    renderApp('/coach/squad')
-    expect(await screen.findByText('Bo Lind')).toBeInTheDocument()
-    expect(screen.queryByText('Ade Okafor')).toBeNull()
+    // Remembered on this device, which is what the Squad page reads (TRAK-250 tests it there).
+    await waitFor(() => expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16'))
   })
 
   it('a coach with one squad sees their name and no squad picker', async () => {

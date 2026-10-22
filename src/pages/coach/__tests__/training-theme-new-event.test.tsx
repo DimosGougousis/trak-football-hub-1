@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -9,6 +9,7 @@ import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toInstant } from '@/lib/event-time'
 import { pickTime } from '../../../../tests/support/arc-pickers'
 import { eventStep, saveEventWith } from '../../../../tests/support/event-steps'
+import { atMorningToday } from '../../../../tests/support/clock'
 
 /**
  * [scope] Training theme on New event: setting up a training, the coach picks
@@ -29,6 +30,9 @@ const SAVED = {
 let posts: unknown[]
 let patches: unknown[]
 beforeEach(() => {
+  // TRAK-253: the saved event is today 23:00, which has started (and is locked, TRAK-230)
+  // once a CI runner passes 19:00 UTC. The Schedule suites run at 09:00 today.
+  atMorningToday()
   signInAs(COACH)
   posts = []
   patches = []
@@ -45,7 +49,7 @@ beforeEach(() => {
     rpc('coach_squad_player_consent_required', () => false),
   )
 })
-afterEach(() => { server.events.removeAllListeners() })
+afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
 
 async function newEvent() {
   renderApp('/coach/schedule')

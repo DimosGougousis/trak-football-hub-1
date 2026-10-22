@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
-import { BANDS, type BandType, BAND_COLOR } from '@/lib/types'
+import { BANDS, type BandType, BAND_TEXT } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 import { dedupeMatches } from '@/lib/match-dedupe'
 import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
@@ -389,12 +389,12 @@ export default function PlayerHome() {
 
   // Band summary abbreviations
   const bandAbbrev = [
-    { key: 'exceptional', abbr: 'E', color: BAND_COLOR.Exceptional },
-    { key: 'standout', abbr: 'St', color: BAND_COLOR.Standout },
-    { key: 'good', abbr: 'G', color: BAND_COLOR.Good },
-    { key: 'steady', abbr: 'Sy', color: BAND_COLOR.Steady },
-    { key: 'mixed', abbr: 'M', color: BAND_COLOR.Mixed },
-    { key: 'developing', abbr: 'D', color: BAND_COLOR.Developing },
+    { key: 'exceptional', abbr: 'E', color: BAND_TEXT.Exceptional },
+    { key: 'standout', abbr: 'St', color: BAND_TEXT.Standout },
+    { key: 'good', abbr: 'G', color: BAND_TEXT.Good },
+    { key: 'steady', abbr: 'Sy', color: BAND_TEXT.Steady },
+    { key: 'mixed', abbr: 'M', color: BAND_TEXT.Mixed },
+    { key: 'developing', abbr: 'D', color: BAND_TEXT.Developing },
   ]
 
   if (loading) return (
@@ -472,8 +472,8 @@ export default function PlayerHome() {
 
         {user && <PlayerParentInviteCard playerUserId={user.id} hideWhenLinked />}
 
-        {/* Hero Card */}
-        <div className="trak-dark relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
+        {/* Hero Card: a light card like the rest; band words in their readable shades (TRAK-229) */}
+        <div className="relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
           style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
           <div className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.08) 0%, transparent 70%)' }} />
@@ -485,7 +485,7 @@ export default function PlayerHome() {
                 <>
                   <p className="text-[52px] leading-none mt-2" style={{
                     fontFamily: 'var(--t-font)', fontWeight: 300, letterSpacing: '-0.04em',
-                    color: BANDS.find(b => b.word.toLowerCase() === seasonBand)?.color
+                    color: BANDS.find(b => b.word.toLowerCase() === seasonBand)?.text
                   }}>
                     {BANDS.find(b => b.word.toLowerCase() === seasonBand)?.word}
                   </p>
@@ -521,7 +521,7 @@ export default function PlayerHome() {
                             }} />
                             <span className="text-[7px]" style={{
                               fontFamily: 'var(--t-font-mono)',
-                              color: isLast ? band.color : 'rgb(var(--t-ink-3))',
+                              color: isLast ? band.text : 'rgb(var(--t-ink-3))',
                             }}>{abbrs[i]}</span>
                           </div>
                           {!isLast && (
@@ -598,7 +598,7 @@ export default function PlayerHome() {
               </span>
               {nextMilestone ? (
                 <span className="text-[9px] font-medium tracking-[0.04em]"
-                  style={{ fontFamily: 'var(--t-font-mono)', color: nextMilestone.nextConfig.color }}>
+                  style={{ fontFamily: 'var(--t-font-mono)', color: nextMilestone.nextConfig.text }}>
                   {nextMilestone.needed} more {nextMilestone.nextConfig.word} → {nextMilestone.nextConfig.word} season
                 </span>
               ) : (
@@ -679,7 +679,7 @@ export default function PlayerHome() {
       {showReveal && lastMatch && (
         <CardRevealModal
           bandWord={seasonBandConfig.word}
-          bandColor={seasonBandConfig.color}
+          bandColor={seasonBandConfig.text}
           newMatchCount={newMatchCount}
           latestMatch={lastMatch}
           onDismiss={handleRevealDismiss}

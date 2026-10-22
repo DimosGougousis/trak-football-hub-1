@@ -4,7 +4,8 @@ import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel, LoadError } from '@/components/trak'
+import { MobileShell, MetadataLabel, LoadError, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { MatchEditor } from '@/components/coach/MatchEditor'
 import { localTodayISO } from '@/lib/event-time'
@@ -239,7 +240,7 @@ export default function CoachSessionEdit() {
 
   if (status !== 'ready' || !session) {
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5">
           {status === 'failed' ? (
@@ -257,7 +258,7 @@ export default function CoachSessionEdit() {
   if (isMatch) {
     // TRAK-185 part 1: a logged match is corrected here (score, goals, assists, cards).
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5 pb-24">
           <MatchEditor sessionId={session.id} title={session.title} date={session.session_date} />
@@ -267,7 +268,7 @@ export default function CoachSessionEdit() {
   }
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {header}
       <div className="pt-5 pb-32 space-y-5">
         {isTraining ? (
@@ -342,7 +343,7 @@ export default function CoachSessionEdit() {
           {shown.length === 0 ? (
             <p role="status" className="text-[12px] text-ink-3 py-2">No players can be recorded yet.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
               {shown.map(r => {
                 const on = present.has(r.id)
                 const fixed = !r.ready || locked(r)
@@ -381,7 +382,7 @@ export default function CoachSessionEdit() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
+      <div className="trak-page-bar fixed bottom-0 -translate-x-1/2 w-full px-5 pb-5 pt-3"
         style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {futureDate && (
           <p role="alert" className="text-[11px] text-center text-warning mb-2">
@@ -398,6 +399,9 @@ export default function CoachSessionEdit() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

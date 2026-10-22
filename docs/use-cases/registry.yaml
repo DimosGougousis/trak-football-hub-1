@@ -468,17 +468,20 @@ use_cases:
       - A guardian can reset their no-email child's password and existing child sessions are invalidated, with an open device signing out within 30 seconds
     source: MVP Requirements
 
+  # spec_version 2 (Kostas, 21 Oct 2026): goals and assists start at 0. The
+  # empty "—" between the − and + buttons read as "− − +". Minutes are no
+  # longer asked (TRAK-198); position and age group are still never invented.
   - id: UC-C09
     actor: coach
     title: Log a match for the squad with no invented defaults
     requirement: J4
     status: pending
     tier: [1, 2]
-    spec_version: 1
+    spec_version: 2
     given: A signed-in coach with a squad
-    when: They log a match with date, opponent and result, and each child's position, minutes, goals and assists
+    when: They log a match with date, opponent and result, and each child's position, goals and assists
     then:
-      - Nothing about a child's minutes, goals or assists is pre-filled
+      - Nothing about a child's position or age group is invented; goals and assists start at 0, shown on every played row
       - A child whose guardian has not consented cannot be logged
       - A retry never creates a duplicate match, and a partial failure says what was and was not saved
     source: MVP Requirements
@@ -643,3 +646,24 @@ use_cases:
       - The message has the squad and type, the day and time, the venue and meet time, kit for a match, and a cancellation's reason
       - No child's name and no absence list appear; a cancellation reason that names a squad child or contains a link is left out
     source: https://linear.app/trak-football/issue/TRAK-139
+
+  # ADDED 2026-10-21. TRAK-250 (J8, Squad tab's Availability). Families say
+  # who is coming in the squad's WhatsApp group; the coach ticks them in
+  # Trak. The local demo seed (supabase/seeds/squad_views_demo.sql) sets up
+  # this scene: a match with 8 confirmed, a guardian's "Can't make it" for
+  # one child and one child waiting for consent.
+  - id: UC-E11
+    actor: coach
+    title: Mark each child Confirmed for an event from the squad's WhatsApp replies
+    requirement: J8
+    status: pending
+    tier: [2]
+    spec_version: 1
+    given: A coach with a published, not-cancelled match for their squad, consented children, one child whose guardian reported "Can't make it" and one child waiting for consent
+    when: They open the Squad tab's Availability and tap children to mark who the WhatsApp group said is coming
+    then:
+      - Each tap moves the child between Confirmed and Not confirmed, and the counts and the confirmed goalkeepers follow
+      - The guardian's report shows as a "Reported can't make it" tag on the child, in whichever column the child is in
+      - The child waiting for consent is listed as not eligible and cannot be confirmed; the database refuses it too
+      - Families never see the confirmations in Trak, and the coach can still change them until the end of the event's day
+    source: TRAK-250

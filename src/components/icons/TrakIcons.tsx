@@ -29,6 +29,14 @@ export const IconHome = makeIcon({}, ({ size, color, className }) => (
   </svg>
 ))
 
+// TRAK-254: the Calendar in a coach's side menu, drawn like the other tab icons.
+export const IconCalendar = makeIcon({}, ({ size, color, className }) => (
+  <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect x="2.75" y="4" width="16.5" height="15.25" rx="2" stroke={color} strokeWidth="1.5"/>
+    <path d="M2.75 8.75H19.25M7 2.25V5.5M15 2.25V5.5" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+))
+
 export const IconLog = makeIcon({}, ({ size, color, className }) => (
   <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <rect x="2" y="2" width="18" height="18" rx="4" stroke={color} strokeWidth="1.5"/>

@@ -524,6 +524,7 @@ export default function CoachSchedule() {
       toast.error(`Saved as ${ids.length > 1 ? 'drafts' : 'a draft'}, not published. ${clashMessage(error) ?? 'Tap Publish on the event to try again.'}`)
       return
     }
+    askToEmailFamilies() // TRAK-135: publishing emails families too
     toast.success(ids.length > 1 ? `Published ${ids.length} events to the squad` : 'Published to the squad')
   }
 
@@ -541,6 +542,7 @@ export default function CoachSchedule() {
     const { data, error } = await supabase.from('coach_calendar_events')
       .update({ published: true }).eq('id', row.id).select('id')
     if (failed(error, data)) { toast.error(clashMessage(error) ?? `Couldn't publish "${row.title}". Try again.`); return }
+    askToEmailFamilies() // TRAK-135
     loadData()
     toast.success('Published to the squad')
   }
@@ -559,10 +561,11 @@ export default function CoachSchedule() {
 
   // TRAK-182: the event sheet on Home sends Edit (?edit=<id>), Cancel
   // (?cancel=<id>) and a weekly series' Publish (?publish=<id>, which asks
-  // this week or following) here, to Schedule's own sheets.
+  // this week or following) here, to Schedule's own sheets. TRAK-232: the
+  // coach's bell sends ?event=<id>, which only opens that event's day.
   const [params, setParams] = useSearchParams()
   useEffect(() => {
-    const action = (['edit', 'publish', 'cancel', 'register'] as const).find(a => params.has(a))
+    const action = (['edit', 'publish', 'cancel', 'register', 'event'] as const).find(a => params.has(a))
     const row = action ? calEvents.find(r => r.id === params.get(action)) : undefined
     if (!row) return
     setParams({}, { replace: true })
@@ -576,7 +579,7 @@ export default function CoachSchedule() {
     else if (action === 'cancel') setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })
     // The quick-add's Take register (TRAK-182 part 8): only when it can open.
     else if (action === 'register') { if (!registerProblem(row)) setSheet({ kind: 'register', row }) }
-    else void publish(row)
+    else if (action === 'publish') void publish(row)
   }, [calEvents, params]) // eslint-disable-line react-hooks/exhaustive-deps -- once the rows load, and on a new link while here
 
   const confirmCancel = async () => {
@@ -652,6 +655,7 @@ export default function CoachSchedule() {
       return
     }
     setSheet({ kind: 'closed' })
+    if (action === 'publish') askToEmailFamilies() // TRAK-135: the series is one email per person
     loadData()
     const n = data!.length
     toast.success(action === 'publish'
@@ -683,7 +687,7 @@ export default function CoachSchedule() {
   }
 
   return (
-    <MobileShell>
+    <MobileShell width="wide">
       <div className="pt-3 pb-28 space-y-4">
 
         {/* Header */}
@@ -712,10 +716,13 @@ export default function CoachSchedule() {
 
         {loadFailed && <LoadError what="your calendar" onRetry={retry} retrying={retrying} />}
 
+        {/* TRAK-252: on a coach's laptop the month and the chosen day stand side by side. */}
+        <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
         {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
         <div className="arc rounded-[18px] border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
           <div className="flex justify-center px-2 pt-2">
-            <Calendar locale="en-GB" showToday
+            {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
+            <Calendar locale="en-GB" showToday className="laptop:!w-full"
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
               month={new Date(viewYear, viewMonth, 1)}
               onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
@@ -881,6 +888,7 @@ export default function CoachSchedule() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* ── Event sheet: new or edit, one step per screen (TRAK-182) ──────── */}
@@ -889,7 +897,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.row ? 'Edit event' : 'New event'}
-            className="w-full max-w-[430px] rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
+            className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: '85vh', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>
@@ -1113,7 +1121,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Cancel event"
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Cancel {sheet.row.title}?</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -1148,7 +1156,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Event cancelled"
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Event cancelled</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -1173,7 +1181,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Import fixtures"
-            className="w-full max-w-[430px] max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>Import fixtures</span>
@@ -1195,7 +1203,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Take register"
-            className="w-full max-w-[430px] max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[16px] font-medium text-ink" style={font}>
@@ -1220,7 +1228,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.action === 'publish' ? 'Publish event' : 'Delete draft'}
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {sheet.action === 'publish' ? 'Publish' : 'Delete'} {sheet.row.title}, {formatEventDay(sheet.row.event_date!)}
@@ -1254,7 +1262,7 @@ export default function CoachSchedule() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
           <div role="dialog" aria-label="Not published"
-            className="w-full max-w-[430px] rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Not published</span>
             <p className="text-[12px] text-ink-2" style={font}>

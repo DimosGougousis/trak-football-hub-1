@@ -86,6 +86,17 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      // TRAK-252: columns on a coach's tablet or laptop. The height floor keeps a
+      // phone turned sideways on today's layout, as the widths in src/index.css do.
+      // Coach-only screens use them; a shared screen would change for everyone.
+      screens: {
+        tablet: { raw: "(min-width: 768px) and (min-height: 500px)" },
+        laptop: { raw: "(min-width: 1024px) and (min-height: 500px)" },
+      },
+      // TRAK-199: a bottom sheet's width (src/index.css --sheet-w).
+      maxWidth: {
+        sheet: "var(--sheet-w)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
