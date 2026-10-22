@@ -725,8 +725,8 @@ function CoachAssessmentForm() {
 
         </>}
         {step === 1 && <>
-        {/* ---- 5. sliders in dark container ---- */}
-        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
+        {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
+        <div className="rounded-[14px] bg-surface border border-line p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
           <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
@@ -735,9 +735,9 @@ function CoachAssessmentForm() {
           <SliderInput label="Coachability" value={coachability} onChange={setCoachability} disabled={!formReady || saving || consentWait} />
         </div>
 
-        {/* ---- 6. overall band card (amber glow) ---- */}
+        {/* ---- 6. overall band card, in the band's light tint (TRAK-229) ---- */}
         <div
-          className="trak-dark flex flex-col items-center gap-2 py-5 rounded-[14px]"
+          className="flex flex-col items-center gap-2 py-5 rounded-[14px]"
           style={{
             background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
@@ -751,7 +751,7 @@ function CoachAssessmentForm() {
             className="inline-flex items-center justify-center px-5 rounded-full text-[16px] font-semibold"
             style={{
               height: 36,
-              color: overallCfg.color,
+              color: overallCfg.text,
               background: overallCfg.bg,
               border: `1.5px solid ${overallCfg.border}`,
             }}

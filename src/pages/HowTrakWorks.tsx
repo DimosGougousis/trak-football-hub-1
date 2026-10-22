@@ -2,8 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
-import { BANDS } from '@/lib/types'
-import { BAND_COLOR } from '@/lib/types'
+import { BANDS, BAND_TEXT } from '@/lib/types'
 
 const BAND_DESCRIPTIONS: Record<string, string> = {
   exceptional: 'Outstanding — everything clicked',
@@ -63,8 +62,8 @@ export default function HowTrakWorks() {
           </p>
         </div>
 
-        {/* Bands: their bright colours read on a dark card (TRAK-189, Tarek, 17 Oct). */}
-        <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
+        {/* TRAK-229: the bands on a light card like the rest, each in its light tint. */}
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="PERFORMANCE BANDS" />
           <div className="mt-3 space-y-2.5">
             {BANDS.map(b => {
@@ -73,7 +72,7 @@ export default function HowTrakWorks() {
                 <div key={key} className="flex items-start gap-3">
                   <span
                     className="inline-flex items-center justify-center h-6 px-2.5 rounded-lg text-[11px] font-semibold flex-shrink-0"
-                    style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}`, minWidth: 92 }}
+                    style={{ background: b.bg, color: b.text, border: `1px solid ${b.border}`, minWidth: 92 }}
                   >
                     {b.word}
                   </span>
@@ -113,15 +112,15 @@ export default function HowTrakWorks() {
           </div>
         </div>
 
-        {/* Why bands not numbers: it names three bands in their colours, so a dark card too. */}
-        <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
+        {/* Why bands not numbers: it names three bands in their readable shades (TRAK-229). */}
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="WHY WORDS, NOT NUMBERS" />
           <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>
             A 7.2 and a 7.4 feel the same on the pitch, but a number invites comparison and pressure.
-            Bands keep the focus on growth: how often you reach <span style={{ color: BAND_COLOR.Good }}>Good</span>,
-            how you bounce back from a <span style={{ color: BAND_COLOR.Mixed }}>Mixed</span> match, and when you
-            break into <span style={{ color: BAND_COLOR.Exceptional }}>Exceptional</span>.
+            Bands keep the focus on growth: how often you reach <span style={{ color: BAND_TEXT.Good }}>Good</span>,
+            how you bounce back from a <span style={{ color: BAND_TEXT.Mixed }}>Mixed</span> match, and when you
+            break into <span style={{ color: BAND_TEXT.Exceptional }}>Exceptional</span>.
           </p>
         </div>
       </div>

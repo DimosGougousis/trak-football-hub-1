@@ -37,6 +37,8 @@ interface ChartDatum {
   label: string
   rating: number
   color: string
+  /** TRAK-229: the band word's readable shade. */
+  text: string
   band: string
 }
 
@@ -51,7 +53,7 @@ function CustomTooltip({ active, payload }: any) {
       <p className="text-[10px] text-ink-3 mb-0.5" style={{ fontFamily: 'var(--t-font-mono)' }}>
         {d.label}
       </p>
-      <p className="text-[13px] font-semibold" style={{ color: d.color }}>
+      <p className="text-[13px] font-semibold" style={{ color: d.text }}>
         {d.band}
       </p>
     </div>
@@ -81,6 +83,7 @@ export default function RatingTrendChart({ matches }: Props) {
       label: formatDate(m.created_at),
       rating: m.computed_rating,
       color: bandConfig?.color ?? 'rgb(var(--t-ink-3))',
+      text: bandConfig?.text ?? 'rgb(var(--t-ink-3))',
       band: bandConfig?.word ?? 'Difficult',
     }
   })
