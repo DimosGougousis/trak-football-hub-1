@@ -113,6 +113,7 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   expect(last.y + last.height).toBeGreaterThan(900 - 140)
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
   expect(first.x).toBeLessThan(240)
+  await page.waitForTimeout(600) // let the radar draw in for the screenshot
   await page.screenshot({ path: testInfo.outputPath('coach-home-1440.png') })
   // "+ Create" at the top right, after the bell; it opens the same menu.
   const create = page.getByRole('button', { name: 'Create' })
