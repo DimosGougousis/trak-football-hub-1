@@ -37,6 +37,14 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
+    // TRAK-250: the Squad tabs' reads. Two latest bands for three children, so Snapshot has columns to show.
+    if (path === '/rest/v1/coach_assessments') return json(role === 'coach' ? [
+      { squad_player_id: 'sq-1', coach_rating: 9, created_at: '2026-10-10T10:00:00Z', work_rate: 4, technical: 4, physical: 4, coachability: 4, attitude: 4, tactical: 4 },
+      { squad_player_id: 'sq-2', coach_rating: 7, created_at: '2026-10-10T10:00:00Z', work_rate: 3, technical: 3, physical: 3, coachability: 3, attitude: 3, tactical: 3 },
+      { squad_player_id: 'sq-3', coach_rating: 5, created_at: '2026-10-10T10:00:00Z', work_rate: 2, technical: 3, physical: 2, coachability: 3, attitude: 2, tactical: 3 },
+    ] : [])
+    if (['/rest/v1/coach_sessions', '/rest/v1/session_attendance', '/rest/v1/rpc/coach_squad_season', '/rest/v1/coach_calendar_events',
+      '/rest/v1/event_confirmations', '/rest/v1/event_absences'].includes(path)) return json([])
     // Layout only: every other read is empty.
     if (path.startsWith('/rest/v1/')) return json(req.method() === 'GET' || path.startsWith('/rest/v1/rpc/') ? [] : null)
     unexpected.push(`${req.method()} ${path}`)
@@ -153,40 +161,43 @@ test("a player's Home keeps the phone column on a laptop", async ({ page, contex
   expect(unexpected).toEqual([])
 })
 
-// TRAK-252: lists use the room; a phone keeps one column, and on a laptop the list
-// stands beside the chosen player.
-for (const [label, width, height, columns] of [
-  ['a phone', 390, 844, 1],
-  ['an upright tablet', 820, 1180, 2],
-  ['a laptop', 1440, 900, 1],
+// TRAK-250 (Dimos, 22 Oct: tabs only): Squad is a tabbed coach workspace in place
+// of TRAK-252's list. On a tablet or a laptop it uses the room: the four tabs, a
+// page wider than the phone column, and Snapshot's band columns side by side.
+const BAND_WORDS = ['Exceptional', 'Standout', 'Good', 'Steady', 'Mixed', 'Developing', 'Difficult']
+// [screen, width, height, rail, band columns]
+for (const [label, width, height, rail, columns] of [
+  ['an upright tablet', 820, 1180, 0, 4],
+  ['a laptop', 1440, 900, 232, 7],
 ] as const) {
-  test(`coach Squad on ${label}: players in ${columns} column${columns > 1 ? 's' : ''}`, async ({ page, context }) => {
+  test(`coach Squad on ${label}: the four tabs across a wide page, Snapshot's bands in ${columns} columns, no sheet`, async ({ page, context }) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
-    const rows = page.getByRole('list').getByRole('button')
-    await expect(rows.first()).toBeVisible()
+    const tabs = page.getByRole('tablist', { name: 'Squad views' }).getByRole('tab')
+    await expect(tabs).toHaveText(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
+    await expect(page.getByRole('heading', { name: 'Squad snapshot' })).toBeVisible()
+
+    // The wide page, right of the side menu on a laptop: no 430 px column.
+    const panel = await box(page, '#squad-panel')
+    expect(Math.round(panel.width)).toBe(Math.min(1280, width - rail) - 64)
+    expect(Math.round(panel.x)).toBeGreaterThanOrEqual(rail)
+
+    // Every band is a column; on a laptop all seven stand in one row.
     const lefts = new Set<number>()
-    for (let i = 0; i < 3; i++) lefts.add(Math.round((await rows.nth(i).boundingBox())!.x))
+    for (const word of BAND_WORDS) lefts.add(Math.round((await page.getByRole('group', { name: word }).boundingBox())!.x))
     expect(lefts.size).toBe(columns)
+
+    // Each tab opens in place: no Arc sheet, and no read the backend does not answer.
+    for (const name of ['Attributes', 'Availability', 'Games Statistics', 'Snapshot']) {
+      await tabs.filter({ hasText: name }).click()
+      await expect(tabs.filter({ hasText: name })).toHaveAttribute('aria-selected', 'true')
+      await expect(page.getByRole('tabpanel').getByText(/^(Loading|Checking) /)).toHaveCount(0)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+    }
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 }
-
-test("coach Squad on a laptop: the chosen player's page beside the list, no sheet", async ({ page, context }) => {
-  const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', 1440, 900)
-  const rows = page.getByRole('list').getByRole('button')
-  await expect(page.getByRole('complementary', { name: "Hugo Lloris's page" })).toBeVisible()
-  await rows.nth(1).click()
-  const panel = page.getByRole('complementary', { name: "Bukayo Saka's page" })
-  await expect(panel).toBeVisible()
-  await expect(panel.getByRole('button', { name: /Assess Bukayo/ })).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  const [list, side] = [(await rows.nth(1).boundingBox())!, (await panel.boundingBox())!]
-  expect(side.x).toBeGreaterThan(list.x + list.width)
-  expect(unexpected).toEqual([])
-  expect(errors).toEqual([])
-})
 
 test('Feedback on a laptop: a table with a filter by level and Assess on each row', async ({ page, context }) => {
   const { unexpected } = await open(page, context, 'coach', '/coach/feedback', 1440, 900)

@@ -9,11 +9,10 @@ import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { forgetScreens, remember, remembered } from '@/lib/screen-memory'
 
 /**
- * TRAK-180 (J4, Kostas on his iPhone, 15 Oct): switching Home ↔ Squad flashed
- * "Your squad is being prepared" for a squad with players, and an all-Loading
- * Home, then read everything again from nothing. Squad now says it is loading
- * until its read answers, and a revisit shows what the screen last showed
- * while the reads refresh it.
+ * TRAK-180 (J4, Kostas on his iPhone, 15 Oct): switching tabs flashed an
+ * all-Loading screen, then read everything again from nothing. A revisit now
+ * shows what the screen last showed while the reads refresh it. (Squad's own
+ * loading and empty states are tested in squad-views-trak250.)
  */
 const COACH = { id: 'coach-1' }
 const PLAYERS = [
@@ -48,42 +47,19 @@ function coachReads(players: typeof PLAYERS | [], gate?: Promise<void>) {
 
 afterEach(() => { cleanup(); forgetScreens() })
 
-describe('TRAK-180 switching between Squad and the overview tab', () => {
-  it('Squad says it is loading, never "being prepared", until its read answers', async () => {
-    signInAs(COACH)
-    let release!: () => void
-    coachReads(PLAYERS, new Promise<void>(resolve => { release = resolve }))
-    renderApp('/coach/squad')
-    expect(await screen.findByRole('status')).toHaveTextContent(/Loading your squad/)
-    expect(screen.queryByText('Your squad is being prepared')).toBeNull()
-    release()
-    expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
-    expect(screen.queryByText(/Loading your squad/)).toBeNull()
-  })
-
-  it('an empty squad still says "being prepared", once the read has answered', async () => {
-    signInAs(COACH)
-    coachReads([])
-    renderApp('/coach/squad')
-    expect(await screen.findByText('Your squad is being prepared')).toBeInTheDocument()
-  })
-
-  it('going back to Squad and to Feedback shows what they last showed at once, then refreshes', async () => {
+describe('TRAK-180 switching between Home and the overview tab', () => {
+  it('going back to Feedback shows what it last showed at once, then refreshes', async () => {
     signInAs(COACH)
     const user = userEvent.setup()
     coachReads(PLAYERS)
-    renderApp('/coach/squad')
-    expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
+    renderApp('/coach/feedback')
     await waitFor(() => expect(homeRow('Bo Lind')).not.toBeNull(), HOME_LOAD)
 
     // From here every squad read is held: only the memory can show players.
     let release!: () => void
     coachReads(PLAYERS, new Promise<void>(resolve => { release = resolve }))
-    await user.click(screen.getByRole('button', { name: /^Squad$/i }))
-    expect(screen.getByText('Ade Okafor')).toBeInTheDocument()
-    expect(screen.queryByText('Your squad is being prepared')).toBeNull()
-    expect(screen.queryByText(/Loading your squad/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await screen.findByRole('heading', { name: 'Coach Vasilis' })
 
     await user.click(screen.getByRole('button', { name: /^Feedback$/i }))
     expect(homeRow('Ade Okafor')).not.toBeNull()
@@ -98,8 +74,8 @@ describe('TRAK-180 switching between Squad and the overview tab', () => {
     coachReads(PLAYERS)
     renderApp('/coach/feedback')
     await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull(), HOME_LOAD)
-    await user.click(screen.getByRole('button', { name: /^Squad$/i }))
-    expect(await screen.findByText('Ade Okafor')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Home$/i }))
+    await screen.findByRole('heading', { name: 'Coach Vasilis' })
 
     // The assessments decide each level, so a failed read can't keep the old list.
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, () =>

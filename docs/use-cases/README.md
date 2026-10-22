@@ -20,7 +20,7 @@ is in [MVP Requirements](../../MVP%20Requirements); progress is in the
 | UC-C04 | coach | Assess a player on six sliders producing a band | REQ-002 | 1, 2 |
 | UC-X02 | system | A failed load never renders as a false empty state | REQ-004 | 1 |
 
-## Pending — 25
+## Pending — 26
 
 | ID | Actor | Use case | Requirement | Tier |
 |----|-------|----------|-------------|------|
@@ -49,6 +49,7 @@ is in [MVP Requirements](../../MVP%20Requirements); progress is in the
 | UC-E08 | system | Rehearse events on two real phones before real-family access | J8 | 2 |
 | UC-E09 | system | Subscribe a family member's phone calendar in one tap from signup | J8 | 2 |
 | UC-E10 | coach | Share an event to the squad's WhatsApp group, pre-written, with no child names | J8 | 2 |
+| UC-E11 | coach | Mark each child Confirmed for an event from the squad's WhatsApp replies | J8 | 2 |
 
 ## Parked — 9
 
