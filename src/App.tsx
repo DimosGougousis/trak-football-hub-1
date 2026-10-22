@@ -61,6 +61,7 @@ const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
 const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
 const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
 const TrainingsPage = lazy(() => import("./pages/TrainingsPage"));
+const CoachLibrary = lazy(() => import("./pages/coach/library/CoachLibrary"));
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
@@ -167,7 +168,8 @@ const App = () => (
             {/* TRAK-102: a history row opens its session; training and other are editable. */}
             <Route path="/coach/sessions/:id" element={<RouteGuard allowedRole="coach"><CoachSessionEdit /></RouteGuard>} />
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
-            <Route path="/coach/trainings" element={<RouteGuard allowedRole="coach"><TrainingsPage role="coach" /></RouteGuard>} />
+            {/* TRAK-264: the coach's Library (the frame's Library tab) and the pages it opens. */}
+            <Route path="/coach/trainings/*" element={<RouteGuard allowedRole="coach"><CoachLibrary /></RouteGuard>} />
             <Route path="/coach/manual" element={<CoachManual />} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/assess" replace /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />

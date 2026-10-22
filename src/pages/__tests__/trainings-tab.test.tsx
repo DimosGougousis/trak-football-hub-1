@@ -1,8 +1,9 @@
 /**
- * [scope] Trainings tab: coaches and players get a Trainings tab in the bottom
- * bar. It shows two training pages exactly as they were designed: the Coaching
- * Session Catalogue and Play It Right. Both are static HTML under
- * public/trainings, shown in a same-site iframe.
+ * [scope] Trainings tab: players get a Trainings tab in the bottom bar. It
+ * shows two training pages exactly as they were designed: the Coaching Session
+ * Catalogue and Play It Right. Both are static HTML under public/trainings,
+ * shown in a same-site iframe. A coach's tab is the Library (TRAK-264,
+ * coach-library-trak264.test.tsx), which still opens Play It Right this way.
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -44,20 +45,12 @@ function player() {
 const navTab = (name: string) => within(screen.getByRole('navigation')).getByRole('button', { name: new RegExp(name, 'i') })
 
 describe.each([
-  ['coach', coach, '/coach/trainings'],
   ['player', player, '/player/trainings'],
 ] as const)('Trainings tab for a %s', (_role, signIn, path) => {
   it('is in the bottom bar and marked on its page', async () => {
     signIn()
     renderApp(path)
     await screen.findByRole('heading', { name: 'Trainings' })
-    if (_role === 'coach') {
-      // TRAK-259: a coach's bar is the frame's glass tab bar, where Trainings is Library.
-      const bar = await screen.findByRole('tablist', { name: 'Coach' })
-      expect(within(bar).getByRole('tab', { name: 'Library' })).toHaveAttribute('aria-selected', 'true')
-      expect(within(bar).getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'false')
-      return
-    }
     expect(navTab('Trainings')).toHaveAttribute('aria-current', 'page')
     expect(navTab('Home')).not.toHaveAttribute('aria-current')
   }, 20_000)
@@ -195,11 +188,11 @@ describe('the catalogue opens on a theme from New event', () => {
     return { errors, lib: selected?.dataset.lib }
   }
 
-  it('the Trainings tab hands the theme to the catalogue page', async () => {
+  it("a coach's old theme link opens that library in the Library (TRAK-264)", async () => {
     coach()
     renderApp(`/coach/trainings?lib=${encodeURIComponent(DEFENDING)}`)
-    const frame = await screen.findByTitle('Coaching Session Catalogue')
-    expect(frame).toHaveAttribute('src', `${CATALOGUE}?lib=Tactical+%E2%80%93+Defending`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Defending' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/coach/trainings/defending')
   }, 20_000)
 
   it('the catalogue selects that library', () => {
