@@ -19,6 +19,8 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-wide199-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
+  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   await context.route('**/*', async route => {
     const req = route.request(), url = new URL(req.url())
     if (url.origin === 'http://127.0.0.1:4189') return route.continue()
@@ -72,7 +74,7 @@ for (const [label, width, height, pageWidth] of [
 ] as const) {
   test(`coach Home on ${label}: the page, and the glass tab bar with the "+" under it`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
-    await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Squad shape' })).toBeVisible()
 
     // TRAK-259: Home, Squad and Library, with the "+" merged in at the right; no Calendar, Feedback or Profile tab.
     const bar = page.getByRole('tablist', { name: 'Coach' })
@@ -99,7 +101,7 @@ for (const [label, width, height, pageWidth] of [
 
 test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top right, the page beside it', async ({ page, context }, testInfo) => {
   const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
-  await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Squad shape' })).toBeVisible()
 
   // TRAK-259: Arc's sidebar rail. The club, then Home, Calendar, Squad, Library; Settings and the coach at the bottom.
   const sidebar = page.getByRole('navigation', { name: 'Your academy' })
@@ -111,6 +113,7 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   expect(last.y + last.height).toBeGreaterThan(900 - 140)
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
   expect(first.x).toBeLessThan(240)
+  await page.waitForTimeout(600) // let the radar draw in for the screenshot
   await page.screenshot({ path: testInfo.outputPath('coach-home-1440.png') })
   // "+ Create" at the top right, after the bell; it opens the same menu.
   const create = page.getByRole('button', { name: 'Create' })
@@ -121,9 +124,12 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 
-  const shell = await box(page, '.trak-page')
-  expect(Math.round(shell.width)).toBe(720)
+  // TRAK-262: Home takes the wide column on a laptop, the week and Squad shape side by side.
+  const shell = await box(page, '.trak-wide')
+  expect(Math.round(shell.width)).toBe(1100)
   expect(Math.round(shell.x + shell.width / 2)).toBe(240 + (1440 - 240) / 2)
+  const [week, shape] = [(await page.getByRole('region', { name: 'This week' }).boundingBox())!, (await page.getByRole('region', { name: 'Squad shape' }).boundingBox())!]
+  expect(shape.x).toBeGreaterThan(week.x + week.width - 1)
   expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])

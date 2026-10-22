@@ -16,6 +16,8 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
+  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   let kits: Record<string, unknown> | null = null
   let event: Record<string, unknown> | null = null
   const errors: string[] = [], unexpected: string[] = []
@@ -48,7 +50,8 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     }
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
-    if (['coach_sessions', 'coach_assessments', 'event_absences', 'session_attendance', 'coach_shared_feedback', 'matches', 'recognition_awards'].some(t => path === `/rest/v1/${t}`)) return json([])
+    // TRAK-262: notification_settings is coach Home's Needs you switch (no row: on).
+    if (['coach_sessions', 'coach_assessments', 'event_absences', 'session_attendance', 'coach_shared_feedback', 'matches', 'recognition_awards', 'notification_settings'].some(t => path === `/rest/v1/${t}`)) return json([])
     if (path === '/rest/v1/telemetry_events') return json(null)
     // TRAK-135 (#369): Publish asks the server to send the families' emails, fire-and-forget,
     // so whether it lands before the test ends is timing; expect it either way.
@@ -81,7 +84,9 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
   await expect(form).not.toBeVisible()
   expect(event).toMatchObject({ published: true, kit_snapshot: { version: 1, slot: 'away', design: { shirt: '#F5F3EC' } } })
   await page.goto('/coach/home')
+  // TRAK-262: the coach's week picks an event on a tap; Details opens its sheet.
   await page.getByRole('button', { name: /Synthetic United/ }).click()
+  await page.getByRole('button', { name: 'Details' }).click()
   const sheet = page.getByRole('dialog', { name: 'vs Synthetic United' })
   await expect(sheet.getByRole('heading', { name: 'Away kit' })).toBeVisible()
   for (const width of [320, 390, 768]) {
