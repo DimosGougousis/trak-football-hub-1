@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import catalogue from '../catalogue.json'
 import {
-  LIBRARIES, SESSIONS, ageBandOf, forAge, libraryOrder, playersOf, programmeOf, programmeWeeks, searchLibrary, sessionLine, sizeOf,
+  LIBRARIES, SESSIONS, ageBandOf, agesLabel, forAge, libraryOrder, playersOf, programmeOf, programmeWeeks, searchLibrary, sessionLine, sizeOf,
   squadsAgeBand, titleParts, weekOf,
 } from '../library'
 import { BANDS } from '@/lib/types'
@@ -80,6 +80,15 @@ describe('TRAK-264: ages', () => {
     expect(squadsAgeBand(['U14', 'U16'])).toBe('12-16')
     expect(squadsAgeBand(['U10', 'U14'])).toBeNull()
     expect(squadsAgeBand([])).toBeNull()
+  })
+
+  it('says a session\'s ages in a few words, joining neighbouring age groups', () => {
+    expect(agesLabel(['12-16'])).toBe('Ages 12–16')
+    expect(agesLabel(['5-11', '12-16'])).toBe('Ages 5–16')
+    expect(agesLabel(['5-11', '12-16', '17-21', '21+'])).toBe('Ages 5 and up')
+    expect(agesLabel(['Play phase 4-6', '12-16'])).toBe('Ages 4–6, 12–16')
+    expect(agesLabel(['Play phase 4-6', '5-11', '12-16', '17-21', '21+'])).toBe('Every age')
+    expect(agesLabel([])).toBe('Every age')
   })
 
   it('never hides a session that lists no ages: it is for every age', () => {

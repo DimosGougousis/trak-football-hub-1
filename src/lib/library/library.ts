@@ -81,6 +81,26 @@ export const AGE_BANDS = ['Play phase 4-6', '5-11', '12-16', '17-21', '21+'] as 
 export type AgeBand = (typeof AGE_BANDS)[number]
 
 export const ageLabel = (band: string) => band === 'Play phase 4-6' ? 'Ages 4–6' : `Ages ${band.replace('-', '–')}`
+
+const AGE_RANGE: Record<AgeBand, [from: number, to: number | null]> = {
+  'Play phase 4-6': [4, 6], '5-11': [5, 11], '12-16': [12, 16], '17-21': [17, 21], '21+': [21, null],
+}
+/** A session's ages in a few words: "Ages 12–16", "Ages 5–16", "Ages 5 and up", "Every age".
+ *  Neighbouring age groups join into one range. */
+export function agesLabel(ages: string[]): string {
+  const bands = AGE_BANDS.filter(b => ages.includes(b))
+  if (bands.length === 0 || bands.length === AGE_BANDS.length) return 'Every age'
+  const runs: AgeBand[][] = []
+  bands.forEach(band => {
+    const last = runs[runs.length - 1]
+    if (last && AGE_BANDS.indexOf(band) === AGE_BANDS.indexOf(last[last.length - 1]) + 1) last.push(band)
+    else runs.push([band])
+  })
+  return `Ages ${runs.map(run => {
+    const from = AGE_RANGE[run[0]][0], to = AGE_RANGE[run[run.length - 1]][1]
+    return to === null ? `${from} and up` : `${from}–${to}`
+  }).join(', ')}`
+}
 export const formatLabel = (format: string) => `${format.replace(' Per Side', '').replace('-', '–')} a side`
 
 /** A squad's age group ("U14") as the catalogue's age group, or null when it can't tell. */
@@ -133,7 +153,7 @@ export const weekOf = (session: LibrarySession) => WEEK[session.programme_week] 
 /** "Ages 12–16 · 14 players · 44×30-yard pitch": what a coach checks before picking a session. */
 export function factsLine(session: LibrarySession) {
   return [
-    session.ages.length ? session.ages.map(ageLabel).join(', ') : 'Every age',
+    agesLabel(session.ages),
     playersOf(session) ?? sizeOf(session),
     pitchOf(session),
   ].filter(Boolean).join(' · ')
