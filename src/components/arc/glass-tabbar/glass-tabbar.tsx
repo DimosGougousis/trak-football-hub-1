@@ -265,7 +265,8 @@ export function GlassTabBar({ items, value: valueProp, defaultValue, onValueChan
           buttonRef={el => { buttons.current[i] = el; }}
           onSelect={() => { if (suppressClick.current) { suppressClick.current = false; return; } select(item.value); }} />)}
       </motion.div>
-      {actionNode ? <motion.div className={styles.slotNode} style={{ width: height, height }}>{actionNode}</motion.div>
+      {/* Trak (Imad, 23 Oct): the slot wears the bar's own glass, as the action bubble does; the control sits on it. */}
+      {actionNode ? <motion.div className={styles.slotNode} style={{ width: height, height }}><span className={styles.material} aria-hidden />{actionNode}</motion.div>
         : action ? <motion.div className={styles.bubble} style={{ width: height, height }} data-active={actionSelected || undefined}>
         <span className={styles.material} aria-hidden />
         <span className={styles.bubbleLens} aria-hidden />
