@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink, MapPin, ClipboardCheck, ClipboardList } from 'lucide-react'
-import { ButtonGroup, type ButtonGroupItem, type ButtonGroupMenuItem } from '@/components/arc/button-group/button-group'
+import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { EventSheet } from '@/components/trak/EventSheet'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
@@ -301,6 +302,8 @@ export default function CoachSchedule() {
   // TRAK-85: parked, so actions say "Coming soon" and send nothing.
   const { parked, comingSoon } = useParked()
   const navigate = useNavigate()
+  // TRAK-275: a card's actions carry words only where the side menu shows (a laptop).
+  const wide = useSideMenuScreen()
   const { user } = useAuth()
   // TRAK-176: the squad picked; its events and the whole-roster ones show, and new ones are saved for it.
   const coachSquad = useCoachSquad(user?.id)
@@ -839,10 +842,10 @@ export default function CoachSchedule() {
                 const waiting = !!row && row.published && !cancelled && started && !sessionId && (row.event_type === 'match' || !registerProblem(row))
                 const shareText = row?.published ? whatsAppShareText(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames }) : null
                 const guarded = (fn: () => void) => () => (parked ? comingSoon() : fn())
-                // TRAK-272 (Tarek, 23 Oct): the event's actions as one Arc Button group, in words, the next step
-                // first; Cancel and Delete wait behind its menu. Each keeps its full name ("Publish Shooting").
+                // TRAK-272, TRAK-275 (Tarek, 23 Oct): the event's actions as one Arc Button group at the card's top
+                // right, the next step first and Cancel or Delete last. A phone shows the icons only; a laptop adds
+                // the words. Each keeps its full name ("Publish Shooting") as its accessible name and tooltip.
                 const items: ButtonGroupItem[] = []
-                const more: ButtonGroupMenuItem[] = []
                 if (!row) {
                   items.push({ id: 'edit', label: `Edit ${ev.title}`, content: 'Edit', icon: <Pencil />, onSelect: () => navigate(`/coach/sessions/${ev.id}`) })
                 } else {
@@ -855,15 +858,16 @@ export default function CoachSchedule() {
                         state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
                       })) })
                   // TRAK-139, TRAK-168: the phone's share sheet (Viber or WhatsApp; WhatsApp's link without one). Trak sends nothing.
-                  if (shareText) items.push({ id: 'share', label: `Share ${row.title}`, content: 'Share', icon: <ShareIcon size={16} />, onSelect: guarded(() => shareEventText(shareText)) })
+                  if (shareText) items.push({ id: 'share', label: `Share ${row.title}`, content: 'Share', icon: <ShareIcon size={16} tight />, onSelect: guarded(() => shareEventText(shareText)) })
                   // TRAK-230: once started, what families were told is fixed.
                   if (!cancelled && !startedLocked(row)) items.push({ id: 'edit', label: `Edit ${row.title}`, content: 'Edit', icon: <Pencil />, onSelect: () => openEdit(row) })
-                  if (!cancelled && canDelete(row)) more.push({ id: 'delete', label: 'Delete draft', icon: <Trash2 />, destructive: true, onSelect: () => void deleteDraft(row) })
-                  else if (!cancelled && !startedLocked(row)) more.push({ id: 'cancel', label: 'Cancel event', icon: <Ban />, destructive: true,
-                    onSelect: () => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null }) })
+                  if (!cancelled && canDelete(row)) items.push({ id: 'delete', label: `Delete ${row.title}`, content: 'Delete',
+                    icon: <Trash2 color="rgb(var(--t-danger))" />, onSelect: () => void deleteDraft(row) })
+                  else if (!cancelled && !startedLocked(row)) items.push({ id: 'cancel', label: `Cancel ${row.title}`, content: 'Cancel',
+                    icon: <Ban color="rgb(var(--t-danger))" />, onSelect: () => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null }) })
                 }
-                // The next step leads in the solid group: publish a draft, or a register or match log that waits.
-                const nextStep = (!!row && !row.published && !cancelled) || waiting
+                // TRAK-275: icons alone on a phone (content would show the word, so it goes too).
+                const groupItems = items.map(item => (wide ? item : { ...item, iconOnly: true, content: undefined }))
                 // TRAK-272: the card opens the same event sheet as coach Home's week (CoachWeekStrip).
                 const sheetSource = row ?? { id: `session:${ev.id}`, published: true, title: ev.title, event_date: ev.date, event_type: ev.type, ...(ev.venue && { venue: ev.venue }) }
                 const base = toPlayerEvent(sheetSource as unknown as Record<string, unknown>)
@@ -953,13 +957,13 @@ export default function CoachSchedule() {
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-0.5 text-ink-3" style={font}>{row.cancel_reason}</p>
                       )}
-                      {items.length > 0 && (
-                        <div className="arc mt-3">
-                          <ButtonGroup label={`Actions for ${ev.title}`} items={items} variant={nextStep ? 'solid' : 'outline'} size="md"
-                            menu={more.length ? { label: `More actions for ${ev.title}`, items: more } : undefined} />
-                        </div>
-                      )}
                     </div>
+                    {/* TRAK-275: outline always; a draft or a waiting register is never a black block. */}
+                    {items.length > 0 && (
+                      <div className="arc flex-shrink-0">
+                        <ButtonGroup label={`Actions for ${ev.title}`} items={groupItems} variant="outline" size="md" />
+                      </div>
+                    )}
                   </div>
                 )
               })}

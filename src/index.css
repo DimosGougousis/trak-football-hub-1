@@ -169,7 +169,7 @@
     --t-warning: 138 83 0;
     /* TRAK-270 (Tarek, 23 Oct): "needs you" marks in a clear yellow. A mark only, never text:
        its edge and any words beside it stay --t-warning for contrast. */
-    --t-attention: 236 228 0; /* TRAK-271: Tarek's #ECE400 */
+    --t-attention: 234 179 8; /* TRAK-275: back to TRAK-270's #EAB308 (Tarek, 23 Oct) */
     --t-orange: 156 69 22;
     --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
     --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
@@ -249,7 +249,7 @@
   --t-line: 30 30 33; --t-line-strong: 72 72 76;
   --t-brand: 200 242 90; --t-on-brand: 0 0 0;
   --t-danger: 248 113 113; --t-success: 74 222 128; --t-info: 96 165 250;
-  --t-warning: 251 191 36; --t-attention: 236 228 0; --t-orange: 251 146 60;
+  --t-warning: 251 191 36; --t-attention: 250 204 21; --t-orange: 251 146 60;
   --background: 0 0% 4%; --foreground: 0 0% 100%;
   --card: 240 4% 6.5%; --card-foreground: 0 0% 100%;
   --muted: 240 3% 10%; --muted-foreground: 0 0% 60%;
