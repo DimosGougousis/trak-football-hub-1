@@ -271,6 +271,8 @@ test('the "+" grows into its menu with a close button, and Escape folds it back'
     await page.screenshot({ path: testInfo.outputPath(`coach-create-${width}.png`) })
     await page.keyboard.press('Escape')
     await expect(page.getByRole('menu', { name })).toBeVisible()
+    // Focus comes back to the first row two frames after the form folds; on a slow runner a key pressed sooner lands on the page.
+    await expect(page.getByRole('menu', { name }).getByRole('menuitem').first()).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
     await expect(page.getByRole('menu', { name })).toHaveCount(0)
