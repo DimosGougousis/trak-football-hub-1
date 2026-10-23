@@ -108,8 +108,11 @@ afterEach(() => {
 
 const labelOf = (b: HTMLElement) => (b.getAttribute('aria-label') || b.textContent || '').replace(/\s+/g, ' ').trim()
 
-async function clickEveryAction(): Promise<string[]> {
+// The "Coming soon" toast closes itself after 4 s, and on a loaded CI runner the walk's later
+// clicks take longer than that (#438's gate, 23 Oct), so the walk notes it when it shows.
+async function clickEveryAction(): Promise<{ clicked: string[]; saidComingSoon: boolean }> {
   const clicked: string[] = []
+  let saidComingSoon = false
   // Choosing in a dropdown sends nothing; it unlocks the screen's action.
   for (const select of screen.queryAllByRole('combobox')) {
     const options = [...(select as HTMLSelectElement).options].filter(o => o.value)
@@ -120,14 +123,17 @@ async function clickEveryAction(): Promise<string[]> {
     for (const box of screen.queryAllByRole('textbox')) {
       if (!(box as HTMLInputElement).value) await userEvent.type(box, 'Synthetic text')
     }
-    const next = screen.queryAllByRole('button')
-      .find(b => !(b as HTMLButtonElement).disabled && !NAVIGATION.test(labelOf(b)) && !clicked.includes(labelOf(b)))
+    // TRAK-272: a button that opens a sheet (a Schedule card's title) only shows details, so it is
+    // navigation; an open menu's items (a card's Delete behind More) are actions like any button.
+    const next = [...screen.queryAllByRole('menuitem'), ...screen.queryAllByRole('button')]
+      .find(b => !(b as HTMLButtonElement).disabled && b.getAttribute('aria-haspopup') !== 'dialog' && !NAVIGATION.test(labelOf(b)) && !clicked.includes(labelOf(b)))
     if (!next) break
     clicked.push(labelOf(next))
     await userEvent.click(next)
     await act(async () => { await new Promise(r => setTimeout(r, 20)) })
+    if (screen.queryAllByText(COMING_SOON_DETAIL).length) saidComingSoon = true
   }
-  return clicked
+  return { clicked, saidComingSoon }
 }
 
 const draft = { points: [{ title: 'First touch', what: 'Receive on the back foot', why: 'Time', drill: 'Rondo' }],
@@ -169,14 +175,13 @@ describe('TRAK-85 parked screens: actions say "Coming soon" and send nothing', (
     await waitFor(() => expect(screen.queryAllByRole('button')
       .some(b => expected[0].test(labelOf(b)) && !(b as HTMLButtonElement).disabled)).toBe(true), { timeout: 4000 })
 
-    const clicked = await clickEveryAction()
+    const { clicked, saidComingSoon } = await clickEveryAction()
     for (const action of expected) expect(clicked.some(label => action.test(label)), `${action} among ${JSON.stringify(clicked)}`).toBe(true)
 
     expect(sent()).toEqual([])
     expect(share).not.toHaveBeenCalled()
     expect(clipboard).not.toHaveBeenCalled()
     expect(canvas).not.toHaveBeenCalled()
-    // 4 s like the waits above: under the full suite's load 1 s was too short (TRAK-211's gate runs).
-    expect(await screen.findAllByText(COMING_SOON_DETAIL, {}, { timeout: 4000 })).not.toHaveLength(0)
+    expect(saidComingSoon, 'a click showed "Coming soon"').toBe(true)
   }, 20000)
 })

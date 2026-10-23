@@ -481,6 +481,12 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
     // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
     await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
+    // TRAK-272: a card's actions are a button group big enough to tap, and tapping the card opens its sheet.
+    const share = page.getByRole('group', { name: 'Actions for League' }).getByRole('button', { name: 'Share League' })
+    expect((await share.boundingBox())!.height).toBeGreaterThanOrEqual(36)
+    await page.getByText('Kit: White shirts, black shorts').click()
+    // A match's sheet is titled by its opponent, as on coach Home.
+    await expect(page.getByRole('dialog', { name: 'vs Rivals FC' })).toBeVisible()
     expect(unexpected).toEqual([])
   })
 

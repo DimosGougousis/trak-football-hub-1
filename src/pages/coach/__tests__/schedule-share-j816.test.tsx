@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -64,71 +64,80 @@ function fixtures() {
   )
 }
 
-const shareLink = (title: string) => screen.queryByRole('link', { name: `Share ${title}` })
-const sharedText = (link: HTMLElement) => {
-  const href = link.getAttribute('href') ?? ''
-  expect(href.startsWith('https://wa.me/?text=')).toBe(true)
-  return decodeURIComponent(href.slice('https://wa.me/?text='.length))
+// TRAK-272: Share is a button in each card's button group. Without the phone's share sheet (as here) it
+// opens WhatsApp's link in a new tab, so Trak stays open; the test reads the link it opens.
+const opened: { url: string; target?: string }[] = []
+const shareButton = (title: string) => screen.queryByRole('button', { name: `Share ${title}` })
+const sharedText = async (button: HTMLElement) => {
+  await userEvent.click(button)
+  const url = opened.at(-1)?.url ?? ''
+  expect(url.startsWith('https://wa.me/?text=')).toBe(true)
+  return decodeURIComponent(url.slice('https://wa.me/?text='.length))
 }
 
 describe('J8.16: Share to WhatsApp on the coach schedule', () => {
-  beforeEach(() => signInAs(COACH))
+  beforeEach(() => {
+    signInAs(COACH)
+    opened.length = 0
+    vi.spyOn(window, 'open').mockImplementation(((url?: string | URL, target?: string) => { opened.push({ url: String(url), target }); return null }) as typeof window.open)
+  })
+  afterEach(() => vi.restoreAllMocks())
 
   it('pre-writes a published match for the group: squad, time, venue, meet time, kit', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 Match vs Synthetic Rovers \(Away\)\*/))
-    const text = sharedText(link)
+    const link = await screen.findByRole('button', { name: 'Share vs Synthetic Rovers' })
+    await waitFor(async () => expect(await sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 Match vs Synthetic Rovers \(Away\)\*/))
+    const text = await sharedText(link)
         expect(text).toContain('Venue: Rovers Park')
     expect(text).toContain('⏰ Meet Time: 17:45 | Kick-off: 18:30')
     expect(text).toContain('Kit: White')
     // TRAK-168: the link opens this event, not Home.
     expect(text).toContain('🔗 Confirm availability: https://trakfootball.com/event/live-1')
-    expect(link).toHaveAttribute('target', '_blank')
+    expect(opened.at(-1)?.target).toBe('_blank')
   })
 
   it('shares a cancellation with its reason', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share Training' })
+    const link = await screen.findByRole('button', { name: 'Share Training' })
     // The reason waits for the squad's names (the child-name check).
-    await waitFor(() => expect(sharedText(link)).toContain('Reason: Pitch closed'))
-    expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/)
+    await waitFor(async () => expect(await sharedText(link)).toContain('Reason: Pitch closed'))
+    expect(await sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/)
   })
 
   it('offers nothing to share for a draft only the coach can see', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    await screen.findByRole('link', { name: 'Share vs Synthetic Rovers' })
-    expect(shareLink('Finishing')).toBeNull()
+    await screen.findByRole('button', { name: 'Share vs Synthetic Rovers' })
+    expect(shareButton('Finishing')).toBeNull()
   })
 
   it('never puts a child\'s name or a coach note in the message', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share vs Synthetic Rovers' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 /))
-    for (const l of screen.getAllByRole('link', { name: /^Share / })) {
-      expect(sharedText(l)).not.toMatch(/Omar|Lucas|Zara|bench/)
+    const link = await screen.findByRole('button', { name: 'Share vs Synthetic Rovers' })
+    await waitFor(async () => expect(await sharedText(link)).toMatch(/^\*⚔️ MATCH \| U15 /))
+    for (const l of screen.getAllByRole('button', { name: /^Share / })) {
+      expect(await sharedText(l)).not.toMatch(/Omar|Lucas|Zara|bench/)
     }
   })
 
   it('leaves out a cancel reason that names a child on the squad, and still shares the cancellation', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share Recovery' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/))
-    expect(sharedText(link)).not.toMatch(/Reason:|Lucas/)
+    const link = await screen.findByRole('button', { name: 'Share Recovery' })
+    await waitFor(async () => expect(await sharedText(link)).toMatch(/^\*❌ CANCELLED \| U15 Training\*/))
+    expect(await sharedText(link)).not.toMatch(/Reason:|Lucas/)
   })
 
   it('leaves out every reason, and titles the squad "Squad", when the squad read fails', async () => {
     fixtures()
     server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
     renderApp('/coach/schedule')
-    const link = await screen.findByRole('link', { name: 'Share Training' })
-    await waitFor(() => expect(sharedText(link)).toMatch(/^\*❌ CANCELLED \| Squad Training\*/))
-    expect(sharedText(link)).not.toContain('Reason:')
+    const link = await screen.findByRole('button', { name: 'Share Training' })
+    await waitFor(async () => expect(await sharedText(link)).toMatch(/^\*❌ CANCELLED \| Squad Training\*/))
+    expect(await sharedText(link)).not.toContain('Reason:')
   })
 
   it('says "Coming soon" instead of sharing while events are off for the academy', async () => {

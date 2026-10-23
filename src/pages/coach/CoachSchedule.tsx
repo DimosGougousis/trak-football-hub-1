@@ -1,6 +1,13 @@
-import { useEffect, useState, useMemo } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink, MapPin } from 'lucide-react'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink, MapPin, ClipboardCheck, ClipboardList } from 'lucide-react'
+import { ButtonGroup, type ButtonGroupItem, type ButtonGroupMenuItem } from '@/components/arc/button-group/button-group'
+import { EventSheet } from '@/components/trak/EventSheet'
+import type { StripEvent } from '@/components/trak/WeekStrip'
+import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
+import { LoggedAttendance } from '@/components/coach/LoggedAttendance'
+import { toPlayerEvent } from '@/lib/player-events'
+import { BackButton } from '@/pages/coach/library/parts'
 import { isMapsUrl, joinVenue, splitVenue, venueParts } from '@/lib/venue-link'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
@@ -27,6 +34,7 @@ import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '
 import type { Fixture } from '@/lib/fixtures-csv'
 import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
+import { shareEventText } from '@/lib/share-event'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
@@ -424,6 +432,9 @@ export default function CoachSchedule() {
 
   const selectedEvents = byDate[selected] ?? []
 
+  // TRAK-272: each card's sheet trigger (its title), so a tap anywhere on the card opens it.
+  const cardTriggers = useRef(new Map<string, HTMLButtonElement>())
+
   // TRAK-255: a day waits for the coach while an event that has started has no register (training,
   // other) or no match log (match): the same rules as its Take register and Log match buttons.
   const needsYou = useMemo(() => {
@@ -727,10 +738,14 @@ export default function CoachSchedule() {
 
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-[22px] font-light text-ink tracking-tight"
-            style={{ ...font, letterSpacing: '-0.02em' }}>
-            Schedule
-          </h1>
+          <div className="flex items-center gap-2">
+            {/* TRAK-272: a phone has no Schedule tab, so a Back (where the coach came from, else Home). A laptop has the sidebar. */}
+            <div className="laptop:hidden"><BackButton fallback="/coach/home" label="Back" /></div>
+            <h1 className="text-[22px] font-light text-ink tracking-tight"
+              style={{ ...font, letterSpacing: '-0.02em' }}>
+              Schedule
+            </h1>
+          </div>
           <div className="flex items-center gap-2">
             {/* TRAK-162: the CSV import is parked; no coach is offered it. */}
             {FIXTURE_IMPORT_ENABLED && <button
@@ -818,19 +833,77 @@ export default function CoachSchedule() {
                   : startedLocked(row) ? { text: 'Started · details fixed', color: 'rgb(var(--t-ink-2))', fill: 'rgb(var(--t-raised))' }
                   : { text: 'Published', color: 'rgb(var(--t-brand))', fill: 'transparent' }
                 const place = ev.venue ? venueParts(ev.venue) : null
-                const pending = 'mt-2 inline-flex items-center min-h-8 px-3 rounded-full text-[11px] font-medium'
-                const pendingStyle = { ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-attention) / 0.22)', border: `1.5px solid ${NEEDS_YOU_COLOR}` }
+                const sessionId = row ? registerSession.get(row.id) : undefined
+                const started = !!row && hasStarted(row)
+                // Waiting for the coach: the same rule as the month's corner (needsYou).
+                const waiting = !!row && row.published && !cancelled && started && !sessionId && (row.event_type === 'match' || !registerProblem(row))
+                const shareText = row?.published ? whatsAppShareText(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames }) : null
+                const guarded = (fn: () => void) => () => (parked ? comingSoon() : fn())
+                // TRAK-272 (Tarek, 23 Oct): the event's actions as one Arc Button group, in words, the next step
+                // first; Cancel and Delete wait behind its menu. Each keeps its full name ("Publish Shooting").
+                const items: ButtonGroupItem[] = []
+                const more: ButtonGroupMenuItem[] = []
+                if (!row) {
+                  items.push({ id: 'edit', label: `Edit ${ev.title}`, content: 'Edit', icon: <Pencil />, onSelect: () => navigate(`/coach/sessions/${ev.id}`) })
+                } else {
+                  if (!row.published && !cancelled) items.push({ id: 'publish', label: `Publish ${row.title}`, content: 'Publish', icon: <Send />, onSelect: () => publish(row) })
+                  if (!registerProblem(row)) items.push({ id: 'register', label: `${sessionId ? 'Edit register' : 'Take register'} for ${row.title}`,
+                    content: sessionId ? 'Edit register' : 'Take register', icon: <ClipboardCheck />, onSelect: guarded(() => setSheet({ kind: 'register', row })) })
+                  if (row.event_type === 'match' && row.published && !cancelled && started) items.push(sessionId
+                    ? { id: 'match', label: `Edit match for ${row.title}`, content: 'Edit match', icon: <Pencil />, onSelect: () => navigate(`/coach/sessions/${sessionId}`) }
+                    : { id: 'match', label: `Log match for ${row.title}`, content: 'Log match', icon: <ClipboardList />, onSelect: guarded(() => navigate('/coach/sessions/quick', {
+                        state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
+                      })) })
+                  // TRAK-139, TRAK-168: the phone's share sheet (Viber or WhatsApp; WhatsApp's link without one). Trak sends nothing.
+                  if (shareText) items.push({ id: 'share', label: `Share ${row.title}`, content: 'Share', icon: <ShareIcon size={16} />, onSelect: guarded(() => shareEventText(shareText)) })
+                  // TRAK-230: once started, what families were told is fixed.
+                  if (!cancelled && !startedLocked(row)) items.push({ id: 'edit', label: `Edit ${row.title}`, content: 'Edit', icon: <Pencil />, onSelect: () => openEdit(row) })
+                  if (!cancelled && canDelete(row)) more.push({ id: 'delete', label: 'Delete draft', icon: <Trash2 />, destructive: true, onSelect: () => void deleteDraft(row) })
+                  else if (!cancelled && !startedLocked(row)) more.push({ id: 'cancel', label: 'Cancel event', icon: <Ban />, destructive: true,
+                    onSelect: () => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null }) })
+                }
+                // The next step leads in the solid group: publish a draft, or a register or match log that waits.
+                const nextStep = (!!row && !row.published && !cancelled) || waiting
+                // TRAK-272: the card opens the same event sheet as coach Home's week (CoachWeekStrip).
+                const sheetSource = row ?? { id: `session:${ev.id}`, published: true, title: ev.title, event_date: ev.date, event_type: ev.type, ...(ev.venue && { venue: ev.venue }) }
+                const base = toPlayerEvent(sheetSource as unknown as Record<string, unknown>)
+                const sheetEvent: StripEvent | null = base && { ...base, draft: !!row && !row.published, sessionId: row ? undefined : ev.id }
+                const titleText = (
+                  <p className="text-[14px] font-medium truncate"
+                    style={{ color: 'rgb(var(--t-ink))', ...font, textDecoration: cancelled ? 'line-through' : undefined }}>
+                    {ev.title}
+                  </p>
+                )
                 return (
                   <div key={ev.id}
-                    className="rounded-[14px] px-4 py-3 flex items-start gap-3"
+                    onClick={event => {
+                      // The card opens its sheet; its own buttons and links do what they say.
+                      if ((event.target as HTMLElement).closest('button, a, [role="menuitem"], [role="group"]')) return
+                      cardTriggers.current.get(ev.id)?.click()
+                    }}
+                    className="rounded-[14px] px-4 py-3 flex items-start gap-3 cursor-pointer"
                     style={{ background: 'rgb(var(--t-surface))', border: row && !row.published && !cancelled ? '1.5px dashed rgb(var(--t-line-strong))' : '1px solid rgb(var(--t-line))' }}>
                     <div className="w-1 self-stretch rounded-full flex-shrink-0"
                       style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium truncate"
-                        style={{ color: 'rgb(var(--t-ink))', ...font, textDecoration: cancelled ? 'line-through' : undefined }}>
-                        {ev.title}
-                      </p>
+                      {sheetEvent ? (
+                        <EventSheet event={sheetEvent} role="coach" trigger={
+                          <button type="button" ref={node => { if (node) cardTriggers.current.set(ev.id, node); else cardTriggers.current.delete(ev.id) }}
+                            className="block max-w-full text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                            {titleText}
+                          </button>}>
+                          {/* A logged session's sheet says so, shows who came and opens its record, as on coach Home. */}
+                          {sheetEvent.sessionId
+                            ? <>
+                                <Link to={`/coach/sessions/${sheetEvent.sessionId}`}
+                                  className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
+                                  Open session
+                                </Link>
+                                {user && <LoggedAttendance sessionId={sheetEvent.sessionId} coachId={user.id} />}
+                              </>
+                            : user && <EventSheetCoach event={sheetEvent} coachId={user.id} onChanged={() => void loadData()} />}
+                        </EventSheet>
+                      ) : titleText}
                       <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
                         {/* TRAK-159: a scheduled event says its time, or that it has none. */}
                         {ev.time
@@ -851,18 +924,25 @@ export default function CoachSchedule() {
                           <MapPin size={13} aria-hidden="true" />Open in Maps
                         </a>
                       )}
-                      {ev.source === 'session' && (
-                        <span className="text-[8px] tracking-[0.06em] uppercase mt-0.5 inline-block"
-                          style={{ color: 'rgb(var(--t-ink-3))', ...mono }}>
-                          Logged
-                        </span>
-                      )}
-                      {state && (
-                        <span className={`mt-1 block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium ${cancelled ? 'text-danger' : ''}`}
-                          style={{ color: state.color, background: state.fill, border: `1px ${row && !row.published && !cancelled ? 'dashed' : 'solid'} ${'edge' in state ? state.edge : state.color}`, ...font }}>
-                          {state.text}
-                        </span>
-                      )}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {state && (
+                          <span className={`block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium ${cancelled ? 'text-danger' : ''}`}
+                            style={{ color: state.color, background: state.fill, border: `1px ${row && !row.published && !cancelled ? 'dashed' : 'solid'} ${'edge' in state ? state.edge : state.color}`, ...font }}>
+                            {state.text}
+                          </span>
+                        )}
+                        {!row && (
+                          <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium text-ink-2 bg-raised" style={font}>Logged</span>
+                        )}
+                        {row && row.event_type === 'match' && sessionId && (
+                          <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium text-ink-2 bg-raised" style={font}>Match logged</span>
+                        )}
+                        {/* TRAK-270: the yellow of needs you; its word stays dark for contrast. */}
+                        {waiting && (
+                          <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium"
+                            style={{ ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-attention) / 0.22)', border: `1.5px solid ${NEEDS_YOU_COLOR}` }}>Needs you</span>
+                        )}
+                      </div>
                       {row && !cancelled && clashes.has(row.id) && (() => {
                         const c = clashes.get(row.id)!
                         return <p className="text-[11px] mt-0.5 text-warning" style={font}>
@@ -873,76 +953,13 @@ export default function CoachSchedule() {
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-0.5 text-ink-3" style={font}>{row.cancel_reason}</p>
                       )}
-                      {row && !registerProblem(row) && (
-                        <button onClick={parked ? comingSoon : () => setSheet({ kind: 'register', row })}
-                          aria-label={`${registerSession.has(row.id) ? 'Edit register' : 'Take register'} for ${row.title}`}
-                          className={registerSession.has(row.id) ? 'mt-2 block text-[10px] tracking-[0.08em] uppercase text-brand' : pending}
-                          style={registerSession.has(row.id) ? mono : pendingStyle}>
-                          {registerSession.has(row.id) ? 'Register taken · Edit' : 'Take register'}
-                        </button>
-                      )}
-                      {/* TRAK-138: a logged match is its event, so it's logged once. */}
-                      {row && row.event_type === 'match' && registerSession.has(row.id) && (
-                        <p className="mt-2 text-[10px] tracking-[0.08em] uppercase text-ink-3" style={mono}>Match logged</p>
-                      )}
-                      {row && row.event_type === 'match' && row.published && !cancelled && hasStarted(row) && !registerSession.has(row.id) && (
-                        <button aria-label={`Log match for ${row.title}`}
-                          onClick={parked ? comingSoon : () => navigate('/coach/sessions/quick', {
-                            state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
-                          })}
-                          className={pending} style={pendingStyle}>
-                          Log match
-                        </button>
+                      {items.length > 0 && (
+                        <div className="arc mt-3">
+                          <ButtonGroup label={`Actions for ${ev.title}`} items={items} variant={nextStep ? 'solid' : 'outline'} size="md"
+                            menu={more.length ? { label: `More actions for ${ev.title}`, items: more } : undefined} />
+                        </div>
                       )}
                     </div>
-                    {row && !cancelled && (
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {/* TRAK-230: once started, what families were told is fixed. */}
-                        {!startedLocked(row) && <button onClick={() => openEdit(row)} aria-label={`Edit ${row.title}`}>
-                          <Pencil size={14} color="rgb(var(--t-ink-2))" />
-                        </button>}
-                        {!row.published && (
-                          <button onClick={() => publish(row)} aria-label={`Publish ${row.title}`}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium"
-                            style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))', ...font }}>
-                            <Send size={11} color="rgb(var(--t-on-brand))" />Publish
-                          </button>
-                        )}
-                        {canDelete(row) ? (
-                          <button onClick={() => deleteDraft(row)} aria-label={`Delete ${row.title}`}>
-                            <Trash2 size={14} color="rgb(var(--t-ink-3))" />
-                          </button>
-                        ) : !startedLocked(row) && (
-                          <button onClick={() => setSheet({ kind: 'cancel', row, reason: '', scope: 'one', error: null })}
-                            aria-label={`Cancel ${row.title}`}>
-                            <Ban size={14} color="rgb(var(--t-danger) / 0.8)" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {/* TRAK-139 (J8.16), TRAK-168: Share opens the phone's share sheet (Viber
-                        or WhatsApp; WhatsApp's link without one). Trak sends nothing; the
-                        coach picks the group. Drafts have nothing to share yet. */}
-                    {row?.published && (parked ? (
-                      <button onClick={comingSoon} aria-label={`Share ${row.title}`} className="flex-shrink-0 text-ink-2">
-                        <ShareIcon size={16} />
-                      </button>
-                    ) : (
-                      <ShareEventButton text={whatsAppShareText(shareableFromRow(row, row.squad ?? squad.label), { childNames: squad.childNames })}
-                        aria-label={`Share ${row.title}`} className="flex-shrink-0 text-brand">
-                        <ShareIcon size={16} />
-                      </ShareEventButton>
-                    ))}
-                    {/* TRAK-185: a logged session opens to be corrected (a match's score and stats too). */}
-                    {ev.source === 'session' && (
-                      <button
-                        onClick={() => navigate(`/coach/sessions/${ev.id}`)}
-                        aria-label={`Edit ${ev.title}`}
-                        className="text-[9px] uppercase tracking-[0.08em] flex-shrink-0"
-                        style={{ color: 'rgb(var(--t-ink-3))', ...mono }}>
-                        Edit
-                      </button>
-                    )}
                   </div>
                 )
               })}
