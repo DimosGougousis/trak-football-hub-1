@@ -55,10 +55,11 @@
 .slot[data-state="clash"] .slotMeta { color: rgb(var(--t-danger)); }
 .slot[data-state="logged"] .slotBar { background: var(--text-muted); }
 .slot[data-state="logged"] .slotTitle { color: var(--text-secondary); }
-.slot[data-state="needs-you"]:not([data-selected]) { border-color: rgb(var(--t-warning)); }
+/* TRAK-270 (Tarek, 23 Oct): needs you in a clear yellow; its words stay --t-warning for contrast. */
+.slot[data-state="needs-you"]:not([data-selected]) { border-color: rgb(var(--t-attention)); border-width: 1.5px; }
 .slot[data-state="needs-you"] .slotMeta { color: rgb(var(--t-warning)); font-weight: 500; }
-.day[data-needs-you]::after { content: ""; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-top-right-radius: 4px; background: rgb(var(--t-warning)); clip-path: polygon(0 0, 100% 0, 100% 100%); }
-.legend .needs { width: 8px; height: 8px; border-radius: 0; background: rgb(var(--t-warning)); clip-path: polygon(0 0, 100% 0, 100% 100%); margin-left: 8px; }
+.day[data-needs-you]::after { content: ""; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-top-right-radius: 4px; background: rgb(var(--t-attention)); filter: drop-shadow(0 0 .6px rgb(var(--t-warning))); clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.legend .needs { width: 8px; height: 8px; border-radius: 0; background: rgb(var(--t-attention)); filter: drop-shadow(0 0 .6px rgb(var(--t-warning))); clip-path: polygon(0 0, 100% 0, 100% 100%); margin-left: 8px; }
 .slotCheck { display: grid; flex: none; place-items: center; width: 0; margin-left: -12px; overflow: hidden; color: var(--accent); opacity: 0; transition: width var(--duration-spring) var(--ease-spring), margin var(--duration-spring) var(--ease-spring), opacity var(--duration-fast) var(--ease-standard); }
 .slot[data-selected] .slotCheck { width: 14px; margin-left: 0; opacity: 1; }
 
