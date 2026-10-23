@@ -465,9 +465,9 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
     // TRAK-270 (Tarek, 23 Oct): needs you is a clear yellow, not the warning amber, with a dark edge.
-    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('234 179 8')
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('236 228 0')
     const needsYou = page.getByRole('group', { name: 'Colour key' }).getByText('Needs you').locator('xpath=preceding-sibling::div[1]')
-    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(234, 179, 8)')
+    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(236, 228, 0)')
     await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
     // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
     await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
@@ -488,7 +488,7 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     const flag = cell.locator('[aria-hidden="true"]').filter({ hasNot: page.locator('span') }).first()
     await expect(flag).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
     await expect(flag).toHaveCSS('border-top-right-radius', '4px')
-    await expect(flag).toHaveCSS('background-color', 'rgb(234, 179, 8)')
+    await expect(flag).toHaveCSS('background-color', 'rgb(236, 228, 0)')
     const [f, c] = [(await flag.boundingBox())!, (await cell.boundingBox())!]
     expect(f.x).toBeGreaterThanOrEqual(c.x)
     expect(f.y).toBeGreaterThanOrEqual(c.y)

@@ -25,14 +25,20 @@ export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
    TRAK-231 (20 Oct live run): match magenta, training teal, other green,
    cancelled a brighter red with a hollow dot; tournament takes the blue. The
    green is the lightest that still reads as text on the light screens (4.5:1)
-   and stays apart from the brand's forest green (event-colours-distinct). */
+   and stays apart from the brand's forest green (event-colours-distinct).
+   TRAK-271 (Tarek, 23 Oct): the permanent colours. Training and other were too
+   alike, so training is cyan and other a bright green; match pink-magenta,
+   cancelled red. They are bright (training, other about 1.5:1 on white), so
+   they are marks only (dots, bars, rings, a chip's edge), never text: a type
+   word stays dark beside its dot, "Cancelled" uses the danger token
+   (event-colours-distinct checks it). */
 export const EVENT_COLOR: Record<EventKind | 'tournament', string> = {
-  training:   '#00796B',
-  match:      '#9C1C8C',
-  other:      '#62790A',
+  training:   '#00ECE6',
+  match:      '#EC007E',
+  other:      '#00EC6E',
   tournament: '#3B5BBD',
 }
-export const CANCELLED_COLOR = '#D1242F'
+export const CANCELLED_COLOR = '#EC000A'
 /** "No time set" on a card: a warning, unlike every type colour. */
 export const NO_TIME_COLOR = '#875100'
 export const DURATIONS = [60, 75, 90, 120] as const

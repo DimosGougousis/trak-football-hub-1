@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { CANCELLED_COLOR, EVENT_COLOR, NO_TIME_COLOR } from '../coach-events'
 
 /**
@@ -40,21 +40,34 @@ const token = (name: string) => {
   return `#${[r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')}`
 }
 const SCREENS = { surface: token('surface'), ground: token('ground') }
-const COLOURS = { ...EVENT_COLOR, cancelled: CANCELLED_COLOR, noTime: NO_TIME_COLOR }
 
 describe('event colours on the light theme (TRAK-189)', () => {
-  // TRAK-231 (20 Oct live run) replaces 18 Oct's purple with magenta.
-  it('a match is magenta: red and blue both well above green', () => {
-    const [r, g, b] = hex(EVENT_COLOR.match)
-    expect(r - g).toBeGreaterThan(0.3)
-    expect(b - g).toBeGreaterThan(0.3)
+  // TRAK-271 (Tarek, 23 Oct): the permanent colours. Training and other were too alike (teal and olive).
+  it('are the permanent colours', () => {
+    expect(EVENT_COLOR).toEqual({ training: '#00ECE6', match: '#EC007E', other: '#00EC6E', tournament: '#3B5BBD' })
+    expect(CANCELLED_COLOR).toBe('#EC000A')
+    expect(token('attention')).toBe('#ece400')
   })
 
-  it('every event colour reads as text on cards and on the screen (4.5:1)', () => {
-    for (const [name, colour] of Object.entries(COLOURS)) {
-      for (const [screen, background] of Object.entries(SCREENS)) {
-        expect(contrast(colour, background), `${name} on ${screen}`).toBeGreaterThanOrEqual(4.5)
-      }
+  // TRAK-271: training, other and needs you are bright (about 1.5:1 on white), so no event colour is ever
+  // text: a type word stays dark beside its coloured dot, and a "Cancelled" word uses the danger token.
+  // (Replaces TRAK-189/231's rule that every event colour reads as text at 4.5:1.)
+  it('is never used as a text colour, on any screen', () => {
+    const found: string[] = []
+    const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+      e.isDirectory() ? (e.name === '__tests__' ? [] : walk(join(dir, e.name))) : /\.tsx?$/.test(e.name) && !/\.test\./.test(e.name) ? [join(dir, e.name)] : [])
+    for (const file of walk(resolve(__dirname, '../..'))) {
+      readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+        // A calendar mark ({ color, hollow }) is a dot, not text.
+        if (/\bcolor:\s*[^,}]*\b(TYPE_COLOR|EVENT_COLOR|CANCELLED_COLOR)\b/.test(line) && !/hollow:\s*true/.test(line)) found.push(`${file.split('/src/')[1]}:${i + 1}`)
+      })
+    }
+    expect(found).toEqual([])
+  })
+
+  it('"No time set" (a warning, not a type) still reads as text (4.5:1)', () => {
+    for (const [screen, background] of Object.entries(SCREENS)) {
+      expect(contrast(NO_TIME_COLOR, background), `noTime on ${screen}`).toBeGreaterThanOrEqual(4.5)
     }
   })
 

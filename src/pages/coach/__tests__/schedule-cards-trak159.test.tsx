@@ -65,7 +65,8 @@ describe('TRAK-159: the coach calendar cards', () => {
     renderApp('/coach/schedule')
     await screen.findByText('Rained off', { selector: 'p' })
     const label = within(card('Rained off')).getByText('Cancelled')
-    expect(label.style.color).toBe(hexToRgb(CANCELLED_COLOR))
+    // TRAK-271: the word is the danger red (the event colour is too light for text); the stripe is the event colour.
+    expect(label.className).toContain('text-danger')
     const stripe = card('Rained off').firstElementChild as HTMLElement
     expect(stripe.style.background).toBe(hexToRgb(CANCELLED_COLOR))
     // TRAK-189: not faded as well. On the light theme a 0.7 fade drops the label to
