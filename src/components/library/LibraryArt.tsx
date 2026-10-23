@@ -59,6 +59,20 @@ export function PitchArt({ seed, colour, size, wide = false, className = '' }: {
   )
 }
 
+/** TRAK-268: a Play It Right match moment, on its part's colour: two speech bubbles for
+ *  "make the call", a numbered list for "rank three". */
+export function MomentArt({ colour, size = 48, rank = false }: { colour: string; size?: number; rank?: boolean }) {
+  return (
+    <span aria-hidden className="flex flex-none items-center justify-center rounded-[4px]" style={{ background: colour, width: size, height: size }}>
+      <svg viewBox="0 0 24 24" width={size * 0.56} height={size * 0.56} fill="none" stroke={ON_LIBRARY} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        {rank
+          ? <><path d="M10 6h10M10 12h10M10 18h10" /><path d="M4 5.5l1.2-.8V8M3.8 11.2a1.2 1.2 0 1 1 1.6 1.7L3.8 14.5h2.4M3.8 17h2.2l-1.2 1.4a1 1 0 1 1-1 1.6" strokeWidth={1.4} /></>
+          : <><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h7A2.5 2.5 0 0 1 15 5.5v3A2.5 2.5 0 0 1 12.5 11H8l-3.5 3v-3A2.5 2.5 0 0 1 3 8.5z" /><path d="M18 9h.5A2.5 2.5 0 0 1 21 11.5v3a2.5 2.5 0 0 1-1.5 2.3V20l-3-2.5H13a2.5 2.5 0 0 1-2.5-2.5" /></>}
+      </svg>
+    </span>
+  )
+}
+
 /** A six-week programme as a small stack of cards with "6 weeks" on the front. */
 export function ProgrammeArt({ colour, size, label }: { colour: string; size: number; label?: string }) {
   const lip = Math.max(6, Math.round(size / 18))

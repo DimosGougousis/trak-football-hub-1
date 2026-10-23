@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
@@ -10,7 +9,7 @@ import {
   AGE_BANDS, LIBRARY_PATH, SESSIONS, TOPICS, ageLabel, forAge, formatLabel, libraryByKey, libraryOf, libraryOrder, sessionById,
   squadsAgeBand, titleParts, type Library, type LibrarySession,
 } from '@/lib/library/library'
-import { BackButton, Chip, CloseIcon, ProgrammeRow, SessionDetail, SessionHeading, SessionRow } from './parts'
+import { BackButton, BesideList, Chip, CloseButton, ProgrammeRow, SessionDetail, SessionHeading, SessionRow } from './parts'
 
 /* TRAK-264: one library (Defending, Technical…). Its coloured header, the
    squad's age group as a filter the coach can clear, its topics as tabs, its
@@ -18,8 +17,6 @@ import { BackButton, Chip, CloseIcon, ProgrammeRow, SessionDetail, SessionHeadin
    the list, the way Squad opens a player (TRAK-263), so the coach keeps their place. */
 
 const FORMATS = ['1-4 Per Side', '5-8 Per Side', '9-11 Per Side']
-/** Where a laptop's open session sticks: just under the frame's 60px top bar. */
-const STICK = 72
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 export default function LibraryPage() {
@@ -148,43 +145,14 @@ function Picker({ label, value, onChange, options }: { label: string; value: str
   )
 }
 
-/** On a laptop, Squad's way (TRAK-263): one card with a narrow list on the left and the open session wide
- *  beside it. The session stays in view (sticky, under the frame's top bar) however far down the list
- *  the coach picked it. Nothing open yet says so, as Squad's "Nobody selected" does. */
+/** On a laptop a session opens beside the list, the way Squad opens a player (BesideList). */
 function SessionBrowser({ sessions, open, onOpen, onClose }: {
   sessions: LibrarySession[]; open?: LibrarySession; onOpen: (id: string) => void; onClose: () => void
 }) {
-  const pane = useRef<HTMLDivElement>(null)
-  // Near the end of a long list the open session can only stick as far as the card's bottom, which can
-  // push its top under the frame's top bar; then the page moves up just enough to show it whole.
-  useEffect(() => {
-    if (!open) return
-    const frame = requestAnimationFrame(() => {
-      const top = pane.current?.getBoundingClientRect().top ?? STICK
-      const page = document.scrollingElement ?? document.documentElement
-      if (top < STICK) page.scrollTo({ top: page.scrollTop + top - STICK, behavior: 'smooth' })
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [open])
-
-  return (
-    // No overflow clipping on the card: it would stop the open session from sticking.
-    <div className="grid rounded-[14px] border border-line bg-surface" style={{ gridTemplateColumns: 'minmax(280px, 34%) minmax(0, 1fr)' }}>
-      <ul aria-label="Sessions" className="grid content-start gap-0.5 border-r border-line p-2">
-        {sessions.map(s => <li key={s.id} className="min-w-0"><SessionRow session={s} selected={s.id === open?.id} onSelect={() => onOpen(s.id)} /></li>)}
-      </ul>
-      <div className="min-w-0">
-        <div ref={pane} className="sticky top-[72px] max-h-[calc(100dvh-84px)] overflow-y-auto">
-          {open ? <OpenSession session={open} onClose={onClose} /> : (
-            <div className="flex min-h-[320px] flex-col items-center justify-center gap-1 p-6 text-center">
-              <p className="text-[16px] font-semibold text-ink">No session open</p>
-              <p className="text-[14px] text-ink-2">Pick a session to see it here.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+  return <BesideList label="Sessions" items={sessions} open={open}
+    row={(s, selected) => <SessionRow session={s} selected={selected} onSelect={() => onOpen(s.id)} />}
+    view={s => <OpenSession session={s} onClose={onClose} />}
+    empty={{ title: 'No session open', hint: 'Pick a session to see it here.' }} />
 }
 
 /** The session a laptop's list opened: the same name block and details as its own page. */
@@ -195,10 +163,7 @@ function OpenSession({ session, onClose }: { session: LibrarySession; onClose: (
       <div className="flex items-start gap-5 rounded-[12px] p-5" style={{ background: library.tint }}>
         <PitchArt seed={session.id} colour={library.colour} className="w-24 flex-none xl:w-[132px]" />
         <SessionHeading session={session} level={2} />
-        <button type="button" onClick={onClose} aria-label="Close"
-          className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-surface text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-          <CloseIcon />
-        </button>
+        <CloseButton onClose={onClose} />
       </div>
       <SessionDetail session={session} />
     </article>

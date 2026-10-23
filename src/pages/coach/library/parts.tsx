@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { PitchArt, ProgrammeArt } from '@/components/library/LibraryArt'
 import { useBack } from './useBack'
@@ -205,6 +205,64 @@ export function SessionDetail({ session, compact = false }: { session: LibrarySe
       </div>
       <p className="text-[12px] text-ink-3">From England Football Learning, {session.published}. © The FA</p>
     </div>
+  )
+}
+
+/** Where a laptop's open item sticks: just under the frame's 60px top bar. */
+const STICK = 72
+
+/** On a laptop, Squad's way (TRAK-263, TRAK-267): one card with a narrow list on the left and the open item
+ *  wide beside it. The open item stays in view (sticky, under the frame's top bar) however far down the
+ *  list the coach picked it; nothing open yet says so, as Squad's "Nobody selected" does. Drills and
+ *  Play It Right's match moments both use it. */
+export function BesideList<T extends { id: string }>({ label, items, open, row, view, empty }: {
+  label: string
+  items: T[]
+  open?: T
+  row: (item: T, selected: boolean) => ReactNode
+  view: (item: T) => ReactNode
+  empty: { title: string; hint: string }
+}) {
+  const pane = useRef<HTMLDivElement>(null)
+  // Near the end of a long list the open item can only stick as far as the card's bottom, which can
+  // push its top under the frame's top bar; then the page moves up just enough to show it whole.
+  useEffect(() => {
+    if (!open) return
+    const frame = requestAnimationFrame(() => {
+      const top = pane.current?.getBoundingClientRect().top ?? STICK
+      const page = document.scrollingElement ?? document.documentElement
+      if (top < STICK) page.scrollTo({ top: page.scrollTop + top - STICK, behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open])
+
+  return (
+    // No overflow clipping on the card: it would stop the open item from sticking.
+    <div className="grid rounded-[14px] border border-line bg-surface" style={{ gridTemplateColumns: 'minmax(280px, 34%) minmax(0, 1fr)' }}>
+      <ul aria-label={label} className="grid content-start gap-0.5 border-r border-line p-2">
+        {items.map(item => <li key={item.id} className="min-w-0">{row(item, item.id === open?.id)}</li>)}
+      </ul>
+      <div className="min-w-0">
+        <div ref={pane} className="sticky top-[72px] max-h-[calc(100dvh-84px)] overflow-y-auto">
+          {open ? view(open) : (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-1 p-6 text-center">
+              <p className="text-[16px] font-semibold text-ink">{empty.title}</p>
+              <p className="text-[14px] text-ink-2">{empty.hint}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** The Close button on a laptop's open item. */
+export function CloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button type="button" onClick={onClose} aria-label="Close"
+      className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-surface text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <CloseIcon />
+    </button>
   )
 }
 
