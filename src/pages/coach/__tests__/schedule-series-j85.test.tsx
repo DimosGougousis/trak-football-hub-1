@@ -3,6 +3,7 @@ import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { chooseCardAction, endActions } from '../../../../tests/support/schedule-actions'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -226,7 +227,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
 
   it('cancels only this week, or this and following weeks', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel Training' }))
+    await chooseCardAction('Training', 'Cancel')
     let sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     expect(within(sheet).getByRole('button', { name: 'Only this week' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel event' }))
@@ -236,7 +237,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     // TRAK-168: one cancelled week is offered to the team group; Done closes it.
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel Training' }))
+    await chooseCardAction('Training', 'Cancel')
     sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel event' }))
@@ -283,7 +284,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
   it('deletes only this draft week, never a published one', async () => {
     rows = rows.map(r => ({ ...r, published: false }))
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Training' }))
+    await chooseCardAction('Training', 'Delete')
     const sheet = screen.getByRole('dialog', { name: 'Delete draft' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Only this week' }))
     await waitFor(() => expect(writes).toHaveLength(1))

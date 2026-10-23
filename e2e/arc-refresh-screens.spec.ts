@@ -313,6 +313,62 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
     await expect(panel).toBeHidden()
     expect(unexpected).toEqual([])
   })
+
+  // Imad's 23 Oct phone review: on a scrolled page the quick look rose from under the screen (Motion sometimes placed
+  // the grow from a stale page scroll). It now opens in place: every frame of the opening stays on screen.
+  test('on a scrolled page, an assessment card opens on screen, never from under it', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    await page.getByRole('button', { name: /^Bukayo Saka/ }).click()
+    const trigger = page.locator('article[aria-label^="Bukayo Saka"]').locator('h3 button').first()
+    await trigger.evaluate(el => el.scrollIntoView({ block: 'center' }))
+    const scrolled = await page.evaluate(() => scrollY)
+    expect(scrolled, 'the page must be scrolled for this check to mean anything').toBeGreaterThan(100)
+    // As a coach does: scroll, look, then tap. The stale scroll showed up most after a pause.
+    await page.waitForTimeout(150)
+    await trigger.click()
+    // Every frame for half a second, from the first one the quick look is in the page.
+    const tops = await page.evaluate(() => new Promise<number[]>(resolve => {
+      const seen: number[] = []
+      let start = 0
+      const look = (now: number) => {
+        const panel = document.querySelector('[role="dialog"]')
+        if (panel) { start ||= now; seen.push(panel.getBoundingClientRect().top) }
+        if (start && now - start > 500) resolve(seen); else requestAnimationFrame(look)
+      }
+      requestAnimationFrame(look)
+    }))
+    const height = page.viewportSize()!.height
+    expect(tops.length).toBeGreaterThan(3)
+    expect(Math.max(...tops), `quick look tops ${tops.map(Math.round).join(', ')}, page scrolled ${scrolled}`).toBeLessThan(height / 2)
+    await page.keyboard.press('Escape')
+    expect(unexpected).toEqual([])
+  })
+})
+
+// Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
+// On a phone the profile now takes the list's place, and "All players" returns to the same spot.
+test.describe('Squad Players on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 500 } })
+
+  test("a picked player's profile replaces the list, and All players returns to it", async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    const list = page.getByRole('list', { name: 'Players' })
+    await expect(list).toBeVisible()
+    await page.evaluate(() => scrollTo({ top: 200 }))
+    const before = await page.evaluate(() => scrollY)
+    await page.getByRole('button', { name: /^Thiago Silva/ }).click()
+    const profile = page.locator('article[aria-label^="Thiago Silva"]')
+    await expect(profile).toBeInViewport()
+    await expect(list).toBeHidden()
+    await page.getByRole('button', { name: 'All players' }).click()
+    await expect(list).toBeVisible()
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(before)
+    expect(unexpected).toEqual([])
+  })
 })
 
 // TRAK-221 (20 Oct live run): scrolling the assessment with a finger that
@@ -419,12 +475,18 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
     // TRAK-270 (Tarek, 23 Oct): needs you is a clear yellow, not the warning amber, with a dark edge.
-    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('236 228 0')
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('234 179 8')
     const needsYou = page.getByRole('group', { name: 'Colour key' }).getByText('Needs you').locator('xpath=preceding-sibling::div[1]')
-    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(236, 228, 0)')
+    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(234, 179, 8)')
     await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
     // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
     await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
+    // TRAK-272, TRAK-275: a card's actions are a button group big enough to tap (icons only on a phone), and tapping the card opens its sheet.
+    const share = page.getByRole('group', { name: 'Actions for League' }).getByRole('button', { name: 'Share League' })
+    expect((await share.boundingBox())!.height).toBeGreaterThanOrEqual(36)
+    await page.getByText('Kit: White shirts, black shorts').click()
+    // A match's sheet is titled by its opponent, as on coach Home.
+    await expect(page.getByRole('dialog', { name: 'vs Rivals FC' })).toBeVisible()
     expect(unexpected).toEqual([])
   })
 
@@ -442,7 +504,7 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     const flag = cell.locator('[aria-hidden="true"]').filter({ hasNot: page.locator('span') }).first()
     await expect(flag).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
     await expect(flag).toHaveCSS('border-top-right-radius', '4px')
-    await expect(flag).toHaveCSS('background-color', 'rgb(236, 228, 0)')
+    await expect(flag).toHaveCSS('background-color', 'rgb(234, 179, 8)')
     const [f, c] = [(await flag.boundingBox())!, (await cell.boundingBox())!]
     expect(f.x).toBeGreaterThanOrEqual(c.x)
     expect(f.y).toBeGreaterThanOrEqual(c.y)

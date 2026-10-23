@@ -88,7 +88,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
 
   return <CoachFrameContext.Provider value={frame}>
     <SidebarRail label={club} title={title} narrow={!wide} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen} onWidthChange={setRail}
-      brand={{ name: club, detail: coachSquad.squads.join(' · ') || identity?.team || undefined, logo: <Avatar name={club} size="sm" /> }}
+      brand={{ name: club, logo: <Avatar name={club} size="sm" /> }}
       items={items} footerItem={{ id: 'settings', label: 'Settings', icon: Settings }}
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} size="sm" /> }}
       active={active} onSelect={select} defaultOpen={{ squads: true }}
