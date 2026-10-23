@@ -9,7 +9,7 @@ export const COACH_SCREEN_PATH: Record<CoachScreen, string> = {
 /** Which nav row a path belongs to, and the name in the laptop's top bar. */
 const PLACES: [prefix: string, screen: CoachScreen | null, title: string][] = [
   ['/coach/home', 'home', 'Home'],
-  ['/coach/schedule', 'calendar', 'Calendar'],
+  ['/coach/schedule', 'calendar', 'Schedule'], // TRAK-255
   ['/coach/squad', 'squad', 'Squad'],
   ['/coach/player', 'squad', 'Player'],
   ['/coach/trainings', 'library', 'Library'],

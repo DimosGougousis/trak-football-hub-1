@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { PitchArt } from '@/components/library/LibraryArt'
@@ -6,15 +6,15 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { ON_LIBRARY, ON_LIBRARY_RING } from '@/lib/fixed-colours'
 import {
-  AGE_BANDS, LIBRARY_PATH, SESSIONS, TOPICS, ageLabel, factsLine, forAge, formatLabel, libraryByKey, libraryOf, libraryOrder, pitchOf,
-  playersOf, programmeOf, sessionById, sessionPath, sizeOf, squadsAgeBand, titleParts, weekOf, type Library, type LibrarySession,
+  AGE_BANDS, LIBRARY_PATH, SESSIONS, TOPICS, ageLabel, forAge, formatLabel, libraryByKey, libraryOf, libraryOrder, sessionById,
+  squadsAgeBand, titleParts, type Library, type LibrarySession,
 } from '@/lib/library/library'
-import { ChevronLeft, Chip, CloseIcon, ProgrammeRow, RoundLink, SessionDetail, SessionRow } from './parts'
+import { BackButton, BesideList, Chip, CloseButton, ProgrammeRow, SessionDetail, SessionHeading, SessionRow } from './parts'
 
 /* TRAK-264: one library (Defending, Technical…). Its coloured header, the
    squad's age group as a filter the coach can clear, its topics as tabs, its
-   six-week programmes, then its sessions. On a laptop the sessions are a table,
-   and a session opens in a panel beside it so the coach keeps their place. */
+   six-week programmes, then its sessions. On a laptop a session opens beside
+   the list, the way Squad opens a player (TRAK-263), so the coach keeps their place. */
 
 const FORMATS = ['1-4 Per Side', '5-8 Per Side', '9-11 Per Side']
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
@@ -105,10 +105,7 @@ export default function LibraryPage() {
             <section className="mt-6">
               <h2 className="mb-2 text-[20px] font-bold text-ink">Sessions</h2>
               {wide
-                ? <div className="flex items-start gap-6">
-                    <SessionTable sessions={sessions} open={open} onOpen={id => set({ session: id })} />
-                    {open && <SessionPanel session={open} onClose={() => set({ session: null })} />}
-                  </div>
+                ? <SessionBrowser sessions={sessions} open={open} onOpen={id => set({ session: id })} onClose={() => set({ session: null })} />
                 : <div className="grid gap-1 tablet:grid-cols-2 tablet:gap-x-2">
                     {sessions.map(s => <SessionRow key={s.id} session={s} />)}
                   </div>}
@@ -125,7 +122,7 @@ function Header({ library, sessions, topics }: { library: Library; sessions: num
     <header className="relative -mx-5 overflow-hidden px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-[12px] tablet:px-7 tablet:pt-6"
       style={{ background: library.colour, color: ON_LIBRARY }}>
       <span aria-hidden className="absolute -right-10 -bottom-16 h-52 w-52 rounded-full border-2 tablet:-right-16 tablet:-bottom-24 tablet:h-[300px] tablet:w-[300px]" style={{ borderColor: ON_LIBRARY_RING }} />
-      <RoundLink to={LIBRARY_PATH} label="Back to Library" onColour><ChevronLeft /></RoundLink>
+      <BackButton fallback={LIBRARY_PATH} label="Back" onColour />
       <p className="mt-14 text-[12px] font-semibold tracking-[0.1em] tablet:mt-16">LIBRARY</p>
       <h1 className="mt-0.5 text-[40px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[54px]">{library.label}</h1>
       <p className="mt-2 text-[14px] font-medium tablet:text-[16px]">{plural(sessions, 'session')} · {plural(topics, 'topic')}</p>
@@ -148,67 +145,27 @@ function Picker({ label, value, onChange, options }: { label: string; value: str
   )
 }
 
-const programmeCell = (s: LibrarySession) => {
-  const programme = programmeOf(s)
-  return programme ? `${titleParts(programme).title} · week ${weekOf(s)}` : weekOf(s) ? `Week ${weekOf(s)}` : 'On its own'
+/** On a laptop a session opens beside the list, the way Squad opens a player (BesideList). */
+function SessionBrowser({ sessions, open, onOpen, onClose }: {
+  sessions: LibrarySession[]; open?: LibrarySession; onOpen: (id: string) => void; onClose: () => void
+}) {
+  return <BesideList label="Sessions" items={sessions} open={open}
+    row={(s, selected) => <SessionRow session={s} selected={selected} onSelect={() => onOpen(s.id)} />}
+    view={s => <OpenSession session={s} onClose={onClose} />}
+    empty={{ title: 'No session open', hint: 'Pick a session to see it here.' }} />
 }
 
-/** The laptop's table, like Spotify's playlist rows: number, session, programme, players, pitch. */
-function SessionTable({ sessions, open, onOpen }: { sessions: LibrarySession[]; open?: LibrarySession; onOpen: (id: string) => void }) {
+/** The session a laptop's list opened: the same name block and details as its own page. */
+function OpenSession({ session, onClose }: { session: LibrarySession; onClose: () => void }) {
+  const library = libraryOf(session)
   return (
-    <table className="min-w-0 flex-1 text-left text-[14px] text-ink">
-      <thead>
-        <tr className="h-9 border-b border-line text-[13px] text-ink-3">
-          <th className="w-10 pr-3 text-right font-normal">#</th>
-          <th className="pr-3 font-normal">Session</th>
-          <th className="pr-3 font-normal">Programme</th>
-          <th className="pr-3 font-normal">Players</th>
-          {!open && <th className="font-normal">Pitch</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {sessions.map((s, i) => {
-          const selected = s.id === open?.id
-          return (
-            <tr key={s.id} className={selected ? 'bg-raised' : 'hover:bg-raised'} style={selected ? { boxShadow: 'inset 3px 0 0 rgb(var(--t-brand))' } : undefined}>
-              <td className={`py-2 pr-3 text-right ${selected ? 'font-semibold text-brand' : 'text-ink-3'}`}>{i + 1}</td>
-              <td className="py-2 pr-3">
-                <button type="button" onClick={() => onOpen(s.id)} aria-pressed={selected}
-                  className="flex items-center gap-3 rounded-[6px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <PitchArt seed={s.id} colour={libraryOf(s).colour} size={42} />
-                  <span className={`text-[15px] font-semibold ${selected ? 'text-brand' : ''}`}>{titleParts(s).title}</span>
-                </button>
-              </td>
-              <td className="py-2 pr-3 text-ink-2">{programmeCell(s)}</td>
-              <td className="py-2 pr-3">{playersOf(s)?.replace(/\s*players?$/i, '') ?? sizeOf(s)}</td>
-              {!open && <td className="py-2 text-ink-2">{pitchOf(s)?.replace('-yard pitch', ' yards') ?? '—'}</td>}
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  )
-}
-
-/** On a laptop: the session beside the table, with everything its own page shows. */
-function SessionPanel({ session, onClose }: { session: LibrarySession; onClose: () => void }) {
-  const { label, title } = titleParts(session)
-  return (
-    <aside aria-label={title} className="sticky top-[76px] grid w-[380px] flex-none gap-4 rounded-[12px] border border-line bg-surface p-5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[13px] text-ink-2">{label}</span>
-        <button type="button" onClick={onClose} aria-label="Close"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-raised text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-          <CloseIcon />
-        </button>
+    <article aria-label={titleParts(session).title} className="grid gap-6 p-6">
+      <div className="flex items-start gap-5 rounded-[12px] p-5" style={{ background: library.tint }}>
+        <PitchArt seed={session.id} colour={library.colour} className="w-24 flex-none xl:w-[132px]" />
+        <SessionHeading session={session} level={2} />
+        <CloseButton onClose={onClose} />
       </div>
-      <PitchArt seed={session.id} colour={libraryOf(session).colour} wide />
-      <div>
-        <h2 className="text-[28px] font-bold leading-tight text-ink">{title}</h2>
-        <p className="mt-1.5 text-[14px] text-ink-2">{factsLine(session)}</p>
-      </div>
-      <SessionDetail session={session} compact />
-      <Link to={sessionPath(session)} className="text-[14px] font-medium text-brand underline">Open its page</Link>
-    </aside>
+      <SessionDetail session={session} />
+    </article>
   )
 }

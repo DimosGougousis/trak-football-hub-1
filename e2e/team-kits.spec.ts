@@ -82,7 +82,8 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
   await expect(form.getByRole('heading', { name: 'Away kit' })).toBeVisible()
   await form.getByRole('button', { name: 'Publish', exact: true }).click()
   await expect(form).not.toBeVisible()
-  expect(event).toMatchObject({ published: true, kit_snapshot: { version: 1, slot: 'away', design: { shirt: '#F5F3EC' } } })
+  // Publish saves the draft, closes the sheet, then publishes it: wait for that last step.
+  await expect.poll(() => event).toMatchObject({ published: true, kit_snapshot: { version: 1, slot: 'away', design: { shirt: '#F5F3EC' } } })
   await page.goto('/coach/home')
   // TRAK-262: the coach's week picks an event on a tap; Details opens its sheet.
   await page.getByRole('button', { name: /Synthetic United/ }).click()

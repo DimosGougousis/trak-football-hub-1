@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderApp } from '../../../../../tests/support/render-app'
@@ -6,6 +6,7 @@ import { signInAs } from '../../../../../tests/support/session'
 import { server } from '../../../../../tests/msw/server'
 import { table, rpc } from '../../../../../tests/msw/supabase'
 import { SIDE_MENU_QUERY } from '@/lib/side-menu-screen'
+import { SESSIONS } from '@/lib/library/library'
 
 /**
  * TRAK-264 (Kostas, 22 Oct): the coach's Trainings tab becomes the Library.
@@ -98,7 +99,8 @@ describe('TRAK-264: the coach\'s Library', { timeout: 20_000 }, () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Read and react' })).toBeInTheDocument()
     expect(screen.getByText('Pressing and covering session')).toBeInTheDocument()
     expect(screen.getByText('Ages 12–16 · 14 players · 44×30-yard pitch')).toBeInTheDocument()
-    expect(link('Back to Defending')).toHaveAttribute('href', '/coach/trainings/defending')
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'About this session' }).nextElementSibling).toHaveTextContent(/press and cover effectively to win the ball back/)
 
     const learn = screen.getByRole('heading', { name: 'Players will learn to' }).nextElementSibling as HTMLElement
     expect(within(learn).getAllByRole('listitem').map(li => li.textContent)).toEqual([
@@ -149,24 +151,71 @@ describe('TRAK-264: the coach\'s Library', { timeout: 20_000 }, () => {
     expect(await screen.findByRole('status')).toHaveTextContent('No sessions match “zzzz”.')
   })
 
-  it('Play It Right keeps its own page, with a way back to the Library', async () => {
+  it('Play It Right opens inside the Library (TRAK-268), with a way back', async () => {
     renderApp('/coach/trainings/play-it-right')
-    expect(await screen.findByTitle('Play It Right')).toHaveAttribute('src', '/trainings/play-it-right.html')
-    expect(link('Back to Library')).toHaveAttribute('href', '/coach/trainings')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Play It Right' })).toBeInTheDocument()
+    expect(document.querySelector('iframe')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeInTheDocument()
   })
 
-  it('on a laptop: the sessions are a table, and a session opens in a panel beside it', async () => {
+  it('on a laptop: a session opens wide beside the list, the way Squad opens a player', async () => {
     screenIs(true)
     renderApp('/coach/trainings/defending')
-    const sessions = await screen.findByRole('table')
-    expect(within(sessions).getAllByRole('columnheader').map(th => th.textContent)).toEqual(['#', 'Session', 'Programme', 'Players', 'Pitch'])
+    const sessions = await screen.findByRole('list', { name: 'Sessions' })
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.getByText('No session open')).toBeInTheDocument()
+    expect(screen.getByText('Pick a session to see it here.')).toBeInTheDocument()
+
     await userEvent.click(within(sessions).getByRole('button', { name: /Read and react/ }))
-    const panel = await screen.findByRole('complementary', { name: 'Read and react' })
-    expect(within(panel).getByRole('heading', { name: 'Players will learn to' })).toBeInTheDocument()
-    expect(within(panel).getByRole('link', { name: 'Open its page' })).toHaveAttribute('href', '/coach/trainings/session/pressing-and-covering-session-read-and-react')
+    const open = await screen.findByRole('article', { name: 'Read and react' })
+    expect(within(open).getByRole('heading', { level: 2, name: 'Read and react' })).toBeInTheDocument()
+    expect(within(open).getByRole('heading', { name: 'About this session' })).toBeInTheDocument()
+    expect(within(open).getByRole('heading', { name: 'Players will learn to' })).toBeInTheDocument()
     expect(within(sessions).getByRole('button', { name: /Read and react/ })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(within(panel).getByRole('button', { name: 'Close' }))
-    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Read and react' })).toBeNull())
+    expect(screen.queryByText('No session open')).toBeNull()
+    // The list and the open session are the same card: the session sits beside the list, not at the page's edge.
+    expect(open.closest('[style*="grid-template-columns"]')).toBe(sessions.closest('[style*="grid-template-columns"]'))
+
+    await userEvent.click(within(sessions).getByRole('button', { name: /Pressing for glory/ }))
+    expect(await screen.findByRole('article', { name: 'Pressing for glory' })).toBeInTheDocument()
+    await userEvent.click(within(screen.getByRole('article', { name: 'Pressing for glory' })).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('article')).toBeNull())
+    expect(screen.getByText('No session open')).toBeInTheDocument()
+  })
+
+  it('a drill with no aims or kit list still says what it is about and its skills', async () => {
+    const bare = SESSIONS.find(s => s.title === 'Dribbling session: dare to dribble')!
+    expect(bare.objectives).toEqual([])
+    expect(bare.setup).toEqual([])
+    renderApp(`/coach/trainings/session/${bare.id}`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dare to dribble' })).toBeInTheDocument()
+    expect(screen.getByText('Ages 5 and up · 1–4 a side')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'About this session' }).nextElementSibling).toHaveTextContent(bare.summary)
+    const skills = screen.getByRole('heading', { name: 'Skills' }).nextElementSibling as HTMLElement
+    expect(within(skills).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Moving with the ball'])
+  })
+
+  it('a new page opens at its top, and Back returns to the same library, topic and place', async () => {
+    const scrolls = vi.spyOn(Element.prototype, 'scrollTo')
+    renderApp('/coach/trainings')
+    await userEvent.click(await screen.findByRole('link', { name: /^Defending/ }))
+    await screen.findByRole('heading', { level: 1, name: 'Defending' })
+    await userEvent.click(within(screen.getByRole('tablist', { name: 'Topics' })).getByRole('tab', { name: /Marking and intercepting/ }))
+    scrolls.mockClear()
+    const first = within(screen.getByRole('heading', { name: 'Sessions' }).parentElement!).getAllByRole('link')[0]
+    const name = first.querySelector('span span')!.textContent!
+    await userEvent.click(first)
+    expect(await screen.findByRole('heading', { level: 1, name })).toBeInTheDocument()
+    expect(scrolls).toHaveBeenCalledWith(0, 0)
+
+    scrolls.mockClear()
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Defending' })).toBeInTheDocument()
+    expect(within(screen.getByRole('tablist', { name: 'Topics' })).getByRole('tab', { selected: true })).toHaveTextContent(/^Marking and intercepting/)
+    // Back leaves the place in the list to the browser: no jump to the top.
+    expect(scrolls).not.toHaveBeenCalled()
+    scrolls.mockRestore()
   })
 
   it('never sends the coach to another website: every link stays in Trak (Kostas, 22 Oct)', async () => {

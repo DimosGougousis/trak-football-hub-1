@@ -14,13 +14,14 @@ export function HomeHeader({ calendarTo, center, right, left }: { calendarTo: st
     <header className={`grid ${coach ? 'grid-cols-[1fr_minmax(0,auto)_1fr]' : 'grid-cols-[44px_minmax(0,1fr)_44px]'} items-center gap-2 mb-3`}>
       <div className="flex">{coach ? left : <CalendarLink to={calendarTo} />}</div>
       <div className="min-w-0 flex justify-center">{center}</div>
-      <div className="flex justify-end gap-2">{coach && <CalendarLink to={calendarTo} />}{right}</div>
+      {/* TRAK-255: the coach's is called Schedule; players' and parents' stay Calendar. */}
+      <div className="flex justify-end gap-2">{coach && <CalendarLink to={calendarTo} label="Schedule" />}{right}</div>
     </header>
   )
 }
 
-function CalendarLink({ to }: { to: string }) {
-  return <Link to={to} aria-label="Calendar"
+function CalendarLink({ to, label = 'Calendar' }: { to: string; label?: string }) {
+  return <Link to={to} aria-label={label}
     className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center border border-border bg-card text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
     <CalendarDays size={19} strokeWidth={1.75} aria-hidden="true" />
   </Link>

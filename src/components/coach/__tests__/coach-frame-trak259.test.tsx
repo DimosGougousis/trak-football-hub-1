@@ -50,7 +50,7 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(within(tabs).getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'true')
     const nav = tabs.closest('nav')!
     expect(within(nav).getByRole('button', { name: 'Quick add' })).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /Feedback|Profile|Calendar/ })).toBeNull()
+    expect(screen.queryByRole('tab', { name: /Feedback|Profile|Calendar|Schedule/ })).toBeNull()
 
     await userEvent.click(within(tabs).getByRole('tab', { name: 'Library' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/trainings'))
@@ -60,13 +60,13 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     screenIs(false)
     renderApp('/coach/home')
     const header = (await screen.findByRole('button', { name: 'Open menu' })).closest('header')!
-    expect(within(header).getByRole('link', { name: 'Calendar' })).toHaveAttribute('href', '/coach/schedule')
+    expect(within(header).getByRole('link', { name: 'Schedule' })).toHaveAttribute('href', '/coach/schedule') // TRAK-255
     expect(within(header).getByRole('button', { name: /^Alerts/ })).toBeInTheDocument()
 
     await userEvent.click(within(header).getByRole('button', { name: 'Open menu' }))
     const menu = await screen.findByRole('dialog', { name: 'Menu' })
     expect(await within(menu).findByText('Rehearsal FC')).toBeInTheDocument()
-    for (const row of ['Home', 'Calendar', 'Squads', 'U14', 'U16', 'Library', 'Settings']) {
+    for (const row of ['Home', 'Schedule', 'Squads', 'U14', 'U16', 'Library', 'Settings']) {
       expect(within(menu).getByRole('button', { name: new RegExp(`^${row}`) })).toBeInTheDocument()
     }
     expect(within(menu).getByText('Otto Rehhagel')).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     screenIs(true)
     renderApp('/coach/home')
     const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
-    for (const row of ['Home', 'Calendar', 'Squads', 'Library', 'Settings']) {
+    for (const row of ['Home', 'Schedule', 'Squads', 'Library', 'Settings']) {
       expect(within(sidebar).getByRole('button', { name: new RegExp(`^${row}`) })).toBeInTheDocument()
     }
     expect(within(sidebar).queryByRole('button', { name: /Feedback|Profile/ })).toBeNull()
@@ -115,7 +115,7 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
   it('knows which row a page belongs to', () => {
     expect(placeOf('/coach/player/abc')).toEqual({ screen: 'squad', title: 'Player' })
     expect(placeOf('/coach/sessions/list')).toEqual({ screen: 'home', title: 'Log' })
-    expect(placeOf('/coach/schedule')).toEqual({ screen: 'calendar', title: 'Calendar' })
+    expect(placeOf('/coach/schedule')).toEqual({ screen: 'calendar', title: 'Schedule' }) // TRAK-255
     expect(placeOf('/coach/homework')).toEqual({ screen: null, title: 'Trak' })
   })
 })

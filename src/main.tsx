@@ -2,22 +2,16 @@ import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import { reloadForNewBuild } from "./lib/stale-build";
+import { sentryOptions } from "./lib/sentry-options";
 import "./index.css";
 // TRAK-163: Arc component tokens, scoped to .arc (see the file for why).
 import "./components/arc/arc-theme.css";
 
-Sentry.init({
+Sentry.init(sentryOptions({
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  enabled: import.meta.env.PROD && !!import.meta.env.VITE_SENTRY_DSN,
-  environment: import.meta.env.MODE,
-  integrations: [Sentry.browserTracingIntegration()],
-  tracesSampleRate: 0.1,
-  // No session replay. The option is deliberately absent rather than set to 0:
-  // replaysOnErrorSampleRate was here without replayIntegration(), so nothing
-  // recorded — but anyone adding that integration would have silently begun
-  // capturing children's screens, free text included, and shipping them to a
-  // US provider with no EU region. Removing the line removes the invitation.
-})
+  prod: import.meta.env.PROD,
+  mode: import.meta.env.MODE,
+}))
 
 // TRAK-192: Vite says a lazy screen's file failed to load, as happens when the
 // tab is older than the latest deploy. Reload once for the new release; the

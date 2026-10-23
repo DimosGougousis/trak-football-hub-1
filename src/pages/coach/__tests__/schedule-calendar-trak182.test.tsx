@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -25,7 +26,10 @@ const row = (id: string, date: string, over: Record<string, unknown>) => ({
 })
 const fullDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'full' })
 
+// TRAK-255: today's 17:00 and 19:00 events are still to come, so no day reads "needs you" yet.
+afterEach(() => vi.useRealTimers())
 beforeEach(() => {
+  atMorningToday()
   signInAs(COACH)
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),

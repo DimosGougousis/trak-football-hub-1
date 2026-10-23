@@ -76,3 +76,6 @@
 .monthChoiceCurrent .monthChoiceYear { color: inherit; opacity: .7; }
 .monthChoice:disabled { cursor: default; opacity: .36; }
 @media (prefers-reduced-motion: reduce) { .titleChevron { transition: none; } }
+
+/* Trak (TRAK-255): an amber corner on a day that needs the user (a register to take, a match to log). Its words are in the day's label. */
+.attention { position: absolute; top: 4px; right: 4px; width: 8px; height: 7px; background: var(--warning); clip-path: polygon(50% 0, 100% 100%, 0 100%); pointer-events: none; }
