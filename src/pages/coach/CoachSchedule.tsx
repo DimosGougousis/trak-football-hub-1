@@ -148,7 +148,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
               <input type="radio" name="training-theme" value={t.key} checked={on} onChange={() => onChange(t.key)}
                 className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: TYPE_COLOR.training }} />
               <span className="min-w-0">
-                <span className="block text-[13px] leading-tight" style={{ color: on ? TYPE_COLOR.training : 'rgb(var(--t-ink))' }}>{t.label}</span>
+                <span className={`block text-[13px] leading-tight text-ink ${on ? 'font-medium' : ''}`}>{t.label}</span>
                 <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
               </span>
             </label>
@@ -157,7 +157,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
       </div>
       {/* A new tab, so the event being set up stays as it is. */}
       <a href={catalogueLink(theme)} target="_blank" rel="noopener"
-        className="inline-flex items-center gap-1.5 text-[12px]" style={{ color: TYPE_COLOR.training, ...font }}>
+        className="inline-flex items-center gap-1.5 text-[12px] text-brand" style={font}>
         {picked ? `Find ${picked.label} sessions in the Trainings Catalogue` : 'Browse all sessions in the Trainings Catalogue'}
         <ExternalLink size={12} aria-hidden />
       </a>
@@ -756,7 +756,8 @@ export default function CoachSchedule() {
         <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
         {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
         <div className="arc rounded-[18px] border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
-          <div className="flex justify-center px-2 pt-2">
+          {/* TRAK-271: room between the last row of days and the legend's line. */}
+          <div className="flex justify-center px-2 pt-2 pb-4">
             {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
             <Calendar locale="en-GB" showToday className="laptop:!w-full"
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
@@ -811,7 +812,8 @@ export default function CoachSchedule() {
                 const cancelled = !!row && isCancelled(row)
                 // TRAK-255: the state in words and colour; a draft is a dashed card only the coach sees.
                 const state = !row ? null
-                  : cancelled ? { text: 'Cancelled', color: CANCELLED_COLOR, fill: 'transparent' }
+                  // TRAK-271: the word is the danger red; the event colour is too light for text, so it is the chip's edge.
+                  : cancelled ? { text: 'Cancelled', color: undefined, edge: CANCELLED_COLOR, fill: 'transparent' }
                   : !row.published ? { text: 'Draft · only you see this', color: 'rgb(var(--t-ink-3))', fill: 'transparent' }
                   : startedLocked(row) ? { text: 'Started · details fixed', color: 'rgb(var(--t-ink-2))', fill: 'rgb(var(--t-raised))' }
                   : { text: 'Published', color: 'rgb(var(--t-brand))', fill: 'transparent' }
@@ -834,7 +836,7 @@ export default function CoachSchedule() {
                         {ev.time
                           ? <><span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>{' · '}</>
                           : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>No time set</span>{' · '}</>}
-                        <span className="font-medium" style={{ color: TYPE_COLOR[ev.type] }}>{TYPE_LABEL[ev.type]}</span>{row?.series_id ? ' · Weekly' : ''}
+                        {/* TRAK-271: the type's colour is a dot; the word stays dark. */}<span className="inline-flex items-center gap-1 font-medium text-ink-2"><span aria-hidden="true" className="inline-block w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[ev.type] }} />{TYPE_LABEL[ev.type]}</span>{row?.series_id ? ' · Weekly' : ''}
                         {row?.meet_time ? ` · meet ${row.meet_time.slice(0, 5)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
                         {place?.text ? ` · ${place.text}` : ''}
@@ -856,8 +858,8 @@ export default function CoachSchedule() {
                         </span>
                       )}
                       {state && (
-                        <span className="mt-1 block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium"
-                          style={{ color: state.color, background: state.fill, border: `1px ${row && !row.published && !cancelled ? 'dashed' : 'solid'} ${state.color}`, ...font }}>
+                        <span className={`mt-1 block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium ${cancelled ? 'text-danger' : ''}`}
+                          style={{ color: state.color, background: state.fill, border: `1px ${row && !row.published && !cancelled ? 'dashed' : 'solid'} ${'edge' in state ? state.edge : state.color}`, ...font }}>
                           {state.text}
                         </span>
                       )}
