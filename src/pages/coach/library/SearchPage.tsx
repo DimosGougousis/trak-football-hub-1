@@ -4,6 +4,7 @@ import { MobileShell } from '@/components/trak'
 import { PitchArt, ProgrammeArt } from '@/components/library/LibraryArt'
 import { LIBRARY_PATH, SESSIONS, libraryOf, libraryOrder, searchLibrary, sessionPath, titleParts, type LibrarySession } from '@/lib/library/library'
 import { Chip, ProgrammeRow, SearchIcon, SessionRow } from './parts'
+import { useBack } from './useBack'
 
 /* TRAK-264: searching the Library, as the catalogue did: every word must be in
    the session somewhere (its name, aims, skills or kit). Results come as the
@@ -18,6 +19,7 @@ export default function SearchPage() {
   const query = params.get('q') ?? ''
   const show = (SHOWS.find(([value]) => value === params.get('show'))?.[0] ?? 'all') as Show
   const [limit, setLimit] = useState(PAGE)
+  const back = useBack(LIBRARY_PATH)
   const set = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
     for (const [name, value] of Object.entries(changes)) {
@@ -46,7 +48,7 @@ export default function SearchPage() {
             <input type="search" autoFocus value={query} onChange={e => set({ q: e.target.value })}
               placeholder="Sessions, skills or kit" className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-3" />
           </label>
-          <Link to={LIBRARY_PATH} className="flex h-11 flex-none items-center px-1 text-[15px] font-medium text-ink">Cancel</Link>
+          <button type="button" onClick={back} className="flex h-11 flex-none items-center px-1 text-[15px] font-medium text-ink">Cancel</button>
         </div>
         <div className="mt-3 flex gap-2">
           {SHOWS.map(([value, text]) => (

@@ -1,5 +1,5 @@
 import { LIBRARY_PATH } from '@/lib/library/library'
-import { ChevronLeft, RoundLink } from './parts'
+import { BackButton } from './parts'
 
 /* TRAK-264: Play It Right keeps its own page for now (TRAK-264's first version
    is the Library's look), opened from the Library with a way back. The page is
@@ -10,7 +10,7 @@ export default function PlayItRightPage() {
   return (
     <div className="min-h-screen bg-ground pb-24">
       <div className="trak-wide mx-auto flex items-center gap-3 px-5 pt-3.5 pb-3">
-        <RoundLink to={LIBRARY_PATH} label="Back to Library"><ChevronLeft /></RoundLink>
+        <BackButton fallback={LIBRARY_PATH} label="Back" />
         <h1 className="text-[22px] font-bold text-ink">Play It Right</h1>
       </div>
       <iframe
