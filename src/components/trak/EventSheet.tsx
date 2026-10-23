@@ -5,8 +5,7 @@ import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-rea
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { updatedNote } from '@/lib/alert-read-state'
-import { academyClock } from '@/lib/event-time'
-import { meetText } from '@/lib/player-events'
+import { academyLine, meetText } from '@/lib/player-events'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
 import { venueParts } from '@/lib/venue-link'
@@ -44,15 +43,15 @@ function sheetStatus(event: StripEvent, role: SheetRole): { text: string; tone: 
 function TimeRow({ event }: { event: StripEvent }) {
   // A logged session has no start time of its own; a logged match shows its event's kick-off (TRAK-182).
   if (event.sessionId && !event.time) return null
-  // TRAK-223: the academy's clock, and this phone's when it differs; the time itself stays the academy's.
-  const clock = academyClock(event)
+  // Imad, 23 Oct: the time is this phone's; the academy's own time shows under it only when the clocks differ.
+  const academy = academyLine(event)
   return (
     <div>
       <p className="text-[13px] text-ink-2">{event.kind === 'match' ? 'Kick-off' : 'Starts'}</p>
       {event.time
         ? <p className="text-[40px] leading-[1.1] font-medium tracking-[-0.02em] text-ink">{event.time}</p>
         : <p className="text-[17px] text-ink mt-1">Time to be confirmed</p>}
-      {event.time && clock && <p className="text-[13px] text-ink-2">{clock.zone}{clock.here ? ` · ${clock.here}` : ''}</p>}
+      {event.time && academy && <p className="text-[13px] text-ink-2">{academy}</p>}
     </div>
   )
 }

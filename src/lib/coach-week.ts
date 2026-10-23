@@ -1,5 +1,6 @@
 import { draftClashes, isCancelled, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
+import { phoneEventTime } from '@/lib/event-time'
 
 /* TRAK-262 (Imad, 22 Oct): coach Home's week in Tarek's colour key (TRAK-255).
    The type is a colour; the state is a shape: a draft is dashed and only the
@@ -60,7 +61,9 @@ export function coachWeek({ dates, events, sessions, inView, now = new Date() }:
     // A logged event shows once, as its session.
     if (done.has(row.id) || !inView(row.squad) || !row.event_date) continue
     const kind = kindOf(row.event_type)
-    const base = { id: row.id, date: row.event_date, kind, title: row.title, time: row.start_time?.slice(0, 5) ?? null, source: row, row }
+    // Imad, 23 Oct: the day and time on this phone's clock.
+    const { date, time } = phoneEventTime(row)
+    const base = { id: row.id, date, kind, title: row.title, time, source: row, row }
     const clash = clashes.get(row.id)
     if (isCancelled(row)) items.push({ ...base, state: 'cancelled', note: 'Cancelled', step: null })
     else if (!row.published && clash) items.push({ ...base, state: 'clash', note: `Clashes with ${clash.title} ${clash.start}–${clash.end}`, step: null })
@@ -84,7 +87,7 @@ export function coachWeek({ dates, events, sessions, inView, now = new Date() }:
       ...(session.venue && { venue: session.venue }), event_type: kind,
     }
     items.push({
-      id: source.id, date: session.session_date, kind, title: source.title, time: event?.start_time?.slice(0, 5) ?? null,
+      id: source.id, date: session.session_date, kind, title: source.title, time: event ? phoneEventTime(event).time : null,
       state: 'logged', note: 'Logged', step: 'view', source, sessionId: session.id,
     })
   }

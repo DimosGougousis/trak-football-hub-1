@@ -510,3 +510,29 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     expect(unexpected).toEqual([])
   })
 })
+
+// Imad, 23 Oct: event times follow the phone's own clock. Tonight's away match is 20:00 at a Dubai academy.
+test.describe("Event times on the phone's clock", () => {
+  const kickOff = (timeZone: string, day: string) =>
+    new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(`${day}T16:00:00Z`))
+
+  for (const [timeZone, academyLine] of [['Asia/Dubai', false], ['Europe/Athens', true]] as const) {
+    test(`a phone in ${timeZone}`, async ({ browser }) => {
+      const context = await browser.newContext({ timezoneId: timeZone, viewport: { width: 390, height: 844 } })
+      const page = await context.newPage()
+      const unexpected: string[] = []
+      await coachBackend(context, unexpected, true)
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+      await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
+      await page.goto('/coach/home')
+      await page.getByRole('button', { name: /Rivals FC/ }).click()
+      await page.getByRole('button', { name: 'Details' }).click()
+      const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
+      await expect(sheet.getByText(kickOff(timeZone, day), { exact: true })).toBeVisible()
+      if (academyLine) await expect(sheet.getByText('20:00 Dubai time', { exact: true })).toBeVisible()
+      else await expect(sheet.getByText(/Dubai time|Athens time|on this phone/)).toHaveCount(0)
+      expect(unexpected).toEqual([])
+      await context.close()
+    })
+  }
+})
