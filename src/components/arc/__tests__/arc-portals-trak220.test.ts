@@ -17,6 +17,8 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
     ['select/select.tsx', /<SelectPrimitive\.Content className=\{`arc \$\{styles\.content\}`\}/],
     ['notification-center/notification-center.tsx', /<PopoverPrimitive\.Content className=\{`arc \$\{styles\.panel\}`\}/],
     ['card/card.tsx', /className=\{\["arc", className, styles\.panel\]/],
+    // TRAK-272: Arc's Button group's More menu.
+    ['button-group/button-group.tsx', /<DropdownPrimitive\.Content className=\{`arc \$\{styles\.menu\}`\}/],
   ])('%s', (file, pattern) => {
     expect(source(file)).toMatch(pattern)
   })
@@ -26,7 +28,7 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
       .flatMap(dir => readdirSync(join(ARC, dir.name)).filter(f => f.endsWith('.tsx')).map(f => `${dir.name}/${f}`))
       .filter(file => /\.Portal\b/.test(source(file)))
     // The bottom sheet takes its class from callers; they pass "arc" (EventSheet).
-    expect(portalling.sort()).toEqual(['bottom-sheet/bottom-sheet.tsx', 'card/card.tsx', 'dropdown-menu/dropdown-menu.tsx',
+    expect(portalling.sort()).toEqual(['bottom-sheet/bottom-sheet.tsx', 'button-group/button-group.tsx', 'card/card.tsx', 'dropdown-menu/dropdown-menu.tsx',
       'notification-center/notification-center.tsx', 'select/select.tsx', 'split-button/split-button.tsx'])
   })
 
