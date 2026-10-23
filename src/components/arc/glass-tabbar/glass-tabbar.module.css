@@ -191,8 +191,9 @@
   flex: none;
   border-radius: var(--radius-pill);
 }
-/* Trak: a custom control in the action slot fills it and brings its own glass. */
-.slotNode { position: relative; display: grid; flex: none; place-items: stretch; }
+/* Trak: a custom control in the action slot fills it and sits on the bar's glass (Imad, 23 Oct: it had none,
+   each side expecting the other to draw it). */
+.slotNode { position: relative; display: grid; flex: none; place-items: stretch; border-radius: var(--radius-pill); }
 .bubbleLens {
   position: absolute;
   inset: 4px;
