@@ -29,7 +29,7 @@
    that blurs itself (a laptop's top bar), the shape's own blur can't reach the page below. */
 .root[data-view="menu"] .shape { --glass-fill: color-mix(in oklab, var(--surface) 90%, transparent); }
 .root[data-view="face"] .shape { --glass-fill: var(--surface); }
-/* At the top the closed button is a glass pill of its own; in the tab bar the bar's bubble is behind it. */
+/* At the top the closed button is a glass pill of its own; in the tab bar it sits on the slot's glass (GlassTabBar). */
 .root[data-anchor="top"][data-view="fab"] .shape {
   border: 1px solid var(--glass-edge); background: var(--glass-fill);
   box-shadow: inset 0 1px 0 var(--glass-shine), 0 1px 2px rgb(0 0 0 / .06), 0 6px 16px -6px rgb(0 0 0 / .18);
