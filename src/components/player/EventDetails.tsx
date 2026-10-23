@@ -47,7 +47,7 @@ export function EventDetails({ event: e, changes = [] }: {
       )}
       {cancelled && (
         <div className="rounded-[14px] px-4 py-3" style={{ border: `1px solid ${withAlpha(CANCELLED_COLOR, 0.5)}` }}>
-          <p className="text-[13px] font-semibold" style={{ color: CANCELLED_COLOR }}>This event is cancelled.</p>
+          <p className="text-[13px] font-semibold text-danger">This event is cancelled.</p>
           {e.cancelReason && <p className="text-[13px] text-ink-2 mt-1">{e.cancelReason}</p>}
         </div>
       )}

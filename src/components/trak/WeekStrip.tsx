@@ -97,7 +97,7 @@ export function DayEvents({ day, today = false, events, renderSheet, refresh = (
             <span aria-hidden="true" className="w-[7px] h-[7px] rounded-full shrink-0" style={dotStyle(event)} />
             <span className="w-12 shrink-0 text-[13px] text-ink-2">{event.sessionId ? 'Logged' : event.time ?? 'TBC'}</span>
             <span className="flex-1 min-w-0 truncate text-[14px] text-ink">{eventHeading(event)}</span>
-            {event.status === 'cancelled' && <span className="text-[12px]" style={{ color: CANCELLED_COLOR }}>Cancelled</span>}
+            {event.status === 'cancelled' && <span className="text-[12px] text-danger">Cancelled</span>}
             {event.draft && <span className="text-[12px] text-ink-3">Draft</span>}
             {event.absent && event.status !== 'cancelled' && <span className="text-[12px] text-ink-2">Can't make it</span>}
             <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-ink-3" />
