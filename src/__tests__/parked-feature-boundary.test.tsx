@@ -21,7 +21,7 @@ const endpoint = (name: string) => `${SUPABASE_URL}/rest/v1/${name}`
 const parked: [string, string, RegExp][] = [
   ['player', '/player/passport', /PLAYER PASSPORT/i], ['player', '/player/evolution', /EVOLUTION CARD/i],
   ['coach', '/coach/assistant', /TRY ASKING/i], ['coach', '/coach/feedback/audit-assessment', /Review feedback/i],
-  ['coach', '/coach/schedule', /Calendar/], ['coach', '/coach/recognition', /Give Recognition/], ['coach', '/coach/award', /Give Award/],
+  ['coach', '/coach/schedule', /Schedule/], ['coach', '/coach/recognition', /Give Recognition/], ['coach', '/coach/award', /Give Award/],
   ['parent', '/parent/alerts', /^Alerts$/], ['club', '/club/home', /Pilot Active/], ['club', '/club/squads', /Filter by age group/],
   ['club', '/club/coaches', /Connected Coaches/], ['club', '/club/profile', /Administrator/], ['club', '/club/radar', /Movement Radar/],
 ]
@@ -78,7 +78,7 @@ describe('TRAK-47 parked feature boundary', () => {
     const asked: unknown[] = []
     server.use(rpc('feature_on', args => { asked.push(args.p_feature); return true }))
     renderApp('/coach/schedule')
-    expect((await screen.findAllByText(/Calendar/, {}, { timeout: 4000 })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/Schedule/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar
     await waitFor(() => expect(asked).toEqual(['events']))
     await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
   })
@@ -87,7 +87,7 @@ describe('TRAK-47 parked feature boundary', () => {
     let asked = 0
     server.use(rpc('feature_on', () => { asked++; return { status: 500, body: { message: 'Synthetic failure' } } }))
     renderApp('/coach/schedule')
-    expect((await screen.findAllByText(/Calendar/, {}, { timeout: 4000 })).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/Schedule/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar
     // The app retries once; both answers are failures.
     await waitFor(() => expect(asked).toBe(2), { timeout: 4000 })
     expect(screen.getByRole('note', { name: 'This screen is coming soon' })).toHaveTextContent('Coming soon')

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink, MapPin } from 'lucide-react'
+import { isMapsUrl, joinVenue, splitVenue, venueParts } from '@/lib/venue-link'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO } from '@/lib/event-time'
@@ -65,6 +66,8 @@ type CalEvent = {
 // ── Colours ──────────────────────────────────────────────────────────────────
 
 const TYPE_COLOR: Record<ShownType, string> = EVENT_COLOR
+/** TRAK-255: the amber of "needs you" (a register to take, a match to log), as the calendar's corner. */
+const NEEDS_YOU_COLOR = 'rgb(var(--t-warning))'
 
 const TYPE_LABEL: Record<ShownType, string> = {
   match: 'Match', training: 'Training', tournament: 'Tournament', other: 'Other',
@@ -230,7 +233,8 @@ function EventSummary({ form, repeat, noteProblem }: {
     ...(form.kind === 'training' ? [['Theme', TRAINING_THEMES.find(t => t.key === form.theme)?.label ?? 'Not set'] as [string, string]] : []),
     ...(form.kind === 'match' ? [['Opponent', form.opponent.trim() + (form.homeAway ? ` (${form.homeAway === 'home' ? 'Home' : 'Away'})` : '')] as [string, string]] : []),
     ['Title', eventTitle(form)],
-    ['Venue', form.venue.trim() || 'Not set'],
+    // TRAK-255: the name, and whether it has a map link; never the link itself.
+    ['Venue', (() => { const v = splitVenue(form.venue); return (v.name.trim() || (v.link ? 'Unnamed place' : 'Not set')) + (v.link ? ' · on the map' : '') })()],
     [repeat?.on ? 'First date' : 'Date', form.date ? formatEventDay(form.date) : 'Not set'],
     [form.kind === 'match' ? 'Kickoff' : 'Start', form.time || 'Not set'],
     ['Meet', form.meetTime || 'At the start'],
@@ -420,6 +424,18 @@ export default function CoachSchedule() {
 
   const selectedEvents = byDate[selected] ?? []
 
+  // TRAK-255: a day waits for the coach while an event that has started has no register (training,
+  // other) or no match log (match): the same rules as its Take register and Log match buttons.
+  const needsYou = useMemo(() => {
+    const days = new Set<string>()
+    for (const e of allEvents) {
+      const r = e.row
+      if (!r || !r.published || isCancelled(r) || registerSession.has(r.id) || !hasStarted(r)) continue
+      if (r.event_type === 'match' || !registerProblem(r)) days.add(e.date)
+    }
+    return days
+  }, [allEvents, registerSession])
+
   const openNew = (date: string) =>
     setSheet({ kind: 'edit', row: null, form: blankForm(date), repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
   // TRAK-182 (live run 3): an edit opens on the first step, filled in, not on Review.
@@ -435,6 +451,25 @@ export default function CoachSchedule() {
         : patch.date && !s.repeat.on ? blankRepeat(patch.date) : s.repeat
       return { ...s, form: { ...s.form, ...patch }, repeat, error: null }
     })
+  // TRAK-255: the venue is stored as before (the name, then the map link), but the form keeps them
+  // in two boxes. The link box keeps what's typed until it is a Maps link; only a Maps link is saved.
+  const [mapLinkText, setMapLinkText] = useState<string | null>(null)
+  const editKey = sheet.kind === 'edit' ? sheet.row?.id ?? 'new' : null
+  useEffect(() => { setMapLinkText(null) }, [editKey])
+  const venueNow = () => (sheet.kind === 'edit' ? splitVenue(sheet.form.venue) : { name: '', link: '' })
+  const setVenueName = (typed: string) => {
+    // A link pasted into the name box moves to the link box.
+    const pasted = splitVenue(typed)
+    if (pasted.link) { setMapLinkText(null); setForm({ venue: joinVenue(pasted.name, pasted.link) }); return }
+    let link = venueNow().link
+    // A saved venue brings the map link it was last used with.
+    if (!link && !mapLinkText) link = venues.find(v => v.name.toLowerCase() === typed.trim().toLowerCase())?.link ?? ''
+    setForm({ venue: joinVenue(typed, link) })
+  }
+  const setVenueLink = (typed: string) => {
+    setMapLinkText(typed)
+    setForm({ venue: joinVenue(venueNow().name, isMapsUrl(typed) ? typed.trim() : '') })
+  }
   const setRepeat = (patch: Partial<Repeat>) =>
     setSheet(s => s.kind === 'edit' ? { ...s, repeat: { ...s.repeat, ...patch }, error: null } : s)
   const toggleDay = (day: number) =>
@@ -694,7 +729,7 @@ export default function CoachSchedule() {
         <div className="flex items-center justify-between">
           <h1 className="text-[22px] font-light text-ink tracking-tight"
             style={{ ...font, letterSpacing: '-0.02em' }}>
-            Calendar
+            Schedule
           </h1>
           <div className="flex items-center gap-2">
             {/* TRAK-162: the CSV import is parked; no coach is offered it. */}
@@ -714,7 +749,7 @@ export default function CoachSchedule() {
           </div>
         </div>
 
-        {loadFailed && <LoadError what="your calendar" onRetry={retry} retrying={retrying} />}
+        {loadFailed && <LoadError what="your schedule" onRetry={retry} retrying={retrying} />}
 
         {/* TRAK-252: on a coach's laptop the month and the chosen day stand side by side. */}
         <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
@@ -726,20 +761,28 @@ export default function CoachSchedule() {
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
               month={new Date(viewYear, viewMonth, 1)}
               onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
-              marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])} />
+              marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])}
+              attention={date => needsYou.has(toDateStr(date))} />
           </div>
 
-          {/* Legend */}
-          <div className="flex items-center gap-4 px-4 py-2.5 border-t border-line">
+          {/* Legend. TRAK-255: Cancelled (the hollow ring the month draws) and Needs you (the amber corner). */}
+          <div role="group" aria-label="Colour key" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 border-t border-line">
             {EVENT_KINDS.map(type => (
               <div key={type} className="flex items-center gap-1.5">
-                <div className="w-[6px] h-[6px] rounded-full" style={{ background: TYPE_COLOR[type] }} />
-                <span className="text-[8px] uppercase tracking-[0.08em]"
-                  style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
+                <div className="w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[type] }} />
+                <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
                   {TYPE_LABEL[type]}
                 </span>
               </div>
             ))}
+            <div className="flex items-center gap-1.5">
+              <div className="w-[8px] h-[8px] rounded-full box-border" style={{ border: `1.5px solid ${CANCELLED_COLOR}` }} />
+              <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Cancelled</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-[8px] h-[7px]" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} />
+              <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Needs you</span>
+            </div>
           </div>
         </div>
 
@@ -767,10 +810,19 @@ export default function CoachSchedule() {
               {selectedEvents.map(ev => {
                 const row = ev.row
                 const cancelled = !!row && isCancelled(row)
+                // TRAK-255: the state in words and colour; a draft is a dashed card only the coach sees.
+                const state = !row ? null
+                  : cancelled ? { text: 'Cancelled', color: CANCELLED_COLOR, fill: 'transparent' }
+                  : !row.published ? { text: 'Draft · only you see this', color: 'rgb(var(--t-ink-3))', fill: 'transparent' }
+                  : startedLocked(row) ? { text: 'Started · details fixed', color: 'rgb(var(--t-ink-2))', fill: 'rgb(var(--t-raised))' }
+                  : { text: 'Published', color: 'rgb(var(--t-brand))', fill: 'transparent' }
+                const place = ev.venue ? venueParts(ev.venue) : null
+                const pending = 'mt-2 inline-flex items-center min-h-8 px-3 rounded-full text-[11px] font-medium'
+                const pendingStyle = { ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-warning) / 0.1)', border: `1px solid ${NEEDS_YOU_COLOR}` }
                 return (
                   <div key={ev.id}
                     className="rounded-[14px] px-4 py-3 flex items-start gap-3"
-                    style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
+                    style={{ background: 'rgb(var(--t-surface))', border: row && !row.published && !cancelled ? '1.5px dashed rgb(var(--t-line-strong))' : '1px solid rgb(var(--t-line))' }}>
                     <div className="w-1 self-stretch rounded-full flex-shrink-0"
                       style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
                     <div className="flex-1 min-w-0">
@@ -783,13 +835,20 @@ export default function CoachSchedule() {
                         {ev.time
                           ? <><span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>{' · '}</>
                           : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>No time set</span>{' · '}</>}
-                        {TYPE_LABEL[ev.type]}{row?.series_id ? ' · Weekly' : ''}
+                        <span className="font-medium" style={{ color: TYPE_COLOR[ev.type] }}>{TYPE_LABEL[ev.type]}</span>{row?.series_id ? ' · Weekly' : ''}
                         {row?.meet_time ? ` · meet ${row.meet_time.slice(0, 5)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
-                        {ev.venue ? ` · ${ev.venue}` : ''}
+                        {place?.text ? ` · ${place.text}` : ''}
                       </p>
                       {row?.kit && (
                         <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Kit: {row.kit}</p>
+                      )}
+                      {/* TRAK-255 (TRAK-225's link): the venue opens in Maps from the coach's day too. */}
+                      {place && (
+                        <a href={place.mapsUrl} target="_blank" rel="noopener noreferrer"
+                          className="mt-1 flex w-fit items-center gap-1 min-h-8 text-[12px] font-medium text-brand underline" style={font}>
+                          <MapPin size={13} aria-hidden="true" />Open in Maps
+                        </a>
                       )}
                       {ev.source === 'session' && (
                         <span className="text-[8px] tracking-[0.06em] uppercase mt-0.5 inline-block"
@@ -797,10 +856,10 @@ export default function CoachSchedule() {
                           Logged
                         </span>
                       )}
-                      {row && (
-                        <span className="text-[8px] tracking-[0.06em] uppercase mt-0.5 inline-block"
-                          style={{ color: cancelled ? CANCELLED_COLOR : row.published ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))', ...mono }}>
-                          {cancelled ? 'Cancelled' : row.published ? 'Published' : 'Draft · only you see this'}
+                      {state && (
+                        <span className="mt-1 block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium"
+                          style={{ color: state.color, background: state.fill, border: `1px ${row && !row.published && !cancelled ? 'dashed' : 'solid'} ${state.color}`, ...font }}>
+                          {state.text}
                         </span>
                       )}
                       {row && !cancelled && clashes.has(row.id) && (() => {
@@ -816,7 +875,8 @@ export default function CoachSchedule() {
                       {row && !registerProblem(row) && (
                         <button onClick={parked ? comingSoon : () => setSheet({ kind: 'register', row })}
                           aria-label={`${registerSession.has(row.id) ? 'Edit register' : 'Take register'} for ${row.title}`}
-                          className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-brand" style={mono}>
+                          className={registerSession.has(row.id) ? 'mt-2 block text-[10px] tracking-[0.08em] uppercase text-brand' : pending}
+                          style={registerSession.has(row.id) ? mono : pendingStyle}>
                           {registerSession.has(row.id) ? 'Register taken · Edit' : 'Take register'}
                         </button>
                       )}
@@ -829,7 +889,7 @@ export default function CoachSchedule() {
                           onClick={parked ? comingSoon : () => navigate('/coach/sessions/quick', {
                             state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
                           })}
-                          className="mt-2 block text-[10px] tracking-[0.08em] uppercase text-success" style={mono}>
+                          className={pending} style={pendingStyle}>
                           Log match
                         </button>
                       )}
@@ -950,13 +1010,23 @@ export default function CoachSchedule() {
                   className={inputClass} style={font} />
               </Field>
 
+              {/* TRAK-255: a venue is a name everyone reads; its map link has a box of its own. */}
               <Field label="Venue">
-                <input value={sheet.form.venue} onChange={e => setForm({ venue: e.target.value })}
-                  list="saved-venues" placeholder="Pick a saved venue or type a new one" className={inputClass} style={font} />
+                <input value={splitVenue(sheet.form.venue).name} onChange={e => setVenueName(e.target.value)}
+                  list="saved-venues" placeholder="Pick a saved venue or type its name" className={inputClass} style={font} />
                 <datalist id="saved-venues">
-                  {venues.map(v => <option key={v} value={v} />)}
+                  {venues.map(v => <option key={v.name} value={v.name} />)}
                 </datalist>
               </Field>
+              <div className="space-y-1">
+                <Field label="Map link (optional)">
+                  <input value={mapLinkText ?? splitVenue(sheet.form.venue).link} onChange={e => setVenueLink(e.target.value)}
+                    inputMode="url" placeholder="Paste a Google Maps or Apple Maps link" className={inputClass} style={font} />
+                </Field>
+                {mapLinkText && !isMapsUrl(mapLinkText) && (
+                  <p className="text-[11px] text-warning" style={font}>That isn't a Google Maps or Apple Maps link, so it won't be saved.</p>
+                )}
+              </div>
             </>}
 
             {sheet.step === 1 && <>

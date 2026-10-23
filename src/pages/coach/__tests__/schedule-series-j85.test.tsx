@@ -293,6 +293,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
   it('marks a series week as Weekly on its card', async () => {
     await open()
     // TRAK-159: the time leads the card.
-    expect(screen.getByText(/Training · Weekly/)).toHaveTextContent('18:00 · Training · Weekly')
+    // TRAK-255: the type word is in its own colour, so the line is read as a whole.
+    expect(screen.getByText((_, el) => el?.tagName === 'P' && /Training · Weekly/.test(el.textContent ?? ''))).toHaveTextContent('18:00 · Training · Weekly')
   })
 })

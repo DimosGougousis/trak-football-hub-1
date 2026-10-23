@@ -72,7 +72,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
   const many = coachSquad.squads.length > 1
   const items: RailEntry[] = [
     { id: 'home', label: 'Home', icon: House },
-    { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+    { id: 'calendar', label: 'Schedule', icon: CalendarDays }, // TRAK-255: the coach's is called Schedule
     many
       ? { id: 'squads', label: 'Squads', icon: Users, children: coachSquad.squads.map(squad => ({ id: `squad:${squad}`, label: squad })) }
       : { id: 'squad', label: 'Squad', icon: Users },

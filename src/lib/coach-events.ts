@@ -10,6 +10,7 @@
 import { calendarFields, displayEventTime, toAcademyInstant, toInstant } from '@/lib/event-time'
 import { describeEventKit, readKitSnapshot, type EventKitSnapshot } from '@/lib/kit-templates'
 import { trainingThemeFrom, type TrainingTheme } from '@/lib/training-theme'
+import { splitVenue } from '@/lib/venue-link'
 
 export type EventKind = 'training' | 'match' | 'other'
 export const EVENT_KINDS: EventKind[] = ['training', 'match', 'other']
@@ -278,16 +279,19 @@ export function thisAndFollowing<R extends Pick<EventRow, 'series_id' | 'status'
 }
 
 /** The coach's venues, most recently used first, for "pick or add". */
-export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): string[] {
-  const seen = new Map<string, { name: string; at: string }>()
+/** TRAK-255: saved venues by name, most recent first, each with the map link it was last used with.
+ *  A venue saved as a bare link has no name to offer, so it isn't offered. */
+export function savedVenues(rows: Pick<EventRow, 'venue' | 'starts_at'>[]): { name: string; link: string }[] {
+  const seen = new Map<string, { name: string; link: string; at: string }>()
   for (const row of rows) {
-    const name = row.venue?.trim()
+    const { name: typed, link } = splitVenue(row.venue ?? '')
+    const name = typed.trim()
     if (!name) continue
     const key = name.toLowerCase()
     const prior = seen.get(key)
-    if (!prior || row.starts_at > prior.at) seen.set(key, { name, at: row.starts_at })
+    if (!prior || row.starts_at > prior.at) seen.set(key, { name, link, at: row.starts_at })
   }
-  return [...seen.values()].sort((a, b) => b.at.localeCompare(a.at)).map(v => v.name)
+  return [...seen.values()].sort((a, b) => b.at.localeCompare(a.at)).map(({ name, link }) => ({ name, link }))
 }
 
 /** TRAK-158: the database refuses an overlapping live event with a sentence
