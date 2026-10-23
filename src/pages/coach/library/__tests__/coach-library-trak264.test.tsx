@@ -151,9 +151,10 @@ describe('TRAK-264: the coach\'s Library', { timeout: 20_000 }, () => {
     expect(await screen.findByRole('status')).toHaveTextContent('No sessions match “zzzz”.')
   })
 
-  it('Play It Right keeps its own page, with a way back to the Library', async () => {
+  it('Play It Right opens inside the Library (TRAK-268), with a way back', async () => {
     renderApp('/coach/trainings/play-it-right')
-    expect(await screen.findByTitle('Play It Right')).toHaveAttribute('src', '/trainings/play-it-right.html')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Play It Right' })).toBeInTheDocument()
+    expect(document.querySelector('iframe')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeInTheDocument()
   })
