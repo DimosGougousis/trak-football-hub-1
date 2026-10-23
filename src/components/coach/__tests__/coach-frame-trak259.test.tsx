@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderApp } from '../../../../tests/support/render-app'
@@ -20,6 +20,9 @@ const COACH = { id: 'coach-frame' }
 const realMatchMedia = window.matchMedia
 function screenIs(laptop: boolean) {
   window.matchMedia = ((query: string) => ({ ...realMatchMedia(query), matches: laptop && query === SIDE_MENU_QUERY })) as typeof window.matchMedia
+  // jsdom lays nothing out, so every width reads 0 and the sidebar folds to its rail (under 760 px) whenever it measures.
+  // A laptop's frame is wide; on CI the fold landed before the squad rows were tapped (#439).
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(laptop ? 1440 : 390)
 }
 
 beforeEach(() => {
@@ -39,7 +42,7 @@ beforeEach(() => {
     rpc('feature_on', () => true),
   )
 })
-afterEach(() => { window.matchMedia = realMatchMedia })
+afterEach(() => { window.matchMedia = realMatchMedia; vi.restoreAllMocks() })
 
 describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
   it('on a phone: Home, Squad and Library in the glass tab bar, with the "+" beside them', async () => {
@@ -88,10 +91,12 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.queryByRole('tablist', { name: 'Coach' })).toBeNull()
 
-    // A squad's row picks that squad and opens Squad.
-    await userEvent.click(within(sidebar).getByRole('button', { name: 'U16' }))
+    // A squad's row picks that squad and opens Squad. The sidebar is looked up again each time: while a page's code
+    // loads, the frame can be rebuilt, and a held copy is then a detached one (CI, four times on #439).
+    const sidebarNow = () => screen.getByRole('navigation', { name: 'Rehearsal FC' })
+    await userEvent.click(await within(sidebar).findByRole('button', { name: 'U16' }, { timeout: 5000 }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
-    await waitFor(() => expect(within(sidebar).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'))
+    await waitFor(() => expect(within(sidebarNow()).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'), { timeout: 5000 })
   })
 
   it('Feedback and Profile still open by their address', async () => {

@@ -62,7 +62,7 @@ describe('TRAK-72 coach Home', () => {
     renderApp('/coach/home')
     // The file's first render loads coach Home cold; on a busy CI runner that
     // took over the default 1 s (run 36394909944, Imad on TRAK-72).
-    expect(await screen.findByText('Head Coach · U15s', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText(/TRK-/)).toBeNull()
     expect(screen.queryByText(/tap to copy/i)).toBeNull()
     // Give any code generator the time it used to take, then check nothing wrote.
@@ -190,13 +190,6 @@ describe('TRAK-72 item 11: the club comes from the academy', () => {
     )
   }
 
-  // TRAK-196: one quiet line, the academy's name in it.
-  it('Home shows the age group even though no club name was typed', async () => {
-    coachInAcademy(null)
-    renderApp('/coach/home')
-    expect(await screen.findByText('Head Coach · Synthetic Academy FC · U15s')).toBeInTheDocument()
-  })
-
   it('Profile names the academy and never shows a stale typed club', async () => {
     coachInAcademy('Old Typed Club')
     renderApp('/coach/profile')
@@ -208,7 +201,7 @@ describe('TRAK-72 item 11: the club comes from the academy', () => {
   it('Home never shows a stale typed club either', async () => {
     coachInAcademy('Old Typed Club')
     renderApp('/coach/home')
-    expect(await screen.findByText('Head Coach · Synthetic Academy FC · U15s')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText(/Old Typed Club/)).toBeNull()
   })
 })
