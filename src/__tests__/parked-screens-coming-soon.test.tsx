@@ -120,8 +120,10 @@ async function clickEveryAction(): Promise<string[]> {
     for (const box of screen.queryAllByRole('textbox')) {
       if (!(box as HTMLInputElement).value) await userEvent.type(box, 'Synthetic text')
     }
-    const next = screen.queryAllByRole('button')
-      .find(b => !(b as HTMLButtonElement).disabled && !NAVIGATION.test(labelOf(b)) && !clicked.includes(labelOf(b)))
+    // TRAK-272: a button that opens a sheet (a Schedule card's title) only shows details, so it is
+    // navigation; an open menu's items (a card's Delete behind More) are actions like any button.
+    const next = [...screen.queryAllByRole('menuitem'), ...screen.queryAllByRole('button')]
+      .find(b => !(b as HTMLButtonElement).disabled && b.getAttribute('aria-haspopup') !== 'dialog' && !NAVIGATION.test(labelOf(b)) && !clicked.includes(labelOf(b)))
     if (!next) break
     clicked.push(labelOf(next))
     await userEvent.click(next)

@@ -4,6 +4,7 @@ import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { chooseMore, moreActions } from '../../../../tests/support/schedule-actions'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -326,8 +327,8 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
   it('cancels a published event: it stays, marked Cancelled, and nothing is deleted', async () => {
     await open()
     // A published event has no Delete: families have seen it.
-    expect(screen.queryByRole('button', { name: 'Delete vs Synthetic Rovers' })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel vs Synthetic Rovers' }))
+    expect(await moreActions('vs Synthetic Rovers')).toEqual(['Cancel event'])
+    await chooseMore('vs Synthetic Rovers', 'Cancel event')
     const sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     await userEvent.type(within(sheet).getByLabelText('Reason (optional)'), 'Pitch waterlogged')
     rows = [DRAFT, { ...LIVE, status: 'cancelled', cancel_reason: 'Pitch waterlogged' }]
@@ -339,8 +340,9 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     })
     expect(await within(card('vs Synthetic Rovers')).findByText('Cancelled')).toBeInTheDocument()
     expect(within(card('vs Synthetic Rovers')).getByText('Pitch waterlogged')).toBeInTheDocument()
-    // A cancelled event can't be edited, published or cancelled again.
-    expect(within(card('vs Synthetic Rovers')).queryAllByRole('button')).toEqual([])
+    // A cancelled event can't be edited, published or cancelled again: its card opens its sheet (the title) and shares the cancellation.
+    expect(within(card('vs Synthetic Rovers')).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent?.trim()))
+      .toEqual(['vs Synthetic Rovers', 'Share vs Synthetic Rovers'])
     expect(writes.some(w => w.method === 'delete')).toBe(false)
     // TRAK-135: and the families' cancellation email is sent.
     expect(emailNudges).toBe(1)
@@ -348,7 +350,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
 
   it('deletes only a draft nobody has seen', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Finishing' }))
+    await chooseMore('Finishing', 'Delete draft')
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'delete', query: '?id=eq.draft-1&select=id' })
     expect(emailNudges).toBe(0)

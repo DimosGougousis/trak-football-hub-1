@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { chooseMore, moreActions } from '../../../../tests/support/schedule-actions'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -62,12 +63,13 @@ describe('TRAK-230: a started event is fixed', { timeout: 20_000 }, () => {
     await screen.findByText('Late', { selector: 'p' })
     await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
     expect(screen.getByRole('button', { name: 'Edit Late' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cancel Late' })).toBeInTheDocument()
+    // TRAK-272: Cancel and Delete sit behind each card's More menu.
+    expect(await moreActions('Late')).toEqual(['Cancel event'])
     expect(screen.queryByRole('button', { name: 'Edit Early' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Cancel Early' })).toBeNull()
+    expect(await moreActions('Early')).toEqual([])
     expect(screen.queryByRole('button', { name: 'Edit Old draft' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Publish Old draft' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete Old draft' })).toBeInTheDocument()
+    expect(await moreActions('Old draft')).toEqual(['Delete draft'])
   })
 
   it.each(['edit', 'cancel'])("a ?%s= link for a started event says why and opens nothing", async action => {

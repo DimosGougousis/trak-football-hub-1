@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { canShareSheet } from '@/lib/share-event'
 
 /** Imad's share icon (TRAK-168, 18 Oct): a box with an arrow out, drawn in the text colour. */
 export function ShareIcon({ size = 16 }: { size?: number }) {
@@ -11,8 +12,6 @@ export function ShareIcon({ size = 16 }: { size?: number }) {
     </svg>
   )
 }
-
-const canShareSheet = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
 /**
  * TRAK-168 (Imad, 18 Oct): Share opens the phone's share sheet with the message, so the
