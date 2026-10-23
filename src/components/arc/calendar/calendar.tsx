@@ -27,6 +27,8 @@ export interface CalendarProps {
   showToday?: boolean;
   /** Trak: event dots under a day; hollow marks distinguish cancellations without colour alone. */
   marks?: (date: Date) => CalendarMark[];
+  /** Trak (TRAK-255): a day with something waiting for the user gets an amber corner, read as "needs you". */
+  attention?: (date: Date) => boolean;
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -123,6 +125,7 @@ export function Calendar({
   className,
   showToday = false,
   marks,
+  attention,
 }: CalendarProps) {
   const titleId = useId();
   const today = useToday();
@@ -292,6 +295,7 @@ export function Calendar({
         const selected = sameDay(date, value);
         const isToday = sameDay(date, today);
         const dots = marks?.(date) ?? [];
+        const needsYou = attention?.(date) ?? false;
         const label = date.toLocaleDateString(locale, { dateStyle: "full" });
         return <button
           key={key}
@@ -299,7 +303,8 @@ export function Calendar({
           role="gridcell"
           data-date={key}
           data-outside={outside || undefined}
-          aria-label={dots.length ? `${label}, ${dots.length} ${dots.length === 1 ? "event" : "events"}` : label}
+          aria-label={(dots.length ? `${label}, ${dots.length} ${dots.length === 1 ? "event" : "events"}` : label) + (needsYou ? ", needs you" : "")}
+          data-attention={needsYou || undefined}
           aria-selected={selected}
           aria-current={isToday ? "date" : undefined}
           tabIndex={present && key === tabbableKey ? 0 : -1}
@@ -310,6 +315,7 @@ export function Calendar({
           onKeyDown={(event) => onDayKeyDown(event, date)}
           onClick={() => onChange?.(date)}
         >{monthLabel && <span className={styles.monthLabel} data-month-label aria-hidden="true">{monthLabel}</span>}
+          {needsYou && <span className={styles.attention} aria-hidden="true" />}
           <span className={styles.dayNumber}>{date.getDate()}</span>
           {dots.length > 0 && <span className={styles.marks} aria-hidden="true">{dots.slice(0, 3).map((mark, i) => {
             const { color, hollow } = typeof mark === "string" ? { color: mark, hollow: false } : mark;
