@@ -91,11 +91,12 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.queryByRole('tablist', { name: 'Coach' })).toBeNull()
 
-    // A squad's row picks that squad and opens Squad. The squads come from their own read, so wait for the row
-    // (CI's slower runner reached it before it was there, on #439).
+    // A squad's row picks that squad and opens Squad. The sidebar is looked up again each time: while a page's code
+    // loads, the frame can be rebuilt, and a held copy is then a detached one (CI, four times on #439).
+    const sidebarNow = () => screen.getByRole('navigation', { name: 'Rehearsal FC' })
     await userEvent.click(await within(sidebar).findByRole('button', { name: 'U16' }, { timeout: 5000 }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
-    await waitFor(() => expect(within(sidebar).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'))
+    await waitFor(() => expect(within(sidebarNow()).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'), { timeout: 5000 })
   })
 
   it('Feedback and Profile still open by their address', async () => {
