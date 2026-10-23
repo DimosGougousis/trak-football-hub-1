@@ -25,7 +25,7 @@ Imad used the live coach app on his phone on 23 Oct and listed 13 fixes for the 
 | S1 | Remove the band bar and "9 of 9 assessed" | Remove the summary entirely. |
 | S2 | Sparklines, not "Good ↑" | Each row ends with Arc's Sparkline (free): the player's overall rating per assessment, oldest to newest, last 6, not interactive. No line under 2 assessments. "Waiting for consent" stays; "Not assessed" goes. The profile header keeps its band chip. |
 | S3 | Tapping a player lags, then you scroll yourself | Root cause (reproduced): on a phone the profile sits under the list, and the smooth scroll starts while it's still loading, so it stops short (profile left 505 px down). **Fix: on a phone, a player opens in place of the list, at the top, with "All players" to go back to the same spot.** Tablet and laptop keep the side-by-side layout. |
-| S4 | Cards rise from under the screen | Two causes, both reproduced. (1) Every time: the profile pane in the team directory was a Motion layout element (`layout="position"`), so the card was measured against the pane, and the quick look began about a page-scroll below the card (1,423 px for a card at 389 px). The pane is now a plain element. (2) Intermittently, on CI 1 run in 12 and more after a pause: Motion sometimes measures the quick look with a stale page scroll (its cached root scroll), so the grow still began below the screen (701–961 px on an 844 px screen). Fix: the assessment card's quick look opens in place, rising slightly in the middle of the screen, instead of growing out of the card (`Card grow={false}`). Arc's grow stays available to other cards. |
+| S4 | Cards rise from under the screen | Two causes, both reproduced. (1) The profile pane in the team directory was a Motion layout element (`layout="position"`), so the card was measured against the pane (fixed in #439). (2) Arc's Card panel had `layoutScroll`: on a fixed element Motion takes that for a scroll root and measured the panel without the page's scroll while the card kept it, so on a scrolled page the grow began a page-scroll below the card. TRAK-277 removes it, and the card grows out of itself again (#439 had opened it in place meanwhile). |
 | S5 | Merge Latest and Earlier | One row, "Assessments": the latest first, swipe right for older ones (up to 6, then "All N"). |
 | S6 | Date and session name above each card | Remove. The card's quick look already shows both. |
 
@@ -47,7 +47,7 @@ Imad used the live coach app on his phone on 23 Oct and listed 13 fixes for the 
 2. An event sheet on a phone in the academy's zone shows no "Dubai time"; with the phone set to another zone it shows "… on this phone".
 3. Squad Players: no band bar or "assessed" line; a player with 2+ assessments shows a sparkline at the row's right edge.
 4. Tapping a player on a phone shows the profile's top within 300 ms with no scrolling by hand; "All players" returns to the same list position.
-5. Opening an assessment card on a scrolled page, 30 runs: every frame of the quick look stays in the top half of the screen (the grow failed this, starting at 701–961 px).
+5. Opening an assessment card on a scrolled page, 30 runs: the grow begins within 80 px of the card (with `layoutScroll`, 30 of 30 fail: card at 277 px, grow from 980 px).
 6. One "Assessments" row, latest first, no date line above any card.
 7. All unit tests, types and the pilot browser suite pass.
 
