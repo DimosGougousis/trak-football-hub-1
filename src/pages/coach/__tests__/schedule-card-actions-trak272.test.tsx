@@ -7,6 +7,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { toInstant } from '@/lib/event-time'
+import { SIDE_MENU_QUERY } from '@/lib/side-menu-screen'
 
 /**
  * TRAK-272 (Tarek, 23 Oct, on the live Schedule): the pencil, ban and share icons at the top right of
@@ -14,6 +15,10 @@ import { toInstant } from '@/lib/event-time'
  * me into what I need to do next". Each card now has Arc's Button group of that event's actions, in
  * words, the next step first, with Cancel or Delete behind its menu. Tapping the card opens the same
  * event sheet coach Home's week opens. And Schedule has a Back on a phone.
+ *
+ * TRAK-275 (Tarek, 23 Oct, later): the group goes back to the card's top right, keeps the icons, and
+ * on a phone shows only them; a laptop adds the words. No group is solid black (a draft or a waiting
+ * register read as black), and Cancel or Delete is an icon of the group again, not behind a menu.
  */
 
 const COACH = { id: 'coach-1' }
@@ -43,6 +48,10 @@ function fixtures() {
   )
 }
 
+const realMatchMedia = window.matchMedia
+const onLaptop = () => {
+  window.matchMedia = ((query: string) => ({ ...realMatchMedia(query), matches: query === SIDE_MENU_QUERY })) as typeof window.matchMedia
+}
 const group = (title: string) => screen.getByRole('group', { name: `Actions for ${title}` })
 const names = (el: HTMLElement) => within(el).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent?.trim())
 
@@ -58,34 +67,45 @@ describe('TRAK-272: each Schedule card has a button group of its actions', { tim
     signInAs(COACH)
     fixtures()
   })
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => { vi.useRealTimers(); window.matchMedia = realMatchMedia })
 
-  it('a draft: Publish first, then Edit; Delete is behind More', async () => {
+  it('a draft: Publish, Edit and Delete, as icons only on a phone', async () => {
     await open()
     const g = group('Shooting')
-    expect(names(g)).toEqual(['Publish Shooting', 'Edit Shooting', 'More actions for Shooting'])
-    expect(within(g).getByRole('button', { name: 'Publish Shooting' })).toHaveTextContent('Publish')
-    // No loose icon buttons left at the card's corner.
-    expect(screen.queryByRole('button', { name: 'Delete Shooting' })).toBeNull()
-    await userEvent.click(within(g).getByRole('button', { name: 'More actions for Shooting' }))
-    expect(await screen.findByRole('menuitem', { name: 'Delete draft' })).toBeInTheDocument()
+    expect(names(g)).toEqual(['Publish Shooting', 'Edit Shooting', 'Delete Shooting'])
+    for (const button of within(g).getAllByRole('button')) {
+      expect(button.textContent?.trim()).toBe('')
+      expect(button.querySelector('svg')).not.toBeNull()
+      expect(button).toHaveAttribute('title', button.getAttribute('aria-label'))
+    }
+    expect(screen.queryByRole('button', { name: 'More actions for Shooting' })).toBeNull()
   })
 
-  it('a published event to come: Share, Edit; Cancel is behind More', async () => {
+  it('a published event to come: Share, Edit and Cancel', async () => {
     await open()
-    const g = group('vs AEK Athens U16')
-    expect(names(g)).toEqual(['Share vs AEK Athens U16', 'Edit vs AEK Athens U16', 'More actions for vs AEK Athens U16'])
-    expect(screen.queryByRole('button', { name: 'Cancel vs AEK Athens U16' })).toBeNull()
-    await userEvent.click(within(g).getByRole('button', { name: 'More actions for vs AEK Athens U16' }))
-    expect(await screen.findByRole('menuitem', { name: 'Cancel event' })).toBeInTheDocument()
+    expect(names(group('vs AEK Athens U16'))).toEqual(['Share vs AEK Athens U16', 'Edit vs AEK Athens U16', 'Cancel vs AEK Athens U16'])
   })
 
-  it('a started training with no register: Take register is the next step, and it says Needs you', async () => {
+  it('a started training with no register: Take register leads, and it says Needs you', async () => {
     await open()
     await userEvent.click(document.querySelector('[data-present] [data-date="2026-10-21"]') as HTMLElement)
     const g = group('Recovery')
     expect(names(g)[0]).toBe('Take register for Recovery')
     expect(within(g.closest('div.rounded-\\[14px\\]') as HTMLElement).getByText('Needs you')).toBeInTheDocument()
+  })
+
+  it('no card\'s group is solid black: not a draft, not a register that waits', async () => {
+    await open()
+    expect(group('Shooting').className).not.toMatch(/solid/)
+    await userEvent.click(document.querySelector('[data-present] [data-date="2026-10-21"]') as HTMLElement)
+    expect(group('Recovery').className).not.toMatch(/solid/)
+  })
+
+  it('on a laptop the icons carry their words', async () => {
+    onLaptop()
+    await open()
+    expect(within(group('Shooting')).getByRole('button', { name: 'Publish Shooting' })).toHaveTextContent('Publish')
+    expect(within(group('Shooting')).getByRole('button', { name: 'Delete Shooting' })).toHaveTextContent('Delete')
   })
 
   it('tapping the card opens its event sheet, as on coach Home', async () => {

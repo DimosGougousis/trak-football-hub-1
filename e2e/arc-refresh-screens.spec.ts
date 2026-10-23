@@ -419,13 +419,13 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
     // TRAK-270 (Tarek, 23 Oct): needs you is a clear yellow, not the warning amber, with a dark edge.
-    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('236 228 0')
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('234 179 8')
     const needsYou = page.getByRole('group', { name: 'Colour key' }).getByText('Needs you').locator('xpath=preceding-sibling::div[1]')
-    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(236, 228, 0)')
+    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(234, 179, 8)')
     await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
     // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
     await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
-    // TRAK-272: a card's actions are a button group big enough to tap, and tapping the card opens its sheet.
+    // TRAK-272, TRAK-275: a card's actions are a button group big enough to tap (icons only on a phone), and tapping the card opens its sheet.
     const share = page.getByRole('group', { name: 'Actions for League' }).getByRole('button', { name: 'Share League' })
     expect((await share.boundingBox())!.height).toBeGreaterThanOrEqual(36)
     await page.getByText('Kit: White shirts, black shorts').click()
@@ -448,7 +448,7 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     const flag = cell.locator('[aria-hidden="true"]').filter({ hasNot: page.locator('span') }).first()
     await expect(flag).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
     await expect(flag).toHaveCSS('border-top-right-radius', '4px')
-    await expect(flag).toHaveCSS('background-color', 'rgb(236, 228, 0)')
+    await expect(flag).toHaveCSS('background-color', 'rgb(234, 179, 8)')
     const [f, c] = [(await flag.boundingBox())!, (await cell.boundingBox())!]
     expect(f.x).toBeGreaterThanOrEqual(c.x)
     expect(f.y).toBeGreaterThanOrEqual(c.y)
