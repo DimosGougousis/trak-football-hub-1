@@ -313,6 +313,52 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
     await expect(panel).toBeHidden()
     expect(unexpected).toEqual([])
   })
+
+  // Imad's 23 Oct phone review: on a scrolled page the quick look rose from under the screen, because Motion measured
+  // the fixed panel without the page's scroll. Its first frame must start where the card sits.
+  test('on a scrolled page, an assessment card grows from where it sits', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    await page.getByRole('button', { name: /^Bukayo Saka/ }).click()
+    const trigger = page.locator('article[aria-label^="Bukayo Saka"]').locator('h3 button').first()
+    await trigger.evaluate(el => el.scrollIntoView({ block: 'center' }))
+    const scrolled = await page.evaluate(() => scrollY)
+    expect(scrolled, 'the page must be scrolled for this check to mean anything').toBeGreaterThan(100)
+    const cardTop = await trigger.evaluate(el => el.closest('article')!.getBoundingClientRect().top)
+    await trigger.click()
+    const firstTop = await page.evaluate(() => new Promise<number>(resolve => {
+      const look = () => { const panel = document.querySelector('[role="dialog"]'); if (panel) resolve(panel.getBoundingClientRect().top); else requestAnimationFrame(look) }
+      look()
+    }))
+    expect(Math.abs(firstTop - cardTop), `card at ${cardTop}, quick look began at ${firstTop}, page scrolled ${scrolled}`).toBeLessThan(80)
+    await page.keyboard.press('Escape')
+    expect(unexpected).toEqual([])
+  })
+})
+
+// Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
+// On a phone the profile now takes the list's place, and "All players" returns to the same spot.
+test.describe('Squad Players on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 500 } })
+
+  test("a picked player's profile replaces the list, and All players returns to it", async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    const list = page.getByRole('list', { name: 'Players' })
+    await expect(list).toBeVisible()
+    await page.evaluate(() => scrollTo({ top: 200 }))
+    const before = await page.evaluate(() => scrollY)
+    await page.getByRole('button', { name: /^Thiago Silva/ }).click()
+    const profile = page.locator('article[aria-label^="Thiago Silva"]')
+    await expect(profile).toBeInViewport()
+    await expect(list).toBeHidden()
+    await page.getByRole('button', { name: 'All players' }).click()
+    await expect(list).toBeVisible()
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(before)
+    expect(unexpected).toEqual([])
+  })
 })
 
 // TRAK-221 (20 Oct live run): scrolling the assessment with a finger that
