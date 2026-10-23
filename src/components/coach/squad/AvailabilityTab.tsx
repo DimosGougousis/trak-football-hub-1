@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, Circle, TriangleAlert } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { displayEventTime, localTodayISO, toInstant } from '@/lib/event-time'
+import { localTodayISO, phoneEventTime, toInstant } from '@/lib/event-time'
 import { splitAvailability, type AvailPlayer } from '@/lib/squad/availability'
 import { quoted, weekdayDayMonth as dayLabel } from '@/lib/squad/format'
 import type { Tables } from '@/integrations/supabase/types'
@@ -204,7 +204,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     )
   }
 
-  const { date, time } = displayEventTime(event)
+  const { date, time } = phoneEventTime(event)
   const what = isMatch ? (event.opponent ? `vs ${event.opponent}` : event.title) : event.title
   const heading = [dayLabel(date), what].filter(Boolean).join(' · ')
   const details = [

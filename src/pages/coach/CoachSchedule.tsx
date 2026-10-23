@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Pencil, Send, Trash2, Ban, X, FileUp, 
 import { isMapsUrl, joinVenue, splitVenue, venueParts } from '@/lib/venue-link'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
-import { displayEventTime, localTodayISO } from '@/lib/event-time'
+import { displayEventTime, localTodayISO, phoneClock, phoneEventTime } from '@/lib/event-time'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
@@ -372,7 +372,8 @@ export default function CoachSchedule() {
   const allEvents = useMemo<CalEvent[]>(() => {
     const ev: CalEvent[] = []
     for (const e of calEvents) {
-      const shown = displayEventTime(e)
+      // Imad, 23 Oct: shown on this phone's clock; the form and saves keep the academy's.
+      const shown = phoneEventTime(e)
       ev.push({
         id:       e.id,
         title:    e.title,
@@ -837,7 +838,7 @@ export default function CoachSchedule() {
                           ? <><span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>{' · '}</>
                           : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>No time set</span>{' · '}</>}
                         {/* TRAK-271: the type's colour is a dot; the word stays dark. */}<span className="inline-flex items-center gap-1 font-medium text-ink-2"><span aria-hidden="true" className="inline-block w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[ev.type] }} />{TYPE_LABEL[ev.type]}</span>{row?.series_id ? ' · Weekly' : ''}
-                        {row?.meet_time ? ` · meet ${row.meet_time.slice(0, 5)}` : ''}
+                        {row?.meet_time ? ` · meet ${phoneClock(row, row.meet_time)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
                         {place?.text ? ` · ${place.text}` : ''}
                       </p>

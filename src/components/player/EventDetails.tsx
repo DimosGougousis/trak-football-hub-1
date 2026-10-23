@@ -1,6 +1,5 @@
 import { MapPin } from 'lucide-react'
-import { eventDay, eventHeading, eventTime, meetText, type PlayerEvent } from '@/lib/player-events'
-import { academyClock } from '@/lib/event-time'
+import { academyLine, eventDay, eventHeading, eventTime, meetText, type PlayerEvent } from '@/lib/player-events'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
 import { withAlpha } from '@/lib/with-alpha'
@@ -24,11 +23,11 @@ export function EventDetails({ event: e, changes = [] }: {
   const place = e.venue ? venueParts(e.venue) : null
   const venueText = place?.text || null
   const venue = venueText && side ? `${venueText} (${side})` : venueText ?? side
-  // TRAK-223: "17:00 Athens time (19:00 on this phone)": the academy's clock, named.
-  const clock = academyClock(e)
+  // Imad, 23 Oct: "20:00 (19:00 Athens time)": this phone's clock, with the academy's only when they differ.
+  const academy = academyLine(e)
   const rows: [string, string][] = [
     ['Date', eventDay(e)],
-    ['Time', `${eventTime(e)}${clock ? ` ${clock.zone}` : ''}${clock?.here ? ` (${clock.here})` : ''}`],
+    ['Time', `${eventTime(e)}${academy && e.time ? ` (${academy})` : ''}`],
     ...(e.meetTime ? [['Meet', meetText(e, e.meetTime)] as [string, string]] : []),
     ...(venue ? [['Venue', venue] as [string, string]] : []),
     ...(e.kit && !e.kitSnapshot ? [['Kit', e.kit] as [string, string]] : []),

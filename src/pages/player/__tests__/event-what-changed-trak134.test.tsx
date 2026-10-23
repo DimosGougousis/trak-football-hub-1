@@ -6,13 +6,19 @@
  * then the time and the venue) on that visit, whatever the attendance; once
  * opened, it's seen. Someone who never saw the old version is told nothing.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, rpcRows, SUPABASE_URL } from '../../../../tests/msw/supabase'
+
+// These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
+// Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
+const phoneTZ = process.env.TZ
+beforeAll(() => { process.env.TZ = 'Asia/Dubai' })
+afterAll(() => { process.env.TZ = phoneTZ })
 
 let PLAYER = { id: 'player-134' }
 const BEFORE = {

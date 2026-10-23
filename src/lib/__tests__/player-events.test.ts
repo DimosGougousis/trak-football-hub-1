@@ -20,15 +20,23 @@ const ROW = {
   meet_time: '09:15:00', kit: 'White', home_away: 'away', status: 'scheduled', cancel_reason: null, sequence: 2,
 }
 
-afterEach(() => localStorage.clear())
+const realTZ = process.env.TZ
+afterEach(() => { localStorage.clear(); process.env.TZ = realTZ })
 
 describe('toPlayerEvent', () => {
-  it('reads every field the player sees, with times as the coach typed them', () => {
+  it('reads every field the player sees; on a phone in the academy zone, times as the coach typed them', () => {
+    process.env.TZ = 'Asia/Dubai'
     expect(toPlayerEvent(ROW)).toEqual({
       id: 'ev-1', kind: 'match', title: 'League match', date: '2026-11-14', time: '10:00', meetTime: '09:15',
+      academy: { date: '2026-11-14', time: '10:00' },
       venue: 'Rivals Park', kit: 'White', kitSnapshot: null, opponent: 'Rivals FC', homeAway: 'away',
       status: 'scheduled', cancelReason: null, sequence: 2, updatedAt: null, familyNote: null, startsAt: '2026-11-14T06:00:00Z',
     })
+  })
+
+  it("Imad, 23 Oct: on a phone elsewhere, the start and meet time are that phone's, and the academy's are kept", () => {
+    process.env.TZ = 'Europe/London'
+    expect(toPlayerEvent(ROW)).toMatchObject({ date: '2026-11-14', time: '06:00', meetTime: '05:15', academy: { date: '2026-11-14', time: '10:00' } })
   })
 
   it("reads when the coach last changed it, where the read includes it (TRAK-134, the parent's bell)", () => {

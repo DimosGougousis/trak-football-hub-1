@@ -4,7 +4,7 @@ import { followChild } from '@/test/follow-child'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useParams, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
 import ParentHome from '../ParentHome'
 import ParentMatches from '../ParentMatches'
@@ -13,6 +13,12 @@ import ParentProfilePage from '../ParentProfilePage'
 import Settings from '@/pages/Settings'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
+
+// These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
+// Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
+const phoneTZ = process.env.TZ
+beforeAll(() => { process.env.TZ = 'Asia/Dubai' })
+afterAll(() => { process.env.TZ = phoneTZ })
 
 const auth = vi.hoisted(() => ({ parentId: 'parent-a' }))
 vi.mock('@/contexts/AuthContext', () => ({

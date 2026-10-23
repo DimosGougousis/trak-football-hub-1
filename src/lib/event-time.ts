@@ -257,28 +257,62 @@ export function calendarFieldsFromInstant(
   }
 }
 
-const pad2 = (n: number) => String(n).padStart(2, '0')
 const ACADEMY_ZONES: Record<number, string> = { 240: 'Dubai time', 180: 'Athens time', 120: 'Athens time' }
 
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
 /**
- * TRAK-223 (20 Oct live run, S3): which clock an event's time is on, read from
- * the event itself. Its date and time are the academy's wall clock (TRAK-175)
- * and starts_at the instant, so the gap is the academy's UTC offset that day.
- * The database allows two zones (organizations_time_zone_supported): Dubai is
- * always +4, Athens +2 or +3. Trak keeps academy time on every screen; when
- * this phone's clock differs that day, `here` says the time on it too.
+ * Imad, 23 Oct: what a screen shows for an event is this phone's clock. Its day
+ * and start come from the instant in the phone's own time zone, so 19:00 in
+ * Athens reads 20:00 on a phone in Dubai. An event with no time yet keeps the
+ * academy's day. Forms, the share text and the emails stay on the academy's
+ * clock (displayEventTime). Only an academy's own gap moves a time (Dubai +4,
+ * Athens +2 or +3, the zones the database allows); anything else stays as typed.
  */
-export function academyClock(event: { date: string; time: string | null; startsAt?: string | null }):
-  { zone: string; here: string | null } | null {
+export function phoneEventTime(row: { event_date?: string | null; start_time?: string | null; starts_at?: string | null }):
+  { date: string; time: string | null } {
+  const academy = displayEventTime(row)
+  if (!academy.time || !row.starts_at || academyOffset(academy.date, academy.time, row.starts_at) === null) return academy
+  return localParts(row.starts_at)
+}
+
+/** The academy's UTC offset in minutes, read from an event's wall clock and its instant; null when it isn't one Trak knows. */
+function academyOffset(date: string, time: string, startsAt: string): number | null {
+  const offset = Math.round((Date.parse(`${date}T${time}:00Z`) - Date.parse(startsAt)) / 60_000)
+  return offset in ACADEMY_ZONES ? offset : null
+}
+
+/** Another of an event's academy times (its meet time) on this phone's clock: moved by the same gap as its start. */
+export function phoneClock(row: { event_date?: string | null; start_time?: string | null; starts_at?: string | null }, hhmm: string | null | undefined):
+  string | null {
+  if (!hhmm) return null
+  const academy = displayEventTime(row)
+  const here = phoneEventTime(row)
+  if (!academy.time || !here.time) return hhmm.slice(0, 5)
+  const shift = (Date.parse(`${here.date}T${here.time}:00Z`) - Date.parse(`${academy.date}T${academy.time}:00Z`)) / 60_000
+  const at = (((Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)) + shift) % 1440) + 1440) % 1440
+  return `${pad2(Math.floor(at / 60))}:${pad2(at % 60)}`
+}
+
+/**
+ * TRAK-223 (20 Oct live run, S3), turned round by Imad on 23 Oct: screens show
+ * this phone's clock, so when the academy's clock differs that day this is the
+ * academy's own time for a second line, "19:00 Athens time" ("Wed 01:00 Athens
+ * time" on another day). Null when the two agree, so a phone in the academy's
+ * zone shows no zone at all. `date` and `time` are the academy's wall clock
+ * (TRAK-175) and starts_at the instant, so the gap is the academy's UTC offset
+ * that day. The database allows two zones (organizations_time_zone_supported):
+ * Dubai is always +4, Athens +2 or +3.
+ */
+export function academyClock(event: { date: string; time: string | null; startsAt?: string | null }): string | null {
   if (!event.time || !event.startsAt) return null
+  const offset = academyOffset(event.date, event.time, event.startsAt)
   const instant = new Date(event.startsAt)
-  if (Number.isNaN(instant.getTime())) return null
-  const offset = Math.round((Date.parse(`${event.date}T${event.time}:00Z`) - instant.getTime()) / 60_000)
-  const zone = ACADEMY_ZONES[offset] ?? 'academy time'
-  if (-instant.getTimezoneOffset() === offset) return { zone, here: null }
-  const time = `${pad2(instant.getHours())}:${pad2(instant.getMinutes())}`
-  const day = instant.toLocaleDateString('en-CA') === event.date ? '' : `${instant.toLocaleDateString('en-GB', { weekday: 'short' })} `
-  return { zone, here: `${day}${time} on this phone` }
+  if (offset === null || -instant.getTimezoneOffset() === offset) return null
+  const zone = ACADEMY_ZONES[offset]
+  const day = instant.toLocaleDateString('en-CA') === event.date ? ''
+    : `${new Date(`${event.date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })} `
+  return `${day}${event.time} ${zone}`
 }
 
 /** "45 min before kick-off" (or "before the start"): a meet time against its event's start, both academy time. */

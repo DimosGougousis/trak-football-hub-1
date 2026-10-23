@@ -41,9 +41,11 @@ export function CoachWeekStrip({ coachId, version = 0, everySquad = false }: {
 }
 
 async function loadWeek(coachId: string, from: string, to: string): Promise<{ events: EventRow[]; sessions: WeekSession[] }> {
-  // Every squad's events: a draft's clash counts them all, as the database does (TRAK-218).
+  // Every squad's events: a draft's clash counts them all, as the database does (TRAK-218). A day either side, as a
+  // late or early event can fall in this week on this phone's clock (Imad, 23 Oct); the week keeps only its own days.
+  const day = (date: string, by: number) => format(addDays(parseISO(date), by), 'yyyy-MM-dd')
   const events = await supabase.from('coach_calendar_events').select('*')
-    .eq('coach_user_id', coachId).gte('event_date', from).lte('event_date', to)
+    .eq('coach_user_id', coachId).gte('event_date', day(from, -1)).lte('event_date', day(to, 1))
     .order('event_date', { ascending: true })
   if (events.error) throw events.error
   // A date correction can move a completed session to another week; its old calendar entry stays hidden.

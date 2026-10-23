@@ -4,7 +4,7 @@
  * Arc's glass segmented control. This file holds the shell tests;
  * each tab's own tests are appended as the tab lands.
  */
-import { it, expect, describe, beforeEach, afterEach, vi } from 'vitest'
+import { beforeAll, afterAll, it, expect, describe, beforeEach, afterEach, vi } from 'vitest'
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -17,6 +17,12 @@ import { forgetScreens } from '@/lib/screen-memory'
 import { supabase } from '@/integrations/supabase/client'
 import { localTodayISO } from '@/lib/event-time'
 import { seasonWindow } from '@/lib/squad/season'
+
+// These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
+// Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
+const phoneTZ = process.env.TZ
+beforeAll(() => { process.env.TZ = 'Asia/Dubai' })
+afterAll(() => { process.env.TZ = phoneTZ })
 
 // jsdom lays nothing out, so recharts' ResponsiveContainer would measure 0×0 and warn. A fixed size instead.
 vi.mock('recharts', async importOriginal => {
