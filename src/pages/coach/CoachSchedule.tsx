@@ -781,8 +781,9 @@ export default function CoachSchedule() {
               <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Cancelled</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-[9px] h-[8px]" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
-                <div className="w-full h-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} />
+              {/* Coach Home's corner (TRAK-270), as the month draws it. */}
+              <div className="w-[8px] h-[8px]" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
+                <div className="w-full h-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
               </div>
               <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Needs you</span>
             </div>
