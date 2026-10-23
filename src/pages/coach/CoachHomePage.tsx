@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
@@ -18,14 +18,11 @@ import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { needsYou } from '@/lib/coach-needs-you'
 import { squadShape } from '@/lib/squad/shape'
 import { localParts, localTodayISO } from '@/lib/event-time'
-import { remember, remembered } from '@/lib/screen-memory'
 
 /* TRAK-262 (Imad, 22 Oct): coach Home on Arc. Squad pills (each squad, then All, which is Home's only); the week
    in Tarek's colour key with one next step per event; the Squad shape radar; Needs you. "Assess a player" and
    "Log a match" left: the "+" has both. TRAK-266: no onboarding for now (Imad, 22 Oct).
-   TRAK-196: one quiet line, as player and parent Home have it; it follows the squad picked (TRAK-176). */
-
-type HomeMemory = { line: string }
+   Imad, 23 Oct: no role and academy line under the header. */
 
 export default function CoachHomePage() {
   const { user, profile } = useAuth()
@@ -38,30 +35,7 @@ export default function CoachHomePage() {
   const [allPicked, setEverySquad] = useState(true)
   const everySquad = allPicked && coachSquad.squads.length >= 2
   const roster = useSquadRoster({ everySquad })
-  // TRAK-180: a revisit starts from the line Home last showed this coach.
-  const [seed] = useState(() => remembered<HomeMemory>('coach-home', user?.id))
-  const [details, setDetails] = useState<{ coach_role: string | null; team: string | null; academy: string | null } | null>(null)
-
-  // The quiet line's facts: role and academy. A failure here leaves the line shorter.
-  useEffect(() => {
-    if (!user) return
-    let stale = false
-    ;(async () => {
-      const { data } = await supabase.from('coach_details').select('coach_role, team, organization_id').eq('user_id', user.id).maybeSingle()
-      const orgId = (data as { organization_id?: string | null } | null)?.organization_id
-      const org = orgId ? (await supabase.from('organizations').select('name').eq('id', orgId).maybeSingle()).data : null
-      if (!stale) setDetails({ coach_role: data?.coach_role ?? null, team: data?.team ?? null, academy: (org as { name?: string } | null)?.name ?? null })
-    })()
-    return () => { stale = true }
-  }, [user])
-
-  const squadLabel = everySquad ? 'All squads' : coachSquad.squad ?? details?.team ?? 'Your squad'
-  // "Head Coach · Rehearsal Athens · U16": the squad picked, else the coach's team.
-  const line = [details?.coach_role, details?.academy, everySquad ? 'All squads' : coachSquad.squad ?? details?.team].filter(Boolean).join(' · ')
-
-  useEffect(() => {
-    if (user && line) remember<HomeMemory>('coach-home', user.id, { line })
-  }, [user, line])
+  const squadLabel = everySquad ? 'All squads' : coachSquad.squad ?? coachSquad.squads[0] ?? 'Your squad'
 
   // The coach's "Needs you" switch (Settings, TRAK-261): on unless turned off. A switch that can't be read shows the cards.
   const needsYouSwitch = useQuery({
@@ -95,7 +69,6 @@ export default function CoachHomePage() {
           ? <div className="mb-3 flex justify-start">{pills}</div>
           : <HomeHeader calendarTo="/coach/schedule" left={<CoachMenuButton name={profile?.full_name || 'Coach'} />}
               center={pills} right={user && <CoachAlertsBell coachId={user.id} />} />}
-        {(line || seed?.line) && <p className={`text-xs text-muted-foreground pb-4 ${wide ? '' : 'text-center -mt-1'}`}>{line || seed?.line}</p>}
 
         <div className={wide ? 'grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-6' : 'grid gap-5'}>
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}

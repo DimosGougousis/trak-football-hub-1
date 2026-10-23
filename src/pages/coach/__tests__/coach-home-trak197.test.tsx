@@ -60,11 +60,12 @@ beforeEach(() => {
 })
 afterEach(() => { vi.useRealTimers(); cleanup(); forgetScreens(); localStorage.clear() })
 
-describe('TRAK-196: one quiet line', () => {
-  it('reads "Head Coach · academy · squad", with no greeting, no chips and no season card', async () => {
+describe('Home under the header (Imad, 23 Oct: no role and academy line)', () => {
+  it('has no role or academy line, no greeting, no chips and no season card', async () => {
     home({ players: [player('a', 'Ade Okafor')], assessments: [{ squad_player_id: 'a', created_at: daysAgo(1) }], present: cameToAll('a') })
     renderApp('/coach/home')
-    expect(await screen.findByText('Head Coach · Synthetic Athens · U16s')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByText(/Head Coach|Synthetic Athens/)).toBeNull()
     expect(screen.queryByText(/^Good (morning|afternoon|evening)/)).toBeNull()
     expect(screen.queryByText('Active')).toBeNull()
     for (const gone of ['THIS SEASON', 'Players in squad', 'Squad bands', 'RECENT ASSESSMENTS', 'Squad Overview', 'Coach Assistant']) {
@@ -218,15 +219,18 @@ describe('TRAK-262: coach Home', () => {
     expect(await screen.findByText(/No assessments this month or last/, {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
-  it('Squad shape counts each player in their band', async () => {
+  it('Squad shape names only the squad, with no band chips (Imad, 23 Oct)', async () => {
     const rating = { work_rate: 8, technical: 8, physical: 8, coachability: 8, attitude: 8, tactical: 8 }
     home({ players: [player('a', 'Ade Okafor'), player('b', 'Bo Lind')], present: cameToAll('a', 'b'), assessments: [
       { squad_player_id: 'a', coach_user_id: COACH.id, created_at: daysAgo(2), published_at: daysAgo(2), coach_rating: 8.2, ...rating },
       { squad_player_id: 'b', coach_user_id: COACH.id, created_at: daysAgo(3), published_at: daysAgo(3), coach_rating: 8.4, ...rating },
     ] })
     renderApp('/coach/home')
-    const bands = await screen.findByRole('list', { name: 'Players per band' }, { timeout: 5000 })
-    expect(within(bands).getByText('Standout').parentElement).toHaveTextContent('Standout 2')
+    const shape = await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })
+    expect(await within(shape).findByText('U16')).toBeInTheDocument()
+    expect(within(shape).queryByText(/this month against last/)).toBeNull()
+    expect(within(shape).queryByRole('list', { name: 'Players per band' })).toBeNull()
+    expect(within(shape).queryByText('Standout')).toBeNull()
   })
 
   it('opens on All, every squad, and a squad tapped is remembered without changing what All shows', async () => {
@@ -236,18 +240,19 @@ describe('TRAK-262: coach Home', () => {
     expect(await within(needs).findByRole('button', { name: /Ade Okafor/ })).toBeInTheDocument()
     expect(within(needs).getByRole('button', { name: /Bo Lind/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('Head Coach · Synthetic Athens · All squads')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Squad shape' })).getByText('All squads')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'U16' }))
     await waitFor(() => expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull())
     expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16')
   })
 
-  it('the quiet line follows the squad picked in the header', async () => {
+  it('Squad shape names the squad picked in the header', async () => {
     home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     renderApp('/coach/home')
-    expect(await screen.findByText('Head Coach · Synthetic Athens · All squads', {}, { timeout: 5000 })).toBeInTheDocument()
+    const shape = await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })
+    expect(await within(shape).findByText('All squads')).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'U14' }))
-    expect(await screen.findByText('Head Coach · Synthetic Athens · U14')).toBeInTheDocument()
+    expect(await within(shape).findByText('U14')).toBeInTheDocument()
   })
 })

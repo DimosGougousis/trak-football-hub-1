@@ -1,11 +1,12 @@
 // Arc Pro (uiarc.dev): adapted from the Team directory block; licensed source, not covered by this repository's licence. See src/components/arc/PRO.md.
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
-import { ArrowDown, ArrowUp, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, Search, X } from "lucide-react";
 import { Avatar } from "../../avatar/avatar";
 import { GlassSegmented } from "../../glass-segmented/glass-segmented";
+import { Sparkline } from "../../sparkline/sparkline";
 import { motionTokens } from "../../lib/motion-tokens";
 import { BANDS } from "@/lib/types";
 import styles from "./squad-directory.module.css";
@@ -28,6 +29,8 @@ export interface SquadPlayer {
   waiting?: boolean;
   /** Trak (TRAK-266): what the coach still owes this player, as a badge in the colour key. */
   flag?: ReactNode;
+  /** Trak (Imad, 23 Oct): overall ratings, oldest first, drawn as the row's sparkline. */
+  trend?: number[];
 }
 
 const FILTERS = ["All", "GK", "DEF", "MID", "ATT"] as const;
@@ -65,17 +68,31 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("All");
   const [selectedId, setSelectedId] = useState(defaultSelected);
+  /** Trak (Imad, 23 Oct): on a phone a picked player takes the list's place; this is where the list was scrolled. */
+  const [listScroll, setListScroll] = useState<number | null>(null);
 
   const needle = query.trim().toLowerCase();
   const visible = players.filter(player => (filter === "All" || player.group === filter) && `${player.name} ${player.position} ${player.shirt ?? ""}`.toLowerCase().includes(needle));
   const selected = visible.find(player => player.id === selectedId);
+  const focused = listScroll !== null && Boolean(selected);
 
-  // Trak: stacked on a phone, the profile is below the list, so picking a player brings it into view.
+  // The profile opens at its top, and "All players" puts the list back where it was, both at once rather than with a smooth scroll
+  // that a loading profile cut short (Imad's 23 Oct phone review).
+  useLayoutEffect(() => {
+    if (focused) detailRef.current?.scrollIntoView({ block: "start" });
+  }, [focused, selectedId]);
+
   function choose(id: string) {
     setSelectedId(id);
     const body = bodyRef.current;
-    if (body && getComputedStyle(body).gridTemplateColumns.split(" ").length === 1)
-      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }));
+    if (body && getComputedStyle(body).gridTemplateColumns.split(" ").length === 1) setListScroll(window.scrollY);
+  }
+
+  function back() {
+    const y = listScroll ?? 0;
+    setSelectedId(undefined);
+    setListScroll(null);
+    requestAnimationFrame(() => window.scrollTo({ top: y }));
   }
 
   function reset() {
@@ -86,7 +103,7 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
 
   const listTransition = reduce ? { duration: 0 } : motionTokens.spring.smooth;
 
-  return <section className={`arc ${styles.directory}`} aria-labelledby={`${uid}-title`}>
+  return <section className={`arc ${styles.directory}`} aria-labelledby={`${uid}-title`} data-focused={focused || undefined}>
     <header className={styles.header}>
       <h2 id={`${uid}-title`}>{title} <span className={styles.count}>{players.length}</span></h2>
       <label className={styles.search}>
@@ -118,7 +135,12 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
                   <Avatar name={player.name} />
                   <span className={styles.personText}><span className={styles.personName}>{player.name}</span><span className={styles.personRole}>{player.position}{player.shirt != null ? ` · #${player.shirt}` : ""}</span></span>
                   {player.flag}
-                  <BandChip band={player.band} move={player.move} waiting={player.waiting} />
+                  {/* Trak (Imad, 23 Oct): a sparkline of the player's ratings in place of the band chip; under two there's no line. */}
+                  {player.waiting ? <BandChip band={null} waiting />
+                    : player.trend && player.trend.length >= 2 ? <span className={styles.trend}>
+                      <Sparkline data={player.trend} label={`${player.name}'s last ${player.trend.length} ratings`}
+                        value={player.trend.map(score => score.toFixed(1)).join(", ")} width={64} height={24} area={false} interactive={false} />
+                    </span> : null}
                 </button>
               </motion.li>;
             })}
@@ -130,8 +152,8 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
         </div>}
       </div>
 
-      {/* Stacked on a phone, the profile rides up with the list as rows leave instead of jumping ahead of it. */}
-      <motion.div ref={detailRef} className={styles.detailPane} layout={reduce ? false : "position"} transition={{ layout: listTransition }} aria-live="polite">
+      <div ref={detailRef} className={styles.detailPane} aria-live="polite">
+        {focused && <button type="button" className={styles.back} onClick={back}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />All players</button>}
         <AnimatePresence mode="popLayout" initial={false}>
           {selected ? <motion.article key={selected.id} className={styles.profile} initial={reduce ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: reduce ? 0 : motionTokens.duration.exit, ease: [...motionTokens.ease.standard] } }}
@@ -139,7 +161,7 @@ export function SquadDirectory({ title, players, summary, renderProfile, default
             {renderProfile(selected)}
           </motion.article> : <motion.div key="none" className={styles.noProfile} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }}><p>Nobody selected</p><span>{visible.length ? "Pick a player to see their profile." : "Clear your search to see the squad."}</span></motion.div>}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </div>
   </section>;
 }

@@ -6,7 +6,7 @@ import { Avatar } from '@/components/arc/avatar/avatar'
 import { RadarChart } from '@/components/arc/radar-chart/radar-chart'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { BandChip, type SquadPlayer } from '@/components/arc/blocks/team-directory/squad-directory'
-import { CoachAssessmentCard, type CoachAssessment } from '@/components/coach/CoachAssessmentCard'
+import { CoachAssessmentCard } from '@/components/coach/CoachAssessmentCard'
 import { LoadError } from '@/components/trak/LoadError'
 import { ATTRIBUTES } from '@/lib/squad/attributes'
 import { bornLine } from '@/lib/squad/format'
@@ -16,14 +16,8 @@ import { PlayerFactsEditor } from './PlayerFactsEditor'
 import type { PlayerFacts } from './usePlayerFacts'
 
 const FOOT = { left: 'Left', right: 'Right', both: 'Both' } as const
-/** The earlier assessments shown here; the player's page has them all. */
-const EARLIER = 5
-
-/** "Sat 17 Oct · vs Marina FC" above a card. */
-const when = (assessment: CoachAssessment) => {
-  const date = new Date(assessment.created_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-  return assessment.coach_sessions?.title ? `${date} · ${assessment.coach_sessions.title}` : date
-}
+/** The assessments shown here, newest first; the player's page has them all. */
+const SHOWN = 6
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return <div className="grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-3 border-b border-line py-2.5 last:border-b-0">
@@ -36,7 +30,8 @@ const notSet = <span className="text-ink-3">Not set</span>
 /**
  * TRAK-263 (Imad, 22 Oct): one player's profile in Squad's Players view. Foot, nationality, born and traits (the
  * coach edits all but the date of birth, which is the academy roster's); the season radar against the squad; the
- * coach's assessment card exactly as it is elsewhere; earlier assessments as swipeable cards.
+ * coach's assessment card exactly as it is elsewhere. Imad, 23 Oct: one row of cards, the latest first, swiping to
+ * earlier ones, with no date line above them (the card's quick look has the date and session).
  */
 export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, season, squadSeason }: {
   player: SquadPlayer
@@ -53,7 +48,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   const first = player.name.split(' ')[0]
   const key = ['coach', coachId, 'player-assessments', player.id]
   const assessments = useQuery({ queryKey: key, queryFn: () => loadPlayerAssessments(player.id, coachId), enabled: !player.waiting })
-  const [latest, ...earlier] = assessments.data?.list ?? []
+  const list = assessments.data?.list ?? []
 
   const header = <div className="flex items-center gap-4">
     <Avatar name={player.name} size="lg" />
@@ -106,40 +101,26 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
 
     {assessments.isError ? <LoadError what={`${first}'s assessments`} onRetry={() => { void assessments.refetch() }} />
       : !assessments.data ? <p role="status" className="text-sm text-ink-3">Loading {first}'s assessments…</p>
-      : <div className="grid gap-5 laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] laptop:items-start">
-        <section aria-labelledby={`latest-${player.id}`} className="grid gap-2">
-          <div className="grid gap-0.5">
-            <h4 id={`latest-${player.id}`} className="text-base font-medium text-ink">Latest assessment</h4>
-            {latest && <p className="text-sm text-ink-3">{when(latest)}</p>}
-          </div>
-          {latest
-            ? <CoachAssessmentCard key={latest.id} assessment={latest} playerName={player.name}
-                message={assessments.data.messages[latest.id]} messageFailed={assessments.data.sent === undefined} note={assessments.data.notes[latest.id]}
-                onChanged={() => { void client.invalidateQueries({ queryKey: key }) }} />
-            : <p className="text-sm text-ink-2">No assessment yet.</p>}
-        </section>
-
-        {earlier.length > 0 && <section aria-labelledby={`earlier-${player.id}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <h4 id={`earlier-${player.id}`} className="text-base font-medium text-ink">Earlier</h4>
-            {earlier.length > EARLIER
-              ? <Link to={`/coach/player/${player.id}`} className="text-sm font-medium text-brand">All {earlier.length + 1}</Link>
-              : <span className="text-sm text-ink-3">{earlier.length} more<span className="[@media(pointer:fine)]:hidden"> · swipe</span></span>}
-          </div>
-          <div className="arc">
+      : <section aria-labelledby={`assessments-${player.id}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <h4 id={`assessments-${player.id}`} className="text-base font-medium text-ink">Assessments</h4>
+          {list.length > SHOWN
+            ? <Link to={`/coach/player/${player.id}`} className="text-sm font-medium text-brand">All {list.length}</Link>
+            : list.length > 1 && <span className="text-sm text-ink-3 [@media(pointer:fine)]:hidden">Swipe for earlier</span>}
+        </div>
+        {list.length === 0 ? <p className="text-sm text-ink-2">No assessment yet.</p>
+          : <div className="arc">
             {/* As ParentAssessmentCarousel: the viewport is the row, so 88% is of what's visible and the next card peeks in. */}
-            <ScrollArea orientation="horizontal" snap="x mandatory" fade={0} label={`${first}'s earlier assessments`} viewportClassName="flex gap-3">
-              {earlier.slice(0, EARLIER).map((assessment, index) => <div key={assessment.id} role="group" aria-label={`Earlier assessment ${index + 1} of ${Math.min(earlier.length, EARLIER)}`}
-                className="grid min-w-0 gap-1.5" style={{ flex: '0 0 88%', scrollSnapAlign: 'start' }}>
-                <p className="truncate px-1 text-sm text-ink-3">{when(assessment)}</p>
+            <ScrollArea orientation="horizontal" snap="x mandatory" fade={0} label={`${first}'s assessments`} viewportClassName="flex gap-3">
+              {list.slice(0, SHOWN).map((assessment, index) => <div key={assessment.id} role="group" aria-label={`Assessment ${index + 1} of ${Math.min(list.length, SHOWN)}`}
+                className="min-w-0 basis-[88%] laptop:basis-[calc(50%-6px)] shrink-0 grow-0" style={{ scrollSnapAlign: 'start' }}>
                 <CoachAssessmentCard assessment={assessment} playerName={player.name}
                   message={assessments.data.messages[assessment.id]} messageFailed={assessments.data.sent === undefined} note={assessments.data.notes[assessment.id]}
                   onChanged={() => { void client.invalidateQueries({ queryKey: key }) }} />
               </div>)}
             </ScrollArea>
-          </div>
-        </section>}
-      </div>}
+          </div>}
+      </section>}
 
     <button type="button" onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}
       className="inline-flex min-h-11 items-center gap-1.5 self-start text-[15px] font-medium text-brand">

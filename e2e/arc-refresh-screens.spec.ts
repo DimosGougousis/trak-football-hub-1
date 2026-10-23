@@ -313,6 +313,62 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
     await expect(panel).toBeHidden()
     expect(unexpected).toEqual([])
   })
+
+  // Imad's 23 Oct phone review: on a scrolled page the quick look rose from under the screen (Motion sometimes placed
+  // the grow from a stale page scroll). It now opens in place: every frame of the opening stays on screen.
+  test('on a scrolled page, an assessment card opens on screen, never from under it', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    await page.getByRole('button', { name: /^Bukayo Saka/ }).click()
+    const trigger = page.locator('article[aria-label^="Bukayo Saka"]').locator('h3 button').first()
+    await trigger.evaluate(el => el.scrollIntoView({ block: 'center' }))
+    const scrolled = await page.evaluate(() => scrollY)
+    expect(scrolled, 'the page must be scrolled for this check to mean anything').toBeGreaterThan(100)
+    // As a coach does: scroll, look, then tap. The stale scroll showed up most after a pause.
+    await page.waitForTimeout(150)
+    await trigger.click()
+    // Every frame for half a second, from the first one the quick look is in the page.
+    const tops = await page.evaluate(() => new Promise<number[]>(resolve => {
+      const seen: number[] = []
+      let start = 0
+      const look = (now: number) => {
+        const panel = document.querySelector('[role="dialog"]')
+        if (panel) { start ||= now; seen.push(panel.getBoundingClientRect().top) }
+        if (start && now - start > 500) resolve(seen); else requestAnimationFrame(look)
+      }
+      requestAnimationFrame(look)
+    }))
+    const height = page.viewportSize()!.height
+    expect(tops.length).toBeGreaterThan(3)
+    expect(Math.max(...tops), `quick look tops ${tops.map(Math.round).join(', ')}, page scrolled ${scrolled}`).toBeLessThan(height / 2)
+    await page.keyboard.press('Escape')
+    expect(unexpected).toEqual([])
+  })
+})
+
+// Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
+// On a phone the profile now takes the list's place, and "All players" returns to the same spot.
+test.describe('Squad Players on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 500 } })
+
+  test("a picked player's profile replaces the list, and All players returns to it", async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    const list = page.getByRole('list', { name: 'Players' })
+    await expect(list).toBeVisible()
+    await page.evaluate(() => scrollTo({ top: 200 }))
+    const before = await page.evaluate(() => scrollY)
+    await page.getByRole('button', { name: /^Thiago Silva/ }).click()
+    const profile = page.locator('article[aria-label^="Thiago Silva"]')
+    await expect(profile).toBeInViewport()
+    await expect(list).toBeHidden()
+    await page.getByRole('button', { name: 'All players' }).click()
+    await expect(list).toBeVisible()
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(before)
+    expect(unexpected).toEqual([])
+  })
 })
 
 // TRAK-221 (20 Oct live run): scrolling the assessment with a finger that
