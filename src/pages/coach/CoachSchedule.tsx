@@ -740,7 +740,13 @@ export default function CoachSchedule() {
               aria-label="Import fixtures">
               <FileUp size={15} color="rgb(var(--t-ink))" />
             </button>}
-            {/* TRAK-270: one add button, the chosen day's (below); the frame's "+" stays. */}
+            {/* TRAK-270 (Tarek, 23 Oct): the one add button. It opens New event on the chosen day. */}
+            <button
+              onClick={() => openNew(selected)}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-brand"
+              aria-label="Add event">
+              <Plus size={16} color="rgb(var(--t-on-brand))" strokeWidth={2.5} />
+            </button>
           </div>
         </div>
 
@@ -789,18 +795,13 @@ export default function CoachSchedule() {
             <span className="text-[9px] font-medium tracking-[0.1em] uppercase text-ink-3" style={mono}>
               {formatEventDay(selected)}
             </span>
-            <button
-              onClick={() => openNew(selected)}
-              className="inline-flex items-center gap-1 min-h-9 px-3.5 rounded-full bg-brand text-on-brand text-[13px] font-medium"
-              style={font}>
-              <Plus size={14} strokeWidth={2.5} aria-hidden="true" />Add event
-            </button>
+
           </div>
 
           {selectedEvents.length === 0 ? (
             <div className="rounded-[14px] border border-line px-4 py-5 text-center"
               style={{ background: 'rgb(var(--t-surface))' }}>
-              <p className="text-[12px] text-ink-3">Nothing planned. Tap Add event to schedule one.</p>
+              <p className="text-[12px] text-ink-3">Nothing planned. Tap + to schedule an event.</p>
             </div>
           ) : (
             <div className="space-y-2">

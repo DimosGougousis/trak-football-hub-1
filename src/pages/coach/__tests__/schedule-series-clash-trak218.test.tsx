@@ -90,7 +90,7 @@ describe('TRAK-218: a series refused for an overlap', { timeout: 30_000 }, () =>
 
   it('Publish from Review, refused: it stays on screen, names the week, and says nothing went out', async () => {
     fixtures([game(shift(MONDAY, 7))])
-    await open('Nothing planned. Tap Add event to schedule one.')
+    await open('Nothing planned. Tap + to schedule an event.')
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')

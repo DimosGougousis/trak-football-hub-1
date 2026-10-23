@@ -79,5 +79,5 @@
 
 /* Trak (TRAK-255): an amber corner on a day that needs the user (a register to take, a match to log). Its words are in the day's label. */
 /* TRAK-270: a clear yellow (Tarek, 23 Oct), with a thin dark edge so it shows on white. */
-.attention { position: absolute; top: 3px; right: 3px; width: 10px; height: 9px; pointer-events: none; filter: drop-shadow(0 0 .6px var(--warning)) drop-shadow(0 0 .6px var(--warning)); }
+.attention { position: absolute; top: 3px; right: 3px; width: 10px; height: 9px; pointer-events: none; filter: drop-shadow(0 0 .5px var(--warning)); }
 .attention::before { content: ""; position: absolute; inset: 0; background: var(--attention); clip-path: polygon(50% 0, 100% 100%, 0 100%); }

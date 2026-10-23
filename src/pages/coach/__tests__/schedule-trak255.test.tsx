@@ -146,9 +146,9 @@ describe('TRAK-255: the coach\'s Schedule', { timeout: 20_000 }, () => {
 })
 
 /**
- * TRAK-270 (Tarek, 23 Oct, on the live Schedule): the page had two add buttons, a "+" at the top and
- * "+ Add" by the chosen day, opening the same form. One stays: the chosen day's, which fills in that
- * day. And "needs you" is a clear yellow (its own token), not the warning amber.
+ * TRAK-270 (Tarek, 23 Oct, on the live Schedule): the page had two add buttons, a green "+" at the top and
+ * "+ Add" by the chosen day, opening the same form. Tarek kept the green "+"; it opens New event on the
+ * chosen day. And "needs you" is a clear yellow (its own token), not the warning amber.
  */
 describe('TRAK-270: one add button, and needs you in yellow', { timeout: 20_000 }, () => {
   beforeEach(() => {
@@ -159,12 +159,13 @@ describe('TRAK-270: one add button, and needs you in yellow', { timeout: 20_000 
   })
   afterEach(() => vi.useRealTimers())
 
-  it('has one add button, by the chosen day, and it opens New event on that day', async () => {
+  it('has one add button, the green "+" at the top, and it opens New event on the chosen day', async () => {
     await open()
     const adds = screen.getAllByRole('button').filter(b => /^\+?\s*add(\s+event)?$/i.test((b.getAttribute('aria-label') ?? b.textContent ?? '').trim()))
     expect(adds).toHaveLength(1)
     expect(adds[0]).toHaveAccessibleName('Add event')
-    expect(adds[0]).toHaveTextContent('Add event')
+    // The top "+" (beside the Schedule heading), not a button by the day's heading.
+    expect(adds[0].closest('div')?.parentElement?.querySelector('h1')).toHaveTextContent('Schedule')
     await userEvent.click(cell('2026-10-21'))
     await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
     const sheet = screen.getByRole('dialog', { name: 'New event' })
