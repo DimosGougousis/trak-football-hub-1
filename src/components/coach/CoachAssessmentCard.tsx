@@ -68,6 +68,8 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
     // TRAK-229: a light Arc card like the rest; each bar carries its band's colour.
     <Card
       className="arc"
+      // Imad's 23 Oct phone review: the quick look rose from under the screen; it now opens in place (see Card's grow).
+      grow={false}
       aria-label={`${label} assessment${playerName ? `, ${playerName}` : ''}, ${date}`}
       title={label}
       description={playerName}

@@ -314,9 +314,9 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
     expect(unexpected).toEqual([])
   })
 
-  // Imad's 23 Oct phone review: on a scrolled page the quick look rose from under the screen, because Motion measured
-  // the fixed panel without the page's scroll. Its first frame must start where the card sits.
-  test('on a scrolled page, an assessment card grows from where it sits', async ({ page, context }) => {
+  // Imad's 23 Oct phone review: on a scrolled page the quick look rose from under the screen (Motion sometimes placed
+  // the grow from a stale page scroll). It now opens in place: every frame of the opening stays on screen.
+  test('on a scrolled page, an assessment card opens on screen, never from under it', async ({ page, context }) => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
     await page.goto('/coach/squad')
@@ -325,13 +325,23 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
     await trigger.evaluate(el => el.scrollIntoView({ block: 'center' }))
     const scrolled = await page.evaluate(() => scrollY)
     expect(scrolled, 'the page must be scrolled for this check to mean anything').toBeGreaterThan(100)
-    const cardTop = await trigger.evaluate(el => el.closest('article')!.getBoundingClientRect().top)
+    // As a coach does: scroll, look, then tap. The stale scroll showed up most after a pause.
+    await page.waitForTimeout(150)
     await trigger.click()
-    const firstTop = await page.evaluate(() => new Promise<number>(resolve => {
-      const look = () => { const panel = document.querySelector('[role="dialog"]'); if (panel) resolve(panel.getBoundingClientRect().top); else requestAnimationFrame(look) }
-      look()
+    // Every frame for half a second, from the first one the quick look is in the page.
+    const tops = await page.evaluate(() => new Promise<number[]>(resolve => {
+      const seen: number[] = []
+      let start = 0
+      const look = (now: number) => {
+        const panel = document.querySelector('[role="dialog"]')
+        if (panel) { start ||= now; seen.push(panel.getBoundingClientRect().top) }
+        if (start && now - start > 500) resolve(seen); else requestAnimationFrame(look)
+      }
+      requestAnimationFrame(look)
     }))
-    expect(Math.abs(firstTop - cardTop), `card at ${cardTop}, quick look began at ${firstTop}, page scrolled ${scrolled}`).toBeLessThan(80)
+    const height = page.viewportSize()!.height
+    expect(tops.length).toBeGreaterThan(3)
+    expect(Math.max(...tops), `quick look tops ${tops.map(Math.round).join(', ')}, page scrolled ${scrolled}`).toBeLessThan(height / 2)
     await page.keyboard.press('Escape')
     expect(unexpected).toEqual([])
   })
