@@ -7,23 +7,24 @@ import { CalendarDays } from 'lucide-react'
  * person's name in the middle (the parent's child switcher), the bell on the
  * right. The coach's bell says who can't make it (TRAK-232).
  */
-export function HomeHeader({ calendarTo, calendarLabel = 'Calendar', center, right }: {
-  calendarTo: string
-  /** TRAK-255: the coach's is called Schedule. */
-  calendarLabel?: string
-  center: ReactNode
-  right?: ReactNode
-}) {
+export function HomeHeader({ calendarTo, center, right, left }: { calendarTo: string; center: ReactNode; right?: ReactNode; left?: ReactNode }) {
+  // TRAK-259: a coach's phone has the avatar on the left and the calendar beside the bell.
+  const coach = left !== undefined
   return (
-    <header className="grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 mb-3">
-      <Link to={calendarTo} aria-label={calendarLabel}
-        className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center border border-border bg-card text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <CalendarDays size={19} strokeWidth={1.75} aria-hidden="true" />
-      </Link>
+    <header className={`grid ${coach ? 'grid-cols-[1fr_minmax(0,auto)_1fr]' : 'grid-cols-[44px_minmax(0,1fr)_44px]'} items-center gap-2 mb-3`}>
+      <div className="flex">{coach ? left : <CalendarLink to={calendarTo} />}</div>
       <div className="min-w-0 flex justify-center">{center}</div>
-      <div className="flex justify-end">{right}</div>
+      {/* TRAK-255: the coach's is called Schedule; players' and parents' stay Calendar. */}
+      <div className="flex justify-end gap-2">{coach && <CalendarLink to={calendarTo} label="Schedule" />}{right}</div>
     </header>
   )
+}
+
+function CalendarLink({ to, label = 'Calendar' }: { to: string; label?: string }) {
+  return <Link to={to} aria-label={label}
+    className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center border border-border bg-card text-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+    <CalendarDays size={19} strokeWidth={1.75} aria-hidden="true" />
+  </Link>
 }
 
 export function HomeTitle({ children }: { children: ReactNode }) {

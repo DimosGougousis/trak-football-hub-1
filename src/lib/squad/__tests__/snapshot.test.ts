@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bandMoves, bandSpread, nextSteps, type AssessmentRow, type BandMove } from '../snapshot'
+import { bandMoves, bandSpread, type AssessmentRow, type BandMove } from '../snapshot'
 
 const row = (id: string, rating: number | null, created_at: string): AssessmentRow => ({
   squad_player_id: id, coach_rating: rating, created_at,
@@ -67,28 +67,3 @@ describe('bandSpread', () => {
 
 const mv = (id: string, move: -1 | 0 | 1): BandMove => ({ squadPlayerId: id, band: 'mixed', previous: 'steady', move })
 const names = { leo: 'Leo M.', yusuf: 'Yusuf A.', sami: 'Sami R.', omar: 'Omar K.', ethan: 'Ethan P.' }
-
-describe('nextSteps', () => {
-  it('a drop with 3 missed sessions is a talk', () => {
-    expect(nextSteps([mv('leo', -1)], names, { leo: 3 })).toEqual(['Talk to Leo M.: a drop and missed sessions.'])
-  })
-  it('a drop with none missed is a check in', () => {
-    expect(nextSteps([mv('yusuf', -1)], names, { yusuf: 0 })).toEqual(['Check in with Yusuf A.'])
-    expect(nextSteps([mv('yusuf', -1)], names, {})).toEqual(['Check in with Yusuf A.'])
-  })
-  it('rises are told together', () => {
-    expect(nextSteps([mv('sami', 1), mv('omar', 1), mv('ethan', 1)], names, {}))
-      .toEqual(['Tell Sami R., Omar K. and Ethan P. what they did well.'])
-    expect(nextSteps([mv('sami', 1)], names, {})).toEqual(['Tell Sami R. what they did well.'])
-    expect(nextSteps([mv('sami', 1), mv('omar', 1)], names, {})).toEqual(['Tell Sami R. and Omar K. what they did well.'])
-  })
-  it('puts drops before the rises and skips children who did not move', () => {
-    expect(nextSteps([mv('sami', 1), mv('leo', -1), mv('omar', 0)], names, { leo: 4 })).toEqual([
-      'Talk to Leo M.: a drop and missed sessions.',
-      'Tell Sami R. what they did well.',
-    ])
-  })
-  it('empty input gives no steps', () => {
-    expect(nextSteps([], names, {})).toEqual([])
-  })
-})

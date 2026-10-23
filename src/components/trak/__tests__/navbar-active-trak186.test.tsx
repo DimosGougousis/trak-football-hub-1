@@ -1,8 +1,9 @@
 /**
  * TRAK-186 (live run 3, 16 Oct): on the coach's Sessions → History, the bottom
  * bar stopped marking Sessions, as if the coach had left it. A tab stays marked
- * on every page under it, and says so to screen readers (aria-current).
+ * on every page under it, and says so to screen readers.
  * Since the Sessions tab went (Kostas, 20 Oct), its pages mark Home, where they open from.
+ * TRAK-259: the coach's bar is the frame's glass tab bar, a tab list (aria-selected).
  */
 import { describe, expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
@@ -21,33 +22,24 @@ function coach() {
     rpc('feature_on', () => true),
   )
 }
-const tab = (name: string) => within(screen.getByRole('navigation')).getByRole('button', { name: new RegExp(name, 'i') })
-
-const tabNames = () => within(screen.getByRole('navigation')).getAllByRole('button').map(b => b.textContent)
+const bar = () => screen.findByRole('tablist', { name: 'Coach' })
+const tab = (name: string) => within(screen.getByRole('tablist', { name: 'Coach' })).getByRole('tab', { name })
 
 describe('TRAK-186: the coach\'s logging pages keep Home marked', () => {
-  // Kostas, 20 Oct: no Sessions tab. Home's "Log a match or training" and the "+" open it.
-  // TRAK-211: Feedback and assessment has its own tab, after Squad.
-  it('has no Sessions tab', async () => {
-    coach()
-    renderApp('/coach/home')
-    await screen.findByRole('navigation')
-    expect(tabNames()).toEqual(['Home', 'Squad', 'Feedback', 'Trainings', 'Profile'])
-  }, 20_000)
-
   it('marks Home on "What are you logging?"', async () => {
     coach()
     renderApp('/coach/sessions')
     await screen.findByText('What are you logging?')
-    expect(tab('Home')).toHaveAttribute('aria-current', 'page')
-    expect(tab('Squad')).not.toHaveAttribute('aria-current')
+    await bar()
+    expect(tab('Home')).toHaveAttribute('aria-selected', 'true')
+    expect(tab('Squad')).toHaveAttribute('aria-selected', 'false')
   }, 20_000)
 
   it('still marks Home on History', async () => {
     coach()
     renderApp('/coach/sessions/list')
-    await screen.findByRole('navigation')
-    expect(tab('Home')).toHaveAttribute('aria-current', 'page')
-    expect(tab('Squad')).not.toHaveAttribute('aria-current')
+    await bar()
+    expect(tab('Home')).toHaveAttribute('aria-selected', 'true')
+    expect(tab('Squad')).toHaveAttribute('aria-selected', 'false')
   }, 20_000)
 })

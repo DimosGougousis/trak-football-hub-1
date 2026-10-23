@@ -19,6 +19,8 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-wide199-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
+  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   await context.route('**/*', async route => {
     const req = route.request(), url = new URL(req.url())
     if (url.origin === 'http://127.0.0.1:4189') return route.continue()
@@ -70,75 +72,93 @@ for (const [label, width, height, pageWidth] of [
   ['a phone turned sideways', 844, 390, 430],
   ['an upright tablet', 820, 1180, 720],
 ] as const) {
-  test(`coach Home on ${label}: the page and the bottom bar share one column`, async ({ page, context }) => {
+  test(`coach Home on ${label}: the page, and the glass tab bar with the "+" under it`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
-    await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Squad shape' })).toBeVisible()
 
-    // TRAK-254: no side-menu-only Calendar tab off a laptop.
-    await expect(page.locator('nav.trak-nav button')).toHaveText([/Home/i, /Squad/i, /Feedback/i, /Trainings/i, /Profile/i])
+    // TRAK-259: Home, Squad and Library, with the "+" merged in at the right; no Calendar, Feedback or Profile tab.
+    const bar = page.getByRole('tablist', { name: 'Coach' })
+    await expect(bar.getByRole('tab')).toHaveText(['Home', 'Squad', 'Library'])
     const shell = await box(page, '.trak-page')
     expect(Math.round(shell.width)).toBe(pageWidth)
     expect(Math.round(shell.x + shell.width / 2)).toBe(Math.round(width / 2))
-    const nav = await box(page, 'nav.trak-nav')
-    expect([Math.round(nav.x), Math.round(nav.width), Math.round(nav.y + nav.height)]).toEqual([Math.round(shell.x), pageWidth, height])
-    // The "+" keeps 16 px from the page's right edge.
-    const plus = await box(page, '[data-quick-add]')
-    expect(Math.round(shell.x + shell.width - (plus.x + plus.width))).toBe(16)
+    const nav = (await page.getByRole('navigation', { name: 'Coach' }).boundingBox())!
+    const plus = (await page.getByRole('button', { name: 'Quick add' }).boundingBox())!
+    // The bar floats above the bottom edge, centred, with the "+" beside it inside the screen.
+    expect(nav.y + nav.height).toBeLessThan(height)
+    expect(Math.abs(nav.x + nav.width / 2 - width / 2)).toBeLessThanOrEqual(1)
+    expect(plus.x).toBeGreaterThan((await bar.boundingBox())!.x)
+    expect(plus.x + plus.width).toBeLessThanOrEqual(width)
+    // The avatar (top left) opens the side menu; the calendar sits beside the bell.
+    await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Schedule' })).toBeVisible() // TRAK-255
+    await page.screenshot({ path: testInfo.outputPath(`coach-home-${width}.png`) })
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 }
 
-test('coach Home on a laptop: a side menu with words on the left, the page beside it', async ({ page, context }) => {
+test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top right, the page beside it', async ({ page, context }, testInfo) => {
   const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
-  await expect(page.getByRole('button', { name: 'Assess a player' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Squad shape' })).toBeVisible()
 
-  const nav = await box(page, 'nav.trak-nav')
-  expect([nav.x, nav.y, nav.width, nav.height].map(Math.round)).toEqual([0, 0, 232, 900])
-  // TRAK-254: the tabs in words, one under the other, with the Calendar; Profile at the bottom.
-  await expect(page.locator('nav.trak-nav')).toContainText('TRAK')
-  const tabs = page.locator('nav.trak-nav button')
-  // TRAK-255: the coach's Calendar is called Schedule.
-  await expect(tabs).toHaveText(['Home', 'Schedule', 'Squad', 'Feedback', 'Trainings', 'Profile'])
-  const [first, second] = [(await tabs.nth(0).boundingBox())!, (await tabs.nth(1).boundingBox())!]
-  expect(second.y).toBeGreaterThan(first.y + first.height - 1)
-  expect(first.x).toBe(second.x)
-  const profile = (await tabs.last().boundingBox())!
-  expect(profile.y + profile.height).toBeGreaterThan(900 - 60)
-  // "+ Create" at the top of the side menu, above the tabs; it opens the same menu.
-  const create = page.getByRole('button', { name: 'Quick add' })
+  // TRAK-259: Arc's sidebar rail. The club, then Home, Calendar, Squad, Library; Settings and the coach at the bottom.
+  const sidebar = page.getByRole('navigation', { name: 'Your academy' })
+  const rows = sidebar.getByRole('button')
+  await expect(rows).toHaveText(['Home', 'Schedule', 'Squad', 'Library', 'Settings']) // TRAK-255
+  const rail = await sidebar.evaluate(el => el.closest('[id$="-sidebar"]')!.getBoundingClientRect().toJSON() as DOMRect)
+  expect([rail.x, rail.y, rail.width, rail.height].map(Math.round)).toEqual([0, 0, 240, 900])
+  const [first, last] = [(await rows.first().boundingBox())!, (await rows.last().boundingBox())!]
+  expect(last.y + last.height).toBeGreaterThan(900 - 140)
+  await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
+  expect(first.x).toBeLessThan(240)
+  await page.waitForTimeout(600) // let the radar draw in for the screenshot
+  await page.screenshot({ path: testInfo.outputPath('coach-home-1440.png') })
+  // "+ Create" at the top right, after the bell; it opens the same menu.
+  const create = page.getByRole('button', { name: 'Create' })
   const createBox = (await create.boundingBox())!
-  expect(createBox.x + createBox.width).toBeLessThanOrEqual(232)
-  expect(createBox.y + createBox.height).toBeLessThan(first.y)
-  await expect(create).toContainText('Create')
+  expect(createBox.x + createBox.width).toBeGreaterThan(1440 - 40)
+  expect(createBox.y).toBeLessThan(60)
   await create.click()
-  await expect(page.getByRole('menu', { name: 'Quick add' })).toBeVisible()
+  // TRAK-265: Arc's Action morph; the button grows into the menu, titled "Create", with a close button.
+  await expect(page.getByRole('menu', { name: 'Create' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Close create' })).toBeVisible()
+  await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 
-  const shell = await box(page, '.trak-page')
-  expect(Math.round(shell.width)).toBe(720)
-  expect(Math.round(shell.x + shell.width / 2)).toBe(232 + (1440 - 232) / 2)
+  // TRAK-262: Home takes the wide column on a laptop, the week and Squad shape side by side.
+  const shell = await box(page, '.trak-wide')
+  expect(Math.round(shell.width)).toBe(1100)
+  expect(Math.round(shell.x + shell.width / 2)).toBe(240 + (1440 - 240) / 2)
+  const [week, shape] = [(await page.getByRole('region', { name: 'This week' }).boundingBox())!, (await page.getByRole('region', { name: 'Squad shape' }).boundingBox())!]
+  expect(shape.x).toBeGreaterThan(week.x + week.width - 1)
   expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
 })
 
-test('a coach page without the bottom bar keeps the side menu on a laptop, not on a phone', async ({ page, context }) => {
+test("a coach's Settings sits in the frame on a laptop; on a phone it keeps no bottom bar", async ({ page, context }, testInfo) => {
   await open(page, context, 'coach', '/settings', 1440, 900)
   await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
-  await expect(page.locator('nav.trak-nav')).toBeVisible()
-  await expect(page.locator('nav.trak-nav button[aria-current="page"]')).toHaveText('Profile')
+  await expect(page.getByRole('navigation', { name: 'Your academy' }).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.locator('nav.trak-nav')).toHaveCount(0)
-  await expect(page.locator('[data-quick-add]')).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Your academy' })).toHaveCount(0)
+  await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('coach-settings-390.png'), fullPage: true })
 })
 
-test("a coach's form and Settings keep a reading column on a laptop", async ({ page, context }) => {
+// TRAK-261: a coach's Settings is Arc's settings page, its section menu beside the sections, in the wide column.
+test("a coach's Settings is Arc's settings page in the wide column on a laptop", async ({ page, context }, testInfo) => {
   const { unexpected } = await open(page, context, 'coach', '/settings', 1440, 900)
-  await expect(page.getByText('Synthetic Coach').first()).toBeVisible()
-  const column = await box(page, '.trak-read')
-  expect(Math.round(column.width)).toBe(640)
-  expect(Math.round(column.x + column.width / 2)).toBe(232 + (1440 - 232) / 2)
+  await expect(page.getByRole('textbox', { name: 'Full name' })).toHaveValue('Synthetic Coach')
+  const column = await box(page, '.trak-wide')
+  expect(Math.round(column.x + column.width / 2)).toBe(240 + (1440 - 240) / 2)
+  const menu = (await page.getByRole('navigation', { name: 'Settings sections' }).boundingBox())!
+  const profile = (await page.getByRole('heading', { name: 'Profile', exact: true }).boundingBox())!
+  expect(profile.x).toBeGreaterThan(menu.x + menu.width)
+  await expect(page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button')).toHaveText(['Profile', 'Club', 'Notifications', 'How Trak works', 'Account'])
+  await page.screenshot({ path: testInfo.outputPath('coach-settings-1440.png') })
+  expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
 })
 
@@ -162,36 +182,42 @@ test("a player's Home keeps the phone column on a laptop", async ({ page, contex
   expect(unexpected).toEqual([])
 })
 
-// TRAK-250 (Dimos, 22 Oct: tabs only): Squad is a tabbed coach workspace in place
-// of TRAK-252's list. On a tablet or a laptop it uses the room: the four tabs, a
-// page wider than the phone column, and Snapshot's band columns side by side.
-const BAND_WORDS = ['Exceptional', 'Standout', 'Good', 'Steady', 'Mixed', 'Developing', 'Difficult']
-// [screen, width, height, rail, band columns]
-for (const [label, width, height, rail, columns] of [
-  ['an upright tablet', 820, 1180, 0, 4],
-  ['a laptop', 1440, 900, 232, 7],
+// TRAK-250: Squad is a coach workspace of views. TRAK-263 (Imad, 22 Oct): Players (Arc's team
+// directory) replaced Snapshot, and the views sit on Arc's glass segmented control. On a tablet
+// or a laptop it uses the room: a page wider than the phone column, the profile beside the list.
+// [screen, width, height, rail]
+for (const [label, width, height, rail] of [
+  ['an upright tablet', 820, 1180, 0],
+  ['a laptop', 1440, 900, 240],
 ] as const) {
-  test(`coach Squad on ${label}: the four tabs across a wide page, Snapshot's bands in ${columns} columns, no sheet`, async ({ page, context }) => {
+  test(`coach Squad on ${label}: the four views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
-    const tabs = page.getByRole('tablist', { name: 'Squad views' }).getByRole('tab')
-    await expect(tabs).toHaveText(['Snapshot', 'Attributes', 'Availability', 'Games Statistics'])
-    await expect(page.getByRole('heading', { name: 'Squad snapshot' })).toBeVisible()
+    const views = page.getByRole('radiogroup', { name: 'Squad view' }).getByRole('radio')
+    await expect(views).toHaveText(['Players', 'Attributes', 'Availability', 'Games'])
+    const playersView = page.getByRole('region', { name: 'Players', exact: true })
+    await expect(playersView.getByRole('list', { name: 'Players' }).getByRole('listitem').first()).toBeVisible()
 
     // The wide page, right of the side menu on a laptop: no 430 px column.
-    const panel = await box(page, '#squad-panel')
+    const panel = (await playersView.boundingBox())!
     expect(Math.round(panel.width)).toBe(Math.min(1280, width - rail) - 64)
     expect(Math.round(panel.x)).toBeGreaterThanOrEqual(rail)
 
-    // Every band is a column; on a laptop all seven stand in one row.
-    const lefts = new Set<number>()
-    for (const word of BAND_WORDS) lefts.add(Math.round((await page.getByRole('group', { name: word }).boundingBox())!.x))
-    expect(lefts.size).toBe(columns)
+    // Picking a player opens their profile beside the list.
+    const first = playersView.getByRole('list', { name: 'Players' }).getByRole('button').first()
+    const name = players[0].player_name
+    await first.click()
+    // The profile is the article named after the player (their assessment cards are articles too).
+    const profile = playersView.getByRole('article', { name: new RegExp(`^${name},`) })
+    await expect(profile.getByRole('heading', { level: 3, name })).toBeVisible()
+    expect((await profile.boundingBox())!.x).toBeGreaterThan((await first.boundingBox())!.x + (await first.boundingBox())!.width - 1)
+    await page.waitForTimeout(600) // let the radar draw in for the screenshot
+    await page.screenshot({ path: testInfo.outputPath(`coach-squad-${width}.png`) })
 
-    // Each tab opens in place: no Arc sheet, and no read the backend does not answer.
-    for (const name of ['Attributes', 'Availability', 'Games Statistics', 'Snapshot']) {
-      await tabs.filter({ hasText: name }).click()
-      await expect(tabs.filter({ hasText: name })).toHaveAttribute('aria-selected', 'true')
-      await expect(page.getByRole('tabpanel').getByText(/^(Loading|Checking) /)).toHaveCount(0)
+    // Each view opens in place: no Arc sheet, and no read the backend does not answer.
+    for (const name of ['Attributes', 'Availability', 'Games', 'Players']) {
+      await views.filter({ hasText: name }).click()
+      await expect(views.filter({ hasText: name })).toHaveAttribute('aria-checked', 'true')
+      await expect(page.getByRole('region', { name, exact: true }).getByText(/^(Loading|Checking) /)).toHaveCount(0)
       await expect(page.getByRole('dialog')).toHaveCount(0)
     }
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
@@ -229,3 +255,50 @@ for (const [label, width, height, beside] of [['an upright tablet', 820, 1180, f
     expect(unexpected).toEqual([])
   })
 }
+
+// TRAK-265 (Imad, 22 Oct): the "+" is Arc's Action morph; the phone's sidebar sheet works; one title in the breadcrumb.
+test('the "+" grows into its menu with a close button, and Escape folds it back', async ({ page, context }, testInfo) => {
+  for (const [width, height, name] of [[390, 844, 'Quick add'], [1440, 900, 'Create']] as const) {
+    const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
+    await page.getByRole('button', { name, exact: true }).click()
+    const menu = page.getByRole('menu', { name })
+    await expect(menu.getByRole('menuitem')).toHaveText(['Log training', 'Log match', 'Assess player', 'New event'])
+    await expect(page.getByRole('button', { name: `Close ${name.toLowerCase()}` })).toBeVisible()
+    await menu.getByRole('menuitem', { name: 'New event' }).click()
+    const form = page.getByRole('dialog', { name: 'New event' })
+    await expect(form.getByRole('button', { name: 'Save draft' })).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`coach-create-${width}.png`) })
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu', { name })).toBeVisible()
+    // Focus comes back to the first row two frames after the form folds; on a slow runner a key pressed sooner lands on the page.
+    await expect(page.getByRole('menu', { name }).getByRole('menuitem').first()).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
+    await expect(page.getByRole('menu', { name })).toHaveCount(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  }
+})
+
+test("a phone's sidebar sheet takes a tap: the row opens its page and the sheet closes", async ({ page, context }) => {
+  const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', 390, 844)
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  const sheet = page.getByRole('navigation', { name: 'Your academy' })
+  await sheet.getByRole('button', { name: 'Squad', exact: true }).click()
+  await expect(page).toHaveURL(/\/coach\/squad$/)
+  await expect(page.getByRole('navigation', { name: 'Your academy' })).toHaveCount(0)
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
+test("a laptop's breadcrumb names the page, one title after several moves", async ({ page, context }) => {
+  const { errors } = await open(page, context, 'coach', '/coach/home', 1440, 900)
+  const side = page.getByRole('navigation', { name: 'Your academy' })
+  for (const name of ['Squad', 'Schedule', 'Library', 'Home']) {
+    await side.getByRole('button', { name, exact: true }).click()
+    await page.waitForTimeout(300)
+  }
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveText(/^Your academy\s*\/?\s*Home$/)
+  expect(errors).toEqual([])
+})

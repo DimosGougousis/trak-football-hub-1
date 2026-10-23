@@ -874,9 +874,9 @@ function CoachAssessmentForm() {
         ) : null}
       </div>
 
-      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it.
-          TRAK-199: beside a laptop's rail there is no bar, so no room (trak-bar-room). */}
-      <div className="trak-bar-room arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
+      {/* Above the floating glass tab bar (TRAK-259: 62px, 12px off the bottom, plus the home indicator's inset),
+          so Back and Next are never under it. TRAK-199: beside a laptop's sidebar there is no bar, so no room (trak-bar-room). */}
+      <div className="trak-bar-room arc flex gap-2 px-5 pb-3 pt-2 mb-[calc(84px+env(safe-area-inset-bottom))] shrink-0 border-t border-line">
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
           <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>

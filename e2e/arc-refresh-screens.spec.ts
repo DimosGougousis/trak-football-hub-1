@@ -24,6 +24,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-arc182-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
+  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   const assessments = players.slice(0, 3).map((p, i) => ({ id: `as-${i}`, squad_player_id: p.id, coach_user_id: ids.coach,
     created_at: `${day}T0${8 - i}:00:00Z`, coach_rating: 8 - i, work_rate: 8, tactical: 7, attitude: 8, technical: 7, physical: 7, coachability: 8,
     squad_players: { player_name: p.player_name } }))
@@ -57,12 +59,17 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
     if (path === '/rest/v1/coach_team_kits') return json([])
+    // TRAK-263: the Players view's profile facts (TRAK-260).
+    if (path === '/rest/v1/squad_player_profiles') return json([])
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
+    // TRAK-261: the coach's notification switches (the bell's "Can't make it alerts"); no row means on.
+    if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
-    if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes'].some(t => path === `/rest/v1/${t}`)) return json([])
+    // TRAK-262: notification_settings is Home's Needs you switch (no row: on).
+    if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes', 'notification_settings'].some(t => path === `/rest/v1/${t}`)) return json([])
     unexpected.push(`${req.method()} ${path}`)
     return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
   })
@@ -102,8 +109,8 @@ test.describe('TRAK-182 coach screens', () => {
   })
 
   for (const [name, path, ready] of [
-    // TRAK-211: Home lists no players; they are on the Feedback and assessment tab.
-    ['home', '/coach/home', 'Assess a player'],
+    // TRAK-262: Home's week, Squad shape and Needs you.
+    ['home', '/coach/home', 'Squad shape'],
     ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
@@ -134,7 +141,9 @@ test.describe('TRAK-182 coach screens', () => {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
     await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
     await page.goto('/coach/home')
+    // TRAK-262: tapping the event picks it on the week; Details opens its sheet.
     await page.getByRole('button', { name: /Rivals FC/ }).click()
+    await page.getByRole('button', { name: 'Details' }).click()
     const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
     await expect(sheet.getByRole('heading', { name: 'Attending · 3' })).toBeVisible()
     await expect(sheet.getByText(/not counted yet: waiting for consent/)).toBeVisible()
@@ -151,7 +160,8 @@ test.describe('TRAK-182 coach screens', () => {
     expect(errors).toEqual([])
   })
 
-  // TRAK-182 part 8: the quick-add's four faces: "+", menu, form, check.
+  // TRAK-182 part 8: the quick-add's faces: "+", menu, form, saved. TRAK-259: the "+" is Arc's glass menu in the
+  // phone's glass tab bar; the form opens above it, and a toast says the draft is saved.
   test('coach quick add, its four states', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
@@ -167,7 +177,8 @@ test.describe('TRAK-182 coach screens', () => {
       // motion's springs run in JavaScript: wait until the surface stops moving.
       let last = ''
       for (let i = 0; i < 20; i++) {
-        const box = JSON.stringify(await page.locator('[data-quick-add] > div').first().boundingBox())
+        const box = await page.evaluate(() => JSON.stringify((document.querySelector('[data-quick-add]') ?? document.querySelector('[role="menu"]')
+          ?? document.querySelector('[data-quick-add-trigger]'))?.getBoundingClientRect()))
         if (box === last) return
         last = box; await page.waitForTimeout(80)
       }
@@ -199,10 +210,11 @@ test.describe('TRAK-182 coach screens', () => {
     expect(listBox!.y).toBeGreaterThanOrEqual(0)
     await list.getByRole('option', { name: '5:00 PM' }).click()
     await form.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeAttached()
+    await expect(page.getByText('Draft saved. Publish it from Schedule.')).toBeVisible()
     await page.waitForTimeout(300)
     await page.screenshot({ path: testInfo.outputPath('quick-add-4-check.png') })
-    await expect(page.getByRole('button', { name: 'Quick add' })).toBeVisible({ timeout: 3000 })
+    await expect(form).toHaveCount(0, { timeout: 3000 })
+    await expect(page.getByRole('button', { name: 'Quick add', exact: true })).toHaveAttribute('aria-expanded', 'false')
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

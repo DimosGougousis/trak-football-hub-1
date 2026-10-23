@@ -540,17 +540,23 @@ export type Database = {
       }
       notification_settings: {
         Row: {
+          cant_make_it_alerts: boolean
           event_reminders: boolean
+          needs_you: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          cant_make_it_alerts?: boolean
           event_reminders?: boolean
+          needs_you?: boolean
           updated_at?: string
           user_id?: string
         }
         Update: {
+          cant_make_it_alerts?: boolean
           event_reminders?: boolean
+          needs_you?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -910,6 +916,38 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_player_profiles: {
+        Row: {
+          nationality: string | null
+          preferred_foot: string | null
+          squad_player_id: string
+          traits: string[]
+          updated_at: string
+        }
+        Insert: {
+          nationality?: string | null
+          preferred_foot?: string | null
+          squad_player_id: string
+          traits?: string[]
+          updated_at?: string
+        }
+        Update: {
+          nationality?: string | null
+          preferred_foot?: string | null
+          squad_player_id?: string
+          traits?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_player_profiles_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: true
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -951,6 +989,13 @@ export type Database = {
           saved_goals: number
           team_score: number
           opponent_score: number
+        }[]
+      }
+      coach_player_birth_dates: {
+        Args: { p_squad?: string }
+        Returns: {
+          squad_player_id: string
+          date_of_birth: string
         }[]
       }
       create_parent_invite: {
