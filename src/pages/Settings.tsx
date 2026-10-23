@@ -256,7 +256,7 @@ function AccountSettings({ userId }: { userId: string }) {
     ...(role === 'coach' ? [{
       id: 'notifications', label: 'Notifications', icon: Bell, description: 'What Trak shows you in the app. On unless you turn it off.',
       content: <SettingsRows>
-        <NotificationSwitch userId={userId} column="cant_make_it_alerts" label="Can't make it alerts" noun="alerts"
+        <NotificationSwitch userId={userId} column="cant_make_it_alerts" label="Can't make it" noun="alert"
           hint="In the bell when a family says their child can't make an event." />
         <NotificationSwitch userId={userId} column="needs_you" label="Needs you" noun="Needs you"
           hint="Players to assess and drafts to finish, on Home." />

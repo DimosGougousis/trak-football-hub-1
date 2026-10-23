@@ -24,8 +24,6 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-arc182-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
-  // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
-  await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
   const assessments = players.slice(0, 3).map((p, i) => ({ id: `as-${i}`, squad_player_id: p.id, coach_user_id: ids.coach,
     created_at: `${day}T0${8 - i}:00:00Z`, coach_rating: 8 - i, work_rate: 8, tactical: 7, attitude: 8, technical: 7, physical: 7, coachability: 8,
     squad_players: { player_name: p.player_name } }))
@@ -62,7 +60,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-263: the Players view's profile facts (TRAK-260).
     if (path === '/rest/v1/squad_player_profiles') return json([])
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
-    // TRAK-261: the coach's notification switches (the bell's "Can't make it alerts"); no row means on.
+    // TRAK-261: the coach's notification switches (the bell's "Can't make it"); no row means on.
     if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)

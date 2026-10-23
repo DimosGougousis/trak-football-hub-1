@@ -13,18 +13,16 @@ import { SquadPills } from '@/components/coach/home/SquadPills'
 import { SquadShape } from '@/components/coach/home/SquadShape'
 import { NeedsYou } from '@/components/coach/home/NeedsYou'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
-import { CoachOnboarding } from '@/components/arc/blocks/onboarding-illustration/coach-onboarding'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { needsYou } from '@/lib/coach-needs-you'
 import { squadShape } from '@/lib/squad/shape'
 import { localParts, localTodayISO } from '@/lib/event-time'
 import { remember, remembered } from '@/lib/screen-memory'
-import { markOnboardingSeen, onboardingSeen } from '@/lib/coach-onboarding'
 
 /* TRAK-262 (Imad, 22 Oct): coach Home on Arc. Squad pills (each squad, then All, which is Home's only); the week
    in Tarek's colour key with one next step per event; the Squad shape radar; Needs you. "Assess a player" and
-   "Log a match" left: the "+" has both. A coach's first open shows the onboarding, once per device.
+   "Log a match" left: the "+" has both. TRAK-266: no onboarding for now (Imad, 22 Oct).
    TRAK-196: one quiet line, as player and parent Home have it; it follows the squad picked (TRAK-176). */
 
 type HomeMemory = { line: string }
@@ -36,9 +34,10 @@ export default function CoachHomePage() {
   const wide = useSideMenuScreen()
   // TRAK-182 part 8: a quick-add draft shows in the week at once.
   const [weekVersion, setWeekVersion] = useState(0)
-  const [everySquad, setEverySquad] = useState(false)
+  // TRAK-266 (Imad, 22 Oct): Home opens on All. All exists only with two squads or more.
+  const [allPicked, setEverySquad] = useState(true)
+  const everySquad = allPicked && coachSquad.squads.length >= 2
   const roster = useSquadRoster({ everySquad })
-  const [onboarding, setOnboarding] = useState(() => !onboardingSeen())
   // TRAK-180: a revisit starts from the line Home last showed this coach.
   const [seed] = useState(() => remembered<HomeMemory>('coach-home', user?.id))
   const [details, setDetails] = useState<{ coach_role: string | null; team: string | null; academy: string | null } | null>(null)
@@ -87,11 +86,6 @@ export default function CoachHomePage() {
         onChange={pick => { setEverySquad(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
     : <HomeTitle>{profile?.full_name || 'Coach'}</HomeTitle>
 
-  const closeOnboarding = (open: boolean) => {
-    setOnboarding(open)
-    if (!open) markOnboardingSeen()
-  }
-
   return (
     <MobileShell width={wide ? 'wide' : 'page'}>
       <div className="pt-3 pb-24">
@@ -117,8 +111,6 @@ export default function CoachHomePage() {
         </div>}
       </div>
       <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />
-      {user && <CoachOnboarding open={onboarding} onOpenChange={closeOnboarding} club={details?.academy ?? 'Your academy'}
-        squads={Math.max(1, coachSquad.squads.length)} players={roster.playerCount} />}
     </MobileShell>
   )
 }

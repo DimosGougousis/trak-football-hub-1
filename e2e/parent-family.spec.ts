@@ -137,8 +137,6 @@ test.describe('TRAK-171 Home follow-ups', () => {
         .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
       await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
         { access_token: token, refresh_token: 'synthetic-home171-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
-      // TRAK-262: a device that has seen coach Home's first-open onboarding (a modal over Home).
-      await context.addInitScript(() => localStorage.setItem('trak:coach-onboarded', '1'))
       const event = (child: string) => ({ id: `event-${child}`, title: child === ids.sibling ? 'Sibling training' : 'Technical training',
         event_type: 'training', event_date: day, start_time: '18:00:00', starts_at: `${day}T14:00:00Z`,
         status: 'scheduled', published: true, venue: 'Synthetic pitch', sequence: 0, coach_user_id: ids.coach })
@@ -176,7 +174,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
           return json(filter && filter !== `eq.event-${child}` ? [] : [event(child)])
         }
         if (url.pathname === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
-        // TRAK-261: the coach's notification switches (the bell's "Can't make it alerts"); no row means on.
+        // TRAK-261: the coach's notification switches (the bell's "Can't make it"); no row means on.
         if (url.pathname === '/rest/v1/notification_settings') return json([])
         if (url.pathname === '/rest/v1/rpc/my_session_is_live' || url.pathname === '/rest/v1/rpc/feature_on') return json(true)
         if (['get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup', 'get_player_invites_for_current_user', 'family_training_history', 'my_calendar_link'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])

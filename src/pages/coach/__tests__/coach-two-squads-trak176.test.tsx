@@ -64,10 +64,10 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
   it('Home offers the squads, and remembers the one picked', async () => {
     coachReads(TWO)
     renderApp('/coach/home')
-    // TRAK-262: pills, each squad then All (All is Home's only).
+    // TRAK-266: pills, All first and picked; a squad tapped is remembered for what's made next.
     const pick = await screen.findByRole('group', { name: 'Squad' })
-    expect(within(pick).getAllByRole('button').map(b => b.textContent)).toEqual(['U14', 'U16', 'All'])
-    expect(within(pick).getByRole('button', { name: 'U14' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(pick).getAllByRole('button').map(b => b.textContent)).toEqual(['All', 'U14', 'U16'])
+    expect(within(pick).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(pick).getByRole('button', { name: 'U16' }))
     // Remembered on this device, which is what the Squad page reads (TRAK-250 tests it there).
     await waitFor(() => expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16'))

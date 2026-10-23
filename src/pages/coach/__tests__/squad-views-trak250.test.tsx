@@ -93,9 +93,13 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     coachReads()
     renderApp('/coach/squad')
     // Two squads: the first (U10) shows until the coach picks the other.
+    // TRAK-266: All first and picked; then one squad at a time.
     const first = await view('Players')
     await within(first).findByText('Nia Rehearsal')
-    expect(within(first).queryByText('Theo Rehearsal')).toBeNull()
+    expect(within(first).getByText('Theo Rehearsal')).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Squad' })).getAllByRole('button').map(b => b.textContent)).toEqual(['All', 'U10', 'U12'])
+    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U10' }))
+    await waitFor(() => expect(within(first).queryByText('Theo Rehearsal')).toBeNull())
 
     await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U12' }))
     const players = () => within(within(screen.getByRole('region', { name: 'Players' })).getByRole('list', { name: 'Players' }))
@@ -234,16 +238,34 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(within(panel).getByText('Pick a player to see their profile.')).toBeInTheDocument()
   })
 
-  it('filters by position, with counts, and searches by name or shirt number', async () => {
+  // TRAK-266 (Imad, 22 Oct): the colour key only where the coach is needed, as Home's Needs you.
+  it('badges a player due an assessment and a draft to finish, and no one else', async () => {
+    const joined = new Date(Date.now() - 35 * 86_400_000).toISOString()
+    const recent = new Date(Date.now() - 2 * 86_400_000).toISOString()
+    coachReads(SNAP_PLAYERS.map(p => ({ ...p, created_at: joined })))
+    server.use(table('coach_assessments', [
+      { ...rating('sq-sami', 8, recent), published_at: null },
+      { ...rating('sq-new', 7, recent), published_at: recent },
+    ]))
+    renderApp('/coach/squad')
+    const panel = await view('Players')
+    await within(panel).findByText('Leo M.')
+    await waitFor(() => expect(row(panel, 'Leo M.')).toHaveTextContent('Assess'))
+    expect(row(panel, 'Sami K.')).toHaveTextContent('Draft')
+    expect(row(panel, 'Newcomer R.')).not.toHaveTextContent(/Assess|Draft/)
+  })
+
+  it('filters by position and searches by name or shirt number', async () => {
     const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     renderApp('/coach/squad')
     const panel = await view('Players')
     await within(panel).findByText('Leo M.')
-    await user.click(within(panel).getByRole('button', { name: 'Attackers, 1' }))
+    // TRAK-266: the position filters are Arc's glass segmented control, as before #420.
+    await user.click(within(panel).getByRole('radio', { name: 'ATT' }))
     await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(1))
     expect(playerList(panel).getByText('Sami K.')).toBeInTheDocument()
-    await user.click(within(panel).getByRole('button', { name: 'All, 3' }))
+    await user.click(within(panel).getByRole('radio', { name: 'All' }))
     await user.type(within(panel).getByRole('searchbox'), '3')
     await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(1))
     expect(playerList(panel).getByText('Newcomer R.')).toBeInTheDocument()
@@ -527,7 +549,8 @@ describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
     server.use(rpc('coach_squad_season', args => { asked.push(args); return [] }))
     renderApp('/coach/squad?tab=games')
     await within(await screen.findByRole('region', { name: GAMES })).findByText('No matches logged this season yet')
-    expect(asked.at(-1)).toMatchObject({ p_squad: 'U10' })
+    // TRAK-266: Squad opens on All, which asks for every squad.
+    expect(asked.at(-1)).toMatchObject({ p_squad: null })
 
     await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U12' }))
     await waitFor(() => expect(asked.at(-1)).toMatchObject({ p_squad: 'U12' }))
@@ -735,6 +758,8 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
     server.use(table('squad_players', [...AV_PLAYERS,
       { id: 'c9', coach_user_id: 'x', player_name: 'Omar T.', position: 'Defender', shirt_number: 5, age_group: 'U12' }]))
     renderApp('/coach/squad?tab=availability')
+    // TRAK-266: Squad opens on All; picking U10 leaves the U12 event out.
+    await userEvent.click(within(await screen.findByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U10' }))
     const panel = await screen.findByRole('region', { name: 'Availability' })
     expect(await within(panel).findByText('No upcoming events')).toBeInTheDocument()
   })
