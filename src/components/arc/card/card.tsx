@@ -25,9 +25,6 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Trak (23 Oct): false opens the quick look in the middle of the screen, rising in place, instead of growing out of the
-   *  card. Motion sometimes placed the grow's start from a stale page scroll, so on a scrolled page it rose from under the screen. */
-  grow?: boolean;
 }
 
 type Side = "card" | "panel";
@@ -77,7 +74,7 @@ function px(node: Element, value: string) {
   return value.trim().endsWith("rem") ? amount * parseFloat(getComputedStyle(node.ownerDocument.documentElement).fontSize) : amount;
 }
 
-export function Card({ title, description, media, action, avatar, meta, status, details, open: openProp, defaultOpen = false, onOpenChange, grow: growOut = true, children, className, style, ...props }: CardProps) {
+export function Card({ title, description, media, action, avatar, meta, status, details, open: openProp, defaultOpen = false, onOpenChange, children, className, style, ...props }: CardProps) {
   const reduced = useReducedMotion() ?? false;
   const group = useId();
   const cardRef = useRef<HTMLElement>(null);
@@ -88,7 +85,7 @@ export function Card({ title, description, media, action, avatar, meta, status, 
   /** Where the quick look lands when it closes: the card's box on screen. The panel travels there above the page, then hands back to the card. */
   const [landing, setLanding] = useState<Landing | null>(null);
   const open = details ? openProp ?? uncontrolled : false;
-  const morph = Boolean(details) && !reduced && growOut;
+  const morph = Boolean(details) && !reduced;
   const returning = !open && landing !== null;
   const hasDescription = Boolean(description);
   const setOpen = useCallback((next: boolean) => { if (openProp === undefined) setUncontrolled(next); onOpenChange?.(next); }, [openProp, onOpenChange]);
@@ -174,7 +171,9 @@ export function Card({ title, description, media, action, avatar, meta, status, 
               className={["arc", className, styles.panel].filter(Boolean).join(" ")}
               data-framer-portal-id={group}
               data-returning={returning || undefined}
-              layoutScroll
+              // Trak (Imad, 23 Oct): no layoutScroll here. On a fixed panel Motion took it for a scroll root and measured the
+              // panel without the page's scroll, while the card kept it, so on a scrolled page the grow began a page-scroll
+              // below the card, under the screen.
               style={{ borderRadius: geometry.panel, "--card-measure": geometry.measure ? `${geometry.measure}px` : undefined, ...(landing && returning ? { "--landing-top": `${landing.top}px`, "--landing-left": `${landing.left}px`, "--landing-width": `${landing.width}px`, "--landing-height": `${landing.height}px` } : {}) } as CSSProperties}
               {...(morph ? {
                 ...shared("card", "panel"),
@@ -182,8 +181,7 @@ export function Card({ title, description, media, action, avatar, meta, status, 
                 animate: geometry.card !== undefined && geometry.panel !== undefined ? { borderRadius: returning ? geometry.card : geometry.panel } : undefined,
                 transition: { layout: returning ? settle : grow, borderRadius: returning ? settle : grow },
                 exit: { opacity: 0, transition: { duration: 0 } },
-              } : reduced ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0, transition: fade }, transition: fade }
-                : { initial: { opacity: 0, y: 12, scale: .98 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, scale: .98, transition: { duration: duration.exit, ease: [...ease.standard] } }, transition: spring.smooth })}
+              } : { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0, transition: fade }, transition: fade })}
             >
               {media ? <motion.div className={styles.media} {...shared("media", "panel")}><motion.div className={styles.zoom} initial={{ scale: hovered && !reduced ? ZOOM : 1 }} animate={{ scale: 1 }} transition={grow}>{media}</motion.div></motion.div> : null}
               <motion.span className={styles.closeSlot} initial={reduced ? { opacity: 0 } : { opacity: 0, scale: .9 }} animate={returning ? { opacity: 0, scale: .9 } : { opacity: 1, scale: 1 }} transition={returning ? fade : reduced ? fade : closeIn}><Dialog.Close asChild><motion.button type="button" className={styles.close} aria-label="Close quick look" whileTap={reduced ? undefined : { scale: .94 }} transition={spring.snappy}><X width={16} height={16} strokeWidth={1.75} aria-hidden="true" /></motion.button></Dialog.Close></motion.span>
