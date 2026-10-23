@@ -1,0 +1,98 @@
+/* Arc Pro (uiarc.dev): adapted from the Availability picker block; licensed source, not covered by this repository's licence. See src/components/arc/PRO.md. */
+.root { width: 100%; min-width: 0; container-type: inline-size; }
+.picker { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-surface); background: var(--surface); color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); }
+.swap { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
+.swap > * { white-space: nowrap; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 20px 16px; }
+.headerCopy { display: grid; gap: 2px; min-width: 0; }
+.header h2 { margin: 0; font-size: var(--text-lg); font-weight: 500; line-height: 1.3; }
+.header p { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.weekNav { display: flex; flex: none; gap: 4px; }
+.navButton { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-secondary); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.navButton:active { transform: scale(.96); }
+
+/* Days: a week, so seven columns. */
+.days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 0 20px; }
+.day { position: relative; isolation: isolate; display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 10px 2px 8px; border: 1px solid var(--border); border-radius: 14px; background: transparent; color: var(--foreground); font: inherit; outline: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color var(--duration-standard) var(--ease-standard), color var(--duration-standard) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+.day:active { transform: scale(.97); }
+.day[data-today]:not([data-selected]) { border-color: var(--accent); }
+.day[data-selected] { border-color: transparent; color: var(--accent-foreground); }
+.dayHighlight { position: absolute; z-index: -1; inset: -1px; border-radius: inherit; background: var(--accent); }
+.dayName { color: inherit; font-size: var(--text-xs); line-height: var(--leading-body); opacity: .72; }
+.dayDate { font-size: var(--text-xl); font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.dots { display: flex; height: 8px; align-items: center; gap: 3px; }
+.dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); }
+.dots i[data-hollow] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot); }
+.day[data-selected] .dots i { box-shadow: 0 0 0 1.5px var(--accent-foreground); }
+
+/* Events */
+.slotsHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 14px 20px 0; border-top: 1px solid var(--border-subtle); }
+.slotsTitle { min-width: 0; margin: 0; font-size: var(--text-sm); font-weight: 500; }
+.legend { display: inline-flex; flex: none; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--text-xs); }
+.legend i { display: block; width: 4px; height: 14px; border-radius: 2px; background: var(--dot); }
+.legend i:nth-of-type(2) { margin-left: 8px; }
+
+.slotsStage { position: relative; padding: 10px 20px 20px; }
+.slots { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.empty { display: grid; height: 56px; place-items: center; border: 1px dashed var(--border); border-radius: 14px; color: var(--text-muted); font-size: var(--text-sm); }
+.slot { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; min-height: 56px; padding: 8px 12px 8px 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--foreground); font: inherit; text-align: left; outline: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+.slot:active { transform: scale(.98); }
+.slot[data-selected] { border-color: var(--accent); background: var(--accent-subtle); }
+.slotBar { display: block; flex: none; align-self: stretch; width: 4px; border-radius: 2px; background: var(--dot); }
+.slot[data-state="cancelled"] .slotBar { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot); }
+.slotTime { flex: none; min-width: 42px; font-size: var(--text-sm); font-weight: 500; font-variant-numeric: tabular-nums; }
+.slotText { display: grid; flex: 1; min-width: 0; gap: 1px; }
+.slotTitle { overflow: hidden; font-size: var(--text-sm); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.slot[data-state="cancelled"] .slotTitle { text-decoration: line-through; color: var(--text-muted); }
+.slotMeta { overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.cant { flex: none; border-radius: var(--radius-pill); padding: 2px 8px; background: var(--surface-muted); color: var(--text-secondary); font-size: var(--text-xs); white-space: nowrap; }
+/* Trak (TRAK-262), Tarek's colour key (TRAK-255): the type is the bar's colour, the state its shape. A draft is
+   dashed and only the coach sees it; a draft that would clash is red; a logged event is grey; amber waits for the coach. */
+.slot[data-state="draft"], .slot[data-state="clash"] { border-style: dashed; }
+.slot[data-state="clash"] { border-color: rgb(var(--t-danger)); }
+.slot[data-state="clash"] .slotMeta { color: rgb(var(--t-danger)); }
+.slot[data-state="logged"] .slotBar { background: var(--text-muted); }
+.slot[data-state="logged"] .slotTitle { color: var(--text-secondary); }
+.slot[data-state="needs-you"]:not([data-selected]) { border-color: rgb(var(--t-warning)); }
+.slot[data-state="needs-you"] .slotMeta { color: rgb(var(--t-warning)); font-weight: 500; }
+.day[data-needs-you]::after { content: ""; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-top-right-radius: 4px; background: rgb(var(--t-warning)); clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.legend .needs { width: 8px; height: 8px; border-radius: 0; background: rgb(var(--t-warning)); clip-path: polygon(0 0, 100% 0, 100% 100%); margin-left: 8px; }
+.slotCheck { display: grid; flex: none; place-items: center; width: 0; margin-left: -12px; overflow: hidden; color: var(--accent); opacity: 0; transition: width var(--duration-spring) var(--ease-spring), margin var(--duration-spring) var(--ease-spring), opacity var(--duration-fast) var(--ease-standard); }
+.slot[data-selected] .slotCheck { width: 14px; margin-left: 0; opacity: 1; }
+
+/* Footer: the chosen event and its next step. */
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px; border-top: 1px solid var(--border-subtle); background: var(--surface-muted); }
+.selection { display: grid; gap: 2px; min-width: 0; }
+.selectionLabel { min-width: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); }
+.selectionValue { min-width: 0; overflow: hidden; line-height: var(--leading-body); font-size: var(--text-sm); font-weight: 500; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
+.footerActions { display: flex; flex: none; align-items: center; gap: 6px; }
+.primaryButton { min-width: 128px; }
+.buttonLabel { display: inline-flex; align-items: center; gap: 6px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .day:not([data-selected]):hover, .slot:not([data-selected]):hover, .navButton:hover { border-color: var(--border-strong); }
+}
+
+@container (max-width: 520px) {
+  .header { padding: 16px 16px 12px; }
+  .days { gap: 4px; padding: 0 12px; }
+  .day { padding: 8px 0 6px; border-radius: 12px; }
+  .dayDate { font-size: var(--text-lg); }
+  .slotsHead { padding-inline: 16px; }
+  .slotsStage { padding: 10px 12px 14px; }
+  .footer { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px; }
+  .selection .swap > * { white-space: normal; }
+  .footerActions { justify-content: flex-end; }
+  .footerActions > :last-child { flex: 1; }
+}
+@container (max-width: 360px) {
+  .legend { display: none; }
+  .cant { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day, .slot, .slotCheck { transition: none; }
+  .day:active, .slot:active, .navButton:active { transform: none; }
+}

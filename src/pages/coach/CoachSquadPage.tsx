@@ -1,87 +1,49 @@
-import { useRef, type KeyboardEvent } from 'react'
 import { LayoutGroup } from 'motion/react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
+import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { NavBar } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
-import { SnapshotTab } from '@/components/coach/squad/SnapshotTab'
+import { PlayersTab } from '@/components/coach/squad/PlayersTab'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
 import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
 import { GamesTab } from '@/components/coach/squad/GamesTab'
 
 /* TRAK-250: Squad is a full-width coach workspace with four views of the same
-   roster. The tab lives in the URL (?tab=), so a view can be linked and a
-   reload keeps it. Every view reads from one shared roster (useSquadRoster). */
+   roster. The view lives in the URL (?tab=), so a view can be linked and a
+   reload keeps it. Every view reads from one shared roster (useSquadRoster).
+   TRAK-263 (Imad, 22 Oct): Players replaces Snapshot and comes first; the views
+   sit on Arc's glass segmented control, which fits all four on a phone. */
 const TABS = [
-  { id: 'snapshot', label: 'Snapshot' },
+  { id: 'players', label: 'Players' },
   { id: 'attributes', label: 'Attributes' },
   { id: 'availability', label: 'Availability' },
-  { id: 'games', label: 'Games Statistics' },
+  { id: 'games', label: 'Games' },
 ] as const
 type TabId = typeof TABS[number]['id']
-
-const tabId = (id: TabId) => `squad-tab-${id}`
 
 export default function CoachSquadPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [params, setParams] = useSearchParams()
-  const active: TabId = TABS.find(t => t.id === params.get('tab'))?.id ?? 'snapshot'
+  const active: TabId = TABS.find(t => t.id === params.get('tab'))?.id ?? 'players'
   const roster = useSquadRoster()
-  const tabs = useRef<HTMLDivElement>(null)
-
-  const choose = (id: TabId) => setParams({ tab: id }, { replace: true })
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const at = TABS.findIndex(t => t.id === active)
-    const next = e.key === 'ArrowRight' ? (at + 1) % TABS.length
-      : e.key === 'ArrowLeft' ? (at + TABS.length - 1) % TABS.length
-      : e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : -1
-    if (next < 0) return
-    e.preventDefault()
-    choose(TABS[next].id)
-    tabs.current?.querySelector<HTMLElement>(`#${tabId(TABS[next].id)}`)?.focus()
-  }
+  const choose = (id: string) => setParams({ tab: id }, { replace: true })
 
   return (
     <div className="min-h-screen bg-ground pb-24">
       <div className="mx-auto w-full max-w-[1280px] px-5 tablet:px-8">
         <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
           <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Squad</h1>
-          <div
-            ref={tabs}
-            role="tablist"
-            aria-label="Squad views"
-            onKeyDown={onKeyDown}
-            // On a phone the tabs scroll sideways under a rule; on a coach's tablet or laptop (TRAK-252 screens) they sit in the header with nothing to scroll or clip a focus ring.
-            className="order-last tablet:order-none flex w-full tablet:w-auto gap-6 overflow-x-auto overflow-y-hidden border-b border-line tablet:overflow-visible tablet:border-b-0"
-          >
-            {TABS.map(t => {
-              const selected = t.id === active
-              return (
-                <button
-                  key={t.id}
-                  id={tabId(t.id)}
-                  role="tab"
-                  type="button"
-                  aria-selected={selected}
-                  aria-controls="squad-panel"
-                  tabIndex={selected ? 0 : -1}
-                  onClick={() => choose(t.id)}
-                  className="min-h-11 -mb-px tablet:mb-0 border-b-2 px-0.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
-                  style={{
-                    borderColor: selected ? 'rgb(var(--t-brand))' : 'transparent',
-                    color: selected ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
-                  }}
-                >
-                  {t.label}
-                </button>
-              )
-            })}
+          {/* On a phone the views take the full width, under the title; on a coach's tablet or laptop they sit in the header. */}
+          <div className="arc order-last w-full tablet:order-none tablet:w-[440px]">
+            <GlassSegmented label="Squad view" value={active} onValueChange={choose} fullWidth
+              options={TABS.map(t => ({ value: t.id, label: t.label }))} />
           </div>
           {roster.squad && roster.squads.length >= 2 && (
             <LayoutGroup id="age">
@@ -94,11 +56,11 @@ export default function CoachSquadPage() {
           <Avatar name={profile?.full_name || 'Coach'} size="md" className="arc ml-auto" aria-hidden />
         </header>
 
-        <section id="squad-panel" role="tabpanel" aria-labelledby={tabId(active)} tabIndex={-1} className="pb-8 focus:outline-none">
+        <section aria-label={TABS.find(t => t.id === active)!.label} className="pb-8">
           {roster.error ? <SquadLoadError onRetry={roster.retry} />
             : roster.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your squad…</p>
             : roster.players.length === 0 ? <PreparingSquad />
-            : active === 'snapshot' ? <SnapshotTab roster={roster} />
+            : active === 'players' ? <PlayersTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
             : active === 'availability' ? <AvailabilityTab roster={roster} />
             : <GamesTab roster={roster} />}

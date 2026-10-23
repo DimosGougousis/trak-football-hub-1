@@ -75,7 +75,7 @@ describe('Training theme on New event', { timeout: 30_000 }, () => {
     expect(link()).toHaveAttribute('href', '/coach/trainings')
     expect(link()).toHaveAttribute('target', '_blank')
     await userEvent.click(within(sheet).getByRole('radio', { name: /^Defending/ }))
-    expect(link()).toHaveAttribute('href', '/coach/trainings?lib=Tactical+%E2%80%93+Defending')
+    expect(link()).toHaveAttribute('href', '/coach/trainings/defending')
   })
 
   it('a match or other event has no theme', async () => {

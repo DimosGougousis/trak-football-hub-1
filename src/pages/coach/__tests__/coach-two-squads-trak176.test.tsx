@@ -64,10 +64,11 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
   it('Home offers the squads, and remembers the one picked', async () => {
     coachReads(TWO)
     renderApp('/coach/home')
-    const pick = await screen.findByRole('combobox', { name: 'Squad' })
-    expect(pick).toHaveValue('U14')
-    expect(within(pick).getAllByRole('option').map(o => o.textContent)).toEqual(['U14', 'U16'])
-    await userEvent.selectOptions(pick, 'U16')
+    // TRAK-262: pills, each squad then All (All is Home's only).
+    const pick = await screen.findByRole('group', { name: 'Squad' })
+    expect(within(pick).getAllByRole('button').map(b => b.textContent)).toEqual(['U14', 'U16', 'All'])
+    expect(within(pick).getByRole('button', { name: 'U14' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(within(pick).getByRole('button', { name: 'U16' }))
     // Remembered on this device, which is what the Squad page reads (TRAK-250 tests it there).
     await waitFor(() => expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16'))
   })
@@ -76,15 +77,14 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     // Another coach: the app's query cache outlives a test, and would hold the first one's squads.
     signInAs({ id: 'coach-176-one' })
     coachReads(TWO.map(p => ({ ...p, coach_user_id: 'coach-176-one', age_group: 'U14' })))
-    renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
-    // TRAK-211: Home lists no players now. The Feedback tab's list shows the squads have answered.
-    await userEvent.click(screen.getByRole('button', { name: /^Feedback$/i }))
+    // TRAK-211: Home lists no players now. The Feedback page's list shows the squads have answered
+    // (TRAK-259: it left the nav, so it opens by its address).
+    renderApp('/coach/feedback')
     expect(await screen.findByText('Ade Okafor', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Squad' })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: /^Home$/i }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
     expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: 'Squad' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Squad' })).toBeNull()
   })
 
   it('a new event from quick add is saved for the squad picked', async () => {

@@ -1,10 +1,14 @@
 import "@testing-library/jest-dom";
 import { configure } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 import { forgetScreens } from "@/lib/screen-memory";
 
 // TRAK-180: no test starts from the screens another test left in memory.
 afterEach(() => forgetScreens());
+
+// TRAK-262: coach Home's first-open onboarding is a modal, so it would hide Home from every
+// test that opens it. Every test runs as a device that has seen it; its own test unmocks this.
+vi.mock("@/lib/coach-onboarding", () => ({ onboardingSeen: () => true, markOnboardingSeen: () => {} }));
 
 // TRAK-114: findBy/waitFor wait 1 s by default, and GitHub's runners can take longer than
 // that for a full-provider render (main went red on 5 Oct). 4 s is what 45 calls already pass.
@@ -31,6 +35,18 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// TRAK-262: Arc's radar chart draws in when scrolled into view (IntersectionObserver), which
+// every browser Trak supports has and jsdom lacks. Nothing in jsdom ever scrolls into view.
+globalThis.IntersectionObserver ??= class {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds = [];
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return []; }
+} as unknown as typeof IntersectionObserver;
 
 // TRAK-182: Arc's Select (Radix) scrolls the chosen option into view and checks
 // pointer capture, which every browser Trak supports has and jsdom lacks.

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
@@ -53,20 +53,25 @@ async function openMenu() {
   return screen.findByRole('menu', { name: 'Quick add' })
 }
 
+/** TRAK-259: the "+" is Arc's glass menu; closed is what its trigger says (its panel morphs back into it). */
+const closed = () => waitFor(() => expect(screen.getByRole('button', { name: 'Quick add' })).toHaveAttribute('aria-expanded', 'false'))
+
 describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
+  // TRAK-265 (Imad, 22 Oct): Arc's Action morph. The "+" grows into the menu, which has its title and a close button.
   it('opens a menu that arrow keys move through, and Escape returns to the "+"', async () => {
     const menu = await openMenu()
     const items = within(menu).getAllByRole('menuitem').map(i => i.textContent)
     expect(items).toEqual(['Log training', 'Log match', 'Assess player', 'New event'])
+    expect(screen.getByRole('button', { name: 'Close quick add' })).toBeInTheDocument()
+    // Opening focuses the first action; the arrows wrap.
     await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log training' })).toHaveFocus())
     await userEvent.keyboard('{ArrowDown}')
-    expect(within(menu).getByRole('menuitem', { name: 'Log match' })).toHaveFocus()
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log match' })).toHaveFocus())
     await userEvent.keyboard('{ArrowUp}{ArrowUp}')
-    expect(within(menu).getByRole('menuitem', { name: 'New event' })).toHaveFocus()
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'New event' })).toHaveFocus())
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Quick add' })).toHaveFocus())
-    // It fades out (0.1 s), then it's gone.
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    await closed()
   })
 
   // Imad, 16 Oct (Kostas's item 9): Assess player is a quick action too.
@@ -76,31 +81,30 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
   })
 
-  // Imad, 16 Oct: an X to leave from anywhere, and Back once inside an option.
-  it('X closes it from the menu and from a form; Back returns from a form to the menu', async () => {
-    let menu = await openMenu()
-    const surface = () => menu.closest('[data-quick-add]') as HTMLElement
-    expect(within(surface()).getByText('Create')).toBeInTheDocument()
-    await userEvent.click(within(surface()).getByRole('button', { name: 'Close quick add' }))
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
-    expect(await screen.findByRole('button', { name: 'Quick add' })).toBeInTheDocument()
+  // Imad, 16 Oct: an X to leave a form, and Back to the menu. TRAK-259: the "+" itself closes the menu.
+  it('X closes the menu and a form; Back returns from a form to the menu; Escape steps back', async () => {
+    await openMenu()
+    await userEvent.click(screen.getByRole('button', { name: 'Close quick add' }))
+    await closed()
 
     await userEvent.click(screen.getByRole('button', { name: 'Quick add' }))
-    menu = await screen.findByRole('menu', { name: 'Quick add' })
+    const menu = await screen.findByRole('menu', { name: 'Quick add' })
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log match' }))
     const form = await screen.findByRole('dialog', { name: 'Log a match' })
-    await userEvent.click(within(form).getByRole('button', { name: 'Back to Create' }))
+    await userEvent.click(within(form).getByRole('button', { name: 'Back to quick add' }))
+    await userEvent.click(within(await screen.findByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
+    const event = await screen.findByRole('dialog', { name: 'New event' })
+    // Escape goes back to the menu, then folds it into the "+".
+    await userEvent.keyboard('{Escape}')
     expect(await screen.findByRole('menu', { name: 'Quick add' })).toBeInTheDocument()
     await userEvent.click(within(screen.getByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
-    const event = await screen.findByRole('dialog', { name: 'New event' })
-    // The menu fades out over 0.1 s inside the same surface, its header with it.
-    await waitFor(() => expect(within(event).getAllByRole('button', { name: 'Close quick add' })).toHaveLength(1))
-    await userEvent.click(within(event).getByRole('button', { name: 'Close quick add' }))
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'New event' })).getByRole('button', { name: 'Close quick add' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New event' })).toBeNull())
-    expect(screen.getByRole('button', { name: 'Quick add' })).toBeInTheDocument()
+    expect(event).not.toBeInTheDocument()
+    await closed()
   })
 
-  it('New event saves a draft families never see, then shows the check', async () => {
+  it('New event saves a draft families never see, then says so', async () => {
     const menu = await openMenu()
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
     const form = await screen.findByRole('dialog', { name: 'New event' })
@@ -112,25 +116,9 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await waitFor(() => expect(inserted).toHaveLength(1))
     expect(inserted[0]).toMatchObject({ coach_user_id: COACH.id, event_type: 'training', published: false, start_time: '17:30:00', event_date: localTodayISO() })
     expect(await screen.findByText('Draft saved. Publish it from Schedule.')).toBeInTheDocument()
-    // Then back to "+".
-    expect(await screen.findByRole('button', { name: 'Quick add' }, { timeout: 3000 })).toBeInTheDocument()
-  })
-
-  // Tarek, 16 Oct: the check's 1.1 s timer outlived an unmounted QuickAdd and crashed a CI run.
-  it('clears the check\'s timer when it unmounts mid-check', async () => {
-    const set = vi.spyOn(window, 'setTimeout'), clear = vi.spyOn(window, 'clearTimeout')
-    const menu = await openMenu()
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
-    const form = await screen.findByRole('dialog', { name: 'New event' })
-    await pickTime(userEvent, 'Start', '17:30')
-    await userEvent.click(within(form).getByRole('button', { name: 'Save draft' }))
-    await screen.findByText('Draft saved. Publish it from Schedule.')
-    const call = set.mock.calls.findIndex(args => args[1] === 1100)
-    expect(call).toBeGreaterThanOrEqual(0)
-    const timer = set.mock.results[call].value
-    cleanup()
-    expect(clear).toHaveBeenCalledWith(timer)
-    set.mockRestore(); clear.mockRestore()
+    // The form closes; the "+" is back.
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New event' })).toBeNull())
+    await closed()
   })
 
   it('a match draft needs its opponent, and Escape steps back to the menu', async () => {
@@ -231,6 +219,6 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     await userEvent.click(register)
     expect(await screen.findByRole('dialog', { name: 'Take register' }, { timeout: 3000 })).toBeInTheDocument()
     // Nothing of the quick-add stays open under the register.
-    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Quick add' })).toBeNull())
+    await closed()
   })
 })
