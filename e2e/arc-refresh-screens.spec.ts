@@ -15,11 +15,12 @@ const players = [
   { id: 'sq-5', player_name: 'Thiago Silva', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
 ].map(p => ({ ...p, coach_user_id: ids.coach, status: 'active', linked_player_id: `${p.id}-user`, created_at: '2026-10-01T08:00:00Z' }))
 
-async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false, cancelled = false) {
+async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false, cancelled = false, sessionHours = 1) {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
   const user = { id: ids.coach, email: 'coach@arc182.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
-  const exp = Math.floor(Date.now() / 1000) + 3600
+  // A test that moves the page's clock forward needs a session that lasts past it.
+  const exp = Math.floor(Date.now() / 1000) + 3600 * sessionHours
   const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: ids.coach, exp, role: 'authenticated' }]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
@@ -74,7 +75,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
 }
 
 test.describe('TRAK-182 coach screens', () => {
-  test.use({ timezoneId: 'Asia/Dubai' })
+  test.use({ timezoneId: 'Asia/Dubai', deviceScaleFactor: 3 })
   // TRAK-211: the attention levels moved from Home to the Feedback and assessment tab.
   test('TRAK-189 coach Feedback attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
@@ -422,6 +423,32 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     const needsYou = page.getByRole('group', { name: 'Colour key' }).getByText('Needs you').locator('xpath=preceding-sibling::div[1]')
     await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(234, 179, 8)')
     await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
+    // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
+    await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
+    expect(unexpected).toEqual([])
+  })
+
+  // TRAK-270 (Tarek, 23 Oct): "make it the same way it is on the home screen". A day that needs the
+  // coach (tonight's match, started, not logged) has coach Home's yellow corner flag, tucked into the
+  // day's top-right corner, not a triangle standing out of it.
+  test('TRAK-270 needs you is coach Home\'s corner flag, inside the day', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected, true, false, 36)
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+    await page.clock.setFixedTime(new Date(`${day}T17:00:00Z`)) // 21:00 in Dubai: the 20:00 kick-off has passed
+    await page.goto('/coach/schedule')
+    const cell = page.getByRole('gridcell', { name: /needs you/ })
+    await expect(cell).toHaveCount(1)
+    const flag = cell.locator('[aria-hidden="true"]').filter({ hasNot: page.locator('span') }).first()
+    await expect(flag).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
+    await expect(flag).toHaveCSS('border-top-right-radius', '4px')
+    await expect(flag).toHaveCSS('background-color', 'rgb(234, 179, 8)')
+    const [f, c] = [(await flag.boundingBox())!, (await cell.boundingBox())!]
+    expect(f.x).toBeGreaterThanOrEqual(c.x)
+    expect(f.y).toBeGreaterThanOrEqual(c.y)
+    expect(f.x + f.width).toBeLessThanOrEqual(c.x + c.width)
+    expect(f.y + f.height).toBeLessThanOrEqual(c.y + c.height)
+    await cell.screenshot({ path: testInfo.outputPath('needs-you-corner.png'), scale: 'device' })
     expect(unexpected).toEqual([])
   })
 })
