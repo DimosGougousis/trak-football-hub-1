@@ -419,6 +419,11 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     // A neutral backing keeps the red outline distinct from the green disc.
     await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
+    // TRAK-270 (Tarek, 23 Oct): needs you is a clear yellow, not the warning amber, with a dark edge.
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('234 179 8')
+    const needsYou = page.getByRole('group', { name: 'Colour key' }).getByText('Needs you').locator('xpath=preceding-sibling::div[1]')
+    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(234, 179, 8)')
+    await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
     expect(unexpected).toEqual([])
   })
 })

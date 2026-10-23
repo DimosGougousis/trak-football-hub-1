@@ -144,3 +144,33 @@ describe('TRAK-255: the coach\'s Schedule', { timeout: 20_000 }, () => {
     expect(saved.venue).toBe('Rizoupoli https://maps.app.goo.gl/new777')
   })
 })
+
+/**
+ * TRAK-270 (Tarek, 23 Oct, on the live Schedule): the page had two add buttons, a green "+" at the top and
+ * "+ Add" by the chosen day, opening the same form. Tarek kept the green "+"; it opens New event on the
+ * chosen day. And "needs you" is a clear yellow (its own token), not the warning amber.
+ */
+describe('TRAK-270: one add button, and needs you in yellow', { timeout: 20_000 }, () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 22, 9, 0, 0))
+    signInAs(COACH)
+    fixtures()
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('has one add button, the green "+" at the top, and it opens New event on the chosen day', async () => {
+    await open()
+    const adds = screen.getAllByRole('button').filter(b => /^\+?\s*add(\s+event)?$/i.test((b.getAttribute('aria-label') ?? b.textContent ?? '').trim()))
+    expect(adds).toHaveLength(1)
+    expect(adds[0]).toHaveAccessibleName('Add event')
+    // The top "+" (beside the Schedule heading), not a button by the day's heading.
+    expect(adds[0].closest('div')?.parentElement?.querySelector('h1')).toHaveTextContent('Schedule')
+    await userEvent.click(cell('2026-10-21'))
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await eventStep(sheet, 'When')
+    expect(within(sheet).getByRole('button', { name: /^Date\b/ })).toHaveTextContent(/21 Oct/)
+  })
+  // The yellow itself is checked in a real browser (arc-refresh-screens.spec.ts): jsdom drops colours written with var().
+})

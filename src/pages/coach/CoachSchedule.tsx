@@ -67,7 +67,7 @@ type CalEvent = {
 
 const TYPE_COLOR: Record<ShownType, string> = EVENT_COLOR
 /** TRAK-255: the amber of "needs you" (a register to take, a match to log), as the calendar's corner. */
-const NEEDS_YOU_COLOR = 'rgb(var(--t-warning))'
+const NEEDS_YOU_COLOR = 'rgb(var(--t-attention))' // TRAK-270: a clear yellow, never text
 
 const TYPE_LABEL: Record<ShownType, string> = {
   match: 'Match', training: 'Training', tournament: 'Tournament', other: 'Other',
@@ -740,6 +740,7 @@ export default function CoachSchedule() {
               aria-label="Import fixtures">
               <FileUp size={15} color="rgb(var(--t-ink))" />
             </button>}
+            {/* TRAK-270 (Tarek, 23 Oct): the one add button. It opens New event on the chosen day. */}
             <button
               onClick={() => openNew(selected)}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-brand"
@@ -780,7 +781,9 @@ export default function CoachSchedule() {
               <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Cancelled</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-[8px] h-[7px]" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} />
+              <div className="w-[9px] h-[8px]" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
+                <div className="w-full h-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} />
+              </div>
               <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>Needs you</span>
             </div>
           </div>
@@ -792,18 +795,13 @@ export default function CoachSchedule() {
             <span className="text-[9px] font-medium tracking-[0.1em] uppercase text-ink-3" style={mono}>
               {formatEventDay(selected)}
             </span>
-            <button
-              onClick={() => openNew(selected)}
-              className="text-[9px] tracking-[0.1em] uppercase text-brand"
-              style={mono}>
-              + Add
-            </button>
+
           </div>
 
           {selectedEvents.length === 0 ? (
             <div className="rounded-[14px] border border-line px-4 py-5 text-center"
               style={{ background: 'rgb(var(--t-surface))' }}>
-              <p className="text-[12px] text-ink-3">Nothing planned. Tap + Add to schedule an event.</p>
+              <p className="text-[12px] text-ink-3">Nothing planned. Tap + to schedule an event.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -818,7 +816,7 @@ export default function CoachSchedule() {
                   : { text: 'Published', color: 'rgb(var(--t-brand))', fill: 'transparent' }
                 const place = ev.venue ? venueParts(ev.venue) : null
                 const pending = 'mt-2 inline-flex items-center min-h-8 px-3 rounded-full text-[11px] font-medium'
-                const pendingStyle = { ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-warning) / 0.1)', border: `1px solid ${NEEDS_YOU_COLOR}` }
+                const pendingStyle = { ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-attention) / 0.22)', border: `1.5px solid ${NEEDS_YOU_COLOR}` }
                 return (
                   <div key={ev.id}
                     className="rounded-[14px] px-4 py-3 flex items-start gap-3"
