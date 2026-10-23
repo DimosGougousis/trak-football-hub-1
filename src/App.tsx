@@ -11,6 +11,7 @@ import { PlayerConsentWatcher } from "@/components/player/PlayerConsentWatcher";
 import { PlayerSessionWatcher } from "@/components/player/PlayerSessionWatcher";
 import { ParentConsentWatcher } from "@/components/parent/ParentConsentWatcher";
 import { CoachLayout } from "@/components/coach/CoachLayout";
+import { CoachFrame } from "@/components/coach/CoachFrame";
 import { ErrorBoundary } from "@/components/trak/ErrorBoundary";
 import { ParkedScreen } from "@/components/trak/ParkedScreen";
 
@@ -60,6 +61,7 @@ const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
 const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
 const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
 const TrainingsPage = lazy(() => import("./pages/TrainingsPage"));
+const CoachLibrary = lazy(() => import("./pages/coach/library/CoachLibrary"));
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
@@ -126,7 +128,6 @@ const App = () => (
             {/* TRAK-168: a shared event link; routes each person to that event. */}
             <Route path="/event/:id" element={<EventLink />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
             {DevSetupPage && <Route path="/dev-setup" element={<DevSetupPage />} />}
@@ -142,9 +143,12 @@ const App = () => (
             <Route path="/player/evolution" element={<RouteGuard allowedRole="player"><ParkedScreen><PlayerEvolutionCard /></ParkedScreen></RouteGuard>} />
             <Route path="/player/feedback/:assessmentId" element={<RouteGuard allowedRole="player"><PlayerFeedback /></RouteGuard>} />
             <Route path="/player/trainings" element={<RouteGuard allowedRole="player"><TrainingsPage role="player" /></RouteGuard>} />
-            <Route path="/how-it-works" element={<HowTrakWorks />} />
 
-            {/* Coach routes */}
+            {/* Coach routes. TRAK-259: inside the coach's frame (the sidebar on a laptop, the glass tab bar on a phone).
+                Settings and How Trak works are shared; the frame shows only for a coach. */}
+            <Route element={<CoachFrame />}>
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/how-it-works" element={<HowTrakWorks />} />
             <Route path="/coach/home" element={<RouteGuard allowedRole="coach"><CoachHomePage /></RouteGuard>} />
             <Route path="/coach/squad" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
             <Route path="/coach/squad/add" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/squad" replace /></RouteGuard>} />
@@ -164,7 +168,8 @@ const App = () => (
             {/* TRAK-102: a history row opens its session; training and other are editable. */}
             <Route path="/coach/sessions/:id" element={<RouteGuard allowedRole="coach"><CoachSessionEdit /></RouteGuard>} />
             <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
-            <Route path="/coach/trainings" element={<RouteGuard allowedRole="coach"><TrainingsPage role="coach" /></RouteGuard>} />
+            {/* TRAK-264: the coach's Library (the frame's Library tab) and the pages it opens. */}
+            <Route path="/coach/trainings/*" element={<RouteGuard allowedRole="coach"><CoachLibrary /></RouteGuard>} />
             <Route path="/coach/manual" element={<CoachManual />} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/assess" replace /></RouteGuard>} />
             <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
@@ -172,6 +177,7 @@ const App = () => (
             <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAwardPlayer /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/schedule" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="events"><CoachSchedule /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/assistant" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAssistant /></ParkedScreen></RouteGuard>} />
+            </Route>
 
             {/* Parent routes */}
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />

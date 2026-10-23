@@ -13,5 +13,13 @@ export function weekdayDayMonth(date: string) {
   return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]}`
 }
 
+/** `2012-02-26` on 22 Oct 2026 -> `26/2/2012 · 14 years old` (Imad's format). The age turns on the birthday itself. */
+export function bornLine(born: string, today: Date) {
+  const [y, m, d] = born.split('-').map(Number)
+  const month = today.getMonth() + 1
+  const age = today.getFullYear() - y - (month < m || (month === m && today.getDate() < d) ? 1 : 0)
+  return `${d}/${m}/${y} · ${age} years old`
+}
+
 /** PostgREST value quoting for an `or=` filter, so a squad name with a comma or bracket cannot change the filter. */
 export const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`

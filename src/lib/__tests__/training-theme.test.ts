@@ -30,9 +30,10 @@ describe('the seven themes are the catalogue libraries', () => {
     ])
   })
 
-  it('links to the catalogue opened on a theme, or on everything', () => {
-    expect(catalogueLink('defending')).toBe('/coach/trainings?lib=Tactical+%E2%80%93+Defending')
+  it('links to the Library opened on a theme, or on its first page (TRAK-264)', () => {
+    expect(catalogueLink('defending')).toBe('/coach/trainings/defending')
     expect(catalogueLink(null)).toBe('/coach/trainings')
+    expect(catalogueLink('')).toBe('/coach/trainings')
   })
 
   it('reads back only a known theme', () => {

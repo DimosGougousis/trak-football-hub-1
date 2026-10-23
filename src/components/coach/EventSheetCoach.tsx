@@ -4,11 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
-import { askToEmailFamilies } from '@/lib/event-emails'
+import { publishEvent } from '@/lib/event-publish'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
 import { TakeRegister } from '@/components/coach/TakeRegister'
-import { clashMessage, startedLocked, type EventRow } from '@/lib/coach-events'
+import { startedLocked, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
@@ -115,12 +115,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
     enabled: details.isSuccess,
   })
   const publish = useMutation({
-    mutationFn: async (row: EventRow) => {
-      const { data, error } = await supabase.from('coach_calendar_events').update({ published: true }).eq('id', row.id).select('id')
-      if (error || !data?.length) throw new Error(clashMessage(error) ?? "Couldn't publish. Try again.")
-    },
+    mutationFn: (row: EventRow) => publishEvent(row.id),
     onSuccess: () => {
-      askToEmailFamilies() // TRAK-135: publishing emails families too
       toast.success('Published to the squad')
       void client.invalidateQueries({ queryKey: ['coach', 'event', event.id] })
       onChanged()

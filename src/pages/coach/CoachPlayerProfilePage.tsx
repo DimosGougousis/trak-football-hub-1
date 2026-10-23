@@ -10,6 +10,7 @@ import { BANDS, appearanceLabel } from '@/lib/types'
 import { openable } from '@/lib/openable'
 import { ChevronLeft } from 'lucide-react'
 import { CoachAssessmentCard } from '@/components/coach/CoachAssessmentCard'
+import { loadPlayerAssessments } from '@/lib/coach-assessments'
 
 function avgScore(a: any) {
   return (a.work_rate + a.tactical + a.attitude + a.technical + a.physical + a.coachability) / 6
@@ -57,27 +58,14 @@ export function CoachPlayerOverview({ id, embedded = false }: { id: string | und
      way — a shared state field here is a bug that hides itself. */
   const loadAssessments = useCallback(async () => {
     if (!id || !user) return
-    const { data, error } = await supabase.from('coach_assessments').select('*, coach_sessions(title, session_date)')
-      .eq('squad_player_id', id).eq('coach_user_id', user.id)
-      .order('created_at', { ascending: false })
-    if (error) { setAssessmentsFailed(true); return }
+    // TRAK-263: the same read as Squad's profile panel.
+    let loaded
+    try { loaded = await loadPlayerAssessments(id, user.id) } catch { setAssessmentsFailed(true); return }
     setAssessmentsFailed(false)
-    const list = data || []
-    setAssessments(list)
-    if (list.length) {
-      const ids = list.map((a: any) => a.id)
-      const [{ data: notes }, shared] = await Promise.all([
-        supabase.from('coach_assessment_notes').select('assessment_id, note').in('assessment_id', ids),
-        supabase.from('coach_shared_feedback' as any).select('assessment_id, body, published_at').in('assessment_id', ids),
-      ])
-      const map: Record<string, string> = {}
-      notes?.forEach((n: any) => { map[n.assessment_id] = n.note })
-      setNotesById(map)
-      if (!shared.error) setMessageById(Object.fromEntries(((shared.data ?? []) as any[]).map(f => [f.assessment_id, f.body])))
-      if (shared.error) setMessageSentById(undefined)
-      else setMessageSentById(Object.fromEntries(ids.map((assessmentId: string) =>
-        [assessmentId, ((shared.data ?? []) as any[]).some(f => f.assessment_id === assessmentId && f.published_at != null)])))
-    }
+    setAssessments(loaded.list)
+    setNotesById(loaded.notes)
+    setMessageById(loaded.messages)
+    setMessageSentById(loaded.sent)
   }, [id, user])
 
   useEffect(() => { void loadPlayer(); void loadAssessments() }, [loadPlayer, loadAssessments])

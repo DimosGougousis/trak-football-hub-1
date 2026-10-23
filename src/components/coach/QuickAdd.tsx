@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, type NavigateOptions } from 'react-router-dom'
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
-import { ArrowLeft, Check, ClipboardCheck, ClipboardPen, Plus, Swords, CalendarPlus, Dumbbell, X } from 'lucide-react'
+import { ClipboardCheck, ClipboardPen, Plus, Swords, CalendarPlus, Dumbbell } from 'lucide-react'
+import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { localTodayISO } from '@/lib/event-time'
@@ -12,36 +12,22 @@ import { Button } from '@/components/arc/button/button'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
+import { ActionMorph, type MorphRow } from '@/components/arc/action-morph/action-morph'
 import { useCoachSquad } from '@/lib/coach-squad'
-import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import { useCreateSaved } from './coach-frame-context'
 
-/* TRAK-182 part 8 (Imad, 15 Oct; plan 8a–8g): a "+" above the tab bar that
-   becomes a menu, then the shortest form that makes a real record, then a
-   check, and back to "+". One surface changes shape, anchored to the corner
-   the "+" sits in, on springs that start from wherever it is (a second tap
-   mid-move reverses it). Built from Arc's free parts and motion; Arc's Pro
-   "action morph" is not used. Only "New event" finishes here (a draft
-   families never see). A match log needs every player's facts (J4: nothing
-   invented), so it continues on the log's Squad step; a training is logged
-   on its own screen, or its register is taken when today has one. */
-type Face = 'closed' | 'menu' | 'event' | 'match' | 'done'
+/* TRAK-182 part 8 (Imad, 15 Oct): the coach's "+" opens a menu, then the
+   shortest form that makes a real record. Only "New event" finishes here (a
+   draft families never see). A match log needs every player's facts (J4:
+   nothing invented), so it continues on the log's Squad step; a training is
+   logged on its own screen, or its register is taken when today has one.
+   TRAK-259 (Imad, 22 Oct): merged into the glass tab bar on a phone, "+ Create"
+   at a laptop's top right. TRAK-265 (Imad, 22 Oct): it works as Arc's Action
+   morph, one glass shape that grows from the button into the menu (with ✕) and
+   into each short form, then folds back. */
+type View = 'fab' | 'menu' | 'event' | 'match'
 
-const SPRING = { type: 'spring', bounce: 0, visualDuration: 0.35 } as const
-const CHECK_SPRING = { type: 'spring', bounce: 0.3, visualDuration: 0.35 } as const
 const field = 'w-full rounded-[12px] border border-line bg-ground px-3 py-2.5 text-[16px] text-ink placeholder-ink-3 outline-none focus-visible:ring-2 focus-visible:ring-primary'
-
-/** The top row of the open surface: Back (on a form), its title, and X, which
- *  closes it from anywhere (Imad, 16 Oct, as Arc's action menu does). */
-function Header({ title, onBack, onClose }: { title: string; onBack?: () => void; onClose: () => void }) {
-  const icon = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-raised active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
-  return (
-    <div className="-mx-1 -mt-1 mb-1 flex items-center gap-1">
-      {onBack && <button type="button" aria-label="Back to Create" onClick={onBack} className={icon}><ArrowLeft size={18} aria-hidden="true" /></button>}
-      <p className={`flex-1 text-[15px] font-medium text-ink ${onBack ? '' : 'pl-2'}`}>{title}</p>
-      <button type="button" aria-label="Close quick add" onClick={onClose} className={icon}><X size={18} aria-hidden="true" /></button>
-    </div>
-  )
-}
 
 /** Home or away as two pressed buttons: it starts unanswered, as on Schedule,
  *  so a fixture is never saved as Home because nobody chose (Tarek, #319). */
@@ -57,7 +43,7 @@ function HomeAway({ value, onChange }: { value: '' | 'home' | 'away'; onChange: 
   )
 }
 
-/** Keeps the surface above the on-screen keyboard (8g): the visual viewport shrinks when it opens. */
+/** Keeps a form above the on-screen keyboard (8g): the visual viewport shrinks when it opens. */
 function useKeyboardInset() {
   const [inset, setInset] = useState(0)
   useEffect(() => {
@@ -71,35 +57,27 @@ function useKeyboardInset() {
   return inset
 }
 
-/** Where the "+" sits. "top" is Home's header corner, the slot a coach's
- *  bell would take (HomeHeader), so it stays in reach however far the page
- *  scrolls; other tabs have their own controls there and keep "bottom".
- *  "side" (TRAK-254): "+ Create" at the top of a coach's side menu on a laptop. */
-type Corner = 'top' | 'bottom' | 'side'
-
-/** TRAK-254: on a laptop the "+" is "+ Create" in the side menu. `sideMenuOnly`: a
- *  page that has no "+" on a phone shows it there only. */
-export function QuickAdd({ onSaved, corner = 'bottom', sideMenuOnly = false }: { onSaved?: () => void; corner?: Exclude<Corner, 'side'>; sideMenuOnly?: boolean }) {
-  const sideMenu = useSideMenuScreen()
-  if (sideMenuOnly && !sideMenu) return null
-  return <QuickAddSurface onSaved={onSaved} corner={sideMenu ? 'side' : corner} />
+/** Pages keep saying `<QuickAdd onSaved={…} />`: inside the coach's frame (TRAK-259) the "+" is the frame's,
+ *  and this only tells the page when it saved something. */
+export function QuickAdd({ onSaved }: { onSaved?: () => void; corner?: 'top' | 'bottom'; sideMenuOnly?: boolean }) {
+  useCreateSaved(onSaved)
+  return null
 }
 
-function QuickAddSurface({ onSaved, corner }: { onSaved?: () => void; corner: Corner }) {
+/** The coach's "+". `bar`: round, in the phone's glass tab bar, growing upward. `top`: "+ Create" at a laptop's top right, growing down. */
+export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; onSaved?: () => void }) {
   const { user } = useAuth()
   // TRAK-176: a new event belongs to the squad picked; wait until the squads are known.
   const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
-  const reduced = useReducedMotion()
   const keyboard = useKeyboardInset()
   // Events switched off for the academy (TRAK-124): New event and the register
   // say "Coming soon", as Schedule does; logging is not an events feature.
   const eventsOn = useFeature('events')
   const { comingSoon } = useParked()
-  const [face, setFace] = useState<Face>('closed')
+  const [view, setView] = useState<View>('fab')
   const [register, setRegister] = useState<EventRow | null>(null)
-  const surface = useRef<HTMLDivElement>(null)
-  const plus = useRef<HTMLButtonElement>(null)
+  const bar = placement === 'bar'
 
   // New event: the fields a valid draft needs. Log match: what the log's first step needs.
   const [kind, setKind] = useState<'training' | 'match'>('training')
@@ -112,73 +90,40 @@ function QuickAddSurface({ onSaved, corner }: { onSaved?: () => void; corner: Co
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const back = () => { setError(null); setFace(f => f === 'event' || f === 'match' ? 'menu' : 'closed') }
-  const close = () => { setError(null); setFace('closed') }
-
-  // Back to "+" puts focus back on it, as a closing menu does.
-  useEffect(() => { if (face === 'closed' && document.activeElement !== document.body) plus.current?.focus({ preventScroll: true }) }, [face])
-  // Focus goes into the surface: the first menu item, or the form's first field.
-  useEffect(() => {
-    if (face === 'menu' || face === 'event' || face === 'match') {
-      surface.current?.querySelector<HTMLElement>('[role="menuitem"], input, button[aria-pressed]')?.focus({ preventScroll: true })
-    }
-  }, [face])
-  // A tap outside steps back one state.
-  useEffect(() => {
-    if (face === 'closed' || face === 'done') return
-    const away = (e: PointerEvent) => {
-      const target = e.target as Node
-      // Arc's pickers open in a portal; a tap inside one is not "outside".
-      if (surface.current?.contains(target) || (target as Element).closest?.('[role="dialog"], [role="listbox"]')) return
-      back()
-    }
-    document.addEventListener('pointerdown', away)
-    return () => document.removeEventListener('pointerdown', away)
-  }, [face])
+  const show = useCallback((next: string) => { setError(null); setView(next as View) }, [])
+  const close = () => show('fab')
 
   // Today's training whose register can open now: the menu offers it first.
   useEffect(() => {
-    if (face !== 'menu' || !user || !eventsOn) return
+    if (view !== 'menu' || !user || !eventsOn) return
     let cancelled = false
     supabase.from('coach_calendar_events').select('*').eq('coach_user_id', user.id).eq('event_date', localTodayISO())
       .eq('published', true).then(({ data }) => {
         if (!cancelled) setRegister(((data ?? []) as EventRow[]).find(row => !registerProblem(row)) ?? null)
       })
     return () => { cancelled = true }
-  }, [face, user, eventsOn])
-
-  const [doneText, setDoneText] = useState('')
-  const done = (text: string) => {
-    setFace('done')
-    setDoneText(text)
-  }
-  // The check shows for 1.1 s, then "+" again. The timer belongs to the done face,
-  // so leaving it or unmounting clears it (Tarek, 16 Oct: it fired after a test's page was gone).
-  useEffect(() => {
-    if (face !== 'done') return
-    const timer = window.setTimeout(() => setFace('closed'), 1100)
-    return () => window.clearTimeout(timer)
-  }, [face])
+  }, [view, user, eventsOn])
 
   const datePassed = pastDateProblem(date, localTodayISO())
   const eventForm = (): EventForm => ({ ...blankForm(date), kind, time, opponent: kind === 'match' ? opponent : '', homeAway: kind === 'match' ? homeAway : '' })
   const saveDraft = async () => {
     if (!user || saving) return
-    const form = eventForm()
-    const problem = formProblem(form) ?? pastDateProblem(form.date, localTodayISO())
+    const draft = eventForm()
+    const problem = formProblem(draft) ?? pastDateProblem(draft.date, localTodayISO())
     if (problem) { setError(problem); return }
     if (!coachSquad.ready) { setError(coachSquad.retry()); return }
     setSaving(true)
     // As Schedule's Save draft: a new event starts unpublished; families never see a draft.
     const { data, error: failed } = await supabase.from('coach_calendar_events')
-      .insert([{ ...formToRow(form), ...newDraftFields(user.id, coachSquad.squad) }]).select('id')
+      .insert([{ ...formToRow(draft), ...newDraftFields(user.id, coachSquad.squad) }]).select('id')
     setSaving(false)
     if (failed || !data?.length) { setError(clashMessage(failed) ?? "Couldn't save the draft. Check your connection and try again."); return }
     setTime(''); setOpponent(''); setHomeAway('')
     onSaved?.()
-    done('Draft saved. Publish it from Schedule.')
+    close()
+    toast.success('Draft saved. Publish it from Schedule.')
   }
-  // Leaving closes the surface first: on Schedule itself nothing remounts, so it
+  // Leaving closes the shape first: on Schedule itself nothing remounts, so it
   // would otherwise stay open over the sheet it hands to (Tarek, #319).
   const go = (to: string, options?: NavigateOptions) => { close(); navigate(to, options) }
   const moreDetails = () => go('/coach/schedule', { state: { quickEvent: eventForm() } })
@@ -189,172 +134,82 @@ function QuickAddSurface({ onSaved, corner }: { onSaved?: () => void; corner: Co
     go('/coach/sessions/add', { state: { quickMatch: { opponent: opponent.trim(), venue: homeAway === 'home' ? 'Home' : 'Away', scoreUs, scoreThem, date } } })
   }
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Escape') { e.stopPropagation(); back(); return }
-    if (face === 'menu' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-      e.preventDefault()
-      const items = [...(surface.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])]
-      const at = items.indexOf(document.activeElement as HTMLElement)
-      items[(at + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus()
-    }
-    // The form keeps focus inside it, as a small dialog does.
-    if ((face === 'event' || face === 'match') && e.key === 'Tab') {
-      const focusable = [...(surface.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input, [tabindex="0"]') ?? [])]
-      const first = focusable[0], last = focusable[focusable.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
-    }
+  const choose = (id: string) => {
+    setError(null)
+    if (id === 'register' && register) go(`/coach/schedule?register=${register.id}`)
+    else if (id === 'training') go('/coach/sessions/add')
+    else if (id === 'assess') go('/coach/assess')
+    else if (id === 'match') show('match')
+    else if (id === 'event') { if (eventsOn) show('event'); else { close(); comingSoon() } }
   }
+  const rows: MorphRow[] = [
+    ...(register ? [{ id: 'register', label: `Take register · ${register.title}`, icon: <ClipboardCheck /> }] : []),
+    { id: 'training', label: 'Log training', icon: <Dumbbell /> },
+    { id: 'match', label: 'Log match', icon: <Swords /> },
+    // Imad, 16 Oct (Kostas's item 9): assessing is one of the coach's quick actions.
+    { id: 'assess', label: 'Assess player', icon: <ClipboardPen /> },
+    { id: 'event', label: 'New event', icon: <CalendarPlus /> },
+  ]
 
-  const round = face === 'closed' || face === 'done'
-  const side = corner === 'side'
-  // The side menu's "+ Create" opens downward, as the header corner's does.
-  const top = corner === 'top' || side
-  // At the top it lines up with the header's 44 px corner slot (the shell's 20 px
-  // gutter, the header's 12 px top padding) and opens downward. TRAK-199: the
-  // page's edge is wherever its column (--col-w) ends, right of the laptop rail.
-  const edge = '(100vw - var(--rail-w) - var(--col-w, var(--page-w))) / 2'
-  const position = side
-    ? { left: '16px', top: '64px' }
-    : top
-    ? { right: `max(20px, calc(${edge} + 20px))`, top: 'calc(12px + env(safe-area-inset-top))' }
-    : { right: `max(16px, calc(${edge} + 16px))`, bottom: `calc(${Math.max(keyboard + 12, 76)}px + env(safe-area-inset-bottom))` }
-  const item = 'flex w-full min-h-11 items-center gap-3 rounded-[12px] px-3 text-left text-[15px] text-ink hover:bg-raised focus-visible:bg-raised focus-visible:outline-none active:scale-[0.98] transition-transform'
+  // In the tab bar the pickers open upward: opening down ran off the screen (Imad, 16 Oct).
+  const pickers = `space-y-3 ${bar ? `[&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
+    [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left` : ''}
+    [&_[aria-label$=calendar]]:bg-raised [&_[role=listbox]]:bg-raised`
 
-  return <>
-    {/* Room under the last row, so the "+" never covers it. */}
-    {!top && <div aria-hidden="true" className="h-16" />}
-    {/* In the side menu it sits above the menu (z-50), below a sheet (z-70). */}
-    <div data-quick-add data-corner={corner} className={`fixed ${side ? 'z-[60]' : 'z-40'} pointer-events-none`} style={position}>
-      <LayoutGroup>
-        <motion.div ref={surface} layout={!reduced} onKeyDown={onKeyDown}
-          role={face === 'event' || face === 'match' ? 'dialog' : undefined}
-          aria-label={face === 'event' ? 'New event' : face === 'match' ? 'Log a match' : undefined}
-          transition={face === 'done' ? CHECK_SPRING : SPRING}
-          // Clip (never "hidden", which focus can scroll) while the shape morphs; a
-          // form lets its pickers out, and at the bottom they open upward: opening
-          // down ran off the screen (Imad, 16 Oct). At the top they open down as usual.
-          style={{ borderRadius: round ? (side ? 12 : top ? 22 : 28) : 22, originX: side ? 0 : 1, originY: top ? 0 : 1 }}
-          className={`arc pointer-events-auto border border-line shadow-[0_12px_40px_rgba(0,0,0,0.5)]
-            bg-surface/90 backdrop-blur-xl [@media(prefers-reduced-transparency:reduce)]:bg-surface [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none
-            ${top ? '' : `[&_[role=listbox]]:top-auto [&_[role=listbox]]:bottom-[calc(100%+6px)] [&_[role=listbox]]:origin-bottom
-            [&_[aria-label$=calendar]]:top-auto [&_[aria-label$=calendar]]:bottom-[calc(100%+8px)] [&_[aria-label$=calendar]]:origin-bottom-left`}
-            [&_[aria-label$=calendar]]:bg-raised [&_[role=listbox]]:bg-raised
-            ${face === 'event' || face === 'match' ? 'overflow-visible' : 'overflow-clip'}
-            ${round ? (side ? 'w-[200px] h-11' : top ? 'w-11 h-11' : 'w-14 h-14') : face === 'menu' ? 'w-[232px]' : 'w-[min(340px,calc(100vw-32px))]'}`}>
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.div key={face} initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}
-              transition={{ duration: 0.18 }} className={round ? 'w-full h-full' : 'p-3'}>
-
-              {face === 'closed' && (
-                <button ref={plus} type="button" aria-label="Quick add" aria-haspopup="menu" aria-expanded="false"
-                  // Opens on press (8d). The press must not then focus this fading "+", or
-                  // it would take focus back from the menu's first item.
-                  onPointerDown={() => setFace('menu')} onMouseDown={e => e.preventDefault()} onClick={() => setFace('menu')} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFace('menu') } }}
-                  className="flex w-full h-full items-center justify-center bg-primary text-on-brand active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink">
-                  <Plus size={side ? 18 : 24} strokeWidth={2.2} aria-hidden="true" />
-                  {side && <span className="ml-2 text-[15px] font-medium" style={{ fontFamily: 'var(--t-font)' }}>Create</span>}
-                </button>
-              )}
-
-              {face === 'done' && (
-                <div role="status" className="flex w-full h-full items-center justify-center bg-primary text-on-brand">
-                  <motion.span initial={reduced ? false : { scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={CHECK_SPRING}>
-                    <Check size={26} strokeWidth={2.6} aria-hidden="true" />
-                  </motion.span>
-                  <span className="sr-only">{doneText}</span>
-                </div>
-              )}
-
-              {face === 'menu' && (
-                <>
-                <Header title="Create" onClose={close} />
-                <div role="menu" aria-label="Quick add" className="space-y-0.5">
-                  {register && (
-                    <button type="button" role="menuitem" className={item}
-                      onClick={() => go(`/coach/schedule?register=${register.id}`)}>
-                      <ClipboardCheck size={18} aria-hidden="true" className="text-primary" />
-                      <span className="flex-1 min-w-0 truncate">Take register · {register.title}</span>
-                    </button>
-                  )}
-                  <button type="button" role="menuitem" className={item} onClick={() => go('/coach/sessions/add')}>
-                    <Dumbbell size={18} aria-hidden="true" className="text-ink-2" />Log training
-                  </button>
-                  <button type="button" role="menuitem" className={item} onClick={() => { setError(null); setFace('match') }}>
-                    <Swords size={18} aria-hidden="true" className="text-ink-2" />Log match
-                  </button>
-                  {/* Imad, 16 Oct (Kostas's item 9): assessing is one of the coach's quick actions. */}
-                  <button type="button" role="menuitem" className={item} onClick={() => go('/coach/assess')}>
-                    <ClipboardPen size={18} aria-hidden="true" className="text-ink-2" />Assess player
-                  </button>
-                  <button type="button" role="menuitem" className={item} onClick={() => { if (!eventsOn) { comingSoon(); return } setError(null); setFace('event') }}>
-                    <CalendarPlus size={18} aria-hidden="true" className="text-ink-2" />New event
-                  </button>
-                </div>
-                </>
-              )}
-
-              {face === 'event' && (
-                <div className="space-y-3">
-                  <Header title="New event" onBack={back} onClose={close} />
-                  <SegmentedControl label="Event type" value={kind} onValueChange={v => { setKind(v as 'training' | 'match'); setError(null) }}
-                    options={[{ value: 'training', label: 'Training' }, { value: 'match', label: 'Match' }]} />
-                  {kind === 'match' && <>
-                    <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
-                      placeholder="Opponent" className={field} />
-                    <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
-                  </>}
-                  {/* One per row: each picker's panel opens across the surface's full width. */}
-                  <div className="space-y-3">
-                    <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-                      onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
-                      format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
-                    <TimePicker label={kind === 'match' ? 'Kickoff' : 'Start'} className="arc-trak-field" value={time}
-                      onChange={t => { setTime(t); setError(null) }} minuteStep={5} format="12h" placeholder="Pick a time" emptyAt="17:00" />
-                  </div>
-                  {/* TRAK-127: New event is for what's coming; a past day offers the logs. */}
-                  {datePassed ? (
-                    <div role="alert" className="space-y-2">
-                      <p className="text-[12px] text-danger">{datePassed}</p>
-                      <div className="flex gap-2">
-                        <Button size="md" variant="secondary" className="flex-1" onClick={() => { setError(null); setFace('match') }}>Log match</Button>
-                        <Button size="md" variant="secondary" className="flex-1" onClick={() => go('/coach/sessions/add', { state: { logDate: date } })}>Log training</Button>
-                      </div>
-                    </div>
-                  ) : error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
-                  <div className="flex gap-2">
-                    <Button size="md" variant="ghost" className="flex-1" onClick={moreDetails}>More details</Button>
-                    <Button size="md" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveDraft()}>Save draft</Button>
-                  </div>
-                </div>
-              )}
-
-              {face === 'match' && (
-                <div className="space-y-3">
-                  <Header title="Log a match" onBack={back} onClose={close} />
-                  <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
-                    placeholder="Opponent" className={field} />
-                  <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <input aria-label="Our score" inputMode="numeric" value={scoreUs} placeholder="Us"
-                      onChange={e => { setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />
-                    <span aria-hidden="true" className="text-ink-3">–</span>
-                    <input aria-label="Their score" inputMode="numeric" value={scoreThem} placeholder="Them"
-                      onChange={e => { setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />
-                  </div>
-                  <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-                    onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
-                    format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
-                  {error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
-                  <p className="text-[12px] text-ink-3">Next: who played, their goals and assists.</p>
-                  <Button size="md" className="w-full" onClick={continueMatch}>Continue</Button>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-      </LayoutGroup>
+  const eventFace = <div className={pickers}>
+    <SegmentedControl label="Event type" value={kind} onValueChange={v => { setKind(v as 'training' | 'match'); setError(null) }}
+      options={[{ value: 'training', label: 'Training' }, { value: 'match', label: 'Match' }]} />
+    {kind === 'match' && <>
+      <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
+        placeholder="Opponent" className={field} />
+      <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
+    </>}
+    {/* One per row: each picker's panel opens across the form's full width. */}
+    <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
+      onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
+      format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
+    <TimePicker label={kind === 'match' ? 'Kickoff' : 'Start'} className="arc-trak-field" value={time}
+      onChange={t => { setTime(t); setError(null) }} minuteStep={5} format="12h" placeholder="Pick a time" emptyAt="17:00" />
+    {/* TRAK-127: New event is for what's coming; a past day offers the logs. */}
+    {datePassed ? (
+      <div role="alert" className="space-y-2">
+        <p className="text-[12px] text-danger">{datePassed}</p>
+        <div className="flex gap-2">
+          <Button size="md" variant="secondary" className="flex-1" onClick={() => show('match')}>Log match</Button>
+          <Button size="md" variant="secondary" className="flex-1" onClick={() => go('/coach/sessions/add', { state: { logDate: date } })}>Log training</Button>
+        </div>
+      </div>
+    ) : error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
+    <div className="flex gap-2">
+      <Button size="md" variant="ghost" className="flex-1" onClick={moreDetails}>More details</Button>
+      <Button size="md" className="flex-1" loading={saving} disabled={!!datePassed} onClick={() => void saveDraft()}>Save draft</Button>
     </div>
-  </>
+  </div>
+
+  const matchFace = <div className={pickers}>
+    <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
+      placeholder="Opponent" className={field} />
+    <HomeAway value={homeAway} onChange={v => { setHomeAway(v); setError(null) }} />
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <input aria-label="Our score" inputMode="numeric" value={scoreUs} placeholder="Us"
+        onChange={e => { setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />
+      <span aria-hidden="true" className="text-ink-3">–</span>
+      <input aria-label="Their score" inputMode="numeric" value={scoreThem} placeholder="Them"
+        onChange={e => { setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2)); setError(null) }} className={`${field} text-center`} />
+    </div>
+    <DatePicker label="Date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
+      onChange={d => { if (d) { setDate(dateAsDay(d)); setError(null) } }} placeholder="Pick a date"
+      format={{ weekday: 'short', day: 'numeric', month: 'short' }} locale="en-GB" />
+    {error && <p role="alert" className="text-[12px] text-danger">{error}</p>}
+    <p className="text-[12px] text-ink-3">Next: who played, their goals and assists.</p>
+    <Button size="md" className="w-full" onClick={continueMatch}>Continue</Button>
+  </div>
+
+  return <ActionMorph label={bar ? 'Quick add' : 'Create'} anchor={bar ? 'bottom' : 'top'} lift={bar ? keyboard : 0}
+    // At the top the root needs a size of its own: in the bar the slot gives it one.
+    className={bar ? undefined : 'arc'} style={bar ? undefined : { width: 104, height: 40 }} rows={rows} view={view} onViewChange={show} onSelect={choose}
+    faces={[{ id: 'event', title: 'New event', content: eventFace }, { id: 'match', title: 'Log a match', content: matchFace }]}
+    trigger={bar
+      ? <Plus size={22} strokeWidth={2.2} aria-hidden="true" className="text-brand" />
+      : <><Plus size={16} strokeWidth={2.2} aria-hidden="true" className="text-brand" />Create</>} />
 }
