@@ -43,10 +43,11 @@ const SCREENS = { surface: token('surface'), ground: token('ground') }
 
 describe('event colours on the light theme (TRAK-189)', () => {
   // TRAK-271 (Tarek, 23 Oct): the permanent colours. Training and other were too alike (teal and olive).
+  // TRAK-275 (Tarek, 23 Oct, later): a second set, one family (15 and C2), and needs you back to #EAB308.
   it('are the permanent colours', () => {
-    expect(EVENT_COLOR).toEqual({ training: '#00ECE6', match: '#EC007E', other: '#00EC6E', tournament: '#3B5BBD' })
-    expect(CANCELLED_COLOR).toBe('#EC000A')
-    expect(token('attention')).toBe('#ece400')
+    expect(EVENT_COLOR).toEqual({ training: '#6EC215', match: '#6915C2', other: '#15C2BF', tournament: '#3B5BBD' })
+    expect(CANCELLED_COLOR).toBe('#C21517')
+    expect(token('attention')).toBe('#eab308')
   })
 
   // TRAK-271: training, other and needs you are bright (about 1.5:1 on white), so no event colour is ever

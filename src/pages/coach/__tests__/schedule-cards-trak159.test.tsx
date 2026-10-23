@@ -53,11 +53,12 @@ describe('TRAK-159: the coach calendar cards', () => {
     expect(within(card('Training')).getByText('No time set')).toBeInTheDocument()
   }, 20_000)
 
-  it('a draft has a Publish button that says "Publish" in words', async () => {
+  // TRAK-275 (Tarek, 23 Oct): on a phone the card's actions are icons; the name and tooltip keep the word.
+  it('a draft has a Publish button, named and titled "Publish" on a phone', async () => {
     fixtures()
     renderApp('/coach/schedule')
     const publish = await screen.findByRole('button', { name: 'Publish Finishing' })
-    expect(publish).toHaveTextContent('Publish')
+    expect(publish).toHaveAttribute('title', 'Publish Finishing')
   }, 20_000)
 
   it('a cancelled event is marked red, label and stripe (founders, 12 Oct)', async () => {
@@ -76,12 +77,12 @@ describe('TRAK-159: the coach calendar cards', () => {
 })
 
 describe('TRAK-159: one colour per type', () => {
-  // TRAK-231 (20 Oct live run): match magenta, training teal, other green,
-  // cancelled red; tournament blue. (Was blue/purple/orange, 12 and 18 Oct.)
-  it('training teal, match magenta, other green, tournament blue, cancelled red (20 Oct live run)', () => {
-    expect(hue(EVENT_COLOR.training)).toBe('teal')
-    expect(hue(EVENT_COLOR.match)).toBe('magenta')
-    expect(hue(EVENT_COLOR.other)).toBe('green')
+  // TRAK-275 (Tarek, 23 Oct): training green, match purple, other teal, cancelled red; tournament blue.
+  // (Was blue/purple/orange on 12 and 18 Oct, teal/magenta/green on 20 Oct, cyan/pink/green earlier on 23 Oct.)
+  it('training green, match purple, other teal, tournament blue, cancelled red (23 Oct)', () => {
+    expect(hue(EVENT_COLOR.training)).toBe('green')
+    expect(hue(EVENT_COLOR.match)).toBe('purple')
+    expect(hue(EVENT_COLOR.other)).toBe('teal')
     expect(hue(EVENT_COLOR.tournament)).toBe('blue')
     expect(hue(CANCELLED_COLOR)).toBe('red')
   })

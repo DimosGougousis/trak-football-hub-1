@@ -2,9 +2,10 @@ import type { ReactNode } from 'react'
 import { canShareSheet } from '@/lib/share-event'
 
 /** Imad's share icon (TRAK-168, 18 Oct): a box with an arrow out, drawn in the text colour. */
-export function ShareIcon({ size = 16 }: { size?: number }) {
+/** `tight` crops the drawing's margin, so it is as big as a lucide icon beside it (TRAK-275's button group). */
+export function ShareIcon({ size = 16, tight = false }: { size?: number; tight?: boolean }) {
   return (
-    <svg width={size} height={(size * 134) / 142} viewBox="0 0 142 134" fill="none" aria-hidden="true">
+    <svg width={size} height={tight ? size : (size * 134) / 142} viewBox={tight ? '32 17 78 80' : '0 0 142 134'} fill="none" aria-hidden="true">
       <g stroke="currentColor" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round">
         <path d="M71 69V21m-12 12 12-12 12 12" />
         <path d="M56 47h-3a14 14 0 0 0-13.7 11.1l-4 19A14 14 0 0 0 49 94h44a14 14 0 0 0 13.7-16.9l-4-19A14 14 0 0 0 89 47h-3" />

@@ -4,7 +4,7 @@ import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { chooseMore, moreActions } from '../../../../tests/support/schedule-actions'
+import { chooseCardAction, endActions } from '../../../../tests/support/schedule-actions'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -327,8 +327,8 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
   it('cancels a published event: it stays, marked Cancelled, and nothing is deleted', async () => {
     await open()
     // A published event has no Delete: families have seen it.
-    expect(await moreActions('vs Synthetic Rovers')).toEqual(['Cancel event'])
-    await chooseMore('vs Synthetic Rovers', 'Cancel event')
+    expect(endActions('vs Synthetic Rovers')).toEqual(['Cancel'])
+    await chooseCardAction('vs Synthetic Rovers', 'Cancel')
     const sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     await userEvent.type(within(sheet).getByLabelText('Reason (optional)'), 'Pitch waterlogged')
     rows = [DRAFT, { ...LIVE, status: 'cancelled', cancel_reason: 'Pitch waterlogged' }]
@@ -350,7 +350,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
 
   it('deletes only a draft nobody has seen', async () => {
     await open()
-    await chooseMore('Finishing', 'Delete draft')
+    await chooseCardAction('Finishing', 'Delete')
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'delete', query: '?id=eq.draft-1&select=id' })
     expect(emailNudges).toBe(0)
