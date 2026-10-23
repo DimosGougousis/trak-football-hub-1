@@ -88,8 +88,9 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.queryByRole('tablist', { name: 'Coach' })).toBeNull()
 
-    // A squad's row picks that squad and opens Squad.
-    await userEvent.click(within(sidebar).getByRole('button', { name: 'U16' }))
+    // A squad's row picks that squad and opens Squad. The squads come from their own read, so wait for the row
+    // (CI's slower runner reached it before it was there, on #439).
+    await userEvent.click(await within(sidebar).findByRole('button', { name: 'U16' }, { timeout: 5000 }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
     await waitFor(() => expect(within(sidebar).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'))
   })
