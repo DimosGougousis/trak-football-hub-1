@@ -29,6 +29,8 @@
    that blurs itself (a laptop's top bar), the shape's own blur can't reach the page below. */
 .root[data-view="menu"] .shape { --glass-fill: color-mix(in oklab, var(--surface) 90%, transparent); }
 .root[data-view="face"] .shape { --glass-fill: var(--surface); }
+/* Trak (Imad, 23 Oct): a settled form lets a date or time picker open past its edge (see shapeRef). */
+.root[data-view="face"] .shape[data-settled] { overflow: visible; }
 /* At the top the closed button is a glass pill of its own; in the tab bar it sits on the slot's glass (GlassTabBar). */
 .root[data-anchor="top"][data-view="fab"] .shape {
   border: 1px solid var(--glass-edge); background: var(--glass-fill);
