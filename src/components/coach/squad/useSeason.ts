@@ -17,10 +17,11 @@ async function loadSeason(from: string, to: string, squad: string | null): Promi
   return data ?? []
 }
 
-export function useSeason() {
+/** `squad`: the squad in view (null: every squad, TRAK-266's All). */
+export function useSeason(squad: string | null) {
   const { user } = useAuth()
   const userId = user?.id
-  const { squad, ready } = useCoachSquad(userId)
+  const { ready } = useCoachSquad(userId)
   const today = localTodayISO()
   const window = useMemo(() => seasonWindow(today), [today])
 

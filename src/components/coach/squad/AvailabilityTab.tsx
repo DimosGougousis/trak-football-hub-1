@@ -170,9 +170,12 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     if (moved) document.getElementById(childButtonId(moved.childId))?.focus()
   }, [moved])
 
+  // TRAK-266: with every squad in view, an event for one squad lists that squad's players only.
+  const eventSquad = event?.squad ?? null
   const avail = useMemo<AvailPlayer[]>(
-    () => players.map(p => ({ id: p.id, name: p.player_name, shirt: p.shirt_number, position: p.position })),
-    [players],
+    () => players.filter(p => eventSquad == null || p.age_group?.trim() === eventSquad)
+      .map(p => ({ id: p.id, name: p.player_name, shirt: p.shirt_number, position: p.position })),
+    [players, eventSquad],
   )
   const confirmedIds = useMemo(() => new Set(confirmedQuery.data ?? []), [confirmedQuery.data])
   const absentIds = useMemo(() => new Set(absentQuery.data ?? []), [absentQuery.data])

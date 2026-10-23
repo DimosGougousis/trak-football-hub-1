@@ -37,7 +37,7 @@ function fixtures(id: string) {
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Angelos Basinas', invite_code: 'ABCD' }]),
     table('coach_details', []),
-    // TRAK-261: no row means the coach's "Can't make it alerts" switch is on.
+    // TRAK-261: no row means the coach's "Can't make it" switch is on.
     table('notification_settings', []),
     table('coach_calendar_events', EVENTS),
     table('coach_sessions', []),
@@ -74,7 +74,7 @@ describe("TRAK-232: the coach's bell says who can't make it", { timeout: 20_000 
     expect(within(panel).queryByText(/fever/)).toBeNull()
   })
 
-  // TRAK-261: the coach's "Can't make it alerts" switch in Settings.
+  // TRAK-261: the coach's "Can't make it" switch in Settings.
   it('shows none while the coach has turned the alerts off', async () => {
     absences = [absence('ev-sat', 'sp-1'), absence('ev-sat', 'sp-2')]
     fixtures('coach-232-off')

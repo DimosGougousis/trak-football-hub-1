@@ -53,7 +53,7 @@ export function CoachAlertsBell({ coachId }: { coachId: string }) {
     queryFn: ({ signal }) => fetchAbsenceAlerts(coachId, today, signal),
     enabled: eventsOn,
   })
-  // TRAK-261: the coach's "Can't make it alerts" switch in Settings; on unless turned off. An unread switch shows them.
+  // TRAK-261: the coach's "Can't make it" switch in Settings; on unless turned off. An unread switch shows them.
   const switchOn = useQuery({
     queryKey: ['coach', coachId, 'cant-make-it-alerts'],
     queryFn: async () => {

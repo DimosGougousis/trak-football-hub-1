@@ -4,6 +4,7 @@
 import { useId, useState, type ReactElement, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Badge } from "../../badge/badge";
 import { Button } from "../../button/button";
 import { motionTokens } from "../../lib/motion-tokens";
 import { CANCELLED_COLOR, EVENT_COLOR } from "@/lib/coach-events";
@@ -136,6 +137,9 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
                     <span className={styles.slotTitle}>{entry.title}</span>
                     <span className={styles.slotMeta}>{entry.note}</span>
                   </span>
+                  {/* Trak (TRAK-266): a badge in the colour key only where the coach is needed. */}
+                  {entry.state === "needs-you" && <Badge tone="warning" size="sm">Needs you</Badge>}
+                  {entry.state === "clash" && <Badge tone="danger" size="sm">Clashes</Badge>}
                   <span className={styles.slotCheck} aria-hidden="true"><Check size={14} strokeWidth={2} /></span>
                 </button>
               </li>;

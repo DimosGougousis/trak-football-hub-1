@@ -231,4 +231,26 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       expect(screen.queryByRole('button', { name: /U14/ })).toBeNull()
     } finally { localStorage.clear() }
   })
+
+  // TRAK-266 (Imad, 22 Oct): the colour key's badges only where the coach is needed.
+  it('badges a started event with no register (Needs you) and a clashing draft (Clashes), and nothing else', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-22T12:00:00Z'))
+    try {
+      const at = (id: string, title: string, date: string, time: string, extra: Row = {}) => ({
+        id, coach_user_id: 'coach-1', event_type: 'training', title, event_date: date, start_time: `${time}:00`,
+        starts_at: `${date}T${time}:00Z`, published: true, status: 'scheduled', squad: null, ...extra })
+      database.read.mockImplementation(async table => ok(table === 'coach_calendar_events' ? [
+        at('started', 'Tuesday training', '2026-10-20', '14:00'),
+        at('live', 'Friday training', '2026-10-23', '14:00', { ends_at: '2026-10-23T15:30:00Z' }),
+        at('draft', 'Friday extra', '2026-10-23', '15:00', { published: false }),
+      ] : []))
+      render(strip(), queries())
+      fireEvent.click(await screen.findByRole('button', { name: /Tuesday 20 October/ }))
+      expect(await screen.findByRole('button', { name: /Tuesday training/ })).toHaveTextContent('Needs you')
+      fireEvent.click(screen.getByRole('button', { name: /Friday 23 October/ }))
+      expect(await screen.findByRole('button', { name: /Friday extra/ })).toHaveTextContent('Clashes')
+      expect(screen.getByRole('button', { name: /Friday training/ })).not.toHaveTextContent(/Needs you|Clashes/)
+    } finally { vi.useRealTimers() }
+  })
 })
