@@ -17,6 +17,7 @@ import { BARLESS, placeOf } from '@/lib/coach-places'
  */
 
 const COACH = { id: 'coach-frame' }
+const LOGO = 'data:image/jpeg;base64,/9j/synthetic'
 const realMatchMedia = window.matchMedia
 function screenIs(laptop: boolean) {
   window.matchMedia = ((query: string) => ({ ...realMatchMedia(query), matches: laptop && query === SIDE_MENU_QUERY })) as typeof window.matchMedia
@@ -30,7 +31,8 @@ beforeEach(() => {
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Otto Rehhagel', invite_code: 'ABCD' }]),
     table('coach_details', [{ user_id: COACH.id, coach_role: 'Head Coach', team: 'U14', organization_id: 'org-1' }]),
-    table('organizations', [{ id: 'org-1', name: 'Rehearsal FC' }]),
+    // Imad, 24 Oct: the academy has a logo; the coach's identity is cached across these tests, so every one sees it.
+    table('organizations', [{ id: 'org-1', name: 'Rehearsal FC', logo_url: LOGO }]),
     table('coach_calendar_events', []),
     table('coach_sessions', []),
     table('squad_players', [
@@ -97,6 +99,15 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     await userEvent.click(await within(sidebar).findByRole('button', { name: 'U16' }, { timeout: 5000 }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
     await waitFor(() => expect(within(sidebarNow()).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'), { timeout: 5000 })
+  })
+
+  it("Imad, 24 Oct: the academy's logo in the sidebar; the coach stays initials (G7)", async () => {
+    screenIs(true)
+    renderApp('/coach/home')
+    await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+    await waitFor(() => expect(document.querySelector(`img[src="${LOGO}"]`)).not.toBeNull(), { timeout: 5000 })
+    // The only picture on the page: no person's photo.
+    expect(document.querySelectorAll('img')).toHaveLength(1)
   })
 
   it('Feedback and Profile still open by their address', async () => {
