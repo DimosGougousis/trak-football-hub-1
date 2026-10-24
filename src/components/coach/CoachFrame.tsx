@@ -25,7 +25,8 @@ import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coa
 type Screen = CoachScreen
 const TO = COACH_SCREEN_PATH
 
-/** The club's name and the coach's role, as Home's quiet line and Settings read them. */
+/** The club's name, logo and the coach's role, as Settings reads them. Imad, 24 Oct: the club's logo shows in the
+ *  sidebar; a person's photo stays off for the pilot (G7), so the coach is initials. */
 function useCoachIdentity(userId: string | undefined) {
   return useQuery({
     queryKey: ['coach', userId, 'identity'],
@@ -35,9 +36,10 @@ function useCoachIdentity(userId: string | undefined) {
       const { data, error } = await supabase.from('coach_details').select('coach_role, team, organization_id').eq('user_id', userId!).maybeSingle()
       if (error) throw error
       const org = data?.organization_id
-        ? (await supabase.from('organizations').select('name').eq('id', data.organization_id).maybeSingle()).data
+        ? (await supabase.from('organizations').select('name, logo_url').eq('id', data.organization_id).maybeSingle()).data
         : null
-      return { role: data?.coach_role ?? null, team: data?.team ?? null, club: (org as { name?: string } | null)?.name ?? null }
+      const academy = org as { name?: string; logo_url?: string | null } | null
+      return { role: data?.coach_role ?? null, team: data?.team ?? null, club: academy?.name ?? null, logo: academy?.logo_url ?? null }
     },
   })
 }
@@ -88,7 +90,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
 
   return <CoachFrameContext.Provider value={frame}>
     <SidebarRail label={club} title={title} narrow={!wide} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen} onWidthChange={setRail}
-      brand={{ name: club, logo: <Avatar name={club} size="sm" /> }}
+      brand={{ name: club, logo: <Avatar name={club} src={identity?.logo ?? undefined} size="sm" /> }}
       items={items} footerItem={{ id: 'settings', label: 'Settings', icon: Settings }}
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} size="sm" /> }}
       active={active} onSelect={select} defaultOpen={{ squads: true }}
