@@ -243,7 +243,8 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await week.getByRole('button', { name: 'Details' }).click()
         const logged = page.getByRole('dialog', { name: 'Logged set pieces' })
         await expect(logged.getByText('Logged.')).toBeVisible()
-        await logged.getByRole('link', { name: 'Open session' }).click()
+        // Imad, 23 Oct (TRAK-278): the sheet shows the log, read only; Edit log opens the saved record.
+        await logged.getByRole('link', { name: 'Edit log' }).click()
         await expect(page).toHaveURL(/\/coach\/sessions\/saved-session$/)
         await page.getByRole('button', { name: 'Back' }).click()
         await expect(page).toHaveURL(/\/coach\/home$/)

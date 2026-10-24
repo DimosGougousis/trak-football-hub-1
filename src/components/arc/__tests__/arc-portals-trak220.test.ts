@@ -37,8 +37,8 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
       .filter(file => file.endsWith('.tsx') && !file.includes('__tests__') && !file.startsWith('components/arc/'))
       .map(file => `src/${file}`)
       .filter(file => readFileSync(join(process.cwd(), file), 'utf8').includes('<BottomSheet'))
-    // TRAK-263: the coach's player profile editor (foot, nationality, traits).
-    expect(files.sort()).toEqual(['src/components/coach/squad/PlayerFactsEditor.tsx', 'src/components/trak/EventSheet.tsx'])
+    // TRAK-263: the coach's player profile editor (foot, nationality, traits). Imad, 23 Oct: Home's Take register and View log.
+    expect(files.sort()).toEqual(['src/components/coach/CoachWeekStrip.tsx', 'src/components/coach/squad/PlayerFactsEditor.tsx', 'src/components/trak/EventSheet.tsx'])
     for (const file of files) {
       const sheets = readFileSync(join(process.cwd(), file), 'utf8').match(/<BottomSheet\b[^>]*>/gs) ?? []
       expect(sheets.length, file).toBeGreaterThan(0)
