@@ -174,7 +174,7 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     await waitFor(() => expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual(['Select player...', 'Bo Lind']))
   })
 
-  it('Schedule lists the squad picked and whole-roster events', async () => {
+  it('Schedule opens on All, naming each squad; a squad tapped lists its events and whole-roster ones (Imad, 24 Oct)', async () => {
     coachReads(TWO)
     const event = (id: string, title: string, squad: string | null) => ({
       id, coach_user_id: COACH.id, title, event_type: 'training', event_date: localTodayISO(), start_time: '18:00:00',
@@ -183,8 +183,13 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     server.use(http.get(EVENTS, () => HttpResponse.json([event('e1', 'U14 training', 'U14'), event('e2', 'U16 training', 'U16'), event('e3', 'Whole roster training', null)])))
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     renderApp('/coach/schedule')
+    expect(await screen.findByText('U14 training', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(/· U14/)).toBeInTheDocument()
+    expect(screen.getByText(/· All squads/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'U16' }))
     expect(await screen.findByText('U16 training', { selector: 'p' })).toBeInTheDocument()
     expect(screen.getByText('Whole roster training', { selector: 'p' })).toBeInTheDocument()
-    expect(screen.queryByText('U14 training', { selector: 'p' })).toBeNull()
+    await waitFor(() => expect(screen.queryByText('U14 training', { selector: 'p' })).toBeNull())
   })
 })

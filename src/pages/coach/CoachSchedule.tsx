@@ -14,6 +14,8 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO, phoneClock, phoneEventTime } from '@/lib/event-time'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { squadName } from '@/lib/coach-week'
+import { SquadPills } from '@/components/coach/home/SquadPills'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
@@ -70,6 +72,8 @@ type CalEvent = {
   row?: EventRow
   opponent?: string
   venue?: string
+  /** Imad, 24 Oct: the squad it's for, named on the card when Schedule shows every squad. */
+  squad?: string | null
 }
 
 // ── Colours ──────────────────────────────────────────────────────────────────
@@ -234,10 +238,13 @@ function seriesCount(sheet: { row: EventRow | null; form: EventForm; repeat: Rep
 }
 
 /** Review: everything the save writes, in the order the steps asked for it. */
-function EventSummary({ form, repeat, noteProblem }: {
+function EventSummary({ form, repeat, noteProblem, squad }: {
   form: EventForm; repeat: Repeat | null; noteProblem: 'link' | 'name' | null
+  /** Imad, 24 Oct: for a coach with two squads or more, which squad it's for. */
+  squad?: string
 }) {
   const rows: [string, string][] = [
+    ...(squad ? [['Squad', squad] as [string, string]] : []),
     ['Type', TYPE_LABEL[form.kind]],
     ...(form.kind === 'training' ? [['Theme', TRAINING_THEMES.find(t => t.key === form.theme)?.label ?? 'Not set'] as [string, string]] : []),
     ...(form.kind === 'match' ? [['Opponent', form.opponent.trim() + (form.homeAway ? ` (${form.homeAway === 'home' ? 'Home' : 'Away'})` : '')] as [string, string]] : []),
@@ -307,6 +314,11 @@ export default function CoachSchedule() {
   const { user } = useAuth()
   // TRAK-176: the squad picked; its events and the whole-roster ones show, and new ones are saved for it.
   const coachSquad = useCoachSquad(user?.id)
+  // Imad, 24 Oct: Schedule has Home's pills, All first and picked, so it never hides another squad's events without
+  // saying so. A new event's squad is chosen in its form.
+  const [allPicked, setAllPicked] = useState(true)
+  const everySquad = allPicked && coachSquad.squads.length >= 2
+  const inView = (squad: string | null | undefined) => everySquad || coachSquad.eventInSquad(squad)
 
   // Calendar view state
   const today = new Date()
@@ -341,13 +353,13 @@ export default function CoachSchedule() {
     const events = ev.error ? null : (ev.data as EventRow[]) || []
     if (events) {
       setCoachEvents(events)
-      setCalEvents(events.filter(e => coachSquad.eventInSquad(e.squad)))
+      setCalEvents(events.filter(e => inView(e.squad)))
     }
-    if (!sess.error) setSessions((sess.data || []).filter(s => coachSquad.eventInSquad(s.squad)))
+    if (!sess.error) setSessions((sess.data || []).filter(s => inView(s.squad)))
     return events
   }
 
-  useEffect(() => { loadData() }, [user, coachSquad.squad])
+  useEffect(() => { loadData() }, [user, coachSquad.squad, everySquad])
 
   // TRAK-139 (J8.16): the squad for the WhatsApp message title ("U15 Match"),
   // and its children's names, so coach-typed text naming one stays out.
@@ -396,6 +408,7 @@ export default function CoachSchedule() {
         row:      e,
         opponent: e.opponent ?? undefined,
         venue:    e.venue ?? undefined,
+        squad:    e.squad ?? null,
       })
     }
     for (const s of sessions) {
@@ -407,6 +420,7 @@ export default function CoachSchedule() {
         type:     (s.session_type === 'match' ? 'match' : s.session_type === 'training' ? 'training' : 'other') as ShownType,
         date:     s.session_date ?? '',
         source:   'session',
+        squad:    s.squad ?? null,
         venue:    s.venue,
       })
     }
@@ -452,7 +466,7 @@ export default function CoachSchedule() {
   }, [allEvents, registerSession])
 
   const openNew = (date: string) =>
-    setSheet({ kind: 'edit', row: null, form: blankForm(date), repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
+    setSheet({ kind: 'edit', row: null, form: { ...blankForm(date), squad: coachSquad.squad }, repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
   // TRAK-182 (live run 3): an edit opens on the first step, filled in, not on Review.
   const openEdit = (row: EventRow) =>
     setSheet({ kind: 'edit', row, form: rowToForm(row), repeat: blankRepeat(''), scope: 'one', step: 0, error: null })
@@ -532,7 +546,7 @@ export default function CoachSchedule() {
 
     if (!editing && !coachSquad.ready) { setSheet({ ...sheet, error: coachSquad.retry() }); return }
     setSaving(true)
-    const fresh = newDraftFields(user.id, coachSquad.squad)
+    const fresh = newDraftFields(user.id, form.squad === undefined ? coachSquad.squad : form.squad)
     const series = !editing && repeat.on && form.kind !== 'match'
     const rows = series
       ? seriesRows(form, repeat, crypto.randomUUID()).map(r => ({ ...r, ...fresh }))
@@ -605,7 +619,7 @@ export default function CoachSchedule() {
     if (!quick) return
     const date = quick.date || toDateStr(new Date())
     setSelected(date)
-    setSheet({ kind: 'edit', row: null, form: { ...blankForm(date), ...quick }, repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
+    setSheet({ kind: 'edit', row: null, form: { ...blankForm(date), squad: coachSquad.squad, ...quick }, repeat: blankRepeat(date), scope: 'one', step: 0, error: null })
     navigate(location.pathname + location.search, { replace: true, state: null })
   }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps -- on arrival, and on a new hand-over while here
 
@@ -768,6 +782,10 @@ export default function CoachSchedule() {
             </button>
           </div>
         </div>
+        {coachSquad.squads.length >= 2 && coachSquad.squad && (
+          <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
+            onChange={pick => { setAllPicked(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
+        )}
 
         {loadFailed && <LoadError what="your schedule" onRetry={retry} retrying={retrying} />}
 
@@ -914,7 +932,7 @@ export default function CoachSchedule() {
                         {ev.time
                           ? <><span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>{' · '}</>
                           : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>No time set</span>{' · '}</>}
-                        {/* TRAK-271: the type's colour is a dot; the word stays dark. */}<span className="inline-flex items-center gap-1 font-medium text-ink-2"><span aria-hidden="true" className="inline-block w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[ev.type] }} />{TYPE_LABEL[ev.type]}</span>{row?.series_id ? ' · Weekly' : ''}
+                        {/* TRAK-271: the type's colour is a dot; the word stays dark. */}<span className="inline-flex items-center gap-1 font-medium text-ink-2"><span aria-hidden="true" className="inline-block w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[ev.type] }} />{TYPE_LABEL[ev.type]}</span>{everySquad ? ` · ${squadName(ev.squad)}` : ''}{row?.series_id ? ' · Weekly' : ''}
                         {row?.meet_time ? ` · meet ${phoneClock(row, row.meet_time)}` : ''}
                         {row?.home_away ? ` · ${row.home_away === 'home' ? 'Home' : 'Away'}` : ''}
                         {place?.text ? ` · ${place.text}` : ''}
@@ -1009,6 +1027,18 @@ export default function CoachSchedule() {
                   </Chip>
                 ))}
               </div>
+
+              {/* Imad, 24 Oct: which squad a new event is for, never silently the last pill tapped. A saved event keeps
+                  its squad: moving a published one would change which families have it. */}
+              {!sheet.row && coachSquad.squads.length >= 2 && (
+                <div className="flex gap-2 flex-wrap" role="group" aria-label="Squad">
+                  {[...coachSquad.squads, null].map(squad => (
+                    <Chip key={squad ?? 'all'} on={(sheet.form.squad === undefined ? coachSquad.squad : sheet.form.squad) === squad} onClick={() => setForm({ squad })}>
+                      {squadName(squad)}
+                    </Chip>
+                  ))}
+                </div>
+              )}
 
               {sheet.form.kind === 'training' && (
                 <ThemeChoice theme={sheet.form.theme} onChange={theme => setForm({ theme })} />
@@ -1159,7 +1189,8 @@ export default function CoachSchedule() {
                   {sheet.scope === 'following' ? 'Saves this week and the following weeks.' : 'Saves only this week.'}
                 </p>
               )}
-              <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem} />
+              <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem}
+                squad={coachSquad.squads.length >= 2 ? squadName(sheet.row ? sheet.row.squad : sheet.form.squad === undefined ? coachSquad.squad : sheet.form.squad) : undefined} />
             </>}
 
             {datePassed && (sheet.step === 1 || sheet.step === REVIEW) && (

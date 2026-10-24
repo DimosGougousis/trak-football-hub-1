@@ -202,6 +202,22 @@ describe('TRAK-262: coach Home', () => {
     expect(screen.queryByRole('button', { name: /Ade Okafor/ })).toBeNull()
   })
 
+  it('Imad, 24 Oct: an event waiting for its register or match log is in Needs you too, with its next step', async () => {
+    home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
+    const event = (id: string, event_type: string, title: string, event_date: string, opponent: string | null = null) => ({
+      id, coach_user_id: COACH.id, event_type, title, opponent, event_date, start_time: '17:00:00', end_time: '18:30:00',
+      starts_at: `${event_date}T13:00:00Z`, published: true, status: 'scheduled', squad: null, sequence: 1,
+    })
+    server.use(table('coach_calendar_events', [event('ev-tr', 'training', 'Tactical', '2026-11-29'), event('ev-m', 'match', 'League', '2026-11-28', 'Rovers')]))
+    renderApp('/coach/home')
+    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
+    expect(await within(needs).findByText('Started, no register yet', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(needs).getByRole('button', { name: 'Take register' })).toBeInTheDocument()
+    expect(within(needs).getByText('Played, not logged yet')).toBeInTheDocument()
+    expect(within(needs).getByRole('button', { name: 'Log it' })).toBeInTheDocument()
+    expect(within(needs).getByText('Match vs Rovers')).toBeInTheDocument()
+  })
+
   it("a draft families can't see yet has its own card, which opens the player", async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'),
       assessments: [{ squad_player_id: 'a', coach_user_id: COACH.id, created_at: daysAgo(1), published_at: null, coach_rating: 7,

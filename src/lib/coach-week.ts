@@ -41,6 +41,9 @@ export interface WeekItem {
   row?: EventRow
 }
 
+/** Imad, 24 Oct: which squad an event is for; no squad is the whole roster. */
+export const squadName = (squad: unknown) => typeof squad === 'string' && squad ? squad : 'All squads'
+
 const kindOf = (type: string | null | undefined): WeekItem['kind'] =>
   type === 'match' || type === 'training' ? type : 'other'
 
@@ -83,7 +86,7 @@ export function coachWeek({ dates, events, sessions, inView, now = new Date() }:
     const source = {
       ...(event && { start_time: event.start_time, starts_at: event.starts_at, kit: event.kit, kit_snapshot: event.kit_snapshot,
         opponent: event.opponent, home_away: event.home_away, venue: event.venue }),
-      id: `session:${session.id}`, published: true, title: session.title || 'Session', event_date: session.session_date,
+      id: `session:${session.id}`, published: true, title: session.title || 'Session', event_date: session.session_date, squad: session.squad,
       ...(session.venue && { venue: session.venue }), event_type: kind,
     }
     items.push({
