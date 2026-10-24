@@ -16,7 +16,8 @@ import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton
 import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
 import { useCoachSquad } from '@/lib/coach-squad'
-import { coachWeek, type WeekItem, type WeekSession } from '@/lib/coach-week'
+import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
+import { loadWeek } from '@/lib/coach-week-load'
 import { publishEvent } from '@/lib/event-publish'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { eventHeading, toPlayerEvent } from '@/lib/player-events'
@@ -35,41 +36,27 @@ export function CoachWeekStrip({ coachId, version = 0, everySquad = false }: {
   everySquad?: boolean
 }) {
   const eventsOn = useFeature('events')
-  const { squad, eventInSquad } = useCoachSquad(coachId)
+  const { squad, squads, eventInSquad } = useCoachSquad(coachId)
   if (!eventsOn) return null
   // Another coach remounts, so a late answer for the last one never shows.
   return <CoachWeek key={coachId} coachId={coachId} version={version}
-    inView={everySquad ? () => true : eventInSquad} squadLabel={everySquad ? 'All squads' : squad} />
+    inView={everySquad ? () => true : eventInSquad} squadLabel={everySquad ? 'All squads' : squad}
+    squadOf={squads.length >= 2 ? squadName : null} labelEach={everySquad} />
 }
 
-async function loadWeek(coachId: string, from: string, to: string): Promise<{ events: EventRow[]; sessions: WeekSession[] }> {
-  // Every squad's events: a draft's clash counts them all, as the database does (TRAK-218). A day either side, as a
-  // late or early event can fall in this week on this phone's clock (Imad, 23 Oct); the week keeps only its own days.
-  const day = (date: string, by: number) => format(addDays(parseISO(date), by), 'yyyy-MM-dd')
-  const events = await supabase.from('coach_calendar_events').select('*')
-    .eq('coach_user_id', coachId).gte('event_date', day(from, -1)).lte('event_date', day(to, 1))
-    .order('event_date', { ascending: true })
-  if (events.error) throw events.error
-  // A date correction can move a completed session to another week; its old calendar entry stays hidden.
-  // IDs are UUID columns from the coach's event rows, never free text.
-  const eventIds = (events.data ?? []).map(event => event.id)
-  const thisWeek = `and(session_date.gte.${from},session_date.lte.${to})`
-  const sessions = await supabase.from('coach_sessions').select('id, event_id, title, session_type, session_date, venue, squad')
-    .eq('coach_user_id', coachId)
-    .or(eventIds.length ? `${thisWeek},event_id.in.(${eventIds.join(',')})` : thisWeek)
-    .order('session_date', { ascending: true })
-  if (sessions.error) throw sessions.error
-  return { events: (events.data ?? []) as EventRow[], sessions: (sessions.data ?? []) as WeekSession[] }
-}
 
 const weekTitle = (offset: number, monday: string) =>
   offset === 0 ? 'This week' : offset === 1 ? 'Next week' : offset === -1 ? 'Last week' : `Week of ${format(parseISO(monday), 'd MMMM')}`
 
-function CoachWeek({ coachId, version, inView, squadLabel }: {
+function CoachWeek({ coachId, version, inView, squadLabel, squadOf, labelEach }: {
   coachId: string
   version: number
   inView: (squad: string | null | undefined) => boolean
   squadLabel: string | null
+  /** A coach with two squads or more: each event's squad, for its sheet. */
+  squadOf: ((squad: unknown) => string) | null
+  /** Home on All: each event in the week names its squad too. */
+  labelEach: boolean
 }) {
   const [offset, setOffset] = useState(0)
   const dates = useMemo(() => weekDays(addDays(new Date(), offset * 7)), [offset])
@@ -117,15 +104,16 @@ function CoachWeek({ coachId, version, inView, squadLabel }: {
     today: date === today,
     // A match reads "vs Rivals FC", as everywhere events show.
     events: (byDate.get(date) ?? []).filter(item => strips.has(item.id))
-      .map(({ id, kind, time, state, note }) => ({ id, kind, title: eventHeading(strips.get(id)!.event), time, state, note })),
+      .map(({ id, kind, time, state, note, source }) => ({ id, kind, title: eventHeading(strips.get(id)!.event), time, state,
+        note: squadOf && labelEach ? `${squadOf(source.squad)} · ${note}` : note })),
   }))
 
   return <WeekPicker key={dates[0]} title={weekTitle(offset, dates[0])}
     subtitle={[`${format(parseISO(dates[0]), 'd')}–${format(parseISO(dates[6]), 'd MMMM')}`, squadLabel].filter(Boolean).join(' · ')}
     days={days} onPrevWeek={() => setOffset(n => n - 1)} onNextWeek={() => setOffset(n => n + 1)}
     renderDetails={(id, trigger) => {
-      const { event } = strips.get(id)!
-      return <EventSheet event={event} role="coach" trigger={trigger}>
+      const { event, item } = strips.get(id)!
+      return <EventSheet event={event} role="coach" trigger={trigger} squad={squadOf ? squadOf(item.source.squad) : null}>
         {/* A logged session's sheet shows its log, read only, with Edit log (Imad, 23 Oct; before: who came and Open session). */}
         {event.sessionId
           ? <SessionLog sessionId={event.sessionId} coachId={coachId} />
@@ -136,7 +124,7 @@ function CoachWeek({ coachId, version, inView, squadLabel }: {
 }
 
 /** The chosen event's one next step (TRAK-262). A weekly series' Publish uses Schedule's own sheet. */
-function NextStep({ item, coachId, roster, onChanged }: {
+export function NextStep({ item, coachId, roster, onChanged }: {
   item: WeekItem
   coachId: string
   roster: { player_name: string | null; age_group: string | null; status: string | null }[] | undefined

@@ -24,7 +24,9 @@
 .dayDate { font-size: var(--text-xl); font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .dots { display: flex; height: 8px; align-items: center; gap: 3px; }
 .dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); }
-.dots i[data-hollow] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot); }
+/* Imad, 24 Oct: drawn as the month calendar draws it (a border), so a selected day's ring below can't replace it. */
+.dots i { box-sizing: border-box; }
+.dots i[data-hollow] { background: transparent; border: 1.5px solid var(--dot); }
 .day[data-selected] .dots i { box-shadow: 0 0 0 1.5px var(--accent-foreground); }
 
 /* Events */

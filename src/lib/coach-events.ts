@@ -64,6 +64,8 @@ export type EventForm = {
   familyNote: string
   /** A training's catalogue theme; '' for none. Coach-only. */
   theme: TrainingTheme | ''
+  /** Imad, 24 Oct: a new event's squad, chosen in the form; null is the whole roster, undefined the squad last picked. */
+  squad?: string | null
 }
 
 export type EventRow = {

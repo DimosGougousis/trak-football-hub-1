@@ -89,6 +89,9 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
   const [scoreThem, setScoreThem] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Imad, 24 Oct: a new event's squad, chosen here; until then the squad last picked. null is every squad.
+  const [squadPick, setSquadPick] = useState<string | null | undefined>(undefined)
+  const squad = squadPick === undefined ? coachSquad.squad : squadPick
 
   const show = useCallback((next: string) => { setError(null); setView(next as View) }, [])
   const close = () => show('fab')
@@ -105,7 +108,7 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
   }, [view, user, eventsOn])
 
   const datePassed = pastDateProblem(date, localTodayISO())
-  const eventForm = (): EventForm => ({ ...blankForm(date), kind, time, opponent: kind === 'match' ? opponent : '', homeAway: kind === 'match' ? homeAway : '' })
+  const eventForm = (): EventForm => ({ ...blankForm(date), kind, time, opponent: kind === 'match' ? opponent : '', homeAway: kind === 'match' ? homeAway : '', squad })
   const saveDraft = async () => {
     if (!user || saving) return
     const draft = eventForm()
@@ -115,7 +118,7 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
     setSaving(true)
     // As Schedule's Save draft: a new event starts unpublished; families never see a draft.
     const { data, error: failed } = await supabase.from('coach_calendar_events')
-      .insert([{ ...formToRow(draft), ...newDraftFields(user.id, coachSquad.squad) }]).select('id')
+      .insert([{ ...formToRow(draft), ...newDraftFields(user.id, squad) }]).select('id')
     setSaving(false)
     if (failed || !data?.length) { setError(clashMessage(failed) ?? "Couldn't save the draft. Check your connection and try again."); return }
     setTime(''); setOpponent(''); setHomeAway('')
@@ -159,6 +162,12 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
   const eventFace = <div className={pickers}>
     <SegmentedControl label="Event type" value={kind} onValueChange={v => { setKind(v as 'training' | 'match'); setError(null) }}
       options={[{ value: 'training', label: 'Training' }, { value: 'match', label: 'Match' }]} />
+    {/* Its own row, labelled like Date and Start, so it never reads as part of Training / Match. */}
+    {coachSquad.squads.length >= 2 && <div className="arc-trak-field grid gap-1.5">
+      <span aria-hidden="true">Squad</span>
+      <SegmentedControl label="Squad" value={squad ?? ''} onValueChange={v => setSquadPick(v || null)}
+        options={[...coachSquad.squads.map(s => ({ value: s, label: s })), { value: '', label: 'All squads' }]} />
+    </div>}
     {kind === 'match' && <>
       <input aria-label="Opponent" value={opponent} onChange={e => { setOpponent(e.target.value); setError(null) }}
         placeholder="Opponent" className={field} />

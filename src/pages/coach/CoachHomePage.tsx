@@ -1,17 +1,22 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { format, parseISO } from 'date-fns'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
 import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
-import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
+import { CoachWeekStrip, NextStep } from '@/components/coach/CoachWeekStrip'
+import { squadName } from '@/lib/coach-week'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadPills } from '@/components/coach/home/SquadPills'
 import { SquadShape } from '@/components/coach/home/SquadShape'
-import { NeedsYou } from '@/components/coach/home/NeedsYou'
+import { NeedsYou, type OwedEvent } from '@/components/coach/home/NeedsYou'
+import { useOwedEvents } from '@/components/coach/home/useOwedEvents'
+import { useFeature } from '@/components/trak/parked'
+import { eventHeading, toPlayerEvent } from '@/lib/player-events'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
@@ -55,6 +60,28 @@ export default function CoachHomePage() {
     ? needsYou({ players: roster.players, waitingForParent: roster.consentPending, assessments: roster.assessments, now: Date.now() })
     : null, [loaded, roster.players, roster.consentPending, roster.assessments])
 
+  // Imad, 24 Oct: events the week marks "Needs you" are in Needs you too, with the week's own next step.
+  const client = useQueryClient()
+  const eventsOn = useFeature('events')
+  const owed = useOwedEvents(user?.id, everySquad ? () => true : coachSquad.eventInSquad, eventsOn)
+  // Shown once both have answered: events added in front of player cards already on screen left the row scrolled past them.
+  const needsReady = !eventsOn || owed.items !== null || owed.failed
+  const owedChanged = () => {
+    setWeekVersion(v => v + 1)
+    void client.invalidateQueries({ queryKey: ['coach', user?.id, 'owed-events'] })
+  }
+  const owedEvents: OwedEvent[] = !user ? [] : (owed.items ?? []).map(item => {
+    const event = toPlayerEvent(item.source)
+    return {
+      id: item.id,
+      title: event ? eventHeading(event) : item.title,
+      when: `${format(parseISO(item.date), 'EEE d MMM')}${item.time ? ` · ${item.time}` : ''}`,
+      squad: coachSquad.squads.length >= 2 ? squadName(item.source.squad) : null,
+      reason: item.kind === 'match' ? 'Played, not logged yet' : 'Started, no register yet',
+      action: <NextStep item={item} coachId={user.id} roster={undefined} onChanged={owedChanged} />,
+    }
+  })
+
   const pills = coachSquad.squads.length >= 2 && coachSquad.squad
     ? <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
         onChange={pick => { setEverySquad(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
@@ -76,7 +103,7 @@ export default function CoachHomePage() {
         </div>
         {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
         {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-6' : 'mt-5'}>
-          <NeedsYou items={cards} failed={!!roster.error} onRetry={roster.retry}
+          <NeedsYou items={needsReady ? cards : null} events={owedEvents} failed={!!roster.error || owed.failed} onRetry={() => { roster.retry(); owed.retry() }}
             onOpen={item => item.kind === 'draft'
               // TRAK-200: the profile's assessment card says Draft and has Publish.
               ? navigate(`/coach/player/${item.playerId}`)
