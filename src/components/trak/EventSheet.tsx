@@ -59,10 +59,12 @@ function TimeRow({ event }: { event: StripEvent }) {
 /** An earlier meet time, as a detail rather than a second headline. */
 const meetTime = (event: StripEvent) => event.time && event.meetTime && event.meetTime < event.time ? event.meetTime : null
 
-export function EventSheet({ event, role, trigger, children }: {
+export function EventSheet({ event, role, trigger, squad, children }: {
   event: StripEvent
   role: SheetRole
   trigger: ReactElement
+  /** Imad, 24 Oct: for a coach with two squads or more, which squad it's for ("U17", or "All squads"). */
+  squad?: string | null
   children?: ReactNode
 }) {
   const { pathname } = useLocation()
@@ -94,7 +96,7 @@ export function EventSheet({ event, role, trigger, children }: {
   const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgb(var(--t-ink-2))' : 'rgb(var(--t-success))'
 
   return (
-    <BottomSheet trigger={trigger} title={sheetTitle(event)} description={sheetPlace(event) ?? undefined}
+    <BottomSheet trigger={trigger} title={sheetTitle(event)} description={[squad, sheetPlace(event)].filter(Boolean).join(' · ') || undefined}
       aside={format(parseISO(event.date), 'EEE MMM d')} detents={[0.62, 0.92]} initialDetent={event.kitSnapshot ? 1 : 0} className="arc">
       <div className="space-y-5 pb-4">
         <TimeRow event={event} />
