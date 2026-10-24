@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
-import { Avatar } from '@/components/arc/avatar/avatar'
 import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { NavBar } from '@/components/trak'
 import { useAuth } from '@/contexts/AuthContext'
@@ -28,7 +27,7 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export default function CoachSquadPage() {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const location = useLocation()
@@ -54,7 +53,6 @@ export default function CoachSquadPage() {
             <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
               onChange={pick => { setEverySquad(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
           )}
-          <Avatar name={profile?.full_name || 'Coach'} size="md" className="arc ml-auto" aria-hidden />
         </header>
 
         <section aria-label={TABS.find(t => t.id === active)!.label} className="pb-8">
