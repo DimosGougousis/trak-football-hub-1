@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { addDays, format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
@@ -9,7 +9,9 @@ import { weekDays, type StripEvent } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
 import { LoadError } from '@/components/trak/LoadError'
 import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
-import { LoggedAttendance } from '@/components/coach/LoggedAttendance'
+import { SessionLog } from '@/components/coach/SessionLog'
+import { TakeRegister } from '@/components/coach/TakeRegister'
+import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
@@ -124,24 +126,19 @@ function CoachWeek({ coachId, version, inView, squadLabel }: {
     renderDetails={(id, trigger) => {
       const { event } = strips.get(id)!
       return <EventSheet event={event} role="coach" trigger={trigger}>
-        {/* A logged session's sheet says so, shows who came (TRAK-182) and opens its saved record (Imad, 16 Oct). */}
+        {/* A logged session's sheet shows its log, read only, with Edit log (Imad, 23 Oct; before: who came and Open session). */}
         {event.sessionId
-          ? <>
-              <Link to={`/coach/sessions/${event.sessionId}`}
-                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
-                Open session
-              </Link>
-              <LoggedAttendance sessionId={event.sessionId} coachId={coachId} />
-            </>
+          ? <SessionLog sessionId={event.sessionId} coachId={coachId} />
           : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}
       </EventSheet>
     }}
-    renderPrimary={id => <NextStep item={strips.get(id)!.item} roster={roster.data} onChanged={refresh} />} />
+    renderPrimary={id => <NextStep item={strips.get(id)!.item} coachId={coachId} roster={roster.data} onChanged={refresh} />} />
 }
 
-/** The chosen event's one next step (TRAK-262). Register and a weekly series' Publish use Schedule's own sheets. */
-function NextStep({ item, roster, onChanged }: {
+/** The chosen event's one next step (TRAK-262). A weekly series' Publish uses Schedule's own sheet. */
+function NextStep({ item, coachId, roster, onChanged }: {
   item: WeekItem
+  coachId: string
   roster: { player_name: string | null; age_group: string | null; status: string | null }[] | undefined
   onChanged: () => void
 }) {
@@ -168,10 +165,32 @@ function NextStep({ item, roster, onChanged }: {
       <ShareIcon size={16} />Share with families
     </ShareEventButton>
   }
-  if (item.step === 'register' && row) return go('Take register', () => navigate(`/coach/schedule?register=${row.id}`))
+  // Imad, 23 Oct: the register opens here. Schedule shows only the squad last picked, so an event of another squad
+  // (Home on All) was never found there, and Schedule stayed on today.
+  if (item.step === 'register' && row) return <StepSheet label="Take register" title="Take register" description={item.title}>
+    {close => <TakeRegister eventId={row.id} coachId={coachId} sessionId={null} squad={row.squad ?? null} onSaved={() => { close(); onChanged() }} />}
+  </StepSheet>
   if (item.step === 'log' && row) return go('Log it', () => navigate('/coach/sessions/quick', {
     state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
   }))
-  if (item.step === 'view' && item.sessionId) return go('View log', () => navigate(`/coach/sessions/${item.sessionId}`))
+  // Imad, 23 Oct: View log shows the log; editing is one tap further, inside it.
+  if (item.step === 'view' && item.sessionId) {
+    const sessionId = item.sessionId
+    return <StepSheet label="View log" title={item.title} description="Logged">{() => <SessionLog sessionId={sessionId} coachId={coachId} />}</StepSheet>
+  }
   return null
+}
+
+/** A next step that opens in a sheet over Home rather than another page. */
+function StepSheet({ label, title, description, children }: {
+  label: string
+  title: string
+  description: string
+  children: (close: () => void) => ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return <BottomSheet open={open} onOpenChange={setOpen} title={title} description={description} detents={[0.62, 0.92]} className="arc"
+    trigger={<Button size="sm" className="min-w-[128px]">{label}</Button>}>
+    <div className="pb-4">{open && children(() => setOpen(false))}</div>
+  </BottomSheet>
 }

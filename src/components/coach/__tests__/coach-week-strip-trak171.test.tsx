@@ -19,21 +19,29 @@ type Reply = { data: Row[] | null; error: unknown }
 
 const database = vi.hoisted(() => ({
   read: vi.fn<(table: string, coachId: string, filter?: string) => Promise<Reply>>(),
+  // Imad, 23 Oct: a logged match's log reads its players through logged_match.
+  rpc: vi.fn<(name: string) => Promise<Reply>>(async () => ({ data: [], error: null })),
 }))
 
 // The feature switch is independent of how the enabled strip loads its week.
 vi.mock('@/components/trak/parked', () => ({ useFeature: () => true }))
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
+    rpc: (name: string) => database.rpc(name),
     from: (table: string) => {
       let coachId = ''
+      let id: string | undefined
       let filter: string | undefined
       const query = {
         select: () => query,
         eq: (column: string, value: string) => {
           if (column === 'coach_user_id') coachId = value
+          if (column === 'id') id = value
           return query
         },
+        // One row, as the session log reads its session.
+        maybeSingle: () => database.read(table, coachId, filter)
+          .then(reply => ({ data: reply.data?.find(row => row.id === id) ?? null, error: reply.error })),
         gte: () => query,
         lte: () => query,
         or: (value: string) => { filter = value; return query },
@@ -91,18 +99,26 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     await chooseMonday()
 
     expect(await screen.findByRole('button', { name: /Planned training/ })).toBeInTheDocument()
-    // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too, which says
-    // so and links to its saved record (it used to jump straight there).
+    // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too, which says so. Imad, 23 Oct: the sheet shows
+    // the log, read only, with Edit log (it used to say only who came, with Open session).
+    database.rpc.mockResolvedValue(ok([{ user_id: 'u-1', player_name: 'Bukayo Saka', competition: 'League', venue: 'Home', opponent: 'Rovers',
+      goals: 1, assists: 0, card_received: 'None', team_score: 2, opponent_score: 0, played: true }]))
     for (const [title, id] of [['Logged training', 'saved-training'], ['Logged match', 'saved-match']]) {
       await openDetails(new RegExp(title))
       const sheet = await screen.findByRole('dialog', { name: title })
       expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
-      expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', `/coach/sessions/${id}`)
-      // TRAK-182 (live run 3): who came and who didn't, from the saved register.
-      expect(await within(sheet).findByText('Attended · 1')).toBeInTheDocument()
-      expect(within(sheet).getByText("Didn't come · 1")).toBeInTheDocument()
-      fireEvent.click(within(sheet).getByRole('button', { name: "Show names: Didn't come" }))
-      expect(within(within(sheet).getByRole('list', { name: "Didn't come" })).getByText('Beth Mead')).toBeInTheDocument()
+      expect(await within(sheet).findByRole('link', { name: 'Edit log' })).toHaveAttribute('href', `/coach/sessions/${id}`)
+      if (id === 'saved-training') {
+        // TRAK-182 (live run 3): who came and who didn't, from the saved register.
+        expect(await within(sheet).findByText('Attended · 1')).toBeInTheDocument()
+        expect(within(sheet).getByText("Didn't come · 1")).toBeInTheDocument()
+        fireEvent.click(within(sheet).getByRole('button', { name: "Show names: Didn't come" }))
+        expect(within(within(sheet).getByRole('list', { name: "Didn't come" })).getByText('Beth Mead')).toBeInTheDocument()
+      } else {
+        // A match's log: the score and who scored.
+        expect(within(sheet).getByText('2–0')).toBeInTheDocument()
+        expect(within(sheet).getByText('1 goal')).toBeInTheDocument()
+      }
       fireEvent.keyDown(sheet, { key: 'Escape' })
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     }
@@ -141,7 +157,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
     await openDetails(/Completed training/)
     const sheet = await screen.findByRole('dialog', { name: 'Completed training' })
-    expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', '/coach/sessions/completed-training')
+    expect(await within(sheet).findByRole('link', { name: 'Edit log' })).toHaveAttribute('href', '/coach/sessions/completed-training')
     expect(within(sheet).queryByText(/18:00|Time to be confirmed/)).not.toBeInTheDocument()
   })
 
