@@ -101,19 +101,25 @@ export function ActionMorph({ label, rows, faces, view, onViewChange, onSelect, 
   const sizes = useRef(new Map<string, Size>());
   const live = useRef({ view: FAB, reduced: false, measured: false });
   const last = useRef<Size>({ w: 0, h: 0 });
+  /* Trak (Imad, 23 Oct): once a form has finished growing, the shape stops clipping, so a date or time picker can open
+     past its edge instead of being cut off by it. Moving or resizing, it clips again. */
+  const shapeRef = useRef<HTMLDivElement>(null);
 
   const place = useCallback(() => {
     const state = live.current;
+    const node = shapeRef.current;
+    node?.removeAttribute("data-settled");
+    const settle = () => { if (live.current.view === state.view && state.view !== FAB && state.view !== MENU) node?.setAttribute("data-settled", ""); };
     const size = sizes.current.get(state.view);
     if (!size || !size.w) return;
     const r = state.view === FAB ? size.h / 2 : 24;
     const previous = last.current;
-    if (Math.abs(previous.w - size.w) < .5 && Math.abs(previous.h - size.h) < .5 && state.measured) return;
+    if (Math.abs(previous.w - size.w) < .5 && Math.abs(previous.h - size.h) < .5 && state.measured) { settle(); return; }
     last.current = size;
-    if (!state.measured || state.reduced) { width.jump(size.w); height.jump(size.h); radius.jump(r); state.measured = true; return; }
+    if (!state.measured || state.reduced) { width.jump(size.w); height.jump(size.h); radius.jump(r); state.measured = true; settle(); return; }
     const transition = size.w * size.h >= previous.w * previous.h ? GROW : SHRINK;
     animate(width, size.w, transition);
-    animate(height, size.h, transition);
+    animate(height, size.h, { ...transition, onComplete: settle });
     animate(radius, r, transition);
   }, [height, radius, width]);
 
@@ -224,7 +230,7 @@ export function ActionMorph({ label, rows, faces, view, onViewChange, onSelect, 
   const close = <button type="button" className={styles.iconButton} aria-label={`Close ${label.toLowerCase()}`} onClick={() => onViewChange(FAB)}><X size={16} strokeWidth={1.75} aria-hidden="true" /></button>;
 
   return <div ref={rootRef} className={[styles.root, className].filter(Boolean).join(" ")} style={style} data-anchor={anchor} data-view={shown === FAB ? "fab" : shown === MENU ? "menu" : "face"} onKeyDown={onRootKey}>
-    <motion.div className={styles.shape} style={{ width, height, borderRadius: radius, scale: press, y: opened ? -lift : 0 }}>
+    <motion.div ref={shapeRef} className={styles.shape} style={{ width, height, borderRadius: radius, scale: press, y: opened ? -lift : 0 }}>
       <AnimatePresence initial={false} custom={direction}>
         {shown === FAB && <Face key={FAB} id={FAB} direction={direction} reduced={reduced} onSize={onSize} className={styles.fabFace}>
           <button ref={fabRef} type="button" className={styles.fab} aria-label={label} aria-haspopup="menu" aria-expanded={false}

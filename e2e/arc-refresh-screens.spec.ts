@@ -536,3 +536,38 @@ test.describe("Event times on the phone's clock", () => {
     })
   }
 })
+
+// Imad, 23 Oct: in the "+" form the date and time pickers opened upward and were cut off by the form's own edge (its
+// shape clips while it moves, and the side-picker didn't count `clip`). Once the form has settled they open whole.
+test.describe('The "+" form\'s pickers on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
+
+  test('the date calendar and the time list open fully on screen', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/home')
+    await page.getByRole('button', { name: 'Quick add' }).click()
+    await page.getByText('New event', { exact: true }).click()
+    await page.waitForTimeout(600)
+    // Whole on screen, and not cut by an ancestor: the point a little inside each corner is the panel itself.
+    const whole = (selector: string) => page.evaluate(sel => {
+      const panel = document.querySelector(sel) as HTMLElement
+      const r = panel.getBoundingClientRect()
+      const inside = [[r.left + 8, r.top + 8], [r.right - 8, r.top + 8], [r.left + 8, r.bottom - 8], [r.right - 8, r.bottom - 8]]
+        .every(([x, y]) => panel.contains(document.elementFromPoint(x, y)))
+      return { top: Math.round(r.top), bottom: Math.round(r.bottom), inside }
+    }, selector)
+    await page.getByRole('button', { name: 'Date', exact: true }).click()
+    await page.waitForTimeout(500)
+    const calendar = await whole('[role="dialog"][aria-label$="calendar"]')
+    expect(calendar.top, JSON.stringify(calendar)).toBeGreaterThanOrEqual(0)
+    expect(calendar.inside, JSON.stringify(calendar)).toBe(true)
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: /^Start/ }).click()
+    await page.waitForTimeout(500)
+    const times = await whole('[role="listbox"]')
+    expect(times.top, JSON.stringify(times)).toBeGreaterThanOrEqual(0)
+    expect(times.inside, JSON.stringify(times)).toBe(true)
+    expect(unexpected).toEqual([])
+  })
+})
