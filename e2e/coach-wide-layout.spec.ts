@@ -35,7 +35,9 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
       return json(one ? players.filter(p => p.id === one) : players)
     }
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
-    if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    if (path === '/rest/v1/rpc/my_session_is_live') return json(true)
+    // Events on; Games (TRAK-283) off, as for every academy until it is switched on (e2e/games.spec.ts has it on).
+    if (path === '/rest/v1/rpc/feature_on') return json(req.postDataJSON()?.p_feature === 'events')
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     // TRAK-250: the Squad tabs' reads. Two latest bands for three children, so Snapshot has columns to show.
     if (path === '/rest/v1/coach_assessments') return json(role === 'coach' ? [
@@ -188,10 +190,10 @@ for (const [label, width, height, rail] of [
   ['an upright tablet', 820, 1180, 0],
   ['a laptop', 1440, 900, 240],
 ] as const) {
-  test(`coach Squad on ${label}: the four views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
+  test(`coach Squad on ${label}: the three views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
     const views = page.getByRole('radiogroup', { name: 'Squad view' }).getByRole('radio')
-    await expect(views).toHaveText(['Players', 'Attributes', 'Availability', 'Games'])
+    await expect(views).toHaveText(['Players', 'Attributes', 'Availability']) // TRAK-283: Games left Squad
     const playersView = page.getByRole('region', { name: 'Players', exact: true })
     await expect(playersView.getByRole('list', { name: 'Players' }).getByRole('listitem').first()).toBeVisible()
 
@@ -212,7 +214,7 @@ for (const [label, width, height, rail] of [
     await page.screenshot({ path: testInfo.outputPath(`coach-squad-${width}.png`) })
 
     // Each view opens in place: no Arc sheet, and no read the backend does not answer.
-    for (const name of ['Attributes', 'Availability', 'Games', 'Players']) {
+    for (const name of ['Attributes', 'Availability', 'Players']) {
       await views.filter({ hasText: name }).click()
       await expect(views.filter({ hasText: name })).toHaveAttribute('aria-checked', 'true')
       await expect(page.getByRole('region', { name, exact: true }).getByText(/^(Loading|Checking) /)).toHaveCount(0)

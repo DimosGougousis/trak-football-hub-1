@@ -128,6 +128,13 @@ export function formProblem(form: EventForm): string | null {
  *  happened is logged, with its score or register (TRAK-138). */
 export const PAST_DATE_PROBLEM = 'This date has passed: log it instead'
 
+/** `2026-10-31` -> `Saturday 31 October`, as Schedule's Review and sheets write a day. */
+export function formatEventDay(date: string) {
+  return new Date(date + 'T12:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  })
+}
+
 /** A date before `today` on a new event, or moved to on an edit. An edit that
  *  keeps a past event's own date still saves (a venue fix, a note). */
 export function pastDateProblem(date: string, today: string, originalDate?: string | null): string | null {

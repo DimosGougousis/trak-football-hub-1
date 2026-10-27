@@ -393,3 +393,59 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect(await screen.findByText(/We couldn't load your schedule/)).toBeInTheDocument()
   })
 })
+
+// TRAK-283 (Games 1/8): with Games on, a match just published offers its next step, the game plan.
+describe('TRAK-283: a match just published offers its game plan', { timeout: 20_000 }, () => {
+  afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
+  beforeEach(() => {
+    atMorningToday()
+    signInAs(COACH)
+    fixtures()
+    rows = [DRAFT, row({ id: 'match-1', title: 'vs Parkview Athletic', event_type: 'match', opponent: 'Parkview Athletic',
+      starts_at: toInstant(today, '20:00'), start_time: '20:00:00' })]
+  })
+  // By keyboard: a toast's button is reachable without a pointer (and jsdom has no pointer capture for Sonner's swipe).
+  const takeNextStep = async () => {
+    const button = await screen.findByRole('button', { name: 'Write the game plan' })
+    button.focus()
+    await userEvent.keyboard('{Enter}')
+  }
+
+  it("the list's Publish: Write the game plan opens the match's game page", async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish vs Parkview Athletic' }))
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    await takeNextStep()
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/games/match-1?tab=plan'))
+  })
+
+  it("Review's Publish of a new match offers it too", async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
+    await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
+    await eventStep(sheet, 'When')
+    await pickTime(userEvent, 'Kickoff', '16:00')
+    await saveEventWith(sheet, 'Publish')
+    await takeNextStep()
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/games/written?tab=plan'))
+  })
+
+  it('a training gets the usual toast only', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish Finishing' }))
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Write the game plan' })).toBeNull()
+  })
+
+  it('so does a match where Games is off', async () => {
+    // The app keeps a switch's answer for 30 s, so the academy without Games is another coach's.
+    signInAs({ id: 'coach-1-no-games' })
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature === 'events'))
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish vs Parkview Athletic' }))
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Write the game plan' })).toBeNull()
+  })
+})

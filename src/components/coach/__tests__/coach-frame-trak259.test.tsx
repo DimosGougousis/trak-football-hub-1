@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
@@ -41,7 +41,8 @@ beforeEach(() => {
     ]),
     table('session_attendance', []),
     table('event_absences', []),
-    rpc('feature_on', () => true),
+    // Events on; Games (TRAK-283) off unless a test switches it on.
+    rpc('feature_on', ({ p_feature }) => p_feature === 'events'),
   )
 })
 afterEach(() => { window.matchMedia = realMatchMedia; vi.restoreAllMocks() })
@@ -128,7 +129,50 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(screen.queryByRole('tablist', { name: 'Coach' })).toBeNull()
   })
 
+  it("TRAK-283: Games joins the nav only where the academy's switch is on", async () => {
+    // Off: no Games on a phone or a laptop.
+    screenIs(false)
+    renderApp('/coach/home')
+    const offTabs = await screen.findByRole('tablist', { name: 'Coach' })
+    expect(within(offTabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Library'])
+    cleanup()
+    screenIs(true)
+    renderApp('/coach/home')
+    const offSidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+    expect(within(offSidebar).getByRole('button', { name: /^Library/ })).toBeInTheDocument()
+    expect(within(offSidebar).queryByRole('button', { name: /^Games/ })).toBeNull()
+    cleanup()
+    vi.restoreAllMocks()
+
+    // On: the phone's bar is Home · Squad · Games · Library, and Games opens Games home. The app keeps a switch's
+    // answer for 30 s, so the academy whose switch is on is another coach's.
+    signInAs({ id: 'coach-frame-games' })
+    server.use(rpc('feature_on', () => true))
+    screenIs(false)
+    renderApp('/coach/home')
+    const tabs = await screen.findByRole('tablist', { name: 'Coach' })
+    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Games', 'Library']))
+    await userEvent.click(within(tabs).getByRole('tab', { name: 'Games' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/games'))
+    await waitFor(() => expect(within(screen.getByRole('tablist', { name: 'Coach' })).getByRole('tab', { name: 'Games' })).toHaveAttribute('aria-selected', 'true'))
+    cleanup()
+
+    // The sidebar: Home · Schedule · Squads · Games · Library.
+    screenIs(true)
+    renderApp('/coach/home')
+    const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+    const games = await within(sidebar).findByRole('button', { name: /^Games/ })
+    const order = within(sidebar).getAllByRole('button').map(button => button.textContent ?? '')
+    const rows = ['Home', 'Schedule', 'Squads', 'Games', 'Library'].map(row => order.findIndex(text => text.startsWith(row)))
+    expect(rows.every(index => index >= 0)).toBe(true)
+    expect(rows).toEqual([...rows].sort((a, b) => a - b))
+    await userEvent.click(games)
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/games'))
+  })
+
   it('knows which row a page belongs to', () => {
+    expect(placeOf('/coach/games')).toEqual({ screen: 'games', title: 'Games' }) // TRAK-283
+    expect(placeOf('/coach/games/ev-1')).toEqual({ screen: 'games', title: 'Games' })
     expect(placeOf('/coach/player/abc')).toEqual({ screen: 'squad', title: 'Player' })
     expect(placeOf('/coach/sessions/list')).toEqual({ screen: 'home', title: 'Log' })
     expect(placeOf('/coach/schedule')).toEqual({ screen: 'calendar', title: 'Schedule' }) // TRAK-255

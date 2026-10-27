@@ -79,16 +79,17 @@ describe('TRAK-47 parked feature boundary', () => {
     server.use(rpc('feature_on', args => { asked.push(args.p_feature); return true }))
     renderApp('/coach/schedule')
     expect((await screen.findAllByText(/Schedule/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar
-    await waitFor(() => expect(asked).toEqual(['events']))
+    // TRAK-283: the coach's frame also asks for Games, to show its tab.
+    await waitFor(() => expect([...new Set(asked)].sort()).toEqual(['events', 'games']))
     await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
   })
 
   it('keeps the coach schedule parked when the switch cannot be read', async () => {
     let asked = 0
-    server.use(rpc('feature_on', () => { asked++; return { status: 500, body: { message: 'Synthetic failure' } } }))
+    server.use(rpc('feature_on', args => { if (args.p_feature === 'events') asked++; return { status: 500, body: { message: 'Synthetic failure' } } }))
     renderApp('/coach/schedule')
     expect((await screen.findAllByText(/Schedule/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar
-    // The app retries once; both answers are failures.
+    // The app retries once; both answers are failures. (TRAK-283: Games' own asks fail too, uncounted.)
     await waitFor(() => expect(asked).toBe(2), { timeout: 4000 })
     expect(screen.getByRole('note', { name: 'This screen is coming soon' })).toHaveTextContent('Coming soon')
   })

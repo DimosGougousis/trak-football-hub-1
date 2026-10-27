@@ -3,6 +3,8 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, House, Settings, Users } from 'lucide-react'
 import { PitchIcon } from '@/components/icons/PitchIcon'
+import { MatchIcon } from '@/components/icons/MatchIcon'
+import { useFeature } from '@/components/trak/parked'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Avatar } from '@/components/arc/avatar/avatar'
@@ -20,7 +22,9 @@ import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coa
    Settings and the coach), with the bell and "+ Create" at the top right.
    Phone and tablet: Arc's glass tab bar (Home, Squad, Library) with the "+"
    at its right; the coach's avatar on a page opens the same sidebar as a
-   sheet. Feedback and Profile left the nav; their pages still open. */
+   sheet. Feedback and Profile left the nav; their pages still open.
+   TRAK-283: Games sits after Squad, on a laptop and a phone, only where the
+   academy's games switch is on. */
 
 type Screen = CoachScreen
 const TO = COACH_SCREEN_PATH
@@ -56,6 +60,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
   const wide = useSideMenuScreen()
   const coachSquad = useCoachSquad(userId)
   const identity = useCoachIdentity(userId).data
+  const games = useFeature('games')
   const [sheetOpen, setSheetOpen] = useState(false)
   const listeners = useRef(new Set<() => void>())
   const { screen, title } = placeOf(pathname)
@@ -78,6 +83,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
     many
       ? { id: 'squads', label: 'Squads', icon: Users, children: coachSquad.squads.map(squad => ({ id: `squad:${squad}`, label: squad })) }
       : { id: 'squad', label: 'Squad', icon: Users },
+    ...(games ? [{ id: 'games', label: 'Games', icon: MatchIcon }] : []),
     // TRAK-265: Imad's pitch icon.
     { id: 'library', label: 'Library', icon: PitchIcon },
   ]
@@ -103,6 +109,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
         items={[
           { value: 'home', label: 'Home', icon: <House /> },
           { value: 'squad', label: 'Squad', icon: <Users /> },
+          ...(games ? [{ value: 'games', label: 'Games', icon: <MatchIcon /> }] : []),
           { value: 'library', label: 'Library', icon: <PitchIcon /> },
         ]}
         actionNode={<CoachCreate placement="bar" onSaved={saved} />} />
