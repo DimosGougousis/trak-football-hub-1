@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { LoadedWeekStrip, WeekStrip, type StripEvent } from '../WeekStrip'
@@ -52,6 +52,10 @@ describe('TRAK-231: the family\'s own "Can\'t make it" shows in the strip', () =
   })
 
   it('the loaded strip reads this child\'s own absences for the week, and only theirs', async () => {
+    // TRAK-291: the loaded strip reads the real clock, so it runs on this file's Wednesday 21 October, as the others do.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(today)
+    onTestFinished(() => { vi.useRealTimers() })
     const asked: string[] = []
     server.use(
       http.get(`${SUPABASE_URL}/rest/v1/squad_players`, ({ request }) => {
