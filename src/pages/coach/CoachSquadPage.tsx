@@ -11,18 +11,17 @@ import { PlayersTab } from '@/components/coach/squad/PlayersTab'
 import { SquadPills } from '@/components/coach/home/SquadPills'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
 import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
-import { GamesTab } from '@/components/coach/squad/GamesTab'
 
-/* TRAK-250: Squad is a full-width coach workspace with four views of the same
+/* TRAK-250: Squad is a full-width coach workspace with views of the same
    roster. The view lives in the URL (?tab=), so a view can be linked and a
    reload keeps it. Every view reads from one shared roster (useSquadRoster).
    TRAK-263 (Imad, 22 Oct): Players replaces Snapshot and comes first; the views
-   sit on Arc's glass segmented control, which fits all four on a phone. */
+   sit on Arc's glass segmented control. TRAK-283 (Imad, 27 Oct): Games left
+   Squad for everyone; matches have their own Games tab, with no statistics. */
 const TABS = [
   { id: 'players', label: 'Players' },
   { id: 'attributes', label: 'Attributes' },
   { id: 'availability', label: 'Availability' },
-  { id: 'games', label: 'Games' },
 ] as const
 type TabId = typeof TABS[number]['id']
 
@@ -61,8 +60,7 @@ export default function CoachSquadPage() {
             : roster.players.length === 0 ? <PreparingSquad />
             : active === 'players' ? <PlayersTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
-            : active === 'availability' ? <AvailabilityTab roster={roster} />
-            : <GamesTab roster={roster} />}
+            : <AvailabilityTab roster={roster} />}
         </section>
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />

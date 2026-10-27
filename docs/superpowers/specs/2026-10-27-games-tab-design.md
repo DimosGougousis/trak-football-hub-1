@@ -183,8 +183,9 @@ Trak. The Pro block, `release-readiness`, is listed in `src/components/arc/PRO.m
 - The player and parent event pages and cards: `PlayerEvent`, `ParentEvent`, `UpcomingEventCard`, `ParentEvents`.
 - `docs/rehearsal-script.html` (289), and AGENTS.md's Squad views row (283).
 
-**Retired:** Squad › Games, for everyone: `GamesTab.tsx`, its tab and its test cases. `useSeason` and
-`src/lib/squad/season.ts` stay, because the Players view uses them.
+**Retired:** Squad › Games, for everyone: `GamesTab.tsx`, its tab and its test cases, with `useSeason.ts` and
+`seasonSummary`, which only it used. `seasonWindow` stays in `src/lib/squad/season.ts`: the Players view counts its
+averages over it.
 
 **Not reusable:** `PitchDiagram.tsx` is a static drill drawing in the old dark palette, with nothing to tap. The
 line-up gets a light pitch with slot buttons, as the mockup draws it.

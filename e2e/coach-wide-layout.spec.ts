@@ -188,10 +188,10 @@ for (const [label, width, height, rail] of [
   ['an upright tablet', 820, 1180, 0],
   ['a laptop', 1440, 900, 240],
 ] as const) {
-  test(`coach Squad on ${label}: the four views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
+  test(`coach Squad on ${label}: the three views across a wide page, a player's profile beside the list, no sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/squad', width, height)
     const views = page.getByRole('radiogroup', { name: 'Squad view' }).getByRole('radio')
-    await expect(views).toHaveText(['Players', 'Attributes', 'Availability', 'Games'])
+    await expect(views).toHaveText(['Players', 'Attributes', 'Availability']) // TRAK-283: Games left Squad
     const playersView = page.getByRole('region', { name: 'Players', exact: true })
     await expect(playersView.getByRole('list', { name: 'Players' }).getByRole('listitem').first()).toBeVisible()
 
@@ -212,7 +212,7 @@ for (const [label, width, height, rail] of [
     await page.screenshot({ path: testInfo.outputPath(`coach-squad-${width}.png`) })
 
     // Each view opens in place: no Arc sheet, and no read the backend does not answer.
-    for (const name of ['Attributes', 'Availability', 'Games', 'Players']) {
+    for (const name of ['Attributes', 'Availability', 'Players']) {
       await views.filter({ hasText: name }).click()
       await expect(views.filter({ hasText: name })).toHaveAttribute('aria-checked', 'true')
       await expect(page.getByRole('region', { name, exact: true }).getByText(/^(Loading|Checking) /)).toHaveCount(0)

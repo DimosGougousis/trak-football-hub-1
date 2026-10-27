@@ -1,7 +1,7 @@
 /**
  * TRAK-250: Squad is a coach workspace with views of one shared roster read. TRAK-263:
- * Players replaced Snapshot; the views (Players, Attributes, Availability, Games) sit on
- * Arc's glass segmented control. This file holds the shell tests;
+ * Players replaced Snapshot; the views (Players, Attributes, Availability) sit on
+ * Arc's glass segmented control. TRAK-283 removed Games. This file holds the shell tests;
  * each tab's own tests are appended as the tab lands.
  */
 import { beforeAll, afterAll, it, expect, describe, beforeEach, afterEach, vi } from 'vitest'
@@ -15,8 +15,6 @@ import { table, rpc, rpcRows, SUPABASE_URL } from '../../../../tests/msw/supabas
 import { registerAuthUser } from '../../../../tests/msw/auth-sessions'
 import { forgetScreens } from '@/lib/screen-memory'
 import { supabase } from '@/integrations/supabase/client'
-import { localTodayISO } from '@/lib/event-time'
-import { seasonWindow } from '@/lib/squad/season'
 
 // These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
 // Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
@@ -75,19 +73,20 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     expect(await tab('Players')).toHaveAttribute('aria-checked', 'true')
     expect(await view('Players')).toBeInTheDocument()
 
-    expect(within(screen.getByRole('radiogroup', { name: 'Squad view' })).getAllByRole('radio').map(t => t.textContent)).toEqual(['Players', 'Attributes', 'Availability', 'Games'])
-    await user.click(screen.getByRole('radio', { name: 'Games' }))
-    expect(screen.getByRole('radio', { name: 'Games' })).toHaveAttribute('aria-checked', 'true')
-    expect(window.location.search).toContain('tab=games')
-    expect(await view('Games')).toBeInTheDocument()
+    // TRAK-283 (Imad, 27 Oct): Squad no longer offers Games; matches have their own Games tab.
+    expect(within(screen.getByRole('radiogroup', { name: 'Squad view' })).getAllByRole('radio').map(t => t.textContent)).toEqual(['Players', 'Attributes', 'Availability'])
+    await user.click(screen.getByRole('radio', { name: 'Availability' }))
+    expect(screen.getByRole('radio', { name: 'Availability' })).toHaveAttribute('aria-checked', 'true')
+    expect(window.location.search).toContain('tab=availability')
+    expect(await view('Availability')).toBeInTheDocument()
 
     cleanup()
     renderApp('/coach/squad?tab=attributes')
     expect(await tab('Attributes')).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('radio', { name: 'Players' })).toHaveAttribute('aria-checked', 'false')
 
-    // Snapshot left (TRAK-263); an old link to it, or nonsense, opens Players.
-    for (const old of ['snapshot', 'nonsense', 'season']) {
+    // Snapshot left (TRAK-263) and Games (TRAK-283); an old link to either, or nonsense, opens Players.
+    for (const old of ['snapshot', 'nonsense', 'season', 'games']) {
       cleanup()
       renderApp(`/coach/squad?tab=${old}`)
       expect(await tab('Players')).toHaveAttribute('aria-checked', 'true')
@@ -413,158 +412,17 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
   })
 })
 
-// ---- Games Statistics tab (task 6; renamed from Season, Dimos 22 Oct) ----------------------------
-// The RPC still returns minutes_played; Trak does not capture minutes, so nothing on screen reads it.
+// ---- Availability tab (task 7) ---------------------------------------------------------------
+// The season read's rows (coach_squad_season), offered to Availability, which must not read them.
 const seasonRow = (match_date: string, opponent: string, session_id: string | null, team_score: number, opponent_score: number,
   squad_player_id: string, minutes_played: number | null, goals = 0, assists = 0) =>
   ({ match_date, opponent, session_id, team_score, opponent_score, squad_player_id, minutes_played, goals, assists })
-// Three matches: W 4-1, L 1-3 (its scorers add up to 0, not 1), W 2-0 logged without minutes.
-const SEASON_ROWS = [
-  seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'sq-leo', 48, 2), seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'sq-sami', 48, 2),
-  seasonRow('2026-09-05', 'Parkview U12', 's-1', 4, 1, 'sq-new', 19),
-  seasonRow('2026-09-12', 'Riverside U12', 's-2', 1, 3, 'sq-leo', 48), seasonRow('2026-09-12', 'Riverside U12', 's-2', 1, 3, 'sq-sami', 48, 0, 1),
-  seasonRow('2026-09-12', 'Riverside U12', 's-2', 1, 3, 'sq-new', 20),
-  seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-leo', null, 2), seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-sami', null),
-]
-const tile = (panel: HTMLElement, name: string) => within(panel).getByRole('group', { name })
-const GAMES = 'Games'
-const seasonLine = (matches: string) => `${seasonWindow(localTodayISO()).label} · ${matches}`
 /** Nothing about minutes played, in any wording, and no percentage. */
 function noMinutes(el: HTMLElement) {
   expect(el).not.toHaveTextContent(/minute/i)
   expect(el).not.toHaveTextContent('%')
   expect(el).not.toHaveTextContent(/owed|of available|not counted/i)
 }
-
-describe('TRAK-250: Games Statistics tab', { timeout: 20_000 }, () => {
-  it('games statistics build up from logged matches', async () => {
-    coachReads(SNAP_PLAYERS)
-    const asked: Record<string, unknown>[] = []
-    server.use(rpc('coach_squad_season', args => { asked.push(args); return SEASON_ROWS }))
-    renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('region', { name: GAMES })
-
-    const window_ = seasonWindow(localTodayISO())
-    expect(await within(panel).findByRole('heading', { name: 'Games Statistics' })).toBeInTheDocument()
-    expect(asked[0]).toEqual({ p_from: window_.from, p_to: window_.to, p_squad: null })
-    expect(await within(panel).findByText(seasonLine('3 matches'))).toBeInTheDocument()
-    expect(within(panel).getAllByRole('group').map(g => g.getAttribute('aria-label')))
-      .toEqual(['Played', 'Won · drawn · lost', 'Goals for – against'])
-    expect(within(tile(panel, 'Played')).getByText('3')).toBeInTheDocument()
-    expect(within(tile(panel, 'Won · drawn · lost')).getByText('2 · 0 · 1')).toBeInTheDocument()
-    expect(within(tile(panel, 'Goals for – against')).getByText('7 – 4')).toBeInTheDocument()
-
-    expect(within(panel).getByRole('img', { name: /How the season built up/ })).toBeInTheDocument()
-
-    // #, Player, Apps, Goals, Assists; most appearances first, then by name.
-    const table_ = within(panel).getByRole('table')
-    expect(within(table_).getAllByRole('columnheader').map(h => h.textContent)).toEqual(['#', 'Player', 'Apps', 'Goals', 'Assists'])
-    const rows = within(table_).getAllByRole('row').slice(1)
-    expect(rows.map(r => within(r).getByRole('rowheader').textContent)).toEqual(['Leo M.', 'Sami K.', 'Newcomer R.'])
-    expect(within(rows[0]).getAllByRole('cell').map(c => c.textContent)).toEqual(['8', '3', '4', '0'])
-    expect(within(rows[1]).getAllByRole('cell').map(c => c.textContent)).toEqual(['9', '3', '2', '1'])
-    expect(within(rows[2]).getAllByRole('cell').map(c => c.textContent)).toEqual(['3', '2', '0', '0'])
-    expect(within(rows[2]).getByRole('link', { name: 'Newcomer R.' })).toHaveAttribute('href', '/coach/player/sq-new')
-
-    // The L 1-3 match has no scorer for its goal; the callout names it and links to its log.
-    const callout = within(panel).getByRole('status')
-    expect(callout).toHaveTextContent("Numbers don't add up: player goals total 6, match scores total 7.")
-    expect(within(callout).getByRole('link', { name: '12 Sep vs Riverside U12' })).toHaveAttribute('href', '/coach/sessions/s-2')
-    expect(within(callout).queryByRole('link', { name: /Parkview/ })).toBeNull()
-
-    const results = within(panel).getByRole('region', { name: 'Results' })
-    const items = within(results).getAllByRole('listitem')
-    expect(items[0]).toHaveTextContent('Lakeside U12')
-    expect(items[0]).toHaveTextContent('W')
-    expect(items[1]).toHaveTextContent('L')
-    expect(items[1]).toHaveTextContent('1–3')
-
-    noMinutes(panel)
-    expect(within(panel).queryByRole('group', { name: 'Minutes balance' })).toBeNull()
-  })
-
-  it('a roster child with no match rows appears with 0 apps; a consent-pending one does not', async () => {
-    coachReads([...SNAP_PLAYERS,
-      { id: 'sq-wait', coach_user_id: 'x', player_name: 'Waiting W.', position: 'Defender', shirt_number: 5, age_group: 'U12' }])
-    server.use(
-      rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'sq-wait'),
-      rpc('coach_squad_season', () => SEASON_ROWS.filter(r => r.squad_player_id !== 'sq-new')),
-    )
-    renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('region', { name: GAMES })
-    const table_ = await within(panel).findByRole('table')
-    const rows = within(table_).getAllByRole('row').slice(1)
-    expect(rows).toHaveLength(3)
-    const newcomer = rows.find(r => r.textContent?.includes('Newcomer R.'))!
-    expect(newcomer).toBe(rows[2])
-    expect(within(newcomer).getAllByRole('cell').map(c => c.textContent)).toEqual(['3', '0', '0', '0'])
-    expect(within(table_).queryByText('Waiting W.')).toBeNull()
-    noMinutes(panel)
-  })
-
-  it('the running chart shows the won-drawn-lost record after each match', async () => {
-    coachReads(SNAP_PLAYERS)
-    server.use(rpc('coach_squad_season', () => SEASON_ROWS))
-    renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('region', { name: GAMES })
-    const record = await within(panel).findByRole('list', { name: 'Record after each match (won–drawn–lost)' })
-    const items = within(record).getAllByRole('listitem')
-    expect(items.map(i => i.textContent)).toEqual(['5 Sep 1–0–0', '12 Sep 1–0–1', '19 Sep 2–0–1'])
-  })
-
-  it('empty season', async () => {
-    coachReads(SNAP_PLAYERS)
-    server.use(rpc('coach_squad_season', () => []))
-    renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('region', { name: GAMES })
-    expect(await within(panel).findByText('No matches logged this season yet')).toBeInTheDocument()
-    expect(within(panel).getByText(seasonLine('0 matches'))).toBeInTheDocument()
-    expect(within(panel).queryByRole('table')).toBeNull()
-    noMinutes(panel)
-  })
-
-  it('a match logged without minutes counts like any other: one match, its apps and goals', async () => {
-    coachReads(SNAP_PLAYERS)
-    server.use(rpc('coach_squad_season', () => [seasonRow('2026-09-19', 'Lakeside U12', 's-3', 2, 0, 'sq-leo', null, 2)]))
-    renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('region', { name: GAMES })
-    expect(await within(panel).findByText(seasonLine('1 match'))).toBeInTheDocument()
-    const leo = within(within(panel).getByRole('table')).getAllByRole('row')[1]
-    expect(within(leo).getAllByRole('cell').map(c => c.textContent)).toEqual(['8', '1', '2', '0'])
-    noMinutes(panel)
-  })
-
-  it('a failed season read shows Try again inside the tab, never an empty season', async () => {
-    const user = userEvent.setup()
-    coachReads(SNAP_PLAYERS)
-    let failing = true
-    server.use(rpc('coach_squad_season', () => failing ? { status: 500, body: { message: 'unavailable' } } : SEASON_ROWS))
-    renderApp('/coach/squad?tab=games')
-    const panel = await screen.findByRole('region', { name: GAMES })
-    expect(await within(panel).findByText("Couldn't load the season", undefined, { timeout: 5000 })).toBeInTheDocument()
-    expect(within(panel).queryByText('No matches logged this season yet')).toBeNull()
-    failing = false
-    await user.click(within(panel).getByRole('button', { name: 'Try again' }))
-    expect(await within(panel).findByText(seasonLine('3 matches'))).toBeInTheDocument()
-    expect(within(panel).queryByText("Couldn't load the season")).toBeNull()
-  })
-
-  it('picking a squad asks for that squad only', async () => {
-    const user = userEvent.setup()
-    coachReads()
-    const asked: Record<string, unknown>[] = []
-    server.use(rpc('coach_squad_season', args => { asked.push(args); return [] }))
-    renderApp('/coach/squad?tab=games')
-    await within(await screen.findByRole('region', { name: GAMES })).findByText('No matches logged this season yet')
-    // TRAK-266: Squad opens on All, which asks for every squad.
-    expect(asked.at(-1)).toMatchObject({ p_squad: null })
-
-    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U12' }))
-    await waitFor(() => expect(asked.at(-1)).toMatchObject({ p_squad: 'U12' }))
-  })
-})
-
-// ---- Availability tab (task 7) ---------------------------------------------------------------
 const AV_PLAYERS = [
   { id: 'c1', coach_user_id: 'x', player_name: 'Zayd B.', position: 'Goalkeeper', shirt_number: 1, age_group: 'U10' },
   { id: 'c2', coach_user_id: 'x', player_name: 'Rayan S.', position: 'Midfielder', shirt_number: 8, age_group: 'U10' },
