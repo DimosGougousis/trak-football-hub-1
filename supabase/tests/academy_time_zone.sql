@@ -1,7 +1,7 @@
 -- @trak-suite mode=--academy-time-zone in-all=true
 -- TRAK-175 (J8): each academy runs on its own clock. Academy D is Dubai
 -- (UTC+4 all year), academy A is Athens (UTC+3, then UTC+2 from 04:00 on
--- Sun 25 Oct 2026). The same 17:00 typed by each academy's coach is a
+-- the last Sunday of October; the checks use next year's, see tz175day). The same 17:00 typed by each academy's coach is a
 -- different instant, the app's old Dubai instant is corrected without a
 -- "Changed" bump, and the register, "can't make it", overlaps, reminders and
 -- the calendar feed all read the academy's own clock. Only the operator sets
@@ -40,6 +40,17 @@ END $$;
 CREATE FUNCTION pg_temp.tz175athens(k integer) RETURNS timestamp LANGUAGE sql AS $$
  SELECT (now() + make_interval(mins => k)) AT TIME ZONE 'Europe/Athens'
 $$;
+-- TRAK-291: the clock change every check below straddles, Athens' last Sunday of October next year, so the dates
+-- are always to come (fixed 2026 dates went stale once those events started and fell out of the feed). Days are
+-- counted from that Sunday: Thursday -3 is summer (UTC+3), Tuesday +2 and Wednesday +3 are winter (UTC+2).
+CREATE FUNCTION pg_temp.tz175day(k integer) RETURNS date LANGUAGE sql STABLE AS $$
+ SELECT make_date(extract(year FROM now())::int + 1, 10, 31)
+  - extract(dow FROM make_date(extract(year FROM now())::int + 1, 10, 31))::int + k
+$$;
+-- A UTC instant on one of those days.
+CREATE FUNCTION pg_temp.tz175at(k integer, hhmm text) RETURNS timestamptz LANGUAGE sql STABLE AS $$
+ SELECT (pg_temp.tz175day(k) + hhmm::time) AT TIME ZONE 'UTC'
+$$;
 SET LOCAL check_function_bodies = off;
 CREATE FUNCTION pg_temp.tz175ev(n integer) RETURNS public.coach_calendar_events LANGUAGE sql AS $$
  SELECT * FROM public.coach_calendar_events WHERE id = pg_temp.tz175id(n)
@@ -53,7 +64,7 @@ $$;
 -- ── Fixtures ───────────────────────────────────────────────────────────────
 -- Academy D (100, admin 1): coach 10, child 21, parent 31.
 -- Academy A (101, admin 2): coach 11, child 20, parent 30; coach 12 holds section 3's "from now"
--- events, so they can never overlap coach 11's fixed-date ones (22, 27, 28 Oct).
+-- events, so they can never overlap coach 11's ones around the clock change (Thu, Tue, Wed).
 INSERT INTO auth.users(id,email,email_confirmed_at)
  SELECT pg_temp.tz175id(n), 'synthetic-'||n||'@timezone175.invalid', now()
  FROM unnest(ARRAY[1,2,10,11,12,20,21,30,31]) n;
@@ -111,51 +122,51 @@ RESET ROLE;
 -- What today's app sends: the Dubai instant (17:00 = 13:00Z), 90 minutes long.
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,ends_at,event_date,start_time,end_time,venue,published)
  VALUES
- (pg_temp.tz175id(900),pg_temp.tz175id(11),'Athens Tue','training','2026-10-27 13:00Z','2026-10-27 14:30Z','2026-10-27','17:00','18:30','Pitch 1',true),
- (pg_temp.tz175id(901),pg_temp.tz175id(11),'Athens Thu','training','2026-10-22 13:00Z','2026-10-22 14:30Z','2026-10-22','17:00','18:30','Pitch 1',true),
- (pg_temp.tz175id(910),pg_temp.tz175id(10),'Dubai Tue','training','2026-10-27 13:00Z','2026-10-27 14:30Z','2026-10-27','17:00','18:30','Pitch 1',true);
-SELECT pg_temp.tz175check((SELECT starts_at = '2026-10-27 15:00Z' AND ends_at = '2026-10-27 16:30Z' FROM pg_temp.tz175ev(900)),
- '2 Athens 17:00 on Tue 27 Oct (winter, UTC+2) is 15:00Z, still 90 minutes', (SELECT starts_at||' to '||ends_at FROM pg_temp.tz175ev(900)));
-SELECT pg_temp.tz175check((SELECT starts_at = '2026-10-22 14:00Z' FROM pg_temp.tz175ev(901)),
- '2 Athens 17:00 on Thu 22 Oct (summer, UTC+3) is 14:00Z', (SELECT starts_at::text FROM pg_temp.tz175ev(901)));
-SELECT pg_temp.tz175check((SELECT starts_at = '2026-10-27 13:00Z' AND ends_at = '2026-10-27 14:30Z' FROM pg_temp.tz175ev(910)),
+ (pg_temp.tz175id(900),pg_temp.tz175id(11),'Athens Tue','training',pg_temp.tz175at(2, '13:00'),pg_temp.tz175at(2, '14:30'),pg_temp.tz175day(2),'17:00','18:30','Pitch 1',true),
+ (pg_temp.tz175id(901),pg_temp.tz175id(11),'Athens Thu','training',pg_temp.tz175at(-3, '13:00'),pg_temp.tz175at(-3, '14:30'),pg_temp.tz175day(-3),'17:00','18:30','Pitch 1',true),
+ (pg_temp.tz175id(910),pg_temp.tz175id(10),'Dubai Tue','training',pg_temp.tz175at(2, '13:00'),pg_temp.tz175at(2, '14:30'),pg_temp.tz175day(2),'17:00','18:30','Pitch 1',true);
+SELECT pg_temp.tz175check((SELECT starts_at = pg_temp.tz175at(2, '15:00') AND ends_at = pg_temp.tz175at(2, '16:30') FROM pg_temp.tz175ev(900)),
+ '2 Athens 17:00 on the Tuesday after the change (winter, UTC+2) is 15:00Z, still 90 minutes', (SELECT starts_at||' to '||ends_at FROM pg_temp.tz175ev(900)));
+SELECT pg_temp.tz175check((SELECT starts_at = pg_temp.tz175at(-3, '14:00') FROM pg_temp.tz175ev(901)),
+ '2 Athens 17:00 on the Thursday before it (summer, UTC+3) is 14:00Z', (SELECT starts_at::text FROM pg_temp.tz175ev(901)));
+SELECT pg_temp.tz175check((SELECT starts_at = pg_temp.tz175at(2, '13:00') AND ends_at = pg_temp.tz175at(2, '14:30') FROM pg_temp.tz175ev(910)),
  '2 Dubai 17:00 is still 13:00Z: nothing moves for a Dubai academy', (SELECT starts_at||' to '||ends_at FROM pg_temp.tz175ev(910)));
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.tz175actor(11);
 -- A no-op save from today's app re-sends the Dubai instant.
-UPDATE public.coach_calendar_events SET starts_at = '2026-10-27 13:00Z', ends_at = '2026-10-27 14:30Z', venue = 'Pitch 1'
+UPDATE public.coach_calendar_events SET starts_at = pg_temp.tz175at(2, '13:00'), ends_at = pg_temp.tz175at(2, '14:30'), venue = 'Pitch 1'
  WHERE id = pg_temp.tz175id(900);
 RESET ROLE;
-SELECT pg_temp.tz175check((SELECT sequence = 0 AND starts_at = '2026-10-27 15:00Z' FROM pg_temp.tz175ev(900)),
+SELECT pg_temp.tz175check((SELECT sequence = 0 AND starts_at = pg_temp.tz175at(2, '15:00') FROM pg_temp.tz175ev(900)),
  '2 a no-op save from an app that sends the Dubai instant is still no change (no "Changed", TRAK-152)',
  (SELECT sequence||' '||starts_at FROM pg_temp.tz175ev(900)));
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.tz175actor(11);
-UPDATE public.coach_calendar_events SET start_time = '17:30', starts_at = '2026-10-27 13:30Z', ends_at = '2026-10-27 15:00Z'
+UPDATE public.coach_calendar_events SET start_time = '17:30', starts_at = pg_temp.tz175at(2, '13:30'), ends_at = pg_temp.tz175at(2, '15:00')
  WHERE id = pg_temp.tz175id(900);
 RESET ROLE;
-SELECT pg_temp.tz175check((SELECT sequence = 1 AND starts_at = '2026-10-27 15:30Z' AND ends_at = '2026-10-27 17:00Z' FROM pg_temp.tz175ev(900)),
+SELECT pg_temp.tz175check((SELECT sequence = 1 AND starts_at = pg_temp.tz175at(2, '15:30') AND ends_at = pg_temp.tz175at(2, '17:00') FROM pg_temp.tz175ev(900)),
  '2 a real move is one change, on the Athens clock', (SELECT sequence||' '||starts_at||' to '||ends_at FROM pg_temp.tz175ev(900)));
-UPDATE public.coach_calendar_events SET start_time = '17:00', starts_at = '2026-10-27 13:00Z', ends_at = '2026-10-27 14:30Z'
+UPDATE public.coach_calendar_events SET start_time = '17:00', starts_at = pg_temp.tz175at(2, '13:00'), ends_at = pg_temp.tz175at(2, '14:30')
  WHERE id = pg_temp.tz175id(900);
 SELECT pg_temp.tz175refused(format('UPDATE public.organizations SET time_zone = ''Asia/Dubai'' WHERE id = %L', pg_temp.tz175id(101)),
  '2 not even the operator moves an academy''s clock under its events','23514','can''t change');
 
 -- The oldest rows have only an instant: their day is on their academy's clock.
--- 21:30Z on 27 Oct is 23:30 in Athens but already 01:30 on the 28th in Dubai.
+-- 21:30Z on the Tuesday is 23:30 in Athens but already 01:30 on Wednesday in Dubai.
 -- (Such rows predate TRAK-157, which refuses a new event without a time.)
 ALTER TABLE public.coach_calendar_events DISABLE TRIGGER trg_refuse_event_without_start_time;
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,published) VALUES
- (pg_temp.tz175id(905),pg_temp.tz175id(11),'Athens old','training','2026-10-27 21:30Z',false),
- (pg_temp.tz175id(915),pg_temp.tz175id(10),'Dubai old','training','2026-10-27 21:30Z',false);
+ (pg_temp.tz175id(905),pg_temp.tz175id(11),'Athens old','training',pg_temp.tz175at(2, '21:30'),false),
+ (pg_temp.tz175id(915),pg_temp.tz175id(10),'Dubai old','training',pg_temp.tz175at(2, '21:30'),false);
 ALTER TABLE public.coach_calendar_events ENABLE TRIGGER trg_refuse_event_without_start_time;
-SELECT pg_temp.tz175check(trak_private.event_day(pg_temp.tz175ev(905)) = '2026-10-27' AND trak_private.event_day(pg_temp.tz175ev(915)) = '2026-10-28',
+SELECT pg_temp.tz175check(trak_private.event_day(pg_temp.tz175ev(905)) = pg_temp.tz175day(2) AND trak_private.event_day(pg_temp.tz175ev(915)) = pg_temp.tz175day(3),
  '2 an undated row''s day is its academy''s date', trak_private.event_day(pg_temp.tz175ev(905))||' / '||trak_private.event_day(pg_temp.tz175ev(915)));
 -- "Today" for same-day change emails and the minimum age, at that instant.
-SELECT pg_temp.tz175check(trak_private.academy_today(pg_temp.tz175id(101), '2026-10-27 21:30Z') = '2026-10-27'
-   AND trak_private.academy_today(pg_temp.tz175id(100), '2026-10-27 21:30Z') = '2026-10-28',
- '2 at 21:30Z it is still the 27th in Athens and already the 28th in Dubai',
- trak_private.academy_today(pg_temp.tz175id(101), '2026-10-27 21:30Z')||' / '||trak_private.academy_today(pg_temp.tz175id(100), '2026-10-27 21:30Z'));
+SELECT pg_temp.tz175check(trak_private.academy_today(pg_temp.tz175id(101), pg_temp.tz175at(2, '21:30')) = pg_temp.tz175day(2)
+   AND trak_private.academy_today(pg_temp.tz175id(100), pg_temp.tz175at(2, '21:30')) = pg_temp.tz175day(3),
+ '2 at 21:30Z it is still Tuesday in Athens and already Wednesday in Dubai',
+ trak_private.academy_today(pg_temp.tz175id(101), pg_temp.tz175at(2, '21:30'))||' / '||trak_private.academy_today(pg_temp.tz175id(100), pg_temp.tz175at(2, '21:30')));
 
 -- ── 3. The register and "can't make it" go by the Athens clock ───────────
 -- 920 starts in 30 minutes in Athens. Read as Dubai, the same 17:xx would
@@ -176,7 +187,7 @@ SELECT pg_temp.tz175actor(30);
 SELECT pg_temp.tz175refused(format('SELECT public.report_cant_make_it(%L, %L)', pg_temp.tz175id(920), pg_temp.tz175id(20)),
  '3 a parent can still say "can''t make it" 30 minutes before an Athens start',NULL);
 RESET ROLE;
--- Their date is the run's own; gone before section 5 counts reminders by date (27 Oct).
+-- Their date is the run's own; gone before section 5 counts reminders by date (the Tuesday).
 DELETE FROM public.event_absences WHERE event_id IN (pg_temp.tz175id(920), pg_temp.tz175id(921));
 DELETE FROM public.coach_sessions WHERE event_id IN (pg_temp.tz175id(920), pg_temp.tz175id(921));
 DELETE FROM public.coach_calendar_events WHERE id IN (pg_temp.tz175id(920), pg_temp.tz175id(921));
@@ -185,53 +196,53 @@ DELETE FROM public.coach_calendar_events WHERE id IN (pg_temp.tz175id(920), pg_t
 -- 930: 17:00 with no end time, one hour long as an instant (the app's
 -- after-midnight case). Its wall end is 18:00 in Athens (20:00 in Dubai).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,ends_at,event_date,start_time,published)
- VALUES (pg_temp.tz175id(930),pg_temp.tz175id(11),'Athens Wed','training','2026-10-28 13:00Z','2026-10-28 14:00Z','2026-10-28','17:00',true);
+ VALUES (pg_temp.tz175id(930),pg_temp.tz175id(11),'Athens Wed','training',pg_temp.tz175at(3, '13:00'),pg_temp.tz175at(3, '14:00'),pg_temp.tz175day(3),'17:00',true);
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.tz175actor(11);
-SELECT pg_temp.tz175refused(format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,published) VALUES (%L,%L,''Clash'',''training'',now(),''2026-10-28'',''17:30'',''18:15'',true)',
-  pg_temp.tz175id(932), pg_temp.tz175id(11)),
+SELECT pg_temp.tz175refused(format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,published) VALUES (%L,%L,''Clash'',''training'',now(),%L,''17:30'',''18:15'',true)',
+  pg_temp.tz175id(932), pg_temp.tz175id(11), pg_temp.tz175day(3)),
  '4 17:30 overlaps 17:00–18:00 on the Athens clock','P0001','17:00–18:00');
-SELECT pg_temp.tz175refused(format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,published) VALUES (%L,%L,''After'',''training'',now(),''2026-10-28'',''18:30'',''19:30'',true)',
-  pg_temp.tz175id(931), pg_temp.tz175id(11)),
+SELECT pg_temp.tz175refused(format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,end_time,published) VALUES (%L,%L,''After'',''training'',now(),%L,''18:30'',''19:30'',true)',
+  pg_temp.tz175id(931), pg_temp.tz175id(11), pg_temp.tz175day(3)),
  '4 18:30 is after it ends, so it publishes',NULL);
 RESET ROLE;
 
 -- ── 5. Reminders: 2 days ahead and 09:00–20:00, on each academy's clock ──
--- 16:30Z on Sun 25 Oct: 18:30 in Athens (open), 20:30 in Dubai (closed).
-SELECT pg_temp.tz175check((SELECT string_agg(right(organization_id::text,3)||'@'||day, ',') FROM trak_private.event_reminder_days('2026-10-25 16:30Z')) = '101@2026-10-27',
+-- 16:30Z on the Sunday of the change: 18:30 in Athens (open), 20:30 in Dubai (closed).
+SELECT pg_temp.tz175check((SELECT string_agg(right(organization_id::text,3)||'@'||day, ',') FROM trak_private.event_reminder_days(pg_temp.tz175at(0, '16:30'))) = '101@' || pg_temp.tz175day(2),
  '5 at 16:30Z only Athens is inside its sending hours, for its own today + 2',
- (SELECT string_agg(right(organization_id::text,3)||'@'||day, ',') FROM trak_private.event_reminder_days('2026-10-25 16:30Z')));
-SELECT pg_temp.tz175check(pg_temp.tz175due('2026-10-25 16:30Z') = '020:900@2026-10-27,030:900@2026-10-27',
- '5 so only the Athens event''s family is due, not the Dubai event on the same day', pg_temp.tz175due('2026-10-25 16:30Z'));
+ (SELECT string_agg(right(organization_id::text,3)||'@'||day, ',') FROM trak_private.event_reminder_days(pg_temp.tz175at(0, '16:30'))));
+SELECT pg_temp.tz175check(pg_temp.tz175due(pg_temp.tz175at(0, '16:30')) = format('020:900@%s,030:900@%s', pg_temp.tz175day(2), pg_temp.tz175day(2)),
+ '5 so only the Athens event''s family is due, not the Dubai event on the same day', pg_temp.tz175due(pg_temp.tz175at(0, '16:30')));
 -- 05:30Z: 09:30 in Dubai (open), 07:30 in Athens (closed).
-SELECT pg_temp.tz175check(pg_temp.tz175due('2026-10-25 05:30Z') = '021:910@2026-10-27,031:910@2026-10-27',
- '5 and at 05:30Z only the Dubai event''s family', pg_temp.tz175due('2026-10-25 05:30Z'));
-SELECT pg_temp.tz175check(trak_private.event_reminder_work_due('2026-10-25 16:30Z') AND NOT trak_private.event_reminder_work_due('2026-10-25 03:00Z'),
+SELECT pg_temp.tz175check(pg_temp.tz175due(pg_temp.tz175at(0, '05:30')) = format('021:910@%s,031:910@%s', pg_temp.tz175day(2), pg_temp.tz175day(2)),
+ '5 and at 05:30Z only the Dubai event''s family', pg_temp.tz175due(pg_temp.tz175at(0, '05:30')));
+SELECT pg_temp.tz175check(trak_private.event_reminder_work_due(pg_temp.tz175at(0, '16:30')) AND NOT trak_private.event_reminder_work_due(pg_temp.tz175at(0, '03:00')),
  '5 the scheduler wakes when any academy has work in its hours, not at 07:00 Athens / 07:00 Dubai');
 -- The Dubai parent's reminder for the same day failed earlier and is waiting
 -- for a retry. At 16:30Z Dubai is closed, so it must be left alone: claimed
 -- now, nobody would send it, and Dubai's hours never return to that day.
 INSERT INTO public.event_reminder_sends(user_id,reminder_day,status,attempts,claimed_at,finished_at)
- VALUES (pg_temp.tz175id(31),'2026-10-27','failed',1,now() - interval '1 hour',now() - interval '1 hour');
+ VALUES (pg_temp.tz175id(31),pg_temp.tz175day(2),'failed',1,now() - interval '1 hour',now() - interval '1 hour');
 SET LOCAL ROLE service_role;
-CREATE TEMP TABLE tz175_claim AS SELECT public.claim_event_reminders(NULL, '2026-10-25 16:30Z') AS claimed;
+CREATE TEMP TABLE tz175_claim AS SELECT public.claim_event_reminders(NULL, pg_temp.tz175at(0, '16:30')) AS claimed;
 RESET ROLE;
 SELECT pg_temp.tz175check((SELECT status = 'failed' AND attempts = 1 FROM public.event_reminder_sends
-   WHERE user_id = pg_temp.tz175id(31) AND reminder_day = '2026-10-27'),
+   WHERE user_id = pg_temp.tz175id(31) AND reminder_day = pg_temp.tz175day(2)),
  '5 a closed academy''s failed reminder is not claimed in another academy''s hours',
- (SELECT status||' '||attempts FROM public.event_reminder_sends WHERE user_id = pg_temp.tz175id(31) AND reminder_day = '2026-10-27'));
+ (SELECT status||' '||attempts FROM public.event_reminder_sends WHERE user_id = pg_temp.tz175id(31) AND reminder_day = pg_temp.tz175day(2)));
 SELECT pg_temp.tz175check((SELECT string_agg(right(x->>'user_id',3)||'@'||(x->>'day')||':'||(x->'events'->0->>'title'), ',' ORDER BY x->>'user_id')
-   FROM tz175_claim, jsonb_array_elements(claimed) x) = '020@2026-10-27:Athens Tue,030@2026-10-27:Athens Tue',
+   FROM tz175_claim, jsonb_array_elements(claimed) x) = format('020@%s:Athens Tue,030@%s:Athens Tue', pg_temp.tz175day(2), pg_temp.tz175day(2)),
  '5 the claim hands out the Athens family''s reminder, for their day',
  (SELECT claimed::text FROM tz175_claim));
-SELECT pg_temp.tz175check(NOT trak_private.event_reminder_work_due('2026-10-25 16:30Z'),
+SELECT pg_temp.tz175check(NOT trak_private.event_reminder_work_due(pg_temp.tz175at(0, '16:30')),
  '5 once claimed, nothing more is due');
 -- 05:30Z, Dubai's hours: its failed reminder is retried there, with the fresh one.
 SET LOCAL ROLE service_role;
-CREATE TEMP TABLE tz175_claim_dubai AS SELECT public.claim_event_reminders(NULL, '2026-10-25 05:30Z') AS claimed;
+CREATE TEMP TABLE tz175_claim_dubai AS SELECT public.claim_event_reminders(NULL, pg_temp.tz175at(0, '05:30')) AS claimed;
 RESET ROLE;
 SELECT pg_temp.tz175check((SELECT string_agg(right(x->>'user_id',3)||'@'||(x->>'day'), ',' ORDER BY x->>'user_id')
-   FROM tz175_claim_dubai, jsonb_array_elements(claimed) x) = '021@2026-10-27,031@2026-10-27',
+   FROM tz175_claim_dubai, jsonb_array_elements(claimed) x) = format('021@%s,031@%s', pg_temp.tz175day(2), pg_temp.tz175day(2)),
  '5 and is retried in its own academy''s hours',
  (SELECT claimed::text FROM tz175_claim_dubai));
 
