@@ -20,7 +20,7 @@ import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
-import { useParked } from '@/components/trak/parked'
+import { useFeature, useParked } from '@/components/trak/parked'
 import {
   CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, lockedMessage, STARTED_LOCKED, startedLocked, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, formatEventDay, formProblem, formToRow, newDraftFields,
   isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
@@ -261,6 +261,7 @@ function ScopeChoice({ scope, onChange }: { scope: Scope; onChange: (s: Scope) =
 export default function CoachSchedule() {
   // TRAK-85: parked, so actions say "Coming soon" and send nothing.
   const { parked, comingSoon } = useParked()
+  const games = useFeature('games')
   const navigate = useNavigate()
   // TRAK-275: a card's actions carry words only where the side menu shows (a laptop).
   const wide = useSideMenuScreen()
@@ -515,7 +516,7 @@ export default function CoachSchedule() {
     if (failed(error, data) || (!editing && data!.length !== rows.length)) { setSheet({ ...sheet, error: clashMessage(error) ?? lockedMessage(error) ?? SAVE_FAILED }); return }
     setSheet({ kind: 'closed' })
     setSelected(form.date)
-    if (publishNow && !editing?.published) return publishSaved(editing ? [editing.id] : data!.map(r => r.id))
+    if (publishNow && !editing?.published) return publishSaved(editing ? [editing.id] : data!.map(r => r.id), form.kind)
     loadData()
     if (editing?.published) askToEmailFamilies()
     toast.success(editing
@@ -524,10 +525,15 @@ export default function CoachSchedule() {
         : 'Saved as a draft. Tap Publish when it’s ready.')
   }
 
+  /** TRAK-283: with Games on, a match just published offers its next step, which opens its game page. */
+  const publishedToast = (text: string, matchId?: string) => toast.success(text, games && matchId
+    ? { duration: 10_000, action: { label: 'Write the game plan', onClick: () => navigate(`/coach/games/${matchId}?tab=plan`) } }
+    : undefined)
+
   /** Review's Publish: what was just saved goes out, as the list's Publish does.
       The save stands either way; a refused publish (a clash, TRAK-158) leaves
       drafts, published later from the list. */
-  const publishSaved = async (ids: string[]) => {
+  const publishSaved = async (ids: string[], kind?: EventKind) => {
     const { data, error } = await supabase.from('coach_calendar_events').update({ published: true }).in('id', ids).select('id')
     const rows = await loadData()
     // TRAK-218: one update, so a refusal publishes none of the series. Say
@@ -542,7 +548,7 @@ export default function CoachSchedule() {
       return
     }
     askToEmailFamilies() // TRAK-135: publishing emails families too
-    toast.success(ids.length > 1 ? `Published ${ids.length} events to the squad` : 'Published to the squad')
+    publishedToast(ids.length > 1 ? `Published ${ids.length} events to the squad` : 'Published to the squad', ids.length === 1 && kind === 'match' ? ids[0] : undefined)
   }
 
   const toStep = (step: number) => setSheet(s => s.kind === 'edit' ? { ...s, step, error: null } : s)
@@ -561,7 +567,7 @@ export default function CoachSchedule() {
     if (failed(error, data)) { toast.error(clashMessage(error) ?? `Couldn't publish "${row.title}". Try again.`); return }
     askToEmailFamilies() // TRAK-135
     loadData()
-    toast.success('Published to the squad')
+    publishedToast('Published to the squad', row.event_type === 'match' ? row.id : undefined)
   }
 
   // TRAK-182 part 8: the quick-add's "More details" opens a new event here
