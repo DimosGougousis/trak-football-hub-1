@@ -75,7 +75,7 @@ function Game({ row }: { row: EventRow }) {
           <TabsContent value="logistics"><Logistics row={row} squad={squad} /></TabsContent>
           <TabsContent value="plan">
             <EmptyState icon={<ClipboardList size={24} strokeWidth={1.5} />} title="Plan this game here"
-              description="The opponent and your goals, then the line-up and each player's job. Only you see the plan until you share it." />
+              description="The opponent and your goals, then the line-up and each player’s job. Only you see the plan until you share it." />
           </TabsContent>
           <TabsContent value="evaluation">
             <EmptyState icon={<ClipboardCheck size={24} strokeWidth={1.5} />} title="Evaluate it after full time"
