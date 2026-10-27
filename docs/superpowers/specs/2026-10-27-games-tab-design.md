@@ -126,7 +126,9 @@ nobody: the app swaps ids for names, as the match log does.
 
 - **Countdown to kick-off:** `starts_at`. **Full time:** `ends_at`. Both are instants, so the device's zone doesn't
   matter.
-- **Times on screen:** the event's own `start_time` and `end_time`, which are the academy's clock.
+- **Times on screen:** the phone's clock, with the academy's own time beside it when the two differ (Imad, 23 Oct:
+  `phoneEventTime`, `academyClock`), as every event screen shows them. Logistics shows Schedule's Review rows, which
+  are the academy's clock, as forms are.
 - **The 09:00 nudge (290):** the first 09:00 after the draft's `saved_at`, in `organizations.time_zone`, worked out
   when the page is read. No timed job.
 - **A moved match:** the lock reads `starts_at` live, so it moves with the match.
@@ -167,7 +169,9 @@ Trak. The Pro block, `release-readiness`, is listed in `src/components/arc/PRO.m
 - the switch: `academy_features`, `feature_on()`, `useFeature`, `ParkedScreen unless=`;
 - the squad filter: `SquadPills`, `useCoachSquad`;
 - who can come: `useSquadRoster`, `splitAvailability`, `event_confirmations`, and `event_absences` (who only);
-- Schedule's hand-over: `quickEvent` (Add a match), the `?edit=<id>` and `?publish=<id>` links, and the
+- Schedule's hand-over: `quickEvent` (Add a match) and the `?edit=<id>` link. A draft's logistics publish in place
+  with `publishEvent`, as Home's event sheet does: Schedule's single-event `?publish=<id>` link re-publishes in a loop
+  when reached by in-app navigation (found 27 Oct; nothing sends it today), so Games never sends it. And the
   `SAVE_FAILED` pattern;
 - the checks: `squad_player_is_mine`, the consent helpers, `log_match_for_player`;
 - the icon: `IconMatch`.

@@ -1,6 +1,6 @@
 "use client";
 
-import { isValidElement, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { forwardRef, isValidElement, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { AnimatePresence, animate, motion, useIsPresent, useMotionValue, useReducedMotion, type AnimationPlaybackControls, type HTMLMotionProps, type MotionProps, type TargetAndTransition, type Transition } from "motion/react";
 import { Folder } from "lucide-react";
 import { motionTokens } from "../lib/motion-tokens";
@@ -23,11 +23,12 @@ const iconIn: TargetAndTransition = { opacity: 0, scale: .6, filter: `blur(${mot
 const shown: TargetAndTransition = { opacity: 1, y: "0em", scale: 1, filter: "blur(0px)" };
 const fadeOut: TargetAndTransition = { opacity: 0, transition: { duration: motionTokens.duration.instant } };
 
-/** Outgoing copies are hidden from assistive tech while they fade. */
-function Swap(props: HTMLMotionProps<"span">) {
+/** Outgoing copies are hidden from assistive tech while they fade. Trak (React 18): forwardRef, so AnimatePresence's
+ *  popLayout can measure the leaving copy (React 19 passes ref as a prop), as in arc/button. */
+const Swap = forwardRef<HTMLSpanElement, HTMLMotionProps<"span">>(function Swap(props, ref) {
   const present = useIsPresent();
-  return <motion.span {...props} aria-hidden={present ? props["aria-hidden"] : true} />;
-}
+  return <motion.span ref={ref} {...props} aria-hidden={present ? props["aria-hidden"] : true} />;
+});
 
 /** A new icon component crossfades in; re-rendering the same icon stays still. */
 function iconKey(icon: ReactNode) {

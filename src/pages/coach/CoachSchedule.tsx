@@ -22,7 +22,7 @@ import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useParked } from '@/components/trak/parked'
 import {
-  CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, lockedMessage, STARTED_LOCKED, startedLocked, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, eventTitle, formProblem, formToRow, newDraftFields,
+  CANCELLED_COLOR, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, lockedMessage, STARTED_LOCKED, startedLocked, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, formatEventDay, formProblem, formToRow, newDraftFields,
   isCancelled, pastDateProblem, repeatProblem, rowToForm, savedVenues, seriesDates, seriesRows, thisAndFollowing, whatProblem,
   type Clash, type EventForm, type EventKind, type EventRow, type Repeat,
 } from '@/lib/coach-events'
@@ -42,7 +42,7 @@ import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { EventAbsences } from '@/components/coach/EventAbsences'
 import { EventKitField } from '@/components/trak/kits/EventKitField'
-import { KitAnnouncement } from '@/components/trak/kits/KitAnnouncement'
+import { EventSummary } from '@/components/coach/EventSummary'
 import { describeEventKit } from '@/lib/kit-templates'
 import { withAlpha } from '@/lib/with-alpha'
 
@@ -98,12 +98,6 @@ function toDateStr(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-function formatEventDay(date: string) {
-  return new Date(date + 'T12:00:00').toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
 }
 
 /** A write that changed no row was refused (RLS filters, it doesn't error). */
@@ -235,47 +229,6 @@ function seriesCount(sheet: { row: EventRow | null; form: EventForm; repeat: Rep
   const { row, form, repeat } = sheet
   return !row && repeat.on && form.kind !== 'match' && !repeatProblem(form, repeat)
     ? seriesDates(form.date, repeat.until, repeat.days).length : 1
-}
-
-/** Review: everything the save writes, in the order the steps asked for it. */
-function EventSummary({ form, repeat, noteProblem, squad }: {
-  form: EventForm; repeat: Repeat | null; noteProblem: 'link' | 'name' | null
-  /** Imad, 24 Oct: for a coach with two squads or more, which squad it's for. */
-  squad?: string
-}) {
-  const rows: [string, string][] = [
-    ...(squad ? [['Squad', squad] as [string, string]] : []),
-    ['Type', TYPE_LABEL[form.kind]],
-    ...(form.kind === 'training' ? [['Theme', TRAINING_THEMES.find(t => t.key === form.theme)?.label ?? 'Not set'] as [string, string]] : []),
-    ...(form.kind === 'match' ? [['Opponent', form.opponent.trim() + (form.homeAway ? ` (${form.homeAway === 'home' ? 'Home' : 'Away'})` : '')] as [string, string]] : []),
-    ['Title', eventTitle(form)],
-    // TRAK-255: the name, and whether it has a map link; never the link itself.
-    ['Venue', (() => { const v = splitVenue(form.venue); return (v.name.trim() || (v.link ? 'Unnamed place' : 'Not set')) + (v.link ? ' · on the map' : '') })()],
-    [repeat?.on ? 'First date' : 'Date', form.date ? formatEventDay(form.date) : 'Not set'],
-    [form.kind === 'match' ? 'Kickoff' : 'Start', form.time || 'Not set'],
-    ['Meet', form.meetTime || 'At the start'],
-    ['Length', `${form.duration} min`],
-    ...(repeat?.on && form.kind !== 'match' && !repeatProblem(form, repeat)
-      ? [['Repeats', `${repeat.days.map(d => WEEKDAYS[d]).join(', ')} until ${formatEventDay(repeat.until)}`] as [string, string]] : []),
-    ['Kit', form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || 'None'],
-    ['Note for families', form.familyNote.trim() || 'None'],
-  ]
-  return <>
-    <dl className="rounded-[14px] border border-line divide-y divide-line" style={font}>
-      {rows.map(([term, value]) => (
-        <div key={term} className="flex gap-3 px-3 py-2.5 text-[13px]">
-          <dt className="w-[38%] shrink-0 text-ink-3">{term}</dt>
-          <dd className="flex-1 min-w-0 text-ink break-words">{value}</dd>
-        </div>
-      ))}
-    </dl>
-    {form.kitSnapshot && <KitAnnouncement kit={form.kitSnapshot.design} slot={form.kitSnapshot.slot} animated={false} />}
-    {noteProblem && (
-      <p role="status" className="text-[11px] text-warning" style={font}>
-        Families won't see this note: {noteProblem === 'link' ? 'it has a link' : 'it names a player'}.
-      </p>
-    )}
-  </>
 }
 
 /** TRAK-218: the weeks of a refused series that clash, earliest first. */
