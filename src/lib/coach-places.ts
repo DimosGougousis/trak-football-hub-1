@@ -1,9 +1,9 @@
 /* TRAK-259: where each coach page sits in the coach's frame (CoachFrame). */
 
-export type CoachScreen = 'home' | 'calendar' | 'squad' | 'library' | 'settings'
+export type CoachScreen = 'home' | 'calendar' | 'squad' | 'games' | 'library' | 'settings'
 
 export const COACH_SCREEN_PATH: Record<CoachScreen, string> = {
-  home: '/coach/home', calendar: '/coach/schedule', squad: '/coach/squad', library: '/coach/trainings', settings: '/settings',
+  home: '/coach/home', calendar: '/coach/schedule', squad: '/coach/squad', games: '/coach/games', library: '/coach/trainings', settings: '/settings',
 }
 
 /** Which nav row a path belongs to, and the name in the laptop's top bar. */
@@ -12,6 +12,7 @@ const PLACES: [prefix: string, screen: CoachScreen | null, title: string][] = [
   ['/coach/schedule', 'calendar', 'Schedule'], // TRAK-255
   ['/coach/squad', 'squad', 'Squad'],
   ['/coach/player', 'squad', 'Player'],
+  ['/coach/games', 'games', 'Games'], // TRAK-283: Games home and each game's page
   ['/coach/trainings', 'library', 'Library'],
   ['/settings', 'settings', 'Settings'],
   ['/coach/profile', 'settings', 'Profile'],

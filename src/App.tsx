@@ -79,6 +79,9 @@ const PlayerEvolutionCard = lazy(() => import("./pages/player/PlayerEvolutionCar
 const CoachReviewFeedback = lazy(() => import("./pages/coach/CoachReviewFeedback"));
 const CoachAssistant = lazy(() => import("./pages/coach/CoachAssistant"));
 const CoachSchedule = lazy(() => import("./pages/coach/CoachSchedule"));
+// TRAK-283: Games, parked until the academy's games switch is on.
+const CoachGames = lazy(() => import("./pages/coach/CoachGames"));
+const CoachGame = lazy(() => import("./pages/coach/CoachGame"));
 const CoachRecognition = lazy(() => import("./pages/coach/CoachRecognition"));
 const CoachAwardPlayer = lazy(() => import("./pages/coach/CoachAwardPlayer"));
 const ParentAlerts = lazy(() => import("./pages/parent/ParentAlerts"));
@@ -176,6 +179,8 @@ const App = () => (
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachRecognition /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAwardPlayer /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/schedule" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="events"><CoachSchedule /></ParkedScreen></RouteGuard>} />
+            <Route path="/coach/games" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="games"><CoachGames /></ParkedScreen></RouteGuard>} />
+            <Route path="/coach/games/:eventId" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="games"><CoachGame /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/assistant" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAssistant /></ParkedScreen></RouteGuard>} />
             </Route>
 
