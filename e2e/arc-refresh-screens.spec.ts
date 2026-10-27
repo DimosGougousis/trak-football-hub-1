@@ -521,9 +521,13 @@ test.describe("Event times on the phone's clock", () => {
       const context = await browser.newContext({ timezoneId: timeZone, viewport: { width: 390, height: 844 } })
       const page = await context.newPage()
       const unexpected: string[] = []
-      await coachBackend(context, unexpected, true)
+      // A session that lasts past the clock set below.
+      await coachBackend(context, unexpected, true, false, 36)
       const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
-      await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
+      // TRAK-292: 13:00Z is 17:00 in Dubai and 15:00 (16:00 in summer) in Athens: the match's day on both clocks,
+      // before its 20:00 kick-off, whenever the suite runs. The real clock failed from 20:00 to 22:00 UTC, when
+      // Dubai is already on the next day and Athens isn't.
+      await page.clock.setFixedTime(new Date(`${day}T13:00:00Z`))
       await page.goto('/coach/home')
       await page.getByRole('button', { name: /Rivals FC/ }).click()
       await page.getByRole('button', { name: 'Details' }).click()
