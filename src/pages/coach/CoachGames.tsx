@@ -1,10 +1,134 @@
-/* TRAK-283: Games home. */
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { useCoachSquad } from '@/lib/coach-squad'
+import { LOOP_STEPS, STATE, gameState, orderGames } from '@/lib/games/loop'
+import { SquadPills } from '@/components/coach/home/SquadPills'
+import { gameTitle, gameWhen, useGames, type Game } from '@/components/coach/games/useGames'
+import { LoadError } from '@/components/trak'
+import { MatchIcon } from '@/components/icons/MatchIcon'
+import { Badge } from '@/components/arc/badge/badge'
+import { Button } from '@/components/arc/button/button'
+import { Countdown } from '@/components/arc/countdown/countdown'
+import { EmptyState } from '@/components/arc/empty-state/empty-state'
+import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
+import { Stepper } from '@/components/arc/stepper/stepper'
+
+/* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, the open
+   drafts, and every match of the squad in view. Cards follow Home's Needs you pattern (Imad, 27 Oct). */
+
+const STEPS = LOOP_STEPS.map(label => ({ id: label, label }))
+/** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Match picked. */
+const ADD_MATCH = { quickEvent: { kind: 'match' } }
+const details = (game: Game, time: string | null) => [
+  time ? `Kick-off ${time}` : '',
+  game.home_away === 'home' ? 'Home' : game.home_away === 'away' ? 'Away' : '',
+  game.venue ?? '',
+].filter(Boolean).join(' · ')
+
 export default function CoachGames() {
+  const { user } = useAuth()
+  const coachSquad = useCoachSquad(user?.id)
+  const navigate = useNavigate()
+  const games = useGames()
+  // TRAK-266: All first and picked, as Home, Squad and Schedule open.
+  const [allPicked, setAllPicked] = useState(true)
+  const everySquad = allPicked && coachSquad.squads.length >= 2
+  // The countdown's end moves the next game on, so the clock is read again then.
+  const [now, setNow] = useState(() => Date.now())
+  const inView = (games.data ?? []).filter(game => everySquad || coachSquad.eventInSquad(game.squad))
+  const { next, games: ordered } = orderGames(inView, now)
+  const open = (game: Game, tab?: string) => navigate(`/coach/games/${game.id}${tab ? `?tab=${tab}` : ''}`)
+
   return (
     <div className="min-h-screen bg-ground pb-24">
       <div className="mx-auto w-full max-w-[1280px] px-5 tablet:px-8">
-        <h1 className="pt-6 pb-4 text-[22px] font-medium tracking-[-0.01em] text-ink">Games</h1>
+        <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
+          <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Games</h1>
+          {coachSquad.squad && coachSquad.squads.length >= 2 && (
+            <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
+              onChange={pick => { setAllPicked(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
+          )}
+        </header>
+
+        {games.error ? <LoadError what="your games" onRetry={() => void games.refetch()} retrying={games.isFetching} />
+          : games.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your games…</p>
+          : ordered.length === 0 ? (
+            <div className="arc pt-6">
+              <EmptyState icon={<MatchIcon size={24} strokeWidth={1.5} />} title="No matches yet"
+                description="Add a match in Schedule. Its game plan and evaluation will live here."
+                action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_MATCH })}>Add a match</Button>} />
+            </div>
+          ) : <>
+            <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              {next ? <NextGame game={next} now={now} onOpen={open} onKickOff={() => setNow(Date.now())} /> : (
+                <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5">
+                  <h2 id="next-game" className="text-lg font-medium text-ink">Next game</h2>
+                  <p className="mt-2 text-sm text-ink-2">No match coming up.</p>
+                  <Link to="/coach/schedule" state={ADD_MATCH}
+                    className="mt-3 inline-block rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Add a match</Link>
+                </section>
+              )}
+              {/* TRAK-284 fills this with plan drafts, TRAK-288 with evaluation drafts. */}
+              <section aria-labelledby="open-drafts" className="rounded-2xl border border-line bg-surface p-5">
+                <h2 id="open-drafts" className="text-lg font-medium text-ink">Open drafts</h2>
+                <p className="mt-1 text-sm text-ink-3">Only you see a draft. Each stays here until it’s shared or published.</p>
+                <p className="mt-4 text-sm text-ink-2">No drafts open.</p>
+              </section>
+            </div>
+
+            <div className="mt-8">
+              <h2 className="mb-2 text-lg font-medium text-ink">Your games</h2>
+              <div className="arc -mx-1">
+                <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label="Your games">
+                  <ul className="flex gap-3 px-1 pb-1">
+                    {ordered.map(game => {
+                      const state = STATE[gameState(game, now)]
+                      const { day, time } = gameWhen(game)
+                      return <li key={game.id} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
+                        <Link to={`/coach/games/${game.id}`}
+                          className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                          <span className="grid min-w-0">
+                            <span className="truncate text-base font-medium text-ink">{gameTitle(game)}</span>
+                            <span className="truncate text-sm text-ink-3">{[day, time, everySquad ? game.squad : null].filter(Boolean).join(' · ')}</span>
+                          </span>
+                          <span className="arc mt-auto"><Badge tone={state.tone} size="sm">{state.label}</Badge></span>
+                        </Link>
+                      </li>
+                    })}
+                  </ul>
+                </ScrollArea>
+              </div>
+            </div>
+          </>}
       </div>
     </div>
+  )
+}
+
+/** The next match: its loop, the one next action and the countdown to kick-off. A static panel, not a link. */
+function NextGame({ game, now, onOpen, onKickOff }: { game: Game; now: number; onOpen: (game: Game, tab?: string) => void; onKickOff: () => void }) {
+  const state = STATE[gameState(game, now)]
+  const { day, time, academy } = gameWhen(game)
+  return (
+    <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="next-game" className="text-lg font-medium text-ink">Next game</h2>
+        <Badge tone={state.tone}>{state.label}</Badge>
+      </div>
+      <div className="grid min-w-0 gap-1">
+        <p className="text-[22px] font-medium tracking-[-0.01em] text-ink break-words">{gameTitle(game)}</p>
+        <p className="text-sm text-ink-2">{[day, details(game, time)].filter(Boolean).join(' · ')}</p>
+        {academy && <p className="text-sm text-ink-3">{academy}</p>}
+      </div>
+      <Stepper steps={STEPS} current={state.step} label="Where this game is" />
+      <div className="flex flex-wrap items-center gap-3">
+        {state.action && <Button size="lg" onClick={() => onOpen(game, state.action!.tab)}>{state.action.label}</Button>}
+        {state.step > 0 && <Link to={`/coach/games/${game.id}?tab=logistics`}
+          className="text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Logistics</Link>}
+        <Countdown variant="compact" units={['days', 'hours', 'minutes']} target={game.starts_at}
+          label="Kick-off in" completeLabel="Locked" onComplete={onKickOff} className="ml-auto" />
+      </div>
+    </section>
   )
 }
