@@ -9,23 +9,29 @@ import { useWhoCanCome } from './useGames'
 import { OpponentAndGoals } from './OpponentAndGoals'
 import { LineUpAndJobs } from './LineUpAndJobs'
 import { ShareStep } from './ShareStep'
+import { Lock } from 'lucide-react'
+import { Alert } from '@/components/arc/alert/alert'
 import { Button } from '@/components/arc/button/button'
 import { Stepper } from '@/components/arc/stepper/stepper'
 
 /* TRAK-284, TRAK-285, TRAK-286 (Games 2 to 4/8): the Game plan tab. Opponent and goals, Line-up and jobs, then Share.
    One draft, only the coach sees it: Save draft keeps both steps, and a failed save keeps everything typed and says so,
    as Schedule's does. Sharing saves what's typed first, so what goes out is what's on screen. The game page holds what's
-   typed and the step, above its tabs, so a look at Logistics never loses them. */
+   typed and the step, above its tabs, so a look at Logistics never loses them. TRAK-287: at kick-off the plan locks; the
+   saved plan shows read only, Save and Share go, and the alert says what wasn't shared. */
 
 const STEPS = [{ id: 'opponent', label: 'Opponent and goals' }, { id: 'line-up', label: 'Line-up and jobs' }, { id: 'share', label: 'Share' }]
 const SAVE_FAILED = "Couldn't save the plan. Check your connection and try again; everything you typed is still here."
 const SHARE_FAILED = "Couldn't share the plan. Check your connection and try again; everything you typed is still here."
 
-export function GamePlan({ game, form, onFormChange, step, onStep, sharedAt, changes }: {
+export function GamePlan({ game, form, onFormChange, step, onStep, sharedAt, changes, lockedAt = null }: {
   game: EventRow; form: PlanForm; onFormChange: (form: PlanForm) => void; step: number; onStep: (step: number) => void
   /** TRAK-286: when the plan was first shared, or null; and whose copies a share would change now. */
   sharedAt: string | null; changes: string[]
+  /** TRAK-287: kick-off as the header shows it ("11:00") once it has passed; null before. */
+  lockedAt?: string | null
 }) {
+  const locked = lockedAt !== null
   const { user, profile } = useAuth()
   const client = useQueryClient()
   const who = useWhoCanCome(game)
@@ -106,16 +112,23 @@ export function GamePlan({ game, form, onFormChange, step, onStep, sharedAt, cha
 
   return (
     <div className="grid gap-5 pt-4">
+      {locked && <div className="arc"><Alert tone="info" icon={Lock} title={lockedAt ? `Locked at kick-off, ${lockedAt}` : 'Locked at kick-off'}>
+        {`Jobs and expectations are fixed, so the evaluation reads against what you expected before the game.${sharedAt == null
+          ? ' It wasn’t shared, so only you saw it.'
+          : changes.length ? ` ${changes.length} ${changes.length === 1 ? 'player' : 'players'} didn’t get your last changes.` : ''}`}
+      </Alert></div>}
       <Stepper steps={STEPS} current={step} onStepSelect={onStep} label="Game plan" />
-      {step === 0 ? <OpponentAndGoals eventId={game.id} opponent={game.opponent ?? null} form={form} onFormChange={change} tried={tried} />
-        : step === 1 ? <LineUpAndJobs form={form} onFormChange={change} who={who} />
+      {step === 0 ? <OpponentAndGoals eventId={game.id} opponent={game.opponent ?? null} form={form} onFormChange={change} tried={tried} locked={locked} />
+        : step === 1 ? <LineUpAndJobs form={form} onFormChange={change} who={who} locked={locked} />
         : <ShareStep game={game} form={form} who={who} sharedAt={sharedAt} changes={changes} coachName={profile?.full_name?.trim() || null}
-            onShare={shareNow} sharing={share.isPending} problem={shareProblem} />}
+            onShare={shareNow} sharing={share.isPending} problem={shareProblem} locked={locked} />}
       <div className="flex flex-wrap items-center gap-3">
         {step > 0 && <Button variant="ghost" onClick={() => onStep(step - 1)}>Back</Button>}
-        <span className="ml-auto text-sm text-ink-3">Draft · only you see it</span>
-        <Button variant="secondary" loading={save.isPending} onClick={submit}>{savedNow ? 'Saved' : 'Save draft'}</Button>
-        {step < 2 && <Button onClick={() => onStep(step + 1)}>{step === 0 ? 'Next: Line-up and jobs' : 'Next: Share'}</Button>}
+        {!locked && <>
+          <span className="ml-auto text-sm text-ink-3">Draft · only you see it</span>
+          <Button variant="secondary" loading={save.isPending} onClick={submit}>{savedNow ? 'Saved' : 'Save draft'}</Button>
+        </>}
+        {step < 2 && <Button className={locked ? 'ml-auto' : undefined} onClick={() => onStep(step + 1)}>{step === 0 ? 'Next: Line-up and jobs' : 'Next: Share'}</Button>}
       </div>
       {problem && <p role="alert" className="text-right text-[15px] text-danger">{problem}</p>}
     </div>

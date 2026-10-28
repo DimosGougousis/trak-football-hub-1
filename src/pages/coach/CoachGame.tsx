@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { ChevronLeft, ClipboardCheck } from 'lucide-react'
@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { publishEvent } from '@/lib/event-publish'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { rowToForm, startedLocked, type EventRow } from '@/lib/coach-events'
-import { STATE, gameState, type GameTab } from '@/lib/games/loop'
+import { STATE, fullTime, gameState, type GameTab } from '@/lib/games/loop'
 import { planToForm, type PlanForm } from '@/lib/games/plan'
 import type { Tables } from '@/integrations/supabase/types'
 import { gameTitle, gameWhen, useGame, useGamePlan, useGamePlanChanges, useGamePlayers, useGameShares } from '@/components/coach/games/useGames'
@@ -59,6 +59,14 @@ function Game({ row, plan, players, sharedAt }: { row: EventRow; plan: Plan; pla
   const [params, setParams] = useSearchParams()
   const tab = TABS.find(t => t.id === params.get('tab'))?.id ?? 'logistics'
   const [now, setNow] = useState(() => Date.now())
+  // TRAK-287: the page reads the clock again at kick-off itself, so the plan locks with no reload even when the header's
+  // countdown never ticked on screen. A wait past setTimeout's limit (24 days) just wakes early and waits again.
+  useEffect(() => {
+    const left = Date.parse(row.starts_at) - now
+    if (left <= 0) return
+    const timer = setTimeout(() => setNow(Date.now()), Math.min(left + 50, 2 ** 31 - 1))
+    return () => clearTimeout(timer)
+  }, [row.starts_at, now])
   const cancelled = row.status === 'cancelled'
   // TRAK-286: who a share would change now. Only asked once the plan is shared; a failed read shows no changes.
   const changes = useGamePlanChanges([row.id], !!sharedAt && !cancelled).data?.get(row.id) ?? []
@@ -69,6 +77,8 @@ function Game({ row, plan, players, sharedAt }: { row: EventRow; plan: Plan; pla
   const [typed, setTyped] = useState<PlanForm | null>(null)
   const [planStep, setPlanStep] = useState(() => params.get('step') === 'share' ? 2 : 0)
   const { day, time, academy } = gameWhen(row)
+  // TRAK-287: at kick-off the plan locks, on the event's instant (the academy's clock), never the device's.
+  const locked = !cancelled && now >= Date.parse(row.starts_at)
   const squad = coachSquad.squads.length >= 2 && row.squad ? row.squad : undefined
   const where = [day, time ? `Kick-off ${time}` : '', row.home_away === 'home' ? 'Home' : row.home_away === 'away' ? 'Away' : '', row.venue ?? '', squad ?? '']
 
@@ -79,8 +89,8 @@ function Game({ row, plan, players, sharedAt }: { row: EventRow; plan: Plan; pla
       {academy && <p className="text-sm text-ink-3">{academy}</p>}
       <div className="flex flex-wrap items-center gap-3 pt-1">
         {cancelled ? <Badge tone="danger">Cancelled</Badge> : <Badge tone={state.tone}>{state.label}</Badge>}
-        {!cancelled && now < Date.parse(row.starts_at) && <Countdown variant="compact" units={['days', 'hours', 'minutes']}
-          target={row.starts_at} label="Kick-off in" completeLabel="Locked" onComplete={() => setNow(Date.now())} />}
+        {!cancelled && now < fullTime({ ...row, ends_at: row.ends_at ?? null }) && <Countdown variant="compact" units={['days', 'hours', 'minutes']}
+          target={row.starts_at} label="Kick-off in" completeLabel="Locked" />}
       </div>
     </header>
 
@@ -95,8 +105,9 @@ function Game({ row, plan, players, sharedAt }: { row: EventRow; plan: Plan; pla
             {(plan.isError && plan.data === undefined) || (players.isError && players.data === undefined)
               ? <div className="pt-4"><LoadError what="the plan" onRetry={() => { void plan.refetch(); void players.refetch() }}
                   retrying={plan.isFetching || players.isFetching} /></div>
-              : <GamePlan game={row} form={typed ?? planToForm(plan.data ?? null, players.data ?? [])} onFormChange={setTyped}
-                  step={planStep} onStep={setPlanStep} sharedAt={sharedAt} changes={changes} />}
+              // Locked, it shows the plan as saved at kick-off: what the evaluation reads against.
+              : <GamePlan game={row} form={(locked ? null : typed) ?? planToForm(plan.data ?? null, players.data ?? [])} onFormChange={setTyped}
+                  step={planStep} onStep={setPlanStep} sharedAt={sharedAt} changes={changes} lockedAt={locked ? time : null} />}
           </TabsContent>
           <TabsContent value="evaluation">
             <EmptyState icon={<ClipboardCheck size={24} strokeWidth={1.5} />} title="Evaluate it after full time"

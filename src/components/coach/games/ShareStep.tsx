@@ -18,15 +18,16 @@ import { ShareReadiness } from '@/components/arc/blocks/release-readiness/share-
 /* TRAK-286 (Games 4/8): plan step 3, Share (TRAK-282). Before the first share: the readiness checks and Share now,
    held back only by the logistics and the face-to-face tick (Imad, 28 Oct). After it: when it was shared and, for
    edits since, who they change and "Share the changes with N". Who sees what, and a preview drawn by the player's
-   and the parent's own Game plan section. In the app only: no email, no push. */
+   and the parent's own Game plan section. In the app only: no email, no push. TRAK-287: locked at kick-off, nothing
+   is shared any more; the lock's alert says what wasn't. */
 
 const card = 'grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5'
 const first = (name: string) => name.split(/\s+/)[0] || name
 const players = (n: number) => `${n} ${n === 1 ? 'player' : 'players'}`
 const list = (names: string[]) => names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
 
-export function ShareStep({ game, form, who, sharedAt, changes, coachName, onShare, sharing, problem }: {
-  game: EventRow; form: PlanForm; who: ReturnType<typeof useWhoCanCome>
+export function ShareStep({ game, form, who, sharedAt, changes, coachName, onShare, sharing, problem, locked = false }: {
+  game: EventRow; form: PlanForm; who: ReturnType<typeof useWhoCanCome>; locked?: boolean
   /** When the plan was first shared; null while it's a draft. */
   sharedAt: string | null
   /** The squad rows whose copies a share would change now (game_plan_changes). */
@@ -54,7 +55,12 @@ export function ShareStep({ game, form, who, sharedAt, changes, coachName, onSha
   return (
     <div className="grid gap-4 tablet:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] tablet:items-start">
       <div className="grid min-w-0 gap-4">
-        {sharedAt == null ? (
+        {sharedAt == null && locked ? (
+          <section aria-labelledby="plan-not-shared" className={card}>
+            <h2 id="plan-not-shared" className="text-lg font-medium text-ink">Not shared</h2>
+            <p className="text-sm text-ink-2">It wasn’t shared before kick-off, so only you saw it.</p>
+          </section>
+        ) : sharedAt == null ? (
           <div className="arc">
             <ShareReadiness title="Share the plan" subtitle={`${players(reading.length)} and their families, in the app only`}
               actionLabel="Share now" onAction={() => onShare(talked)} busy={sharing} error={problem}
@@ -75,8 +81,8 @@ export function ShareStep({ game, form, who, sharedAt, changes, coachName, onSha
               <h2 id="plan-shared" className="text-lg font-medium text-ink">Shared</h2>
               <Badge tone="success">Shared {format(new Date(sharedAt), 'EEE HH:mm')}</Badge>
             </div>
-            <p className="text-sm text-ink-2">{players(reading.length)} and their families read it in the app. Edits stay with you until you share them.</p>
-            <Alert tone="info" open={changes.length > 0} title="Changes not shared">
+            <p className="text-sm text-ink-2">{players(reading.length)} and their families read it in the app.{locked ? '' : ' Edits stay with you until you share them.'}</p>
+            <Alert tone="info" open={!locked && changes.length > 0} title="Changes not shared">
               {changed.length ? `${list(changed)}. ` : ''}Only they and their families get the update.
               <span className="mt-3 block"><Button size="sm" loading={sharing} onClick={() => onShare(false)}>Share the changes with {changes.length}</Button></span>
             </Alert>
