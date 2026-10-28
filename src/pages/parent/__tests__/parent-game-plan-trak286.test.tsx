@@ -39,7 +39,7 @@ let askedForPlayerCopy: string[]
 
 beforeEach(() => {
   FAMILY = [{ event_id: 'g1', squad_player_id: 'zagorakis-squad', role: 'starter', job: 'Stay tight to their winger.', has_note: true,
-    shared_at: '2099-11-10T15:30:00Z', changed_at: null }]
+    shared_at: '2099-11-10T15:30:00Z', changed_at: null, coach_name: 'Otto Rehhagel' }]
   askedForPlayerCopy = []
   server.use(
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'zagorakis' }])),

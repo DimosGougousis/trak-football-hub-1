@@ -613,6 +613,7 @@ export type Database = {
       game_for_family: {
         Row: {
           changed_at: string | null
+          coach_name: string
           event_id: string
           has_note: boolean
           job: string
@@ -622,6 +623,7 @@ export type Database = {
         }
         Insert: {
           changed_at?: string | null
+          coach_name?: string
           event_id: string
           has_note?: boolean
           job?: string
@@ -631,6 +633,7 @@ export type Database = {
         }
         Update: {
           changed_at?: string | null
+          coach_name?: string
           event_id?: string
           has_note?: boolean
           job?: string

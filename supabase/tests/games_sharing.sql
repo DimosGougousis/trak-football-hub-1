@@ -151,6 +151,9 @@ SELECT pg_temp.g286check((SELECT bool_and(changed_at IS NULL) FROM public.game_f
 SELECT pg_temp.g286check(NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
   AND table_name IN ('game_for_family','game_for_player') AND column_name IN ('expectation','context','strength','scouting','their_formation','key_players')),
   '2 no copy holds expectation, context, strength or scouting');
+-- TRAK-300: a player can't read their coach's profile, so the name travels with the copy.
+SELECT pg_temp.g286check((SELECT bool_and(coach_name='Otto Rehhagel') FROM public.game_for_family),
+  '2 every family copy carries the coach''s name');
 
 -- ── 3. Who reads what ──────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
@@ -160,6 +163,9 @@ SELECT pg_temp.g286check(pg_temp.g286family()=ARRAY[40] AND (SELECT role='starte
 SELECT pg_temp.g286check(pg_temp.g286player()=ARRAY[40] AND (SELECT note='Second game at right-back. Proud of you.'
   AND goals='[{"title":"Win the second ball","looks_like":"First to every loose ball in midfield."}]'::jsonb FROM public.game_for_player),
   '3 player A reads the goals and their own note, and nobody else''s');
+SELECT pg_temp.g286check((SELECT coach_name FROM public.game_for_family)='Otto Rehhagel'
+  AND NOT EXISTS (SELECT 1 FROM public.profiles WHERE user_id=pg_temp.g286id(10)),
+  '3 player A reads the coach''s name from the copy, though not the coach''s profile');
 SELECT pg_temp.g286actor(21);
 SELECT pg_temp.g286check(pg_temp.g286family()=ARRAY[41] AND (SELECT role='not_selected' FROM public.game_for_family)
   AND pg_temp.g286player()=ARRAY[41] AND (SELECT note='Not this week. Your chance comes on Tuesday.' AND jsonb_array_length(goals)=1 FROM public.game_for_player),
@@ -168,6 +174,7 @@ SELECT pg_temp.g286actor(30);
 SELECT pg_temp.g286check(pg_temp.g286family()=ARRAY[40] AND (SELECT has_note FROM public.game_for_family),
   '3 player A''s guardian reads their child''s job and that there''s a note');
 SELECT pg_temp.g286check(pg_temp.g286player()='{}','3 but never the note or the goals');
+SELECT pg_temp.g286check((SELECT coach_name FROM public.game_for_family)='Otto Rehhagel','3 and the coach''s name');
 SELECT pg_temp.g286actor(31);
 SELECT pg_temp.g286check(pg_temp.g286family()=ARRAY[41] AND pg_temp.g286player()='{}','3 player B''s guardian reads only that B is left out');
 SELECT pg_temp.g286actor(11);
@@ -234,6 +241,16 @@ SELECT pg_temp.g286check((SELECT jsonb_array_length(goals)=2 AND changed_at IS N
 SELECT pg_temp.g286actor(35);
 SELECT pg_temp.g286check((SELECT changed_at IS NULL FROM public.game_for_family) AND pg_temp.g286player()='{}',
   '5 their guardian, who never reads the goals, sees nothing new');
+-- TRAK-300: Otto Rehhagel goes by his nickname now; the next share brings it, and marks nobody Updated.
+RESET ROLE;
+UPDATE public.profiles SET full_name='Rehhakles' WHERE user_id=pg_temp.g286id(10);
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.g286actor(10);
+SELECT pg_temp.g286check(pg_temp.g286changes(500)='{}' AND (SELECT public.share_game_plan(pg_temp.g286id(500),false))=0,
+  '5 a new name isn''t a change to announce');
+SELECT pg_temp.g286actor(35);
+SELECT pg_temp.g286check((SELECT coach_name='Rehhakles' AND changed_at IS NULL FROM public.game_for_family),
+  '5 but the next share brings it, and the keeper''s guardian still sees nothing new');
 RESET ROLE;
 -- Takis Fyssas, on the bench by default, can't make it after all.
 INSERT INTO public.event_absences(event_id,squad_player_id,reported_by) VALUES(pg_temp.g286id(500),pg_temp.g286id(48),pg_temp.g286id(38));
@@ -297,7 +314,7 @@ RESET ROLE;
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.g286_results;
- IF total <> 60 THEN RAISE EXCEPTION 'Game sharing: % checks ran; expected 60', total; END IF;
+ IF total <> 65 THEN RAISE EXCEPTION 'Game sharing: % checks ran; expected 65', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.g286_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Game sharing checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Game sharing: % of % passed', total, total;
