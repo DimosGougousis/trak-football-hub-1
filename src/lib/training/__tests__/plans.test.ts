@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sessionById } from '@/lib/library/library'
 import {
   bestFit, blankPractice, fromDrill, fromLibrary, fromSaved, lastPlanWay, minutesLine, move, plannedMinutes, rememberPlanWay,
-  roomFor, searchSessions, sessionSummary, sourceLabel, toSave, type SavedPractice,
+  overTime, roomFor, searchSessions, sessionSummary, sourceLabel, toSave, type SavedPractice,
 } from '../plans'
 
 /* TRAK-295 (Training 2/5): a plan's rules, apart from the screens. */
@@ -71,6 +71,12 @@ describe('the minutes', () => {
 
   it('with no length for the training, just what’s planned', () => {
     expect(minutesLine(40, null)).toEqual({ planned: '40 min planned', left: null })
+  })
+
+  it('a plan longer than the training says so plainly, and never blocks it (Kostas, 28 Oct)', () => {
+    expect(overTime(75, 60)).toBe('You set this training for 60 min. The plan runs 15 min over. You can keep it, or change the training\'s time in Schedule.')
+    expect(overTime(60, 60)).toBeNull()
+    expect(overTime(75, null)).toBeNull()
   })
 })
 

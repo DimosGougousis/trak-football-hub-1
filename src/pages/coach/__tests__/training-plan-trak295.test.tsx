@@ -267,6 +267,30 @@ describe('TRAK-295: Write my own', { timeout: 30_000 }, () => {
     expect(screen.queryByRole('button', { name: 'Save the plan' })).toBeNull()
   })
 
+  it('a plan longer than the training says so plainly on both pages, and still saves (Kostas, 28 Oct)', async () => {
+    const user = userEvent.setup()
+    const saves = database([training('soon', onTheMinute(Date.now() + DAY))],
+      { soon: [practice(1, 'Rondos 4v1', { minutes: 30 }), practice(2, 'Game 8v8', { minutes: 60 })] })
+    renderApp('/coach/training/soon')
+    const note = 'You set this training for 90 min. The plan runs 10 min over.'
+    await user.click(await screen.findByRole('button', { name: 'Change the plan' }))
+    await waitFor(() => expect(practices()).toEqual(['Rondos 4v1', 'Game 8v8']))
+    expect(screen.queryByText(new RegExp(note))).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Write it' }))
+    const form = await screen.findByRole('form', { name: 'Practice 3' })
+    await user.type(within(form).getByLabelText('Name'), 'Cool-down')
+    await user.click(within(form).getByRole('button', { name: '10' }))
+    await user.click(within(form).getByRole('button', { name: 'Add practice' }))
+    expect(await screen.findByText(new RegExp(note))).toBeInTheDocument()
+    expect(screen.getByText('10 min over')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Save the plan' }))
+    await waitFor(() => expect(saves).toHaveLength(1))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon'))
+    expect(await screen.findByText(new RegExp(note))).toBeInTheDocument()
+  })
+
   it("a training that isn't the coach's says so", async () => {
     database([])
     renderApp('/coach/training/someone-elses/plan')
