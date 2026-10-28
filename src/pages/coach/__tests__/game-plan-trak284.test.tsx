@@ -68,6 +68,10 @@ beforeEach(() => {
     table('session_attendance', []),
     table('event_absences', []),
     table('coach_calendar_events', [game()]),
+    table('game_plan_players', []),
+    table('event_confirmations', []),
+    table('coach_assessments', []),
+    rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
   )
 })
@@ -83,7 +87,7 @@ describe('TRAK-284: plan step 1, opponent and goals', { timeout: 30_000 }, () =>
     renderApp('/coach/games/g1?tab=plan')
     expect(await screen.findByRole('heading', { name: 'Your goals' })).toBeInTheDocument()
     expect(screen.getByText('Plan not written')).toBeInTheDocument()
-    const steps = screen.getByRole('group', { name: 'Game plan' })
+    const steps = screen.getByRole('navigation', { name: 'Game plan' })
     expect(steps).toHaveTextContent(/Opponent and goals.*Line-up and jobs.*Share/)
     expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent('Opponent and goals')
 
@@ -105,6 +109,7 @@ describe('TRAK-284: plan step 1, opponent and goals', { timeout: 30_000 }, () =>
       event_id: 'g1', strength: 'stronger', their_formation: '4-3-3', scouting: 'Their keeper plays short.',
       key_players: [{ number: 9, position: 'Striker', note: 'Quick. Runs in behind.' }],
       goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
+      format: 11, formation: null,
     }])
     expect(await screen.findByText('Plan not shared')).toBeInTheDocument()
 

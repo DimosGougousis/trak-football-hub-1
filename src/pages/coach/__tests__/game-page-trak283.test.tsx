@@ -57,6 +57,10 @@ beforeEach(() => {
     table('session_attendance', []),
     table('event_absences', []),
     table('game_plans', []),
+    table('game_plan_players', []),
+    table('event_confirmations', []),
+    table('coach_assessments', []),
+    rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
   )
 })

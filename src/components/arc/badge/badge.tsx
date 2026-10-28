@@ -1,6 +1,6 @@
 "use client";
 
-import { isValidElement, useEffect, useLayoutEffect, useRef } from "react";
+import { forwardRef, isValidElement, useEffect, useLayoutEffect, useRef } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { AnimatePresence, animate, motion, useIsPresent, useMotionValue, useReducedMotion, type AnimationPlaybackControls, type HTMLMotionProps, type TargetAndTransition, type Transition } from "motion/react";
 import { motionTokens } from "../lib/motion-tokens";
@@ -23,10 +23,12 @@ const shown: TargetAndTransition = { opacity: 1, y: "0em", scale: 1, filter: "bl
 const fadeOnly: TargetAndTransition = { opacity: 0, transition: { duration: motionTokens.duration.instant } };
 
 /** Outgoing copies are hidden from assistive tech while they fade, so only the current text is read. */
-function Swap(props: HTMLMotionProps<"span">) {
+// Trak (React 18): forwardRef, so AnimatePresence's popLayout can measure the leaving copy (React 19 passes ref as a
+// prop), as in arc/empty-state.
+const Swap = forwardRef<HTMLSpanElement, HTMLMotionProps<"span">>(function Swap(props, ref) {
   const present = useIsPresent();
-  return <motion.span {...props} aria-hidden={present ? props["aria-hidden"] : true} />;
-}
+  return <motion.span ref={ref} {...props} aria-hidden={present ? props["aria-hidden"] : true} />;
+});
 
 /** A new icon component crossfades in; re-rendering the same icon stays still. */
 function iconKey(icon: ReactNode) {

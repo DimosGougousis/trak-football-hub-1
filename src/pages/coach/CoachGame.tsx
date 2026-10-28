@@ -10,27 +10,25 @@ import { rowToForm, startedLocked, type EventRow } from '@/lib/coach-events'
 import { STATE, gameState, type GameTab } from '@/lib/games/loop'
 import { planToForm, type PlanForm } from '@/lib/games/plan'
 import type { Tables } from '@/integrations/supabase/types'
-import { gameTitle, gameWhen, useGame, useGamePlan } from '@/components/coach/games/useGames'
-import { OpponentAndGoals } from '@/components/coach/games/OpponentAndGoals'
+import { gameTitle, gameWhen, useGame, useGamePlan, useGamePlayers } from '@/components/coach/games/useGames'
+import { GamePlan } from '@/components/coach/games/GamePlan'
 import { EventSummary } from '@/components/coach/EventSummary'
 import { LoadError } from '@/components/trak'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
-import { Stepper } from '@/components/arc/stepper/stepper'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/arc/tabs/tabs'
 
 /* TRAK-283 (Games 1/8): a game's page. Its header says where it is in the loop; Logistics, Game plan and
    Evaluation are peer panels of the one game (Arc tabs), and the panel lives in the URL (?tab=). Evaluation
-   (TRAK-288) says what will happen there until it's built. TRAK-284: the Game plan's three steps, the first built;
-   Line-up and jobs (TRAK-285) and Share (TRAK-286) show in its stepper as what comes next. */
+   (TRAK-288) says what will happen there until it's built. TRAK-284, TRAK-285: the Game plan (GamePlan). */
 
 const TABS: { id: GameTab; label: string }[] = [
   { id: 'logistics', label: 'Logistics' }, { id: 'plan', label: 'Game plan' }, { id: 'evaluation', label: 'Evaluation' },
 ]
-const PLAN_STEPS = [{ id: 'opponent', label: 'Opponent and goals' }, { id: 'line-up', label: 'Line-up and jobs' }, { id: 'share', label: 'Share' }]
 type Plan = UseQueryResult<Tables<'game_plans'> | null>
+type Players = UseQueryResult<Pick<Tables<'game_plan_players'>, 'squad_player_id' | 'role' | 'slot' | 'job' | 'note' | 'context' | 'expectation'>[]>
 const linkClass = 'rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
 export default function CoachGame() {
@@ -38,21 +36,22 @@ export default function CoachGame() {
   const game = useGame(eventId)
   // Read beside the game, so the header's state never flips from "Plan not written" once the draft arrives.
   const plan = useGamePlan(eventId)
+  const players = useGamePlayers(eventId)
   return (
     <div className="min-h-screen bg-ground pb-24">
       <div className="mx-auto w-full max-w-[960px] px-5 tablet:px-8">
         <Link to="/coach/games" className={`mt-5 inline-flex items-center gap-1 ${linkClass}`}><ChevronLeft size={16} aria-hidden="true" />Games</Link>
         {game.error ? <div className="pt-6"><LoadError what="this game" onRetry={() => void game.refetch()} retrying={game.isFetching} /></div>
-          : game.isPending || plan.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading the game…</p>
+          : game.isPending || plan.isPending || players.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading the game…</p>
           : !game.data ? <p className="pt-10 text-[15px] text-ink-2">This game isn’t in your games.</p>
           // Keyed by match: a route that only changes :eventId must never carry one match's typing into another's.
-          : <Game key={game.data.id} row={game.data} plan={plan} />}
+          : <Game key={game.data.id} row={game.data} plan={plan} players={players} />}
       </div>
     </div>
   )
 }
 
-function Game({ row, plan }: { row: EventRow; plan: Plan }) {
+function Game({ row, plan, players }: { row: EventRow; plan: Plan; players: Players }) {
   const { user } = useAuth()
   const coachSquad = useCoachSquad(user?.id)
   const [params, setParams] = useSearchParams()
@@ -60,9 +59,10 @@ function Game({ row, plan }: { row: EventRow; plan: Plan }) {
   const [now, setNow] = useState(() => Date.now())
   const cancelled = row.status === 'cancelled'
   const state = STATE[gameState({ ...row, ends_at: row.ends_at ?? null }, now, !!plan.data)]
-  // The plan as typed lives here, above the tabs: Arc unmounts a panel that isn't shown. Until the coach types, it
-  // is the saved plan, so a retried read still fills the form.
+  // The plan as typed, and its step, live here, above the tabs: Arc unmounts a panel that isn't shown. Until the coach
+  // types, it is the saved plan, so a retried read still fills the form.
   const [typed, setTyped] = useState<PlanForm | null>(null)
+  const [planStep, setPlanStep] = useState(0)
   const { day, time, academy } = gameWhen(row)
   const squad = coachSquad.squads.length >= 2 && row.squad ? row.squad : undefined
   const where = [day, time ? `Kick-off ${time}` : '', row.home_away === 'home' ? 'Home' : row.home_away === 'away' ? 'Away' : '', row.venue ?? '', squad ?? '']
@@ -87,12 +87,11 @@ function Game({ row, plan }: { row: EventRow; plan: Plan }) {
           </TabsList>
           <TabsContent value="logistics"><Logistics row={row} squad={squad} /></TabsContent>
           <TabsContent value="plan">
-            <div className="grid gap-5 pt-4">
-              <Stepper steps={PLAN_STEPS} current={0} label="Game plan" />
-              {plan.isError && plan.data === undefined
-                ? <LoadError what="the plan" onRetry={() => void plan.refetch()} retrying={plan.isFetching} />
-                : <OpponentAndGoals eventId={row.id} opponent={row.opponent ?? null} form={typed ?? planToForm(plan.data ?? null)} onFormChange={setTyped} />}
-            </div>
+            {(plan.isError && plan.data === undefined) || (players.isError && players.data === undefined)
+              ? <div className="pt-4"><LoadError what="the plan" onRetry={() => { void plan.refetch(); void players.refetch() }}
+                  retrying={plan.isFetching || players.isFetching} /></div>
+              : <GamePlan game={row} form={typed ?? planToForm(plan.data ?? null, players.data ?? [])} onFormChange={setTyped}
+                  step={planStep} onStep={setPlanStep} />}
           </TabsContent>
           <TabsContent value="evaluation">
             <EmptyState icon={<ClipboardCheck size={24} strokeWidth={1.5} />} title="Evaluate it after full time"
