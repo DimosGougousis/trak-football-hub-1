@@ -89,6 +89,7 @@ beforeEach(() => {
     table('coach_sessions', []),
     table('session_attendance', []),
     table('event_absences', []),
+    table('training_plans', []),
     rpc('feature_on', () => true),
   )
 })
@@ -126,7 +127,7 @@ describe('TRAK-294: Training home', { timeout: 20_000 }, () => {
     expect(comingUp()[0]).toMatch(/Before AEK U16 on Saturday$/)
     expect(comingUp()[1]).toMatch(/Training later$/)
     const first = within(screen.getByRole('region', { name: 'Coming up' })).getAllByRole('article')[0]
-    expect(within(first).getByText('Not planned')).toBeInTheDocument()
+    expect(await within(first).findByText('Not planned')).toBeInTheDocument()
     expect(within(first).getByText(/90 min · U16/)).toBeInTheDocument()
     expect(within(first).getByRole('link', { name: 'Open in Schedule' })).toHaveAttribute('href', '/coach/schedule?event=soon')
     const lastWeek = within(screen.getByRole('region', { name: 'Last week' })).getAllByRole('link').map(link => link.getAttribute('href'))

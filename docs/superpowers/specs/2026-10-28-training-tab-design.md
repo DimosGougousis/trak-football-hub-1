@@ -30,8 +30,8 @@ Every text field has a length limit.
 | Table | Key | Holds | Slice |
 |---|---|---|---|
 | `coach_drills` | `id` | The coach's own single drills: name (≤80), usual minutes (5–60; the app offers 10–30), how it works (≤1000), what you'll tell them (≤500), and the five details area, numbers, direction, targets, conditions (≤120 each). | 294 |
-| `training_plans` | `event_id` | One plan per training event (`coach_calendar_events(id) ON DELETE CASCADE`). | 295 |
-| `training_plan_practices` | `event_id, position` | The plan's practices in order (at most 12): name, minutes, what you'll tell them, the five details, where it came from (own, a drill, the Library) and the drill or Library session it came from. | 295 |
+| `training_plans` | `event_id` | One plan per training event (`coach_calendar_events(id) ON DELETE CASCADE`), and its coach. | 295 |
+| `training_plan_practices` | `event_id, position` | The plan's practices in order (positions 1–12): name, minutes, how it works, what you'll tell them, the five details (drills' limits), where it came from (`own`, `drill`, `library`) and the drill (`ON DELETE SET NULL`) or Library session it came from. A practice is a copy: changing or deleting a drill never changes a plan. | 295 |
 
 ## Read and write rules
 
@@ -39,8 +39,12 @@ Every text field has a length limit.
 pass restrictive rules, as events do: `is_coach()` and the academy's `training` switch on (`feature_on('training')`).
 Reads don't need the switch, so switching Training off hides the tab without losing anyone's drills or plans.
 
-From 295, a plan's event must be the coach's own training, not cancelled. A plan is saved whole by one database
-function (all practices or none), so a half-saved plan can't exist.
+From 295, a plan's event must be the coach's own training, not cancelled, and a practice can name only the coach's
+own drill. A plan is saved whole by `save_training_plan(event, practices)` (1 to 12 practices, all or none), so a
+half-saved plan can't exist. It runs as the coach (`SECURITY INVOKER`), so the rules above apply unchanged, and says
+in words why it refuses (not your training, cancelled, no practice, more than 12). A practice written here and
+ticked "Save to My drills" becomes one of the coach's drills in the same save. Practices are replaced whole on each
+save, so the coach gets select, insert and delete on them, never update.
 
 Nobody else reads these tables.
 
@@ -52,6 +56,10 @@ Nobody else reads these tables.
 | `/coach/training/drills` | Training home, Drills: search, My drills, New drill / edit / delete (Arc bottom sheet), the Library's seven tiles | 294 |
 | `/coach/training/:eventId/plan` | Write my own (and Copy a past session, 297) | 295 |
 | `/coach/training/:eventId` | The plan, with the loop strip | 295, 298 |
+
+"How do you want to plan it?" (from Plan this session, or New session after "Which training?") remembers the
+coach's last way on this device. Write my own is the only way in 295; Copy a past session joins it in 297. A
+training's page starts at the top whenever the coach opens it.
 
 Both routes are inside `ParkedScreen unless="training"`, so with the switch off the screen shows "Coming soon" and
 every write handler stops at `useParked()`.

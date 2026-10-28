@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react'
-import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useLayoutEffect, useState, type ReactNode } from 'react'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
@@ -8,8 +8,10 @@ import { LIBRARIES, SESSIONS, libraryPath } from '@/lib/library/library'
 import { ON_LIBRARY } from '@/lib/fixed-colours'
 import { searchDrills, splitTrainings, trainingMinutes, type Drill } from '@/lib/training/sessions'
 import { gameWhen } from '@/components/coach/games/useGames'
-import { useDrills, useTrainings, type Training } from '@/components/coach/training/useTraining'
+import { useDrills, usePlannedTrainings, useTrainings, type Training } from '@/components/coach/training/useTraining'
 import { DrillSheet } from '@/components/coach/training/DrillSheet'
+import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
+import { PlanEditorRoute, PlanRoute } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadPills } from '@/components/coach/home/SquadPills'
 import { LoadError } from '@/components/trak'
@@ -22,18 +24,29 @@ import SegmentedControl from '@/components/arc/segmented-control/segmented-contr
 
 /* TRAK-294 (Training 1/5, spec TRAK-293): Training home, behind the academy's training switch. Sessions lists the
    coach's trainings from Schedule (Coming up, then Last week); Drills holds My drills, then the Library's tiles.
-   Planning a session is Training 2/5; until then a training opens in Schedule. Homework and Value of the month are
-   parked (TRAK-293). */
+   Homework and Value of the month are parked (TRAK-293). TRAK-295 (Training 2/5): a training coming up says whether
+   it's planned; Plan this session and New session ask how (PlanWaySheet), and a plan has its own pages. */
 
 export const TRAINING_PATH = '/coach/training'
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Training picked. */
 const ADD_TRAINING = { quickEvent: { kind: 'training' } }
+const linkClass = 'rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
 export default function CoachTraining() {
+  const { pathname } = useLocation()
+  const navigation = useNavigationType()
+  // As the Library's pages do: a page the coach opens (a plan once saved, too) starts at its top; Back (POP) is left to
+  // the browser, which returns them to their place.
+  useLayoutEffect(() => {
+    if (navigation !== 'POP') (document.scrollingElement ?? document.documentElement).scrollTo(0, 0)
+  }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps -- only a new page moves to the top
+
   return (
     <Routes>
       <Route index element={<SessionsView />} />
       <Route path="drills" element={<DrillsView />} />
+      <Route path=":eventId" element={<PlanRoute />} />
+      <Route path=":eventId/plan" element={<PlanEditorRoute />} />
       <Route path="*" element={<Navigate to={TRAINING_PATH} replace />} />
     </Routes>
   )
@@ -69,16 +82,20 @@ function SessionsView() {
   const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const trainings = useTrainings()
+  const planned = usePlannedTrainings()
+  // "How do you want to plan it?": for one training, or, from New session, asking which first.
+  const [planning, setPlanning] = useState<{ training: Training | null } | null>(null)
   // TRAK-266: All first and picked, as Home, Squad, Schedule and Games open.
   const [allPicked, setAllPicked] = useState(true)
   const everySquad = allPicked && coachSquad.squads.length >= 2
   const inView = (trainings.data ?? []).filter(t => everySquad || coachSquad.eventInSquad(t.squad))
   const { comingUp, lastWeek } = splitTrainings(inView, Date.now())
   const addTraining = () => navigate('/coach/schedule', { state: ADD_TRAINING })
+  const isPlanned = (training: Training) => planned.data?.has(training.id)
 
   return (
     <Page view="sessions"
-      action={<Button onClick={addTraining}><Plus aria-hidden size={18} />New session</Button>}
+      action={<Button onClick={() => setPlanning({ training: null })}><Plus aria-hidden size={18} />New session</Button>}
       aside={coachSquad.squad && coachSquad.squads.length >= 2 && (
         <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
           onChange={pick => { setAllPicked(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
@@ -95,7 +112,8 @@ function SessionsView() {
                   action={<Button onClick={addTraining}>Add a training</Button>} />
               </div>
             ) : <ul className="grid gap-3">
-              {comingUp.map(training => <li key={training.id}><ComingUp training={training} showSquad={everySquad} /></li>)}
+              {comingUp.map(training => <li key={training.id}><ComingUp training={training} showSquad={everySquad}
+                planned={planned.data ? !!isPlanned(training) : null} onPlan={() => setPlanning({ training })} /></li>)}
             </ul>}
           </section>
 
@@ -115,12 +133,14 @@ function SessionsView() {
             </ul>
           </section>}
         </div>}
+      <PlanWaySheet open={!!planning} onOpenChange={open => { if (!open) setPlanning(null) }} training={planning?.training ?? null}
+        choices={comingUp.filter(training => !isPlanned(training))} onAddTraining={addTraining} />
     </Page>
   )
 }
 
-/** One training coming up: when and where, its title and length, and whether it's planned. */
-function ComingUp({ training, showSquad }: { training: Training; showSquad: boolean }) {
+/** One training coming up: when and where, its title and length, and whether it's planned (null while that's read). */
+function ComingUp({ training, showSquad, planned, onPlan }: { training: Training; showSquad: boolean; planned: boolean | null; onPlan: () => void }) {
   const { day, time, academy } = gameWhen(training)
   const today = phoneEventTime(training).date === localTodayISO()
   const minutes = trainingMinutes(training)
@@ -128,15 +148,15 @@ function ComingUp({ training, showSquad }: { training: Training; showSquad: bool
     <article aria-label={`${day}, ${training.title}`} className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-brand">{[today ? 'Today' : null, day, time, training.venue].filter(Boolean).join(' · ')}</p>
-        {/* Training 2/5 saves plans; until then every training is Not planned. */}
-        <Badge tone="warning" size="sm">Not planned</Badge>
+        {planned !== null && <Badge tone={planned ? 'success' : 'warning'} size="sm">{planned ? 'Planned' : 'Not planned'}</Badge>}
       </div>
       <p className="text-lg font-medium text-ink break-words">{training.title}</p>
       <p className="text-sm text-ink-3">{[minutes ? `${minutes} min` : null, showSquad ? training.squad : null,
         training.published ? null : 'Not published yet', academy].filter(Boolean).join(' · ')}</p>
-      <div className="mt-1">
-        <Link to={`/coach/schedule?event=${training.id}`}
-          className="text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">Open in Schedule</Link>
+      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-2">
+        {planned === false && <Button size="sm" onClick={onPlan}>Plan this session</Button>}
+        {planned && <Link to={`${TRAINING_PATH}/${training.id}`} className={linkClass}>Open the plan</Link>}
+        <Link to={`/coach/schedule?event=${training.id}`} className={linkClass}>Open in Schedule</Link>
       </div>
     </article>
   )

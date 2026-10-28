@@ -2,6 +2,8 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
 // TRAK-294 (Training 1/5): Training home (Sessions and Drills) and the New drill sheet with the academy's training
 // switch on, at a phone's and a laptop's width: no sideways scroll, and the keyboard reaches every control.
+// TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
+// same two widths.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -32,12 +34,19 @@ const DRILLS = [
   drill('d-2', 'Pressing on the trigger', 25, 'Press as soon as their 6 turns back.'),
   drill('d-3', 'Game: 8v8 with conditions', 30, '8v8 + 2 floaters in 30 × 24 m.'),
 ]
+// Receiving under pressure is planned already. Each test starts from this; a save keeps the plan sent, so the plan
+// page reads it back.
+const PLANNED: [string, Record<string, unknown>[]][] = [['t-tue', [
+  { position: 1, name: 'Warm-up: rondos 4v1', minutes: 15, how: '', tell: '', area: '10 × 10 m', numbers: '', direction: '', targets: '',
+    conditions: '', source: 'drill', drill_id: 'd-1', library_session: null },
+]]]
 const players = [['Thierry Henry', 'U16'], ['Patrick Vieira', 'U16'], ['Robert Pires', 'U14']].map(([name, squad], i) => ({
   id: `sq-${i + 1}`, coach_user_id: COACH, player_name: name, position: 'Midfielder', age_group: squad, shirt_number: i + 1,
   status: 'active', linked_player_id: null, created_at: '2026-10-01T08:00:00Z',
 }))
 
 async function backend(context: BrowserContext, unexpected: string[]) {
+  const plans = new Map(PLANNED)
   const user = { id: COACH, email: 'coach@training294.test', email_confirmed_at: '2026-10-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z',
     aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
   const exp = Math.floor(Date.now() / 1000) + 3600
@@ -60,7 +69,22 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     if (path === '/rest/v1/squad_players') return json(players)
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
-    if (path === '/rest/v1/coach_calendar_events') return json(TRAININGS)
+    if (path === '/rest/v1/coach_calendar_events') {
+      const id = url.searchParams.get('id')?.slice(3)
+      return json(id ? TRAININGS.filter(t => t.id === id) : TRAININGS)
+    }
+    if (path === '/rest/v1/training_plans') {
+      const id = url.searchParams.get('event_id')?.slice(3)
+      return json([...plans.keys()].filter(key => !id || key === id).map(event_id => ({ event_id, updated_at: '2026-10-28T10:00:00Z' })))
+    }
+    if (path === '/rest/v1/training_plan_practices') return json(plans.get(url.searchParams.get('event_id')!.slice(3)) ?? [])
+    if (path === '/rest/v1/rpc/save_training_plan') {
+      const { p_event_id, p_practices } = req.postDataJSON() as { p_event_id: string; p_practices: Record<string, unknown>[] }
+      // As the database does: a practice ticked "Save to My drills" becomes the coach's drill.
+      plans.set(p_event_id, p_practices.map(({ save_to_drills, ...p }, i) =>
+        ({ ...p, position: i + 1, ...(save_to_drills ? { source: 'drill', drill_id: `drill-${i + 1}` } : {}) })))
+      return route.fulfill({ status: 204, body: '' })
+    }
     if (path === '/rest/v1/coach_drills' && req.method() === 'GET') return json(DRILLS)
     // Every other read is empty.
     if (path.startsWith('/rest/v1/')) return json(req.method() === 'GET' || path.startsWith('/rest/v1/rpc/') ? [] : null)
@@ -83,6 +107,8 @@ const sideways = (page: Page) => page.evaluate(() => document.documentElement.sc
 async function everyControlByKeyboard(page: Page, scope: string) {
   const controls = await page.locator(`${scope} :is(a[href], button:not([disabled]), input, textarea, [tabindex="0"]):not([tabindex="-1"])`).evaluateAll(els =>
     els.filter(el => (el as HTMLElement).offsetParent !== null && el.getAttribute('aria-hidden') !== 'true'
+      // Add details folded away: its fields take focus once it's opened.
+      && !el.closest('details:not([open])')
       // A segmented control is one stop (roving focus): only its selected option takes Tab.
       && !(el.closest('[role="group"][aria-label="Training view"]') && el.getAttribute('aria-pressed') !== 'true'))
       .map((el, i) => { (el as HTMLElement).dataset.kb = String(i); return String(i) }))
@@ -136,6 +162,44 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  test(`Planning at ${width} px: how to plan it, Write my own, and the plan`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
+    const first = page.getByRole('region', { name: 'Coming up' }).getByRole('article').first()
+    await first.getByRole('button', { name: 'Plan this session' }).click()
+    const sheet = page.getByRole('dialog', { name: 'How do you want to plan it?' })
+    await expect(sheet.getByRole('button', { name: /Write my own/ })).toBeVisible()
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-how-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await sheet.getByRole('button', { name: /Write my own/ }).click()
+
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
+    const form = page.getByRole('form', { name: 'Practice 1' })
+    await form.getByLabel('Name').fill('Pressing on the trigger')
+    await form.getByRole('button', { name: '25' }).click()
+    await form.getByLabel(/What you’ll tell them/).fill('Press as soon as their 6 turns back.')
+    await form.getByRole('button', { name: 'Add practice' }).click()
+    await page.getByRole('button', { name: 'Write it' }).click()
+    await page.getByRole('form', { name: 'Practice 2' }).getByLabel('Name').fill('Finishing 3v2')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-write-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    expect(keyboard.count).toBeGreaterThan(10)
+    expect(keyboard.missed).toEqual([])
+    await page.getByRole('form', { name: 'Practice 2' }).getByRole('button', { name: 'Add practice' }).click()
+
+    await page.getByRole('button', { name: 'Save the plan' }).click()
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu$/)
+    await expect(page.getByText('Ready')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-plan-ready-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

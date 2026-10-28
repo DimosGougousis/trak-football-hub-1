@@ -61,10 +61,11 @@ export function cleanDrill(draft: DrillDraft): DrillDraft {
   return out
 }
 
-/** Why a drill can't be saved yet, or null when it can. The name is the only thing it must have. */
-export function drillProblem(draft: DrillDraft): string | null {
+/** Why a drill (or a plan's practice) can't be saved yet, or null when it can. The name is the only thing it must
+ *  have. */
+export function drillProblem(draft: DrillDraft, what: 'drill' | 'practice' = 'drill'): string | null {
   const drill = cleanDrill(draft)
-  if (!drill.name) return 'Give the drill a name.'
+  if (!drill.name) return `Give the ${what} a name.`
   if (drill.name.length > DRILL_LIMITS.name) return `Keep the name to ${DRILL_LIMITS.name} characters.`
   if (drill.how.length > DRILL_LIMITS.how) return `Keep "How it works" to ${DRILL_LIMITS.how} characters.`
   if (drill.tell.length > DRILL_LIMITS.tell) return `Keep "What you'll tell them" to ${DRILL_LIMITS.tell} characters.`
