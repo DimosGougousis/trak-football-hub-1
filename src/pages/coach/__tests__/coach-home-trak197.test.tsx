@@ -138,6 +138,7 @@ describe('TRAK-211: the Feedback and assessment tab', { timeout: 20_000 }, () =>
       present: cameToAll('u14', 'u16'),
     })
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/feedback')
     expect(await within(await region()).findByText('Bo Lind')).toBeInTheDocument()
     expect(within(overview()).queryByText('Ade Okafor')).toBeNull()
@@ -146,7 +147,7 @@ describe('TRAK-211: the Feedback and assessment tab', { timeout: 20_000 }, () =>
     let release!: () => void
     const held = new Promise<void>(resolve => { release = resolve })
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, async () => { await held; return HttpResponse.json([]) }))
-    await userEvent.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U14' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Age group' })).getByRole('button', { name: 'U14' }))
     expect(within(overview()).queryByText('Bo Lind')).toBeNull()
     expect(within(overview()).getByRole('status')).toHaveTextContent('Loading your players…')
     release()
@@ -167,6 +168,7 @@ describe('TRAK-211: the Feedback and assessment tab', { timeout: 20_000 }, () =>
     ]), table('squad_players', [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')]),
     table('session_attendance', [['t0', 'u14'], ...cameToAll('u16')].map(([session_id, squad_player_id]) => ({ session_id, squad_player_id }))))
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/feedback')
     expect(await within(await region()).findByText('Assessed 1 day ago')).toBeInTheDocument()
   })
@@ -252,7 +254,7 @@ describe('TRAK-262: coach Home', () => {
     expect(within(shape).queryByText('Standout')).toBeNull()
   })
 
-  it('opens on All, every squad, and a squad tapped is remembered without changing what All shows', async () => {
+  it('opens on All, every squad; a squad tapped shows only it and is remembered (TRAK-305)', async () => {
     home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
     renderApp('/coach/home')
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
@@ -263,6 +265,7 @@ describe('TRAK-262: coach Home', () => {
     await userEvent.click(screen.getByRole('button', { name: 'U16' }))
     await waitFor(() => expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull())
     expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16')
+    expect(localStorage.getItem(`trak:coach-squad-all:${COACH.id}`)).toBe('0')
   })
 
   it('Squad shape names the squad picked in the header', async () => {

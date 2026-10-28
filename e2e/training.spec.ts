@@ -158,6 +158,27 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 
+  // TRAK-305: one age-group switcher at the top (the top bar on a laptop, the page's top on a phone); the pick holds.
+  test(`Age groups at ${width} px: picked once at the top, kept after a reload`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
+    const ages = page.getByRole('group', { name: 'Age group' })
+    await expect(ages.getByRole('button')).toHaveText(['All', 'U14', 'U16'])
+    await expect(ages.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    const coming = page.getByRole('region', { name: 'Coming up' })
+    await expect(coming.getByRole('article')).toHaveCount(3)
+    await ages.getByRole('button', { name: 'U14' }).click()
+    await expect(coming.getByRole('article')).toHaveCount(1)
+    await expect(coming.getByRole('article')).toContainText('U14 finishing')
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`age-groups-${width}.png`) })
+    await page.reload()
+    await expect(page.getByRole('group', { name: 'Age group' }).getByRole('button', { name: 'U14' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('region', { name: 'Coming up' }).getByRole('article')).toHaveCount(1)
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   test(`Drills at ${width} px: My drills, the Library, and the New drill sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/drills', width, height)
     await expect(page.getByRole('region', { name: 'My drills' }).getByRole('button', { name: /Edit$/ })).toHaveCount(3)

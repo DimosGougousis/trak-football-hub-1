@@ -69,12 +69,14 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     coachReads(TWO)
     renderApp('/coach/home')
     // TRAK-266: pills, All first and picked; a squad tapped is remembered for what's made next.
-    const pick = await screen.findByRole('group', { name: 'Squad' })
+    // TRAK-305: one set at the top of the frame; the pick, All included, is what every page shows.
+    const pick = await screen.findByRole('group', { name: 'Age group' })
     expect(within(pick).getAllByRole('button').map(b => b.textContent)).toEqual(['All', 'U14', 'U16'])
     expect(within(pick).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(pick).getByRole('button', { name: 'U16' }))
     // Remembered on this device, which is what the Squad page reads (TRAK-250 tests it there).
     await waitFor(() => expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16'))
+    expect(localStorage.getItem(`trak:coach-squad-all:${COACH.id}`)).toBe('0')
   })
 
   it('a coach with one squad sees their name and no squad picker', async () => {
@@ -85,10 +87,10 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     // (TRAK-259: it left the nav, so it opens by its address).
     renderApp('/coach/feedback')
     expect(await screen.findByText('Ade Okafor', {}, { timeout: 5000 })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Squad' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Age group' })).toBeNull()
     await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
     expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Squad' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Age group' })).toBeNull()
   })
 
   it('a new event from quick add is saved for the squad picked', async () => {
@@ -164,6 +166,7 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
       { id: 's3', coach_user_id: COACH.id, title: 'Whole roster session', session_type: 'training', session_date: '2026-10-12', squad: null },
     ])))
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/sessions/list')
     expect(await screen.findByText('U16 session')).toBeInTheDocument()
     expect(screen.getByText('Whole roster session')).toBeInTheDocument()
@@ -173,19 +176,23 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
   it('Assess offers the squad picked', async () => {
     coachReads(TWO)
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/assess')
     const picker = await screen.findByRole('combobox', { name: 'Player' })
     await waitFor(() => expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual(['Select player...', 'Bo Lind']))
   })
 
   it('Schedule opens on All, naming each squad; a squad tapped lists its events and whole-roster ones (Imad, 24 Oct)', async () => {
-    coachReads(TWO)
+    // Another coach: the app's query cache outlives a test, and holds the pick an earlier test made.
+    const coach = 'coach-176-schedule'
+    signInAs({ id: coach })
+    coachReads(TWO.map(p => ({ ...p, coach_user_id: coach })))
     const event = (id: string, title: string, squad: string | null) => ({
-      id, coach_user_id: COACH.id, title, event_type: 'training', event_date: localTodayISO(), start_time: '18:00:00',
+      id, coach_user_id: coach, title, event_type: 'training', event_date: localTodayISO(), start_time: '18:00:00',
       starts_at: toInstant(localTodayISO(), '18:00'), ends_at: null, published: true, status: 'scheduled', series_id: null, squad,
     })
     server.use(http.get(EVENTS, () => HttpResponse.json([event('e1', 'U14 training', 'U14'), event('e2', 'U16 training', 'U16'), event('e3', 'Whole roster training', null)])))
-    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad:${coach}`, 'U16')
     renderApp('/coach/schedule')
     expect(await screen.findByText('U14 training', { selector: 'p' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
