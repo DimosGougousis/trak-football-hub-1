@@ -82,9 +82,10 @@ export function LineUpAndJobs({ form, onFormChange, who }: {
     <div className="grid gap-4">
       <section aria-labelledby="plan-shape" className={card}>
         <h2 id="plan-shape" className="text-lg font-medium text-ink">Format and formation</h2>
-        <div className="grid gap-4 tablet:grid-cols-[180px_minmax(0,1fr)] tablet:items-start">
-          <Select label="Format" options={FORMAT_OPTIONS} value={String(form.format)} onValueChange={setFormat} />
-          <RadioCards aria-label="Formation" minColumnWidth={112} value={shape}
+        <div className="max-w-[220px]"><Select label="Format" options={FORMAT_OPTIONS} value={String(form.format)} onValueChange={setFormat} /></div>
+        <div className="grid gap-2">
+          <p id="plan-formation" className="text-sm font-medium text-ink">Formation</p>
+          <RadioCards aria-labelledby="plan-formation" minColumnWidth={150} value={shape}
             options={FORMATIONS[form.format].map(option => ({ value: option, label: option, icon: <MiniPitch shape={option} /> }))}
             onValueChange={formation => onFormChange({ ...form, formation })} />
         </div>

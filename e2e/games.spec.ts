@@ -27,12 +27,20 @@ const MATCHES = [
   match('m-past', 'U16', -5, '10:00', { opponent: 'Lakeside FC U16' }),
   match('m-old', null, -12, '18:00', { opponent: 'Riverside Academy' }),
 ]
-const players = [['Theodoros Zagorakis', 'U16'], ['Angelos Charisteas', 'U16'], ['Giorgos Karagounis', 'U14']].map(([name, squad], i) => ({
+// TRAK-285: Greece's Euro 2004 squad as the U16 roster; Karagounis is U14. Zagorakis to Basinas are confirmed, and
+// Nikopolidis's family said he can't make it.
+const players = [['Theodoros Zagorakis', 'U16'], ['Angelos Charisteas', 'U16'], ['Giorgos Karagounis', 'U14'], ['Traianos Dellas', 'U16'],
+  ['Giourkas Seitaridis', 'U16'], ['Michalis Kapsis', 'U16'], ['Takis Fyssas', 'U16'], ['Angelos Basinas', 'U16'],
+  ['Antonios Nikopolidis', 'U16'], ['Kostas Katsouranis', 'U16'], ['Stelios Giannakopoulos', 'U16'], ['Zisis Vryzas', 'U16'],
+  ['Vasilios Tsiartas', 'U16'], ['Demis Nikolaidis', 'U16']].map(([name, squad], i) => ({
   id: `sq-${i + 1}`, coach_user_id: COACH, player_name: name, position: 'Midfielder', age_group: squad, shirt_number: i + 1,
   status: 'active', linked_player_id: null, created_at: '2026-10-01T08:00:00Z',
 }))
+const CONFIRMED = ['sq-1', 'sq-2', 'sq-4', 'sq-5', 'sq-6', 'sq-7', 'sq-8'].map(squad_player_id => ({ squad_player_id }))
+const ABSENT = [{ squad_player_id: 'sq-9' }]
 
-/** game_plans as the database keeps them: one row per match, written by the app's upsert. */
+/** game_plans as the database keeps them: one row per match, written by the app's upsert. TRAK-285: the line-up rows
+ *  go under `line-up:<match>:<squad row>`. */
 type Plans = Map<string, Record<string, unknown>>
 
 async function backend(context: BrowserContext, unexpected: string[], plans: Plans) {
@@ -57,6 +65,17 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     if (path === '/rest/v1/organizations') return json([{ id: 'org-283', name: 'Rehearsal FC', logo_url: null }])
     if (path === '/rest/v1/squad_players') return json(players)
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
+    if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
+    if (path === '/rest/v1/event_confirmations') return json(CONFIRMED)
+    if (path === '/rest/v1/event_absences') return json(ABSENT)
+    if (path === '/rest/v1/game_plan_players' && req.method() === 'POST') {
+      for (const row of req.postDataJSON() as Record<string, unknown>[]) plans.set(`line-up:${row.event_id}:${row.squad_player_id}`, row)
+      return route.fulfill({ status: 201, body: '' })
+    }
+    if (path === '/rest/v1/game_plan_players') {
+      const one = url.searchParams.get('event_id')?.replace(/^eq\./, '')
+      return json([...plans.entries()].filter(([key]) => key.startsWith(`line-up:${one}:`)).map(([, row]) => row))
+    }
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path === '/rest/v1/coach_calendar_events') {
       const one = url.searchParams.get('id')?.replace(/^eq\./, '')
@@ -69,7 +88,7 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     }
     if (path === '/rest/v1/game_plans') {
       const one = url.searchParams.get('event_id')?.replace(/^eq\./, '')
-      return json([...plans.values()].filter(plan => !one || plan.event_id === one))
+      return json([...plans.entries()].filter(([key, plan]) => !key.startsWith('line-up:') && (!one || plan.event_id === one)).map(([, plan]) => plan))
     }
     // Every other read is empty.
     if (path.startsWith('/rest/v1/')) return json(req.method() === 'GET' || path.startsWith('/rest/v1/rpc/') ? [] : null)
@@ -192,3 +211,74 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 }
+
+// TRAK-285: on a phone the player's sheet is a bottom sheet: it opens, scrolls, and closes with Esc and with a swipe.
+test("a game's line-up at 390 px: the player's sheet opens, scrolls and closes with Esc and with a swipe", async ({ page, context }, testInfo) => {
+  const { unexpected, errors } = await open(page, context, '/coach/games/m-next?tab=plan', 390, 844)
+  await page.getByRole('button', { name: 'Next: Line-up and jobs' }).click()
+  await expect(page.getByRole('heading', { name: '4-4-2' })).toBeVisible()
+  await page.getByRole('button', { name: 'Slot 1, empty' }).click()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet).toBeVisible()
+  await sheet.getByRole('combobox', { name: 'Who plays here?' }).click()
+  await page.getByRole('option', { name: /^Theodoros Zagorakis/ }).click()
+  await expect(sheet.getByLabel('Job · Theodoros and family see it')).toBeVisible()
+  await sheet.getByLabel('Job · Theodoros and family see it').fill('Command the box on crosses.')
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: testInfo.outputPath('line-up-sheet-390.png') })
+
+  // Expanded with its grabber, it scrolls to the last field.
+  await sheet.getByRole('button', { name: 'Expand sheet' }).click()
+  await page.waitForTimeout(500)
+  const box = (await sheet.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.75)
+  await page.mouse.wheel(0, 1200)
+  await expect(sheet.getByRole('group', { name: 'Expectation · only you' })).toBeInViewport()
+
+  await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Theodoros Zagorakis, slot 1' })).toBeVisible()
+
+  // A swipe down on the sheet's header closes it too.
+  await page.getByRole('button', { name: 'Theodoros Zagorakis, slot 1' }).click()
+  await expect(sheet).toBeVisible()
+  await page.waitForTimeout(500)
+  const title = (await sheet.getByRole('heading', { name: 'Theodoros Zagorakis' }).boundingBox())!
+  await page.mouse.move(title.x + title.width / 2, title.y + title.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(title.x + title.width / 2, title.y + 520, { steps: 12 })
+  await page.mouse.up()
+  await expect(sheet).toBeHidden()
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
+// TRAK-285: on a laptop the sheet is a panel beside the pitch, so the pitch stays in view while the coach edits.
+test("a game's line-up at 1440 px: the pitch stays in view while the panel beside it is edited", async ({ page, context }, testInfo) => {
+  const plans: Plans = new Map()
+  const { unexpected, errors } = await open(page, context, '/coach/games/m-next?tab=plan', 1440, 900, plans)
+  await page.getByRole('button', { name: 'Next: Line-up and jobs' }).click()
+  const pitch = page.getByRole('region', { name: '4-4-2' })
+  await expect(pitch).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.getByRole('region', { name: 'Format and formation' }).screenshot({ path: testInfo.outputPath('formations-1440.png') })
+  await page.getByRole('button', { name: 'Slot 2, empty' }).click()
+  await page.getByRole('combobox', { name: 'Who plays here?' }).click()
+  await page.getByRole('option', { name: /^Traianos Dellas/ }).click()
+  const job = page.getByLabel('Job · Traianos and family see it')
+  await job.fill('Stay tight to their number 9. Win the first header.')
+  await expect(pitch).toBeInViewport()
+  await expect(job).toBeInViewport()
+  await expect(page.getByRole('progressbar', { name: '1 of 11 starters have a job' })).toBeVisible()
+  await page.getByRole('button', { name: 'Save draft' }).click()
+  await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible()
+  expect(plans.get('line-up:m-next:sq-4')).toMatchObject({ role: 'starter', slot: 2, job: 'Stay tight to their number 9. Win the first header.' })
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: testInfo.outputPath('line-up-1440.png'), fullPage: true })
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
+  expect(keyboard.missed).toEqual([])
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
