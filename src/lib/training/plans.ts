@@ -104,6 +104,13 @@ export function minutesLine(planned: number, length: number | null): { planned: 
   }
 }
 
+/** Kostas, 28 Oct: a plan may run longer than the training was set for (the time may have been a mistake), so the
+ *  coach can keep it; this says so plainly. Null when it fits or the training has no length. */
+export function overTime(planned: number, length: number | null): string | null {
+  if (!length || planned <= length) return null
+  return `You set this training for ${length} min. The plan runs ${planned - length} min over. You can keep it, or change the training's time in Schedule.`
+}
+
 /** The list with one practice moved up (-1) or down (+1); unchanged at either end. */
 export function move<T>(list: T[], index: number, by: -1 | 1): T[] {
   const to = index + by

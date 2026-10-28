@@ -8,7 +8,7 @@ import { registerProblem } from '@/lib/event-register'
 import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingEnd, trainingMinutes } from '@/lib/training/sessions'
 import { loopNote, loopState, practiceStarts } from '@/lib/training/loop'
 import {
-  PLAN_MAX, blankPractice, fromDrill, fromSaved, minutesLine, move, planPath, plannedMinutes, roomFor, sourceLabel,
+  PLAN_MAX, blankPractice, fromDrill, fromSaved, minutesLine, move, overTime, planPath, plannedMinutes, roomFor, sourceLabel,
   type PlannerState, type Practice,
 } from '@/lib/training/plans'
 import { gameWhen } from '@/components/coach/games/useGames'
@@ -86,6 +86,11 @@ function Header({ training, children }: { training: Training; children: ReactNod
   )
 }
 
+/** The plan runs longer than the training was set for: said plainly, never a block (Kostas, 28 Oct). */
+function OverTime({ text }: { text: string }) {
+  return <p role="status" className="mt-2 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-ink">{text}</p>
+}
+
 /** The details a practice has, in the mockup's order: "20 × 30 m · 4v4 + 2". */
 const detailsLine = (practice: Practice) => DRILL_DETAILS.map(d => practice[d.key].trim()).filter(Boolean).join(' · ')
 
@@ -138,6 +143,7 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
   const [problem, setProblem] = useState<string | null>(null)
   const length = trainingMinutes(training)
   const line = minutesLine(plannedMinutes(practices), length)
+  const over = overTime(plannedMinutes(practices), length)
   const full = practices.length >= PLAN_MAX
   const inPlan = new Set(practices.flatMap(p => p.drill_id ? [p.drill_id] : []))
 
@@ -187,7 +193,8 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
     <div className="mt-6 grid max-w-[720px] gap-3">
       <div>
         <p className="flex justify-between gap-3 text-[13px]"><span className="font-medium text-ink">{line.planned}</span>
-          {line.left && <span className="text-ink-3">{line.left}</span>}</p>
+          {line.left && <span className={over ? 'font-medium text-warning' : 'text-ink-3'}>{line.left}</span>}</p>
+        {over && <OverTime text={over} />}
       </div>
 
       {copiedFrom && <p role="status" className="rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
@@ -329,6 +336,7 @@ function PlanView({ training, plan }: { training: Training; plan: Plan | null })
           <h2 id="practices" className="text-lg font-medium text-ink">Practices</h2>
           <span className="text-[13px] text-ink-3">{practices.length} {practices.length === 1 ? 'practice' : 'practices'} · {total} min</span>
         </div>
+        {!cancelled && overTime(total, trainingMinutes(training)) && <OverTime text={overTime(total, trainingMinutes(training))!} />}
         <ol className="grid gap-2.5">{practices.map((practice, i) => <li key={i}><PracticeRow practice={practice} /></li>)}</ol>
       </> : <>
         <h2 id="practices" className="sr-only">Practices</h2>
