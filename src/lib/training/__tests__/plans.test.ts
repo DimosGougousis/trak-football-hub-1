@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sessionById } from '@/lib/library/library'
 import {
   bestFit, blankPractice, fromDrill, fromLibrary, fromSaved, lastPlanWay, minutesLine, move, plannedMinutes, rememberPlanWay,
-  roomFor, sourceLabel, toSave, type SavedPractice,
+  roomFor, searchSessions, sessionSummary, sourceLabel, toSave, type SavedPractice,
 } from '../plans'
 
 /* TRAK-295 (Training 2/5): a plan's rules, apart from the screens. */
@@ -81,6 +81,11 @@ describe('the last way the coach planned', () => {
     expect(lastPlanWay('coach-a')).toBe('write')
     expect(lastPlanWay('coach-b')).toBeNull()
     expect(lastPlanWay(undefined)).toBeNull()
+    // TRAK-297: Copy a past session too; anything else stored there is no way at all.
+    rememberPlanWay('coach-a', 'copy')
+    expect(lastPlanWay('coach-a')).toBe('copy')
+    localStorage.setItem('trak:training:plan-way:coach-a', 'guided')
+    expect(lastPlanWay('coach-a')).toBeNull()
   })
 
   it('a device that refuses storage just forgets it', () => {
@@ -126,5 +131,24 @@ describe('TRAK-296: a practice from a drill or the Library', () => {
     expect(bestFit(drills, 20).map(d => d.minutes)).toEqual([20, 15, 25])
     expect(bestFit(drills, 30).map(d => d.minutes)).toEqual([30, 25, 20])
     expect(bestFit([], 20)).toEqual([])
+  })
+})
+
+describe('TRAK-297: past sessions', () => {
+  const sessions = [
+    { title: 'Pressing zones', practices: [{ name: 'Rondos 4v1', minutes: 15 }, { name: 'Pressing on the trigger', minutes: 25 }] },
+    { title: 'Finishing', practices: [{ name: 'Finishing 3v2', minutes: 20 }] },
+  ]
+
+  it('search finds a session by its name or a practice’s, every word typed', () => {
+    expect(searchSessions(sessions, '').map(s => s.title)).toEqual(['Pressing zones', 'Finishing'])
+    expect(searchSessions(sessions, 'rondos').map(s => s.title)).toEqual(['Pressing zones'])
+    expect(searchSessions(sessions, 'FINISH 3v2').map(s => s.title)).toEqual(['Finishing'])
+    expect(searchSessions(sessions, 'pressing finishing')).toEqual([])
+  })
+
+  it('sums a session up: practices, minutes and their names', () => {
+    expect(sessionSummary(sessions[0].practices)).toBe('2 practices · 40 min · Rondos 4v1, Pressing on the trigger')
+    expect(sessionSummary(sessions[1].practices)).toBe('1 practice · 20 min · Finishing 3v2')
   })
 })

@@ -1,11 +1,11 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ClipboardList, PenLine, Pencil, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
-import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingMinutes, type Drill } from '@/lib/training/sessions'
+import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingMinutes } from '@/lib/training/sessions'
 import {
   PLAN_MAX, blankPractice, fromDrill, fromSaved, minutesLine, move, planPath, plannedMinutes, roomFor, sourceLabel,
-  type Practice,
+  type PlannerState, type Practice,
 } from '@/lib/training/plans'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { usePlan, useSavePlan, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
@@ -25,7 +25,8 @@ import { Input } from '@/components/arc/input/input'
    (/coach/training/:eventId/plan) types practices one at a time and saves the plan whole; the plan
    (/coach/training/:eventId) shows it with the loop. Only the coach sees either. TRAK-296 (Training 3/5): a practice
    comes from My drills or the Library too, added or swapped in through AddSheet, and Training › Drills can send a
-   drill here ("Add to <training>"). Copy a past session is 4/5; Who's here, Run it and Close 5/5. */
+   drill here ("Add to <training>"). TRAK-297 (Training 4/5): Copy a past session opens the planner filled in with its
+   practices; nothing saves until Save the plan. Who's here, Run it and Close are 5/5. */
 
 const SAVE_FAILED = "Couldn't save the plan. Check your connection and try again. Nothing you typed is lost."
 const TRAINING_PATH = '/coach/training'
@@ -107,8 +108,6 @@ export function PlanEditorRoute() {
 }
 
 type Writing = { index: number | null; draft: Practice }
-/** Training › Drills' "Add to <training>" opens the planner with that drill added. */
-export type PlannerState = { addDrill?: Drill } | null
 
 function Editor({ training, saved }: { training: Training; saved: Plan | null }) {
   const { parked, comingSoon } = useParked()
@@ -116,23 +115,22 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
   const location = useLocation()
   const save = useSavePlan(training.id)
   const sent = (location.state as PlannerState)?.addDrill
+  // A copied session takes the place of what's there; the coach chose to start from it.
+  const copied = (location.state as PlannerState)?.copy
+  const [copiedFrom] = useState(() => copied?.length ? (location.state as PlannerState)?.copiedFrom ?? null : null)
   const [practices, setPractices] = useState<Practice[]>(() => {
+    if (copied?.length) return fromSaved(copied).slice(0, PLAN_MAX)
     const list = fromSaved(saved?.practices ?? [])
     return sent && list.length < PLAN_MAX ? [...list, fromDrill(sent)] : list
   })
   // The practice being written: a new one (index null) or one of the list. An empty plan starts with one open.
-  const [writing, setWriting] = useState<Writing | null>(() => saved?.practices.length || sent ? null : { index: null, draft: blankPractice() })
+  const [writing, setWriting] = useState<Writing | null>(() => practices.length ? null : { index: null, draft: blankPractice() })
   const [adding, setAdding] = useState<AddTarget | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const length = trainingMinutes(training)
   const line = minutesLine(plannedMinutes(practices), length)
   const full = practices.length >= PLAN_MAX
   const inPlan = new Set(practices.flatMap(p => p.drill_id ? [p.drill_id] : []))
-
-  // The drill sent from Training › Drills is added once: a reload or Back doesn't add it again.
-  useEffect(() => {
-    if (sent) navigate(location.pathname, { replace: true, state: null })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- only the drill the planner opened with
 
   const add = (view: AddView) => { setProblem(null); setAdding({ view, swap: null, minutes: roomFor(plannedMinutes(practices), length) }) }
   const use = (practice: Practice) => {
@@ -162,7 +160,9 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
     if (!practices.length) return setProblem('Add a practice first.')
     setWriting(null)
     save.mutate(practices, {
-      onSuccess: () => { toast.success('Plan saved'); navigate(`${TRAINING_PATH}/${training.id}`) },
+      // The plan replaces the planner in the history: Back never reopens it with a drill or a copy already used, which
+      // stay in the planner's own history entry so a reload or a change of layout doesn't lose them.
+      onSuccess: () => { toast.success('Plan saved'); navigate(`${TRAINING_PATH}/${training.id}`, { replace: true }) },
       // The database's own words when it refuses (a cancelled training, too many practices); typing is kept.
       onError: error => setProblem('code' in error && error.code === 'P0001' ? `${error.message}.` : SAVE_FAILED),
     })
@@ -181,6 +181,8 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
           {line.left && <span className="text-ink-3">{line.left}</span>}</p>
       </div>
 
+      {copiedFrom && <p role="status" className="rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
+        Copied from {copiedFrom}. Change anything, then Save the plan. Nothing is saved until you do.</p>}
       {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
 
       <ol aria-label="Practices" className="grid gap-2.5">
