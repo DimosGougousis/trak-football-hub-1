@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '@/integrations/supabase/client'
@@ -15,6 +15,8 @@ import { SquadPills } from '@/components/coach/home/SquadPills'
 import { SquadShape } from '@/components/coach/home/SquadShape'
 import { NeedsYou, type OwedEvent } from '@/components/coach/home/NeedsYou'
 import { useOwedEvents } from '@/components/coach/home/useOwedEvents'
+import { gameTitle, gameWhen, useGames } from '@/components/coach/games/useGames'
+import { needsAPlan } from '@/lib/games/loop'
 import { useFeature } from '@/components/trak/parked'
 import { eventHeading, toPlayerEvent } from '@/lib/player-events'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
@@ -64,8 +66,11 @@ export default function CoachHomePage() {
   const client = useQueryClient()
   const eventsOn = useFeature('events')
   const owed = useOwedEvents(user?.id, everySquad ? () => true : coachSquad.eventInSquad, eventsOn)
-  // Shown once both have answered: events added in front of player cards already on screen left the row scrolled past them.
-  const needsReady = !eventsOn || owed.items !== null || owed.failed
+  // TRAK-284: a match a week out or less, its logistics shared, without a shared plan.
+  const gamesOn = useFeature('games')
+  const games = useGames(gamesOn)
+  // Shown once all have answered: events added in front of player cards already on screen left the row scrolled past them.
+  const needsReady = (!eventsOn || owed.items !== null || owed.failed) && (!gamesOn || !games.isPending || games.isError)
   const owedChanged = () => {
     setWeekVersion(v => v + 1)
     void client.invalidateQueries({ queryKey: ['coach', user?.id, 'owed-events'] })
@@ -81,6 +86,17 @@ export default function CoachHomePage() {
       action: <NextStep item={item} coachId={user.id} roster={undefined} onChanged={owedChanged} />,
     }
   })
+  const planEvents: OwedEvent[] = !gamesOn ? [] : needsAPlan((games.data ?? []).filter(game => everySquad || coachSquad.eventInSquad(game.squad)), Date.now())
+    .map(game => {
+      const { day, time } = gameWhen(game)
+      return {
+        id: game.id, title: gameTitle(game), when: [day, time].filter(Boolean).join(' · '),
+        squad: coachSquad.squads.length >= 2 ? squadName(game.squad) : null,
+        reason: 'Plan not shared',
+        action: <Link to={`/coach/games/${game.id}?tab=plan`}
+          className="arc inline-flex h-9 min-w-[128px] items-center justify-center gap-2 rounded-full bg-brand px-4 text-[14px] font-medium text-on-brand focus-visible:ring-2 focus-visible:ring-primary">Write the plan</Link>,
+      }
+    })
 
   const pills = coachSquad.squads.length >= 2 && coachSquad.squad
     ? <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
@@ -103,7 +119,8 @@ export default function CoachHomePage() {
         </div>
         {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
         {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-6' : 'mt-5'}>
-          <NeedsYou items={needsReady ? cards : null} events={owedEvents} failed={!!roster.error || owed.failed} onRetry={() => { roster.retry(); owed.retry() }}
+          <NeedsYou items={needsReady ? cards : null} events={[...owedEvents, ...planEvents]} failed={!!roster.error || owed.failed || (gamesOn && games.isError)}
+            onRetry={() => { roster.retry(); owed.retry(); if (gamesOn) void games.refetch() }}
             onOpen={item => item.kind === 'draft'
               // TRAK-200: the profile's assessment card says Draft and has Publish.
               ? navigate(`/coach/player/${item.playerId}`)

@@ -610,6 +610,39 @@ export type Database = {
         }
         Relationships: []
       }
+      game_plans: {
+        Row: {
+          created_at: string
+          event_id: string
+          goals: Json
+          key_players: Json
+          scouting: string
+          strength: string | null
+          their_formation: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          goals?: Json
+          key_players?: Json
+          scouting?: string
+          strength?: string | null
+          their_formation?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          goals?: Json
+          key_players?: Json
+          scouting?: string
+          strength?: string | null
+          their_formation?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           age_group: string

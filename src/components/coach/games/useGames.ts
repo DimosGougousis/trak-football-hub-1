@@ -11,11 +11,12 @@ import { weekdayDayMonth } from '@/lib/squad/format'
 export type Game = Pick<Tables<'coach_calendar_events'>, 'id' | 'squad' | 'title' | 'published' | 'status' | 'starts_at'
   | 'ends_at' | 'event_date' | 'start_time' | 'opponent' | 'home_away' | 'venue'>
 
-export function useGames() {
+/** `enabled`: Home asks only while the academy's games switch is on (TRAK-284). */
+export function useGames(enabled = true) {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['coach', user?.id, 'games'],
-    enabled: !!user,
+    enabled: !!user && enabled,
     queryFn: async (): Promise<Game[]> => {
       const { data, error } = await supabase.from('coach_calendar_events')
         .select('id, squad, title, published, status, starts_at, ends_at, event_date, start_time, opponent, home_away, venue')
@@ -37,6 +38,34 @@ export function useGame(eventId: string | undefined) {
         .eq('id', eventId!).eq('coach_user_id', user!.id).eq('event_type', 'match').maybeSingle()
       if (error) throw error
       return data
+    },
+  })
+}
+
+/** TRAK-284: one match's plan, or null before its first save. Only the match's coach reads it (the database's rule). */
+export function useGamePlan(eventId: string | undefined) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'game-plan', eventId],
+    enabled: !!user && !!eventId,
+    queryFn: async (): Promise<Tables<'game_plans'> | null> => {
+      const { data, error } = await supabase.from('game_plans').select('*').eq('event_id', eventId!).maybeSingle()
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+/** TRAK-284: when each of the coach's plans was last saved, by match. The database returns only their own. */
+export function useGamePlans() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'game-plans'],
+    enabled: !!user,
+    queryFn: async (): Promise<Map<string, string>> => {
+      const { data, error } = await supabase.from('game_plans').select('event_id, updated_at')
+      if (error) throw error
+      return new Map((data ?? []).map(plan => [plan.event_id, plan.updated_at]))
     },
   })
 }

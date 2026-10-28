@@ -48,7 +48,7 @@ CASCADE`. Every text field has a length limit, and every list a maximum length.
 
 | Table | Key | Holds | Slice |
 |---|---|---|---|
-| `game_plans` | `event_id` | Opponent strength (weaker, similar or stronger), their formation, their key players (shirt number, position, note; at most 11; no names, because they are other clubs' children), scouting, our goals (title, what it looks like; at most 3). Then format (11, 9, 7 or 5 a side; default 11) and formation (285), and the face-to-face tick and `shared_at` (286). | 284 |
+| `game_plans` | `event_id` | `strength` (weaker, similar or stronger), `their_formation` (a shape such as 4-4-2), `key_players` (shirt number 1 to 99 or blank, position, note; at most 11; no names, because they are other clubs' children), `scouting`, `goals` (title, what it looks like; at most 3). The two lists are JSON the database checks (`trak_private.valid_key_players`, `valid_game_goals`). No one deletes a plan: it goes with its match. Then format (11, 9, 7 or 5 a side; default 11) and formation (285), and the face-to-face tick and `shared_at` (286). | 284 |
 | `game_plan_players` | `event_id, squad_player_id` | Role (starter, bench or not selected), slot (starters only; one player per slot), job, note, context (the five chips), expectation (stretch, usual or lead; unset reads as usual). | 285 |
 | `game_shares` | `event_id, shared_at` | One row per share, with how many players it changed. Feeds the timeline ("Changes shared to 3"). | 286 |
 | `game_evaluations` | `event_id` | Our score, their score, our goals (scorer and optional assist each; no more than our score), how they scored, "Did the plan work?" (one answer per plan goal), `saved_at`, `published_at`. | 288 |
@@ -146,9 +146,13 @@ Both routes sit inside `RouteGuard` (coach) and `ParkedScreen unless="games"`, a
 - sidebar: Home · Schedule · Squad · Games · Library;
 - phone tab bar: Home · Squad · Games · Library.
 
+Where the academy's training switch is on (TRAK-294), Training takes Library's place.
+
 Where the code goes:
 
-- Screens: `src/components/coach/games/`, one file per step or part.
+- Screens: `src/components/coach/games/`, one file per step or part. Arc's tabs unmount a panel that isn't shown,
+  so what a step holds as typed lives on the game page, above the tabs (TRAK-284). Keeping the panel mounted
+  instead broke the tab keys.
 - Logic with no screen, unit tested, in `src/lib/games/`:
   - `loop.ts`: a game's state, its next action and its Needs you card, from the event, plan, evaluation, change
     count and clock;
@@ -160,7 +164,9 @@ Where the code goes:
 
 Arc: each step uses TRAK-282's picks. Before each slice, every component it adds is read with the Arc MCP
 (`whenToUse`, `whenNotToUse`) and checked for React 19-only APIs. Fifteen free components and one Pro block are new to
-Trak. The Pro block, `release-readiness`, is listed in `src/components/arc/PRO.md`.
+Trak. The Pro block, `release-readiness`, is listed in `src/components/arc/PRO.md`. One pick changed (Imad, 28 Oct):
+a key player's shirt number is an `input` with the number pad, not `number-field`, because it is a code and can be
+blank.
 
 ## Existing code
 
@@ -269,7 +275,8 @@ npm run build && npx playwright test --config playwright.pilot.config.ts
 
 **Never:**
 
-- run SQL against production (Imad runs the switch SQL);
+- run SQL against production without Imad's go for that step (on 28 Oct he had the agent run the Rehearsal FC
+  switch);
 - edit an applied migration;
 - read the reason behind "Can't make it";
 - add a diagnosis field;
@@ -292,7 +299,8 @@ npm run build && npx playwright test --config playwright.pilot.config.ts
    pulls against "after a game there is no number". To ask with the list of match readers before slice 6.
 2. **Unplaced players (285).** Does a player who can come but isn't on the pitch start as Bench, Not selected or
    undecided? It decides what they see if the coach forgets them.
-3. **Formations (285).** A proposed list per format, for Imad to trim.
+3. **Formations (285).** A proposed list per format, for Imad to trim. Until then, step 1's "their formation" offers
+   11-a-side shapes only.
 4. **Competition (289).** The match log stores league, cup or friendly, and the evaluation doesn't ask. A default,
    or one more question?
 5. **Data export.** `export_my_account` should include a child's Games rows, as it includes their matches. A
