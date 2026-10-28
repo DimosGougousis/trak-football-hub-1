@@ -32,6 +32,9 @@ const AFTER = { ...BEFORE, event_date: '2026-11-15', start_time: '11:00:00', sta
 
 function setup(event: Record<string, unknown>) {
   server.use(
+    // TRAK-286: no shared game plan.
+    table('game_for_family', []),
+    table('game_for_player', []),
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('matches', []), table('player_details', []), table('coach_assessments', []), table('recognition_awards', []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),

@@ -70,7 +70,9 @@ export function LineUpAndJobs({ form, onFormChange, who }: {
         {plan(player).role !== 'not_selected' && (plan(player).job.trim()
           ? <ExpandableText lines={2} className="text-sm text-ink-2">{plan(player).job}</ExpandableText>
           : <span className="text-sm text-ink-3">No job yet</span>)}
-        {(plan(player).expectation !== 'usual' || plan(player).context.length > 0) && <span className="arc flex flex-wrap gap-1.5">
+        {(player.absent || plan(player).expectation !== 'usual' || plan(player).context.length > 0) && <span className="arc flex flex-wrap gap-1.5">
+          {/* TRAK-286: a starter whose family said they can't make it, after the plan was made. Never the reason. */}
+          {player.absent && <Badge size="sm" tone="warning">Can’t make it</Badge>}
           {plan(player).context.map(tag => <Badge key={tag} size="sm" tone="warning">{contextLabel.get(tag)}</Badge>)}
           {plan(player).expectation !== 'usual' && <Badge size="sm" tone="info">Expect: {expectationLabel.get(plan(player).expectation)}</Badge>}
         </span>}

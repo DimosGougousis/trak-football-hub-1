@@ -3,17 +3,20 @@ import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/playe
 // The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
 import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 import { withAlpha } from '@/lib/with-alpha'
+import { Badge } from '@/components/arc/badge/badge'
 
 /**
  * One upcoming event (TRAK-130). `nextUp` is the home card; otherwise a row
  * in the Sessions tab's list. Either opens the event page.
  */
-export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '/player/event' }: {
+export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '/player/event', plan = null }: {
   event: PlayerEvent
   changed: boolean
   nextUp?: boolean
   /** The event page's route; parents open /parent/event (J8.8). */
   linkBase?: string
+  /** TRAK-286: the coach shared a game plan, or a later share changed it for this reader (planBadge). */
+  plan?: 'shared' | 'updated' | null
 }) {
   const cancelled = event.status === 'cancelled'
   const heading = eventHeading(event)
@@ -30,6 +33,8 @@ export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '
         <div className="flex items-center gap-2">
           {cancelled && <span className="text-[10px] font-semibold text-danger">Cancelled</span>}
           {changed && <span className="text-[10px] font-semibold text-brand">Changed</span>}
+          {plan && !cancelled && <span className="arc"><Badge size="sm" tone={plan === 'updated' ? 'info' : 'success'}>
+            {plan === 'updated' ? 'Updated' : 'Plan shared'}</Badge></span>}
         </div>
         <p className={`text-[13px] font-medium truncate ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{heading}</p>
         <p className="text-[11px] mt-0.5 text-ink-2">{eventDay(event)} · {eventTime(event)}</p>

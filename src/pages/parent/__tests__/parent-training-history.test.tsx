@@ -40,6 +40,8 @@ function deferred() {
 
 beforeEach(() => {
   server.use(
+    // TRAK-286: no roster row, so no shared game plan.
+    http.get(endpoint('squad_players'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'Alex' }, { player_user_id: 'Zara' }])),
     http.get(endpoint('profiles'), ({ request }) => {
       const filter = new URL(request.url).searchParams.get('user_id') ?? ''

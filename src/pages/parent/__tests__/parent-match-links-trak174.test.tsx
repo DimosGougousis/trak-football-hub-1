@@ -19,6 +19,9 @@ const endpoint = (name: string) => `${SUPABASE_URL}/rest/v1/${name}`
 const clients: QueryClient[] = []
 beforeEach(() => {
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'Alex' }, { player_user_id: 'Zara' }])),
     http.get(endpoint('profiles'), () => HttpResponse.json([{ user_id: 'Alex', full_name: 'Alex Example' }, { user_id: 'Zara', full_name: 'Zara Example' }])),
     http.get(endpoint('matches'), ({ request }) => {

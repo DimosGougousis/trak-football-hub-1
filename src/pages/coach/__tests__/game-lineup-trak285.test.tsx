@@ -79,6 +79,8 @@ beforeEach(() => {
     table('session_attendance', []),
     table('coach_calendar_events', [game()]),
     rpc('feature_on', () => true),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
   )
 })
 afterEach(() => { cleanup(); localStorage.clear() })

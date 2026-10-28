@@ -43,6 +43,10 @@ beforeEach(() => {
     table('event_absences', []),
     // Events on; Games (TRAK-283) off unless a test switches it on.
     rpc('feature_on', ({ p_feature }) => p_feature === 'events'),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
   )
 })
 afterEach(() => { window.matchMedia = realMatchMedia; vi.restoreAllMocks() })
