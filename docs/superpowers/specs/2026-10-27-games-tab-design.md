@@ -115,10 +115,14 @@ Players and guardians get no insert, update or delete grant on any Games table.
 - **`trak_private.family_reads_game_copy(event, squad row, guardian)`** (286): the copies' read rule. A published,
   uncancelled match in an academy with the switch on; the child on the coach's current roster in the match's squad,
   with consent; the caller is the child or, for `game_for_family` only, a guardian.
-- **Kick-off lock** (287), on `game_plans` and `game_plan_players`, the approach of
-  `20261021030000_started_event_locked.sql`. For app users, any insert, update or delete after the event's
-  `starts_at` raises a plain-language error. It reads the event each time, so moving the match moves the lock. The
-  operator can still correct a row. `share_game_plan` refuses after kick-off too.
+- **Kick-off lock** (287, `20261028223000_games_locked_at_kick_off.sql`), a trigger on `game_plans` and
+  `game_plan_players` (`trak_private.refuse_locked_plan_change`), the approach of
+  `20261021030000_started_event_locked.sql`. For app users, any insert or update after the event's `starts_at` raises
+  "This match has kicked off, so its plan is locked". It reads the event each time, so moving the match moves the lock.
+  The operator can still correct a row. `share_game_plan` refuses after kick-off too, and `game_plan_changes` keeps
+  counting what wasn't shared, for the lock's note. Imad, 28 Oct: the note sits in the lock's alert ("2 players didn't
+  get your last changes", or "It wasn't shared, so only you saw it"); the History timeline comes with 289 and reads
+  the same facts.
 - **Evaluation window** (288), on both evaluation tables: writes are accepted only after the event's `ends_at` and
   never once `published_at` is set. Published is final.
 - **`publish_game_evaluation(event_id, match)`** (289). Security definer, one transaction. It refuses unless the

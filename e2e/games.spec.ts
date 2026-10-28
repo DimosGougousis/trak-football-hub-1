@@ -379,3 +379,36 @@ test("the player's event page at 390 px: the shared game plan", async ({ page, c
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
 })
+
+// TRAK-287: a match that has kicked off shows its plan locked: read only, with no Save or Share, and the lock's note.
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`a locked plan at ${width} px: read only, with the lock's note`, async ({ page, context }, testInfo) => {
+    const plans: Plans = new Map([
+      ['m-past', { event_id: 'm-past', strength: 'similar', their_formation: '4-3-3', key_players: [], scouting: 'Their 9 is quick.', format: 11,
+        formation: '4-4-2', goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
+        created_at: '2026-10-20T17:00:00Z', updated_at: '2026-10-20T17:40:00Z' }],
+      ['line-up:m-past:sq-1', { event_id: 'm-past', squad_player_id: 'sq-1', role: 'starter', slot: 4, job: 'Stay tight to their winger.',
+        note: '', context: [], expectation: 'usual' }],
+    ])
+    const { unexpected, errors } = await open(page, context, '/coach/games/m-past?tab=plan', width, height, plans)
+    await expect(page.getByText(/^Locked at kick-off, \d\d:\d\d$/)).toBeVisible()
+    await expect(page.getByText(/It wasn’t shared, so only you saw it\./)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save draft' })).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Goal' })).toHaveAttribute('readonly', '')
+    await expect(page.getByRole('button', { name: /Add a goal/ })).toHaveCount(0)
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`locked-plan-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    // Read-only fields still take focus, so the plan can be read with the keyboard.
+    const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
+    expect(keyboard.count).toBeGreaterThan(3)
+    expect(keyboard.missed).toEqual([])
+    await page.getByRole('button', { name: 'Next: Line-up and jobs' }).click()
+    await expect(page.getByText('Tap a player to see their job and note.')).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`locked-line-up-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
