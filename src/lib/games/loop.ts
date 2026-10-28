@@ -3,7 +3,7 @@
    the device's time zone never matters: the database sets both instants on the academy's clock (TRAK-175). */
 
 export type GameEvent = { id: string; published: boolean; starts_at: string; ends_at: string | null }
-export type GameState = 'logistics' | 'plan' | 'locked' | 'fullTime'
+export type GameState = 'logistics' | 'plan' | 'planDraft' | 'locked' | 'fullTime'
 export type GameTab = 'logistics' | 'plan' | 'evaluation'
 
 /** The loop as the stepper draws it (TRAK-282). */
@@ -16,6 +16,8 @@ export const STATE: Record<GameState, {
   // Publishing the match in Schedule is "share the logistics" (TRAK-282, step 1).
   logistics: { label: 'Logistics not shared', tone: 'neutral', step: 0, action: { label: 'Share the logistics', tab: 'logistics' } },
   plan: { label: 'Plan not written', tone: 'warning', step: 1, action: { label: 'Write the plan', tab: 'plan' } },
+  // TRAK-284: a draft only the coach sees. Sharing it (TRAK-286) closes "Plan not shared".
+  planDraft: { label: 'Plan not shared', tone: 'warning', step: 1, action: { label: 'Write the plan', tab: 'plan' } },
   locked: { label: 'Locked at kick-off', tone: 'info', step: 3 },
   // ponytail: no action until the evaluation exists (TRAK-288), which also decides which past matches still need one.
   fullTime: { label: 'Full time', tone: 'neutral', step: 4 },
@@ -26,10 +28,21 @@ export function fullTime(game: GameEvent): number {
   return game.ends_at ? Date.parse(game.ends_at) : Date.parse(game.starts_at) + 90 * 60_000
 }
 
-export function gameState(game: GameEvent, now: number): GameState {
+/** `drafted`: the coach has saved a plan for it (TRAK-284). */
+export function gameState(game: GameEvent, now: number, drafted = false): GameState {
   if (!game.published) return 'logistics' // a draft can still be published after its time (TRAK-230)
-  if (now < Date.parse(game.starts_at)) return 'plan'
+  if (now < Date.parse(game.starts_at)) return drafted ? 'planDraft' : 'plan'
   return now < fullTime(game) ? 'locked' : 'fullTime'
+}
+
+const WEEK = 7 * 24 * 60 * 60_000
+
+/** Needs you (TRAK-284): matches whose logistics are shared and that kick off within 7 days, soonest first. A
+ *  cancelled match isn't one of the coach's games. ponytail: no plan can be shared yet; TRAK-286 drops the shared. */
+export function needsAPlan<T extends GameEvent>(games: T[], now: number): T[] {
+  const kickOff = (game: T) => Date.parse(game.starts_at)
+  return games.filter(game => game.published && kickOff(game) > now && kickOff(game) <= now + WEEK)
+    .sort((a, b) => kickOff(a) - kickOff(b))
 }
 
 /** Upcoming matches soonest first, then past ones newest first, as the mockup orders them. The next game is the

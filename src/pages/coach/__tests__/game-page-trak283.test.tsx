@@ -56,6 +56,7 @@ beforeEach(() => {
     table('coach_sessions', []),
     table('session_attendance', []),
     table('event_absences', []),
+    table('game_plans', []),
     rpc('feature_on', () => true),
   )
 })
@@ -86,12 +87,12 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(read.searchParams.get('event_type')).toBe('eq.match')
   })
 
-  it('Game plan and Evaluation say what will happen there; the panel is in the URL and the keyboard moves between them', async () => {
+  it('Game plan opens its first step (TRAK-284) and Evaluation says what will happen there; the panel is in the URL and the keyboard moves between them', async () => {
     const user = userEvent.setup()
     events([game(soon())])
     renderApp('/coach/games/g1')
     await user.click(await screen.findByRole('tab', { name: 'Game plan' }))
-    expect(await screen.findByRole('heading', { name: 'Plan this game here' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your goals' })).toBeInTheDocument()
     expect(window.location.search).toBe('?tab=plan')
 
     await user.keyboard('{ArrowRight}')

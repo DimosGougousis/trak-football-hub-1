@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LOOP_STEPS, STATE, fullTime, gameState, orderGames, type GameEvent } from '../loop'
+import { LOOP_STEPS, STATE, fullTime, gameState, needsAPlan, orderGames, type GameEvent } from '../loop'
 
 // Kick-off Sat 31 Oct 2026, 11:00 in Athens (09:00Z); the clock is an instant, so the device's zone never matters.
 const KICK_OFF = Date.parse('2026-10-31T09:00:00Z')
@@ -45,6 +45,32 @@ describe('gameState (TRAK-283)', () => {
     expect(STATE.plan.action).toEqual({ label: 'Write the plan', tab: 'plan' })
     expect(STATE.locked.action).toBeUndefined()
     expect(STATE.fullTime.action).toBeUndefined()
+  })
+})
+
+describe('a plan draft (TRAK-284)', () => {
+  it('a published match with a plan draft before kick-off has a plan that is not shared, and the same next action', () => {
+    expect(gameState(game(), KICK_OFF - 1000, true)).toBe('planDraft')
+    expect(STATE.planDraft).toMatchObject({ label: 'Plan not shared', step: 1, action: { label: 'Write the plan', tab: 'plan' } })
+  })
+
+  it('a draft changes nothing while the logistics wait, or after kick-off', () => {
+    expect(gameState(game({ published: false }), KICK_OFF - 1000, true)).toBe('logistics')
+    expect(gameState(game(), KICK_OFF, true)).toBe('locked')
+  })
+})
+
+describe('needsAPlan (TRAK-284)', () => {
+  const now = Date.parse('2026-10-24T09:00:00Z')
+  const at = (id: string, startsAt: string, published = true) => game({ id, published, starts_at: startsAt, ends_at: null })
+
+  it('Needs you lists published matches kicking off within 7 days, soonest first', () => {
+    const games = [
+      at('in-7-days', '2026-10-31T09:00:00+00:00'), at('tomorrow', '2026-10-25T09:00:00+00:00'),
+      at('in-8-days', '2026-11-01T09:00:00+00:00'), at('draft-logistics', '2026-10-26T09:00:00+00:00', false),
+      at('kicked-off', '2026-10-24T09:00:00+00:00'),
+    ]
+    expect(needsAPlan(games, now).map(g => g.id)).toEqual(['tomorrow', 'in-7-days'])
   })
 })
 

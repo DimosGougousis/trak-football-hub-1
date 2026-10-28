@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { LOOP_STEPS, STATE, gameState, orderGames } from '@/lib/games/loop'
 import { SquadPills } from '@/components/coach/home/SquadPills'
-import { gameTitle, gameWhen, useGames, type Game } from '@/components/coach/games/useGames'
+import { gameTitle, gameWhen, useGamePlans, useGames, type Game } from '@/components/coach/games/useGames'
 import { LoadError } from '@/components/trak'
 import { MatchIcon } from '@/components/icons/MatchIcon'
 import { Badge } from '@/components/arc/badge/badge'
@@ -31,6 +32,7 @@ export default function CoachGames() {
   const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const games = useGames()
+  const plans = useGamePlans()
   // TRAK-266: All first and picked, as Home, Squad and Schedule open.
   const [allPicked, setAllPicked] = useState(true)
   const everySquad = allPicked && coachSquad.squads.length >= 2
@@ -39,6 +41,9 @@ export default function CoachGames() {
   const inView = (games.data ?? []).filter(game => everySquad || coachSquad.eventInSquad(game.squad))
   const { next, games: ordered } = orderGames(inView, now)
   const open = (game: Game, tab?: string) => navigate(`/coach/games/${game.id}${tab ? `?tab=${tab}` : ''}`)
+  const stateOf = (game: Game) => STATE[gameState(game, now, plans.data?.has(game.id))]
+  // TRAK-284: a plan draft stays open until it's shared (TRAK-286) or its match kicks off and locks it (TRAK-287).
+  const drafts = ordered.filter(game => plans.data?.has(game.id) && now < Date.parse(game.starts_at))
 
   return (
     <div className="min-h-screen bg-ground pb-24">
@@ -51,8 +56,9 @@ export default function CoachGames() {
           )}
         </header>
 
-        {games.error ? <LoadError what="your games" onRetry={() => void games.refetch()} retrying={games.isFetching} />
-          : games.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your games…</p>
+        {games.error || plans.error ? <LoadError what="your games" onRetry={() => { void games.refetch(); void plans.refetch() }}
+            retrying={games.isFetching || plans.isFetching} />
+          : games.isPending || plans.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your games…</p>
           : ordered.length === 0 ? (
             <div className="arc pt-6">
               <EmptyState icon={<MatchIcon size={24} strokeWidth={1.5} />} title="No matches yet"
@@ -61,7 +67,7 @@ export default function CoachGames() {
             </div>
           ) : <>
             <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              {next ? <NextGame game={next} now={now} onOpen={open} onKickOff={() => setNow(Date.now())} /> : (
+              {next ? <NextGame game={next} state={stateOf(next)} onOpen={open} onKickOff={() => setNow(Date.now())} /> : (
                 <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5">
                   <h2 id="next-game" className="text-lg font-medium text-ink">Next game</h2>
                   <p className="mt-2 text-sm text-ink-2">No match coming up.</p>
@@ -69,11 +75,19 @@ export default function CoachGames() {
                     className="mt-3 inline-block rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Add a match</Link>
                 </section>
               )}
-              {/* TRAK-284 fills this with plan drafts, TRAK-288 with evaluation drafts. */}
-              <section aria-labelledby="open-drafts" className="rounded-2xl border border-line bg-surface p-5">
+              {/* TRAK-284: plan drafts. TRAK-288 adds evaluation drafts. */}
+              <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5">
                 <h2 id="open-drafts" className="text-lg font-medium text-ink">Open drafts</h2>
                 <p className="mt-1 text-sm text-ink-3">Only you see a draft. Each stays here until it’s shared or published.</p>
-                <p className="mt-4 text-sm text-ink-2">No drafts open.</p>
+                {drafts.length === 0 ? <p className="mt-4 text-sm text-ink-2">No drafts open.</p> : <ul className="mt-3 divide-y divide-line">
+                  {drafts.map(game => <li key={game.id} className="flex items-center justify-between gap-3 py-3">
+                    <span className="grid min-w-0">
+                      <span className="truncate text-base font-medium text-ink">{gameTitle(game)}</span>
+                      <span className="truncate text-sm text-ink-3">Game plan · saved {format(new Date(plans.data!.get(game.id)!), 'EEE d MMM, HH:mm')}</span>
+                    </span>
+                    <Button variant="secondary" size="sm" aria-label={`Open the plan, ${gameTitle(game)}`} onClick={() => open(game, 'plan')}>Open</Button>
+                  </li>)}
+                </ul>}
               </section>
             </div>
 
@@ -83,7 +97,7 @@ export default function CoachGames() {
                 <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label="Your games">
                   <ul className="flex gap-3 px-1 pb-1">
                     {ordered.map(game => {
-                      const state = STATE[gameState(game, now)]
+                      const state = stateOf(game)
                       const { day, time } = gameWhen(game)
                       return <li key={game.id} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
                         <Link to={`/coach/games/${game.id}`}
@@ -107,8 +121,9 @@ export default function CoachGames() {
 }
 
 /** The next match: its loop, the one next action and the countdown to kick-off. A static panel, not a link. */
-function NextGame({ game, now, onOpen, onKickOff }: { game: Game; now: number; onOpen: (game: Game, tab?: string) => void; onKickOff: () => void }) {
-  const state = STATE[gameState(game, now)]
+function NextGame({ game, state, onOpen, onKickOff }: {
+  game: Game; state: (typeof STATE)[keyof typeof STATE]; onOpen: (game: Game, tab?: string) => void; onKickOff: () => void
+}) {
   const { day, time, academy } = gameWhen(game)
   return (
     <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
