@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -5,6 +6,9 @@ import type { Tables } from '@/integrations/supabase/types'
 import type { EventRow } from '@/lib/coach-events'
 import { academyClock, displayEventTime, phoneEventTime } from '@/lib/event-time'
 import { weekdayDayMonth } from '@/lib/squad/format'
+import { splitAvailability, type AvailPlayer } from '@/lib/squad/availability'
+import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
+import { absentKey, confirmedKey, loadConfirmed, loadReportedAbsent } from '@/components/coach/squad/availability-reads'
 
 /* TRAK-283: the coach's own matches for Games, not cancelled (a published event is cancelled, never deleted).
    The squad pills filter them on screen, as Schedule's do. */
@@ -68,6 +72,44 @@ export function useGamePlans() {
       return new Map((data ?? []).map(plan => [plan.event_id, plan.updated_at]))
     },
   })
+}
+
+/** TRAK-285: the line-up rows saved for one match. Only the match's coach reads them (the database's rule). */
+export function useGamePlayers(eventId: string | undefined) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'game-players', eventId],
+    enabled: !!user && !!eventId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('game_plan_players')
+        .select('squad_player_id, role, slot, job, note, context, expectation').eq('event_id', eventId!)
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}
+
+export type Candidate = AvailPlayer & { confirmed: boolean; absent: boolean }
+
+/** TRAK-285: who can come to a match, as Squad > Availability shows it: the match's squad, consented children only (a
+ *  departed child never reads), Confirmed first, and a guardian's "Can't make it" as a flag, never its reason. */
+export function useWhoCanCome(game: { id: string; squad?: string | null }) {
+  const { user } = useAuth()
+  const roster = useSquadRoster({ everySquad: true })
+  const confirmed = useQuery({ queryKey: confirmedKey(user?.id, game.id), queryFn: () => loadConfirmed(game.id), enabled: !!user })
+  const absent = useQuery({ queryKey: absentKey(user?.id, game.id), queryFn: () => loadReportedAbsent(game.id), enabled: !!user })
+  const players = useMemo<Candidate[]>(() => {
+    const squad = roster.players.filter(p => game.squad == null || p.age_group?.trim() === game.squad)
+      .map(p => ({ id: p.id, name: p.player_name, shirt: p.shirt_number, position: p.position }))
+    const split = splitAvailability(squad, roster.consentPending, new Set(confirmed.data ?? []), new Set(absent.data ?? []))
+    return [...split.confirmed.map(p => ({ ...p, confirmed: true })), ...split.notConfirmed.map(p => ({ ...p, confirmed: false }))]
+  }, [roster.players, roster.consentPending, confirmed.data, absent.data, game.squad])
+  return {
+    players,
+    isPending: roster.isPending || confirmed.isPending || absent.isPending,
+    error: roster.error ?? confirmed.error ?? absent.error ?? null,
+    retry: () => { roster.retry(); void confirmed.refetch(); void absent.refetch() },
+  }
 }
 
 export const gameTitle = (game: { opponent?: string | null; title: string }) => game.opponent ? `vs ${game.opponent}` : game.title

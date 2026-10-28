@@ -11,6 +11,7 @@ import type { Tables } from '@/integrations/supabase/types'
 import { Card, Missing } from './parts'
 import { SquadLoadError } from './SquadLoadError'
 import type { SquadRoster } from './useSquadRoster'
+import { absentKey, confirmedKey as confirmedKeyFor, loadConfirmed, loadReportedAbsent } from './availability-reads'
 
 /* TRAK-250: Squad > Availability. Families confirm in the squad's WhatsApp group; the coach reads it
    and ticks each child Confirmed here. Everyone else is Not confirmed, and a guardian's "Can't make it"
@@ -34,18 +35,6 @@ async function loadEvents(coachId: string, since: string, squad: string | null):
   return data ?? []
 }
 
-/** Only `squad_player_id` is ever selected: an absence's reason is not read here. */
-async function loadConfirmed(eventId: string): Promise<string[]> {
-  const { data, error } = await supabase.from('event_confirmations').select('squad_player_id').eq('event_id', eventId)
-  if (error) throw error
-  return (data ?? []).map(row => row.squad_player_id)
-}
-
-async function loadReportedAbsent(eventId: string): Promise<string[]> {
-  const { data, error } = await supabase.from('event_absences').select('squad_player_id').eq('event_id', eventId)
-  if (error) throw error
-  return (data ?? []).map(row => row.squad_player_id)
-}
 
 function Chip({ children, tone = 'raised' }: { children: ReactNode; tone?: 'raised' | 'brand' }) {
   return (
@@ -144,10 +133,10 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
   const event = upcoming[at]
   const eventId = event?.id
 
-  const confirmedKey = ['coach', userId, 'squad-availability', 'confirmed', eventId] as const
+  const confirmedKey = confirmedKeyFor(userId, eventId)
   const confirmedQuery = useQuery({ queryKey: confirmedKey, queryFn: () => loadConfirmed(eventId!), enabled: !!userId && !!eventId })
   const absentQuery = useQuery({
-    queryKey: ['coach', userId, 'squad-availability', 'absent', eventId],
+    queryKey: absentKey(userId, eventId),
     queryFn: () => loadReportedAbsent(eventId!),
     enabled: !!userId && !!eventId,
   })
@@ -162,7 +151,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     },
     // The row only moves once the confirmations have been read again; a refusal leaves it where it was.
     onSuccess: async (_data, vars) => {
-      await client.invalidateQueries({ queryKey: ['coach', userId, 'squad-availability', 'confirmed', vars.eventId] })
+      await client.invalidateQueries({ queryKey: confirmedKeyFor(userId, vars.eventId) })
       setMoved({ childId: vars.childId, text: `${vars.name} ${vars.confirm ? 'confirmed' : 'not confirmed'}` })
     },
   })

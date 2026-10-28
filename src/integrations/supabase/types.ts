@@ -610,10 +610,51 @@ export type Database = {
         }
         Relationships: []
       }
+      game_plan_players: {
+        Row: {
+          context: string[]
+          created_at: string
+          event_id: string
+          expectation: string
+          job: string
+          note: string
+          role: string
+          slot: number | null
+          squad_player_id: string
+          updated_at: string
+        }
+        Insert: {
+          context?: string[]
+          created_at?: string
+          event_id: string
+          expectation?: string
+          job?: string
+          note?: string
+          role?: string
+          slot?: number | null
+          squad_player_id: string
+          updated_at?: string
+        }
+        Update: {
+          context?: string[]
+          created_at?: string
+          event_id?: string
+          expectation?: string
+          job?: string
+          note?: string
+          role?: string
+          slot?: number | null
+          squad_player_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_plans: {
         Row: {
           created_at: string
           event_id: string
+          format: number
+          formation: string | null
           goals: Json
           key_players: Json
           scouting: string
@@ -624,6 +665,8 @@ export type Database = {
         Insert: {
           created_at?: string
           event_id: string
+          format?: number
+          formation?: string | null
           goals?: Json
           key_players?: Json
           scouting?: string
@@ -634,6 +677,8 @@ export type Database = {
         Update: {
           created_at?: string
           event_id?: string
+          format?: number
+          formation?: string | null
           goals?: Json
           key_players?: Json
           scouting?: string
