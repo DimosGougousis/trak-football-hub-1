@@ -61,6 +61,15 @@ Nobody else reads these tables.
 coach's last way on this device. Write my own is the only way in 295; Copy a past session joins it in 297. A
 training's page starts at the top whenever the coach opens it.
 
+From 296, "Add another" offers Write it · From My drills · From the Library, and each practice offers Swap; both open
+one sheet (`AddSheet`) with three views. No new tables: a drill or a Library session is copied into the plan as a
+practice (`source` `drill` or `library`). My drills' best fit is the coach's drills closest to the slot's minutes (a
+swapped practice's, or what's left of the training to the nearest 5, kept to 10–30). A Library session takes its
+short name, the slot's minutes or 20, its summary as how it works, and its pitch and players as the area and numbers;
+the Library view keeps to the training's squad's age group until the coach asks for every age, and previews a
+session inside the sheet with no link. From Training › Drills, a drill card adds the drill to the next training not
+planned yet: the planner opens with it added, once.
+
 Both routes are inside `ParkedScreen unless="training"`, so with the switch off the screen shows "Coming soon" and
 every write handler stops at `useParked()`.
 

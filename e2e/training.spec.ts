@@ -3,7 +3,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // TRAK-294 (Training 1/5): Training home (Sessions and Drills) and the New drill sheet with the academy's training
 // switch on, at a phone's and a laptop's width: no sideways scroll, and the keyboard reaches every control.
 // TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
-// same two widths.
+// same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -144,7 +144,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
 
   test(`Drills at ${width} px: My drills, the Library, and the New drill sheet`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/drills', width, height)
-    await expect(page.getByRole('region', { name: 'My drills' }).getByRole('button')).toHaveCount(3)
+    await expect(page.getByRole('region', { name: 'My drills' }).getByRole('button', { name: /Edit$/ })).toHaveCount(3)
+    // TRAK-296: each drill can go to the next training not planned yet.
+    await expect(page.getByRole('region', { name: 'My drills' }).getByRole('button', { name: /^Add .+ to / })).toHaveCount(3)
     await expect(page.getByRole('region', { name: 'From the Library' }).getByRole('link')).toHaveCount(7)
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`training-drills-${width}.png`), fullPage: true })
@@ -200,6 +202,39 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-plan-ready-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  test(`Add or swap at ${width} px: My drills, the Library and a preview`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue/plan', width, height)
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await page.getByRole('button', { name: 'From My drills' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Add a practice' })
+    await expect(sheet.getByRole('article', { name: 'Pressing on the trigger' })).toBeVisible()
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-add-drills-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+
+    await sheet.getByRole('button', { name: 'Library' }).click()
+    await sheet.getByRole('button', { name: 'Defending' }).click()
+    await sheet.getByRole('button', { name: 'Preview Pressing duels' }).click()
+    await expect(sheet.getByRole('heading', { name: 'Pressing duels' })).toBeVisible()
+    await expect(sheet.getByRole('link')).toHaveCount(0)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-add-preview-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await sheet.getByRole('button', { name: 'Use this' }).click()
+    await expect(sheet).toBeHidden()
+    await expect(page.getByText('Library · Defending')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Swap Pressing duels' }).click()
+    await expect(page.getByRole('dialog', { name: 'Swap “Pressing duels”' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-add-plan-${width}.png`), fullPage: true })
+    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

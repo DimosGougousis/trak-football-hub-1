@@ -7,11 +7,12 @@ import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { LIBRARIES, SESSIONS, libraryPath } from '@/lib/library/library'
 import { ON_LIBRARY } from '@/lib/fixed-colours'
 import { searchDrills, splitTrainings, trainingMinutes, type Drill } from '@/lib/training/sessions'
+import { planPath } from '@/lib/training/plans'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { useDrills, usePlannedTrainings, useTrainings, type Training } from '@/components/coach/training/useTraining'
 import { DrillSheet } from '@/components/coach/training/DrillSheet'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
-import { PlanEditorRoute, PlanRoute } from './CoachTrainingPlan'
+import { PlanEditorRoute, PlanRoute, type PlannerState } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadPills } from '@/components/coach/home/SquadPills'
 import { LoadError } from '@/components/trak'
@@ -25,7 +26,8 @@ import SegmentedControl from '@/components/arc/segmented-control/segmented-contr
 /* TRAK-294 (Training 1/5, spec TRAK-293): Training home, behind the academy's training switch. Sessions lists the
    coach's trainings from Schedule (Coming up, then Last week); Drills holds My drills, then the Library's tiles.
    Homework and Value of the month are parked (TRAK-293). TRAK-295 (Training 2/5): a training coming up says whether
-   it's planned; Plan this session and New session ask how (PlanWaySheet), and a plan has its own pages. */
+   it's planned; Plan this session and New session ask how (PlanWaySheet), and a plan has its own pages. TRAK-296: a
+   drill can be added to the next training not planned yet. */
 
 export const TRAINING_PATH = '/coach/training'
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Training picked. */
@@ -166,6 +168,13 @@ function ComingUp({ training, showSquad, planned, onPlan }: { training: Training
 
 function DrillsView() {
   const drills = useDrills()
+  const navigate = useNavigate()
+  const trainings = useTrainings()
+  const planned = usePlannedTrainings()
+  // The next training not planned yet, of any squad; none while either read is pending or failed.
+  const next = trainings.data && planned.data
+    ? splitTrainings(trainings.data, Date.now()).comingUp.find(training => !planned.data.has(training.id)) : undefined
+  const nextDay = next ? gameWhen(next).day : null
   const [query, setQuery] = useState('')
   // The sheet: closed, a new drill, or one of the coach's drills to change.
   const [sheet, setSheet] = useState<{ drill: Drill | null } | null>(null)
@@ -187,15 +196,19 @@ function DrillsView() {
           : (drills.data ?? []).length === 0 ? <p className="mt-3 text-[15px] text-ink-2">No drills yet. Add one with New drill, and use it in any session.</p>
           : shown.length === 0 ? <p className="mt-3 text-[15px] text-ink-2">No drill matches “{query.trim()}”.</p>
           : <ul className="mt-3 grid gap-3 tablet:grid-cols-2 laptop:grid-cols-3">
-            {shown.map(drill => <li key={drill.id}>
+            {shown.map(drill => <li key={drill.id} className="flex h-full flex-col rounded-2xl border border-line bg-surface">
               <button type="button" onClick={() => setSheet({ drill })} aria-label={`${drill.name}, ${drill.minutes} min. Edit`}
-                className="flex h-full w-full flex-col gap-1 rounded-2xl border border-line bg-surface p-4 text-left transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                className="flex w-full flex-1 flex-col gap-1 rounded-2xl p-4 text-left transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                 <span className="flex w-full items-baseline justify-between gap-3">
                   <span className="min-w-0 break-words text-[15px] font-medium text-ink">{drill.name}</span>
                   <span className="flex-none text-sm text-ink-3">{drill.minutes} min</span>
                 </span>
                 {drill.how && <span className="line-clamp-2 text-sm text-ink-2">{drill.how}</span>}
               </button>
+              {next && <button type="button" aria-label={`Add ${drill.name} to ${nextDay}`}
+                onClick={() => navigate(planPath(next.id), { state: { addDrill: drill } satisfies PlannerState })}
+                className={`mx-4 mb-3 inline-flex min-h-11 items-center gap-1.5 self-start ${linkClass}`}>
+                <Plus aria-hidden size={16} />Add to {nextDay}</button>}
             </li>)}
           </ul>}
       </section>
