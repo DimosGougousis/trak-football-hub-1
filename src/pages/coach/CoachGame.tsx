@@ -8,6 +8,7 @@ import { publishEvent } from '@/lib/event-publish'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { rowToForm, startedLocked, type EventRow } from '@/lib/coach-events'
 import { STATE, gameState, type GameTab } from '@/lib/games/loop'
+import { planToForm, type PlanForm } from '@/lib/games/plan'
 import type { Tables } from '@/integrations/supabase/types'
 import { gameTitle, gameWhen, useGame, useGamePlan } from '@/components/coach/games/useGames'
 import { OpponentAndGoals } from '@/components/coach/games/OpponentAndGoals'
@@ -58,6 +59,9 @@ function Game({ row, plan }: { row: EventRow; plan: Plan }) {
   const [now, setNow] = useState(() => Date.now())
   const cancelled = row.status === 'cancelled'
   const state = STATE[gameState({ ...row, ends_at: row.ends_at ?? null }, now, !!plan.data)]
+  // The plan as typed lives here, above the tabs: Arc unmounts a panel that isn't shown. Until the coach types, it
+  // is the saved plan, so a retried read still fills the form.
+  const [typed, setTyped] = useState<PlanForm | null>(null)
   const { day, time, academy } = gameWhen(row)
   const squad = coachSquad.squads.length >= 2 && row.squad ? row.squad : undefined
   const where = [day, time ? `Kick-off ${time}` : '', row.home_away === 'home' ? 'Home' : row.home_away === 'away' ? 'Away' : '', row.venue ?? '', squad ?? '']
@@ -81,13 +85,12 @@ function Game({ row, plan }: { row: EventRow; plan: Plan }) {
             {TABS.map(t => <TabsTrigger key={t.id} value={t.id}>{t.label}</TabsTrigger>)}
           </TabsList>
           <TabsContent value="logistics"><Logistics row={row} squad={squad} /></TabsContent>
-          {/* Kept mounted while another tab is open, so switching tabs never loses what was typed. */}
-          <TabsContent value="plan" forceMount>
+          <TabsContent value="plan">
             <div className="grid gap-5 pt-4">
               <Stepper steps={PLAN_STEPS} current={0} label="Game plan" />
               {plan.isError && plan.data === undefined
                 ? <LoadError what="the plan" onRetry={() => void plan.refetch()} retrying={plan.isFetching} />
-                : <OpponentAndGoals eventId={row.id} opponent={row.opponent ?? null} saved={plan.data ?? null} />}
+                : <OpponentAndGoals eventId={row.id} opponent={row.opponent ?? null} form={typed ?? planToForm(plan.data ?? null)} onFormChange={setTyped} />}
             </div>
           </TabsContent>
           <TabsContent value="evaluation">

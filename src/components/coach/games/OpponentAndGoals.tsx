@@ -3,9 +3,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Lock, Plus } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Tables } from '@/integrations/supabase/types'
 import {
-  FORMATIONS, LIMITS, MAX_GOALS, MAX_KEY_PLAYERS, STRENGTHS, emptyGoal, emptyKeyPlayer, formToPlan, numberProblem, planToForm,
+  FORMATIONS, LIMITS, MAX_GOALS, MAX_KEY_PLAYERS, STRENGTHS, emptyGoal, emptyKeyPlayer, formToPlan, numberProblem,
   type Goal, type KeyPlayer, type PlanForm, type Strength,
 } from '@/lib/games/plan'
 import { Badge } from '@/components/arc/badge/badge'
@@ -25,10 +24,13 @@ const UNSURE = 'unsure'
 const FORMATION_OPTIONS = [{ value: UNSURE, label: 'Not sure yet' }, ...FORMATIONS.map(shape => ({ value: shape, label: shape }))]
 const card = 'grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5'
 
-export function OpponentAndGoals({ eventId, opponent, saved }: { eventId: string; opponent: string | null; saved: Tables<'game_plans'> | null }) {
+/** The game page holds `form`, above its tabs: Arc unmounts a panel that isn't shown, and a look at Logistics must
+ *  never lose what was typed. */
+export function OpponentAndGoals({ eventId, opponent, form, onFormChange }: {
+  eventId: string; opponent: string | null; form: PlanForm; onFormChange: (form: PlanForm) => void
+}) {
   const { user } = useAuth()
   const client = useQueryClient()
-  const [form, setForm] = useState(() => planToForm(saved))
   const [tried, setTried] = useState(false)
   const [savedNow, setSavedNow] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
@@ -36,7 +38,7 @@ export function OpponentAndGoals({ eventId, opponent, saved }: { eventId: string
   const version = useRef(0)
   const change = (next: Partial<PlanForm>) => {
     version.current += 1
-    setForm(current => ({ ...current, ...next }))
+    onFormChange({ ...form, ...next })
     setSavedNow(false)
     setProblem(null)
   }
@@ -75,10 +77,9 @@ export function OpponentAndGoals({ eventId, opponent, saved }: { eventId: string
               <fieldset className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
                 <legend className="sr-only">Goal {index + 1}</legend>
                 <span aria-hidden="true" className="row-span-3 grid size-7 place-items-center rounded-full bg-ink text-sm font-medium text-surface">{index + 1}</span>
-                <Input label="Goal" value={goal.title} maxLength={LIMITS.title} placeholder="Win it back in their half"
-                  onChange={event => setGoal(index, { title: event.target.value })} />
+                <Input label="Goal" value={goal.title} maxLength={LIMITS.title} onChange={event => setGoal(index, { title: event.target.value })} />
                 <Textarea label="What it looks like" rows={2} value={goal.looksLike} maxLength={LIMITS.looksLike}
-                  placeholder="Press when their keeper plays short." onChange={event => setGoal(index, { looksLike: event.target.value })} />
+                  onChange={event => setGoal(index, { looksLike: event.target.value })} />
                 {form.goals.length > 1 && <span><Button variant="ghost" size="sm" aria-label={`Remove goal ${index + 1}`}
                   onClick={() => change({ goals: form.goals.filter((_, i) => i !== index) })}>Remove</Button></span>}
               </fieldset>
@@ -113,10 +114,9 @@ export function OpponentAndGoals({ eventId, opponent, saved }: { eventId: string
                     <Input label="Number" inputMode="numeric" autoComplete="off" maxLength={2} value={player.number}
                       error={tried ? numberProblem(player.number) ?? undefined : undefined}
                       onChange={event => setPlayer(index, { number: event.target.value.replace(/\D/g, '').slice(0, 2) })} />
-                    <Input label="Position" value={player.position} maxLength={LIMITS.position} placeholder="Striker"
-                      onChange={event => setPlayer(index, { position: event.target.value })} />
+                    <Input label="Position" value={player.position} maxLength={LIMITS.position} onChange={event => setPlayer(index, { position: event.target.value })} />
                   </div>
-                  <Textarea label="Note" rows={2} value={player.note} maxLength={LIMITS.note} placeholder="Quick. Runs in behind."
+                  <Textarea label="Note" rows={2} value={player.note} maxLength={LIMITS.note}
                     onChange={event => setPlayer(index, { note: event.target.value })} />
                   <span><Button variant="ghost" size="sm" aria-label={`Remove key player ${index + 1}`}
                     onClick={() => change({ keyPlayers: form.keyPlayers.filter((_, i) => i !== index) })}>Remove</Button></span>
@@ -133,7 +133,7 @@ export function OpponentAndGoals({ eventId, opponent, saved }: { eventId: string
               <Badge size="sm" icon={<Lock size={12} />}>Only you</Badge>
             </div>
             <Textarea label="What you know about them" rows={4} value={form.scouting} maxLength={LIMITS.scouting}
-              placeholder="Their keeper often plays short to the left centre-back." onChange={event => change({ scouting: event.target.value })} />
+              onChange={event => change({ scouting: event.target.value })} />
           </section>
         </div>
       </div>
