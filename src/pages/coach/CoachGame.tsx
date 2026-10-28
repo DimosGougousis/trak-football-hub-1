@@ -45,7 +45,8 @@ export default function CoachGame() {
         {game.error ? <div className="pt-6"><LoadError what="this game" onRetry={() => void game.refetch()} retrying={game.isFetching} /></div>
           : game.isPending || plan.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading the game…</p>
           : !game.data ? <p className="pt-10 text-[15px] text-ink-2">This game isn’t in your games.</p>
-          : <Game row={game.data} plan={plan} />}
+          // Keyed by match: a route that only changes :eventId must never carry one match's typing into another's.
+          : <Game key={game.data.id} row={game.data} plan={plan} />}
       </div>
     </div>
   )
