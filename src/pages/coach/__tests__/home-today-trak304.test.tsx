@@ -1,6 +1,7 @@
 /**
  * TRAK-304 (Kostas, 28 Oct): when the coach opens Trak on a training or match day, Home shows that day's plan in
- * Squad shape's place: a training's practices and next step, a match's formation and goals. With nothing today, the
+ * Squad shape's place, as a quick snapshot: a training's practices with when each starts and how long, a match's
+ * formation and goals. The week above already says the time and place, so the card doesn't. With nothing today, the
  * next one coming up. Only where Training or Games is switched on (without them Home keeps Squad shape, as
  * coach-home-trak197 checks). Test people are named after footballers.
  */
@@ -75,7 +76,7 @@ afterEach(() => { vi.useRealTimers(); cleanup(); forgetScreens(); localStorage.c
 const today = () => screen.findByRole('region', { name: 'Today' }, { timeout: 5000 })
 
 describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
-  it('a planned training today shows its practices and next step, in Squad shape’s place', async () => {
+  it('a planned training today is a quick snapshot: each practice, when it starts and how long, in Squad shape’s place', async () => {
     home({
       events: [event('t1', 'training', '2026-11-04T16:00', { title: 'Pressing zones' })],
       practices: [practice('t1', 1, 'Rondos 4v1', 15), practice('t1', 2, 'Pressing on the trigger', 25)],
@@ -83,15 +84,27 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     renderApp('/coach/home')
     const card = await today()
     const training = await within(card).findByRole('article', { name: 'Training, Pressing zones' })
-    await waitFor(() => expect(within(training).getByText('Planned')).toBeInTheDocument())
-    const list = within(training).getByRole('list', { name: 'Today’s practices' })
-    expect(list).toHaveTextContent('15 minRondos 4v1')
-    expect(list).toHaveTextContent('25 minPressing on the trigger')
-    expect(list).toHaveTextContent('40 min in all')
-    expect(within(training).getByText('Next: Who’s here')).toBeInTheDocument()
+    const list = await within(training).findByRole('list', { name: 'Today’s practices' })
+    const rows = within(list).getAllByRole('listitem')
+    expect(rows.map(row => row.textContent)).toEqual(['16:00Rondos 4v115 min', '16:15Pressing on the trigger25 min'])
+    expect(within(training).getByText('Training plan · 40 min')).toBeInTheDocument()
     expect(within(training).getByRole('link', { name: 'Run it' })).toHaveAttribute('href', '/coach/training/t1/run')
-    expect(within(training).getByRole('link', { name: 'Open the plan' })).toHaveAttribute('href', '/coach/training/t1')
+    // Kostas, 28 Oct: the week above already says the time, the place and the title; the card doesn't repeat them.
+    expect(within(training).queryByText(/Pitch 2/)).toBeNull()
+    expect(within(training).queryByText(/Pressing zones/)).toBeNull()
+    expect(within(card).queryByText('Your plan for today')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Squad shape' })).toBeNull()
+  })
+
+  it('with two things today, each says which it is', async () => {
+    home({
+      events: [event('t1', 'training', '2026-11-04T10:00', { title: 'Pressing zones' }), event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })],
+      practices: [practice('t1', 1, 'Rondos 4v1', 15)],
+    })
+    renderApp('/coach/home')
+    const card = await today()
+    expect(await within(card).findByText('Training plan · Pressing zones · 15 min')).toBeInTheDocument()
+    expect(await within(card).findByText('Training plan · Finishing')).toBeInTheDocument()
   })
 
   it('on a phone the week comes first, then today’s plan (Kostas, 28 Oct)', async () => {
@@ -109,7 +122,7 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     home({ events: [event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })] })
     renderApp('/coach/home')
     const training = await within(await today()).findByRole('article', { name: 'Training, Finishing' })
-    await waitFor(() => expect(within(training).getByText('Not planned')).toBeInTheDocument())
+    await waitFor(() => expect(within(training).getByText('Not planned yet.')).toBeInTheDocument())
     expect(within(training).getByRole('link', { name: 'Plan this session' })).toHaveAttribute('href', '/coach/training/t2')
   })
 
@@ -135,7 +148,8 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     renderApp('/coach/home')
     const card = await today()
     const training = await within(card).findByRole('article', { name: 'Training, Morning session' })
-    await waitFor(() => expect(within(training).getByText('Closed')).toBeInTheDocument())
+    await waitFor(() => expect(within(training).getByText(/Closed/)).toBeInTheDocument())
+    expect(within(training).getByRole('link', { name: 'Open the plan' })).toHaveAttribute('href', '/coach/training/t0')
     expect(within(card).queryByText('Nothing today')).toBeNull()
     expect(within(training).queryByRole('link', { name: 'Run it' })).toBeNull()
   })

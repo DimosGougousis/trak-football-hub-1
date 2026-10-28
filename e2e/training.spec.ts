@@ -5,6 +5,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
 // same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
 // TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): Run it, and a closed training's log.
+// TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -333,6 +334,35 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('dialog', { name: 'The log' }).getByRole('link', { name: 'Edit log' })).toBeVisible()
     await page.waitForTimeout(600)
     await page.screenshot({ path: testInfo.outputPath(`training-closed-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
+
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`Home at ${width} px: today's training as a quick snapshot, after the week`, async ({ page, context }, testInfo) => {
+    // Receiving under pressure (planned) moved to today, 18:00.
+    const today = TRAININGS.map(t => t.id === 't-tue' ? training('t-tue', 'U16', 0, '18:00', 'Receiving under pressure') : t)
+    // Games reads matches only: none here.
+    await page.route('**/rest/v1/coach_calendar_events*', route => {
+      const type = new URL(route.request().url()).searchParams.get('event_type')
+      const rows = type && type !== 'eq.training' ? [] : today
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows), headers: { 'content-range': '0-0/1' } })
+    })
+    const { unexpected, errors } = await open(page, context, '/coach/home', width, height)
+    const card = page.getByRole('region', { name: 'Today' })
+    const list = card.getByRole('list', { name: 'Today’s practices' })
+    await expect(list.getByRole('listitem')).toHaveText(['18:00Warm-up: rondos 4v115 min', '18:15Pressing on the trigger25 min'])
+    await expect(card.getByText('Training plan · 40 min')).toBeVisible()
+    await expect(card.getByRole('link', { name: 'Run it' })).toBeVisible()
+    if (width < 1024) {
+      // Kostas, 28 Oct: on a phone the week comes first.
+      const week = await page.getByRole('heading', { name: 'This week' }).boundingBox()
+      expect(week!.y).toBeLessThan((await card.boundingBox())!.y)
+    }
+    await card.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`home-today-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
