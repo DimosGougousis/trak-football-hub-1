@@ -9,10 +9,10 @@ import { ON_LIBRARY } from '@/lib/fixed-colours'
 import { searchDrills, splitTrainings, trainingMinutes, type Drill } from '@/lib/training/sessions'
 import { planPath, type PlannerState } from '@/lib/training/plans'
 import { gameWhen } from '@/components/coach/games/useGames'
-import { useDrills, usePlannedTrainings, useTrainings, type Training } from '@/components/coach/training/useTraining'
+import { useDrills, usePlannedTrainings, useRegisters, useTrainings, type Training } from '@/components/coach/training/useTraining'
 import { DrillSheet } from '@/components/coach/training/DrillSheet'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
-import { PlanEditorRoute, PlanRoute } from './CoachTrainingPlan'
+import { PlanEditorRoute, PlanRoute, RunRoute } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadPills } from '@/components/coach/home/SquadPills'
 import { LoadError } from '@/components/trak'
@@ -27,7 +27,8 @@ import SegmentedControl from '@/components/arc/segmented-control/segmented-contr
    coach's trainings from Schedule (Coming up, then Last week); Drills holds My drills, then the Library's tiles.
    Homework and Value of the month are parked (TRAK-293). TRAK-295 (Training 2/5): a training coming up says whether
    it's planned; Plan this session and New session ask how (PlanWaySheet), and a plan has its own pages. TRAK-296: a
-   drill can be added to the next training not planned yet. */
+   drill can be added to the next training not planned yet. TRAK-298: Last week says which trainings are closed (ended
+   with their register taken) and opens each one's page. */
 
 export const TRAINING_PATH = '/coach/training'
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Training picked. */
@@ -49,6 +50,7 @@ export default function CoachTraining() {
       <Route path="drills" element={<DrillsView />} />
       <Route path=":eventId" element={<PlanRoute />} />
       <Route path=":eventId/plan" element={<PlanEditorRoute />} />
+      <Route path=":eventId/run" element={<RunRoute />} />
       <Route path="*" element={<Navigate to={TRAINING_PATH} replace />} />
     </Routes>
   )
@@ -85,6 +87,7 @@ function SessionsView() {
   const navigate = useNavigate()
   const trainings = useTrainings()
   const planned = usePlannedTrainings()
+  const registers = useRegisters()
   // "How do you want to plan it?": for one training, or, from New session, asking which first.
   const [planning, setPlanning] = useState<{ training: Training | null } | null>(null)
   // TRAK-266: All first and picked, as Home, Squad, Schedule and Games open.
@@ -124,11 +127,16 @@ function SessionsView() {
             <ul className="divide-y divide-line rounded-2xl border border-line bg-surface px-5">
               {lastWeek.map(training => {
                 const { day } = gameWhen(training)
+                // Every training here is over, so it is closed once its register is taken; unknown while that's read.
+                const closed = registers.data ? registers.data.has(training.id) : null
                 return <li key={training.id}>
-                  <Link to={`/coach/schedule?event=${training.id}`}
-                    className="flex min-h-14 flex-col justify-center py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
-                    <span className="text-[15px] text-ink"><span className="font-medium">{day}</span> · {training.title}</span>
-                    {everySquad && training.squad && <span className="text-sm text-ink-3">{training.squad}</span>}
+                  <Link to={`${TRAINING_PATH}/${training.id}`}
+                    className="arc flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-[15px] text-ink"><span className="font-medium">{day}</span> · {training.title}</span>
+                      {everySquad && training.squad && <span className="text-sm text-ink-3">{training.squad}</span>}
+                    </span>
+                    {closed !== null && <Badge size="sm" tone={closed ? 'success' : 'warning'}>{closed ? 'Closed' : 'No register'}</Badge>}
                   </Link>
                 </li>
               })}

@@ -56,6 +56,7 @@ Nobody else reads these tables.
 | `/coach/training/drills` | Training home, Drills: search, My drills, New drill / edit / delete (Arc bottom sheet), the Library's seven tiles | 294 |
 | `/coach/training/:eventId/plan` | Write my own (and Copy a past session, 297) | 295 |
 | `/coach/training/:eventId` | The plan, with the loop strip | 295, 298 |
+| `/coach/training/:eventId/run` | Run it: the plan at the pitch side | 298 |
 
 "How do you want to plan it?" (from Plan this session, or New session after "Which training?") remembers the
 coach's last way on this device. Write my own is the only way in 295; Copy a past session joins it in 297. A
@@ -78,6 +79,14 @@ or Library practice stays one), with a note that nothing is saved until Save the
 A drill sent by Add to, or a copied session, travels in the planner's own history entry and stays there: changing
 between phone and laptop width lays the coach's pages out again, and the planner must come back with it. Saving
 replaces that entry with the plan, so Back never reopens the planner to add it twice.
+
+From 298, the plan page runs the loop. Each step comes from what exists, so nothing new is stored: Plan is a saved
+plan; Who's here is the register taken (the event's completed session, TRAK-138); Run it is done once the training is
+over; Close is automatic (Kostas, 28 Oct): a training is closed once it has ended with its register taken. Who's here
+opens the existing register (`TakeRegister`) as everywhere else: published, not cancelled, started. Run it
+(`/coach/training/:eventId/run`) is the plan at the pitch side, with when each practice starts. A closed training
+shows View log (`SessionLog`), and Last week says Closed or No register and opens the training's page. Sending who came
+to a weekly check-in waits for the check-in.
 
 Both routes are inside `ParkedScreen unless="training"`, so with the switch off the screen shows "Coming soon" and
 every write handler stops at `useParked()`.

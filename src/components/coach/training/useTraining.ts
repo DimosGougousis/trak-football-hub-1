@@ -8,7 +8,8 @@ import { toSave, type Practice, type SavedPractice } from '@/lib/training/plans'
 /* TRAK-294 (Training 1/5): the coach's own trainings for Training home, not cancelled (a published event is cancelled,
    never deleted), from a week ago on; and the coach's own drills (coach_drills, only they read them).
    TRAK-295 (Training 2/5): one training, its plan, which trainings are planned, and saving a plan whole.
-   TRAK-297 (Training 4/5): every planned session, to copy. Nothing new is stored: a past session is its plan. */
+   TRAK-297 (Training 4/5): every planned session, to copy. Nothing new is stored: a past session is its plan.
+   TRAK-298 (Training 5/5): which trainings have their register taken (the loop's Who's here and Close). */
 
 export type Training = Pick<Tables<'coach_calendar_events'>, 'id' | 'squad' | 'title' | 'published' | 'status' | 'starts_at'
   | 'ends_at' | 'event_date' | 'start_time' | 'venue'>
@@ -79,6 +80,21 @@ export function usePlannedTrainings() {
       const { data, error } = await supabase.from('training_plans').select('event_id')
       if (error) throw error
       return new Set((data ?? []).map(plan => plan.event_id))
+    },
+  })
+}
+
+/** The coach's trainings whose register is taken, to the completed session it made (one per event, TRAK-138). */
+export function useRegisters() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'training-registers'],
+    enabled: !!user,
+    queryFn: async (): Promise<Map<string, string>> => {
+      const { data, error } = await supabase.from('coach_sessions').select('id, event_id')
+        .eq('coach_user_id', user!.id).not('event_id', 'is', null)
+      if (error) throw error
+      return new Map((data ?? []).flatMap(row => row.event_id ? [[row.event_id, row.id] as const] : []))
     },
   })
 }
