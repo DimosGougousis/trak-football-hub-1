@@ -1152,6 +1152,101 @@ export type Database = {
           },
         ]
       }
+      training_plan_practices: {
+        Row: {
+          area: string
+          conditions: string
+          direction: string
+          drill_id: string | null
+          event_id: string
+          how: string
+          library_session: string | null
+          minutes: number
+          name: string
+          numbers: string
+          position: number
+          source: string
+          targets: string
+          tell: string
+        }
+        Insert: {
+          area?: string
+          conditions?: string
+          direction?: string
+          drill_id?: string | null
+          event_id: string
+          how?: string
+          library_session?: string | null
+          minutes: number
+          name: string
+          numbers?: string
+          position: number
+          source?: string
+          targets?: string
+          tell?: string
+        }
+        Update: {
+          area?: string
+          conditions?: string
+          direction?: string
+          drill_id?: string | null
+          event_id?: string
+          how?: string
+          library_session?: string | null
+          minutes?: number
+          name?: string
+          numbers?: string
+          position?: number
+          source?: string
+          targets?: string
+          tell?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_practices_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "coach_drills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plan_practices_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["event_id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          event_id: string
+          updated_at: string
+        }
+        Insert: {
+          coach_user_id?: string
+          created_at?: string
+          event_id: string
+          updated_at?: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          event_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1342,6 +1437,10 @@ export type Database = {
           p_user_id: string
           p_venue: string
         }
+        Returns: undefined
+      }
+      save_training_plan: {
+        Args: { p_event_id: string; p_practices: Json }
         Returns: undefined
       }
       take_event_register: {

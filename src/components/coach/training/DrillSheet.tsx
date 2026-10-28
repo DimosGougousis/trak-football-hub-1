@@ -4,9 +4,8 @@ import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { Button } from '@/components/arc/button/button'
 import { Input } from '@/components/arc/input/input'
 import { useParked } from '@/components/trak/parked'
-import {
-  DRILL_DETAILS, DRILL_LIMITS, DRILL_MINUTES, blankDrill, detailCount, drillProblem, type Drill, type DrillDraft,
-} from '@/lib/training/sessions'
+import { DRILL_LIMITS, blankDrill, drillProblem, type Drill, type DrillDraft } from '@/lib/training/sessions'
+import { DetailFields, MinutesPicks, TellField, textArea } from './fields'
 import { useDeleteDrill, useSaveDrill } from './useTraining'
 
 /* TRAK-294 (Training 1/5): New drill, and the same sheet to change or delete one of the coach's drills (mockup board
@@ -14,10 +13,6 @@ import { useDeleteDrill, useSaveDrill } from './useTraining'
 
 const SAVE_FAILED = "Couldn't save the drill. Check your connection and try again. Nothing you typed is lost."
 const DELETE_FAILED = "Couldn't delete the drill. Check your connection and try again."
-
-const pill = (on: boolean) =>
-  `min-h-11 min-w-12 rounded-xl border px-3.5 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${on ? 'border-brand bg-brand/10 text-brand' : 'border-line bg-surface text-ink'}`
-const area = 'min-h-24 w-full resize-y rounded-xl border border-line bg-surface px-3 py-2.5 text-[15px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
 const toDraft = (drill: Drill | null): DrillDraft => {
   if (!drill) return blankDrill()
@@ -33,7 +28,6 @@ export function DrillSheet({ open, drill, onOpenChange }: { open: boolean; drill
   const save = useSaveDrill()
   const remove = useDeleteDrill()
   const howId = useId()
-  const tellId = useId()
 
   // Each opening starts from the drill picked (or a blank one), never from the last one typed.
   useEffect(() => {
@@ -69,35 +63,15 @@ export function DrillSheet({ open, drill, onOpenChange }: { open: boolean; drill
       <Input label="Name" value={draft.name} maxLength={DRILL_LIMITS.name} autoComplete="off" required
         onChange={e => set('name', e.target.value)} />
 
-      <fieldset className="grid gap-2">
-        <legend className="mb-2 text-sm font-medium text-ink">Usual minutes</legend>
-        <div className="flex flex-wrap gap-2">
-          {DRILL_MINUTES.map(minutes => <button key={minutes} type="button" aria-pressed={draft.minutes === minutes}
-            className={pill(draft.minutes === minutes)} onClick={() => set('minutes', minutes)}>{minutes}</button>)}
-        </div>
-      </fieldset>
+      <MinutesPicks legend="Usual minutes" value={draft.minutes} onChange={minutes => set('minutes', minutes)} />
 
       <div className="grid gap-2">
         <label htmlFor={howId} className="text-sm font-medium text-ink">How it works</label>
-        <textarea id={howId} value={draft.how} maxLength={DRILL_LIMITS.how} rows={3} className={area}
+        <textarea id={howId} value={draft.how} maxLength={DRILL_LIMITS.how} rows={3} className={textArea}
           onChange={e => set('how', e.target.value)} />
       </div>
-      <div className="grid gap-2">
-        <label htmlFor={tellId} className="text-sm font-medium text-ink">What you’ll tell them <span className="font-normal text-ink-3">(optional)</span></label>
-        <textarea id={tellId} value={draft.tell} maxLength={DRILL_LIMITS.tell} rows={2} className={area}
-          onChange={e => set('tell', e.target.value)} />
-      </div>
-
-      <details className="rounded-xl border border-dashed border-line bg-raised px-3.5 py-2" open={detailCount(draft) > 0 || undefined}>
-        <summary className="flex min-h-11 cursor-pointer list-none flex-col justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-          <span className="text-[15px] font-medium text-ink">Add details <span className="font-normal text-ink-3">(optional)</span></span>
-          <span className="text-sm text-ink-3">Area, numbers, direction, targets, conditions</span>
-        </summary>
-        <div className="grid gap-4 pt-3 pb-2">
-          {DRILL_DETAILS.map(detail => <Input key={detail.key} label={detail.label} placeholder={detail.example}
-            value={draft[detail.key]} maxLength={DRILL_LIMITS.detail} autoComplete="off" onChange={e => set(detail.key, e.target.value)} />)}
-        </div>
-      </details>
+      <TellField value={draft.tell} onChange={tell => set('tell', tell)} />
+      <DetailFields draft={draft} onChange={set} />
 
       {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
 

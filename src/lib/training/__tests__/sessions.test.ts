@@ -59,6 +59,8 @@ describe('TRAK-294: a drill', () => {
     expect(drillProblem(blankDrill())).toBe('Give the drill a name.')
     expect(drillProblem({ ...blankDrill(), name: '   ' })).toBe('Give the drill a name.')
     expect(drillProblem({ ...blankDrill(), name: 'Rondos 4v1' })).toBeNull()
+    // TRAK-295: a plan's practice says so.
+    expect(drillProblem(blankDrill(), 'practice')).toBe('Give the practice a name.')
   })
 
   it("is refused past the database's limits, each said plainly", () => {
