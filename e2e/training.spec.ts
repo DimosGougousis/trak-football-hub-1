@@ -353,7 +353,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const { unexpected, errors } = await open(page, context, '/coach/home', width, height)
     const card = page.getByRole('region', { name: 'Today' })
     const list = card.getByRole('list', { name: 'Today’s practices' })
-    await expect(list.getByRole('listitem')).toHaveText(['18:00Warm-up: rondos 4v115 min', '18:15Pressing on the trigger25 min'])
+    await expect(list.getByRole('listitem')).toHaveText(['Warm-up: rondos 4v115 min', 'Pressing on the trigger25 min'])
     await expect(card.getByText('Training plan · 40 min')).toBeVisible()
     await expect(card.getByRole('link', { name: 'Run it' })).toBeVisible()
     if (width < 1024) {

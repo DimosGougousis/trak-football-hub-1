@@ -1,6 +1,6 @@
 /**
  * TRAK-304 (Kostas, 28 Oct): when the coach opens Trak on a training or match day, Home shows that day's plan in
- * Squad shape's place, as a quick snapshot: a training's practices with when each starts and how long, a match's
+ * Squad shape's place, as a quick snapshot: a training's practices and how long each runs, a match's
  * formation and goals. The week above already says the time and place, so the card doesn't. With nothing today, the
  * next one coming up. Only where Training or Games is switched on (without them Home keeps Squad shape, as
  * coach-home-trak197 checks). Test people are named after footballers.
@@ -76,7 +76,7 @@ afterEach(() => { vi.useRealTimers(); cleanup(); forgetScreens(); localStorage.c
 const today = () => screen.findByRole('region', { name: 'Today' }, { timeout: 5000 })
 
 describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
-  it('a planned training today is a quick snapshot: each practice, when it starts and how long, in Squad shape’s place', async () => {
+  it('a planned training today is a quick snapshot: each practice and how long it runs, in Squad shape’s place', async () => {
     home({
       events: [event('t1', 'training', '2026-11-04T16:00', { title: 'Pressing zones' })],
       practices: [practice('t1', 1, 'Rondos 4v1', 15), practice('t1', 2, 'Pressing on the trigger', 25)],
@@ -86,14 +86,23 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     const training = await within(card).findByRole('article', { name: 'Training, Pressing zones' })
     const list = await within(training).findByRole('list', { name: 'Today’s practices' })
     const rows = within(list).getAllByRole('listitem')
-    expect(rows.map(row => row.textContent)).toEqual(['16:00Rondos 4v115 min', '16:15Pressing on the trigger25 min'])
+    expect(rows.map(row => row.textContent)).toEqual(['Rondos 4v115 min', 'Pressing on the trigger25 min'])
     expect(within(training).getByText('Training plan · 40 min')).toBeInTheDocument()
     expect(within(training).getByRole('link', { name: 'Run it' })).toHaveAttribute('href', '/coach/training/t1/run')
     // Kostas, 28 Oct: the week above already says the time, the place and the title; the card doesn't repeat them.
     expect(within(training).queryByText(/Pitch 2/)).toBeNull()
+    expect(within(training).queryByText(/16:/)).toBeNull()
     expect(within(training).queryByText(/Pressing zones/)).toBeNull()
     expect(within(card).queryByText('Your plan for today')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Squad shape' })).toBeNull()
+  })
+
+  it('every practice in the plan shows, however many', async () => {
+    const names = ['Rondos 4v1', 'Passing square', 'Pressing on the trigger', '3v2 to goal', 'Finishing', 'Game: 8v8']
+    home({ events: [event('t1', 'training', '2026-11-04T16:00')], practices: names.map((name, i) => practice('t1', i + 1, name, 10)) })
+    renderApp('/coach/home')
+    const list = await within(await today()).findByRole('list', { name: 'Today’s practices' })
+    expect(within(list).getAllByRole('listitem').map(row => row.textContent)).toEqual(names.map(name => `${name}10 min`))
   })
 
   it('with two things today, each says which it is', async () => {

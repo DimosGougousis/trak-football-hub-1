@@ -3,7 +3,7 @@ import { CalendarCheck } from 'lucide-react'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { trainingEnd } from '@/lib/training/sessions'
 import { fromSaved, plannedMinutes } from '@/lib/training/plans'
-import { loopState, practiceStarts } from '@/lib/training/loop'
+import { loopState } from '@/lib/training/loop'
 import { fullTime } from '@/lib/games/loop'
 import { usePastSessions, useRegisters, useTrainings, type Training } from '@/components/coach/training/useTraining'
 import { gameTitle, gameWhen, useGamePlan, useGames, type Game } from '@/components/coach/games/useGames'
@@ -74,8 +74,8 @@ const when = (event: { event_date: string | null; start_time: string | null; sta
   return [day, time].filter(Boolean).join(' · ')
 }
 
-/** Today's training as a quick snapshot (Kostas, 28 Oct): each practice with when it starts and how long it runs. The
-    week above already says the training's time and place, so the card doesn't. Its name only when today has more than one. */
+/** Today's training as a quick snapshot (Kostas, 28 Oct): each practice and how long it runs. The week above already
+    says the training's time and place, so the card doesn't. Its name only when today has more than one. */
 function TodayTraining({ training, named }: { training: Training; named: boolean }) {
   const sessions = usePastSessions()
   const registers = useRegisters()
@@ -87,7 +87,6 @@ function TodayTraining({ training, named }: { training: Training; named: boolean
     started: Date.parse(training.starts_at) <= now, over: trainingEnd(training) <= now,
   })
   const page = `/coach/training/${training.id}`
-  const starts = practiceStarts(gameWhen(training).time || null, practices)
   const label = ['Training plan', named ? training.title : null, practices.length ? `${plannedMinutes(practices)} min` : null].filter(Boolean).join(' · ')
   return <article aria-label={`Training, ${training.title}`} className="grid gap-2">
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -100,7 +99,6 @@ function TodayTraining({ training, named }: { training: Training; named: boolean
       : !sessions.data ? null
       : practices.length ? <ol aria-label="Today’s practices" className="grid gap-1">
         {practices.map((practice, i) => <li key={i} className="flex items-baseline gap-3 text-[15px]">
-          {starts[i] && <span className="w-11 flex-none text-sm tabular-nums text-ink-3">{starts[i]}</span>}
           <span className="min-w-0 flex-1 truncate text-ink">{practice.name}</span>
           <span className="flex-none text-sm tabular-nums text-ink-3">{practice.minutes} min</span>
         </li>)}
