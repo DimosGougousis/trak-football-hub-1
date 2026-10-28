@@ -70,7 +70,7 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-262: notification_settings is Home's Needs you switch (no row: on).
     if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes', 'notification_settings',
       // TRAK-286: no game plan, shared or not.
-      'game_plans', 'game_shares', 'game_for_family', 'game_for_player'].some(t => path === `/rest/v1/${t}`)) return json([])
+      'game_plans', 'game_shares', 'game_for_family', 'game_for_player', 'training_plans', 'training_plan_practices'].some(t => path === `/rest/v1/${t}`)) return json([])
     unexpected.push(`${req.method()} ${path}`)
     return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
   })
@@ -110,8 +110,8 @@ test.describe('TRAK-182 coach screens', () => {
   })
 
   for (const [name, path, ready] of [
-    // TRAK-262: Home's week, Squad shape and Needs you.
-    ['home', '/coach/home', 'Squad shape'],
+    // TRAK-262: Home's week, Squad shape and Needs you. TRAK-304: with Training and Games on, Today takes Squad shape's place.
+    ['home', '/coach/home', 'Today'],
     ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],

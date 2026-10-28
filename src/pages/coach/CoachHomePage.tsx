@@ -13,6 +13,7 @@ import { squadName } from '@/lib/coach-week'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadPills } from '@/components/coach/home/SquadPills'
 import { SquadShape } from '@/components/coach/home/SquadShape'
+import { TodayPlan } from '@/components/coach/home/TodayPlan'
 import { NeedsYou, type OwedEvent } from '@/components/coach/home/NeedsYou'
 import { useOwedEvents } from '@/components/coach/home/useOwedEvents'
 import { gameTitle, gameWhen, useGamePlanChanges, useGamePlans, useGameShares, useGames } from '@/components/coach/games/useGames'
@@ -29,7 +30,8 @@ import { localParts, localTodayISO } from '@/lib/event-time'
 /* TRAK-262 (Imad, 22 Oct): coach Home on Arc. Squad pills (each squad, then All, which is Home's only); the week
    in Tarek's colour key with one next step per event; the Squad shape radar; Needs you. "Assess a player" and
    "Log a match" left: the "+" has both. TRAK-266: no onboarding for now (Imad, 22 Oct).
-   Imad, 23 Oct: no role and academy line under the header. */
+   Imad, 23 Oct: no role and academy line under the header. TRAK-304 (Kostas, 28 Oct): where Training or Games is
+   switched on, Today (that day's training or game plan) takes Squad shape's place; on a phone it comes first. */
 
 export default function CoachHomePage() {
   const { user, profile } = useAuth()
@@ -69,6 +71,8 @@ export default function CoachHomePage() {
   // TRAK-284: a match a week out or less, its logistics shared, without a shared plan. TRAK-286: or with changes since
   // it was shared that wait for "Share the changes".
   const gamesOn = useFeature('games')
+  const trainingOn = useFeature('training')
+  const showToday = trainingOn || gamesOn
   const games = useGames(gamesOn)
   const plans = useGamePlans(gamesOn)
   const shares = useGameShares(gamesOn)
@@ -128,7 +132,11 @@ export default function CoachHomePage() {
 
         <div className={wide ? 'grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-6' : 'grid gap-5'}>
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
-          <SquadShape squadLabel={squadLabel} shape={shape} failed={!!roster.error} onRetry={roster.retry} />
+          {showToday
+            ? <div className={wide ? '' : '-order-1'}>
+              <TodayPlan trainingOn={trainingOn} gamesOn={gamesOn} inView={squad => everySquad || coachSquad.eventInSquad(squad)} />
+            </div>
+            : <SquadShape squadLabel={squadLabel} shape={shape} failed={!!roster.error} onRetry={roster.retry} />}
         </div>
         {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
         {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-6' : 'mt-5'}>

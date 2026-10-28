@@ -40,7 +40,8 @@ function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[];
     table('coach_calendar_events', []),
     table('notification_settings', over.settings ?? []),
     rpc('coach_squad_player_consent_required', () => false),
-    rpc('feature_on', () => true),
+    // TRAK-304: with Training or Games on, Today takes Squad shape's place; these tests are Home without them.
+    rpc('feature_on', ({ p_feature }) => p_feature === 'events'),
     table('game_plans', []),
     table('game_shares', []),
     rpc('game_plan_changes', () => []),
