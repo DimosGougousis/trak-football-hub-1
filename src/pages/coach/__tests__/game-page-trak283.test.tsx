@@ -140,11 +140,12 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     expect(window.location.pathname).toBe('/coach/games/g1')
   })
 
-  it('once it has kicked off: locked, no countdown, and no edit', async () => {
+  it('once it has kicked off: locked, the countdown says so until full time (TRAK-287), and no edit', async () => {
     events([game(Date.now() - 30 * MINUTE)])
     renderApp('/coach/games/g1')
     expect(await screen.findByText('Locked at kick-off')).toBeInTheDocument()
-    expect(screen.queryByRole('timer')).toBeNull()
+    // jsdom never shows a past countdown's label (it can't tell the countdown is on screen); the TRAK-287 test sees it flip.
+    expect(screen.getByRole('timer', { name: 'Kick-off in' })).toBeInTheDocument()
     expect(screen.getByText('Shared with families')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Edit in Schedule' })).toBeNull()
   })

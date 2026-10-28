@@ -9,12 +9,13 @@ import { ChipGroup } from '@/components/arc/chip-group/chip-group'
 import { Combobox } from '@/components/arc/combobox/combobox'
 import { RadioGroup } from '@/components/arc/radio-group/radio-group'
 import { Textarea } from '@/components/arc/textarea/textarea'
+import { LockedValue } from './LockedValue'
 
 /* TRAK-285 (Games 3/8): what the line-up's sheet holds (a bottom sheet on a phone, a panel beside the pitch on a
    tablet or laptop). An empty slot: who plays there, Confirmed first, then Not confirmed, then "Can't make it",
    which can't be picked. A player: their job (they and their family see it), a note only they see, context and the
    expectation (only the coach, until the evaluation is published). Off the pitch, bench or not selected sits here
-   (Imad, 28 Oct); a player left out gets the note only. */
+   (Imad, 28 Oct); a player left out gets the note only. TRAK-287: locked at kick-off, the sheet only shows. */
 
 export type Target = { kind: 'slot'; slot: number } | { kind: 'player'; id: string }
 
@@ -22,14 +23,16 @@ const ROLES = [{ value: 'bench', label: 'Bench' }, { value: 'not_selected', labe
 const rank = (player: Candidate) => player.absent ? 2 : player.confirmed ? 0 : 1
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name
 
-export function PlayerPanel({ target, players, onPlayers, candidates, shape, onTarget }: {
+export function PlayerPanel({ target, players, onPlayers, candidates, shape, onTarget, locked = false }: {
   target: Target
   players: PlayerPlans
   onPlayers: (players: PlayerPlans) => void
   candidates: Candidate[]
   shape: string
   onTarget: (target: Target) => void
+  locked?: boolean
 }) {
+  if (target.kind === 'slot' && locked) return <p className="text-sm text-ink-2">Nobody was placed here before kick-off.</p>
   if (target.kind === 'slot') {
     const options = [...candidates].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).map(player => {
       const plan = playerPlan(players, player.id)
@@ -49,13 +52,13 @@ export function PlayerPanel({ target, players, onPlayers, candidates, shape, onT
   const plan = playerPlan(players, player.id)
   const first = firstName(player.name)
   const set = (next: Partial<PlayerPlan>) => onPlayers({ ...players, [player.id]: { ...plan, ...next } })
-  const note = <Textarea label={`Note to ${first} · only ${first}, not the family`} rows={3} value={plan.note} maxLength={PLAYER_LIMITS.note}
+  const note = <Textarea label={`Note to ${first} · only ${first}, not the family`} rows={3} value={plan.note} maxLength={PLAYER_LIMITS.note} readOnly={locked}
     onChange={event => set({ note: event.target.value })} />
 
   return <div className="grid gap-4">
     <p className="text-sm text-ink-2">{plan.role === 'starter' && plan.slot != null ? `${lineName(shape, plan.slot)}, slot ${plan.slot}` : plan.role === 'bench' ? 'Bench' : 'Not selected'}</p>
     {player.absent && <p className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-ink">{first}'s family says {first} can't make it.</p>}
-    {plan.role === 'starter'
+    {locked ? null : plan.role === 'starter'
       ? <span><Button variant="ghost" size="sm" onClick={() => onPlayers(takeOff(players, player.id))}>Take off the pitch</Button></span>
       : <RadioGroup label="Bench or not selected" name={`role-${player.id}`} options={ROLES} value={plan.role}
           onValueChange={role => onPlayers(setRole(players, player.id, role as 'bench' | 'not_selected'))} />}
@@ -63,15 +66,20 @@ export function PlayerPanel({ target, players, onPlayers, candidates, shape, onT
       {note}
       <p className="text-sm text-ink-3">{first}'s family sees “Not in the squad this week”.</p>
     </> : <>
-      <Textarea label={`Job · ${first} and family see it`} rows={3} value={plan.job} maxLength={PLAYER_LIMITS.job}
+      <Textarea label={`Job · ${first} and family see it`} rows={3} value={plan.job} maxLength={PLAYER_LIMITS.job} readOnly={locked}
         onChange={event => set({ job: event.target.value })} />
       {note}
-      <div className="grid gap-2">
-        <p className="text-sm font-medium text-ink">Context · only you</p>
-        <ChipGroup label="Context" options={CONTEXT} value={plan.context} onValueChange={context => set({ context })} />
-      </div>
-      <RadioGroup label="Expectation · only you" name={`expectation-${player.id}`} options={EXPECTATIONS} value={plan.expectation}
-        onValueChange={value => set({ expectation: value as Expectation })} />
+      {locked ? <>
+        <LockedValue label="Context · only you" value={CONTEXT.filter(tag => plan.context.includes(tag.value)).map(tag => tag.label).join(', ') || 'None'} />
+        <LockedValue label="Expectation · only you" value={EXPECTATIONS.find(level => level.value === plan.expectation)?.label ?? 'Usual'} />
+      </> : <>
+        <div className="grid gap-2">
+          <p className="text-sm font-medium text-ink">Context · only you</p>
+          <ChipGroup label="Context" options={CONTEXT} value={plan.context} onValueChange={context => set({ context })} />
+        </div>
+        <RadioGroup label="Expectation · only you" name={`expectation-${player.id}`} options={EXPECTATIONS} value={plan.expectation}
+          onValueChange={value => set({ expectation: value as Expectation })} />
+      </>}
       <p className="text-sm text-ink-3">{first} and their family see the expectation only with the published evaluation.</p>
     </>}
   </div>

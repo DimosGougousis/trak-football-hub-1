@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
@@ -75,6 +75,14 @@ export default function CoachHomePage() {
   const plans = useGamePlans(gamesOn)
   const shares = useGameShares(gamesOn)
   const soon = !gamesOn ? [] : needsAPlan((games.data ?? []).filter(game => everySquad || coachSquad.eventInSquad(game.squad)), Date.now())
+  // TRAK-287: a plan's card closes at its match's kick-off, with Home open or not.
+  const [, setKickedOff] = useState(0)
+  const nextKickOff = Math.min(...soon.map(game => Date.parse(game.starts_at)))
+  useEffect(() => {
+    if (!Number.isFinite(nextKickOff)) return
+    const timer = setTimeout(() => setKickedOff(n => n + 1), Math.max(0, nextKickOff - Date.now()) + 250)
+    return () => clearTimeout(timer)
+  }, [nextKickOff])
   const sharedSoon = soon.filter(game => shares.data?.has(game.id)).map(game => game.id)
   const changes = useGamePlanChanges(sharedSoon, gamesOn)
   const gamesFailed = gamesOn && (games.isError || plans.isError || shares.isError)

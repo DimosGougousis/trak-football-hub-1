@@ -14,19 +14,21 @@ import { ExpandableText } from '@/components/arc/expandable-text/expandable-text
 import { Progress } from '@/components/arc/progress/progress'
 import { RadioCards } from '@/components/arc/radio-cards/radio-cards'
 import { Select } from '@/components/arc/select/select'
+import { LockedValue } from './LockedValue'
 
 /* TRAK-285 (Games 3/8): plan step 2, line-up and jobs (TRAK-282; the mockup's Squad step merged in, Imad 27 Oct). The
    coach picks a format and a formation, places players who can come, and gives each a job and a note. Off the pitch,
    a player is on the bench unless the coach leaves them out in their sheet (Imad, 28 Oct). The sheet is a bottom sheet
-   on a phone, and a panel beside the pitch on a tablet or laptop, where the pitch stays in view. */
+   on a phone, and a panel beside the pitch on a tablet or laptop, where the pitch stays in view. TRAK-287: locked at
+   kick-off, the pitch and the sheet only show what was planned. */
 
 const card = 'grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5'
 const FORMAT_OPTIONS = FORMATS.map(format => ({ value: String(format), label: `${format} a side` }))
 const contextLabel = new Map(CONTEXT.map(tag => [tag.value, tag.label]))
 const expectationLabel = new Map(EXPECTATIONS.map(level => [level.value, level.label]))
 
-export function LineUpAndJobs({ form, onFormChange, who }: {
-  form: PlanForm; onFormChange: (form: PlanForm) => void; who: ReturnType<typeof useWhoCanCome>
+export function LineUpAndJobs({ form, onFormChange, who, locked = false }: {
+  form: PlanForm; onFormChange: (form: PlanForm) => void; who: ReturnType<typeof useWhoCanCome>; locked?: boolean
 }) {
   const phone = useIsMobile()
   const [target, setTarget] = useState<Target | null>(null)
@@ -57,7 +59,7 @@ export function LineUpAndJobs({ form, onFormChange, who }: {
   const title = target?.kind === 'slot' ? `${lineName(shape, target.slot)}, slot ${target.slot}`
     : who.players.find(player => target && player.id === target.id)?.name ?? 'Player'
   const panel = target && <PlayerPanel target={target} players={form.players} onPlayers={setPlayers} candidates={who.players}
-    shape={shape} onTarget={setTarget} />
+    shape={shape} onTarget={setTarget} locked={locked} />
   // The name opens the sheet. The job sits beside it, not inside the button: a long job has its own Read more.
   const row = (player: Candidate, detail: string) => (
     <li key={player.id} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-x-3 gap-y-1 px-2 py-3">
@@ -84,10 +86,11 @@ export function LineUpAndJobs({ form, onFormChange, who }: {
     <div className="grid gap-4">
       <section aria-labelledby="plan-shape" className={card}>
         <h2 id="plan-shape" className="text-lg font-medium text-ink">Format and formation</h2>
-        <div className="max-w-[220px]"><Select label="Format" options={FORMAT_OPTIONS} value={String(form.format)} onValueChange={setFormat} /></div>
+        <div className="max-w-[220px]">{locked ? <LockedValue label="Format" value={`${form.format} a side`} />
+          : <Select label="Format" options={FORMAT_OPTIONS} value={String(form.format)} onValueChange={setFormat} />}</div>
         <div className="grid gap-2">
           <p id="plan-formation" className="text-sm font-medium text-ink">Formation</p>
-          <RadioCards aria-labelledby="plan-formation" minColumnWidth={150} value={shape}
+          <RadioCards aria-labelledby="plan-formation" minColumnWidth={150} value={shape} disabled={locked}
             options={FORMATIONS[form.format].map(option => ({ value: option, label: option, icon: <MiniPitch shape={option} /> }))}
             onValueChange={formation => onFormChange({ ...form, formation })} />
         </div>
@@ -102,7 +105,7 @@ export function LineUpAndJobs({ form, onFormChange, who }: {
           <Pitch shape={shape} starters={onPitch} selected={target?.kind === 'slot' ? target.slot
             : target ? playerPlan(form.players, target.id).slot : null}
             onSelect={slot => setTarget(starters.has(slot) ? { kind: 'player', id: starters.get(slot)!.id } : { kind: 'slot', slot })} />
-          <p className="text-sm text-ink-3">Tap a slot to pick who plays there, or a player to give them a job.</p>
+          <p className="text-sm text-ink-3">{locked ? 'Tap a player to see their job and note.' : 'Tap a slot to pick who plays there, or a player to give them a job.'}</p>
         </section>
         {phone
           ? <BottomSheet className="arc" open={!!target} onOpenChange={open => { if (!open) setTarget(null) }} title={title} detents={[0.6, 0.92]}>{panel}</BottomSheet>

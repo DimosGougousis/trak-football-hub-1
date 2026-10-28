@@ -3,7 +3,7 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { AnimatePresence, animate, motion, useIsPresent, useMotionValue, useReducedMotion, type AnimationPlaybackControls, type HTMLMotionProps, type MotionProps, type TargetAndTransition, type Transition } from "motion/react";
-import { Check, Info as InfoCircle, TriangleAlert as WarningTriangle, CircleX as XmarkCircle, X } from "lucide-react";
+import { Check, Info as InfoCircle, TriangleAlert as WarningTriangle, CircleX as XmarkCircle, X, type LucideIcon } from "lucide-react";
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./alert.module.css";
 
@@ -16,6 +16,8 @@ export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
   open?: boolean;
   /** Shows a dismiss button. An uncontrolled alert collapses first, then calls this. */
   onDismiss?: () => void;
+  /** Trak (TRAK-287): another icon than the tone's, such as a lock on an info alert. */
+  icon?: LucideIcon;
 }
 type AlertBoxProps = Omit<AlertProps, "open"> & { reduce: boolean | null; animateIcon?: boolean };
 
@@ -68,8 +70,8 @@ function HeightFrame({ className, reduce, morphKey, children }: { className?: st
   </motion.div>;
 }
 
-function AlertBox({ tone = "info", title, children, className, reduce, onDismiss, animateIcon = false, ...props }: AlertBoxProps) {
-  const Icon = icons[tone];
+function AlertBox({ tone = "info", title, children, className, reduce, onDismiss, animateIcon = false, icon, ...props }: AlertBoxProps) {
+  const Icon = icon ?? icons[tone];
   const text = typeof children === "string" || typeof children === "number" ? String(children) : null;
   const hasDetails = children !== undefined && children !== null && children !== false && children !== "";
   const enter: Transition = reduce ? { duration: motionTokens.duration.instant } : { duration: motionTokens.duration.standard, ease: [...motionTokens.ease.enter] };
