@@ -132,7 +132,8 @@ describe('TRAK-294: Training home', { timeout: 20_000 }, () => {
     expect(within(first).getByText(/90 min · U16/)).toBeInTheDocument()
     expect(within(first).getByRole('link', { name: 'Open in Schedule' })).toHaveAttribute('href', '/coach/schedule?event=soon')
     const lastWeek = within(screen.getByRole('region', { name: 'Last week' })).getAllByRole('link').map(link => link.getAttribute('href'))
-    expect(lastWeek).toEqual(['/coach/schedule?event=last-thu', '/coach/schedule?event=last-tue'])
+    // TRAK-298: a training of last week opens its own page.
+    expect(lastWeek).toEqual(['/coach/training/last-thu', '/coach/training/last-tue'])
 
     // Only the coach's own trainings, never a cancelled one, from about a week ago.
     const read = asked.find(url => url.searchParams.get('event_type') === 'eq.training')!

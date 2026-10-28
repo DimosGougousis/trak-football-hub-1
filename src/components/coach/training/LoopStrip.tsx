@@ -1,18 +1,18 @@
 import { Check } from 'lucide-react'
+import { LOOP_STEPS, type LoopState } from '@/lib/training/loop'
 
 /* TRAK-295 (Training 2/5, spec TRAK-293): every training's loop, Plan → Who's here → Run it → Close, and where this
-   one is. Who's here, Run it and Close are Training 5/5. */
+   one is. TRAK-298 (5/5): each step done or not comes from what exists (loopState); a closed training shows them all
+   done. */
 
-const STEPS = ['Plan', 'Who’s here', 'Run it', 'Close'] as const
-
-/** `at` is the step the training is on; the steps before it are done. `note` says why it's there, e.g. "now". */
-export function LoopStrip({ at, note }: { at: number; note: string }) {
+/** `note` says why the current step is there, e.g. "now". */
+export function LoopStrip({ state, note }: { state: Pick<LoopState, 'done' | 'at' | 'closed'>; note: string }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <ol aria-label="Training loop" className="flex flex-wrap items-center gap-1.5">
-        {STEPS.map((step, i) => {
-          const done = i < at
-          const current = i === at
+        {LOOP_STEPS.map((step, i) => {
+          const done = state.done[i]
+          const current = i === state.at
           return <li key={step} aria-current={current ? 'step' : undefined} className="flex items-center gap-1.5 text-[13px]">
             {i > 0 && <span aria-hidden="true" className="text-ink-3">→</span>}
             <span className={`inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 ${done ? 'bg-brand font-medium text-on-brand'
@@ -25,7 +25,8 @@ export function LoopStrip({ at, note }: { at: number; note: string }) {
           </li>
         })}
       </ol>
-      <span className="text-[13px] text-ink-3">The loop closes when you close the session.</span>
+      <span className="text-[13px] text-ink-3">{state.closed ? 'Closed. Who came is in the log.'
+        : 'It closes when the training ends and the register is taken.'}</span>
     </div>
   )
 }

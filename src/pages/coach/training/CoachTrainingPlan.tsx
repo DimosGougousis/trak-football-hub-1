@@ -1,14 +1,21 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ClipboardList, PenLine, Pencil, Trash2, UserRound } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ChevronLeft, ClipboardList, PenLine, Pencil, Trash2, UserRound } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingMinutes } from '@/lib/training/sessions'
+import { useAuth } from '@/contexts/AuthContext'
+import { registerProblem } from '@/lib/event-register'
+import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingEnd, trainingMinutes } from '@/lib/training/sessions'
+import { loopNote, loopState, practiceStarts } from '@/lib/training/loop'
 import {
   PLAN_MAX, blankPractice, fromDrill, fromSaved, minutesLine, move, planPath, plannedMinutes, roomFor, sourceLabel,
   type PlannerState, type Practice,
 } from '@/lib/training/plans'
 import { gameWhen } from '@/components/coach/games/useGames'
-import { usePlan, useSavePlan, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
+import { usePlan, useRegisters, useSavePlan, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
+import { TakeRegister } from '@/components/coach/TakeRegister'
+import { SessionLog } from '@/components/coach/SessionLog'
+import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { DetailFields, MinutesPicks, TellField } from '@/components/coach/training/fields'
 import { LoopStrip } from '@/components/coach/training/LoopStrip'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
@@ -26,7 +33,9 @@ import { Input } from '@/components/arc/input/input'
    (/coach/training/:eventId) shows it with the loop. Only the coach sees either. TRAK-296 (Training 3/5): a practice
    comes from My drills or the Library too, added or swapped in through AddSheet, and Training › Drills can send a
    drill here ("Add to <training>"). TRAK-297 (Training 4/5): Copy a past session opens the planner filled in with its
-   practices; nothing saves until Save the plan. Who's here, Run it and Close are 5/5. */
+   practices; nothing saves until Save the plan. TRAK-298 (Training 5/5): the plan page runs the loop: Who's here opens
+   the existing register, Run it (/coach/training/:eventId/run) is the plan read at the pitch side, and the training
+   closes on its own once it has ended with its register taken (Kostas, 28 Oct). */
 
 const SAVE_FAILED = "Couldn't save the plan. Check your connection and try again. Nothing you typed is lost."
 const TRAINING_PATH = '/coach/training'
@@ -173,7 +182,7 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
       <Badge>Only you see it</Badge>
       <Button loading={save.isPending} onClick={savePlan}>Save the plan</Button>
     </Header>
-    <div className="pt-2"><LoopStrip at={0} note="now" /></div>
+    <div className="pt-2"><LoopStrip state={{ done: [false, false, false, false], at: 0, closed: false }} note="now" /></div>
 
     <div className="mt-6 grid max-w-[720px] gap-3">
       <div>
@@ -270,23 +279,49 @@ export function PlanRoute() {
 }
 
 function PlanView({ training, plan }: { training: Training; plan: Plan | null }) {
+  const { user } = useAuth()
   const navigate = useNavigate()
+  const client = useQueryClient()
+  const registers = useRegisters()
   const [asking, setAsking] = useState(false)
+  const [sheet, setSheet] = useState<'register' | 'log' | null>(null)
+  const [now] = useState(() => Date.now())
   const cancelled = training.status === 'cancelled'
   const practices = fromSaved(plan?.practices ?? [])
   const total = plannedMinutes(practices)
 
+  const sessionId = registers.data?.get(training.id) ?? null
+  const started = Date.parse(training.starts_at) <= now
+  const over = trainingEnd(training) <= now
+  const loop = loopState({ planned: !!plan, registered: !!sessionId, started, over })
+  // Who's here opens as the register does everywhere else: published, not cancelled, started.
+  const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date(now))
+  const canRegister = !!registers.data && !sessionId && !registerWhy
+  const run = () => navigate(`${TRAINING_PATH}/${training.id}/run`)
+
   return <>
     <Header training={training}>
-      {cancelled ? <Badge tone="danger">Cancelled</Badge> : plan ? <>
-        <Badge tone="success">Ready</Badge>
-        <Button variant="secondary" onClick={() => navigate(planPath(training.id))}>Change the plan</Button>
-      </> : <>
-        <Badge tone="warning">Not planned</Badge>
-        <Button onClick={() => setAsking(true)}>Plan this session</Button>
-      </>}
+      {cancelled ? <Badge tone="danger">Cancelled</Badge>
+        : loop.closed ? <>
+          <Badge tone="success">Closed</Badge>
+          <Button variant="secondary" onClick={() => setSheet('log')}>View log</Button>
+        </> : <>
+          <Badge tone={plan ? 'success' : 'warning'}>{plan ? 'Ready' : 'Not planned'}</Badge>
+          {/* On the day, the main action is the next step: Who's here, then Run it. */}
+          {canRegister && <Button onClick={() => setSheet('register')}>Who’s here</Button>}
+          {plan && <Button variant={canRegister ? 'secondary' : 'primary'} onClick={run}>Run it</Button>}
+          {sessionId && <Button variant="ghost" onClick={() => setSheet('register')}>Edit register</Button>}
+          {plan ? <Button variant="secondary" onClick={() => navigate(planPath(training.id))}>Change the plan</Button>
+            : <Button variant={canRegister ? 'secondary' : 'primary'} onClick={() => setAsking(true)}>Plan this session</Button>}
+        </>}
     </Header>
-    {!cancelled && <div className="pt-2"><LoopStrip at={plan ? 1 : 0} note={plan ? 'next' : 'now'} /></div>}
+    {!cancelled && <div className="grid gap-2 pt-2">
+      <LoopStrip state={loop} note={loopNote(loop, started)} />
+      {registers.error ? <p role="alert" className="text-sm text-danger">Couldn’t check the register. <button type="button"
+        className={`min-h-11 ${linkClass}`} onClick={() => void registers.refetch()}>Try again</button></p>
+        : !sessionId && registerWhy && <p className="text-sm text-ink-3">{registerWhy === 'The register opens once the event has started'
+          ? 'Who’s here opens when the training starts.' : `Who’s here: ${registerWhy.toLowerCase()}.`}</p>}
+    </div>}
 
     <section aria-labelledby="practices" className="mt-6 grid max-w-[720px] gap-2.5">
       {plan ? <>
@@ -308,5 +343,53 @@ function PlanView({ training, plan }: { training: Training; plan: Plan | null })
 
     <PlanWaySheet open={asking} onOpenChange={setAsking} training={training} choices={[]}
       onAddTraining={() => navigate('/coach/schedule')} />
+    {user && <BottomSheet className="arc" open={!!sheet} onOpenChange={open => { if (!open) setSheet(null) }} detents={[0.62, 0.92]}
+      title={sheet === 'log' ? 'The log' : 'Who’s here'} description={[gameWhen(training).day, training.title].join(' · ')}>
+      <div className="pb-4">
+        {sheet === 'register' && <TakeRegister eventId={training.id} coachId={user.id} sessionId={sessionId} squad={training.squad ?? null}
+          onSaved={() => { setSheet(null); void client.invalidateQueries({ queryKey: ['coach', user.id, 'training-registers'] }) }} />}
+        {sheet === 'log' && sessionId && <SessionLog sessionId={sessionId} coachId={user.id} />}
+      </div>
+    </BottomSheet>}
   </>
+}
+
+/* ── Run it ───────────────────────────────────────────────────────────────── */
+
+export function RunRoute() {
+  return <WithTraining>{(training, plan) => <RunView training={training} plan={plan} />}</WithTraining>
+}
+
+/** The plan at the pitch side, on a phone: big type, one practice per row, when each starts and how long it runs. */
+function RunView({ training, plan }: { training: Training; plan: Plan | null }) {
+  const practices = fromSaved(plan?.practices ?? [])
+  const { day, time } = gameWhen(training)
+  const starts = practiceStarts(time || null, practices)
+  const back = `${TRAINING_PATH}/${training.id}`
+  return <div className="mx-auto grid max-w-[720px] gap-5 pt-5">
+    <Link to={back} className={`inline-flex min-h-11 items-center gap-1 justify-self-start ${linkClass}`}><ChevronLeft size={16} aria-hidden />Back to the plan</Link>
+    <header className="grid gap-1">
+      <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">Run it</p>
+      <h1 className="text-[28px] font-medium leading-tight text-ink">{[day, time].filter(Boolean).join(' · ')}</h1>
+      <p className="text-base text-ink-2 break-words">{[training.title, training.venue].filter(Boolean).join(' · ')}</p>
+    </header>
+    {practices.length === 0 ? <p className="text-[17px] text-ink-2">Nothing to run yet. <Link to={planPath(training.id)} className={linkClass}>Plan it</Link></p>
+      : <ol aria-label="Practices to run" className="grid gap-3">
+        {practices.map((practice, i) => {
+          const details = detailsLine(practice)
+          return <li key={i} className="flex gap-4 rounded-2xl border border-line bg-surface p-4 tablet:p-5">
+            <div className="w-16 flex-none text-center">
+              {starts[i] && <p className="text-[15px] font-medium text-brand">{starts[i]}</p>}
+              <p className="text-[28px] font-medium leading-none text-ink">{practice.minutes}</p>
+              <p className="text-[13px] text-ink-3">min</p>
+            </div>
+            <div className="grid min-w-0 flex-1 content-start gap-1.5">
+              <p className="text-[22px] font-medium leading-snug text-ink break-words">{practice.name}</p>
+              {practice.tell.trim() && <p className="text-[19px] leading-snug text-ink break-words">“{practice.tell.trim()}”</p>}
+              {details && <p className="text-[17px] text-ink-2 break-words">{details}</p>}
+            </div>
+          </li>
+        })}
+      </ol>}
+  </div>
 }

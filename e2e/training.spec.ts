@@ -4,7 +4,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // switch on, at a phone's and a laptop's width: no sideways scroll, and the keyboard reaches every control.
 // TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
 // same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
-// TRAK-297 (Training 4/5): Copy a past session.
+// TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): Run it, and a closed training's log.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -40,7 +40,14 @@ const DRILLS = [
 const PLANNED: [string, Record<string, unknown>[]][] = [['t-tue', [
   { position: 1, name: 'Warm-up: rondos 4v1', minutes: 15, how: '', tell: '', area: '10 × 10 m', numbers: '', direction: '', targets: '',
     conditions: '', source: 'drill', drill_id: 'd-1', library_session: null },
+  { position: 2, name: 'Pressing on the trigger', minutes: 25, how: '', tell: 'Press as soon as their 6 turns back.', area: '30 × 40 m',
+    numbers: '6v6', direction: '', targets: '', conditions: '', source: 'own', drill_id: null, library_session: null },
+]], ['t-last', [
+  { position: 1, name: 'Pressing zones', minutes: 30, how: '', tell: '', area: '', numbers: '', direction: '', targets: '', conditions: '',
+    source: 'own', drill_id: null, library_session: null },
 ]]]
+// TRAK-298: last week's training had its register taken, so it is closed.
+const SESSIONS = [{ id: 's-last', event_id: 't-last', session_type: 'training', title: 'Pressing zones', session_date: null, training_type: null, notes: null }]
 const players = [['Thierry Henry', 'U16'], ['Patrick Vieira', 'U16'], ['Robert Pires', 'U14']].map(([name, squad], i) => ({
   id: `sq-${i + 1}`, coach_user_id: COACH, player_name: name, position: 'Midfielder', age_group: squad, shirt_number: i + 1,
   status: 'active', linked_player_id: null, created_at: '2026-10-01T08:00:00Z',
@@ -82,6 +89,10 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     }
     if (path === '/rest/v1/training_plan_practices') {
       return json([...plans].filter(([id]) => matches('event_id')(id)).flatMap(([event_id, rows]) => rows.map(row => ({ event_id, ...row }))))
+    }
+    if (path === '/rest/v1/coach_sessions') {
+      const id = url.searchParams.get('id')?.slice(3)
+      return json(id ? SESSIONS.filter(session => session.id === id) : SESSIONS.map(({ id: sid, event_id }) => ({ id: sid, event_id })))
     }
     if (path === '/rest/v1/rpc/save_training_plan') {
       const { p_event_id, p_practices } = req.postDataJSON() as { p_event_id: string; p_practices: Record<string, unknown>[] }
@@ -220,7 +231,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
 
   test(`Add or swap at ${width} px: My drills, the Library and a preview`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/t-tue/plan', width, height)
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
     await page.getByRole('button', { name: 'From My drills' }).click()
     const sheet = page.getByRole('dialog', { name: 'Add a practice' })
     await expect(sheet.getByRole('article', { name: 'Pressing on the trigger' })).toBeVisible()
@@ -261,7 +272,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const how = page.getByRole('dialog', { name: 'How do you want to plan it?' })
     await how.getByRole('button', { name: /Copy a past session/ }).click()
     const copy = page.getByRole('dialog', { name: 'Copy a past session' })
-    await expect(copy.getByRole('list', { name: 'Past sessions' }).getByRole('listitem')).toHaveCount(1)
+    await expect(copy.getByRole('list', { name: 'Past sessions' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(600)
     await page.screenshot({ path: testInfo.outputPath(`training-copy-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -271,11 +282,36 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByText(/Copied from Receiving under pressure/)).toBeVisible()
     // A copy survives the page being laid out again (a phone turned, a window resized across the laptop width).
     await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
     await page.setViewportSize({ width, height })
-    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-copied-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  test(`Run it and a closed training at ${width} px`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
+    await page.getByRole('button', { name: 'Run it' }).click()
+    await expect(page).toHaveURL(/\/coach\/training\/t-tue\/run$/)
+    await expect(page.getByRole('list', { name: 'Practices to run' }).getByRole('listitem')).toHaveCount(2)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-run-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    expect(keyboard.missed).toEqual([])
+
+    await page.goto('/coach/training')
+    await expect(page.getByRole('region', { name: 'Last week' }).getByText('Closed')).toBeVisible()
+    await page.getByRole('region', { name: 'Last week' }).getByRole('link').first().click()
+    await expect(page).toHaveURL(/\/coach\/training\/t-last$/)
+    await expect(page.getByRole('list', { name: 'Training loop' }).getByText('(done)')).toHaveCount(4)
+    await page.getByRole('button', { name: 'View log' }).click()
+    await expect(page.getByRole('dialog', { name: 'The log' }).getByRole('link', { name: 'Edit log' })).toBeVisible()
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-closed-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
