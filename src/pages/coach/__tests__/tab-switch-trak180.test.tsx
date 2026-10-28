@@ -34,6 +34,10 @@ function coachReads(players: typeof PLAYERS | [], gate?: Promise<void>) {
     table('session_attendance', []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, ({ request }) =>
       new URL(request.url).searchParams.get('limit') === '1'
         ? HttpResponse.json([])

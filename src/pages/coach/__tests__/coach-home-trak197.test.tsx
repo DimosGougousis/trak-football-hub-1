@@ -41,6 +41,9 @@ function home(over: { players: ReturnType<typeof player>[]; assessments?: Row[];
     table('notification_settings', over.settings ?? []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
   )
 }
 // Everyone in `ids` came to every training, so each register counts as taken.

@@ -36,6 +36,9 @@ const UNTIMED_EVENT = event('ev-3', { event_date: '2026-11-21', start_time: null
 
 function setup(events: unknown[] | 'fail' = [MATCH_EVENT, TRAINING_EVENT, UNTIMED_EVENT]) {
   server.use(
+    // TRAK-286: no shared game plan.
+    table('game_for_family', []),
+    table('game_for_player', []),
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('matches', []), table('player_details', []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),

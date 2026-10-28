@@ -83,6 +83,9 @@ beforeEach(() => {
   account = `readback-account-${++sequence}`
   signInAs({ id: account })
   server.use(
+    // TRAK-286: no shared game plan.
+    table('game_for_family', []),
+    table('game_for_player', []),
     http.get(endpoint('profiles'), ({ request }) => {
       const filter = new URL(request.url).searchParams.get('user_id') ?? ''
       if (filter.startsWith('in.')) return HttpResponse.json([

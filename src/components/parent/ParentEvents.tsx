@@ -5,7 +5,8 @@ import { UpcomingEventCard } from '@/components/player/UpcomingEventCard'
 import { SeeMoreList } from '@/components/trak/SeeMoreList'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useParentEvents } from '@/hooks/useParentData'
-import { isChanged, noteEventsShown, readSeenSequences } from '@/lib/player-events'
+import { isChanged, noteEventsShown, readSeenSequences, type PlayerEvent } from '@/lib/player-events'
+import { planBadge, useSharedPlans } from '@/lib/games/shared-plans'
 
 /**
  * The selected child's events (TRAK-131, J8.8), with the player's own card
@@ -14,8 +15,11 @@ import { isChanged, noteEventsShown, readSeenSequences } from '@/lib/player-even
  * for this parent, like the bell. A failed read says so, never an empty list.
  */
 export function ParentUpcomingEvents({ nextUpOnly = false }: { nextUpOnly?: boolean }) {
-  const { parentId } = useParentChildren()
+  const { parentId, selectedChild } = useParentChildren()
   const query = useParentEvents()
+  // TRAK-286: which matches have a shared plan. A failed read only leaves the badges off.
+  const plans = useSharedPlans(selectedChild?.id, false)
+  const plan = (e: PlayerEvent) => planBadge(plans.data?.get(e.id), e)
   const events = nextUpOnly ? (query.data ?? []).slice(0, 1) : query.data ?? []
   // Read before this render's events are recorded as seen.
   const seen = parentId ? readSeenSequences(parentId) : {}
@@ -31,7 +35,7 @@ export function ParentUpcomingEvents({ nextUpOnly = false }: { nextUpOnly?: bool
       <section className="mb-4" aria-label="Next up">
         <MetadataLabel text="NEXT UP" />
         <div className="mt-2">
-          <UpcomingEventCard event={next} changed={isChanged(next, seen)} nextUp linkBase="/parent/event" />
+          <UpcomingEventCard event={next} changed={isChanged(next, seen)} nextUp linkBase="/parent/event" plan={plan(next)} />
         </div>
       </section>
     )
@@ -44,7 +48,7 @@ export function ParentUpcomingEvents({ nextUpOnly = false }: { nextUpOnly?: bool
         {query.isError ? <ParentLoadError message="Couldn't load upcoming events." onRetry={() => { void query.refetch() }} />
           : query.isPending ? <ParentLoading />
             : events.length === 0 ? <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
-              : <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} linkBase="/parent/event" />} />}
+              : <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} linkBase="/parent/event" plan={plan(e)} />} />}
       </div>
     </section>
   )

@@ -48,9 +48,9 @@ CASCADE`. Every text field has a length limit, and every list a maximum length.
 
 | Table | Key | Holds | Slice |
 |---|---|---|---|
-| `game_plans` | `event_id` | `strength` (weaker, similar or stronger), `their_formation` (a shape such as 4-4-2), `key_players` (shirt number 1 to 99 or blank, position, note; at most 11; no names, because they are other clubs' children), `scouting`, `goals` (title, what it looks like; at most 3). The two lists are JSON the database checks (`trak_private.valid_key_players`, `valid_game_goals`). No one deletes a plan: it goes with its match. Then format (11, 9, 7 or 5 a side; default 11) and formation (285), and the face-to-face tick and `shared_at` (286). | 284 |
+| `game_plans` | `event_id` | `strength` (weaker, similar or stronger), `their_formation` (a shape such as 4-4-2), `key_players` (shirt number 1 to 99 or blank, position, note; at most 11; no names, because they are other clubs' children), `scouting`, `goals` (title, what it looks like; at most 3). The two lists are JSON the database checks (`trak_private.valid_key_players`, `valid_game_goals`). No one deletes a plan: it goes with its match. Then format (11, 9, 7 or 5 a side; default 11) and formation (285). A plan is shared once `game_shares` has a row for it (286). | 284 |
 | `game_plan_players` | `event_id, squad_player_id` | `role` (starter, bench or not selected; bench by default, Imad 28 Oct), `slot` (starters only: 1 is the keeper, then each line from the back, left to right; one player per slot, checked at the end of each statement so two starters can swap), `job`, `note`, `context` (the five tags, never a diagnosis), `expectation` (stretch, usual or lead; usual by default). A player left out keeps only the note. Written only for a consented child on the coach's current roster in the match's squad (`trak_private.game_plan_player_ok`). No one deletes a row. `game_plans` gains `format` (11, 9, 7 or 5; default 11) and a `formation` that must fit it. | 285 |
-| `game_shares` | `event_id, shared_at` | One row per share, with how many players it changed. Feeds the timeline ("Changes shared to 3"). | 286 |
+| `game_shares` | `id` | One row per share (`event_id`, `shared_at`), with how many children's copies it wrote, changed or took back. Only the match's coach reads it; only Share writes it. A share that changes nothing isn't logged. Feeds the timeline ("Changes shared to 3"). | 286 |
 | `game_evaluations` | `event_id` | Our score, their score, our goals (scorer and optional assist each; no more than our score), how they scored, "Did the plan work?" (one answer per plan goal), `saved_at`, `published_at`. | 288 |
 | `game_evaluation_players` | `event_id, squad_player_id` | Played, came on, minute (optional), did the job (yes, partly or not yet; default yes), against expectation (below, met or above; default met), note. | 288 |
 
@@ -58,10 +58,17 @@ CASCADE`. Every text field has a length limit, and every list a maximum length.
 
 | Table | Key | Read by | Holds |
 |---|---|---|---|
-| `game_for_family` | `event_id, squad_player_id` | That player and their guardians | In the squad or not, bench, job, whether a note exists, `changed_at` (drives "Updated"). After Publish: played, the score, did the job, the expectation and context, against expectation. |
-| `game_for_player` | `event_id, squad_player_id` | That player only | Our goals (when called up), the plan note, the evaluation note. |
+| `game_for_family` | `event_id, squad_player_id` | That player and their guardians | `role` (starter, bench or not selected), `job`, `has_note`, `shared_at`, `changed_at` (drives "Updated" until kick-off). After Publish: played, the score, did the job, the expectation and context, against expectation. |
+| `game_for_player` | `event_id, squad_player_id` | That player only | The goals, the plan note, `shared_at`, `changed_at`; later the evaluation note. |
 
 The evaluation columns stay empty until Publish writes them, so before the game a family reads only what Share wrote.
+
+**Who gets copies (286):** every child the line-up may hold (`game_plan_player_ok`'s rules) who can come, placed or on
+the bench by default, and a starter who said they can't make it (their slot is flagged until the coach moves them).
+Someone not on the pitch who can't make it gets none, as the coach's line-up lists them apart. A child left out gets
+the goals too: TRAK-286 says a player reads the goals with no exception, where this design had said "when called up";
+the issue wins (Imad told, 28 Oct). Updated is per audience: the family's copy changes only when the role, job or
+"has a note" changes, so new goals or a reworded note read as Updated for the player alone.
 
 ## Read and write rules
 
@@ -96,12 +103,18 @@ Players and guardians get no insert, update or delete grant on any Games table.
 
 ## Database functions and triggers
 
-- **`share_game_plan(event_id)`** (286; 290 adds a share time). Security definer. It refuses unless the caller is
-  the event's coach, the switch is on, the event is a published, uncancelled match and kick-off hasn't passed. It
-  copies working rows into the copy tables for consented, current-roster children only, and deletes the copies of
-  players taken out. It sets `changed_at` only on rows whose content changed, and logs the share in `game_shares`.
-- **`unshared_game_changes(event_ids)`** (286). Security invoker, so the coach's own rules apply. It returns the
-  players whose working rows differ from their copies. It drives "Changes not shared · N" and the Share step's alert.
+- **`share_game_plan(event_id, talked)`** (286; 290 adds a share time). Security definer. It refuses unless the
+  caller is the event's coach, the switch is on, the event is a published, uncancelled match, kick-off hasn't
+  passed and a plan is saved; the first share also needs `talked` (the face-to-face tick). It writes the copies
+  (`trak_private.game_copies`), deletes copies nobody may read any more, sets `changed_at` only on copies whose
+  words changed, and logs the share in `game_shares`. It returns how many children's copies changed.
+- **`game_plan_changes(event_ids)`** (286). Security definer, because the coach never reads the copies: for the
+  caller's own shared matches before kick-off, the children whose copies a share would change now
+  (`trak_private.game_copy_changes`). It drives "Changes not shared · N" and the Share step's alert. A child who
+  left or lost consent isn't a change: they read nothing already.
+- **`trak_private.family_reads_game_copy(event, squad row, guardian)`** (286): the copies' read rule. A published,
+  uncancelled match in an academy with the switch on; the child on the coach's current roster in the match's squad,
+  with consent; the caller is the child or, for `game_for_family` only, a guardian.
 - **Kick-off lock** (287), on `game_plans` and `game_plan_players`, the approach of
   `20261021030000_started_event_locked.sql`. For app users, any insert, update or delete after the event's
   `starts_at` raises a plain-language error. It reads the event each time, so moving the match moves the lock. The
@@ -158,9 +171,9 @@ Where the code goes:
     count and clock;
   - `formations.ts`: one small constant list per format, with slot positions;
   - `words.ts`: the words players and families read, and the coach's plain labels.
-- Player and parent: `src/components/player/GameSections.tsx` (Game plan, After the game). `PlayerEvent`,
-  `ParentEvent` and the coach's Share and Publish previews all render it, so the preview can't drift from the real
-  page.
+- Player and parent: `src/components/player/GamePlanSection.tsx` (286; After the game comes with 289). `PlayerEvent`,
+  `ParentEvent` and the coach's Share preview all render it, and the preview's words come from `previewOf`, so the
+  preview can't drift from the real page (a test compares them).
 
 Arc: each step uses TRAK-282's picks. Before each slice, every component it adds is read with the Arc MCP
 (`whenToUse`, `whenNotToUse`) and checked for React 19-only APIs. Fifteen free components and one Pro block are new to
@@ -169,7 +182,11 @@ a key player's shirt number is an `input` with the number pad, not `number-field
 blank. TRAK-285 (Imad, 28 Oct): Bench or Not selected is the player sheet's `radio-group`, not an inline one in the list
 (Arc's radio-group only stacks). `chip-group` stays for context, though Arc says "checkbox in forms": the five tags read
 as tags and must fit a phone sheet. React 18: chip-group's Chip, MoreChip and Swap, and progress's and badge's Swap,
-take their ref through `forwardRef`.
+take their ref through `forwardRef`. TRAK-286: `release-readiness` is adapted as `blocks/release-readiness/share-readiness`:
+the coach ticks one check (face to face, Arc's `checkbox`); the other three are worked out from the plan and show a
+mark; only the logistics and the tick hold Share now back (Imad, 28 Oct). No owners and no notify switch: sharing is
+in the app only. Alert's Swap takes `forwardRef` too. The coach's note on the player's page is a tinted Trak panel
+like its neighbours, not Arc's `card`, which is for browsable items and lifts on hover (Imad, 28 Oct).
 
 ## Existing code
 

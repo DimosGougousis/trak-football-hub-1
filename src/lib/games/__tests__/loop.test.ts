@@ -49,14 +49,33 @@ describe('gameState (TRAK-283)', () => {
 })
 
 describe('a plan draft (TRAK-284)', () => {
-  it('a published match with a plan draft before kick-off has a plan that is not shared, and the same next action', () => {
-    expect(gameState(game(), KICK_OFF - 1000, true)).toBe('planDraft')
-    expect(STATE.planDraft).toMatchObject({ label: 'Plan not shared', step: 1, action: { label: 'Write the plan', tab: 'plan' } })
+  it('a published match with a plan draft before kick-off has a plan that is not shared; sharing it is next (TRAK-286)', () => {
+    expect(gameState(game(), KICK_OFF - 1000, { drafted: true })).toBe('planDraft')
+    expect(STATE.planDraft).toMatchObject({ label: 'Plan not shared', step: 1, action: { label: 'Share the plan', tab: 'plan', step: 'share' } })
   })
 
   it('a draft changes nothing while the logistics wait, or after kick-off', () => {
-    expect(gameState(game({ published: false }), KICK_OFF - 1000, true)).toBe('logistics')
-    expect(gameState(game(), KICK_OFF, true)).toBe('locked')
+    expect(gameState(game({ published: false }), KICK_OFF - 1000, { drafted: true })).toBe('logistics')
+    expect(gameState(game(), KICK_OFF, { drafted: true })).toBe('locked')
+  })
+})
+
+describe('a shared plan (TRAK-286)', () => {
+  it('a shared plan closes "Plan not shared"; there is nothing to do until kick-off', () => {
+    expect(gameState(game(), KICK_OFF - 1000, { drafted: true, shared: true })).toBe('shared')
+    expect(STATE.shared).toMatchObject({ label: 'Plan shared', tone: 'success' })
+    expect(LOOP_STEPS[STATE.shared.step]).toBe('Shared')
+    expect(STATE.shared.action).toBeUndefined()
+  })
+
+  it('edits after sharing wait for "Share the changes"', () => {
+    expect(gameState(game(), KICK_OFF - 1000, { drafted: true, shared: true, changes: 2 })).toBe('changes')
+    expect(STATE.changes).toMatchObject({ label: 'Changes not shared', tone: 'warning', action: { label: 'Share the changes', tab: 'plan', step: 'share' } })
+    expect(LOOP_STEPS[STATE.changes.step]).toBe('Shared')
+  })
+
+  it('at kick-off a shared plan locks, changes or not', () => {
+    expect(gameState(game(), KICK_OFF, { drafted: true, shared: true, changes: 2 })).toBe('locked')
   })
 })
 

@@ -45,6 +45,9 @@ const assessment = (child: string) => ({
 
 function installFamily() {
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), ({ request }) => {
       const parent = new URL(request.url).searchParams.get('parent_user_id')
       return HttpResponse.json((parent === 'eq.parent-a' ? ['Alex', 'Zara'] : ['Sam'])

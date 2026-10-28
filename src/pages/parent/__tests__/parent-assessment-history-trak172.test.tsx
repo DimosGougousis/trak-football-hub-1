@@ -49,6 +49,9 @@ beforeEach(() => {
   assessments = [...Array.from({ length: 24 }, (_, i) => makeAssessment('Alex', i + 1)), makeAssessment('Zara', 1)]
   failAssessments = false; hiddenAssessments = false; assessmentRequests = []; feedbackReads = 0
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'Alex' }, { player_user_id: 'Zara' }])),
     http.get(endpoint('profiles'), ({ request }) => {
       const filter = new URL(request.url).searchParams.get('user_id') ?? ''

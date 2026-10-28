@@ -13,3 +13,4 @@ Keep the notice line at the top of every file.
 - `glass-tabbar/`
 - `radar-chart/`
 - `blocks/` (adapted from Arc Pro blocks)
+  - `blocks/release-readiness/` (TRAK-286: the Game plan's Share step)

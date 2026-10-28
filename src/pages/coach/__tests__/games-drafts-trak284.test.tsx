@@ -52,6 +52,9 @@ beforeEach(() => {
     table('notification_settings', []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
   )
 })
 afterEach(() => { cleanup(); localStorage.clear() })

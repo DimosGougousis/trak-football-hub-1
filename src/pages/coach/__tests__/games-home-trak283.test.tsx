@@ -63,6 +63,8 @@ beforeEach(() => {
     table('event_absences', []),
     table('game_plans', []),
     rpc('feature_on', () => true),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
   )
 })
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })

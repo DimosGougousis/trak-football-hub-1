@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { MetadataLabel, LoadError } from '@/components/trak'
 import { isChanged, noteEventsShown, readSeenSequences, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { UpcomingEventCard } from './UpcomingEventCard'
+import { fetchSharedPlans, planBadge } from '@/lib/games/shared-plans'
 import { SeeMoreList } from '@/components/trak/SeeMoreList'
 
 /**
@@ -32,6 +33,14 @@ export function UpcomingEvents({ playerUserId }: { playerUserId: string }) {
     return () => { cancelled = true }
   }, [playerUserId, reloadKey])
 
+  // TRAK-286: which matches have a shared plan. A failed read only leaves the badges off.
+  const [plans, setPlans] = useState<Map<string, boolean>>(new Map())
+  useEffect(() => {
+    const abort = new AbortController()
+    fetchSharedPlans(playerUserId, true, abort.signal).then(setPlans, () => {})
+    return () => abort.abort()
+  }, [playerUserId, reloadKey])
+
   // Shown is recorded after render; the read below is the state before it.
   const seen = readSeenSequences(playerUserId)
   useEffect(() => { if (events) noteEventsShown(playerUserId, events) }, [events, playerUserId])
@@ -47,7 +56,8 @@ export function UpcomingEvents({ playerUserId }: { playerUserId: string }) {
         ) : events.length === 0 ? (
           <p className="text-[12px] text-ink-3">Nothing scheduled yet.</p>
         ) : (
-          <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)} />} />
+          <SeeMoreList items={events} render={e => <UpcomingEventCard key={e.id} event={e} changed={isChanged(e, seen)}
+            plan={planBadge(plans.get(e.id), e)} />} />
         )}
       </div>
     </section>

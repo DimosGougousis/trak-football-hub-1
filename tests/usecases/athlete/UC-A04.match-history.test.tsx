@@ -11,6 +11,8 @@ const ATHLETE = { id: 'athlete-1' }
 function signedInAthlete() {
   signInAs(ATHLETE)
   server.use(
+    // TRAK-286: no roster row, so no shared game plan to badge.
+    table('squad_players', []),
     rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [
       { id: 'p-athlete', user_id: ATHLETE.id, role: 'player', full_name: 'Nikos Papadopoulos', nationality: 'GR' },

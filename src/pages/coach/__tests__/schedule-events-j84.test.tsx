@@ -65,6 +65,10 @@ function fixtures() {
     table('coach_sessions', []),
     table('squad_players', []), // TRAK-139: the squad label for the WhatsApp message
     rpc('feature_on', () => true),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     http.post(EVENTS, write('post')),
     http.patch(EVENTS, write('patch')),
     http.delete(EVENTS, write('delete')),

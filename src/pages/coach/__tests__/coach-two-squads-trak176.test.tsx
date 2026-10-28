@@ -41,6 +41,10 @@ function coachReads(players: typeof TWO) {
     table('event_absences', []),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => true),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, () => HttpResponse.json([], { headers: { 'Content-Range': '*/0' } })),
     http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json(players)),
     http.get(EVENTS, () => HttpResponse.json([])),

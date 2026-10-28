@@ -40,14 +40,16 @@ const CONFIRMED = ['sq-1', 'sq-2', 'sq-4', 'sq-5', 'sq-6', 'sq-7', 'sq-8'].map(s
 const ABSENT = [{ squad_player_id: 'sq-9' }]
 
 /** game_plans as the database keeps them: one row per match, written by the app's upsert. TRAK-285: the line-up rows
- *  go under `line-up:<match>:<squad row>`. */
+ *  go under `line-up:<match>:<squad row>`. TRAK-286: a share under `share:<match>`, as share_game_plan logs it. */
 type Plans = Map<string, Record<string, unknown>>
+// TRAK-286: Theodoros Zagorakis (sq-1) signs in as a player to read the shared plan.
+const PLAYER = '97283000-0000-4000-8000-000000000002'
 
-async function backend(context: BrowserContext, unexpected: string[], plans: Plans) {
-  const user = { id: COACH, email: 'coach@games283.test', email_confirmed_at: '2026-10-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z',
+async function backend(context: BrowserContext, unexpected: string[], plans: Plans, me = COACH) {
+  const user = { id: me, email: 'coach@games283.test', email_confirmed_at: '2026-10-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z',
     aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
   const exp = Math.floor(Date.now() / 1000) + 3600
-  const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: COACH, exp, role: 'authenticated' }]
+  const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: me, exp, role: 'authenticated' }]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
     { access_token: token, refresh_token: 'synthetic-games283-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
@@ -55,12 +57,35 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     const req = route.request(), url = new URL(req.url())
     if (url.origin === 'http://127.0.0.1:4189') return route.continue()
     if (url.hostname === 'fonts.googleapis.com') return route.fulfill({ contentType: 'text/css', body: '' })
-    const json = (rows: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows), headers: { 'content-range': '0-0/1' } })
+    const single = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object')
+    const json = (rows: unknown) => route.fulfill({ contentType: 'application/json', headers: { 'content-range': '0-0/1' },
+      body: JSON.stringify(single && Array.isArray(rows) ? rows[0] ?? null : rows) })
     if (url.hostname !== 'xbykbqolvqyqmipikuae.supabase.co') { unexpected.push(req.url()); return route.abort() }
     const path = url.pathname
     if (path === '/auth/v1/user') return json(user)
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
-    if (path === '/rest/v1/profiles') return json([{ user_id: COACH, id: COACH, role: 'coach', full_name: 'Fernando Santos' }])
+    if (path === '/rest/v1/profiles') {
+      const asked = url.searchParams.get('user_id') ?? ''
+      return json([{ user_id: COACH, id: COACH, role: 'coach', full_name: 'Fernando Santos' },
+        { user_id: PLAYER, id: PLAYER, role: 'player', full_name: 'Theodoros Zagorakis' }].filter(profile => asked.includes(profile.user_id)))
+    }
+    // TRAK-286: what Share wrote for Theodoros, and the share itself.
+    if (path === '/rest/v1/rpc/child_events') {
+      const id = url.searchParams.get('id')?.replace(/^eq\./, '')
+      return json(MATCHES.filter(m => m.published && (!id || m.id === id)))
+    }
+    if (path === '/rest/v1/game_for_family') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
+      role: 'starter', job: 'Stay tight to their winger.', has_note: true, changed_at: null }] : [])
+    if (path === '/rest/v1/game_for_player') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
+      goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
+      note: 'Second game at right-back. Proud of you.', changed_at: null }] : [])
+    if (path === '/rest/v1/game_shares') return json([...plans.entries()].filter(([key]) => key.startsWith('share:')).map(([, share]) => share))
+    if (path === '/rest/v1/rpc/share_game_plan') {
+      const body = req.postDataJSON() as { p_event_id: string; p_talked: boolean }
+      plans.set(`share:${body.p_event_id}`, { event_id: body.p_event_id, shared_at: new Date().toISOString(), talked: body.p_talked })
+      return json(1)
+    }
+    if (path === '/rest/v1/squad_players' && me === PLAYER) return json([{ id: 'sq-1', coach_user_id: COACH }])
     if (path === '/rest/v1/coach_details') return json([{ user_id: COACH, organization_id: 'org-283', coach_role: 'Head Coach', team: 'U16' }])
     if (path === '/rest/v1/organizations') return json([{ id: 'org-283', name: 'Rehearsal FC', logo_url: null }])
     if (path === '/rest/v1/squad_players') return json(players)
@@ -88,7 +113,7 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     }
     if (path === '/rest/v1/game_plans') {
       const one = url.searchParams.get('event_id')?.replace(/^eq\./, '')
-      return json([...plans.entries()].filter(([key, plan]) => !key.startsWith('line-up:') && (!one || plan.event_id === one)).map(([, plan]) => plan))
+      return json([...plans.entries()].filter(([key, plan]) => !key.includes(':') && (!one || plan.event_id === one)).map(([, plan]) => plan))
     }
     // Every other read is empty.
     if (path.startsWith('/rest/v1/')) return json(req.method() === 'GET' || path.startsWith('/rest/v1/rpc/') ? [] : null)
@@ -97,11 +122,11 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
   })
 }
 
-async function open(page: Page, context: BrowserContext, path: string, width: number, height: number, plans: Plans = new Map()) {
+async function open(page: Page, context: BrowserContext, path: string, width: number, height: number, plans: Plans = new Map(), me = COACH) {
   const unexpected: string[] = [], errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width, height })
-  await backend(context, unexpected, plans)
+  await backend(context, unexpected, plans, me)
   await page.goto(path)
   return { unexpected, errors }
 }
@@ -136,7 +161,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const next = page.getByRole('region', { name: 'Next game' })
     await expect(next.getByText('vs Parkview Athletic U16')).toBeVisible()
     await expect(next.getByText('Plan not shared')).toBeVisible()
-    await expect(next.getByRole('button', { name: 'Write the plan' })).toBeVisible()
+    // TRAK-286: with a draft, sharing it is next.
+    await expect(next.getByRole('button', { name: 'Share the plan' })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Open drafts' }).getByRole('button', { name: 'Open the plan, vs Parkview Athletic U16' })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Your games' }).getByRole('link')).toHaveCount(4)
     await page.waitForTimeout(500)
@@ -279,6 +305,75 @@ test("a game's line-up at 1440 px: the pitch stays in view while the panel besid
   expect(await sideways(page)).toBeLessThanOrEqual(0)
   const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
   expect(keyboard.missed).toEqual([])
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
+// TRAK-286: the Share step. Share now waits for the face-to-face tick; the keyboard ticks it and shares. The preview
+// switches between the player and the parent with the arrow keys, and the parent never reads the note.
+const DRAFT = (): Plans => new Map([
+  ['m-next', { event_id: 'm-next', strength: 'stronger', their_formation: null, key_players: [], scouting: 'Their 9 is quick.', format: 11,
+    formation: '4-4-2', goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
+    created_at: '2026-10-27T17:00:00Z', updated_at: '2026-10-27T17:40:00Z' }],
+  ['line-up:m-next:sq-1', { event_id: 'm-next', squad_player_id: 'sq-1', role: 'starter', slot: 4, job: 'Stay tight to their winger.',
+    note: 'Second game at right-back. Proud of you.', context: ['out_of_position'], expectation: 'stretch' }],
+])
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`a game's Share step at ${width} px: the preview by keyboard, then tick and share`, async ({ page, context }, testInfo) => {
+    const plans = DRAFT()
+    const { unexpected, errors } = await open(page, context, '/coach/games/m-next?tab=plan&step=share', width, height, plans)
+    const block = page.getByRole('region', { name: 'Share the plan' })
+    await expect(block).toBeVisible()
+    const shareNow = block.getByRole('button', { name: 'Share now' })
+    await expect(shareNow).toBeDisabled()
+    const preview = page.getByRole('region', { name: 'Preview' })
+    await expect(preview.getByRole('heading', { name: 'From Coach Fernando Santos · just for you' })).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`share-step-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+
+    await preview.getByRole('button', { name: 'As the player' }).focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(preview.getByText('Theodoros’s job')).toBeVisible()
+    await expect(preview.getByText('Coach Fernando Santos’s note is just for Theodoros.')).toBeVisible()
+    await expect(preview.getByText('Second game at right-back. Proud of you.')).toHaveCount(0)
+
+    const tick = block.getByRole('checkbox', { name: /talked selection through/ })
+    await tick.focus()
+    await page.keyboard.press('Space')
+    await expect(tick).toBeChecked()
+    await expect(shareNow).toBeEnabled()
+    // Every control, Share now included once it's enabled, takes focus from the keyboard.
+    const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
+    expect(keyboard.count).toBeGreaterThan(5)
+    expect(keyboard.missed).toEqual([])
+    await shareNow.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('region', { name: 'Shared' })).toBeVisible()
+    expect(plans.get('share:m-next')).toMatchObject({ talked: true })
+    expect(plans.get('m-next')).toMatchObject({ goals: [{ title: 'Win it back in their half' }] })
+    await expect(page.getByText('Plan shared').first()).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`shared-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
+
+// TRAK-286: what Theodoros reads on his phone once it's shared: the goals, his job and the note just for him.
+test("the player's event page at 390 px: the shared game plan", async ({ page, context }, testInfo) => {
+  const plans = DRAFT()
+  plans.set('share:m-next', { event_id: 'm-next', shared_at: new Date().toISOString() })
+  const { unexpected, errors } = await open(page, context, '/player/event/m-next', 390, 844, plans, PLAYER)
+  const section = page.getByRole('region', { name: 'Game plan' })
+  await expect(section).toBeVisible()
+  await expect(section.getByText('1 · Win it back in their half')).toBeVisible()
+  await expect(section.getByText('Your job')).toBeVisible()
+  await expect(section.getByRole('heading', { name: 'From Coach Fernando Santos · just for you' })).toBeVisible()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: testInfo.outputPath('player-game-plan-390.png'), fullPage: true })
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
 })

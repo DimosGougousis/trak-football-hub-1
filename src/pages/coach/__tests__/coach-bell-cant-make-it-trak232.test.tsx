@@ -48,6 +48,10 @@ function fixtures(id: string) {
     ]),
     http.get(`${SUPABASE_URL}/rest/v1/event_absences`, () => HttpResponse.json(absences)),
     rpc('feature_on', () => true),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     rpc('coach_squad_player_consent_required', () => false),
   )
 }

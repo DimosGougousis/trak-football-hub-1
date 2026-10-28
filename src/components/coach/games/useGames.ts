@@ -61,15 +61,46 @@ export function useGamePlan(eventId: string | undefined) {
 }
 
 /** TRAK-284: when each of the coach's plans was last saved, by match. The database returns only their own. */
-export function useGamePlans() {
+export function useGamePlans(enabled = true) {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['coach', user?.id, 'game-plans'],
-    enabled: !!user,
+    enabled: !!user && enabled,
     queryFn: async (): Promise<Map<string, string>> => {
       const { data, error } = await supabase.from('game_plans').select('event_id, updated_at')
       if (error) throw error
       return new Map((data ?? []).map(plan => [plan.event_id, plan.updated_at]))
+    },
+  })
+}
+
+/** TRAK-286: when each of the coach's plans was first shared, by match. The database returns only their own. */
+export function useGameShares(enabled = true) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'game-shares'],
+    enabled: !!user && enabled,
+    queryFn: async (): Promise<Map<string, string>> => {
+      const { data, error } = await supabase.from('game_shares').select('event_id, shared_at').order('shared_at', { ascending: false })
+      if (error) throw error
+      // Newest first, so the first share wins.
+      return new Map((data ?? []).map(share => [share.event_id, share.shared_at]))
+    },
+  })
+}
+
+/** TRAK-286: who would read something new if the coach shared now, by shared match (game_plan_changes). */
+export function useGamePlanChanges(eventIds: string[], enabled = true) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'game-plan-changes', [...eventIds].sort().join(',')],
+    enabled: !!user && enabled && eventIds.length > 0,
+    queryFn: async (): Promise<Map<string, string[]>> => {
+      const { data, error } = await supabase.rpc('game_plan_changes', { p_event_ids: eventIds })
+      if (error) throw error
+      const changes = new Map<string, string[]>()
+      for (const row of data ?? []) changes.set(row.event_id, [...changes.get(row.event_id) ?? [], row.squad_player_id])
+      return changes
     },
   })
 }
