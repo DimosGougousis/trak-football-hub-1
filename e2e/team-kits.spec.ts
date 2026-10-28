@@ -49,7 +49,9 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
     // TRAK-262: notification_settings is coach Home's Needs you switch (no row: on).
-    if (['coach_sessions', 'coach_assessments', 'event_absences', 'session_attendance', 'coach_shared_feedback', 'matches', 'recognition_awards', 'notification_settings'].some(t => path === `/rest/v1/${t}`)) return json([])
+    if (['coach_sessions', 'coach_assessments', 'event_absences', 'session_attendance', 'coach_shared_feedback', 'matches', 'recognition_awards', 'notification_settings',
+      // TRAK-286: no game plan, shared or not.
+      'game_plans', 'game_shares'].some(t => path === `/rest/v1/${t}`)) return json([])
     if (path === '/rest/v1/telemetry_events') return json(null)
     // TRAK-261: the coach's notification switches (the bell's "Can't make it"); no row means on.
     if (path === '/rest/v1/notification_settings') return json([])

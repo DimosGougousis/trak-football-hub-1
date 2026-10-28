@@ -68,7 +68,9 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
     // TRAK-262: notification_settings is Home's Needs you switch (no row: on).
-    if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes', 'notification_settings'].some(t => path === `/rest/v1/${t}`)) return json([])
+    if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes', 'notification_settings',
+      // TRAK-286: no game plan, shared or not.
+      'game_plans', 'game_shares', 'game_for_family', 'game_for_player'].some(t => path === `/rest/v1/${t}`)) return json([])
     unexpected.push(`${req.method()} ${path}`)
     return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
   })
