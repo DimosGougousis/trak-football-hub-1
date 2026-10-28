@@ -14,6 +14,7 @@ import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachCreate } from '@/components/coach/QuickAdd'
 import { CoachFrameContext, useCoachFrame, type CoachFrame as Frame } from '@/components/coach/coach-frame-context'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { SquadPills } from '@/components/coach/home/SquadPills'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coach-places'
 
@@ -25,7 +26,10 @@ import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coa
    sheet. Feedback and Profile left the nav; their pages still open.
    TRAK-283: Games sits after Squad, on a laptop and a phone, only where the
    academy's games switch is on. TRAK-294: where the training switch is on,
-   Training takes Library's place; the Library's pages open from Training. */
+   Training takes Library's place; the Library's pages open from Training.
+   TRAK-305 (Kostas, 28 Oct): a coach with two squads or more picks All or one
+   squad here, once, and every coach page shows only that: in the top bar on a
+   laptop (top right), in a row at the top of the page on a phone. */
 
 type Screen = CoachScreen
 const TO = COACH_SCREEN_PATH
@@ -79,34 +83,31 @@ function Framed({ userId, name }: { userId: string; name: string }) {
   useEffect(() => { if (!wide) document.documentElement.style.removeProperty('--rail-w') }, [wide])
   useEffect(() => () => { document.documentElement.style.removeProperty('--rail-w') }, [])
 
-  const many = coachSquad.squads.length > 1
   const items: RailEntry[] = [
     { id: 'home', label: 'Home', icon: House },
     { id: 'calendar', label: 'Schedule', icon: CalendarDays }, // TRAK-255: the coach's is called Schedule
-    many
-      ? { id: 'squads', label: 'Squads', icon: Users, children: coachSquad.squads.map(squad => ({ id: `squad:${squad}`, label: squad })) }
-      : { id: 'squad', label: 'Squad', icon: Users },
+    { id: 'squad', label: 'Squad', icon: Users },
     ...(games ? [{ id: 'games', label: 'Games', icon: MatchIcon }] : []),
     // TRAK-265: Imad's pitch icon.
     training ? { id: 'training', label: 'Training', icon: PitchIcon } : { id: 'library', label: 'Library', icon: PitchIcon },
   ]
-  const active = screen === 'squad' && many && coachSquad.squad ? `squad:${coachSquad.squad}` : screen ?? ''
-  const select = (id: string) => {
-    if (id.startsWith('squad:')) { coachSquad.setSquad(id.slice(6)); navigate(TO.squad); return }
-    if (id in TO) navigate(TO[id as Screen])
-  }
+  const select = (id: string) => { if (id in TO) navigate(TO[id as Screen]) }
   const club = identity?.club || 'Your academy'
+  const barred = BARLESS.test(pathname)
+  const switcher = (compact: boolean) => coachSquad.view &&
+    <SquadPills squads={coachSquad.squads} value={coachSquad.view} onChange={coachSquad.pick} compact={compact} />
 
   return <CoachFrameContext.Provider value={frame}>
     <SidebarRail label={club} title={title} narrow={!wide} sheetOpen={sheetOpen} onSheetOpenChange={setSheetOpen} onWidthChange={setRail}
       brand={{ name: club, logo: <Avatar name={club} src={identity?.logo ?? undefined} size="sm" /> }}
       items={items} footerItem={{ id: 'settings', label: 'Settings', icon: Settings }}
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} size="sm" /> }}
-      active={active} onSelect={select} defaultOpen={{ squads: true }}
-      actions={<><CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
+      active={screen ?? ''} onSelect={select}
+      actions={<>{!barred && switcher(true)}<CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
+      {!wide && !barred && coachSquad.view && <div className="flex justify-end bg-ground px-5 pt-3">{switcher(false)}</div>}
       <Outlet />
     </SidebarRail>
-    {!wide && !BARLESS.test(pathname) && <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
+    {!wide && !barred && <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
       <GlassTabBar label="Coach" value={screen ?? ''} onValueChange={value => navigate(TO[value as Screen])}
         style={{ ['--glass-active' as string]: 'rgb(var(--t-brand))' }}
         items={[

@@ -238,6 +238,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       ]
       : [{ ...session('s-u14', 'U14 logged', 'training'), squad: 'U14' }, { ...session('s-u16', 'U16 logged', 'match'), squad: 'U16' }]))
     localStorage.setItem('trak:coach-squad:coach-1', 'U16')
+    localStorage.setItem('trak:coach-squad-all:coach-1', '0')
     try {
       render(strip(), queries())
       await chooseMonday()

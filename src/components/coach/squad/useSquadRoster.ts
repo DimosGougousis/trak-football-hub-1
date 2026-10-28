@@ -43,12 +43,13 @@ async function loadAssessments(ids: string[]): Promise<AssessmentRow[]> {
   return (data ?? []).map(row => ({ ...row, created_at: row.created_at ?? '' }))
 }
 
-/** `everySquad`: the All pill on Home and Squad (TRAK-262, TRAK-266), every squad without changing the squad picked. */
-export function useSquadRoster({ everySquad = false }: { everySquad?: boolean } = {}) {
+/** `everySquad`: every squad whatever the frame's pick (Games' line-ups); the frame's All (TRAK-305) counts too. */
+export function useSquadRoster({ everySquad: always = false }: { everySquad?: boolean } = {}) {
   const { user } = useAuth()
   const userId = user?.id
   const client = useQueryClient()
-  const { squad, squads, setSquad, inSquad, ready, failed, retry: retrySquads } = useCoachSquad(userId)
+  const { squad, squads, setSquad, inSquad, ready, failed, retry: retrySquads, everySquad: allPicked } = useCoachSquad(userId)
+  const everySquad = always || allPicked
 
   const all = useQuery({ queryKey: [...ROOT(userId), 'players'], queryFn: () => loadPlayers(userId!), enabled: !!userId })
   // Until the squads are known the squad in view is a guess, so nothing is shown (no flash of every squad).

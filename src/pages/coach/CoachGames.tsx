@@ -4,7 +4,6 @@ import { format } from 'date-fns'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { LOOP_STEPS, STATE, actionLink, gameState, orderGames, type GameAction } from '@/lib/games/loop'
-import { SquadPills } from '@/components/coach/home/SquadPills'
 import { gameTitle, gameWhen, useGamePlanChanges, useGamePlans, useGameShares, useGames, type Game } from '@/components/coach/games/useGames'
 import { LoadError } from '@/components/trak'
 import { MatchIcon } from '@/components/icons/MatchIcon'
@@ -34,9 +33,8 @@ export default function CoachGames() {
   const games = useGames()
   const plans = useGamePlans()
   const shares = useGameShares()
-  // TRAK-266: All first and picked, as Home, Squad and Schedule open.
-  const [allPicked, setAllPicked] = useState(true)
-  const everySquad = allPicked && coachSquad.squads.length >= 2
+  // TRAK-305: All or one squad, as picked at the top of the frame.
+  const { everySquad } = coachSquad
   // The countdown's end moves the next game on, so the clock is read again then.
   const [now, setNow] = useState(() => Date.now())
   const inView = (games.data ?? []).filter(game => everySquad || coachSquad.eventInSquad(game.squad))
@@ -54,10 +52,6 @@ export default function CoachGames() {
       <div className="mx-auto w-full max-w-[1280px] px-5 tablet:px-8">
         <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
           <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Games</h1>
-          {coachSquad.squad && coachSquad.squads.length >= 2 && (
-            <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
-              onChange={pick => { setAllPicked(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
-          )}
         </header>
 
         {games.error || plans.error || shares.error ? <LoadError what="your games" onRetry={() => { void games.refetch(); void plans.refetch(); void shares.refetch() }}

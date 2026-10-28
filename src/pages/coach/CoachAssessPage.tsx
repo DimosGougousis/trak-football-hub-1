@@ -63,7 +63,7 @@ function CoachAssessmentForm() {
   const navigate = useNavigate()
   const location = useLocation()
   const userId = user?.id
-  // TRAK-176: the picker offers the squad picked on Home (a player already chosen stays).
+  // TRAK-176/305: the picker offers the squad picked at the top, or All (a player already chosen stays).
   const { inSquad } = useCoachSquad(userId)
 
   /* --- data --- */

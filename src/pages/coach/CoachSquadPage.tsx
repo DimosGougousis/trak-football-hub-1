@@ -1,14 +1,10 @@
-import { useState } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { NavBar } from '@/components/trak'
-import { useAuth } from '@/contexts/AuthContext'
-import { useCoachSquad } from '@/lib/coach-squad'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { PlayersTab } from '@/components/coach/squad/PlayersTab'
-import { SquadPills } from '@/components/coach/home/SquadPills'
 import { AttributesTab } from '@/components/coach/squad/AttributesTab'
 import { AvailabilityTab } from '@/components/coach/squad/AvailabilityTab'
 
@@ -26,16 +22,12 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 
 export default function CoachSquadPage() {
-  const { user } = useAuth()
-  const coachSquad = useCoachSquad(user?.id)
   const navigate = useNavigate()
   const location = useLocation()
   const [params, setParams] = useSearchParams()
   const active: TabId = TABS.find(t => t.id === params.get('tab'))?.id ?? 'players'
-  // TRAK-266 (Imad, 22 Oct): Squad opens on All, as Home does.
-  const [allPicked, setEverySquad] = useState(true)
-  const everySquad = allPicked && coachSquad.squads.length >= 2
-  const roster = useSquadRoster({ everySquad })
+  // TRAK-305: All or one squad, as picked at the top of the frame.
+  const roster = useSquadRoster()
   const choose = (id: string) => setParams({ tab: id }, { replace: true })
 
   return (
@@ -48,10 +40,6 @@ export default function CoachSquadPage() {
             <GlassSegmented label="Squad view" value={active} onValueChange={choose} fullWidth
               options={TABS.map(t => ({ value: t.id, label: t.label }))} />
           </div>
-          {coachSquad.squad && coachSquad.squads.length >= 2 && (
-            <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
-              onChange={pick => { setEverySquad(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
-          )}
         </header>
 
         <section aria-label={TABS.find(t => t.id === active)!.label} className="pb-8">

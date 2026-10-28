@@ -11,7 +11,6 @@ import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachWeekStrip, NextStep } from '@/components/coach/CoachWeekStrip'
 import { squadName } from '@/lib/coach-week'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
-import { SquadPills } from '@/components/coach/home/SquadPills'
 import { SquadShape } from '@/components/coach/home/SquadShape'
 import { TodayPlan } from '@/components/coach/home/TodayPlan'
 import { NeedsYou, type OwedEvent } from '@/components/coach/home/NeedsYou'
@@ -40,10 +39,9 @@ export default function CoachHomePage() {
   const wide = useSideMenuScreen()
   // TRAK-182 part 8: a quick-add draft shows in the week at once.
   const [weekVersion, setWeekVersion] = useState(0)
-  // TRAK-266 (Imad, 22 Oct): Home opens on All. All exists only with two squads or more.
-  const [allPicked, setEverySquad] = useState(true)
-  const everySquad = allPicked && coachSquad.squads.length >= 2
-  const roster = useSquadRoster({ everySquad })
+  // TRAK-305: All or one squad, as picked at the top of the frame. All exists only with two squads or more.
+  const { everySquad } = coachSquad
+  const roster = useSquadRoster()
   const squadLabel = everySquad ? 'All squads' : coachSquad.squad ?? coachSquad.squads[0] ?? 'Your squad'
 
   // The coach's "Needs you" switch (Settings, TRAK-261): on unless turned off. A switch that can't be read shows the cards.
@@ -115,20 +113,14 @@ export default function CoachHomePage() {
     }]
   })
 
-  const pills = coachSquad.squads.length >= 2 && coachSquad.squad
-    ? <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
-        onChange={pick => { setEverySquad(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
-    : <HomeTitle>{profile?.full_name || 'Coach'}</HomeTitle>
 
   return (
     <MobileShell width={wide ? 'wide' : 'page'}>
       <div className="pt-3 pb-24">
         {/* TRAK-259: on a phone the avatar opens the menu and the calendar sits beside the bell; a laptop has both
             in the frame (the sidebar, the top bar). */}
-        {wide
-          ? <div className="mb-3 flex justify-start">{pills}</div>
-          : <HomeHeader calendarTo="/coach/schedule" left={<CoachMenuButton name={profile?.full_name || 'Coach'} />}
-              center={pills} right={user && <CoachAlertsBell coachId={user.id} />} />}
+        {!wide && <HomeHeader calendarTo="/coach/schedule" left={<CoachMenuButton name={profile?.full_name || 'Coach'} />}
+          center={<HomeTitle>{profile?.full_name || 'Coach'}</HomeTitle>} right={user && <CoachAlertsBell coachId={user.id} />} />}
 
         <div className={wide ? 'grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-6' : 'grid gap-5'}>
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
