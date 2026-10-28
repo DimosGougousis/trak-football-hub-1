@@ -610,6 +610,63 @@ export type Database = {
         }
         Relationships: []
       }
+      game_for_family: {
+        Row: {
+          changed_at: string | null
+          event_id: string
+          has_note: boolean
+          job: string
+          role: string
+          shared_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          event_id: string
+          has_note?: boolean
+          job?: string
+          role: string
+          shared_at?: string
+          squad_player_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          event_id?: string
+          has_note?: boolean
+          job?: string
+          role?: string
+          shared_at?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_for_player: {
+        Row: {
+          changed_at: string | null
+          event_id: string
+          goals: Json
+          note: string
+          shared_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          event_id: string
+          goals?: Json
+          note?: string
+          shared_at?: string
+          squad_player_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          event_id?: string
+          goals?: Json
+          note?: string
+          shared_at?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       game_plan_players: {
         Row: {
           context: string[]
@@ -685,6 +742,27 @@ export type Database = {
           strength?: string | null
           their_formation?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      game_shares: {
+        Row: {
+          changed: number
+          event_id: string
+          id: number
+          shared_at: string
+        }
+        Insert: {
+          changed: number
+          event_id: string
+          id?: never
+          shared_at?: string
+        }
+        Update: {
+          changed?: number
+          event_id?: string
+          id?: never
+          shared_at?: string
         }
         Relationships: []
       }
@@ -1145,6 +1223,14 @@ export type Database = {
       }
       revoke_my_calendar_link: { Args: never; Returns: boolean }
       feature_on: { Args: { p_feature: string }; Returns: boolean }
+      game_plan_changes: {
+        Args: { p_event_ids: string[] }
+        Returns: { event_id: string; squad_player_id: string }[]
+      }
+      share_game_plan: {
+        Args: { p_event_id: string; p_talked?: boolean }
+        Returns: number
+      }
       get_children_awaiting_consent: {
         Args: never
         Returns: {
