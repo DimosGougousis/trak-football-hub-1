@@ -94,6 +94,17 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     expect(screen.queryByRole('region', { name: 'Squad shape' })).toBeNull()
   })
 
+  it('on a phone the week comes first, then today’s plan (Kostas, 28 Oct)', async () => {
+    home({ events: [event('t1', 'training', '2026-11-04T16:00', { title: 'Pressing zones' })] })
+    renderApp('/coach/home')
+    const card = await today()
+    const week = await screen.findByRole('heading', { name: 'This week' }, { timeout: 5000 })
+    expect(week.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Nothing moves it back up with CSS order.
+    const ordered = (el: Element | null): boolean => !!el && ([...el.classList].some(c => /^-?order-/.test(c)) || ordered(el.parentElement))
+    expect(ordered(card)).toBe(false)
+  })
+
   it('a training today not planned yet says so, with Plan this session', async () => {
     home({ events: [event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })] })
     renderApp('/coach/home')
