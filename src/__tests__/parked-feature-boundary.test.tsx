@@ -79,8 +79,8 @@ describe('TRAK-47 parked feature boundary', () => {
     server.use(rpc('feature_on', args => { asked.push(args.p_feature); return true }))
     renderApp('/coach/schedule')
     expect((await screen.findAllByText(/Schedule/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar
-    // TRAK-283: the coach's frame also asks for Games, to show its tab.
-    await waitFor(() => expect([...new Set(asked)].sort()).toEqual(['events', 'games']))
+    // TRAK-283: the coach's frame also asks for Games, to show its tab; TRAK-294 for Training.
+    await waitFor(() => expect([...new Set(asked)].sort()).toEqual(['events', 'games', 'training']))
     await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
   })
 

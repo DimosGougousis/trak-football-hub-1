@@ -38,7 +38,8 @@ beforeEach(() => {
     ]),
     table('session_attendance', []),
     table('event_absences', []),
-    rpc('feature_on', () => true),
+    // TRAK-294: Training off, so the nav's tab is still Library.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'training'),
   )
 })
 afterEach(() => { window.matchMedia = realMatchMedia })

@@ -147,7 +147,8 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     // On: the phone's bar is Home · Squad · Games · Library, and Games opens Games home. The app keeps a switch's
     // answer for 30 s, so the academy whose switch is on is another coach's.
     signInAs({ id: 'coach-frame-games' })
-    server.use(rpc('feature_on', () => true))
+    // TRAK-294: Training stays off here, so Library keeps its place (training-home-trak294 covers Training on).
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature !== 'training'))
     screenIs(false)
     renderApp('/coach/home')
     const tabs = await screen.findByRole('tablist', { name: 'Coach' })
@@ -173,6 +174,9 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
   it('knows which row a page belongs to', () => {
     expect(placeOf('/coach/games')).toEqual({ screen: 'games', title: 'Games' }) // TRAK-283
     expect(placeOf('/coach/games/ev-1')).toEqual({ screen: 'games', title: 'Games' })
+    expect(placeOf('/coach/training')).toEqual({ screen: 'training', title: 'Training' }) // TRAK-294
+    expect(placeOf('/coach/training/drills')).toEqual({ screen: 'training', title: 'Training' })
+    expect(placeOf('/coach/trainings/defending')).toEqual({ screen: 'library', title: 'Library' })
     expect(placeOf('/coach/player/abc')).toEqual({ screen: 'squad', title: 'Player' })
     expect(placeOf('/coach/sessions/list')).toEqual({ screen: 'home', title: 'Log' })
     expect(placeOf('/coach/schedule')).toEqual({ screen: 'calendar', title: 'Schedule' }) // TRAK-255
