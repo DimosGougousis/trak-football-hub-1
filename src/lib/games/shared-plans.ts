@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { fetchCoachNames } from '@/lib/parent-assessments'
 import type { PlayerEvent } from '@/lib/player-events'
 import { sharedPlan, type SharedPlan } from './share'
 
@@ -10,31 +9,26 @@ import { sharedPlan, type SharedPlan } from './share'
    cancelled, or an academy with Games off, opens none. Read through the child's roster rows, as "Can't make it" is. */
 
 async function rosterRows(childId: string, signal: AbortSignal) {
-  const { data, error } = await supabase.from('squad_players').select('id, coach_user_id').eq('linked_player_id', childId)
+  const { data, error } = await supabase.from('squad_players').select('id').eq('linked_player_id', childId)
     .abortSignal(signal).retry(false)
   if (error) throw error
   return data ?? []
 }
 
-/** One match's plan as this reader may read it, or null when it isn't shared with this child. */
+/** One match's plan as this reader may read it, or null when it isn't shared with this child. The coach's name comes
+ *  with the copy: a player can't read their coach's profile (TRAK-300). */
 export async function fetchSharedPlan(childId: string, eventId: string, asPlayer: boolean, signal: AbortSignal):
   Promise<{ plan: SharedPlan; coachName: string | null } | null> {
   const rows = await rosterRows(childId, signal)
   if (!rows.length) return null
-  const { data: family, error } = await supabase.from('game_for_family').select('squad_player_id, role, job, has_note, changed_at')
+  const { data: family, error } = await supabase.from('game_for_family').select('squad_player_id, role, job, has_note, changed_at, coach_name')
     .eq('event_id', eventId).in('squad_player_id', rows.map(row => row.id)).abortSignal(signal).retry(false).maybeSingle()
   if (error) throw error
   if (!family) return null
-  const coachId = rows.find(row => row.id === family.squad_player_id)?.coach_user_id
-  const [player, names] = await Promise.all([
-    asPlayer ? supabase.from('game_for_player').select('goals, note, changed_at').eq('event_id', eventId)
-      .eq('squad_player_id', family.squad_player_id).abortSignal(signal).retry(false).maybeSingle() : null,
-    fetchCoachNames(coachId ? [coachId] : [], signal),
-  ])
+  const player = asPlayer ? await supabase.from('game_for_player').select('goals, note, changed_at').eq('event_id', eventId)
+    .eq('squad_player_id', family.squad_player_id).abortSignal(signal).retry(false).maybeSingle() : null
   if (player?.error) throw player.error
-  // fetchCoachNames says 'Coach' for a blank name: that reads as no name, never "Coach Coach".
-  const name = coachId ? names[coachId] : undefined
-  return { plan: sharedPlan(family, player?.data ?? null), coachName: name && name !== 'Coach' ? name : null }
+  return { plan: sharedPlan(family, player?.data ?? null), coachName: family.coach_name.trim() || null }
 }
 
 /** The child's matches with a shared plan: true when a later share changed it for this reader. */

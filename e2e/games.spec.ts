@@ -66,8 +66,10 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
     if (path === '/rest/v1/profiles') {
       const asked = url.searchParams.get('user_id') ?? ''
+      // A player reads only their own profile, never their coach's (TRAK-300): the note's name comes with the copy.
       return json([{ user_id: COACH, id: COACH, role: 'coach', full_name: 'Fernando Santos' },
-        { user_id: PLAYER, id: PLAYER, role: 'player', full_name: 'Theodoros Zagorakis' }].filter(profile => asked.includes(profile.user_id)))
+        { user_id: PLAYER, id: PLAYER, role: 'player', full_name: 'Theodoros Zagorakis' }]
+        .filter(profile => asked.includes(profile.user_id) && (me === COACH || profile.user_id === me)))
     }
     // TRAK-286: what Share wrote for Theodoros, and the share itself.
     if (path === '/rest/v1/rpc/child_events') {
@@ -75,7 +77,7 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       return json(MATCHES.filter(m => m.published && (!id || m.id === id)))
     }
     if (path === '/rest/v1/game_for_family') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
-      role: 'starter', job: 'Stay tight to their winger.', has_note: true, changed_at: null }] : [])
+      role: 'starter', job: 'Stay tight to their winger.', has_note: true, changed_at: null, coach_name: 'Fernando Santos' }] : [])
     if (path === '/rest/v1/game_for_player') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
       goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
       note: 'Second game at right-back. Proud of you.', changed_at: null }] : [])

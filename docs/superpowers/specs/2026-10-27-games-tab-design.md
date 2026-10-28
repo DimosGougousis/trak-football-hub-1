@@ -58,7 +58,7 @@ CASCADE`. Every text field has a length limit, and every list a maximum length.
 
 | Table | Key | Read by | Holds |
 |---|---|---|---|
-| `game_for_family` | `event_id, squad_player_id` | That player and their guardians | `role` (starter, bench or not selected), `job`, `has_note`, `shared_at`, `changed_at` (drives "Updated" until kick-off). After Publish: played, the score, did the job, the expectation and context, against expectation. |
+| `game_for_family` | `event_id, squad_player_id` | That player and their guardians | `role` (starter, bench or not selected), `job`, `has_note`, `coach_name` (TRAK-300: a player can't read their coach's profile, so Share copies the name; a new name refreshes on the next share without marking anyone Updated), `shared_at`, `changed_at` (drives "Updated" until kick-off). After Publish: played, the score, did the job, the expectation and context, against expectation. |
 | `game_for_player` | `event_id, squad_player_id` | That player only | The goals, the plan note, `shared_at`, `changed_at`; later the evaluation note. |
 
 The evaluation columns stay empty until Publish writes them, so before the game a family reads only what Share wrote.

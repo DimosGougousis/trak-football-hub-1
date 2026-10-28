@@ -29,17 +29,17 @@ const MATCH = {
 const GOALS = [{ title: 'Win the second ball', looks_like: 'First to every loose ball in midfield.' }]
 // What Share wrote for Theodoros Zagorakis (game_for_family, game_for_player).
 const FAMILY = { event_id: 'g1', squad_player_id: 'zagorakis', role: 'starter', job: 'Stay tight to their winger.', has_note: true,
-  shared_at: '2099-11-10T15:30:00Z', changed_at: null }
+  shared_at: '2099-11-10T15:30:00Z', changed_at: null, coach_name: 'Otto Rehhagel' }
 const OWN = { event_id: 'g1', squad_player_id: 'zagorakis', goals: GOALS, note: 'Second game at right-back. Proud of you.',
   shared_at: '2099-11-10T15:30:00Z', changed_at: null }
 
 function setup({ family = [FAMILY], own = [OWN], events = [MATCH] }: { family?: object[]; own?: object[]; events?: object[] } = {}) {
-  const profiles = [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Theodoros Zagorakis' },
-    { id: 'c', user_id: 'coach-1', role: 'coach', full_name: 'Otto Rehhagel' }]
+  // TRAK-300: a player reads only their own profile, never the coach's (the database's rule); the name for the note
+  // comes with the copy.
+  const profiles = [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Theodoros Zagorakis' }]
   server.use(
     table('game_for_family', family as Record<string, unknown>[]),
     table('game_for_player', own as Record<string, unknown>[]),
-    // The signed-in player's own profile, or the coach's name for the note.
     http.get(`${SUPABASE_URL}/rest/v1/profiles`, ({ request }) => {
       const asked = new URL(request.url).searchParams.get('user_id') ?? ''
       const rows = profiles.filter(profile => asked.includes(profile.user_id))
