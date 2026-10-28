@@ -49,7 +49,7 @@ CASCADE`. Every text field has a length limit, and every list a maximum length.
 | Table | Key | Holds | Slice |
 |---|---|---|---|
 | `game_plans` | `event_id` | `strength` (weaker, similar or stronger), `their_formation` (a shape such as 4-4-2), `key_players` (shirt number 1 to 99 or blank, position, note; at most 11; no names, because they are other clubs' children), `scouting`, `goals` (title, what it looks like; at most 3). The two lists are JSON the database checks (`trak_private.valid_key_players`, `valid_game_goals`). No one deletes a plan: it goes with its match. Then format (11, 9, 7 or 5 a side; default 11) and formation (285), and the face-to-face tick and `shared_at` (286). | 284 |
-| `game_plan_players` | `event_id, squad_player_id` | Role (starter, bench or not selected), slot (starters only; one player per slot), job, note, context (the five chips), expectation (stretch, usual or lead; unset reads as usual). | 285 |
+| `game_plan_players` | `event_id, squad_player_id` | `role` (starter, bench or not selected; bench by default, Imad 28 Oct), `slot` (starters only: 1 is the keeper, then each line from the back, left to right; one player per slot, checked at the end of each statement so two starters can swap), `job`, `note`, `context` (the five tags, never a diagnosis), `expectation` (stretch, usual or lead; usual by default). A player left out keeps only the note. Written only for a consented child on the coach's current roster in the match's squad (`trak_private.game_plan_player_ok`). No one deletes a row. `game_plans` gains `format` (11, 9, 7 or 5; default 11) and a `formation` that must fit it. | 285 |
 | `game_shares` | `event_id, shared_at` | One row per share, with how many players it changed. Feeds the timeline ("Changes shared to 3"). | 286 |
 | `game_evaluations` | `event_id` | Our score, their score, our goals (scorer and optional assist each; no more than our score), how they scored, "Did the plan work?" (one answer per plan goal), `saved_at`, `published_at`. | 288 |
 | `game_evaluation_players` | `event_id, squad_player_id` | Played, came on, minute (optional), did the job (yes, partly or not yet; default yes), against expectation (below, met or above; default met), note. | 288 |
@@ -166,7 +166,10 @@ Arc: each step uses TRAK-282's picks. Before each slice, every component it adds
 (`whenToUse`, `whenNotToUse`) and checked for React 19-only APIs. Fifteen free components and one Pro block are new to
 Trak. The Pro block, `release-readiness`, is listed in `src/components/arc/PRO.md`. One pick changed (Imad, 28 Oct):
 a key player's shirt number is an `input` with the number pad, not `number-field`, because it is a code and can be
-blank.
+blank. TRAK-285 (Imad, 28 Oct): Bench or Not selected is the player sheet's `radio-group`, not an inline one in the list
+(Arc's radio-group only stacks). `chip-group` stays for context, though Arc says "checkbox in forms": the five tags read
+as tags and must fit a phone sheet. React 18: chip-group's Chip, MoreChip and Swap, and progress's and badge's Swap,
+take their ref through `forwardRef`.
 
 ## Existing code
 
@@ -174,7 +177,8 @@ blank.
 
 - the switch: `academy_features`, `feature_on()`, `useFeature`, `ParkedScreen unless=`;
 - the squad filter: `SquadPills`, `useCoachSquad`;
-- who can come: `useSquadRoster`, `splitAvailability`, `event_confirmations`, and `event_absences` (who only);
+- who can come: `useSquadRoster`, `splitAvailability`, `event_confirmations`, and `event_absences` (who only), read
+  through `src/components/coach/squad/availability-reads.ts` under Squad › Availability's query keys (TRAK-285);
 - Schedule's hand-over: `quickEvent` (Add a match) and the `?edit=<id>` link. A draft's logistics publish in place
   with `publishEvent`, as Home's event sheet does: Schedule's single-event `?publish=<id>` link re-publishes in a loop
   when reached by in-app navigation (found 27 Oct; nothing sends it today), so Games never sends it. And the
@@ -297,10 +301,10 @@ npm run build && npx playwright test --config playwright.pilot.config.ts
 1. **Match rating (288, 289).** Today's match log also stores an automatic rating worked out from goals, assists and
    the score. Players and parents see it as a band, a trend and an average. A Games match would carry one too, which
    pulls against "after a game there is no number". To ask with the list of match readers before slice 6.
-2. **Unplaced players (285).** Does a player who can come but isn't on the pitch start as Bench, Not selected or
-   undecided? It decides what they see if the coach forgets them.
-3. **Formations (285).** A proposed list per format, for Imad to trim. Until then, step 1's "their formation" offers
-   11-a-side shapes only.
+2. **Unplaced players (285). Decided (Imad, 28 Oct): Bench.** Leaving a child out is always a deliberate choice.
+3. **Formations (285). Decided (Imad, 28 Oct):** 11 a side: 4-4-2, 4-3-3, 4-2-3-1, 4-1-4-1, 4-4-1-1, 3-5-2, 3-4-3,
+   5-3-2, 5-4-1. 9 a side: 3-3-2, 3-2-3, 2-4-2, 3-4-1. 7 a side: 2-3-1, 3-2-1, 2-1-2-1, 3-1-2. 5 a side: 2-2, 1-2-1,
+   3-1. The same list feeds "their formation" (`src/lib/games/formations.ts`).
 4. **Competition (289).** The match log stores league, cup or friendly, and the evaluation doesn't ask. A default,
    or one more question?
 5. **Data export.** `export_my_account` should include a child's Games rows, as it includes their matches. A
