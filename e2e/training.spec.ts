@@ -4,6 +4,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // switch on, at a phone's and a laptop's width: no sideways scroll, and the keyboard reaches every control.
 // TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
 // same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
+// TRAK-297 (Training 4/5): Copy a past session.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -69,15 +70,19 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     if (path === '/rest/v1/squad_players') return json(players)
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
-    if (path === '/rest/v1/coach_calendar_events') {
-      const id = url.searchParams.get('id')?.slice(3)
-      return json(id ? TRAININGS.filter(t => t.id === id) : TRAININGS)
+    // An `eq.` or `in.(…)` filter, as PostgREST reads it; no filter matches everything.
+    const matches = (key: string) => {
+      const value = url.searchParams.get(key)
+      const wanted = value?.startsWith('in.(') ? value.slice(4, -1).split(',') : value ? [value.slice(3)] : null
+      return (id: string) => !wanted || wanted.includes(id)
     }
+    if (path === '/rest/v1/coach_calendar_events') return json(TRAININGS.filter(t => matches('id')(t.id)))
     if (path === '/rest/v1/training_plans') {
-      const id = url.searchParams.get('event_id')?.slice(3)
-      return json([...plans.keys()].filter(key => !id || key === id).map(event_id => ({ event_id, updated_at: '2026-10-28T10:00:00Z' })))
+      return json([...plans.keys()].filter(matches('event_id')).map(event_id => ({ event_id, updated_at: '2026-10-28T10:00:00Z' })))
     }
-    if (path === '/rest/v1/training_plan_practices') return json(plans.get(url.searchParams.get('event_id')!.slice(3)) ?? [])
+    if (path === '/rest/v1/training_plan_practices') {
+      return json([...plans].filter(([id]) => matches('event_id')(id)).flatMap(([event_id, rows]) => rows.map(row => ({ event_id, ...row }))))
+    }
     if (path === '/rest/v1/rpc/save_training_plan') {
       const { p_event_id, p_practices } = req.postDataJSON() as { p_event_id: string; p_practices: Record<string, unknown>[] }
       // As the database does: a practice ticked "Save to My drills" becomes the coach's drill.
@@ -164,6 +169,13 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
+
+    // TRAK-296: Add to <day> opens the planner with the drill, which survives the page being laid out again.
+    await page.getByRole('region', { name: 'My drills' }).getByRole('button', { name: /^Add Pressing on the trigger to / }).click()
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
@@ -229,12 +241,42 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByText('Library · Defending')).toBeVisible()
 
     await page.getByRole('button', { name: 'Swap Pressing duels' }).click()
-    await expect(page.getByRole('dialog', { name: 'Swap “Pressing duels”' })).toBeVisible()
-    await page.keyboard.press('Escape')
+    const swap = page.getByRole('dialog', { name: 'Swap “Pressing duels”' })
+    await expect(swap).toBeVisible()
+    // Close, not Escape: a key pressed while the sheet is still sliding in can land before it takes focus.
+    await swap.getByRole('button', { name: 'Close' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-add-plan-${width}.png`), fullPage: true })
     const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
     expect(keyboard.missed).toEqual([])
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  test(`Copy a past session at ${width} px`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
+    const first = page.getByRole('region', { name: 'Coming up' }).getByRole('article').first()
+    await first.getByRole('button', { name: 'Plan this session' }).click()
+    const how = page.getByRole('dialog', { name: 'How do you want to plan it?' })
+    await how.getByRole('button', { name: /Copy a past session/ }).click()
+    const copy = page.getByRole('dialog', { name: 'Copy a past session' })
+    await expect(copy.getByRole('list', { name: 'Past sessions' }).getByRole('listitem')).toHaveCount(1)
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-copy-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await copy.getByRole('button', { name: /^Copy Receiving under pressure/ }).click()
+
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
+    await expect(page.getByText(/Copied from Receiving under pressure/)).toBeVisible()
+    // A copy survives the page being laid out again (a phone turned, a window resized across the laptop width).
+    await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await page.setViewportSize({ width, height })
+    await expect(page.getByRole('list', { name: 'Practices' }).getByRole('listitem')).toHaveCount(1)
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`training-copied-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

@@ -70,6 +70,15 @@ the Library view keeps to the training's squad's age group until the coach asks 
 session inside the sheet with no link. From Training › Drills, a drill card adds the drill to the next training not
 planned yet: the planner opens with it added, once.
 
+From 297, "Copy a past session" shows in "How do you want to plan it?" once the coach has planned another session. A
+past session is its plan: nothing new is stored. The list reads the coach's plans, their trainings and practices,
+newest first, and searches by title or a practice's name. Copying opens Write my own filled in (sources kept: a drill
+or Library practice stays one), with a note that nothing is saved until Save the plan; it replaces what was there.
+
+A drill sent by Add to, or a copied session, travels in the planner's own history entry and stays there: changing
+between phone and laptop width lays the coach's pages out again, and the planner must come back with it. Saving
+replaces that entry with the plan, so Back never reopens the planner to add it twice.
+
 Both routes are inside `ParkedScreen unless="training"`, so with the switch off the screen shows "Coming soon" and
 every write handler stops at `useParked()`.
 

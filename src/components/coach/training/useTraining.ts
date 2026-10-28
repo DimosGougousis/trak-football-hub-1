@@ -7,7 +7,8 @@ import { toSave, type Practice, type SavedPractice } from '@/lib/training/plans'
 
 /* TRAK-294 (Training 1/5): the coach's own trainings for Training home, not cancelled (a published event is cancelled,
    never deleted), from a week ago on; and the coach's own drills (coach_drills, only they read them).
-   TRAK-295 (Training 2/5): one training, its plan, which trainings are planned, and saving a plan whole. */
+   TRAK-295 (Training 2/5): one training, its plan, which trainings are planned, and saving a plan whole.
+   TRAK-297 (Training 4/5): every planned session, to copy. Nothing new is stored: a past session is its plan. */
 
 export type Training = Pick<Tables<'coach_calendar_events'>, 'id' | 'squad' | 'title' | 'published' | 'status' | 'starts_at'
   | 'ends_at' | 'event_date' | 'start_time' | 'venue'>
@@ -82,6 +83,34 @@ export function usePlannedTrainings() {
   })
 }
 
+export type PastSession = Training & { practices: SavedPractice[] }
+
+/** Every training the coach has planned, with its practices, newest first. The database returns only their own. */
+export function usePastSessions(enabled = true) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'past-sessions'],
+    enabled: !!user && enabled,
+    queryFn: async (): Promise<PastSession[]> => {
+      const plans = await supabase.from('training_plans').select('event_id')
+      if (plans.error) throw plans.error
+      const ids = (plans.data ?? []).map(plan => plan.event_id)
+      if (!ids.length) return []
+      const [events, practices] = await Promise.all([
+        supabase.from('coach_calendar_events').select(TRAINING_COLUMNS).eq('coach_user_id', user!.id).in('id', ids),
+        supabase.from('training_plan_practices').select(`event_id, ${PRACTICE_COLUMNS}`).in('event_id', ids).order('position'),
+      ])
+      if (events.error) throw events.error
+      if (practices.error) throw practices.error
+      return (events.data ?? []).map(event => ({
+        ...event,
+        practices: (practices.data ?? []).filter(p => p.event_id === event.id).map(({ event_id: _e, ...p }) => p),
+      })).filter(session => session.practices.length > 0)
+        .sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at))
+    },
+  })
+}
+
 /** Saves the whole plan in one go (save_training_plan: every practice or none). A practice ticked "Save to My drills"
  *  joins My drills in the same save. */
 export function useSavePlan(eventId: string) {
@@ -95,6 +124,7 @@ export function useSavePlan(eventId: string) {
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: ['coach', user?.id, 'training-plan', eventId] }),
       client.invalidateQueries({ queryKey: ['coach', user?.id, 'training-plans'] }),
+      client.invalidateQueries({ queryKey: ['coach', user?.id, 'past-sessions'] }),
       client.invalidateQueries({ queryKey: ['coach', user?.id, 'drills'] }),
     ]),
   })
