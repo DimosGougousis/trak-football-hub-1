@@ -142,7 +142,7 @@ describe('TRAK-294: Training home', { timeout: 20_000 }, () => {
     expect(Date.parse(read.searchParams.get('starts_at')!.slice(4))).toBeLessThan(now - 7 * DAY)
 
     // U14: its own training and the whole roster's.
-    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U14' }))
+    await user.click(within(screen.getByRole('group', { name: 'Age group' })).getByRole('button', { name: 'U14' }))
     await waitFor(() => expect(comingUp()).toHaveLength(1))
     expect(comingUp()[0]).toMatch(/Training later$/)
     expect(within(screen.getByRole('region', { name: 'Last week' })).getAllByRole('link')).toHaveLength(1)

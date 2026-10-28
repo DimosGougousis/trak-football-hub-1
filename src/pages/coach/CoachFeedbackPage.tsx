@@ -38,7 +38,8 @@ export default function CoachFeedbackPage() {
   const [seed] = useState(() => remembered<Overview>('coach-feedback', user?.id))
   // null = not answered yet: never "everyone's on track" before we know.
   const [answered, setOverview] = useState<Overview | null>(seed ?? null)
-  const overview = answered && answered.squad === coachSquad.squad ? answered : null
+  // TRAK-305: the frame's pick (All or one squad) is what this overview is for.
+  const overview = answered && answered.squad === coachSquad.view ? answered : null
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   // TRAK-252: on a laptop the list is a table, with a filter by level.
@@ -94,7 +95,7 @@ export default function CoachFeedbackPage() {
       }
       const playerIds = new Set(players.map(p => p.id))
       setOverview({
-        squad: coachSquad.squad,
+        squad: coachSquad.view,
         players: players.length,
         rows: playerAttention({
           roster: players,
@@ -108,7 +109,7 @@ export default function CoachFeedbackPage() {
       })
     })().catch(fail)
     return () => { stale = true }
-  }, [user, coachSquad.ready, coachSquad.failed, coachSquad.squad, attempt]) // eslint-disable-line react-hooks/exhaustive-deps -- inSquad/eventInSquad follow coachSquad.squad
+  }, [user, coachSquad.ready, coachSquad.failed, coachSquad.view, attempt]) // eslint-disable-line react-hooks/exhaustive-deps -- inSquad/eventInSquad follow coachSquad.view
 
   // Only an answered overview is kept for the next visit.
   useEffect(() => {
@@ -121,15 +122,6 @@ export default function CoachFeedbackPage() {
     <MobileShell width="wide">
       <div className="px-5 pt-4 pb-40">
         <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Feedback and assessment</h1>
-        {/* TRAK-176: the coach's squads, when there are two or more; the pick is shared with Home and Squad. */}
-        {coachSquad.squad && coachSquad.squads.length >= 2 && (
-          <LayoutGroup id="feedback-squad">
-            <div className="arc flex justify-center pt-3">
-              <SegmentedControl label="Squad" value={coachSquad.squad} onValueChange={coachSquad.setSquad}
-                options={coachSquad.squads.map(age => ({ value: age, label: age }))} />
-            </div>
-          </LayoutGroup>
-        )}
 
         <section aria-label="Feedback and assessment" className="rounded-[18px] border border-line p-4 mt-3" style={{ background: 'rgb(var(--t-surface))' }}>
           {failed ? (

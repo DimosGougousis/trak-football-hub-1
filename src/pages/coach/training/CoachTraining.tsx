@@ -14,7 +14,6 @@ import { DrillSheet } from '@/components/coach/training/DrillSheet'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
 import { PlanEditorRoute, PlanRoute, RunRoute } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
-import { SquadPills } from '@/components/coach/home/SquadPills'
 import { LoadError } from '@/components/trak'
 import { PitchIcon } from '@/components/icons/PitchIcon'
 import { Badge } from '@/components/arc/badge/badge'
@@ -56,7 +55,7 @@ export default function CoachTraining() {
   )
 }
 
-function Page({ view, aside, action, children }: { view: 'sessions' | 'drills'; aside?: ReactNode; action: ReactNode; children: ReactNode }) {
+function Page({ view, action, children }: { view: 'sessions' | 'drills'; action: ReactNode; children: ReactNode }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   return (
@@ -71,7 +70,6 @@ function Page({ view, aside, action, children }: { view: 'sessions' | 'drills'; 
               onValueChange={next => navigate(next === 'drills' ? `${TRAINING_PATH}/drills` : TRAINING_PATH)} />
           </div>
           <div className="arc ml-auto">{action}</div>
-          {aside && <div className="basis-full">{aside}</div>}
         </header>
         {children}
       </div>
@@ -90,9 +88,8 @@ function SessionsView() {
   const registers = useRegisters()
   // "How do you want to plan it?": for one training, or, from New session, asking which first.
   const [planning, setPlanning] = useState<{ training: Training | null } | null>(null)
-  // TRAK-266: All first and picked, as Home, Squad, Schedule and Games open.
-  const [allPicked, setAllPicked] = useState(true)
-  const everySquad = allPicked && coachSquad.squads.length >= 2
+  // TRAK-305: All or one squad, as picked at the top of the frame.
+  const { everySquad } = coachSquad
   const inView = (trainings.data ?? []).filter(t => everySquad || coachSquad.eventInSquad(t.squad))
   const { comingUp, lastWeek } = splitTrainings(inView, Date.now())
   const addTraining = () => navigate('/coach/schedule', { state: ADD_TRAINING })
@@ -100,11 +97,7 @@ function SessionsView() {
 
   return (
     <Page view="sessions"
-      action={<Button onClick={() => setPlanning({ training: null })}><Plus aria-hidden size={18} />New session</Button>}
-      aside={coachSquad.squad && coachSquad.squads.length >= 2 && (
-        <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
-          onChange={pick => { setAllPicked(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
-      )}>
+      action={<Button onClick={() => setPlanning({ training: null })}><Plus aria-hidden size={18} />New session</Button>}>
       {trainings.error ? <LoadError what="your trainings" onRetry={() => void trainings.refetch()} retrying={trainings.isFetching} />
         : trainings.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your trainings…</p>
         : <div className="grid max-w-[720px] gap-8">

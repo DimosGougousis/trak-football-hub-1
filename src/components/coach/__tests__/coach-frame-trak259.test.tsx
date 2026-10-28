@@ -12,8 +12,10 @@ import { BARLESS, placeOf } from '@/lib/coach-places'
  * TRAK-259 (Imad, 22 Oct): the coach's frame. Phone: a glass tab bar (Home,
  * Squad, Library) with the "+" at its right; on Home the avatar (top left)
  * opens the side menu, and the calendar sits beside the bell. Laptop: the
- * sidebar (the club, Home, Calendar, Squads, Library, Settings, the coach) and
+ * sidebar (the club, Home, Calendar, Squad, Library, Settings, the coach) and
  * "+ Create" at the top right. Feedback and Profile left the nav, not the app.
+ * TRAK-305: a coach with two squads picks All or one at the top: in the top bar on
+ * a laptop, at the top of the page on a phone; the sidebar has no squad rows.
  */
 
 const COACH = { id: 'coach-frame' }
@@ -76,9 +78,10 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     await userEvent.click(within(header).getByRole('button', { name: 'Open menu' }))
     const menu = await screen.findByRole('dialog', { name: 'Menu' })
     expect(await within(menu).findByText('Rehearsal FC')).toBeInTheDocument()
-    for (const row of ['Home', 'Schedule', 'Squads', 'U14', 'U16', 'Library', 'Settings']) {
+    for (const row of ['Home', 'Schedule', 'Squad', 'Library', 'Settings']) {
       expect(within(menu).getByRole('button', { name: new RegExp(`^${row}`) })).toBeInTheDocument()
     }
+    expect(within(menu).queryByRole('button', { name: 'U16' })).toBeNull()
     expect(within(menu).getByText('Otto Rehhagel')).toBeInTheDocument()
     expect(within(menu).getByText('Head Coach')).toBeInTheDocument()
 
@@ -90,7 +93,7 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     screenIs(true)
     renderApp('/coach/home')
     const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
-    for (const row of ['Home', 'Schedule', 'Squads', 'Library', 'Settings']) {
+    for (const row of ['Home', 'Schedule', 'Squad', 'Library', 'Settings']) {
       expect(within(sidebar).getByRole('button', { name: new RegExp(`^${row}`) })).toBeInTheDocument()
     }
     expect(within(sidebar).queryByRole('button', { name: /Feedback|Profile/ })).toBeNull()
@@ -98,12 +101,16 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(screen.queryByRole('tablist', { name: 'Coach' })).toBeNull()
 
-    // A squad's row picks that squad and opens Squad. The sidebar is looked up again each time: while a page's code
-    // loads, the frame can be rebuilt, and a held copy is then a detached one (CI, four times on #439).
-    const sidebarNow = () => screen.getByRole('navigation', { name: 'Rehearsal FC' })
-    await userEvent.click(await within(sidebar).findByRole('button', { name: 'U16' }, { timeout: 5000 }))
+    // TRAK-305: the age groups sit in the top bar, not the sidebar; the pick holds from page to page.
+    expect(within(sidebar).queryByRole('button', { name: 'U16' })).toBeNull()
+    const ages = () => screen.getByRole('group', { name: 'Age group' })
+    await waitFor(() => expect(within(ages()).getAllByRole('button').map(b => b.textContent)).toEqual(['All', 'U14', 'U16']), { timeout: 5000 })
+    expect(within(ages()).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(within(ages()).getByRole('button', { name: 'U16' }))
+    // The sidebar is looked up again: while a page's code loads, the frame can be rebuilt (CI, four times on #439).
+    await userEvent.click(within(screen.getByRole('navigation', { name: 'Rehearsal FC' })).getByRole('button', { name: /^Squad/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
-    await waitFor(() => expect(within(sidebarNow()).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-current', 'page'), { timeout: 5000 })
+    await waitFor(() => expect(within(ages()).getByRole('button', { name: 'U16' })).toHaveAttribute('aria-pressed', 'true'), { timeout: 5000 })
   })
 
   it("Imad, 24 Oct: the academy's logo in the sidebar; the coach stays initials (G7)", async () => {
@@ -162,13 +169,13 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     await waitFor(() => expect(within(screen.getByRole('tablist', { name: 'Coach' })).getByRole('tab', { name: 'Games' })).toHaveAttribute('aria-selected', 'true'))
     cleanup()
 
-    // The sidebar: Home · Schedule · Squads · Games · Library.
+    // The sidebar: Home · Schedule · Squad · Games · Library.
     screenIs(true)
     renderApp('/coach/home')
     const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
     const games = await within(sidebar).findByRole('button', { name: /^Games/ })
     const order = within(sidebar).getAllByRole('button').map(button => button.textContent ?? '')
-    const rows = ['Home', 'Schedule', 'Squads', 'Games', 'Library'].map(row => order.findIndex(text => text.startsWith(row)))
+    const rows = ['Home', 'Schedule', 'Squad', 'Games', 'Library'].map(row => order.findIndex(text => text.startsWith(row)))
     expect(rows.every(index => index >= 0)).toBe(true)
     expect(rows).toEqual([...rows].sort((a, b) => a - b))
     await userEvent.click(games)

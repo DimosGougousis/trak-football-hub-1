@@ -97,7 +97,7 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
     expect(read.searchParams.get('status')).toBe('neq.cancelled')
 
     // U14: its own match and the whole roster's; the next game follows.
-    await user.click(within(screen.getByRole('group', { name: 'Squad' })).getByRole('button', { name: 'U14' }))
+    await user.click(within(screen.getByRole('group', { name: 'Age group' })).getByRole('button', { name: 'U14' }))
     await waitFor(() => expect(cards()).toEqual(['/coach/games/later', '/coach/games/past-new']))
     expect(within(screen.getByRole('region', { name: 'Next game' })).getByText('vs Opponent later')).toBeInTheDocument()
 

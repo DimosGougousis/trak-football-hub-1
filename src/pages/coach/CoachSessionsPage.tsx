@@ -16,7 +16,7 @@ export default function CoachSessionsPage() {
      claim about sessions the coach created themselves. */
   const [loadFailed, setLoadFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
-  // TRAK-176: the squad picked on Home, plus whole-roster sessions.
+  // TRAK-176/305: the squad picked at the top (or All), plus whole-roster sessions.
   const { eventInSquad } = useCoachSquad(user?.id)
   const shown = sessions.filter(s => eventInSquad(s.squad))
 

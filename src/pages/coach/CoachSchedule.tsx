@@ -15,7 +15,6 @@ import { supabase } from '@/integrations/supabase/client'
 import { displayEventTime, localTodayISO, phoneClock, phoneEventTime } from '@/lib/event-time'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { squadName } from '@/lib/coach-week'
-import { SquadPills } from '@/components/coach/home/SquadPills'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
@@ -268,10 +267,9 @@ export default function CoachSchedule() {
   const { user } = useAuth()
   // TRAK-176: the squad picked; its events and the whole-roster ones show, and new ones are saved for it.
   const coachSquad = useCoachSquad(user?.id)
-  // Imad, 24 Oct: Schedule has Home's pills, All first and picked, so it never hides another squad's events without
-  // saying so. A new event's squad is chosen in its form.
-  const [allPicked, setAllPicked] = useState(true)
-  const everySquad = allPicked && coachSquad.squads.length >= 2
+  // TRAK-305: All or one squad, as picked at the top of the frame (Imad, 24 Oct: never another squad's events hidden
+  // without saying so). A new event's squad is chosen in its form.
+  const { everySquad } = coachSquad
   const inView = (squad: string | null | undefined) => everySquad || coachSquad.eventInSquad(squad)
 
   // Calendar view state
@@ -741,10 +739,6 @@ export default function CoachSchedule() {
             </button>
           </div>
         </div>
-        {coachSquad.squads.length >= 2 && coachSquad.squad && (
-          <SquadPills squads={coachSquad.squads} value={everySquad ? 'All' : coachSquad.squad}
-            onChange={pick => { setAllPicked(pick === 'All'); if (pick !== 'All') coachSquad.setSquad(pick) }} />
-        )}
 
         {loadFailed && <LoadError what="your schedule" onRetry={retry} retrying={retrying} />}
 
