@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { sessionById } from '@/lib/library/library'
 import {
-  blankPractice, fromSaved, lastPlanWay, minutesLine, move, plannedMinutes, rememberPlanWay, sourceLabel, toSave,
-  type SavedPractice,
+  bestFit, blankPractice, fromDrill, fromLibrary, fromSaved, lastPlanWay, minutesLine, move, plannedMinutes, rememberPlanWay,
+  roomFor, sourceLabel, toSave, type SavedPractice,
 } from '../plans'
 
 /* TRAK-295 (Training 2/5): a plan's rules, apart from the screens. */
@@ -43,6 +44,8 @@ describe('a plan’s practices', () => {
     expect(sourceLabel({ source: 'own', saveToDrills: true })).toBe('Your drill')
     expect(sourceLabel({ source: 'drill', saveToDrills: false })).toBe('Your drill')
     expect(sourceLabel({ source: 'library', saveToDrills: false })).toBe('Library')
+    expect(sourceLabel({ source: 'library', saveToDrills: false, library_session: 'pressing-and-covering-session-pressing-duels' }))
+      .toBe('Library · Defending')
   })
 
   it('moves one up or down, and never past either end', () => {
@@ -85,5 +88,43 @@ describe('the last way the coach planned', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('SecurityError') })
     expect(() => rememberPlanWay('coach-a', 'write')).not.toThrow()
     expect(lastPlanWay('coach-a')).toBeNull()
+  })
+})
+
+describe('TRAK-296: a practice from a drill or the Library', () => {
+  const drill = {
+    id: 'd-1', name: 'Rondos 4v1', minutes: 15, how: 'Four round one.', tell: 'Two touches.', area: '10 × 10 m', numbers: '',
+    direction: '', targets: '', conditions: '', updated_at: '2026-10-27T10:00:00Z',
+  }
+
+  it('a drill becomes a copy that remembers it, never saved to My drills again', () => {
+    expect(fromDrill(drill)).toEqual({
+      name: 'Rondos 4v1', minutes: 15, how: 'Four round one.', tell: 'Two touches.', area: '10 × 10 m', numbers: '', direction: '',
+      targets: '', conditions: '', source: 'drill', drill_id: 'd-1', library_session: null, saveToDrills: false,
+    })
+  })
+
+  it('a Library session takes its short name, the slot’s minutes (or 20), what it’s about, its pitch and its players', () => {
+    const session = sessionById('pressing-and-covering-session-pressing-duels')!
+    expect(fromLibrary(session, 25)).toMatchObject({
+      name: 'Pressing duels', minutes: 25, how: session.summary, area: '50×40-yard pitch', numbers: '13 players', tell: '',
+      source: 'library', drill_id: null, library_session: session.id, saveToDrills: false,
+    })
+    expect(fromLibrary(session, null).minutes).toBe(20)
+  })
+
+  it('a new practice has room for what’s left, to the nearest 5, kept to 10–30', () => {
+    expect(roomFor(70, 90)).toBe(20)
+    expect(roomFor(0, 90)).toBe(30)
+    expect(roomFor(83, 90)).toBe(10)
+    expect(roomFor(90, 90)).toBeNull()
+    expect(roomFor(40, null)).toBeNull()
+  })
+
+  it('the best fit is the drills closest to the slot’s minutes, the newest first on a tie, at most 3', () => {
+    const drills = [10, 30, 15, 25, 20].map(minutes => ({ name: `${minutes}`, minutes }))
+    expect(bestFit(drills, 20).map(d => d.minutes)).toEqual([20, 15, 25])
+    expect(bestFit(drills, 30).map(d => d.minutes)).toEqual([30, 25, 20])
+    expect(bestFit([], 20)).toEqual([])
   })
 })

@@ -1,16 +1,18 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ClipboardList, PenLine, Pencil, Trash2 } from 'lucide-react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ClipboardList, PenLine, Pencil, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
-import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingMinutes } from '@/lib/training/sessions'
+import { DRILL_DETAILS, DRILL_LIMITS, drillProblem, trainingMinutes, type Drill } from '@/lib/training/sessions'
 import {
-  PLAN_MAX, blankPractice, fromSaved, minutesLine, move, planPath, plannedMinutes, sourceLabel, type Practice,
+  PLAN_MAX, blankPractice, fromDrill, fromSaved, minutesLine, move, planPath, plannedMinutes, roomFor, sourceLabel,
+  type Practice,
 } from '@/lib/training/plans'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { usePlan, useSavePlan, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
 import { DetailFields, MinutesPicks, TellField } from '@/components/coach/training/fields'
 import { LoopStrip } from '@/components/coach/training/LoopStrip'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
+import { AddSheet, type AddTarget, type AddView } from '@/components/coach/training/AddSheet'
 import { useParked } from '@/components/trak/parked'
 import { LoadError } from '@/components/trak'
 import { Badge } from '@/components/arc/badge/badge'
@@ -21,8 +23,9 @@ import { Input } from '@/components/arc/input/input'
 
 /* TRAK-295 (Training 2/5, spec TRAK-293, mockup boards 3A and 5): a training's plan. Write my own
    (/coach/training/:eventId/plan) types practices one at a time and saves the plan whole; the plan
-   (/coach/training/:eventId) shows it with the loop. Only the coach sees either. Adding from My drills or the Library
-   is Training 3/5; Copy a past session 4/5; Who's here, Run it and Close 5/5. */
+   (/coach/training/:eventId) shows it with the loop. Only the coach sees either. TRAK-296 (Training 3/5): a practice
+   comes from My drills or the Library too, added or swapped in through AddSheet, and Training › Drills can send a
+   drill here ("Add to <training>"). Copy a past session is 4/5; Who's here, Run it and Close 5/5. */
 
 const SAVE_FAILED = "Couldn't save the plan. Check your connection and try again. Nothing you typed is lost."
 const TRAINING_PATH = '/coach/training'
@@ -86,7 +89,7 @@ function PracticeRow({ practice, actions }: { practice: Practice; actions?: Reac
         <p className="text-[15px] font-medium text-ink break-words">{practice.name}</p>
         {practice.tell.trim() && <p className="text-sm text-ink-2 break-words">“{practice.tell.trim()}”</p>}
         {details && <p className="text-sm text-ink-3 break-words">{details}</p>}
-        <span><Badge size="sm" tone={tag === 'Your drill' ? 'success' : 'neutral'}>{tag}</Badge></span>
+        <span><Badge size="sm" tone={tag === 'Your drill' ? 'success' : tag.startsWith('Library') ? 'info' : 'neutral'}>{tag}</Badge></span>
       </div>
       {/* On a phone the buttons sit under the practice, so its name keeps the width. */}
       {actions && <div className="flex w-full justify-end tablet:w-auto">{actions}</div>}
@@ -104,17 +107,46 @@ export function PlanEditorRoute() {
 }
 
 type Writing = { index: number | null; draft: Practice }
+/** Training › Drills' "Add to <training>" opens the planner with that drill added. */
+export type PlannerState = { addDrill?: Drill } | null
 
 function Editor({ training, saved }: { training: Training; saved: Plan | null }) {
   const { parked, comingSoon } = useParked()
   const navigate = useNavigate()
+  const location = useLocation()
   const save = useSavePlan(training.id)
-  const [practices, setPractices] = useState<Practice[]>(() => fromSaved(saved?.practices ?? []))
+  const sent = (location.state as PlannerState)?.addDrill
+  const [practices, setPractices] = useState<Practice[]>(() => {
+    const list = fromSaved(saved?.practices ?? [])
+    return sent && list.length < PLAN_MAX ? [...list, fromDrill(sent)] : list
+  })
   // The practice being written: a new one (index null) or one of the list. An empty plan starts with one open.
-  const [writing, setWriting] = useState<Writing | null>(() => saved?.practices.length ? null : { index: null, draft: blankPractice() })
+  const [writing, setWriting] = useState<Writing | null>(() => saved?.practices.length || sent ? null : { index: null, draft: blankPractice() })
+  const [adding, setAdding] = useState<AddTarget | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  const line = minutesLine(plannedMinutes(practices), trainingMinutes(training))
+  const length = trainingMinutes(training)
+  const line = minutesLine(plannedMinutes(practices), length)
   const full = practices.length >= PLAN_MAX
+  const inPlan = new Set(practices.flatMap(p => p.drill_id ? [p.drill_id] : []))
+
+  // The drill sent from Training › Drills is added once: a reload or Back doesn't add it again.
+  useEffect(() => {
+    if (sent) navigate(location.pathname, { replace: true, state: null })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- only the drill the planner opened with
+
+  const add = (view: AddView) => { setProblem(null); setAdding({ view, swap: null, minutes: roomFor(plannedMinutes(practices), length) }) }
+  const use = (practice: Practice) => {
+    const swap = adding?.swap
+    setPractices(list => swap ? list.map((p, i) => i === swap.index ? practice : p) : list.length < PLAN_MAX ? [...list, practice] : list)
+    setAdding(null)
+    // A new practice nobody typed into gives way to the one picked.
+    if (!swap) setWriting(null)
+  }
+  const writeInstead = () => {
+    const swap = adding?.swap
+    setAdding(null)
+    setWriting({ index: swap ? swap.index : null, draft: blankPractice() })
+  }
 
   const keep = (practice: Practice) => {
     if (!writing) return
@@ -159,6 +191,9 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
             : <PracticeRow practice={practice} actions={<div className="flex flex-none">
               <button type="button" className={iconButton} aria-label={`Edit ${practice.name}`} disabled={!!writing}
                 onClick={() => { setProblem(null); setWriting({ index: i, draft: practice }) }}><Pencil aria-hidden size={18} /></button>
+              <button type="button" className={iconButton} aria-label={`Swap ${practice.name}`} disabled={!!writing}
+                onClick={() => { setProblem(null); setAdding({ view: practice.source === 'library' ? 'library' : 'drills', swap: { index: i, practice }, minutes: practice.minutes }) }}>
+                <ArrowLeftRight aria-hidden size={18} /></button>
               <button type="button" className={iconButton} aria-label={`Move ${practice.name} up`} disabled={i === 0 || !!writing}
                 onClick={() => setPractices(list => move(list, i, -1))}><ArrowUp aria-hidden size={18} /></button>
               <button type="button" className={iconButton} aria-label={`Move ${practice.name} down`} disabled={i === practices.length - 1 || !!writing}
@@ -172,14 +207,20 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
       {writing?.index === null && <PracticeForm number={practices.length + 1} isNew draft={writing.draft}
         onChange={draft => setWriting({ index: null, draft })} onKeep={keep} onCancel={() => { setWriting(null); setProblem(null) }} />}
 
-      {!writing && (full
+      {/* Until the coach types into a new practice, My drills and the Library stay on offer beside it. */}
+      {(!writing || (writing.index === null && !writing.draft.name.trim())) && (full
         ? <p className="text-sm text-ink-3">A plan holds up to {PLAN_MAX} practices.</p>
-        : <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13px] font-medium text-ink-2">Add another:</span>
-          <div className="arc"><Button variant="secondary" size="sm" onClick={() => { setProblem(null); setWriting({ index: null, draft: blankPractice() }) }}>
-            <PenLine aria-hidden size={16} />Write it</Button></div>
+        : <div className="arc flex flex-wrap items-center gap-2">
+          <span className="text-[13px] font-medium text-ink-2">{writing ? 'Or add:' : 'Add another:'}</span>
+          {!writing && <Button variant="secondary" size="sm" onClick={() => { setProblem(null); setWriting({ index: null, draft: blankPractice() }) }}>
+            <PenLine aria-hidden size={16} />Write it</Button>}
+          <Button variant="secondary" size="sm" onClick={() => add('drills')}><UserRound aria-hidden size={16} />From My drills</Button>
+          <Button variant="secondary" size="sm" onClick={() => add('library')}><BookOpen aria-hidden size={16} />From the Library</Button>
         </div>)}
     </div>
+
+    <AddSheet target={adding} onClose={() => setAdding(null)} when={gameWhen(training).day} squad={training.squad}
+      inPlan={inPlan} onUse={use} onWrite={writeInstead} />
   </>
 }
 

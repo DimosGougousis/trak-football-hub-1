@@ -1,5 +1,6 @@
 import type { Json, Tables } from '@/integrations/supabase/types'
-import { blankDrill, cleanDrill, type DrillDraft } from './sessions'
+import { libraryOf, pitchOf, playersOf, sessionById, titleParts, type LibrarySession } from '@/lib/library/library'
+import { DRILL_LIMITS, blankDrill, cleanDrill, type Drill, type DrillDraft } from './sessions'
 
 /* TRAK-295 (Training 2/5, spec TRAK-293): a training's plan, kept apart from the screens. A practice carries what a
    drill does, plus where it came from. The plan is saved whole by save_training_plan(); its limits are the
@@ -41,10 +42,51 @@ export function toSave(practices: Practice[]): Json {
   }))
 }
 
-/** The tag beside a practice. Written here and ticked for My drills, it is the coach's drill once saved. */
-export function sourceLabel(practice: Pick<Practice, 'source' | 'saveToDrills'>): string {
-  if (practice.source === 'library') return 'Library'
+/** The tag beside a practice. Written here and ticked for My drills, it is the coach's drill once saved. A Library
+ *  practice names its library. */
+export function sourceLabel(practice: Pick<Practice, 'source' | 'saveToDrills'> & { library_session?: string | null }): string {
+  if (practice.source === 'library') {
+    const session = practice.library_session ? sessionById(practice.library_session) : undefined
+    return session ? `Library · ${libraryOf(session).label}` : 'Library'
+  }
   return practice.source === 'drill' || practice.saveToDrills ? 'Your drill' : 'Written here'
+}
+
+/* TRAK-296 (Training 3/5): a practice from one of the coach's drills or a Library session, and the drills that fit a
+   slot best. */
+
+/** One of the coach's drills, as a practice: a copy, so changing the drill later never changes the plan. */
+export function fromDrill(drill: Drill): Practice {
+  const { id, updated_at: _at, ...draft } = drill
+  return { ...draft, source: 'drill', drill_id: id, library_session: null, saveToDrills: false }
+}
+
+/** A Library session, as a practice: its name, the slot's minutes (or 20), what it's about, and its pitch and
+ *  players as the area and numbers. */
+export function fromLibrary(session: LibrarySession, minutes: number | null): Practice {
+  const cut = (text: string | undefined, max: number) => (text ?? '').slice(0, max)
+  return {
+    ...blankDrill(),
+    name: cut(titleParts(session).title, DRILL_LIMITS.name),
+    minutes: minutes ?? 20,
+    how: cut(session.summary, DRILL_LIMITS.how),
+    area: cut(pitchOf(session), DRILL_LIMITS.detail),
+    numbers: cut(playersOf(session), DRILL_LIMITS.detail),
+    source: 'library', drill_id: null, library_session: session.id, saveToDrills: false,
+  }
+}
+
+/** The minutes a new practice has room for: what's left of the training, to the nearest 5, kept to 10–30. Null
+ *  when the training has no length or nothing is left. */
+export function roomFor(planned: number, length: number | null): number | null {
+  if (!length || length - planned <= 0) return null
+  return Math.min(30, Math.max(10, Math.round((length - planned) / 5) * 5))
+}
+
+/** The drills whose usual minutes are closest to the slot's, closest first (the newest first on a tie), at most 3. */
+export function bestFit<T extends { minutes: number }>(drills: T[], minutes: number, count = 3): T[] {
+  return drills.map((drill, i) => ({ drill, i })).sort((a, b) =>
+    Math.abs(a.drill.minutes - minutes) - Math.abs(b.drill.minutes - minutes) || a.i - b.i).slice(0, count).map(x => x.drill)
 }
 
 export const plannedMinutes = (practices: Pick<Practice, 'minutes'>[]) => practices.reduce((sum, p) => sum + p.minutes, 0)

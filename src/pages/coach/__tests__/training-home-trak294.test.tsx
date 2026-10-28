@@ -97,8 +97,9 @@ afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 
 const comingUp = () => within(screen.getByRole('region', { name: 'Coming up' })).queryAllByRole('article')
   .map(card => card.getAttribute('aria-label'))
+// TRAK-296: a card's other button, Add to <training>, isn't the drill.
 const myDrills = () => within(screen.getByRole('region', { name: 'My drills' })).queryAllByRole('button')
-  .map(button => button.getAttribute('aria-label'))
+  .map(button => button.getAttribute('aria-label')).filter(label => label?.endsWith('. Edit'))
 
 describe('TRAK-294: Training home', { timeout: 20_000 }, () => {
   it('with the switch on, Training takes Library’s place in the nav, and the Library’s pages mark it', async () => {
