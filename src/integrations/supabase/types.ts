@@ -418,6 +418,54 @@ export type Database = {
           referencedColumns: ["id"]
         }]
       }
+      coach_drills: {
+        Row: {
+          area: string
+          coach_user_id: string
+          conditions: string
+          created_at: string
+          direction: string
+          how: string
+          id: string
+          minutes: number
+          name: string
+          numbers: string
+          targets: string
+          tell: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string
+          coach_user_id?: string
+          conditions?: string
+          created_at?: string
+          direction?: string
+          how?: string
+          id?: string
+          minutes: number
+          name: string
+          numbers?: string
+          targets?: string
+          tell?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          coach_user_id?: string
+          conditions?: string
+          created_at?: string
+          direction?: string
+          how?: string
+          id?: string
+          minutes?: number
+          name?: string
+          numbers?: string
+          targets?: string
+          tell?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coach_details: {
         Row: {
           coach_role: string | null

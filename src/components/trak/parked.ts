@@ -23,8 +23,9 @@ export function useParked() {
 /* TRAK-124 (J8.1): a feature the operator switches on per academy, with no
    deploy (public.academy_features). The database enforces it; this only
    decides whether the screen shows the pill. Loading, a failed read or no
-   feature all count as off. TRAK-283: Games is switched on the same way. */
-export type Feature = 'events' | 'games'
+   feature all count as off. TRAK-283: Games is switched on the same way, and
+   TRAK-294 Training. */
+export type Feature = 'events' | 'games' | 'training'
 
 export function useFeature(feature?: Feature): boolean {
   const { user } = useAuth()

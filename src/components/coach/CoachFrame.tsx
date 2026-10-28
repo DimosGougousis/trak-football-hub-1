@@ -24,7 +24,8 @@ import { BARLESS, COACH_SCREEN_PATH, placeOf, type CoachScreen } from '@/lib/coa
    at its right; the coach's avatar on a page opens the same sidebar as a
    sheet. Feedback and Profile left the nav; their pages still open.
    TRAK-283: Games sits after Squad, on a laptop and a phone, only where the
-   academy's games switch is on. */
+   academy's games switch is on. TRAK-294: where the training switch is on,
+   Training takes Library's place; the Library's pages open from Training. */
 
 type Screen = CoachScreen
 const TO = COACH_SCREEN_PATH
@@ -61,9 +62,11 @@ function Framed({ userId, name }: { userId: string; name: string }) {
   const coachSquad = useCoachSquad(userId)
   const identity = useCoachIdentity(userId).data
   const games = useFeature('games')
+  const training = useFeature('training')
   const [sheetOpen, setSheetOpen] = useState(false)
   const listeners = useRef(new Set<() => void>())
-  const { screen, title } = placeOf(pathname)
+  const { screen: place, title } = placeOf(pathname)
+  const screen = training && place === 'library' ? 'training' : place
 
   const frame = useMemo<Frame>(() => ({
     openMenu: () => setSheetOpen(true),
@@ -85,7 +88,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
       : { id: 'squad', label: 'Squad', icon: Users },
     ...(games ? [{ id: 'games', label: 'Games', icon: MatchIcon }] : []),
     // TRAK-265: Imad's pitch icon.
-    { id: 'library', label: 'Library', icon: PitchIcon },
+    training ? { id: 'training', label: 'Training', icon: PitchIcon } : { id: 'library', label: 'Library', icon: PitchIcon },
   ]
   const active = screen === 'squad' && many && coachSquad.squad ? `squad:${coachSquad.squad}` : screen ?? ''
   const select = (id: string) => {
@@ -110,7 +113,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
           { value: 'home', label: 'Home', icon: <House /> },
           { value: 'squad', label: 'Squad', icon: <Users /> },
           ...(games ? [{ value: 'games', label: 'Games', icon: <MatchIcon /> }] : []),
-          { value: 'library', label: 'Library', icon: <PitchIcon /> },
+          training ? { value: 'training', label: 'Training', icon: <PitchIcon /> } : { value: 'library', label: 'Library', icon: <PitchIcon /> },
         ]}
         actionNode={<CoachCreate placement="bar" onSaved={saved} />} />
     </div>}

@@ -1,0 +1,142 @@
+import { test, expect, type BrowserContext, type Page } from '@playwright/test'
+
+// TRAK-294 (Training 1/5): Training home (Sessions and Drills) and the New drill sheet with the academy's training
+// switch on, at a phone's and a laptop's width: no sideways scroll, and the keyboard reaches every control.
+// Production build, synthetic intercepted backend; test people are named after footballers.
+test.use({ timezoneId: 'Asia/Dubai' })
+
+const COACH = '97294000-0000-4000-8000-000000000001'
+const MINUTE = 60_000
+const DAY = 24 * 60 * MINUTE
+/** A Dubai academy's training (UTC+4 all year): the wall clock typed and its instant. */
+function training(id: string, squad: string | null, days: number, hhmm: string, title: string, over: Record<string, unknown> = {}) {
+  const date = new Date(Date.now() + 4 * 60 * MINUTE + days * DAY).toISOString().slice(0, 10)
+  const starts = Date.parse(`${date}T${hhmm}:00+04:00`)
+  return {
+    id, coach_user_id: COACH, squad, title, event_type: 'training', published: true, status: 'scheduled',
+    starts_at: new Date(starts).toISOString(), ends_at: new Date(starts + 90 * MINUTE).toISOString(), event_date: date,
+    start_time: `${hhmm}:00`, venue: 'Pitch 2', organization_id: 'org-294', ...over,
+  }
+}
+const TRAININGS = [
+  training('t-thu', 'U16', 2, '18:00', 'Before AEK U16 on Saturday'),
+  training('t-tue', 'U16', 7, '18:00', 'Receiving under pressure'),
+  training('t-u14', 'U14', 3, '17:00', 'U14 finishing', { published: false }),
+  training('t-last', 'U16', -5, '18:00', 'Pressing zones'),
+]
+const drill = (id: string, name: string, minutes: number, how: string) => ({
+  id, name, minutes, how, tell: '', area: '', numbers: '', direction: '', targets: '', conditions: '', updated_at: '2026-10-27T10:00:00Z',
+})
+const DRILLS = [
+  drill('d-1', 'Warm-up: rondos 4v1', 15, 'Four round one in a 10 m square. Two touches, then one.'),
+  drill('d-2', 'Pressing on the trigger', 25, 'Press as soon as their 6 turns back.'),
+  drill('d-3', 'Game: 8v8 with conditions', 30, '8v8 + 2 floaters in 30 × 24 m.'),
+]
+const players = [['Thierry Henry', 'U16'], ['Patrick Vieira', 'U16'], ['Robert Pires', 'U14']].map(([name, squad], i) => ({
+  id: `sq-${i + 1}`, coach_user_id: COACH, player_name: name, position: 'Midfielder', age_group: squad, shirt_number: i + 1,
+  status: 'active', linked_player_id: null, created_at: '2026-10-01T08:00:00Z',
+}))
+
+async function backend(context: BrowserContext, unexpected: string[]) {
+  const user = { id: COACH, email: 'coach@training294.test', email_confirmed_at: '2026-10-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z',
+    aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
+  const exp = Math.floor(Date.now() / 1000) + 3600
+  const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: COACH, exp, role: 'authenticated' }]
+    .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
+  await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
+    { access_token: token, refresh_token: 'synthetic-training294-refresh', expires_in: 3600, expires_at: exp, token_type: 'bearer', user })
+  await context.route('**/*', async route => {
+    const req = route.request(), url = new URL(req.url())
+    if (url.origin === 'http://127.0.0.1:4189') return route.continue()
+    if (url.hostname === 'fonts.googleapis.com') return route.fulfill({ contentType: 'text/css', body: '' })
+    const json = (rows: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(rows), headers: { 'content-range': '0-0/1' } })
+    if (url.hostname !== 'xbykbqolvqyqmipikuae.supabase.co') { unexpected.push(req.url()); return route.abort() }
+    const path = url.pathname
+    if (path === '/auth/v1/user') return json(user)
+    if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
+    if (path === '/rest/v1/profiles') return json([{ user_id: COACH, id: COACH, role: 'coach', full_name: 'Jürgen Klopp' }])
+    if (path === '/rest/v1/coach_details') return json([{ user_id: COACH, organization_id: 'org-294', coach_role: 'Head Coach', team: 'U16' }])
+    if (path === '/rest/v1/organizations') return json([{ id: 'org-294', name: 'Rehearsal FC', logo_url: null }])
+    if (path === '/rest/v1/squad_players') return json(players)
+    if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
+    if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    if (path === '/rest/v1/coach_calendar_events') return json(TRAININGS)
+    if (path === '/rest/v1/coach_drills' && req.method() === 'GET') return json(DRILLS)
+    // Every other read is empty.
+    if (path.startsWith('/rest/v1/')) return json(req.method() === 'GET' || path.startsWith('/rest/v1/rpc/') ? [] : null)
+    unexpected.push(`${req.method()} ${path}`)
+    return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
+  })
+}
+
+async function open(page: Page, context: BrowserContext, path: string, width: number, height: number) {
+  const unexpected: string[] = [], errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width, height })
+  await backend(context, unexpected)
+  await page.goto(path)
+  return { unexpected, errors }
+}
+const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+
+/** Tab from the top of the page; every control in `scope` must take focus at least once. */
+async function everyControlByKeyboard(page: Page, scope: string) {
+  const controls = await page.locator(`${scope} :is(a[href], button:not([disabled]), input, textarea, [tabindex="0"]):not([tabindex="-1"])`).evaluateAll(els =>
+    els.filter(el => (el as HTMLElement).offsetParent !== null && el.getAttribute('aria-hidden') !== 'true'
+      // A segmented control is one stop (roving focus): only its selected option takes Tab.
+      && !(el.closest('[role="group"][aria-label="Training view"]') && el.getAttribute('aria-pressed') !== 'true'))
+      .map((el, i) => { (el as HTMLElement).dataset.kb = String(i); return String(i) }))
+  const reached = new Set<string>()
+  await page.locator('body').focus()
+  for (let i = 0; i < 100 && reached.size < controls.length; i++) {
+    await page.keyboard.press('Tab')
+    const kb = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.kb)
+    if (kb) reached.add(kb)
+  }
+  const missed = controls.filter(kb => !reached.has(kb))
+  const names = await Promise.all(missed.map(kb => page.locator(`[data-kb="${kb}"]`).first().evaluate(el => el.outerHTML.slice(0, 120))))
+  return { count: controls.length, missed: names }
+}
+
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`Training home at ${width} px: Coming up and Last week`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
+    await expect(page.getByRole('heading', { level: 1, name: 'Training' })).toBeVisible()
+    const coming = page.getByRole('region', { name: 'Coming up' })
+    await expect(coming.getByRole('article')).toHaveCount(3)
+    await expect(coming.getByRole('article').first()).toContainText('Before AEK U16 on Saturday')
+    await expect(page.getByRole('region', { name: 'Last week' }).getByRole('link')).toHaveCount(1)
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`training-sessions-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    expect(keyboard.count).toBeGreaterThan(5)
+    expect(keyboard.missed).toEqual([])
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  test(`Drills at ${width} px: My drills, the Library, and the New drill sheet`, async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/training/drills', width, height)
+    await expect(page.getByRole('region', { name: 'My drills' }).getByRole('button')).toHaveCount(3)
+    await expect(page.getByRole('region', { name: 'From the Library' }).getByRole('link')).toHaveCount(7)
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`training-drills-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    expect(keyboard.missed).toEqual([])
+
+    await page.getByRole('button', { name: 'New drill' }).click()
+    const sheet = page.getByRole('dialog', { name: 'New drill' })
+    await expect(sheet.getByLabel('Name')).toBeVisible()
+    await sheet.getByLabel('Name').fill('1v1 in channels')
+    await sheet.getByText('Add details').click()
+    await page.waitForTimeout(600)
+    await page.screenshot({ path: testInfo.outputPath(`training-new-drill-${width}.png`) })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
