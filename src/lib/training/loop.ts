@@ -1,9 +1,10 @@
-/* TRAK-298 (Training 5/5, spec TRAK-293): every training's loop, Plan → Who's here → Run it → Close, and where one
-   is. Each step comes from what already exists, so nothing new is stored: a saved plan, a register taken (the
-   event's completed session, TRAK-138), and the clock. Kostas, 28 Oct: Close is automatic: a training is closed once
-   it has ended and its register is taken. */
+/* TRAK-298 (Training 5/5, spec TRAK-293): every training's loop, Plan → Who's here → Close, and where one is. Each
+   step comes from what already exists, so nothing new is stored: a saved plan, a register taken (the event's
+   completed session, TRAK-138), and the clock. Kostas, 28 Oct: Close is automatic: a training is closed once it has
+   ended and its register is taken. TRAK-309 (Kostas, 29 Oct): no Run it step; it asked nothing of the coach and only
+   waited for the end, as Close does. The plan at the pitch side is View. */
 
-export const LOOP_STEPS = ['Plan', 'Who’s here', 'Run it', 'Close'] as const
+export const LOOP_STEPS = ['Plan', 'Who’s here', 'Close'] as const
 
 export type LoopFacts = {
   planned: boolean
@@ -15,9 +16,9 @@ export type LoopFacts = {
 }
 
 export type LoopState = {
-  /** Each step, done or not. Run it is done once the training is over. */
-  done: [boolean, boolean, boolean, boolean]
-  /** The first step not done; 4 when every step is. */
+  /** Each step, done or not. */
+  done: [boolean, boolean, boolean]
+  /** The first step not done; 3 when every step is. */
   at: number
   /** Ended with its register taken. */
   closed: boolean
@@ -25,18 +26,18 @@ export type LoopState = {
 
 export function loopState({ planned, registered, over }: LoopFacts): LoopState {
   const closed = over && registered
-  const done: LoopState['done'] = [planned, registered, over, closed]
+  const done: LoopState['done'] = [planned, registered, closed]
   const at = done.indexOf(false)
-  return { done, at: at < 0 ? 4 : at, closed }
+  return { done, at: at < 0 ? 3 : at, closed }
 }
 
-/** What the current step says beside its name: "now" once the training has started, else "next". The plan is
- *  written before, so it is always now. */
+/** What the current step says beside its name. The plan is written before, so it is always "now"; Who's here is
+ *  "now" once the training has started, else "next"; Close is "next" until the training ends and closes it. */
 export function loopNote(state: LoopState, started: boolean): string {
-  return state.at === 0 || started ? 'now' : 'next'
+  return state.at === 0 || (state.at === 1 && started) ? 'now' : 'next'
 }
 
-/** "18:00" plus minutes, on a 24-hour clock: when each practice starts in Run it. */
+/** "18:00" plus minutes, on a 24-hour clock: when each practice starts in View. */
 export function clockPlus(hhmm: string, minutes: number): string {
   const [h, m] = hhmm.split(':').map(Number)
   const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440
