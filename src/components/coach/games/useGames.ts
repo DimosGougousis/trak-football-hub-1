@@ -120,6 +120,20 @@ export function useGamePlayers(eventId: string | undefined) {
   })
 }
 
+/** TRAK-288: when each of the coach's evaluation drafts was last saved, by match. The database returns only their own. */
+export function useGameEvaluations(enabled = true) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['coach', user?.id, 'game-evaluations'],
+    enabled: !!user && enabled,
+    queryFn: async (): Promise<Map<string, string>> => {
+      const { data, error } = await supabase.from('game_evaluations').select('event_id, saved_at').is('published_at', null)
+      if (error) throw error
+      return new Map((data ?? []).map(row => [row.event_id, row.saved_at]))
+    },
+  })
+}
+
 /** TRAK-288: one match's evaluation: the result, each player listed and the notes. Only the match's coach reads them (the
  *  database's rule); `evaluation` is null before the first save. */
 export function useGameEvaluation(eventId: string | undefined) {

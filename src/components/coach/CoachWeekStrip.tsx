@@ -16,6 +16,7 @@ import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton
 import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { STATE, actionLink } from '@/lib/games/loop'
 import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
 import { loadWeek } from '@/lib/coach-week-load'
 import { publishEvent } from '@/lib/event-publish'
@@ -36,10 +37,11 @@ export function CoachWeekStrip({ coachId, version = 0, everySquad = false }: {
   everySquad?: boolean
 }) {
   const eventsOn = useFeature('events')
+  const games = useFeature('games')
   const { squad, squads, eventInSquad } = useCoachSquad(coachId)
   if (!eventsOn) return null
   // Another coach remounts, so a late answer for the last one never shows.
-  return <CoachWeek key={coachId} coachId={coachId} version={version}
+  return <CoachWeek key={coachId} coachId={coachId} version={version} games={games}
     inView={everySquad ? () => true : eventInSquad} squadLabel={everySquad ? 'All squads' : squad}
     squadOf={squads.length >= 2 ? squadName : null} labelEach={everySquad} />
 }
@@ -48,9 +50,11 @@ export function CoachWeekStrip({ coachId, version = 0, everySquad = false }: {
 const weekTitle = (offset: number, monday: string) =>
   offset === 0 ? 'This week' : offset === 1 ? 'Next week' : offset === -1 ? 'Last week' : `Week of ${format(parseISO(monday), 'd MMMM')}`
 
-function CoachWeek({ coachId, version, inView, squadLabel, squadOf, labelEach }: {
+function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, labelEach }: {
   coachId: string
   version: number
+  /** TRAK-288: the academy's Games switch; a match is then evaluated, not logged. */
+  games: boolean
   inView: (squad: string | null | undefined) => boolean
   squadLabel: string | null
   /** A coach with two squads or more: each event's squad, for its sheet. */
@@ -60,7 +64,7 @@ function CoachWeek({ coachId, version, inView, squadLabel, squadOf, labelEach }:
 }) {
   const [offset, setOffset] = useState(0)
   const dates = useMemo(() => weekDays(addDays(new Date(), offset * 7)), [offset])
-  const [week, setWeek] = useState<{ monday: string; events: EventRow[]; sessions: WeekSession[] } | null>(null)
+  const [week, setWeek] = useState<{ monday: string; events: EventRow[]; sessions: WeekSession[]; evaluated: Set<string> | null } | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   // The share message names the squad and leaves out players' names (J8.16), as the event sheet's Share.
@@ -77,11 +81,11 @@ function CoachWeek({ coachId, version, inView, squadLabel, squadOf, labelEach }:
     let cancelled = false
     setFailed(false)
     // A reload (after Publish) keeps the week on screen, so an open sheet stays open.
-    loadWeek(coachId, dates[0], dates[6]).then(
+    loadWeek(coachId, dates[0], dates[6], games).then(
       data => { if (!cancelled) setWeek({ monday: dates[0], ...data }) },
       () => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
-  }, [coachId, dates, version, attempt])
+  }, [coachId, dates, version, attempt, games])
 
   if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
   if (!week || week.monday !== dates[0]) {
@@ -89,7 +93,7 @@ function CoachWeek({ coachId, version, inView, squadLabel, squadOf, labelEach }:
   }
 
   const refresh = () => setAttempt(n => n + 1)
-  const byDate = coachWeek({ dates, events: week.events, sessions: week.sessions, inView })
+  const byDate = coachWeek({ dates, events: week.events, sessions: week.sessions, inView, evaluated: week.evaluated })
   const strips = new Map<string, { item: WeekItem; event: StripEvent }>()
   for (const item of [...byDate.values()].flat()) {
     const event = toPlayerEvent(item.source)
@@ -158,6 +162,11 @@ export function NextStep({ item, coachId, roster, onChanged }: {
   if (item.step === 'register' && row) return <StepSheet label="Take register" title="Take register" description={item.title}>
     {close => <TakeRegister eventId={row.id} coachId={coachId} sessionId={null} squad={row.squad ?? null} onSaved={() => { close(); onChanged() }} />}
   </StepSheet>
+  // TRAK-288: where Games is on, the match's evaluation on its game page: Evaluate, then Publish once a draft is saved.
+  if ((item.step === 'evaluate' || item.step === 'publish-evaluation') && row) {
+    const action = STATE[item.step === 'evaluate' ? 'fullTime' : 'evaluationDraft'].action!
+    return go(action.label, () => navigate(actionLink(row.id, action)))
+  }
   if (item.step === 'log' && row) return go('Log it', () => navigate('/coach/sessions/quick', {
     state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
   }))
