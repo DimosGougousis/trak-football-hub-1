@@ -19,6 +19,7 @@ import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useGameEvaluations } from '@/components/coach/games/useGames'
 import { useFeature, useParked } from '@/components/trak/parked'
 import {
   CANCELLED_COLOR, COMPETITIONS, DURATIONS, clashMessage, draftClashes, EVENT_COLOR, lockedMessage, STARTED_LOCKED, startedLocked, EVENT_KINDS, FAMILY_NOTE_MAX, NO_TIME_COLOR, WEEKDAYS, blankForm, blankRepeat, canDelete, cancelPatch, dateAsDay, dayAsDate, formatEventDay, formProblem, formToRow, newDraftFields,
@@ -269,6 +270,8 @@ export default function CoachSchedule() {
   // TRAK-85: parked, so actions say "Coming soon" and send nothing.
   const { parked, comingSoon } = useParked()
   const games = useFeature('games')
+  // TRAK-289: a published evaluation is final, so its match opens the review, never the match log's editor.
+  const evaluations = useGameEvaluations(games)
   const navigate = useNavigate()
   // TRAK-275: a card's actions carry words only where the side menu shows (a laptop).
   const wide = useSideMenuScreen()
@@ -837,7 +840,9 @@ export default function CoachSchedule() {
                   if (!row.published && !cancelled) items.push({ id: 'publish', label: `Publish ${row.title}`, content: 'Publish', icon: <Send />, onSelect: () => publish(row) })
                   if (!registerProblem(row)) items.push({ id: 'register', label: `${sessionId ? 'Edit register' : 'Take register'} for ${row.title}`,
                     content: sessionId ? 'Edit register' : 'Take register', icon: <ClipboardCheck />, onSelect: guarded(() => setSheet({ kind: 'register', row })) })
-                  if (row.event_type === 'match' && row.published && !cancelled && started) items.push(sessionId
+                  if (row.event_type === 'match' && row.published && !cancelled && started) items.push(games && evaluations.data?.get(row.id)?.publishedAt
+                    ? { id: 'match', label: `View review of ${row.title}`, content: 'View review', icon: <ClipboardList />, onSelect: () => navigate(`/coach/games/${row.id}?tab=evaluation`) }
+                    : sessionId
                     ? { id: 'match', label: `Edit match for ${row.title}`, content: 'Edit match', icon: <Pencil />, onSelect: () => navigate(`/coach/sessions/${sessionId}`) }
                     // TRAK-288: where Games is on, the match's evaluation replaces the match log.
                     : games ? { id: 'match', label: `Evaluate ${row.title}`, content: 'Evaluate', icon: <ClipboardList />, onSelect: () => navigate(`/coach/games/${row.id}?tab=evaluation`) }

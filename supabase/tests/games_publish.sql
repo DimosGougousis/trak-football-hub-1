@@ -200,6 +200,16 @@ SELECT pg_temp.g289check(pg_temp.g289refused(pg_temp.g289publish(500),'P0001'), 
 SELECT pg_temp.g289check(pg_temp.g289refused(format('SELECT public.save_game_evaluation(%L::uuid, 3, 1, %L::jsonb, %L, %L::text[], %L::jsonb)',
     pg_temp.g289id(500), '[]', '', '{worked,partly}', '[]'),'P0001'),
   '6 and its draft can''t change after');
+SELECT pg_temp.g289check(pg_temp.g289refused(format('SELECT public.edit_logged_match((SELECT s.id FROM public.coach_sessions s WHERE s.event_id=%L), 3, 1, %L::jsonb)',
+    pg_temp.g289id(500), jsonb_build_array(
+      jsonb_build_object('user_id',pg_temp.g289id(20),'goals',2,'assists',0,'card','None','computed_rating',9),
+      jsonb_build_object('user_id',pg_temp.g289id(21),'goals',0,'assists',1,'card','None','computed_rating',7))),'P0001'),
+  '6 nor its result in the match log''s editor, which would give it a rating');
+RESET ROLE;
+SELECT pg_temp.g289check((SELECT count(*) FROM public.matches WHERE opponent='Portugal' AND computed_rating IS NULL AND team_score=2)=2,
+  '6 so the match rows keep the published result and no rating');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.g289actor(10);
 SELECT pg_temp.g289check(pg_temp.g289refused(format('INSERT INTO public.game_review_for_player(event_id,squad_player_id,note) VALUES(%L,%L,%L)',
     pg_temp.g289id(500),pg_temp.g289id(41),'Hi.'),'42501'),
   '6 nobody writes a review copy directly');
@@ -208,7 +218,7 @@ RESET ROLE;
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.g289_results;
- IF total <> 26 THEN RAISE EXCEPTION 'Games publish: % checks ran; expected 26', total; END IF;
+ IF total <> 28 THEN RAISE EXCEPTION 'Games publish: % checks ran; expected 28', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.g289_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Games publish checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Games publish: % of % passed', total, total;

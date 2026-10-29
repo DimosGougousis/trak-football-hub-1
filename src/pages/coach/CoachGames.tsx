@@ -44,14 +44,17 @@ export default function CoachGames() {
   const changes = useGamePlanChanges(ordered.filter(game => shares.data?.has(game.id) && now < Date.parse(game.starts_at)).map(game => game.id))
   const open = (game: Game, action: Omit<GameAction, 'label'>) => navigate(actionLink(game.id, action))
   const stateOf = (game: Game) => STATE[gameState(game, now,
-    { drafted: plans.data?.has(game.id), shared: shares.data?.has(game.id), changes: changes.data?.get(game.id)?.length, evaluated: evaluations.data?.has(game.id) })]
+    { drafted: plans.data?.has(game.id), shared: shares.data?.has(game.id), changes: changes.data?.get(game.id)?.length, evaluated: evaluations.data?.has(game.id),
+      published: !!evaluations.data?.get(game.id)?.publishedAt })]
   // TRAK-284: a plan draft stays open until it's shared (TRAK-286) or its match kicks off and locks it (TRAK-287).
   // TRAK-288: an evaluation draft stays open until it's published (TRAK-289).
   const drafts = [
     ...ordered.filter(game => plans.data?.has(game.id) && !shares.data?.has(game.id) && now < Date.parse(game.starts_at))
       .map(game => ({ game, what: 'Game plan', saved: plans.data!.get(game.id)!, tab: 'plan' as const })),
-    ...ordered.filter(game => evaluations.data?.has(game.id))
-      .map(game => ({ game, what: 'Evaluation', saved: evaluations.data!.get(game.id)!, tab: 'evaluation' as const })),
+    ...ordered.flatMap(game => {
+      const evaluation = evaluations.data?.get(game.id)
+      return evaluation && !evaluation.publishedAt ? [{ game, what: 'Evaluation', saved: evaluation.savedAt, tab: 'evaluation' as const }] : []
+    }),
   ]
 
   return (

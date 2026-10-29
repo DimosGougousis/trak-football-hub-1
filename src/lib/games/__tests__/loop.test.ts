@@ -60,6 +60,15 @@ describe('an evaluation draft (TRAK-288)', () => {
   })
 })
 
+describe('a published evaluation (TRAK-289)', () => {
+  it('closes the loop: Published, with nothing left to do', () => {
+    expect(gameState(game(), Date.parse('2026-10-31T12:00:00Z'), { evaluated: true, published: true })).toBe('published')
+    expect(STATE.published).toMatchObject({ label: 'Published', tone: 'success' })
+    expect(LOOP_STEPS[STATE.published.step]).toBe('Published')
+    expect(STATE.published.action).toBeUndefined()
+  })
+})
+
 describe('a plan draft (TRAK-284)', () => {
   it('a published match with a plan draft before kick-off has a plan that is not shared; sharing it is next (TRAK-286)', () => {
     expect(gameState(game(), KICK_OFF - 1000, { drafted: true })).toBe('planDraft')

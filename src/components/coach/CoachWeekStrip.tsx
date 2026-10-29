@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { addDays, format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
@@ -64,7 +64,8 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
 }) {
   const [offset, setOffset] = useState(0)
   const dates = useMemo(() => weekDays(addDays(new Date(), offset * 7)), [offset])
-  const [week, setWeek] = useState<{ monday: string; events: EventRow[]; sessions: WeekSession[]; evaluated: Set<string> | null } | null>(null)
+  const [week, setWeek] = useState<{ monday: string; events: EventRow[]; sessions: WeekSession[]; evaluated: Set<string> | null
+    published: Set<string> } | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   // The share message names the squad and leaves out players' names (J8.16), as the event sheet's Share.
@@ -93,7 +94,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
   }
 
   const refresh = () => setAttempt(n => n + 1)
-  const byDate = coachWeek({ dates, events: week.events, sessions: week.sessions, inView, evaluated: week.evaluated })
+  const byDate = coachWeek({ dates, events: week.events, sessions: week.sessions, inView, evaluated: week.evaluated, published: week.published })
   const strips = new Map<string, { item: WeekItem; event: StripEvent }>()
   for (const item of [...byDate.values()].flat()) {
     const event = toPlayerEvent(item.source)
@@ -119,7 +120,15 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
       const { event, item } = strips.get(id)!
       return <EventSheet event={event} role="coach" trigger={trigger} squad={squadOf ? squadOf(item.source.squad) : null}>
         {/* A logged session's sheet shows its log, read only, with Edit log (Imad, 23 Oct; before: who came and Open session). */}
-        {event.sessionId
+        {/* TRAK-289: a published evaluation is final; its review is on the game page, never in the log's editor. */}
+        {item.step === 'review' && item.row
+          ? <div className="grid gap-3">
+              <p className="text-[14px] text-ink-2">The evaluation is published, so the result is final.</p>
+              <Link to={`/coach/games/${item.row.id}?tab=evaluation`}
+                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
+                Open the review</Link>
+            </div>
+          : event.sessionId
           ? <SessionLog sessionId={event.sessionId} coachId={coachId} />
           : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}
       </EventSheet>
@@ -167,6 +176,8 @@ export function NextStep({ item, coachId, roster, onChanged }: {
     const action = STATE[item.step === 'evaluate' ? 'fullTime' : 'evaluationDraft'].action!
     return go(action.label, () => navigate(actionLink(row.id, action)))
   }
+  // TRAK-289: a published evaluation is final; it's read on the game page, never in the old log's editor.
+  if (item.step === 'review' && row) return go('View review', () => navigate(`/coach/games/${row.id}?tab=evaluation`))
   if (item.step === 'log' && row) return go('Log it', () => navigate('/coach/sessions/quick', {
     state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
   }))
