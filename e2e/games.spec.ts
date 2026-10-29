@@ -170,7 +170,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`games-home-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1280px\\]')
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
     expect(keyboard.count).toBeGreaterThan(5)
     expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])

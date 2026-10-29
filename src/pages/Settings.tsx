@@ -11,6 +11,7 @@ import { assertSettingsAccount, getSettingsAccount } from '@/lib/settings-accoun
 import { supabase } from '@/integrations/supabase/client'
 import { isTechnicalChildAddress, childUsername } from '@/lib/child-login'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import { WIDE_COLUMN } from '@/components/trak/MobileShell'
 import { CalendarSettings } from '@/components/trak/AddToCalendar'
 import { OwnConsentSettings } from '@/components/player/OwnConsentCard'
 import { ParentFamilyContent } from '@/components/parent/ParentFamily'
@@ -297,7 +298,9 @@ function AccountSettings({ userId }: { userId: string }) {
 
   return (
     <div className="min-h-screen" style={{ background: 'rgb(var(--t-ground))', fontFamily: 'var(--t-font)' }}>
-      <div className={`mx-auto ${role === 'coach' && wide ? 'trak-wide' : 'trak-read'} px-5 pt-5 pb-12`}>
+      {/* TRAK-307: a coach's Settings is a page in their menu, so it takes the menu pages' one column (a phone's is the
+          phone column, as for everyone). */}
+      <div className={`${role === 'coach' ? WIDE_COLUMN : 'mx-auto trak-read px-5'} pt-5 pb-12`}>
         {/* A phone's way back; a coach's laptop has the frame's side menu and top bar (TRAK-259). */}
         {!(role === 'coach' && wide) && <div className="relative flex items-center justify-center mb-4 h-10">
           <button onClick={() => navigate(-1)} aria-label="Back"

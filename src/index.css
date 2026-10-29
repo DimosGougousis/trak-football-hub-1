@@ -175,9 +175,10 @@
     --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
 
     /* TRAK-199: how wide a page (.trak-page), a page of text or a form (.trak-read),
-       a list or calendar page (.trak-wide, TRAK-252) and a bottom sheet (max-w-sheet)
-       are, and the laptop rail beside them. A phone's 430 px for everyone; a
-       coach's screens widen on a tablet or a laptop, below.
+       every page in a coach's menu and a list or calendar page (.trak-wide, TRAK-252,
+       TRAK-307) and a bottom sheet (max-w-sheet) are, and the laptop rail beside
+       them. A phone's 430 px for everyone; a coach's screens widen on a tablet or a
+       laptop, below.
        app-width-setting.test.ts fails on a 430px in a coach screen. */
     --page-w: 430px;
     --read-w: 430px;
@@ -263,17 +264,19 @@
    only: the same screens, words and Arc components. A phone, upright or turned
    sideways (under 500 px tall), keeps today's layout. Sheets stop at 36rem, the
    Arc bottom sheet's width; pages of text or forms at 640 px, so a line stays
-   readable. */
+   readable. TRAK-307 (Kostas, 29 Oct): ONE width for every page in a coach's menu
+   (Home, Schedule, Squad, Games, Training, Settings, Library), Squad's and Games':
+   the page fills the screen beside the menu, 32 px from each side (WIDE_COLUMN in
+   MobileShell.tsx), up to 1,280 px, on a tablet and a laptop alike. */
 @media (min-width: 768px) and (min-height: 500px) {
-  :root[data-layout="coach"] { --page-w: 720px; --read-w: 640px; --wide-w: 720px; --sheet-w: 36rem; }
+  :root[data-layout="coach"] { --page-w: 720px; --read-w: 640px; --wide-w: 1280px; --sheet-w: 36rem; }
 }
 
 /* Tablet sideways and laptop: a coach's pages sit right of the sidebar (TRAK-259,
-   CoachFrame, which sets --rail-w to its width). Lists and the calendar
-   (.trak-wide, TRAK-252) take up to 1,100 px. The same query as
-   SIDE_MENU_QUERY in src/lib/side-menu-screen.ts. */
+   CoachFrame, which sets --rail-w to its width); the wide column keeps the
+   tablet's 1,280 px (TRAK-307). The same query as SIDE_MENU_QUERY in
+   src/lib/side-menu-screen.ts. */
 @media (min-width: 1024px) and (min-height: 500px) {
-  :root[data-layout="coach"] { --wide-w: 1100px; }
   /* With no bottom bar, the room kept for it goes: Assess's Back and Next sit at
      the bottom, and the Trainings frame runs down to it (below the frame's 60 px
      top bar and its own 105 px header). */

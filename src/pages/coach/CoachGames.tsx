@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { LOOP_STEPS, STATE, actionLink, gameState, orderGames, type GameAction } from '@/lib/games/loop'
 import { gameTitle, gameWhen, useGamePlanChanges, useGamePlans, useGameShares, useGames, type Game } from '@/components/coach/games/useGames'
-import { LoadError } from '@/components/trak'
+import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { PitchIcon } from '@/components/icons/PitchIcon'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
@@ -49,7 +49,7 @@ export default function CoachGames() {
 
   return (
     <div className="min-h-screen bg-ground pb-24">
-      <div className="mx-auto w-full max-w-[1280px] px-5 tablet:px-8">
+      <div className={WIDE_COLUMN}>
         <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
           <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Games</h1>
         </header>

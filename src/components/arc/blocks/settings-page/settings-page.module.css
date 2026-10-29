@@ -1,5 +1,7 @@
 /* Arc Pro (uiarc.dev): adapted from the Settings page block; licensed source, not covered by this repository's licence. See src/components/arc/PRO.md. */
-.root { container-type: inline-size; width: min(100%, 980px); min-width: 0; margin-inline: auto; color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); }
+/* Trak (TRAK-307, Kostas, 29 Oct): the page decides the width, so a coach's Settings lines up with the other pages in
+   the menu; each section's fields keep their 600 px (.pane). */
+.root { container-type: inline-size; width: 100%; min-width: 0; margin-inline: auto; color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); }
 /* Trak: one page, every section on it; the window scrolls and the menu stays beside it. */
 .settings { position: relative; display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); overflow: clip; }
 

@@ -10,7 +10,7 @@ const players = ['Hugo Lloris', 'Bukayo Saka', 'Beth Mead', 'Cole Palmer', 'Ella
   status: 'active', linked_player_id: `sq-${i + 1}-user`, created_at: '2026-10-01T08:00:00Z',
 }))
 
-async function backend(context: BrowserContext, role: Role, unexpected: string[]) {
+async function backend(context: BrowserContext, role: Role, unexpected: string[], features: string[] = ['events']) {
   const id = ids[role]
   const user = { id, email: `${role}@wide199.test`, email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
@@ -36,8 +36,9 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     }
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
     if (path === '/rest/v1/rpc/my_session_is_live') return json(true)
-    // Events on; Games (TRAK-283) off, as for every academy until it is switched on (e2e/games.spec.ts has it on).
-    if (path === '/rest/v1/rpc/feature_on') return json(req.postDataJSON()?.p_feature === 'events')
+    // Events on; Games (TRAK-283) and Training (TRAK-294) off, as for every academy until they are switched on, unless a
+    // test switches them on.
+    if (path === '/rest/v1/rpc/feature_on') return json(features.includes(req.postDataJSON()?.p_feature))
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     // TRAK-250: the Squad tabs' reads. Two latest bands for three children, so Snapshot has columns to show.
     if (path === '/rest/v1/coach_assessments') return json(role === 'coach' ? [
@@ -57,11 +58,11 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
 const box = async (page: Page, selector: string) => (await page.locator(selector).first().boundingBox())!
 const noSidewaysScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
 
-async function open(page: Page, context: BrowserContext, role: Role, path: string, width: number, height: number) {
+async function open(page: Page, context: BrowserContext, role: Role, path: string, width: number, height: number, features?: string[]) {
   const unexpected: string[] = [], errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width, height })
-  await backend(context, role, unexpected)
+  await backend(context, role, unexpected, features)
   await page.goto(path)
   return { unexpected, errors }
 }
@@ -70,7 +71,7 @@ async function open(page: Page, context: BrowserContext, role: Role, path: strin
 for (const [label, width, height, pageWidth] of [
   ['a phone', 390, 844, 390],
   ['a phone turned sideways', 844, 390, 430],
-  ['an upright tablet', 820, 1180, 720],
+  ['an upright tablet', 820, 1180, 820], // TRAK-307: the menu pages' one column, 32 px from each side
 ] as const) {
   test(`coach Home on ${label}: the page, and the glass tab bar with the "+" under it`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
@@ -79,7 +80,7 @@ for (const [label, width, height, pageWidth] of [
     // TRAK-259: Home, Squad and Library, with the "+" merged in at the right; no Calendar, Feedback or Profile tab.
     const bar = page.getByRole('tablist', { name: 'Coach' })
     await expect(bar.getByRole('tab')).toHaveText(['Home', 'Squad', 'Library'])
-    const shell = await box(page, '.trak-page')
+    const shell = await box(page, '.trak-wide')
     expect(Math.round(shell.width)).toBe(pageWidth)
     expect(Math.round(shell.x + shell.width / 2)).toBe(Math.round(width / 2))
     const nav = (await page.getByRole('navigation', { name: 'Coach' }).boundingBox())!
@@ -126,9 +127,10 @@ test('coach Home on a laptop: the sidebar on the left, "+ Create" at the top rig
   await expect(page.getByRole('button', { name: 'Close create' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Coach' })).toHaveCount(0)
 
-  // TRAK-262: Home takes the wide column on a laptop, the week and Squad shape side by side.
+  // TRAK-262: Home takes the wide column on a laptop, the week and Squad shape side by side. TRAK-307: the menu pages'
+  // one column, up to 1,280 px, so the whole 1,200 px beside the sidebar here.
   const shell = await box(page, '.trak-wide')
-  expect(Math.round(shell.width)).toBe(1100)
+  expect(Math.round(shell.width)).toBe(1200)
   expect(Math.round(shell.x + shell.width / 2)).toBe(240 + (1440 - 240) / 2)
   const [week, shape] = [(await page.getByRole('region', { name: 'This week' }).boundingBox())!, (await page.getByRole('region', { name: 'Squad shape' }).boundingBox())!]
   expect(shape.x).toBeGreaterThan(week.x + week.width - 1)
@@ -302,3 +304,85 @@ test("a laptop's breadcrumb names the page, one title after several moves", asyn
   await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveText(/^Your academy\s*\/?\s*Home$/)
   expect(errors).toEqual([])
 })
+
+/** Where a page draws (its text, cards, buttons and boxes), right of a laptop's sidebar and under its top bar. Each box
+ *  is cut to what its scrolling parents show; the page's own plain background doesn't count. */
+const drawnEdges = (page: Page) => page.evaluate(() => {
+  const sidebar = document.querySelector('[id$="-sidebar"]')
+  const rail = sidebar ? sidebar.getBoundingClientRect().right : 0
+  const top = sidebar ? 60 : 0
+  let left = Infinity, right = -Infinity
+  const add = (el: Element, r: DOMRect) => {
+    if (r.width < 2 || r.height < 2 || r.top < top || r.top > window.innerHeight) return
+    let l = Math.max(r.left, rail), rt = Math.min(r.right, window.innerWidth)
+    for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+      if (getComputedStyle(a).overflowX !== 'visible') { const b = a.getBoundingClientRect(); l = Math.max(l, b.left); rt = Math.min(rt, b.right) }
+    }
+    if (rt - l >= 2) { left = Math.min(left, l); right = Math.max(right, rt) }
+  }
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, { acceptNode: node => {
+    if (node.nodeType !== 1) return NodeFilter.FILTER_ACCEPT
+    const el = node as HTMLElement, style = getComputedStyle(el)
+    return el.id.endsWith('-sidebar') || style.position === 'fixed' || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0'
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  } })
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.nodeType === 3) {
+      if (!node.textContent?.trim()) continue
+      const range = document.createRange()
+      range.selectNodeContents(node)
+      add(node.parentElement!, range.getBoundingClientRect())
+      continue
+    }
+    const el = node as HTMLElement, style = getComputedStyle(el), r = el.getBoundingClientRect()
+    const control = ['svg', 'img', 'button', 'input', 'textarea', 'select', 'canvas'].includes(el.tagName.toLowerCase())
+    const bordered = parseFloat(style.borderTopWidth) > 0 && style.borderTopColor !== 'rgba(0, 0, 0, 0)'
+    const filled = style.backgroundColor !== 'rgba(0, 0, 0, 0)' && r.width < (window.innerWidth - rail) * 0.95 && !el.classList.contains('bg-ground')
+    if (control || bordered || filled) add(el, r)
+  }
+  return { left, right }
+})
+
+// TRAK-307 (Kostas, 29 Oct): ONE width for every page in a coach's menu, Squad's and Games'. On a tablet or a laptop the
+// page fills the screen beside the menu, 32 px from each side, up to 1,280 px; a phone keeps the phone column (20 px).
+// Each page's column is the same, its content starts at the margin, and nothing sits in the margins.
+const MENU_PAGES = [
+  ['Home', '/coach/home', ['events', 'games', 'training']], ['Schedule', '/coach/schedule', ['events', 'games', 'training']],
+  ['Squad', '/coach/squad', ['events', 'games', 'training']], ['Games', '/coach/games', ['events', 'games', 'training']],
+  ['Training', '/coach/training', ['events', 'games', 'training']], ['Drills', '/coach/training/drills', ['events', 'games', 'training']],
+  ['Settings', '/settings', ['events', 'games', 'training']], ['Library', '/coach/trainings', ['events']], // Library: Training off
+] as const
+for (const [label, width, height] of [['a phone', 390, 844], ['an upright tablet', 820, 1180], ['a laptop', 1440, 900], ['a big screen', 1920, 1080]] as const) {
+  test(`TRAK-307: every page in the coach's menu takes the same width on ${label}`, async ({ browser }, testInfo) => {
+    const rail = width >= 1024 ? 240 : 0
+    const margin = width >= 768 ? 32 : 20
+    const column = Math.min(1280, width - rail)
+    const start = rail + (width - rail - column) / 2
+    const found: Record<string, string> = {}, wanted: Record<string, string> = {}
+    for (const [name, path, features] of MENU_PAGES) {
+      // A fresh coach for each page: the app keeps a switch's answer for 30 s.
+      const context = await browser.newContext()
+      const page = await context.newPage()
+      const { unexpected, errors } = await open(page, context, 'coach', path, width, height, [...features])
+      await expect(page.getByRole('heading').first()).toBeVisible()
+      await page.waitForLoadState('networkidle')
+      await expect(page.getByText(/^(Loading|Checking) /)).toHaveCount(0)
+      await page.waitForTimeout(400) // let the page settle
+      // The menu pages' column (WIDE_COLUMN), if the page has it.
+      const columns = page.locator('.trak-wide')
+      const box = await columns.count() ? await columns.first().boundingBox() : null
+      const { left, right } = await drawnEdges(page)
+      // Within 6 px: a scrolling row may reach a few pixels into the margin to keep its focus rings.
+      found[name] = [!box ? 'no menu-page column' : Math.abs(box.x - start) <= 1 && Math.abs(box.width - column) <= 1 ? 'same column' : `column ${Math.round(box.x)}+${Math.round(box.width)}`,
+        Math.abs(left - (start + margin)) <= 6 ? 'starts at the margin' : `starts at ${Math.round(left)}`,
+        right <= start + column - margin + 6 ? 'ends inside' : `ends at ${Math.round(right)}`].join(', ')
+      wanted[name] = 'same column, starts at the margin, ends inside'
+      if (width === 1440) await page.screenshot({ path: testInfo.outputPath(`menu-page-${name.toLowerCase()}-${width}.png`) })
+      expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
+      expect(unexpected).toEqual([])
+      expect(errors).toEqual([])
+      await context.close()
+    }
+    expect(found).toEqual(wanted)
+  })
+}

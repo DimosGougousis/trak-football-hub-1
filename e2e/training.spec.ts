@@ -153,7 +153,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`training-sessions-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
     expect(keyboard.count).toBeGreaterThan(5)
     expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])
@@ -190,7 +190,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`training-drills-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
     expect(keyboard.missed).toEqual([])
 
     await page.getByRole('button', { name: 'New drill' }).click()
