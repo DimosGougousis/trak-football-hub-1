@@ -826,6 +826,72 @@ export type Database = {
         }
         Relationships: []
       }
+      game_review_for_family: {
+        Row: {
+          against_expectation: string
+          coach_name: string
+          context: string[]
+          did_job: string
+          event_id: string
+          expectation: string
+          has_note: boolean
+          job: string
+          our_score: number
+          published_at: string
+          session_id: string | null
+          squad_player_id: string
+          their_score: number
+        }
+        Insert: {
+          against_expectation: string
+          coach_name?: string
+          context?: string[]
+          did_job: string
+          event_id: string
+          expectation: string
+          has_note?: boolean
+          job?: string
+          our_score: number
+          published_at?: string
+          session_id?: string | null
+          squad_player_id: string
+          their_score: number
+        }
+        Update: {
+          against_expectation?: string
+          coach_name?: string
+          context?: string[]
+          did_job?: string
+          event_id?: string
+          expectation?: string
+          has_note?: boolean
+          job?: string
+          our_score?: number
+          published_at?: string
+          session_id?: string | null
+          squad_player_id?: string
+          their_score?: number
+        }
+        Relationships: []
+      }
+      game_review_for_player: {
+        Row: {
+          event_id: string
+          note: string
+          squad_player_id: string
+        }
+        Insert: {
+          event_id: string
+          note: string
+          squad_player_id: string
+        }
+        Update: {
+          event_id?: string
+          note?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       game_shares: {
         Row: {
           changed: number
@@ -854,7 +920,7 @@ export type Database = {
           body_condition: string | null
           card_received: string | null
           competition: string
-          computed_rating: number
+          computed_rating: number | null
           created_at: string | null
           goals: number
           id: string
@@ -877,7 +943,7 @@ export type Database = {
           body_condition?: string | null
           card_received?: string | null
           competition: string
-          computed_rating?: number
+          computed_rating?: number | null
           created_at?: string | null
           goals?: number
           id?: string
@@ -900,7 +966,7 @@ export type Database = {
           body_condition?: string | null
           card_received?: string | null
           competition?: string
-          computed_rating?: number
+          computed_rating?: number | null
           created_at?: string | null
           goals?: number
           id?: string
@@ -1406,6 +1472,10 @@ export type Database = {
       share_game_plan: {
         Args: { p_event_id: string; p_talked?: boolean }
         Returns: number
+      }
+      publish_game_evaluation: {
+        Args: { p_event_id: string; p_competition?: string | null; p_home_away?: string | null }
+        Returns: Json
       }
       save_game_evaluation: {
         Args: {
