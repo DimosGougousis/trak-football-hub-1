@@ -51,8 +51,9 @@ CASCADE`. Every text field has a length limit, and every list a maximum length.
 | `game_plans` | `event_id` | `strength` (weaker, similar or stronger), `their_formation` (a shape such as 4-4-2), `key_players` (shirt number 1 to 99 or blank, position, note; at most 11; no names, because they are other clubs' children), `scouting`, `goals` (title, what it looks like; at most 3). The two lists are JSON the database checks (`trak_private.valid_key_players`, `valid_game_goals`). No one deletes a plan: it goes with its match. Then format (11, 9, 7 or 5 a side; default 11) and formation (285). A plan is shared once `game_shares` has a row for it (286). | 284 |
 | `game_plan_players` | `event_id, squad_player_id` | `role` (starter, bench or not selected; bench by default, Imad 28 Oct), `slot` (starters only: 1 is the keeper, then each line from the back, left to right; one player per slot, checked at the end of each statement so two starters can swap), `job`, `note`, `context` (the five tags, never a diagnosis), `expectation` (stretch, usual or lead; usual by default). A player left out keeps only the note. Written only for a consented child on the coach's current roster in the match's squad (`trak_private.game_plan_player_ok`). No one deletes a row. `game_plans` gains `format` (11, 9, 7 or 5; default 11) and a `formation` that must fit it. | 285 |
 | `game_shares` | `id` | One row per share (`event_id`, `shared_at`), with how many children's copies it wrote, changed or took back. Only the match's coach reads it; only Share writes it. A share that changes nothing isn't logged. Feeds the timeline ("Changes shared to 3"). | 286 |
-| `game_evaluations` | `event_id` | Our score, their score, our goals (scorer and optional assist each; no more than our score), how they scored, "Did the plan work?" (one answer per plan goal), `saved_at`, `published_at`. | 288 |
-| `game_evaluation_players` | `event_id, squad_player_id` | Played, came on, minute (optional), did the job (yes, partly or not yet; default yes), against expectation (below, met or above; default met), note. | 288 |
+| `game_evaluations` | `event_id` | Our score, their score, our goals (scorer and optional assist each, players who played; no more than our score; nobody assists their own goal), how they scored, "Did the plan work?" (one answer per plan goal: didnt, partly or worked), `saved_at`, `published_at`. | 288 |
+| `game_evaluation_players` | `event_id, squad_player_id` | One row per player listed: played (a starter not unticked, or a bench player who came on; no minutes, Imad 29 Oct), did the job (yes, partly or not yet; default yes), against expectation (below, met or above; default met). Someone who didn't play keeps the defaults. Only for a consented child on the coach's roster in the match's squad (`trak_private.game_plan_player_ok`). | 288 |
+| `game_evaluation_notes` | `event_id, squad_player_id` | The coach's note to a player who played, in its own table so only that player can be let read it (289). | 288 |
 
 **Copies players and families read (written only by Share and Publish):**
 
@@ -123,8 +124,10 @@ Players and guardians get no insert, update or delete grant on any Games table.
   counting what wasn't shared, for the lock's note. Imad, 28 Oct: the note sits in the lock's alert ("2 players didn't
   get your last changes", or "It wasn't shared, so only you saw it"); the History timeline comes with 289 and reads
   the same facts.
-- **Evaluation window** (288), on both evaluation tables: writes are accepted only after the event's `ends_at` and
-  never once `published_at` is set. Published is final.
+- **Evaluation window** (288). `save_game_evaluation` is the only write path: app roles hold SELECT only, so a save
+  is one transaction and the rules across the three tables hold. It refuses before full time (the event's `ends_at`,
+  or 90 minutes after kick-off, as `loop.ts` works it out), with the switch off, for a cancelled match, for a child
+  who can't be recorded (42501), and once `published_at` is set. Published is final.
 - **`publish_game_evaluation(event_id, match)`** (289). Security definer, one transaction. It refuses unless the
   caller is the event's coach, the switch is on, full time has passed, every "Did the plan work?" answer is in and
   the scorers are no more than the score. It then:
@@ -212,7 +215,8 @@ like its neighbours, not Arc's `card`, which is for browsable items and lifts on
 - `CoachFrame`, `coach-places.ts`, `App.tsx` and `parked.ts` (`Feature` gains `'games'`).
 - `EventSummary` moves out of `CoachSchedule.tsx` into its own file, so Games doesn't load the Schedule page's code.
 - Schedule offers "Write the game plan" after a match is published (283). For Games academies, Evaluate replaces "Log
-  match" and "log it instead" (288).
+  match", and a match dated in the past is saved, published (families aren't emailed about a started event) and
+  opened on its evaluation instead of "log it instead"; the "+" Log match opens New event with Match picked (288).
 - `CoachSessionsChooser` hides Quick match log for Games academies (288).
 - Needs you: `coach-week.ts`, `useOwedEvents`, `NeedsYou`.
 - The player and parent event pages and cards: `PlayerEvent`, `ParentEvent`, `UpcomingEventCard`, `ParentEvents`.
@@ -319,15 +323,15 @@ npm run build && npx playwright test --config playwright.pilot.config.ts
 
 ## Open questions, each for the slice that needs it
 
-1. **Match rating (288, 289).** Today's match log also stores an automatic rating worked out from goals, assists and
-   the score. Players and parents see it as a band, a trend and an average. A Games match would carry one too, which
-   pulls against "after a game there is no number". To ask with the list of match readers before slice 6.
+1. **Match rating (288, 289). Decided (Imad, 28 Oct): no rating for a Games match.** Publish writes the result
+   without one, so it stays out of bands, trends and averages; 289 checks every rating reader copes with none.
 2. **Unplaced players (285). Decided (Imad, 28 Oct): Bench.** Leaving a child out is always a deliberate choice.
 3. **Formations (285). Decided (Imad, 28 Oct):** 11 a side: 4-4-2, 4-3-3, 4-2-3-1, 4-1-4-1, 4-4-1-1, 3-5-2, 3-4-3,
    5-3-2, 5-4-1. 9 a side: 3-3-2, 3-2-3, 2-4-2, 3-4-1. 7 a side: 2-3-1, 3-2-1, 2-1-2-1, 3-1-2. 5 a side: 2-2, 1-2-1,
    3-1. The same list feeds "their formation" (`src/lib/games/formations.ts`).
-4. **Competition (289).** The match log stores league, cup or friendly, and the evaluation doesn't ask. A default,
-   or one more question?
+4. **Competition. Decided (Imad, 28 Oct): New event asks it** for a match (League, Tournament or Friendly), and it
+   lives on the event (`coach_calendar_events.competition`, 288); publish reads it from there. Matches made before
+   288 have none: 289 asks Imad what publish does with them.
 5. **Data export.** `export_my_account` should include a child's Games rows, as it includes their matches. A
    follow-up issue.
 
