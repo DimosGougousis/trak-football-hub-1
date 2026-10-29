@@ -130,7 +130,8 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
               : <Evaluation game={row} opensAt={now < whistle ? format(new Date(whistle), 'HH:mm') : null}
                   plans={lockedPlan.players} planGoals={formToPlan(lockedPlan).goals.map((goal, i) => goal.title || goal.looks_like || `Goal ${i + 1}`)}
                   form={entered ?? evaluationToForm(evaluation.data ?? { evaluation: null, players: [], notes: [] })} onFormChange={setEntered}
-                  step={evaluationStep} onStep={setEvaluationStep} savedAt={evaluation.data?.evaluation?.saved_at ?? null} />}
+                  step={evaluationStep} onStep={setEvaluationStep} savedAt={evaluation.data?.evaluation?.saved_at ?? null}
+                  publishedAt={evaluation.data?.evaluation?.published_at ?? null} planCreatedAt={plan.data?.created_at ?? null} />}
           </TabsContent>
         </Tabs>
       </div>

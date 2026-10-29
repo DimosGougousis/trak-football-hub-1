@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PlayerPlans } from '../lineup'
-import { answerOf, evaluationToForm, formToSave, hasPlayed, lineUpAtKickOff, setPlayed, summary, withScore } from '../evaluation'
+import { answerOf, evaluationToForm, formToSave, hasPlayed, lineUpAtKickOff, planAnswered, previewReview, publishSummary, setPlayed, summary, withScore } from '../evaluation'
 
 // TRAK-288: the evaluation as the coach fills it, read against the plan as it locked at kick-off.
 const plans: PlayerPlans = {
@@ -80,5 +80,35 @@ describe('a saved draft', () => {
         { id: 'charisteas', played: true, did_job: 'yes', against_expectation: 'met', note: '' },
       ],
     })
+  })
+})
+
+describe('publishing (TRAK-289)', () => {
+  const listed = [{ id: 'dellas', starter: true }, { id: 'zagorakis', starter: true }, { id: 'charisteas', starter: false }]
+  const form = {
+    ...withScore(evaluationToForm(empty), 2),
+    played: { charisteas: true },
+    answers: { zagorakis: { didJob: 'partly' as const, against: 'above' as const, note: 'Brave all game.' }, dellas: { didJob: 'yes' as const, against: 'met' as const, note: 'Good.' } },
+  }
+
+  it('sums it up: who played, how many changed from Yes · Met, and how many notes', () => {
+    expect(publishSummary(form, listed)).toEqual({ players: 3, changed: 1, notes: 2 })
+    expect(publishSummary(setPlayed(form, 'zagorakis', false), listed)).toEqual({ players: 2, changed: 0, notes: 1 })
+  })
+
+  it('waits for an answer to "Did the plan work?" for every goal', () => {
+    expect(planAnswered({ ...form, planWorked: [] }, 0)).toBe(true)
+    expect(planAnswered({ ...form, planWorked: ['worked'] }, 2)).toBe(false)
+    expect(planAnswered({ ...form, planWorked: ['worked', null] }, 2)).toBe(false)
+    expect(planAnswered({ ...form, planWorked: ['worked', 'didnt'] }, 2)).toBe(true)
+  })
+
+  it('previews what a player and a parent will read, from the draft and the plan as it locked', () => {
+    expect(previewReview({ ...form, theirScore: 1 }, 'zagorakis', plans, 'Otto Rehhagel', 'player')).toEqual({
+      eventId: '', sessionId: null, ourScore: 2, theirScore: 1, job: 'Stay tight.', didJob: 'partly', expectation: 'stretch',
+      context: ['out_of_position'], against: 'above', hasNote: true, coachName: 'Otto Rehhagel', note: 'Brave all game.',
+    })
+    expect(previewReview(form, 'zagorakis', plans, null, 'parent')).toMatchObject({ hasNote: true, note: null, coachName: null })
+    expect(previewReview(form, 'charisteas', plans, null, 'player')).toMatchObject({ job: '', expectation: 'usual', context: [], didJob: 'yes', against: 'met', hasNote: false })
   })
 })
