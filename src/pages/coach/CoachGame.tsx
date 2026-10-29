@@ -78,7 +78,8 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
   // TRAK-286: who a share would change now. Only asked once the plan is shared; a failed read shows no changes.
   const changes = useGamePlanChanges([row.id], !!sharedAt && !cancelled).data?.get(row.id) ?? []
   const state = STATE[gameState({ ...row, ends_at: row.ends_at ?? null }, now,
-    { drafted: !!plan.data, shared: !!sharedAt, changes: changes.length, evaluated: !!evaluation.data?.evaluation })]
+    { drafted: !!plan.data, shared: !!sharedAt, changes: changes.length, evaluated: !!evaluation.data?.evaluation,
+      published: !!evaluation.data?.evaluation?.published_at })]
   // The plan as typed, and its step, live here, above the tabs: Arc unmounts a panel that isn't shown. Until the coach
   // types, it is the saved plan, so a retried read still fills the form. Needs you's "Share the changes" opens Share.
   const [typed, setTyped] = useState<PlanForm | null>(null)
@@ -129,7 +130,8 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
               : <Evaluation game={row} opensAt={now < whistle ? format(new Date(whistle), 'HH:mm') : null}
                   plans={lockedPlan.players} planGoals={formToPlan(lockedPlan).goals.map((goal, i) => goal.title || goal.looks_like || `Goal ${i + 1}`)}
                   form={entered ?? evaluationToForm(evaluation.data ?? { evaluation: null, players: [], notes: [] })} onFormChange={setEntered}
-                  step={evaluationStep} onStep={setEvaluationStep} savedAt={evaluation.data?.evaluation?.saved_at ?? null} />}
+                  step={evaluationStep} onStep={setEvaluationStep} savedAt={evaluation.data?.evaluation?.saved_at ?? null}
+                  publishedAt={evaluation.data?.evaluation?.published_at ?? null} planCreatedAt={plan.data?.created_at ?? null} />}
           </TabsContent>
         </Tabs>
       </div>

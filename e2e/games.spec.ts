@@ -88,6 +88,25 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       plans.set(`evaluation:${body.p_event_id}`, { ...body, saved_at })
       return json(saved_at)
     }
+    // TRAK-289: publishing marks the draft published and writes Theodoros's review (sq-1), as publish_game_evaluation does.
+    if (path === '/rest/v1/rpc/publish_game_evaluation') {
+      const body = req.postDataJSON() as { p_event_id: string }
+      const draft = plans.get(`evaluation:${body.p_event_id}`)!
+      plans.set(`evaluation:${body.p_event_id}`, { ...draft, published_at: new Date().toISOString() })
+      const played = (draft.p_players as { played: boolean }[]).filter(p => p.played).length
+      return json({ reviews: played, logged: 0, skipped: [] })
+    }
+    if (path === '/rest/v1/game_review_for_family' || path === '/rest/v1/game_review_for_player') {
+      const draft = [...plans.entries()].find(([key, value]) => key.startsWith('evaluation:') && value.published_at)?.[1]
+      const own = (draft?.p_players as { id: string; played: boolean; did_job?: string; against_expectation?: string; note?: string }[] | undefined)
+        ?.find(p => p.id === 'sq-1' && p.played)
+      if (!draft || !own) return json([])
+      const line = (plans.get(`line-up:${draft.p_event_id}:sq-1`) ?? {}) as { job?: string; context?: string[]; expectation?: string }
+      return json(path.endsWith('for_player') ? (own.note ? [{ event_id: draft.p_event_id, squad_player_id: 'sq-1', note: own.note }] : [])
+        : [{ event_id: draft.p_event_id, session_id: 'session-1', squad_player_id: 'sq-1', our_score: draft.p_our_score, their_score: draft.p_their_score,
+          job: line.job ?? '', did_job: own.did_job ?? 'yes', expectation: line.expectation ?? 'usual', context: line.context ?? [],
+          against_expectation: own.against_expectation ?? 'met', has_note: !!own.note, coach_name: 'Fernando Santos', published_at: draft.published_at }])
+    }
     if (path.startsWith('/rest/v1/game_evaluation')) {
       const drafts = [...plans.entries()].filter(([key]) => key.startsWith('evaluation:')).map(([, draft]) => draft)
       const one = url.searchParams.get('event_id')?.replace(/^eq\./, '')
@@ -95,7 +114,7 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       const listed = mine.flatMap(draft => draft.p_players as { id: string; played: boolean; did_job?: string; against_expectation?: string; note?: string }[])
       if (path === '/rest/v1/game_evaluations') return json(mine.map(draft => ({ event_id: draft.p_event_id, our_score: draft.p_our_score,
         their_score: draft.p_their_score, goals: draft.p_goals, how_they_scored: draft.p_how_they_scored, plan_worked: draft.p_plan_worked,
-        saved_at: draft.saved_at, published_at: null })))
+        saved_at: draft.saved_at, published_at: draft.published_at ?? null })))
       if (path === '/rest/v1/game_evaluation_players') return json(listed.map(p => ({ squad_player_id: p.id, played: p.played,
         did_job: p.did_job ?? 'yes', against_expectation: p.against_expectation ?? 'met' })))
       if (path === '/rest/v1/game_evaluation_notes') return json(listed.filter(p => p.note).map(p => ({ squad_player_id: p.id, note: p.note })))
@@ -499,5 +518,62 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('checkbox', { name: 'Angelos Charisteas' })).toBeChecked()
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
+  })
+}
+
+// TRAK-289: publishing closes the loop. The coach publishes a complete draft from the Publish step, sees the closed
+// loop with its History, and the player reads After the game on their event page. By keyboard, with no sideways scroll.
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`publishing at ${width} px: the Publish step, the closed loop, and the player's After the game`, async ({ page, context }, testInfo) => {
+    const plans: Plans = new Map([
+      ['m-past', { event_id: 'm-past', strength: 'similar', their_formation: '4-3-3', key_players: [], scouting: '', format: 11, formation: '4-4-2',
+        goals: [{ title: 'Win it back in their half', looks_like: '' }, { title: 'Switch play early', looks_like: '' }],
+        created_at: '2026-10-20T17:00:00Z', updated_at: '2026-10-20T17:40:00Z' }],
+      ['line-up:m-past:sq-1', { event_id: 'm-past', squad_player_id: 'sq-1', role: 'starter', slot: 4, job: 'Stay tight to their winger.',
+        note: '', context: ['out_of_position'], expectation: 'stretch' }],
+      ['line-up:m-past:sq-4', { event_id: 'm-past', squad_player_id: 'sq-4', role: 'starter', slot: 2, job: 'Win the first header.',
+        note: '', context: [], expectation: 'usual' }],
+      ['evaluation:m-past', { p_event_id: 'm-past', p_our_score: 2, p_their_score: 1, p_goals: [{ scorer: 'sq-1', assist: null }, { scorer: null, assist: null }],
+        p_how_they_scored: 'A corner.', p_plan_worked: ['worked', 'partly'], saved_at: '2026-10-24T17:40:00Z',
+        p_players: [{ id: 'sq-1', played: true, did_job: 'partly', against_expectation: 'above', note: 'Brave all game.' }, { id: 'sq-4', played: true }] }],
+    ])
+    const coach = await open(page, context, '/coach/games/m-past?tab=evaluation', width, height, plans)
+    await page.getByRole('button', { name: 'Next: Team' }).click()
+    await page.getByRole('button', { name: 'Next: Players' }).click()
+    await page.getByRole('button', { name: 'Next: Publish' }).click()
+    await expect(page.getByText('2 players · 1 changed from “Met” · 1 note')).toBeVisible()
+    // This match was made before New event asked the competition (Imad, 29 Oct): the Publish step asks it.
+    await expect(page.getByText('Pick the competition first.')).toBeVisible()
+    await page.getByRole('group', { name: 'Competition' }).getByText('League').click()
+    await expect(page.getByRole('button', { name: 'Publish to 2 players and families' })).toBeEnabled()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`publish-step-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])')
+    expect(keyboard.missed).toEqual([])
+
+    await page.getByRole('button', { name: 'Publish to 2 players and families' }).click()
+    await expect(page.getByText('Published to 2 players and their families. The loop is closed.')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'History' }).getByText('Evaluation published. The loop is closed.')).toBeVisible()
+    await expect(page.locator('header.arc').getByText('Published')).toBeVisible()
+    await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`published-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(coach.unexpected).toEqual([])
+    expect(coach.errors).toEqual([])
+
+    // Theodoros reads After the game on his event page.
+    const player = await page.context().browser()!.newContext({ timezoneId: 'Asia/Dubai' })
+    const phone = await player.newPage()
+    const kid = await open(phone, player, '/player/event/m-past', width, height, plans, PLAYER)
+    const after = phone.getByRole('region', { name: 'After the game' })
+    await expect(after.getByText('You did part of your job')).toBeVisible()
+    await expect(after.getByText('From Coach Fernando Santos · just for you')).toBeVisible()
+    await phone.waitForTimeout(500)
+    await phone.screenshot({ path: testInfo.outputPath(`player-after-the-game-${width}.png`), fullPage: true })
+    expect(await sideways(phone)).toBeLessThanOrEqual(0)
+    expect(kid.unexpected).toEqual([])
+    expect(kid.errors).toEqual([])
+    await player.close()
   })
 }

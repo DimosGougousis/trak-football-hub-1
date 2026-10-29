@@ -65,6 +65,14 @@ describe('coach week', () => {
         .toMatchObject({ state: 'needs-you', note: 'Evaluation draft', step: 'publish-evaluation' })
     })
 
+    it('once published (TRAK-289) the match is done: its session says Published and opens the review, not the old log', () => {
+      const items = [...coachWeek({ dates, events: [event('m', '2026-10-20', '18:00', { event_type: 'match' })],
+        sessions: [session('s', '2026-10-20', { event_id: 'm', session_type: 'match' })], inView: all, now, evaluated: new Set(),
+        published: new Set(['m']) }).values()].flat()
+      expect(items).toHaveLength(1)
+      expect(items[0]).toMatchObject({ state: 'logged', note: 'Published', step: 'review' })
+    })
+
     it('a match logged the old way stays logged', () => {
       const items = [...coachWeek({ dates, events: [event('m', '2026-10-20', '18:00', { event_type: 'match' })],
         sessions: [session('s', '2026-10-20', { event_id: 'm', session_type: 'match' })], inView: all, now, evaluated: new Set() }).values()].flat()

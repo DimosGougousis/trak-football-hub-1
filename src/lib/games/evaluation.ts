@@ -1,5 +1,6 @@
 import type { Tables } from '@/integrations/supabase/types'
 import { playerPlan, type PlayerPlans } from './lineup'
+import type { Review } from './reviews'
 
 /* TRAK-288 (Games 6/8): the evaluation after full time, as the coach fills it and as save_game_evaluation keeps it
    (20261029100000_game_evaluations.sql). A draft only the coach reads, against the plan as it locked at kick-off.
@@ -92,5 +93,31 @@ export function formToSave(eventId: string, form: EvaluationForm, listed: { id: 
       const answer = answerOf(form, id)
       return { id, played: true, did_job: answer.didJob, against_expectation: answer.against, note: answer.note.trim() }
     }),
+  }
+}
+
+/** TRAK-289: the Publish step's line: who played, how many changed from Yes · Met, and how many notes. */
+export function publishSummary(form: EvaluationForm, listed: { id: string; starter: boolean }[]) {
+  const played = listed.filter(p => hasPlayed(form, p.id, p.starter)).map(p => answerOf(form, p.id))
+  return {
+    players: played.length,
+    changed: played.filter(a => a.didJob !== 'yes' || a.against !== 'met').length,
+    notes: played.filter(a => a.note.trim()).length,
+  }
+}
+
+/** Publishing waits for an answer to "Did the plan work?" for each of the plan's goals. */
+export const planAnswered = (form: EvaluationForm, goals: number) =>
+  form.planWorked.length >= goals && form.planWorked.slice(0, goals).every(answer => answer != null)
+
+/** What a player or their parent will read once it's published, from the draft and the plan as it locked. */
+export function previewReview(form: EvaluationForm, id: string, plans: PlayerPlans, coachName: string | null, as: 'player' | 'parent'): Review {
+  const plan = playerPlan(plans, id)
+  const answer = answerOf(form, id)
+  const note = answer.note.trim()
+  return {
+    eventId: '', sessionId: null, ourScore: form.ourScore, theirScore: form.theirScore, job: plan.job,
+    didJob: answer.didJob, expectation: plan.expectation, context: plan.context, against: answer.against,
+    hasNote: !!note, coachName, note: as === 'player' && note ? note : null,
   }
 }

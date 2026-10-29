@@ -13,7 +13,7 @@ import { fullTime } from '@/lib/games/loop'
    is evaluated from full time on its game page instead of logged. */
 
 export type WeekState = 'draft' | 'clash' | 'published' | 'needs-you' | 'logged' | 'cancelled'
-export type NextStep = 'publish' | 'share' | 'register' | 'log' | 'view' | 'evaluate' | 'publish-evaluation'
+export type NextStep = 'publish' | 'share' | 'register' | 'log' | 'view' | 'evaluate' | 'publish-evaluation' | 'review'
 
 /** A completed session: a logged training or match, linked to its event or not. */
 export type WeekSession = {
@@ -50,7 +50,7 @@ const kindOf = (type: string | null | undefined): WeekItem['kind'] =>
   type === 'match' || type === 'training' ? type : 'other'
 
 /** The week's items by date, in time order. `inView` is the squad filter; clashes count every squad, as the database does. */
-export function coachWeek({ dates, events, sessions, inView, now = new Date(), evaluated = null }: {
+export function coachWeek({ dates, events, sessions, inView, now = new Date(), evaluated = null, published }: {
   dates: string[]
   events: EventRow[]
   sessions: WeekSession[]
@@ -58,6 +58,8 @@ export function coachWeek({ dates, events, sessions, inView, now = new Date(), e
   now?: Date
   /** TRAK-288: where Games is on, the matches with an evaluation draft; null where it's off. */
   evaluated?: Set<string> | null
+  /** TRAK-289: the matches whose evaluation is published: their session opens the review, never the old log. */
+  published?: Set<string>
 }): Map<string, WeekItem[]> {
   const clashes = draftClashes(events)
   const done = new Set(sessions.map(s => s.event_id).filter(Boolean))
@@ -98,9 +100,11 @@ export function coachWeek({ dates, events, sessions, inView, now = new Date(), e
       id: `session:${session.id}`, published: true, title: session.title || 'Session', event_date: session.session_date, squad: session.squad,
       ...(session.venue && { venue: session.venue }), event_type: kind,
     }
+    const reviewed = !!session.event_id && !!published?.has(session.event_id)
     items.push({
       id: source.id, date: session.session_date, kind, title: source.title, time: event ? phoneEventTime(event).time : null,
-      state: 'logged', note: 'Logged', step: 'view', source, sessionId: session.id,
+      state: 'logged', note: reviewed ? 'Published' : 'Logged', step: reviewed ? 'review' : 'view', source, sessionId: session.id,
+      ...(reviewed && linked && { row: linked }),
     })
   }
 
