@@ -119,10 +119,11 @@ export function Evaluation({ game, opensAt, plans, planGoals, form, onFormChange
           {published?.skipped ? `${published.skipped} ${published.skipped === 1 ? 'player is' : 'players are'} no longer on your roster or waiting for a parent, so they got nothing.` : 'Published is final.'}
         </Alert>
         <div className="grid gap-4 tablet:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] tablet:items-start">
-          <section aria-labelledby={`history-${game.id}`} className="grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5">
-            <h2 id={`history-${game.id}`} className="text-lg font-medium text-ink">History</h2>
+          {/* A div, not a section: the timeline is the History region itself. */}
+          <div className="grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5">
+            <h2 className="text-lg font-medium text-ink">History</h2>
             <GameHistory game={game} planCreatedAt={planCreatedAt} savedAt={savedAt} publishedAt={publishedAt} />
-          </section>
+          </div>
           <ReviewPreview eventId={game.id} form={form} listed={listed} plans={plans} coachName={coachName} />
         </div>
       </div>
