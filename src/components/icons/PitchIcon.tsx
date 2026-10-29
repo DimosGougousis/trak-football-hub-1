@@ -1,8 +1,9 @@
 import { forwardRef } from 'react'
 import type { LucideIcon, LucideProps } from 'lucide-react'
 
-/** TRAK-265 (Imad, 22 Oct): his pitch icon for the coach's Library. Drawn on a 128 grid, so a lucide stroke width
- *  (on a 24 grid) is scaled to match; the markings are fainter than the outline, as in his file. */
+/** TRAK-265 (Imad, 22 Oct): his pitch icon, drawn for the coach's Library; Games' since TRAK-306 (Kostas, 28 Oct),
+ *  when Training and Library took a cone. Drawn on a 128 grid, so a lucide stroke width (on a 24 grid) is scaled to
+ *  match; the markings are fainter than the outline, as in his file. */
 export const PitchIcon = forwardRef<SVGSVGElement, LucideProps>(function PitchIcon(
   { size = 24, strokeWidth = 2, color = 'currentColor', className, ...rest }, ref,
 ) {
