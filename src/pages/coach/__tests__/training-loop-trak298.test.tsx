@@ -1,9 +1,9 @@
 /**
- * TRAK-298 (Training 5/5, spec TRAK-293): the loop on a training's page. Before it starts, Who's here waits and Run it
- * is there; on the day, Who's here opens the existing register; with the register taken, Run it is the step. Run it is
- * the plan at the pitch side. A training closes on its own once it has ended with its register taken (Kostas, 28 Oct):
- * every step done, Closed, View log; Last week says so. Nothing new is stored. Test people are named after
- * footballers.
+ * TRAK-298 (Training 5/5, spec TRAK-293): the loop on a training's page. Before it starts, Who's here waits and View
+ * is there; on the day, Who's here opens the existing register; with the register taken, Close is next. View is the
+ * plan at the pitch side (TRAK-309: it was Run it, a step of the loop, at /run). A training closes on its own once it
+ * has ended with its register taken (Kostas, 28 Oct): every step done, Closed, View log; Last week says so. Nothing new
+ * is stored. Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
@@ -90,17 +90,18 @@ afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 const loop = () => screen.getByRole('list', { name: 'Training loop' })
 
 describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () => {
-  it('before the training: Who’s here waits for the start, and Run it is there', async () => {
+  it('before the training: Who’s here waits for the start, and View is there', async () => {
     database([training('soon', onTheMinute(Date.now() + DAY))], { soon: [practice(1, 'Rondos 4v1')] })
     renderApp('/coach/training/soon')
     expect(await screen.findByText('Ready')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('Who’s here opens when the training starts.')).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Who’s here' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Run it' })).toBeInTheDocument()
-    expect(loop()).toHaveTextContent(/2 · Who’s here\s*\(next\)/)
+    expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument()
+    expect(within(loop()).getAllByRole('listitem').map(step => step.textContent))
+      .toEqual(['1 · Plan(done)', '→2 · Who’s here(next)', '→3 · Close'])
   })
 
-  it('on the day: Who’s here opens the existing register; once taken, Run it is the step', async () => {
+  it('on the day: Who’s here opens the existing register; once taken, Close is next', async () => {
     const user = userEvent.setup()
     // Started 20 minutes ago, 90 minutes long.
     const taken = database([training('today', onTheMinute(Date.now() - 20 * MINUTE))], { today: [practice(1, 'Rondos 4v1')] })
@@ -116,7 +117,7 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Who’s here' })).toBeNull())
     expect(loop()).toHaveTextContent(/2 · Who’s here\s*\(done\)/)
-    expect(loop()).toHaveTextContent(/3 · Run it\s*\(now\)/)
+    expect(loop()).toHaveTextContent(/3 · Close\s*\(next\)/)
     expect(screen.getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
     expect(screen.queryByText('Closed')).toBeNull()
   })
@@ -126,9 +127,9 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     database([training('done', onTheMinute(Date.now() - DAY))], { done: [practice(1, 'Rondos 4v1')] }, { done: 'session-done' })
     renderApp('/coach/training/done')
     expect(await screen.findByText('Closed')).toBeInTheDocument()
-    expect(within(loop()).getAllByText('(done)')).toHaveLength(4)
+    expect(within(loop()).getAllByText('(done)')).toHaveLength(3)
     expect(screen.getByText('Closed. Who came is in the log.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Run it' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'View' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'View log' }))
     const sheet = await screen.findByRole('dialog', { name: 'The log' })
     expect(await within(sheet).findByRole('link', { name: 'Edit log' })).toHaveAttribute('href', '/coach/sessions/session-done')
@@ -150,15 +151,16 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
   })
 })
 
-describe('TRAK-298: Run it', { timeout: 30_000 }, () => {
+describe('TRAK-298: View', { timeout: 30_000 }, () => {
   it('reads the plan at the pitch side: when each practice starts, how long, what to tell them', async () => {
     const user = userEvent.setup()
     database([training('soon', onTheMinute(Date.now() + DAY))], {
       soon: [practice(1, 'Rondos 4v1', { area: '10 × 10 m' }), practice(2, 'Pressing on the trigger', { minutes: 25, tell: 'Press when their 6 turns.' })],
     })
     renderApp('/coach/training/soon')
-    await user.click(await screen.findByRole('button', { name: 'Run it' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon/run'))
+    await user.click(await screen.findByRole('button', { name: 'View' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon/view'))
+    expect(screen.getByText('View')).toBeInTheDocument()
     const list = await screen.findByRole('list', { name: 'Practices to run' })
     const rows = within(list).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
@@ -168,6 +170,13 @@ describe('TRAK-298: Run it', { timeout: 30_000 }, () => {
     expect(rows[1]).toHaveTextContent('25min')
     expect(within(rows[1]).getByText('“Press when their 6 turns.”')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to the plan' })).toHaveAttribute('href', '/coach/training/soon')
+  })
+
+  it('the old Run it address opens View', async () => {
+    database([training('soon', onTheMinute(Date.now() + DAY))], { soon: [practice(1, 'Rondos 4v1')] })
+    renderApp('/coach/training/soon/run')
+    expect(await screen.findByRole('list', { name: 'Practices to run' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/coach/training/soon/view')
   })
 })
 

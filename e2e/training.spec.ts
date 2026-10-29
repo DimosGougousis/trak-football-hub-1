@@ -4,7 +4,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // switch on, at a phone's and a laptop's width: no sideways scroll, and the keyboard reaches every control.
 // TRAK-295 (Training 2/5): planning a training: "How do you want to plan it?", Write my own, and the plan, at the
 // same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
-// TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): Run it, and a closed training's log.
+// TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): View (TRAK-309: was Run it), and a closed training's log.
 // TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices.
 // TRAK-306: the side menu (a laptop's sidebar, a phone's sheet) cuts no letter: g, q and p keep their tails.
 // TRAK-310: each training coming up has View plan and Edit plan, or Create plan, on its right.
@@ -320,10 +320,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 
-  test(`Run it and a closed training at ${width} px`, async ({ page, context }, testInfo) => {
+  test(`View and a closed training at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
-    await page.getByRole('button', { name: 'Run it' }).click()
-    await expect(page).toHaveURL(/\/coach\/training\/t-tue\/run$/)
+    await expect(page.getByRole('list', { name: 'Training loop' }).getByRole('listitem')).toHaveCount(3)
+    await page.getByRole('button', { name: 'View', exact: true }).click()
+    await expect(page).toHaveURL(/\/coach\/training\/t-tue\/view$/)
     await expect(page.getByRole('list', { name: 'Practices to run' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-run-${width}.png`), fullPage: true })
@@ -335,7 +336,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('region', { name: 'Last week' }).getByText('Closed')).toBeVisible()
     await page.getByRole('region', { name: 'Last week' }).getByRole('link').first().click()
     await expect(page).toHaveURL(/\/coach\/training\/t-last$/)
-    await expect(page.getByRole('list', { name: 'Training loop' }).getByText('(done)')).toHaveCount(4)
+    await expect(page.getByRole('list', { name: 'Training loop' }).getByText('(done)')).toHaveCount(3)
     await page.getByRole('button', { name: 'View log' }).click()
     await expect(page.getByRole('dialog', { name: 'The log' }).getByRole('link', { name: 'Edit log' })).toBeVisible()
     await page.waitForTimeout(600)

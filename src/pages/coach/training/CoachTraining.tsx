@@ -12,7 +12,7 @@ import { gameWhen } from '@/components/coach/games/useGames'
 import { useDrills, usePlannedTrainings, useRegisters, useTrainings, type Training } from '@/components/coach/training/useTraining'
 import { DrillSheet } from '@/components/coach/training/DrillSheet'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
-import { PlanEditorRoute, PlanRoute, RunRoute } from './CoachTrainingPlan'
+import { PitchViewRoute, PlanEditorRoute, PlanRoute } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { Badge } from '@/components/arc/badge/badge'
@@ -49,7 +49,9 @@ export default function CoachTraining() {
       <Route path="drills" element={<DrillsView />} />
       <Route path=":eventId" element={<PlanRoute />} />
       <Route path=":eventId/plan" element={<PlanEditorRoute />} />
-      <Route path=":eventId/run" element={<RunRoute />} />
+      <Route path=":eventId/view" element={<PitchViewRoute />} />
+      {/* TRAK-309: View was Run it, at /run. An open tab or an older link (Home's Today card) still lands on it. */}
+      <Route path=":eventId/run" element={<Navigate to="../view" relative="path" replace />} />
       <Route path="*" element={<Navigate to={TRAINING_PATH} replace />} />
     </Routes>
   )
