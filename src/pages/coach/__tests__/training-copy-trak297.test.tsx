@@ -105,8 +105,8 @@ describe('TRAK-297: Copy a past session', { timeout: 30_000 }, () => {
       ],
     })
     renderApp('/coach/training')
-    await waitFor(() => expect(within(card('Before Everton')).getByRole('button', { name: 'Plan this session' })).toBeInTheDocument())
-    await user.click(within(card('Before Everton')).getByRole('button', { name: 'Plan this session' }))
+    await waitFor(() => expect(within(card('Before Everton')).getByRole('button', { name: 'Create plan' })).toBeInTheDocument())
+    await user.click(within(card('Before Everton')).getByRole('button', { name: 'Create plan' }))
     const how = await screen.findByRole('dialog', { name: 'How do you want to plan it?' })
     await user.click(await within(how).findByRole('button', { name: /Copy a past session.*Start from Pressing zones/ }))
 
@@ -161,7 +161,7 @@ describe('TRAK-297: Copy a past session', { timeout: 30_000 }, () => {
     await waitFor(() => expect(window.location.pathname).toBe('/coach/training/next/plan'))
 
     await user.click(await screen.findByRole('link', { name: 'Training' }))
-    await user.click((await screen.findAllByRole('button', { name: 'Plan this session' }))[0])
+    await user.click((await screen.findAllByRole('button', { name: 'Create plan' }))[0])
     how = await screen.findByRole('dialog', { name: 'How do you want to plan it?' })
     const copyWay = await within(how).findByRole('button', { name: /Copy a past session/ })
     expect(within(copyWay).getByText('You used this last time')).toBeInTheDocument()

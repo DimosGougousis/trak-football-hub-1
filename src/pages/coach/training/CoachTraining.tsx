@@ -26,7 +26,8 @@ import SegmentedControl from '@/components/arc/segmented-control/segmented-contr
    Homework and Value of the month are parked (TRAK-293). TRAK-295 (Training 2/5): a training coming up says whether
    it's planned; Plan this session and New session ask how (PlanWaySheet), and a plan has its own pages. TRAK-296: a
    drill can be added to the next training not planned yet. TRAK-298: Last week says which trainings are closed (ended
-   with their register taken) and opens each one's page. */
+   with their register taken) and opens each one's page. TRAK-310 (Kostas, 29 Oct): a training coming up has View plan
+   and Edit plan, or Create plan, and New session is gone, since every training coming up has its own Create plan. */
 
 export const TRAINING_PATH = '/coach/training'
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Training picked. */
@@ -54,7 +55,7 @@ export default function CoachTraining() {
   )
 }
 
-function Page({ view, action, children }: { view: 'sessions' | 'drills'; action: ReactNode; children: ReactNode }) {
+function Page({ view, action, children }: { view: 'sessions' | 'drills'; action?: ReactNode; children: ReactNode }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   return (
@@ -68,7 +69,7 @@ function Page({ view, action, children }: { view: 'sessions' | 'drills'; action:
               options={[{ value: 'sessions', label: 'Sessions' }, { value: 'drills', label: 'Drills' }]}
               onValueChange={next => navigate(next === 'drills' ? `${TRAINING_PATH}/drills` : TRAINING_PATH)} />
           </div>
-          <div className="arc ml-auto">{action}</div>
+          {action && <div className="arc ml-auto">{action}</div>}
         </header>
         {children}
       </div>
@@ -85,8 +86,8 @@ function SessionsView() {
   const trainings = useTrainings()
   const planned = usePlannedTrainings()
   const registers = useRegisters()
-  // "How do you want to plan it?": for one training, or, from New session, asking which first.
-  const [planning, setPlanning] = useState<{ training: Training | null } | null>(null)
+  // "How do you want to plan it?", for the training whose Create plan was pressed; kept while the sheet closes.
+  const [planning, setPlanning] = useState<{ training: Training; open: boolean } | null>(null)
   // TRAK-305: All or one squad, as picked at the top of the frame.
   const { everySquad } = coachSquad
   const inView = (trainings.data ?? []).filter(t => everySquad || coachSquad.eventInSquad(t.squad))
@@ -95,8 +96,7 @@ function SessionsView() {
   const isPlanned = (training: Training) => planned.data?.has(training.id)
 
   return (
-    <Page view="sessions"
-      action={<Button onClick={() => setPlanning({ training: null })}><Plus aria-hidden size={18} />New session</Button>}>
+    <Page view="sessions">
       {trainings.error ? <LoadError what="your trainings" onRetry={() => void trainings.refetch()} retrying={trainings.isFetching} />
         : trainings.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your trainings…</p>
         : <div className="grid gap-8">
@@ -110,7 +110,7 @@ function SessionsView() {
               </div>
             ) : <ul className="grid gap-3">
               {comingUp.map(training => <li key={training.id}><ComingUp training={training} showSquad={everySquad}
-                planned={planned.data ? !!isPlanned(training) : null} onPlan={() => setPlanning({ training })} /></li>)}
+                planned={planned.data ? !!isPlanned(training) : null} onPlan={() => setPlanning({ training, open: true })} /></li>)}
             </ul>}
           </section>
 
@@ -135,31 +135,35 @@ function SessionsView() {
             </ul>
           </section>}
         </div>}
-      <PlanWaySheet open={!!planning} onOpenChange={open => { if (!open) setPlanning(null) }} training={planning?.training ?? null}
-        choices={comingUp.filter(training => !isPlanned(training))} onAddTraining={addTraining} />
+      {planning && <PlanWaySheet open={planning.open} onOpenChange={open => setPlanning({ ...planning, open })} training={planning.training} />}
     </Page>
   )
 }
 
-/** One training coming up: when and where, its title and length, and whether it's planned (null while that's read). */
+/** One training coming up: when and where, its title and length, and on its right View plan and Edit plan, or Create
+    plan when it isn't planned yet (nothing while that's read, `planned` null). TRAK-310: the buttons say whether it's
+    planned, so no Planned badge, and Schedule has its own tab, so no Open in Schedule. */
 function ComingUp({ training, showSquad, planned, onPlan }: { training: Training; showSquad: boolean; planned: boolean | null; onPlan: () => void }) {
+  const navigate = useNavigate()
   const { day, time, academy } = gameWhen(training)
   const today = phoneEventTime(training).date === localTodayISO()
   const minutes = trainingMinutes(training)
   return (
-    <article aria-label={`${day}, ${training.title}`} className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <article aria-label={`${day}, ${training.title}`}
+      className="arc flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5">
+      {/* At least 16rem wide, so on a phone the buttons go under it rather than squeezing it. */}
+      <div className="grid min-w-0 flex-[1_1_16rem] gap-2">
         <p className="text-sm font-medium text-brand">{[today ? 'Today' : null, day, time, training.venue].filter(Boolean).join(' · ')}</p>
-        {planned !== null && <Badge tone={planned ? 'success' : 'warning'} size="sm">{planned ? 'Planned' : 'Not planned'}</Badge>}
+        <p className="text-lg font-medium text-ink break-words">{training.title}</p>
+        <p className="text-sm text-ink-3">{[minutes ? `${minutes} min` : null, showSquad ? training.squad : null,
+          training.published ? null : 'Not published yet', academy].filter(Boolean).join(' · ')}</p>
       </div>
-      <p className="text-lg font-medium text-ink break-words">{training.title}</p>
-      <p className="text-sm text-ink-3">{[minutes ? `${minutes} min` : null, showSquad ? training.squad : null,
-        training.published ? null : 'Not published yet', academy].filter(Boolean).join(' · ')}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-2">
-        {planned === false && <Button size="sm" onClick={onPlan}>Plan this session</Button>}
-        {planned && <Link to={`${TRAINING_PATH}/${training.id}`} className={linkClass}>Open the plan</Link>}
-        <Link to={`/coach/schedule?event=${training.id}`} className={linkClass}>Open in Schedule</Link>
-      </div>
+      {planned !== null && <div className="flex flex-wrap gap-2">
+        {planned ? <>
+          <Button size="sm" variant="secondary" onClick={() => navigate(`${TRAINING_PATH}/${training.id}`)}>View plan</Button>
+          <Button size="sm" variant="secondary" onClick={() => navigate(planPath(training.id))}>Edit plan</Button>
+        </> : <Button size="sm" onClick={onPlan}>Create plan</Button>}
+      </div>}
     </article>
   )
 }

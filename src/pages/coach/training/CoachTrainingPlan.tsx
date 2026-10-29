@@ -349,8 +349,7 @@ function PlanView({ training, plan }: { training: Training; plan: Plan | null })
       <Link to={`/coach/schedule?event=${training.id}`} className={`mt-2 justify-self-start ${linkClass}`}>Open in Schedule</Link>
     </section>
 
-    <PlanWaySheet open={asking} onOpenChange={setAsking} training={training} choices={[]}
-      onAddTraining={() => navigate('/coach/schedule')} />
+    <PlanWaySheet open={asking} onOpenChange={setAsking} training={training} />
     {user && <BottomSheet className="arc" open={!!sheet} onOpenChange={open => { if (!open) setSheet(null) }} detents={[0.62, 0.92]}
       title={sheet === 'log' ? 'The log' : 'Who’s here'} description={[gameWhen(training).day, training.title].join(' · ')}>
       <div className="pb-4">

@@ -128,9 +128,11 @@ describe('TRAK-294: Training home', { timeout: 20_000 }, () => {
     expect(comingUp()[0]).toMatch(/Before AEK U16 on Saturday$/)
     expect(comingUp()[1]).toMatch(/Training later$/)
     const first = within(screen.getByRole('region', { name: 'Coming up' })).getAllByRole('article')[0]
-    expect(await within(first).findByText('Not planned')).toBeInTheDocument()
+    expect(await within(first).findByRole('button', { name: 'Create plan' })).toBeInTheDocument()
     expect(within(first).getByText(/90 min · U16/)).toBeInTheDocument()
-    expect(within(first).getByRole('link', { name: 'Open in Schedule' })).toHaveAttribute('href', '/coach/schedule?event=soon')
+    // TRAK-310: the buttons say whether it's planned; Schedule is its own tab.
+    expect(within(first).queryByText(/Planned|Not planned/)).toBeNull()
+    expect(within(first).queryByRole('link', { name: 'Open in Schedule' })).toBeNull()
     const lastWeek = within(screen.getByRole('region', { name: 'Last week' })).getAllByRole('link').map(link => link.getAttribute('href'))
     // TRAK-298: a training of last week opens its own page.
     expect(lastWeek).toEqual(['/coach/training/last-thu', '/coach/training/last-tue'])
