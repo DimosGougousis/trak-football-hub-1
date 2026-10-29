@@ -1,7 +1,7 @@
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Users } from 'lucide-react'
 import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
-import { NavBar } from '@/components/trak'
+import { NavBar, WIDE_COLUMN } from '@/components/trak'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { SquadLoadError } from '@/components/coach/squad/SquadLoadError'
 import { PlayersTab } from '@/components/coach/squad/PlayersTab'
@@ -32,7 +32,7 @@ export default function CoachSquadPage() {
 
   return (
     <div className="min-h-screen bg-ground pb-24">
-      <div className="mx-auto w-full max-w-[1280px] px-5 tablet:px-8">
+      <div className={WIDE_COLUMN}>
         <header className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-6 pb-4">
           <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Squad</h1>
           {/* On a phone the views take the full width, under the title; on a coach's tablet or laptop they sit in the header. */}

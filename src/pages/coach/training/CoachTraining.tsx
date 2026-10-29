@@ -14,7 +14,7 @@ import { DrillSheet } from '@/components/coach/training/DrillSheet'
 import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
 import { PlanEditorRoute, PlanRoute, RunRoute } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
-import { LoadError } from '@/components/trak'
+import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
@@ -59,7 +59,7 @@ function Page({ view, action, children }: { view: 'sessions' | 'drills'; action:
   const navigate = useNavigate()
   return (
     <div className="min-h-screen bg-ground pb-28">
-      <div className="mx-auto w-full max-w-[1040px] px-5 tablet:px-8">
+      <div className={WIDE_COLUMN}>
         <header className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-6 pb-4">
           <CoachMenuButton name={profile?.full_name || 'Coach'} />
           <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Training</h1>
@@ -99,7 +99,7 @@ function SessionsView() {
       action={<Button onClick={() => setPlanning({ training: null })}><Plus aria-hidden size={18} />New session</Button>}>
       {trainings.error ? <LoadError what="your trainings" onRetry={() => void trainings.refetch()} retrying={trainings.isFetching} />
         : trainings.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your trainings…</p>
-        : <div className="grid max-w-[720px] gap-8">
+        : <div className="grid gap-8">
           <section aria-labelledby="coming-up" className="grid gap-3">
             <h2 id="coming-up" className="text-lg font-medium text-ink">Coming up</h2>
             {comingUp.length === 0 ? (

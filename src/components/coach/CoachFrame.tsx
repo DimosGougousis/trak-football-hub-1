@@ -103,7 +103,8 @@ function Framed({ userId, name }: { userId: string; name: string }) {
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} size="sm" /> }}
       active={screen ?? ''} onSelect={select}
       actions={<>{!barred && switcher(true)}<CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
-      {!wide && !barred && coachSquad.view && <div className="flex justify-end bg-ground px-5 pt-3">{switcher(false)}</div>}
+      {/* TRAK-307: the menu pages' margins, so the pills end where the page does. */}
+      {!wide && !barred && coachSquad.view && <div className="flex justify-end bg-ground px-5 pt-3 tablet:px-8">{switcher(false)}</div>}
       <Outlet />
     </SidebarRail>
     {!wide && !barred && <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>

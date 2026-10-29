@@ -123,7 +123,7 @@ export default function CoachHomePage() {
 
 
   return (
-    <MobileShell width={wide ? 'wide' : 'page'}>
+    <MobileShell width="wide">
       <div className="pt-3 pb-24">
         {/* TRAK-259: on a phone the avatar opens the menu and the calendar sits beside the bell; a laptop has both
             in the frame (the sidebar, the top bar). */}
