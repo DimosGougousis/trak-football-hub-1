@@ -90,6 +90,11 @@ const TYPE_LABEL: Record<ShownType, string> = {
 
 const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
+// Dimos, 29 Oct: a sheet takes the screen's height, over the tab bar, so Edit, Take register and Cancel
+// show everything without scrolling; a phone's home bar keeps its gap under the buttons.
+const SHEET: React.CSSProperties = { background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: 'calc(100dvh - 12px)' }
+const SHEET_BOTTOM = 'max(20px, env(safe-area-inset-bottom))'
+
 function toDateStr(d: Date) {
   // Use LOCAL date parts — toISOString() converts to UTC, which shifts the
   // date back a day for users in timezones ahead of UTC (e.g. Europe), making
@@ -108,7 +113,7 @@ function failed(error: unknown, data: unknown[] | null) {
 const SAVE_FAILED = "Couldn't save the event. Check your connection and try again; your details are still here."
 
 
-const inputClass = 'w-full bg-ground border border-line rounded-[12px] px-3 py-2.5 text-[14px] text-ink placeholder-ink-3 outline-none'
+const inputClass = 'w-full bg-ground border border-line rounded-[12px] px-3 py-2.5 short:py-2 text-[14px] text-ink placeholder-ink-3 outline-none'
 const font = { fontFamily: 'var(--t-font)' }
 const mono = { fontFamily: 'var(--t-font-mono)' }
 
@@ -142,11 +147,11 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
   return (
     <div className="space-y-2">
       <span id="training-theme" className="block text-[9px] tracking-[0.1em] uppercase text-ink-3" style={mono}>Theme</span>
-      <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 gap-2">
+      <div role="radiogroup" aria-labelledby="training-theme" className="grid grid-cols-2 tablet:grid-cols-3 gap-1.5">
         {TRAINING_THEMES.map(t => {
           const on = t.key === theme
           return (
-            <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
+            <label key={t.key} className="flex items-start gap-2 rounded-[12px] px-2.5 py-1.5 cursor-pointer transition-colors"
               style={{
                 background: on ? withAlpha(TYPE_COLOR.training, 0.1) : 'rgb(var(--t-ground))',
                 border: `1px solid ${on ? withAlpha(TYPE_COLOR.training, 0.33) : 'rgb(var(--t-line))'}`,
@@ -156,7 +161,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
                 className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: TYPE_COLOR.training }} />
               <span className="min-w-0">
                 <span className={`block text-[13px] leading-tight text-ink ${on ? 'font-medium' : ''}`}>{t.label}</span>
-                <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
+                <span className="block text-[11px] leading-tight text-ink-3 whitespace-nowrap short:hidden">{t.sessions} sessions · {t.topics} {t.topics === 1 ? 'topic' : 'topics'}</span>
               </span>
             </label>
           )
@@ -969,8 +974,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.row ? 'Edit event' : 'New event'}
-            className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: '85vh', marginBottom: 64 }}>
+            className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 short:space-y-2 short:pt-4 overflow-y-auto"
+            style={SHEET}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>
                 {sheet.row ? 'Edit event' : 'New event'}
@@ -1038,21 +1043,22 @@ export default function CoachSchedule() {
                   className={inputClass} style={font} />
               </Field>
 
-              {/* TRAK-255: a venue is a name everyone reads; its map link has a box of its own. */}
-              <Field label="Venue">
-                <input value={splitVenue(sheet.form.venue).name} onChange={e => setVenueName(e.target.value)}
-                  list="saved-venues" placeholder="Pick a saved venue or type its name" className={inputClass} style={font} />
-                <datalist id="saved-venues">
-                  {venues.map(v => <option key={v.name} value={v.name} />)}
-                </datalist>
-              </Field>
-              <div className="space-y-1">
+              {/* TRAK-255: a venue is a name everyone reads; its map link has a box of its own.
+                  Dimos, 29 Oct: side by side, so the step shows whole without scrolling. */}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                <Field label="Venue">
+                  <input value={splitVenue(sheet.form.venue).name} onChange={e => setVenueName(e.target.value)}
+                    list="saved-venues" placeholder="Saved venue or a name" className={inputClass} style={font} />
+                  <datalist id="saved-venues">
+                    {venues.map(v => <option key={v.name} value={v.name} />)}
+                  </datalist>
+                </Field>
                 <Field label="Map link (optional)">
                   <input value={mapLinkText ?? splitVenue(sheet.form.venue).link} onChange={e => setVenueLink(e.target.value)}
-                    inputMode="url" placeholder="Paste a Google Maps or Apple Maps link" className={inputClass} style={font} />
+                    inputMode="url" placeholder="Google or Apple Maps link" className={inputClass} style={font} />
                 </Field>
                 {mapLinkText && !isMapsUrl(mapLinkText) && (
-                  <p className="text-[11px] text-warning" style={font}>That isn't a Google Maps or Apple Maps link, so it won't be saved.</p>
+                  <p className="col-span-2 text-[11px] text-warning" style={font}>That isn't a Google Maps or Apple Maps link, so it won't be saved.</p>
                 )}
               </div>
             </>}
@@ -1188,7 +1194,7 @@ export default function CoachSchedule() {
             )}
 
             {/* The decision sits where the thumb is, as on the assessment. */}
-            <div className="arc sticky bottom-0 -mx-5 px-5 pt-3 pb-5 flex gap-2 bg-raised border-t border-line">
+            <div className="arc sticky bottom-0 -mx-5 px-5 pt-3 flex gap-2 bg-raised border-t border-line" style={{ paddingBottom: SHEET_BOTTOM }}>
               {sheet.step === REVIEW ? <>
                 <Button size="lg" variant="secondary" aria-label={`Back to ${EVENT_STEPS[REVIEW - 1].label}`} onClick={() => toStep(REVIEW - 1)}>
                   <ChevronLeft size={18} aria-hidden="true" />
@@ -1223,8 +1229,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Cancel event"
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Cancel {sheet.row.title}?</span>
             <p className="text-[12px] text-ink-2" style={font}>
               It stays on everyone's schedule, marked Cancelled.
@@ -1258,8 +1264,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Event cancelled"
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Event cancelled</span>
             <p className="text-[12px] text-ink-2" style={font}>
               {sheet.note} Let the team group know.
@@ -1283,8 +1289,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Import fixtures"
-            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>Import fixtures</span>
               <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
@@ -1305,11 +1311,12 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label="Take register"
-            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3 short:space-y-2 short:pt-4"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[16px] font-medium text-ink" style={font}>
-                {`Register: ${sheet.row.title}, ${formatEventDay(displayEventTime(sheet.row).date)}`}
+                {/* Dimos, 29 Oct: "Thu 29 Oct", so the title keeps to one line and the squad has the room. */}
+                {`Register: ${sheet.row.title}, ${new Date(`${displayEventTime(sheet.row).date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}`}
               </span>
               <button onClick={() => setSheet({ kind: 'closed' })} aria-label="Close">
                 <X size={18} className="text-ink-2" />
@@ -1330,8 +1337,8 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.action === 'publish' ? 'Publish event' : 'Delete draft'}
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {sheet.action === 'publish' ? 'Publish' : 'Delete'} {sheet.row.title}, {formatEventDay(sheet.row.event_date!)}
             </span>
@@ -1364,8 +1371,8 @@ export default function CoachSchedule() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
           <div role="dialog" aria-label="Not published"
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            className="w-full max-w-sheet overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            style={{ ...SHEET, paddingBottom: SHEET_BOTTOM }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>Not published</span>
             <p className="text-[12px] text-ink-2" style={font}>
               None of the {sheet.count} events went out. They’re saved as drafts only you can see.

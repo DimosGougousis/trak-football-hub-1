@@ -92,6 +92,9 @@ export default {
       screens: {
         tablet: { raw: "(min-width: 768px) and (min-height: 500px)" },
         laptop: { raw: "(min-width: 1024px) and (min-height: 500px)" },
+        // Dimos, 29 Oct: a short screen (a small phone, or a phone with its browser's bars showing) tightens the
+        // Schedule sheets so Edit, Take register and Cancel still show everything without scrolling.
+        short: { raw: "(max-height: 760px)" },
       },
       // TRAK-199: a bottom sheet's width (src/index.css --sheet-w).
       maxWidth: {

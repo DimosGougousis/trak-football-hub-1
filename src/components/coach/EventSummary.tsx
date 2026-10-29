@@ -36,7 +36,7 @@ export function EventSummary({ form, repeat, noteProblem, squad }: {
   return <>
     <dl className="rounded-[14px] border border-line divide-y divide-line" style={font}>
       {rows.map(([term, value]) => (
-        <div key={term} className="flex gap-3 px-3 py-2.5 text-[13px]">
+        <div key={term} className="flex gap-3 px-3 py-2.5 short:py-1.5 text-[13px]">
           <dt className="w-[38%] shrink-0 text-ink-3">{term}</dt>
           <dd className="flex-1 min-w-0 text-ink break-words">{value}</dd>
         </div>

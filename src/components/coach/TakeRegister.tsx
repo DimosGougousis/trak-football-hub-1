@@ -125,31 +125,31 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       ) : (
         <>
           <p className="text-[12px] text-ink-2" style={font}>{present.size} present, {absent} absent</p>
-          <ul className="space-y-1.5">
+          {/* Dimos, 29 Oct: the whole squad at once, two names a row on a phone and three on a tablet,
+              so the register never scrolls. The tick and the tint say present; the name says it to a screen reader. */}
+          <ul className="grid grid-cols-2 tablet:grid-cols-3 gap-1.5 short:gap-1">
             {loaded.players.map(p => {
               const on = present.has(p.id)
               const family = loaded.familyReason.has(p.id)
               const reason = loaded.familyReason.get(p.id)
               return (
-                <li key={p.id}>
+                <li key={p.id} className="min-w-0">
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
                     aria-label={`${p.name}: ${on ? 'present' : 'absent'}`}
-                    className="w-full flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-left"
+                    title={family ? (reason ? `Can't make it · ${reason}` : "Can't make it") : undefined}
+                    className="w-full h-full flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left"
                     style={{ background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))', border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}` }}>
-                    <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{ background: on ? 'rgb(var(--t-brand))' : 'transparent', border: on ? 'none' : '1px solid rgb(var(--t-line-strong))' }}>
-                      {on && <Check size={12} color="rgb(var(--t-on-brand))" />}
+                      {on && <Check size={10} color="rgb(var(--t-on-brand))" />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-[13px] text-ink truncate" style={font}>{p.name}</span>
+                      <span className={`block text-[12px] leading-tight truncate ${on ? 'text-ink' : 'text-ink-3'}`} style={font}>{p.name}</span>
                       {family && (
-                        <span className="block text-[11px] text-ink-3" style={font}>
+                        <span className="block text-[10px] leading-tight text-ink-3 truncate" style={font}>
                           {reason ? `Can't make it · ${reason}` : "Can't make it"}
                         </span>
                       )}
-                    </span>
-                    <span className="text-[11px]" style={{ ...font, color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))' }}>
-                      {on ? 'Present' : 'Absent'}
                     </span>
                   </button>
                 </li>
