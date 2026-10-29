@@ -34,8 +34,9 @@ import { Input } from '@/components/arc/input/input'
    comes from My drills or the Library too, added or swapped in through AddSheet, and Training › Drills can send a
    drill here ("Add to <training>"). TRAK-297 (Training 4/5): Copy a past session opens the planner filled in with its
    practices; nothing saves until Save the plan. TRAK-298 (Training 5/5): the plan page runs the loop: Who's here opens
-   the existing register, Run it (/coach/training/:eventId/run) is the plan read at the pitch side, and the training
-   closes on its own once it has ended with its register taken (Kostas, 28 Oct). */
+   the existing register, and the training closes on its own once it has ended with its register taken (Kostas,
+   28 Oct). View (/coach/training/:eventId/view) is the plan read at the pitch side: TRAK-309 (Kostas, 29 Oct) took Run
+   it out of the loop and named the button and its page View. */
 
 const SAVE_FAILED = "Couldn't save the plan. Check your connection and try again. Nothing you typed is lost."
 const TRAINING_PATH = '/coach/training'
@@ -188,7 +189,7 @@ function Editor({ training, saved }: { training: Training; saved: Plan | null })
       <Badge>Only you see it</Badge>
       <Button loading={save.isPending} onClick={savePlan}>Save the plan</Button>
     </Header>
-    <div className="pt-2"><LoopStrip state={{ done: [false, false, false, false], at: 0, closed: false }} note="now" /></div>
+    <div className="pt-2"><LoopStrip state={{ done: [false, false, false], at: 0, closed: false }} note="now" /></div>
 
     <div className="mt-6 grid max-w-[720px] gap-3">
       <div>
@@ -304,7 +305,7 @@ function PlanView({ training, plan }: { training: Training; plan: Plan | null })
   // Who's here opens as the register does everywhere else: published, not cancelled, started.
   const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date(now))
   const canRegister = !!registers.data && !sessionId && !registerWhy
-  const run = () => navigate(`${TRAINING_PATH}/${training.id}/run`)
+  const view = () => navigate(`${TRAINING_PATH}/${training.id}/view`)
 
   return <>
     <Header training={training}>
@@ -314,9 +315,9 @@ function PlanView({ training, plan }: { training: Training; plan: Plan | null })
           <Button variant="secondary" onClick={() => setSheet('log')}>View log</Button>
         </> : <>
           <Badge tone={plan ? 'success' : 'warning'}>{plan ? 'Ready' : 'Not planned'}</Badge>
-          {/* On the day, the main action is the next step: Who's here, then Run it. */}
+          {/* On the day, the main action is Who's here; otherwise View, the plan at the pitch side. */}
           {canRegister && <Button onClick={() => setSheet('register')}>Who’s here</Button>}
-          {plan && <Button variant={canRegister ? 'secondary' : 'primary'} onClick={run}>Run it</Button>}
+          {plan && <Button variant={canRegister ? 'secondary' : 'primary'} onClick={view}>View</Button>}
           {sessionId && <Button variant="ghost" onClick={() => setSheet('register')}>Edit register</Button>}
           {plan ? <Button variant="secondary" onClick={() => navigate(planPath(training.id))}>Change the plan</Button>
             : <Button variant={canRegister ? 'secondary' : 'primary'} onClick={() => setAsking(true)}>Plan this session</Button>}
@@ -362,14 +363,14 @@ function PlanView({ training, plan }: { training: Training; plan: Plan | null })
   </>
 }
 
-/* ── Run it ───────────────────────────────────────────────────────────────── */
+/* ── View ─────────────────────────────────────────────────────────────────── */
 
-export function RunRoute() {
-  return <WithTraining>{(training, plan) => <RunView training={training} plan={plan} />}</WithTraining>
+export function PitchViewRoute() {
+  return <WithTraining>{(training, plan) => <PitchView training={training} plan={plan} />}</WithTraining>
 }
 
 /** The plan at the pitch side, on a phone: big type, one practice per row, when each starts and how long it runs. */
-function RunView({ training, plan }: { training: Training; plan: Plan | null }) {
+function PitchView({ training, plan }: { training: Training; plan: Plan | null }) {
   const practices = fromSaved(plan?.practices ?? [])
   const { day, time } = gameWhen(training)
   const starts = practiceStarts(time || null, practices)
@@ -377,11 +378,11 @@ function RunView({ training, plan }: { training: Training; plan: Plan | null }) 
   return <div className="mx-auto grid max-w-[720px] gap-5 pt-5">
     <Link to={back} className={`inline-flex min-h-11 items-center gap-1 justify-self-start ${linkClass}`}><ChevronLeft size={16} aria-hidden />Back to the plan</Link>
     <header className="grid gap-1">
-      <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">Run it</p>
+      <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">View</p>
       <h1 className="text-[28px] font-medium leading-tight text-ink">{[day, time].filter(Boolean).join(' · ')}</h1>
       <p className="text-base text-ink-2 break-words">{[training.title, training.venue].filter(Boolean).join(' · ')}</p>
     </header>
-    {practices.length === 0 ? <p className="text-[17px] text-ink-2">Nothing to run yet. <Link to={planPath(training.id)} className={linkClass}>Plan it</Link></p>
+    {practices.length === 0 ? <p className="text-[17px] text-ink-2">Nothing planned yet. <Link to={planPath(training.id)} className={linkClass}>Plan it</Link></p>
       : <ol aria-label="Practices to run" className="grid gap-3">
         {practices.map((practice, i) => {
           const details = detailsLine(practice)
