@@ -133,9 +133,8 @@ export default function CoachHomePage() {
         <div className={wide ? 'grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-6' : 'grid gap-5'}>
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
           {showToday
-            ? <div className={wide ? '' : '-order-1'}>
-              <TodayPlan trainingOn={trainingOn} gamesOn={gamesOn} inView={squad => everySquad || coachSquad.eventInSquad(squad)} />
-            </div>
+            // Kostas, 28 Oct: on a phone the week comes first, then today's plan.
+            ? <TodayPlan trainingOn={trainingOn} gamesOn={gamesOn} inView={squad => everySquad || coachSquad.eventInSquad(squad)} />
             : <SquadShape squadLabel={squadLabel} shape={shape} failed={!!roster.error} onRetry={roster.retry} />}
         </div>
         {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
