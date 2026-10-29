@@ -6,7 +6,7 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { LOOP_STEPS, STATE, actionLink, gameState, orderGames, type GameAction } from '@/lib/games/loop'
 import { gameTitle, gameWhen, useGamePlanChanges, useGamePlans, useGameShares, useGames, type Game } from '@/components/coach/games/useGames'
 import { LoadError } from '@/components/trak'
-import { MatchIcon } from '@/components/icons/MatchIcon'
+import { PitchIcon } from '@/components/icons/PitchIcon'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { Countdown } from '@/components/arc/countdown/countdown'
@@ -59,7 +59,7 @@ export default function CoachGames() {
           : games.isPending || plans.isPending || shares.isPending ? <p role="status" className="pt-14 text-center text-[13px] text-ink-3">Loading your games…</p>
           : ordered.length === 0 ? (
             <div className="arc pt-6">
-              <EmptyState icon={<MatchIcon size={24} strokeWidth={1.5} />} title="No matches yet"
+              <EmptyState icon={<PitchIcon size={24} strokeWidth={1.5} />} title="No matches yet"
                 description="Add a match in Schedule. Its game plan and evaluation will live here."
                 action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_MATCH })}>Add a match</Button>} />
             </div>

@@ -182,6 +182,40 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     await waitFor(() => expect(window.location.pathname).toBe('/coach/games'))
   })
 
+  it('TRAK-306 (Kostas, 28 Oct): a cone for Training, Imad’s pitch for Games, on a phone and a laptop', async () => {
+    // The nav's icons: lucide's cone, or Imad's pitch (drawn on a 128 grid).
+    const icon = (item: HTMLElement) => {
+      const svg = item.querySelector('svg')
+      return svg?.classList.contains('lucide-traffic-cone') ? 'cone' : svg?.getAttribute('viewBox') === '0 0 128 128' ? 'pitch' : 'other'
+    }
+    signInAs({ id: 'coach-frame-icons' })
+    server.use(rpc('feature_on', () => true))
+    screenIs(false)
+    renderApp('/coach/home')
+    const tabs = await screen.findByRole('tablist', { name: 'Coach' })
+    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Games', 'Training']))
+    expect(icon(within(tabs).getByRole('tab', { name: 'Training' }))).toBe('cone')
+    expect(icon(within(tabs).getByRole('tab', { name: 'Games' }))).toBe('pitch')
+    cleanup()
+
+    screenIs(true)
+    renderApp('/coach/home')
+    const sidebar = await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+    expect(icon(await within(sidebar).findByRole('button', { name: /^Training/ }))).toBe('cone')
+    expect(icon(within(sidebar).getByRole('button', { name: /^Games/ }))).toBe('pitch')
+  })
+
+  it('TRAK-306: with Training off, Library takes its place with the cone, so the nav never shows the pitch twice', async () => {
+    signInAs({ id: 'coach-frame-icons-library' })
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature !== 'training'))
+    screenIs(false)
+    renderApp('/coach/home')
+    const tabs = await screen.findByRole('tablist', { name: 'Coach' })
+    await waitFor(() => expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Home', 'Squad', 'Games', 'Library']))
+    expect(within(tabs).getByRole('tab', { name: 'Library' }).querySelector('svg')).toHaveClass('lucide-traffic-cone')
+    expect(within(tabs).getByRole('tab', { name: 'Games' }).querySelector('svg')).toHaveAttribute('viewBox', '0 0 128 128')
+  })
+
   it('knows which row a page belongs to', () => {
     expect(placeOf('/coach/games')).toEqual({ screen: 'games', title: 'Games' }) // TRAK-283
     expect(placeOf('/coach/games/ev-1')).toEqual({ screen: 'games', title: 'Games' })

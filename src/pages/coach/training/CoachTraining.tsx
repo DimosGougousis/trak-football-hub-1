@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, TrafficCone } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
@@ -15,7 +15,6 @@ import { PlanWaySheet } from '@/components/coach/training/PlanWaySheet'
 import { PlanEditorRoute, PlanRoute, RunRoute } from './CoachTrainingPlan'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { LoadError } from '@/components/trak'
-import { PitchIcon } from '@/components/icons/PitchIcon'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
@@ -105,7 +104,7 @@ function SessionsView() {
             <h2 id="coming-up" className="text-lg font-medium text-ink">Coming up</h2>
             {comingUp.length === 0 ? (
               <div className="arc">
-                <EmptyState icon={<PitchIcon size={24} strokeWidth={1.5} />} title="No training coming up"
+                <EmptyState icon={<TrafficCone size={24} strokeWidth={1.5} />} title="No training coming up"
                   description="Add a training in Schedule. You'll plan it here."
                   action={<Button onClick={addTraining}>Add a training</Button>} />
               </div>
