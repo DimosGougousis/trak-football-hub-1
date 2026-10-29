@@ -285,8 +285,8 @@ export default function CoachSchedule() {
 
   // Calendar view state
   const today = new Date()
-  const [viewYear,  setViewYear]  = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  // Dimos, 29 Oct: the calendar shows the weeks around this day; it opens on this week, on top.
+  const [viewDate,  setViewDate]  = useState<string>(toDateStr(today))
   const [selected,  setSelected]  = useState<string>(toDateStr(today))
 
   // Data
@@ -607,8 +607,7 @@ export default function CoachSchedule() {
     if (!row) return
     setParams({}, { replace: true })
     if (row.event_date) {
-      const [y, m] = row.event_date.split('-').map(Number)
-      setViewYear(y); setViewMonth(m - 1); setSelected(row.event_date)
+      setViewDate(row.event_date); setSelected(row.event_date)
     }
     // TRAK-230: a started event isn't edited or cancelled, whatever the link says.
     if ((action === 'edit' || action === 'cancel') && startedLocked(row)) toast.error(STARTED_LOCKED)
@@ -767,8 +766,7 @@ export default function CoachSchedule() {
             {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
             <Calendar locale="en-GB" showToday className="laptop:!w-full"
               value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
-              month={new Date(viewYear, viewMonth, 1)}
-              onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
+              weeks={5} month={new Date(`${viewDate}T12:00:00`)} onMonthChange={date => setViewDate(toDateStr(date))}
               marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])}
               attention={date => needsYou.has(toDateStr(date))} />
           </div>
@@ -1383,8 +1381,7 @@ export default function CoachSchedule() {
             {sheet.weeks[0] && (
               <button onClick={() => {
                 const date = sheet.weeks[0].date
-                const [y, m] = date.split('-').map(Number)
-                setViewYear(y); setViewMonth(m - 1); setSelected(date)
+                setViewDate(date); setSelected(date)
                 setSheet({ kind: 'closed' })
               }}
                 className="w-full py-3 rounded-[12px] text-[14px] font-medium"

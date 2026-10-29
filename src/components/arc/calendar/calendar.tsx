@@ -29,6 +29,10 @@ export interface CalendarProps {
   marks?: (date: Date) => CalendarMark[];
   /** Trak (TRAK-255): a day with something waiting for the user gets an amber corner, read as "needs you". */
   attention?: (date: Date) => boolean;
+  /** Trak (Dimos, 29 Oct): shows this many weeks instead of a month, opening on the current week. The arrows move all
+   *  but one of them, so the last week shown becomes the top one. `month` and `onMonthChange` then carry the first day
+   *  shown; a `month` set to any date shows the window it falls in. */
+  weeks?: number;
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -45,9 +49,58 @@ const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() 
 /** Trak: weeks start on Monday, as Schedule and the Home week strip do (TRAK-163). */
 const weekday = (date: Date) => (date.getDay() + 6) % 7;
 /** Every month shows six weeks, so the grid keeps one height and never jumps while months change. */
-const makeWeeks = (month: Date) => {
-  const start = addDays(month, -weekday(month));
-  return Array.from({ length: 6 }, (_, week) => Array.from({ length: 7 }, (_, day) => addDays(start, week * 7 + day)));
+const makeWeeks = (start: Date, rows = 6) =>
+  Array.from({ length: rows }, (_, week) => Array.from({ length: 7 }, (_, day) => addDays(start, week * 7 + day)));
+/** Trak: weeks counted from Monday 1 January 2024, in whole days, so a clock change never shifts one. */
+const weekIndex = (date: Date) => Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(2024, 0, 1)) / 6048e5);
+const fromWeek = (index: number) => new Date(2024, 0, 1 + index * 7);
+
+/**
+ * Trak (Dimos, 29 Oct): what one pane of the strip shows. A month pane is the month's six weeks; a week pane is `rows`
+ * weeks from a Monday, the windows counted from this week in steps of `step`. The strip measures its position in panes'
+ * indexes (months, or weeks) and moves `step` at a time.
+ */
+interface Pager {
+  rows: number;
+  step: number;
+  /** The pane a date is shown in. */
+  indexOf: (date: Date) => number;
+  /** The day `month` and `onMonthChange` carry for a pane. */
+  dateOf: (index: number) => Date;
+  gridStart: (index: number) => Date;
+  /** A pane's own days: in a month pane the others belong to the months either side. */
+  owns: (date: Date, index: number) => boolean;
+  first: (index: number) => Date;
+  last: (index: number) => Date;
+  /** The month the title's month picker marks as shown. */
+  monthOf: (index: number) => Date;
+}
+
+const monthPager: Pager = {
+  rows: 6,
+  step: 1,
+  indexOf: (date) => monthIndex(date),
+  dateOf: (index) => fromIndex(index),
+  gridStart: (index) => addDays(fromIndex(index), -weekday(fromIndex(index))),
+  owns: (date, index) => sameMonth(date, fromIndex(index)),
+  first: (index) => fromIndex(index),
+  last: (index) => addDays(fromIndex(index + 1), -1),
+  monthOf: (index) => fromIndex(index),
+};
+
+const weekPager = (rows: number, anchor: number): Pager => {
+  const step = Math.max(1, rows - 1);
+  return {
+    rows,
+    step,
+    indexOf: (date) => anchor + step * Math.floor((weekIndex(date) - anchor) / step),
+    dateOf: fromWeek,
+    gridStart: fromWeek,
+    owns: (date, index) => weekIndex(date) >= index && weekIndex(date) < index + rows,
+    first: fromWeek,
+    last: (index) => addDays(fromWeek(index), rows * 7 - 1),
+    monthOf: (index) => monthStart(addDays(fromWeek(index), Math.floor((rows * 7) / 2))),
+  };
 };
 
 const subscribeNothing = () => () => {};
@@ -107,9 +160,9 @@ function SelectionDisc({ cell, reduced }: { cell: number; reduced: boolean }) {
 const inertUnless = (present: boolean) => (present ? {} : ({ inert: "" } as Record<string, string>));
 
 /** One month on the strip. Only the month being navigated to is focusable and exposed; the one sliding past is inert. */
-function MonthPane({ index, position, present, children }: { index: number; position: MotionValue<number>; present: boolean; children: ReactNode }) {
-  const x = useTransform(position, (value) => `calc(${(index - value) * 100}% + ${(index - value) * 16}px)`);
-  const opacity = useTransform(position, (value) => 1 - Math.min(1, Math.abs(index - value)) * 0.6);
+function MonthPane({ index, step, position, present, children }: { index: number; step: number; position: MotionValue<number>; present: boolean; children: ReactNode }) {
+  const x = useTransform(position, (value) => `calc(${((index - value) / step) * 100}% + ${((index - value) / step) * 16}px)`);
+  const opacity = useTransform(position, (value) => 1 - Math.min(1, Math.abs(index - value) / step) * 0.6);
   return <motion.div className={styles.monthBody} style={{ x, opacity }} data-present={present || undefined} aria-hidden={present ? undefined : true} {...inertUnless(present)}>{children}</motion.div>;
 }
 
@@ -126,13 +179,14 @@ export function Calendar({
   showToday = false,
   marks,
   attention,
+  weeks,
 }: CalendarProps) {
   const titleId = useId();
   const today = useToday();
   // Motion preference only counts after hydration, so server and client markup agree.
   const hydrated = useSyncExternalStore(subscribeNothing, clientSnapshot, serverSnapshot);
   const reducedMotion = (useReducedMotion() ?? false) && hydrated;
-  const [internalMonth, setInternalMonth] = useState(() => (value ? monthStart(value) : undefined));
+  const [internalMonth, setInternalMonth] = useState(() => value);
   const [focusedDate, setFocusedDate] = useState(value);
   /** Trak (TRAK-157): the title opens twelve months at a time, so March next year is two taps, not five.
    *  TRAK-256: they start five months before the shown one, so recent months are there too. */
@@ -141,44 +195,59 @@ export function Calendar({
   const focusRequest = useRef<string | null>(null);
   // Without a value or month the calendar waits for the client's today, then settles on that month once.
   const fallback = value ?? today;
-  const month = controlledMonth ? monthStart(controlledMonth) : internalMonth ?? (fallback && monthStart(fallback));
+  // Trak: weeks are counted from this week, so the first window opens on it.
+  const anchorWeek = weekIndex(today ?? fallback ?? new Date(2024, 0, 1));
+  const pager = useMemo(() => (weeks ? weekPager(weeks, anchorWeek) : monthPager), [weeks, anchorWeek]);
+  const month = controlledMonth ?? internalMonth ?? fallback;
   if (!controlledMonth && !internalMonth && month) setInternalMonth(month);
-  const monthTime = month?.getTime();
-  const monthKey = month ? dateKey(month) : "pending";
-  // Direction is read from the month itself, so arrows, keys, Today, and a controlled month all travel the same way.
-  const [shownMonth, setShownMonth] = useState(monthTime);
+  // The strip position is measured in panes' indexes. The panes on either side of it render, plus the one being navigated to.
+  const target = month ? pager.indexOf(month) : 0;
+  const ready = month !== undefined;
+  const monthKey = ready ? String(target) : "pending";
+  // Direction is read from the pane itself, so arrows, keys, Today, and a controlled month all travel the same way.
+  const [shownMonth, setShownMonth] = useState(ready ? target : undefined);
   const [direction, setDirection] = useState(0);
-  if (shownMonth !== monthTime) {
-    setShownMonth(monthTime);
-    setDirection(shownMonth === undefined || monthTime === undefined ? 0 : monthTime > shownMonth ? 1 : -1);
+  if (ready && shownMonth !== target) {
+    setShownMonth(target);
+    setDirection(shownMonth === undefined ? 0 : target > shownMonth ? 1 : -1);
   }
-  const weeks = useMemo(() => (monthTime === undefined ? [] : makeWeeks(new Date(monthTime))), [monthTime]);
-  // The strip position is measured in months. The panes on either side of it render, plus the month being navigated to.
-  const target = month ? monthIndex(month) : 0;
+  const grid = useMemo(() => (ready ? makeWeeks(pager.gridStart(target), pager.rows) : []), [ready, pager, target]);
+  const { step } = pager;
   const position = useMotionValue(target);
   const [span, setSpan] = useState<[number, number]>([target, target]);
   useMotionValueEvent(position, "change", (value) => {
-    const next: [number, number] = [Math.floor(value + 1e-3), Math.ceil(value - 1e-3)];
+    // Panes sit `step` apart, counted from the one being navigated to.
+    const away = (value - target) / step;
+    const next: [number, number] = [target + step * Math.floor(away + 1e-3), target + step * Math.ceil(away - 1e-3)];
     setSpan((current) => (current[0] === next[0] && current[1] === next[1] ? current : next));
   });
-  const ready = month !== undefined;
   const placed = useRef(ready);
+  const lastTarget = useRef(target);
   useLayoutEffect(() => {
     if (!ready) return;
     const from = position.get();
+    const aligned = (target - lastTarget.current) % step === 0;
+    lastTarget.current = target;
     if (from === target) return;
     // The first month and reduced motion land in place; everything else slides on the strip.
     if (!placed.current || reducedMotion) { placed.current = true; position.jump(target); return; }
-    // Long jumps (Today, a year with Shift) start one month away, so the strip never scrolls through the months between.
-    if (Math.abs(target - from) > 2) position.jump(target - Math.sign(target - from));
+    // Long jumps (Today, a year with Shift) start one pane away, so the strip never scrolls through the panes between.
+    // So does a window that doesn't line up with the one shown, so no pane slides past with the wrong days.
+    if (Math.abs(target - from) > 2 * step || !aligned) position.jump(target - Math.sign(target - from) * step);
     const controls = animate(position, target, stripSpring);
     return () => controls.stop();
-  }, [ready, target, reducedMotion, position]);
+  }, [ready, target, reducedMotion, position, step]);
   const paneIndexes = Array.from(new Set([span[0], span[1], target])).sort((a, b) => a - b);
   const formatter = useMemo(() => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }), [locale]);
+  const dayFormatter = useMemo(() => new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }), [locale]);
+  /** Trak: a window of weeks is named by its first and last day, "26 Oct – 29 Nov 2026", with both years when they differ. */
+  const rangeLabel = (first: Date, last: Date) => first.getFullYear() === last.getFullYear()
+    ? `${dayFormatter.format(first)} – ${dayFormatter.format(last)} ${last.getFullYear()}`
+    : `${dayFormatter.format(first)} ${first.getFullYear()} – ${dayFormatter.format(last)} ${last.getFullYear()}`;
+  const paneLabel = (index: number) => (weeks ? rangeLabel(pager.first(index), pager.last(index)) : formatter.format(fromIndex(index)));
   const weekdayFormatter = useMemo(() => new Intl.DateTimeFormat(locale, { weekday: "short" }), [locale]);
   const weekdays = useMemo(() => Array.from({ length: 7 }, (_, index) => weekdayFormatter.format(new Date(2024, 0, 8 + index))), [weekdayFormatter]);
-  const monthLabel = month ? formatter.format(month) : "";
+  const monthLabel = ready ? paneLabel(target) : "";
   // The selected disc glides between days, so each number flips color as the disc actually passes it:
   // the day it leaves waits longer on short hops, the day it lands on waits longer on long ones.
   const valueKey = value ? dateKey(value) : "";
@@ -197,23 +266,23 @@ export function Calendar({
   };
 
   const isDisabled = (date: Date) => isBefore(date, minDate) || isAfter(date, maxDate) || Boolean(disabledDates?.(date));
-  const previousMonth = month && addMonths(month, -1);
-  const nextMonth = month && addMonths(month, 1);
   // While the month is still unknown the controls keep their resting look, so hydration does not flash them dim.
-  const previousDisabled = Boolean(previousMonth && minDate && previousMonth.getTime() < monthStart(minDate).getTime());
-  const nextDisabled = Boolean(nextMonth && maxDate && nextMonth.getTime() > monthStart(maxDate).getTime());
+  const previousDisabled = Boolean(ready && minDate && isBefore(pager.last(target - step), minDate));
+  const nextDisabled = Boolean(ready && maxDate && isAfter(pager.first(target + step), maxDate));
   const todaySelectable = Boolean(today && !isDisabled(today) && onChange);
-  const todayIdle = Boolean(today && sameMonth(month, today) && (!todaySelectable || sameDay(value, today)));
+  // Today's own pane: its month, or the window that opens on this week.
+  const atToday = Boolean(today && ready && pager.indexOf(today) === target);
+  const todayIdle = atToday && (!todaySelectable || sameDay(value, today));
   // Roving tab stop: the day last focused, else the selection, else today, else the first open day of the month.
   const tabbableKey = (() => {
-    const open = (date?: Date) => (date && sameMonth(date, month) && !isDisabled(date) ? dateKey(date) : "");
-    return open(focusedDate) || open(value) || open(today) || dateKey(weeks.flat().find((date) => sameMonth(date, month) && !isDisabled(date)) ?? new Date(0));
+    const open = (date?: Date) => (date && pager.owns(date, target) && !isDisabled(date) ? dateKey(date) : "");
+    return open(focusedDate) || open(value) || open(today) || dateKey(grid.flat().find((date) => pager.owns(date, target) && !isDisabled(date)) ?? new Date(0));
   })();
 
-  const changeMonth = (target: Date) => {
-    const normalized = monthStart(target);
-    if (!controlledMonth) setInternalMonth(normalized);
-    onMonthChange?.(normalized);
+  const changeMonth = (index: number) => {
+    const shown = pager.dateOf(index);
+    if (!controlledMonth) setInternalMonth(shown);
+    onMonthChange?.(shown);
   };
 
   /** Keyboard focus lands on the new day in the same frame the month starts to slide. */
@@ -225,13 +294,13 @@ export function Calendar({
   });
 
   /** Clamps a keyboard move to the allowed range and steps past blocked days in the direction of travel. */
-  const moveFocus = (from: Date, target: Date, step: number) => {
-    let next = isBefore(target, minDate) && minDate ? startOfDay(minDate) : isAfter(target, maxDate) && maxDate ? startOfDay(maxDate) : target;
-    for (let tries = 0; tries < 42 && isDisabled(next); tries += 1) next = addDays(next, step);
+  const moveFocus = (from: Date, to: Date, travel: number) => {
+    let next = isBefore(to, minDate) && minDate ? startOfDay(minDate) : isAfter(to, maxDate) && maxDate ? startOfDay(maxDate) : to;
+    for (let tries = 0; tries < 42 && isDisabled(next); tries += 1) next = addDays(next, travel);
     if (isDisabled(next) || sameDay(next, from)) return;
     setFocusedDate(next);
     focusRequest.current = dateKey(next);
-    if (!sameMonth(next, month)) changeMonth(next);
+    if (!pager.owns(next, target)) changeMonth(pager.indexOf(next));
   };
 
   const onDayKeyDown = (event: KeyboardEvent<HTMLButtonElement>, date: Date) => {
@@ -247,8 +316,8 @@ export function Calendar({
       ArrowDown: [addDays(date, 7), 1],
       Home: [addDays(date, -weekday(date)), 1],
       End: [addDays(date, 6 - weekday(date)), -1],
-      PageUp: [shiftMonths(date, event.shiftKey ? -12 : -1), -1],
-      PageDown: [shiftMonths(date, event.shiftKey ? 12 : 1), 1],
+      PageUp: [weeks && !event.shiftKey ? addDays(date, -7 * step) : shiftMonths(date, event.shiftKey ? -12 : -1), -1],
+      PageDown: [weeks && !event.shiftKey ? addDays(date, 7 * step) : shiftMonths(date, event.shiftKey ? 12 : 1), 1],
     };
     const move = moves[event.key];
     if (!move) return;
@@ -257,9 +326,9 @@ export function Calendar({
   };
 
   const goToToday = () => {
-    if (!today || !month || todayIdle) return;
+    if (!today || !ready || todayIdle) return;
     setFocusedDate(today);
-    if (!sameMonth(today, month)) changeMonth(today);
+    if (!atToday) changeMonth(pager.indexOf(today));
     if (todaySelectable && !sameDay(value, today)) onChange?.(today);
   };
 
@@ -269,29 +338,33 @@ export function Calendar({
   const pickMonth = (candidate: Date) => {
     if (monthOutOfRange(candidate)) return;
     setPicking(null);
-    if (!sameMonth(candidate, month)) changeMonth(candidate);
+    // Trak: a window of weeks centres on the month's middle.
+    const index = pager.indexOf(addDays(candidate, 14));
+    if (index !== target) changeMonth(index);
   };
+  const pickerMonth = ready ? pager.monthOf(target) : undefined;
 
   const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(" ");
-  // Six fixed weeks per month, so a day's cell is its distance from the first day on the grid.
-  const cellOf = (paneMonth: Date) => {
+  // Fixed weeks per pane, so a day's cell is its distance from the first day on the grid.
+  const cellOf = (paneIndex: number) => {
     if (!value) return -1;
-    const first = addDays(paneMonth, -weekday(paneMonth));
+    const first = pager.gridStart(paneIndex);
     const index = Math.round((startOfDay(value).getTime() - first.getTime()) / 864e5);
-    return index >= 0 && index < 42 ? index : -1;
+    return index >= 0 && index < pager.rows * 7 ? index : -1;
   };
 
-  const renderMonth = (paneMonth: Date, present: boolean) => {
-    const firstShown = addDays(paneMonth, -weekday(paneMonth));
+  const renderMonth = (paneIndex: number, present: boolean) => {
+    const firstShown = pager.gridStart(paneIndex);
     return <>
-    <SelectionDisc cell={cellOf(paneMonth)} reduced={reducedMotion} />
-    <div className={styles.grid} role="grid" aria-label={formatter.format(paneMonth)}>
-    {makeWeeks(paneMonth).map((week) => <div key={dateKey(week[0]!)} className={styles.week} role="row">
+    <SelectionDisc cell={cellOf(paneIndex)} reduced={reducedMotion} />
+    <div className={styles.grid} role="grid" aria-label={paneLabel(paneIndex)}>
+    {makeWeeks(firstShown, pager.rows).map((week) => <div key={dateKey(week[0]!)} className={styles.week} role="row">
       {week.map((date) => {
         const key = dateKey(date);
         // Trak (TRAK-256): another month's days are marked, and its first shown day names the month.
-        const outside = !sameMonth(date, paneMonth);
-        const monthLabel = outside && (date.getDate() === 1 || sameDay(date, firstShown)) ? shortMonth.format(date) : null;
+        // A window of weeks has no other month's days: it names the month of its first day, and each 1st.
+        const outside = !pager.owns(date, paneIndex);
+        const monthLabel = (outside || weeks) && (date.getDate() === 1 || sameDay(date, firstShown)) ? shortMonth.format(date) : null;
         const selected = sameDay(date, value);
         const isToday = sameDay(date, today);
         const dots = marks?.(date) ?? [];
@@ -334,11 +407,11 @@ export function Calendar({
       <div className={styles.header}>
         <h2 id={titleId} className={styles.heading}>
           <span className={styles.srOnly}>{monthLabel}</span>
-          <button type="button" className={styles.titleButton} disabled={!month} aria-expanded={picking !== null}
-            aria-label={`${monthLabel}, choose month and year`} onClick={() => setPicking(picking === null ? target - 5 : null)}>
+          <button type="button" className={styles.titleButton} disabled={!ready} aria-expanded={picking !== null}
+            aria-label={`${monthLabel}, choose month and year`} onClick={() => setPicking(picking === null && pickerMonth ? monthIndex(pickerMonth) - 5 : null)}>
             <span className={styles.title} aria-hidden="true">
               <AnimatePresence initial={false} custom={direction}>
-                {month && <motion.span key={monthKey} className={styles.titleRow} custom={direction} variants={reducedMotion || !direction ? titleFade : titleSlide} initial="enter" animate="center" exit="exit">{monthLabel}</motion.span>}
+                {ready && <motion.span key={monthKey} className={styles.titleRow} custom={direction} variants={reducedMotion || !direction ? titleFade : titleSlide} initial="enter" animate="center" exit="exit">{monthLabel}</motion.span>}
               </AnimatePresence>
             </span>
             <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className={cx(styles.titleChevron, picking !== null && styles.titleChevronOpen)} />
@@ -351,23 +424,23 @@ export function Calendar({
             <button type="button" className={styles.navButton} aria-label="Earlier months" onClick={() => setPicking(picking - 12)}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
             <button type="button" className={styles.navButton} aria-label="Later months" onClick={() => setPicking(picking + 12)}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
           </> : <>
-          <button type="button" className={styles.navButton} aria-label="Previous month" aria-disabled={previousDisabled || undefined} onClick={() => { if (!previousDisabled && previousMonth) changeMonth(previousMonth); }}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
-          <button type="button" className={styles.navButton} aria-label="Next month" aria-disabled={nextDisabled || undefined} onClick={() => { if (!nextDisabled && nextMonth) changeMonth(nextMonth); }}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+          <button type="button" className={styles.navButton} aria-label={weeks ? "Previous weeks" : "Previous month"} aria-disabled={previousDisabled || undefined} onClick={() => { if (!previousDisabled && ready) changeMonth(target - step); }}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+          <button type="button" className={styles.navButton} aria-label={weeks ? "Next weeks" : "Next month"} aria-disabled={nextDisabled || undefined} onClick={() => { if (!nextDisabled && ready) changeMonth(target + step); }}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>
           </>}
         </div>
       </div>
       {picking !== null && <div className={styles.monthPicker} role="group" aria-label="Choose a month">
         {Array.from({ length: 12 }, (_, i) => fromIndex(picking + i)).map((candidate) => <button key={dateKey(candidate)} type="button"
-          className={cx(styles.monthChoice, sameMonth(candidate, month) && styles.monthChoiceCurrent)}
-          aria-label={formatter.format(candidate)} aria-current={sameMonth(candidate, month) ? "true" : undefined}
+          className={cx(styles.monthChoice, sameMonth(candidate, pickerMonth) && styles.monthChoiceCurrent)}
+          aria-label={formatter.format(candidate)} aria-current={sameMonth(candidate, pickerMonth) ? "true" : undefined}
           disabled={monthOutOfRange(candidate)} onClick={() => pickMonth(candidate)}>
           <span>{shortMonth.format(candidate)}</span><span className={styles.monthChoiceYear}>{candidate.getFullYear()}</span>
         </button>)}
       </div>}
       <div className={styles.weekdays} aria-hidden="true" hidden={picking !== null}>{weekdays.map((day, index) => <span key={`${day}-${index}`}>{day.slice(0, 2)}</span>)}</div>
       <div className={styles.monthViewport} ref={viewportRef} hidden={picking !== null}>
-        {month ? paneIndexes.map((index) => <MonthPane key={index} index={index} position={position} present={index === target}>{renderMonth(fromIndex(index), index === target)}</MonthPane>)
-          : <div className={styles.monthBody} aria-hidden="true"><div className={styles.grid}>{Array.from({ length: 6 }, (_, week) => <div key={week} className={styles.week}>{Array.from({ length: 7 }, (_, day) => <span key={day} className={styles.placeholderDay} />)}</div>)}</div></div>}
+        {ready ? paneIndexes.map((index) => <MonthPane key={index} index={index} step={step} position={position} present={index === target}>{renderMonth(index, index === target)}</MonthPane>)
+          : <div className={styles.monthBody} aria-hidden="true"><div className={styles.grid}>{Array.from({ length: pager.rows }, (_, week) => <div key={week} className={styles.week}>{Array.from({ length: 7 }, (_, day) => <span key={day} className={styles.placeholderDay} />)}</div>)}</div></div>}
       </div>
     </section>;
 }
