@@ -37,7 +37,8 @@ export function ResultStep({ form, onFormChange, starters, bench }: {
           </div>
           {form.goals.length > 0 && <ol className="grid gap-4">
             {form.goals.map((goal, index) => <li key={index}>
-              <fieldset className="grid gap-3 tablet:grid-cols-2">
+              {/* One above the other: side by side, half a laptop's width cut the names short. */}
+              <fieldset className="grid gap-3">
                 <legend className="mb-2 text-sm font-medium text-ink">Goal {index + 1}</legend>
                 <Select label="Scored by" value={goal.scorer ?? NONE} onValueChange={value => setGoal(index, { scorer: pick(value), ...(value === goal.assist && { assist: null }) })}
                   options={[{ value: NONE, label: 'Not recorded' }, ...played.map(p => ({ value: p.id, label: p.name }))]} />

@@ -81,6 +81,25 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     if (path === '/rest/v1/game_for_player') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
       goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
       note: 'Second game at right-back. Proud of you.', changed_at: null }] : [])
+    // TRAK-288: the evaluation draft as save_game_evaluation keeps it, under `evaluation:<match>`.
+    if (path === '/rest/v1/rpc/save_game_evaluation') {
+      const body = req.postDataJSON() as Record<string, unknown>
+      const saved_at = new Date().toISOString()
+      plans.set(`evaluation:${body.p_event_id}`, { ...body, saved_at })
+      return json(saved_at)
+    }
+    if (path.startsWith('/rest/v1/game_evaluation')) {
+      const drafts = [...plans.entries()].filter(([key]) => key.startsWith('evaluation:')).map(([, draft]) => draft)
+      const one = url.searchParams.get('event_id')?.replace(/^eq\./, '')
+      const mine = drafts.filter(draft => !one || draft.p_event_id === one)
+      const listed = mine.flatMap(draft => draft.p_players as { id: string; played: boolean; did_job?: string; against_expectation?: string; note?: string }[])
+      if (path === '/rest/v1/game_evaluations') return json(mine.map(draft => ({ event_id: draft.p_event_id, our_score: draft.p_our_score,
+        their_score: draft.p_their_score, goals: draft.p_goals, how_they_scored: draft.p_how_they_scored, plan_worked: draft.p_plan_worked,
+        saved_at: draft.saved_at, published_at: null })))
+      if (path === '/rest/v1/game_evaluation_players') return json(listed.map(p => ({ squad_player_id: p.id, played: p.played,
+        did_job: p.did_job ?? 'yes', against_expectation: p.against_expectation ?? 'met' })))
+      if (path === '/rest/v1/game_evaluation_notes') return json(listed.filter(p => p.note).map(p => ({ squad_player_id: p.id, note: p.note })))
+    }
     if (path === '/rest/v1/game_shares') return json([...plans.entries()].filter(([key]) => key.startsWith('share:')).map(([, share]) => share))
     if (path === '/rest/v1/rpc/share_game_plan') {
       const body = req.postDataJSON() as { p_event_id: string; p_talked: boolean }
@@ -136,11 +155,11 @@ const sideways = (page: Page) => page.evaluate(() => document.documentElement.sc
 
 /** Tab from the top of the page; every control in `scope` must take focus at least once. A tab list is one stop
  *  (roving focus): its other tabs are reached with the arrow keys, which the tests check separately. So is a radio
- *  group, when `fields` adds a form's inputs. */
+ *  group, when `fields` adds a form's inputs. A closed card's fields are inert (TRAK-288), so they're left out. */
 async function everyControlByKeyboard(page: Page, scope: string, fields = false) {
   const kinds = `a[href], button:not([disabled]), [tabindex="0"]${fields ? ', input:not([type="radio"]), textarea' : ''}`
   const controls = await page.locator(`${scope} :is(${kinds}):not([tabindex="-1"], [role="tablist"])`).evaluateAll(els =>
-    els.filter(el => (el as HTMLElement).offsetParent !== null && el.getAttribute('aria-hidden') !== 'true')
+    els.filter(el => (el as HTMLElement).offsetParent !== null && el.getAttribute('aria-hidden') !== 'true' && !el.closest('[inert]'))
       .map((el, i) => { (el as HTMLElement).dataset.kb = String(i); return String(i) }))
   const reached = new Set<string>()
   await page.locator('body').focus()
@@ -193,7 +212,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.keyboard.press('ArrowRight')
     await expect(page.getByRole('heading', { name: 'Your goals' })).toBeVisible()
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('heading', { name: 'Evaluate it after full time' })).toBeVisible()
+    // TRAK-288: until full time it says when it opens.
+    await expect(page.getByRole('heading', { name: /^Opens at full time, \d\d:\d\d$/ })).toBeVisible()
     expect(page.url()).toContain('?tab=evaluation')
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
@@ -408,6 +428,75 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`locked-line-up-${width}.png`) })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+}
+
+// TRAK-288: after full time, the evaluation as one draft: Result, Team and Players, read against the plan as it locked,
+// saved with Save draft · sleep on it and reloaded. Every field is reachable by keyboard, and nothing scrolls sideways.
+for (const [width, height] of [[390, 844], [1440, 900]] as const) {
+  test(`an evaluation at ${width} px: every step by keyboard, saved as a draft and reloaded`, async ({ page, context }, testInfo) => {
+    const plans: Plans = new Map([
+      ['m-past', { event_id: 'm-past', strength: 'similar', their_formation: '4-3-3', key_players: [], scouting: '', format: 11, formation: '4-4-2',
+        goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }, { title: 'Switch play early', looks_like: '' }],
+        created_at: '2026-10-20T17:00:00Z', updated_at: '2026-10-20T17:40:00Z' }],
+      ['line-up:m-past:sq-1', { event_id: 'm-past', squad_player_id: 'sq-1', role: 'starter', slot: 4, job: 'Stay tight to their winger.',
+        note: '', context: ['out_of_position'], expectation: 'stretch' }],
+      ['line-up:m-past:sq-4', { event_id: 'm-past', squad_player_id: 'sq-4', role: 'starter', slot: 2, job: 'Win the first header.',
+        note: '', context: [], expectation: 'usual' }],
+    ])
+    const { unexpected, errors } = await open(page, context, '/coach/games/m-past?tab=evaluation', width, height, plans)
+    // Result: 2–1, Zagorakis scored the first, Charisteas came on.
+    await page.getByRole('button', { name: 'Increase Our score' }).click()
+    await page.getByRole('button', { name: 'Increase Our score' }).click()
+    await page.getByRole('button', { name: 'Increase Their score' }).click()
+    await page.getByRole('combobox', { name: 'Scored by' }).first().click()
+    await page.getByRole('option', { name: 'Theodoros Zagorakis' }).click()
+    await page.getByRole('checkbox', { name: 'Angelos Charisteas' }).click()
+    await page.getByRole('textbox', { name: 'How their goals came' }).fill('A corner at the back post.')
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`evaluation-result-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    let keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
+    expect(keyboard.count).toBeGreaterThan(10)
+    expect(keyboard.missed).toEqual([])
+
+    // Team: did the plan work?
+    await page.getByRole('button', { name: 'Next: Team' }).click()
+    await page.getByRole('group', { name: 'Win it back in their half' }).getByText('Worked').click()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`evaluation-team-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+
+    // Players: everyone starts at Did the job · Met; Zagorakis did part of his job, above what was expected.
+    await page.getByRole('button', { name: 'Next: Players' }).click()
+    const card = page.getByRole('button', { name: /^Theodoros Zagorakis/ })
+    await expect(card).toContainText('Did the job · Met')
+    await expect(card).toContainText('Expected: Stretch')
+    await card.click()
+    const expanded = page.locator('article').filter({ has: card })
+    await expanded.getByRole('group', { name: 'Did the job' }).getByText('Partly').click()
+    await expanded.getByRole('group', { name: 'Against expectation' }).getByText('Above').click()
+    await expanded.getByRole('textbox', { name: /^Note to Theodoros/ }).fill('Brave all game.')
+    await expect(card).toContainText('Did part of the job · Above')
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`evaluation-players-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
+    expect(keyboard.missed).toEqual([])
+
+    await page.getByRole('button', { name: 'Save draft · sleep on it' }).click()
+    await expect(page.getByText(/^Draft saved \d\d:\d\d$/)).toBeVisible()
+    await expect(page.getByText('Evaluation draft')).toBeVisible()
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath(`evaluation-saved-${width}.png`) })
+
+    // A reload shows the draft.
+    await page.reload()
+    await expect(page.getByRole('spinbutton', { name: 'Our score' })).toHaveAttribute('aria-valuenow', '2')
+    await expect(page.getByRole('checkbox', { name: 'Angelos Charisteas' })).toBeChecked()
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
