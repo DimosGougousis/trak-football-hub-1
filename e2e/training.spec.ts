@@ -6,6 +6,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // same two widths. TRAK-296 (Training 3/5): the Add/Swap sheet's My drills and Library views, and a Library preview.
 // TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): Run it, and a closed training's log.
 // TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices.
+// TRAK-306: the side menu (a laptop's sidebar, a phone's sheet) cuts no letter: g, q and p keep their tails.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -368,3 +369,41 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 }
+
+/** The texts in `scope` that a box clips top or bottom: the glyphs (a Range's box, the font's full height) reach past
+ *  an ancestor that hides its overflow. Screen-reader-only text (a 1 px box) is clipped on purpose, so it's left out. */
+const cutOff = (page: Page, scope: string) => page.locator(scope).evaluate(root => {
+  const cut: string[] = []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.textContent?.trim()
+    const parent = node.parentElement
+    if (!text || !parent || parent.getBoundingClientRect().height <= 1) continue
+    const range = document.createRange()
+    range.selectNodeContents(node)
+    const glyphs = range.getBoundingClientRect()
+    for (let el: HTMLElement | null = parent; el && el !== root.parentElement; el = el.parentElement) {
+      const style = getComputedStyle(el)
+      if (style.overflowY === 'visible' && style.overflowX === 'visible') continue
+      const box = el.getBoundingClientRect()
+      if (glyphs.bottom > box.bottom + 0.5 || glyphs.top < box.top - 0.5) { cut.push(text); break }
+    }
+  }
+  return cut
+})
+
+test('the side menu cuts no letter: on a laptop and in a phone’s menu (Kostas, 29 Oct)', async ({ page, context }) => {
+  const { unexpected, errors } = await open(page, context, '/coach/training', 1440, 900)
+  // The sidebar's id is React's (":r9:-sidebar"), so it's matched as an attribute.
+  const sidebar = `[id="${await page.getByRole('button', { name: 'Collapse sidebar' }).getAttribute('aria-controls')}"]`
+  await expect(page.locator(sidebar).getByRole('button', { name: 'Training' })).toBeVisible()
+  expect(await cutOff(page, sidebar)).toEqual([])
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  const menu = page.getByRole('dialog', { name: 'Menu' })
+  await expect(menu.getByRole('button', { name: 'Settings' })).toBeVisible()
+  expect(await cutOff(page, '[role="dialog"]')).toEqual([])
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
