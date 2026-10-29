@@ -7,6 +7,7 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // TRAK-297 (Training 4/5): Copy a past session. TRAK-298 (Training 5/5): View (TRAK-309: was Run it), and a closed training's log.
 // TRAK-304: Home's Today card with a training planned today: the week first, then the day's practices.
 // TRAK-306: the side menu (a laptop's sidebar, a phone's sheet) cuts no letter: g, q and p keep their tails.
+// TRAK-310: each training coming up has View plan and Edit plan, or Create plan, on its right.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -149,6 +150,10 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const coming = page.getByRole('region', { name: 'Coming up' })
     await expect(coming.getByRole('article')).toHaveCount(3)
     await expect(coming.getByRole('article').first()).toContainText('Before AEK U16 on Saturday')
+    // TRAK-310: on each training's right, View plan and Edit plan, or Create plan; no New session at the top.
+    await expect(coming.getByRole('button', { name: 'Create plan' })).toHaveCount(2)
+    await expect(coming.getByRole('article', { name: /Receiving under pressure$/ }).getByRole('button')).toHaveText(['View plan', 'Edit plan'])
+    await expect(page.getByRole('button', { name: 'New session' })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Last week' }).getByRole('link')).toHaveCount(1)
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`training-sessions-${width}.png`), fullPage: true })
@@ -217,7 +222,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   test(`Planning at ${width} px: how to plan it, Write my own, and the plan`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
     const first = page.getByRole('region', { name: 'Coming up' }).getByRole('article').first()
-    await first.getByRole('button', { name: 'Plan this session' }).click()
+    await first.getByRole('button', { name: 'Create plan' }).click()
     const sheet = page.getByRole('dialog', { name: 'How do you want to plan it?' })
     await expect(sheet.getByRole('button', { name: /Write my own/ })).toBeVisible()
     await page.waitForTimeout(600)
@@ -291,7 +296,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   test(`Copy a past session at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
     const first = page.getByRole('region', { name: 'Coming up' }).getByRole('article').first()
-    await first.getByRole('button', { name: 'Plan this session' }).click()
+    await first.getByRole('button', { name: 'Create plan' }).click()
     const how = page.getByRole('dialog', { name: 'How do you want to plan it?' })
     await how.getByRole('button', { name: /Copy a past session/ }).click()
     const copy = page.getByRole('dialog', { name: 'Copy a past session' })

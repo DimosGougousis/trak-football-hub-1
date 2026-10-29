@@ -1,6 +1,6 @@
 /**
- * TRAK-295 (Training 2/5, spec TRAK-293): planning a training. A training coming up says Planned or Not planned;
- * Plan this session (and New session, which asks which training first) asks "How do you want to plan it?" and
+ * TRAK-295 (Training 2/5, spec TRAK-293): planning a training. A training coming up has View plan and Edit plan, or
+ * Create plan (TRAK-310), which asks "How do you want to plan it?" and
  * remembers the last way. Write my own types practices one at a time (change, move, remove) and saves the plan whole
  * through one database function; a failed save keeps everything typed. The plan page shows the practices with where
  * each came from, the loop, and Change the plan. Test people are named after footballers.
@@ -88,24 +88,31 @@ const practices = () => within(screen.getByRole('list', { name: 'Practices' })).
   .map(item => item.querySelector('p')?.textContent)
 
 describe('TRAK-295: planning a training from Training home', { timeout: 20_000 }, () => {
-  it('a training coming up says whether it is planned; a planned one opens its plan', async () => {
+  it('a training not planned has Create plan; a planned one has View plan and Edit plan (TRAK-310)', async () => {
+    const user = userEvent.setup()
     const now = Date.now()
     database([training('soon', onTheMinute(now + DAY)), training('later', onTheMinute(now + 3 * DAY))],
       { later: [practice(1, 'Rondos 4v1')] })
     renderApp('/coach/training')
-    await waitFor(() => expect(within(card('Training soon')).getByText('Not planned')).toBeInTheDocument())
-    expect(within(card('Training soon')).getByRole('button', { name: 'Plan this session' })).toBeInTheDocument()
-    expect(within(card('Training later')).getByText('Planned')).toBeInTheDocument()
-    expect(within(card('Training later')).getByRole('link', { name: 'Open the plan' })).toHaveAttribute('href', '/coach/training/later')
-    expect(within(card('Training later')).queryByRole('button', { name: 'Plan this session' })).toBeNull()
+    await waitFor(() => expect(within(card('Training soon')).getByRole('button', { name: 'Create plan' })).toBeInTheDocument())
+    expect(within(card('Training soon')).queryByRole('button', { name: /View plan|Edit plan/ })).toBeNull()
+    expect(within(card('Training later')).queryByRole('button', { name: 'Create plan' })).toBeNull()
+    // No New session: every training coming up has its own Create plan.
+    expect(screen.queryByRole('button', { name: 'New session' })).toBeNull()
+
+    await user.click(within(card('Training later')).getByRole('button', { name: 'View plan' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/later'))
+    await user.click(await screen.findByRole('link', { name: 'Training' }))
+    await user.click(await within(await screen.findByRole('article', { name: /Training later$/ })).findByRole('button', { name: 'Edit plan' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/later/plan'))
   })
 
-  it('Plan this session asks how, Write my own opens the planner, and next time it says so', async () => {
+  it('Create plan asks how, Write my own opens the planner, and next time it says so', async () => {
     const user = userEvent.setup()
     database([training('soon', onTheMinute(Date.now() + DAY))])
     renderApp('/coach/training')
-    await waitFor(() => expect(within(card('Training soon')).getByRole('button', { name: 'Plan this session' })).toBeInTheDocument())
-    await user.click(within(card('Training soon')).getByRole('button', { name: 'Plan this session' }))
+    await waitFor(() => expect(within(card('Training soon')).getByRole('button', { name: 'Create plan' })).toBeInTheDocument())
+    await user.click(within(card('Training soon')).getByRole('button', { name: 'Create plan' }))
     let sheet = await screen.findByRole('dialog', { name: 'How do you want to plan it?' })
     expect(within(sheet).getByText(/Pitch 2 · 90 min/)).toBeInTheDocument()
     // Copy a past session is Training 4/5; Build it with Trak is parked.
@@ -116,28 +123,10 @@ describe('TRAK-295: planning a training from Training home', { timeout: 20_000 }
     expect(await screen.findByRole('form', { name: 'Practice 1' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: 'Training' }))
-    await waitFor(() => expect(within(card('Training soon')).getByRole('button', { name: 'Plan this session' })).toBeInTheDocument())
-    await user.click(within(card('Training soon')).getByRole('button', { name: 'Plan this session' }))
+    await waitFor(() => expect(within(card('Training soon')).getByRole('button', { name: 'Create plan' })).toBeInTheDocument())
+    await user.click(within(card('Training soon')).getByRole('button', { name: 'Create plan' }))
     sheet = await screen.findByRole('dialog', { name: 'How do you want to plan it?' })
     expect(within(sheet).getByText('You used this last time')).toBeInTheDocument()
-  })
-
-  it('New session asks which training first, offering only those not planned', async () => {
-    const user = userEvent.setup()
-    const now = Date.now()
-    database([training('soon', onTheMinute(now + DAY), { title: 'Before Everton' }), training('later', onTheMinute(now + 3 * DAY))],
-      { soon: [practice(1, 'Rondos 4v1')] })
-    renderApp('/coach/training')
-    await waitFor(() => expect(within(card('Before Everton')).getByText('Planned')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'New session' }))
-    const which = await screen.findByRole('dialog', { name: 'Which training?' })
-    const offered = within(which).getAllByRole('button').filter(b => /Training later/.test(b.textContent ?? ''))
-    expect(offered).toHaveLength(1)
-    expect(within(which).queryByText(/Before Everton/)).toBeNull()
-    await user.click(offered[0])
-    const how = await screen.findByRole('dialog', { name: 'How do you want to plan it?' })
-    await user.click(within(how).getByRole('button', { name: /Write my own/ }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/later/plan'))
   })
 })
 

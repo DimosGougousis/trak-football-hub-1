@@ -14,75 +14,52 @@ import { Button } from '@/components/arc/button/button'
 import { SearchField } from '@/components/arc/search-field/search-field'
 import { usePastSessions, type PastSession, type Training } from './useTraining'
 
-/* TRAK-295 (Training 2/5, spec TRAK-293, mockup board 2): "How do you want to plan it?". Opened from a training, it
-   asks how; opened from New session, it first asks which training. It remembers the coach's last way. TRAK-297
-   (Training 4/5, board 2b): Copy a past session shows once the coach has planned another session; copying opens Write
-   my own filled in, and nothing saves until Save the plan. Build it with Trak is parked. */
+/* TRAK-295 (Training 2/5, spec TRAK-293, mockup board 2): "How do you want to plan it?", opened from a training. It
+   remembers the coach's last way. TRAK-297 (Training 4/5, board 2b): Copy a past session shows once the coach has
+   planned another session; copying opens Write my own filled in, and nothing saves until Save the plan. Build it with
+   Trak is parked. TRAK-310: New session, which first asked which training, is gone. */
 
 const when = (training: Training) => {
   const { day, time } = gameWhen(training)
   return [day, time].filter(Boolean).join(' · ')
 }
 
-/** `training`: the one to plan. Null asks which of `choices` first (New session). */
-export function PlanWaySheet({ open, onOpenChange, training, choices, onAddTraining }: {
+/** `training`: the one to plan. */
+export function PlanWaySheet({ open, onOpenChange, training }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  training: Training | null
-  choices: Training[]
-  onAddTraining: () => void
+  training: Training
 }) {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [picked, setPicked] = useState<Training | null>(training)
   const [copying, setCopying] = useState(false)
-  // Each opening starts again from the training it was opened for.
-  useEffect(() => { if (open) { setPicked(training); setCopying(false) } }, [open, training])
+  // Each opening starts again from the ways to plan.
+  useEffect(() => { if (open) setCopying(false) }, [open, training])
   const past = usePastSessions(open)
   // Every planned session but this one; a failed read just leaves Copy out.
-  const others = (past.data ?? []).filter(session => session.id !== picked?.id)
+  const others = (past.data ?? []).filter(session => session.id !== training.id)
 
-  const plan = (chosen: Training, way: PlanWay, state: PlannerState = null) => {
+  const plan = (way: PlanWay, state: PlannerState = null) => {
     rememberPlanWay(user?.id, way)
     onOpenChange(false)
-    navigate(planPath(chosen.id), { state })
-  }
-
-  if (!picked) {
-    return <BottomSheet className="arc" open={open} onOpenChange={onOpenChange} title="Which training?"
-      description="Pick the training to plan.">
-      <div className="grid gap-4 pb-4">
-        {choices.length === 0 ? <>
-          <p className="text-[15px] text-ink-2">Every training coming up is planned. Add a training in Schedule to plan another.</p>
-          <div><Button onClick={() => { onOpenChange(false); onAddTraining() }}>Add a training</Button></div>
-        </> : <ul className="grid gap-2">
-          {choices.map(choice => <li key={choice.id}>
-            <button type="button" onClick={() => setPicked(choice)}
-              className="flex min-h-14 w-full flex-col justify-center rounded-xl border border-line bg-surface px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <span className="text-[15px] font-medium text-ink">{when(choice)}</span>
-              <span className="text-sm text-ink-3">{[choice.title, choice.squad].filter(Boolean).join(' · ')}</span>
-            </button>
-          </li>)}
-        </ul>}
-      </div>
-    </BottomSheet>
+    navigate(planPath(training.id), { state })
   }
 
   if (copying) {
     return <BottomSheet className="arc" open={open} onOpenChange={onOpenChange} detents={[0.92]} title="Copy a past session"
-      description={`For ${when(picked)}. Every session you plan is kept here.`}>
+      description={`For ${when(training)}. Every session you plan is kept here.`}>
       <CopyList sessions={others} error={!!past.error} onRetry={() => void past.refetch()} retrying={past.isFetching}
-        onBack={() => setCopying(false)} onCopy={session => plan(picked, 'copy', { copy: session.practices, copiedFrom: `${session.title}, ${gameWhen(session).day}` })} />
+        onBack={() => setCopying(false)} onCopy={session => plan('copy', { copy: session.practices, copiedFrom: `${session.title}, ${gameWhen(session).day}` })} />
     </BottomSheet>
   }
 
-  const minutes = trainingMinutes(picked)
+  const minutes = trainingMinutes(training)
   const last = lastPlanWay(user?.id)
   return <BottomSheet className="arc" open={open} onOpenChange={onOpenChange} title="How do you want to plan it?"
-    description={[when(picked), picked.venue, minutes ? `${minutes} min` : null].filter(Boolean).join(' · ')}>
+    description={[when(training), training.venue, minutes ? `${minutes} min` : null].filter(Boolean).join(' · ')}>
     <div className="grid gap-4 pb-4">
       <div className="grid gap-3.5 tablet:grid-cols-2">
-        <Way icon={<PenLine size={20} />} title="Write my own" last={last === 'write'} onPick={() => plan(picked, 'write')}
+        <Way icon={<PenLine size={20} />} title="Write my own" last={last === 'write'} onPick={() => plan('write')}
           text="Type your practices: a name, the minutes, what you’ll tell them. Fastest when you already know." />
         {others.length > 0 && <Way icon={<Copy size={20} />} title="Copy a past session" last={last === 'copy'} onPick={() => setCopying(true)}
           text={`Start from ${others[0].title}, or any session you’ve planned. Then change what you like.`} />}
