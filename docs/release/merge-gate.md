@@ -22,7 +22,9 @@ Preserve existing migration history and the product's consent/privacy rules.
 1. Keep a PR draft while work continues. Mark it ready when the candidate is
    complete and targets current main.
 2. GitHub runs `test` (the full lint, types, source, use-case, database, build,
-   credential and browser suite) and `Base branch still reaches main`.
+   credential and browser suite) and `Base branch still reaches main`. The
+   suite's parts (`static`, `unit`, `database`, `browser`) run side by side on
+   separate machines; `test` is green only when every part passed.
 3. Fix failures within this gate. A changed final candidate needs fresh results;
    unchanged contents do not need another local or independent verification run.
 4. Merge only with required checks green and current main included. No human,

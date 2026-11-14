@@ -90,6 +90,68 @@ describe('release workflow regression gates', () => {
     expect(permits('deploy', { ...pr, draft: true })).toBe(false)
     expect(permits('test', { ref: 'refs/heads/shared/task' })).toBe(false)
     expect(workflow.concurrency['cancel-in-progress']).toBe("${{ github.event_name == 'pull_request' }}")
-    expect(workflow.jobs.test.steps.find((step: { name: string }) => step.name === 'Install dependencies').run).toBe('npm ci --legacy-peer-deps')
+    for (const job of PARTS) {
+      expect(workflow.jobs[job].steps.find((step: { name: string }) => step.name === 'Install dependencies').run).toBe('npm ci --legacy-peer-deps')
+    }
+  })
+})
+
+// The gate's checks run side by side (Makis and Tarek, 14 Nov): four parts, then `test` gathers them. Branch
+// protection, the merge proof and Deploy all still look for the one job named `test`.
+const PARTS = ['static', 'unit', 'database', 'browser']
+type Step = { name?: string; run?: string; uses?: string; env?: Record<string, string> }
+const steps = (job: string): Step[] => workflow.jobs[job].steps
+describe('the merge gate runs its parts side by side', () => {
+  it('runs every part only for a final PR, as the single job did', () => {
+    const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
+    for (const job of PARTS) {
+      expect(permits(job, pr)).toBe(true)
+      expect(permits(job, { ...pr, draft: true })).toBe(false)
+      expect(permits(job)).toBe(false)
+    }
+  })
+
+  it('still runs every check the single job ran', () => {
+    const ran = PARTS.flatMap(job => steps(job).map(step => step.run ?? '')).join('\n')
+    for (const command of ['node scripts/check-delivery-policy.mjs', 'npm run lint', 'npm run typecheck',
+      'node --test scripts/merge-gate-evidence.test.mjs scripts/check-push-credentials.test.mjs', 'npm run test:consent-timezones',
+      'npm run test:harness', 'npm run uc:check', 'npm run test:db\n', 'npm run test:db -- --parent-upgrade-review',
+      'npm run test:db -- --coach-departure-review', 'npm run test:db -- --academy-upgrade-review', 'npm run test:db -- --assessment-upgrade-review',
+      'npm run test:db:academy-history', 'npm run test:db:runner', 'npm run test:db:concurrency', 'npm run test:db:query-plans',
+      'npm run test:db:native -- --academy-upgrade-review', 'npm run test:db:convergence', 'npm run build', 'npm run check:bundle',
+      'npx playwright install --with-deps chromium']) expect(`${ran}\n`).toContain(command)
+    // The unit and browser tests are split by file across machines; together the shards run every file once.
+    const shards = (job: string) => workflow.jobs[job].strategy.matrix.shard.length
+    expect(steps('unit').map(step => step.run)).toContain(`npm test -- --shard=\${{ matrix.shard }}/${shards('unit')}`)
+    expect(steps('browser').map(step => step.run)).toContain(`npx playwright test --config playwright.pilot.config.ts --shard=\${{ matrix.shard }}/${shards('browser')}`)
+    for (const job of ['unit', 'browser']) {
+      expect(workflow.jobs[job].strategy.matrix.shard).toEqual(Array.from({ length: shards(job) }, (_, i) => i + 1))
+      expect(workflow.jobs[job].strategy['fail-fast']).toBe(false)
+    }
+  })
+
+  // GitHub counts a SKIPPED required check as passed. Without always(), one failed part would skip `test` and let
+  // a broken PR merge. So `test` always runs for a final PR, and fails unless every part succeeded.
+  it.each([
+    ['success', 'success', 'success', 'success', 0],
+    ['failure', 'success', 'success', 'success', 1],
+    ['success', 'failure', 'success', 'success', 1],
+    ['success', 'success', 'cancelled', 'success', 1],
+    ['success', 'success', 'success', 'skipped', 1],
+    ['success', 'success', 'success', '', 1],
+  ])('test is red unless every part passed: %s %s %s %s', (STATIC, UNIT, DATABASE, BROWSER, status) => {
+    expect(workflow.jobs.test.needs).toEqual(PARTS)
+    expect(workflow.jobs.test.if).toMatch(/^always\(\) && /)
+    const gate = steps('test')[0]
+    expect(gate.env).toEqual(Object.fromEntries(PARTS.map(job => [job.toUpperCase(), `\${{ needs.${job}.result }}`])))
+    const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-e', '-c', gate.run!], { encoding: 'utf8', env: { PATH: '', STATIC, UNIT, DATABASE, BROWSER } })
+    expect(result.status).toBe(status)
+  })
+
+  it('records the merge proof last, on a checkout no test or build has touched', () => {
+    const names = steps('test').map(step => step.name ?? step.uses)
+    expect(names.indexOf('Record tested contents')).toBeGreaterThan(0)
+    expect(steps('test').filter(step => step.run).map(step => step.run)).toHaveLength(2)
+    expect(steps('test').at(-1)!.uses).toMatch(/^actions\/upload-artifact@/)
   })
 })
