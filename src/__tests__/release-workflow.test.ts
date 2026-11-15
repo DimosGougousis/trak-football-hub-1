@@ -81,7 +81,7 @@ describe('release workflow regression gates', () => {
     expect(permits('supabase', pr)).toBe(false)
     for (const tests of ['failure', 'cancelled', 'skipped']) expect(permits('deploy', { ...pr, tests })).toBe(false)
   })
-  it('runs the full gate only for final PRs, never branch pushes or drafts', () => {
+  it('runs the gate only for final PRs, never branch pushes or drafts', () => {
     expect(workflow.on.push.branches).toEqual(['main'])
     expect(workflow.on.pull_request.types).toEqual(expect.arrayContaining(['ready_for_review', 'synchronize', 'converted_to_draft']))
     const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
@@ -96,13 +96,13 @@ describe('release workflow regression gates', () => {
   })
 })
 
-// The gate's checks run side by side (Makis and Tarek, 14 Nov): four parts, then `test` gathers them. Branch
-// protection, the merge proof and Deploy all still look for the one job named `test`.
-const PARTS = ['static', 'unit', 'database', 'browser']
+// The gate is one part, `build`, then `test` gathers it (15 Nov 2026). Branch protection, the merge proof and
+// Deploy all still look for the one job named `test`. archive/ci-full-gate-2026-11-15 holds the four-part gate.
+const PARTS = ['build']
 type Step = { name?: string; run?: string; uses?: string; env?: Record<string, string> }
 const steps = (job: string): Step[] => workflow.jobs[job].steps
-describe('the merge gate runs its parts side by side', () => {
-  it('runs every part only for a final PR, as the single job did', () => {
+describe('the merge gate builds and checks the bundle, nothing else', () => {
+  it('runs every part only for a final PR', () => {
     const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
     for (const job of PARTS) {
       expect(permits(job, pr)).toBe(true)
@@ -111,40 +111,26 @@ describe('the merge gate runs its parts side by side', () => {
     }
   })
 
-  it('still runs every check the single job ran', () => {
-    const ran = PARTS.flatMap(job => steps(job).map(step => step.run ?? '')).join('\n')
-    for (const command of ['node scripts/check-delivery-policy.mjs', 'npm run lint', 'npm run typecheck',
-      'node --test scripts/merge-gate-evidence.test.mjs scripts/check-push-credentials.test.mjs', 'npm run test:consent-timezones',
-      'npm run test:harness', 'npm run uc:check', 'npm run test:db\n', 'npm run test:db -- --parent-upgrade-review',
-      'npm run test:db -- --coach-departure-review', 'npm run test:db -- --academy-upgrade-review', 'npm run test:db -- --assessment-upgrade-review',
-      'npm run test:db:academy-history', 'npm run test:db:runner', 'npm run test:db:concurrency', 'npm run test:db:query-plans',
-      'npm run test:db:native -- --academy-upgrade-review', 'npm run test:db:convergence', 'npm run build', 'npm run check:bundle',
-      'npx playwright install --with-deps chromium']) expect(`${ran}\n`).toContain(command)
-    // The unit and browser tests are split by file across machines; together the shards run every file once.
-    const shards = (job: string) => workflow.jobs[job].strategy.matrix.shard.length
-    expect(steps('unit').map(step => step.run)).toContain(`npm test -- --shard=\${{ matrix.shard }}/${shards('unit')}`)
-    expect(steps('browser').map(step => step.run)).toContain(`npx playwright test --config playwright.pilot.config.ts --shard=\${{ matrix.shard }}/${shards('browser')}`)
-    for (const job of ['unit', 'browser']) {
-      expect(workflow.jobs[job].strategy.matrix.shard).toEqual(Array.from({ length: shards(job) }, (_, i) => i + 1))
-      expect(workflow.jobs[job].strategy['fail-fast']).toBe(false)
-    }
+  it('builds, then reads the built bundle for secrets, and runs no regression suite', () => {
+    const ran = steps('build').filter(step => step.run).map(step => step.run)
+    expect(ran).toEqual(['npm ci --legacy-peer-deps', 'npm run build', 'npm run check:bundle'])
+    expect(Object.keys(workflow.jobs)).toEqual(['build', 'test', 'tested-main', 'vercel-credentials', 'supabase', 'deploy'])
   })
 
-  // GitHub counts a SKIPPED required check as passed. Without always(), one failed part would skip `test` and let
-  // a broken PR merge. So `test` always runs for a final PR, and fails unless every part succeeded.
+  // GitHub counts a SKIPPED required check as passed. Without always(), a failed build would skip `test` and let
+  // a broken PR merge. So `test` always runs for a final PR, and fails unless the build succeeded.
   it.each([
-    ['success', 'success', 'success', 'success', 0],
-    ['failure', 'success', 'success', 'success', 1],
-    ['success', 'failure', 'success', 'success', 1],
-    ['success', 'success', 'cancelled', 'success', 1],
-    ['success', 'success', 'success', 'skipped', 1],
-    ['success', 'success', 'success', '', 1],
-  ])('test is red unless every part passed: %s %s %s %s', (STATIC, UNIT, DATABASE, BROWSER, status) => {
+    ['success', 0],
+    ['failure', 1],
+    ['cancelled', 1],
+    ['skipped', 1],
+    ['', 1],
+  ])('test is red unless the build passed: %s', (BUILD, status) => {
     expect(workflow.jobs.test.needs).toEqual(PARTS)
     expect(workflow.jobs.test.if).toMatch(/^always\(\) && /)
     const gate = steps('test')[0]
     expect(gate.env).toEqual(Object.fromEntries(PARTS.map(job => [job.toUpperCase(), `\${{ needs.${job}.result }}`])))
-    const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-e', '-c', gate.run!], { encoding: 'utf8', env: { PATH: '', STATIC, UNIT, DATABASE, BROWSER } })
+    const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-e', '-c', gate.run!], { encoding: 'utf8', env: { PATH: '', BUILD } })
     expect(result.status).toBe(status)
   })
 
