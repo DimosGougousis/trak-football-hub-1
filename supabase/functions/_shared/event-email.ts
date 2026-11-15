@@ -44,9 +44,13 @@ export interface ClaimedNotice {
 export const LINK_PLACEHOLDER = '(link in the Trak app)';
 export const TRAK_URL = 'https://trakfootball.com';
 /** Imad, 10 Oct: no Reply-To; event questions go to the coach, app questions to Trak.
- *  The reminder email's footer; the event emails use Kostas's (TRAK-190) in composeEventEmail. */
-export const WHO_TO_ASK = 'Questions about this event? Ask your coach/academy. '
-  + 'Feedback or questions about the app? Send us an email at support@trakfootball.com';
+ *  Kostas's footer (TRAK-190), on every event email and the reminder (TRAK-243). */
+export const IN_THIS_SQUAD = 'You get this email because you or your child is in this squad on Trak.';
+export const whoToAsk = (several: boolean) =>
+  `Questions about ${several ? 'these events' : 'this event'}? Ask your coach or academy.\nQuestions about the app? Email support@trakfootball.com`;
+export const cantMakeIt = (several: boolean) =>
+  `If your child can't make it${several ? ' to any of these' : ''}, tap "Can't make it" in Trak so the coach knows.`;
+export const SEE_SCHEDULE = `See the full schedule: ${TRAK_URL}`;
 const SUBJECT_MAX = 150;
 
 /** Coach-typed text, safe to send: links replaced, one line, trimmed. */
@@ -94,7 +98,7 @@ export const longDay = (date: string | null) => dayName(date, 'long');
 export const shortDay = (date: string | null) => dayName(date, 'short');
 
 /** The event emails' own spacing (Kostas, TRAK-190): "18:00 – 19:30". Reminders keep timeRange's. */
-const spaced = (range: string) => range.replace('–', ' – ');
+export const spaced = (range: string) => range.replace('–', ' – ');
 
 /** "17:00–18:30", "17:00" or "time to be confirmed". */
 export function timeRange(e: EventFields): string {
@@ -151,7 +155,7 @@ export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { 
 // ── Kostas's wording (TRAK-190, 20 Oct) ─────────────────────────────────────
 
 /** What a family is told an event is, the way the app names it: "Match vs Panionios U14 (away)". */
-function emailEventName(e: EventFields, names: RegExp[]): string {
+export function emailEventName(e: EventFields, names: RegExp[]): string {
   if (e.event_type === 'match') {
     const opponent = clean(e.opponent, names);
     const side = e.home_away === 'home' || e.home_away === 'away' ? ` (${e.home_away})` : '';
@@ -161,7 +165,7 @@ function emailEventName(e: EventFields, names: RegExp[]): string {
 }
 
 /** One email about one event names it only when the opener doesn't already: a plain "Training" goes unnamed. */
-function namedAlone(e: EventFields, names: RegExp[]): boolean {
+export function namedAlone(e: EventFields, names: RegExp[]): boolean {
   if (e.event_type !== 'training') return true;
   const title = clean(e.title, names);
   return !!title && title.toLowerCase() !== 'training';
@@ -264,14 +268,13 @@ export function composeEventEmail(to: string, notices: ClaimedNotice[]): PlainEm
   const hidden = items.length - Math.min(items.length, MAX_LISTED);
 
   const attending = items.some(item => item.change.what !== 'cancelled');
-  const canMakeIt = attending
-    ? [`If your child can't make it${single ? '' : ' to any of these'}, tap "Can't make it" in Trak so the coach knows.`] : [];
+  const canMakeIt = attending ? [cantMakeIt(!single)] : [];
   const text = [
     ...body,
     ...(hidden ? [`...and ${hidden} more. See them all in Trak.`] : []),
-    [...canMakeIt, `See the full schedule: ${TRAK_URL}`].join('\n'),
-    'You get this email because you or your child is in this squad on Trak.',
-    `Questions about ${single ? 'this event' : 'these events'}? Ask your coach or academy.\nQuestions about the app? Email support@trakfootball.com`,
+    [...canMakeIt, SEE_SCHEDULE].join('\n'),
+    IN_THIS_SQUAD,
+    whoToAsk(!single),
   ].join('\n\n');
   return { to, subject: oneLine(subject), text };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LINK_PLACEHOLDER, WHO_TO_ASK } from '../../supabase/functions/_shared/event-email';
-import { composeReminderEmail, type ClaimedReminder, type ReminderEvent } from '../../supabase/functions/_shared/event-reminder';
+import { LINK_PLACEHOLDER } from '../../supabase/functions/_shared/event-email';
+import { composeReminderEmails, type ClaimedReminder, type ReminderEvent } from '../../supabase/functions/_shared/event-reminder';
 import { emailProblem, type PlainEmail, type SendResult } from '../../supabase/functions/_shared/send-email';
 import { SEND_GAP_MS } from '../../supabase/functions/send-event-emails/handler';
 import {
@@ -9,10 +9,10 @@ import {
   type ReminderDependencies,
 } from '../../supabase/functions/send-event-reminders/handler';
 
-// TRAK-136 (J8.13): the reminder 2 days before, one email per person per day
-// listing all their children's events, and how send-event-reminders sends it.
-// Who is due, and never twice for a day, is decided in SQL
-// (supabase/tests/event_reminders.sql).
+// TRAK-136 (J8.13): the reminder 2 days before, and how send-event-reminders
+// sends it. TRAK-243 (Kostas's wording, 21 Oct): one email per event, laid out
+// like the new-event email (TRAK-190). Who is due, and never twice for a day,
+// is decided in SQL (supabase/tests/event_reminders.sql).
 
 const event = (over: Partial<ReminderEvent> = {}): ReminderEvent => ({
   id: 'ev-1', title: 'Training', event_type: 'training', opponent: null, home_away: null, status: 'scheduled',
@@ -23,57 +23,80 @@ const event = (over: Partial<ReminderEvent> = {}): ReminderEvent => ({
 const reminder = (events: ReminderEvent[], over: Partial<ClaimedReminder> = {}): ClaimedReminder => ({
   user_id: 'guardian-1', email: 'guardian@example.org', day: '2026-10-14', events, ...over,
 });
+const only = (r: ClaimedReminder) => {
+  const emails = composeReminderEmails(r);
+  expect(emails).toHaveLength(1);
+  return emails[0].email;
+};
+const FOOTER = 'You get this email because you or your child is in this squad on Trak.\n\n'
+  + 'Questions about this event? Ask your coach or academy.\nQuestions about the app? Email support@trakfootball.com';
 
-describe('the reminder a family reads', () => {
-  it('one event: a generic subject, then what, when, where', () => {
-    const email = composeReminderEmail(reminder([event({ meet_time: '16:45:00' })]))!;
+describe('the reminder a family reads (Kostas, 21 Oct)', () => {
+  it('a match, exactly as Kostas wrote it', () => {
+    const email = only(reminder([event({
+      event_type: 'match', title: 'vs Panionios U14', opponent: 'Panionios U14', home_away: 'away',
+      event_date: '2026-11-07', starts_at: '2026-11-07T09:00:00Z', start_time: '11:00:00', end_time: '12:30:00',
+      meet_time: '10:15:00', venue: 'Nea Smyrni Stadium', kit: 'White',
+    })], { day: '2026-11-07' }));
     expect(email.to).toBe('guardian@example.org');
-    expect(email.subject).toBe('Reminder: Training on Wed 14 Oct');
-    expect(email.text).toContain('Coming up on Wednesday 14 October:');
-    expect(email.text).toContain('Training · U15, Synthetic FC\n17:00–18:30 · meet 16:45\nVenue: Academy Pitch 2');
+    expect(email.subject).toBe('Match reminder on Sat 7 Nov');
+    expect(email.text).toBe([
+      'Coming up: match vs Panionios U14 (away).',
+      'Saturday 7 November, 11:00 – 12:30\nNea Smyrni Stadium\nPlease arrive by 10:15\nKit: White',
+      'If your child can\'t make it, tap "Can\'t make it" in Trak so the coach knows.\nSee the full schedule: https://trakfootball.com',
+      'Turn these reminders off in Trak: Settings → Notifications.',
+      FOOTER,
+    ].join('\n\n'));
     expect(emailProblem(email)).toBeNull();
   });
 
-  it('a family with two children gets one email listing every event that day, in time order', () => {
-    const email = composeReminderEmail(reminder([
+  it('a plain training says "training"; a training the coach named, and any other event, says its name as typed', () => {
+    const plain = only(reminder([event()]));
+    expect(plain.subject).toBe('Training reminder on Wed 14 Oct');
+    expect(plain.text.startsWith('Coming up: training.\n\nWednesday 14 October, 17:00 – 18:30\nAcademy Pitch 2\n\n')).toBe(true);
+    expect(only(reminder([event({ title: 'Tactical' })])).text.startsWith('Coming up: Tactical.\n\n')).toBe(true);
+    const other = only(reminder([event({ event_type: 'other', title: 'Team photo!' })]));
+    expect(other.subject).toBe('Event reminder on Wed 14 Oct');
+    expect(other.text.startsWith('Coming up: Team photo!\n\n')).toBe(true);
+  });
+
+  it('no squad line, no kit for a training, and the name only once', () => {
+    const email = only(reminder([event({ kit: 'Bibs', title: 'Tactical' })]));
+    expect(email.text).not.toMatch(/U15|Synthetic FC|Kit:/);
+    expect(email.text.match(/Tactical/g)).toHaveLength(1);
+  });
+
+  it('two events that day are two emails, in time order', () => {
+    const emails = composeReminderEmails(reminder([
       event({ id: 'b', start_time: '18:30:00', end_time: null, squad: 'U17' }),
       event({ id: 'a', event_type: 'match', title: '', opponent: 'Synthetic Rovers', kit: 'Red shirts', home_away: 'away', start_time: '09:00:00', end_time: '10:30:00' }),
-    ]))!;
-    expect(email.subject).toBe('Reminder: 2 events on Wed 14 Oct');
-    const match = email.text.indexOf('Match vs Synthetic Rovers · U15');
-    const training = email.text.indexOf('Training · U17');
-    expect(match).toBeGreaterThan(-1);
-    expect(training).toBeGreaterThan(match);
-    // Kit is for matches only (J8.4).
-    expect(email.text).toContain('Kit: Red shirts');
-    expect(email.text.match(/Kit:/g)).toHaveLength(1);
+    ]));
+    expect(emails.map(e => e.eventId)).toEqual(['a', 'b']);
+    expect(emails.map(e => e.email.subject)).toEqual(['Match reminder on Wed 14 Oct', 'Training reminder on Wed 14 Oct']);
+    expect(emails[0].email.text).toContain('Kit: Red shirts');
   });
 
   it('never names a child, in the subject or the body, and keeps coach-typed links out', () => {
-    const email = composeReminderEmail(reminder([event({
+    const email = only(reminder([event({
       title: 'Extra session for Lucas', venue: 'Pitch 2 maps.app.goo.gl/x', kit: 'Lucas brings bibs',
-    })]))!;
+    })]));
     expect(`${email.subject}\n${email.text}`).not.toMatch(/Lucas/);
-    expect(email.text).toContain(`Training · U15, Synthetic FC`);
-    expect(email.text).toContain(`Venue: Pitch 2 ${LINK_PLACEHOLDER}`);
+    expect(email.text.startsWith('Coming up: training.')).toBe(true);
+    expect(email.text).toContain(`Pitch 2 ${LINK_PLACEHOLDER}`);
     expect(emailProblem(email)).toBeNull();
   });
 
-  it('links the schedule and says how to turn reminders off, with no unsubscribe link', () => {
-    const email = composeReminderEmail(reminder([event()]))!;
-    expect(email.text).toContain('See the full schedule in Trak: https://trakfootball.com');
-    // No "Can't make it" until its screen ships (TRAK-137's app half); the email
-    // mustn't ask families for something the app can't do yet (Tarek, #271).
-    expect(email.text).not.toMatch(/make it/i);
+  it('says how to turn reminders off, with the schedule as its only link and no unsubscribe link', () => {
+    const email = only(reminder([event()]));
     expect(email.text).toContain('Turn these reminders off in Trak: Settings → Notifications.');
-    expect(email.text.endsWith(WHO_TO_ASK)).toBe(true);
+    expect(email.text.endsWith(FOOTER)).toBe(true);
     expect(email.text).not.toMatch(/unsubscribe/i);
     expect(email.text.match(/https?:\/\/\S+/g)).toEqual(['https://trakfootball.com']);
   });
 
   it('nothing to remind (the events were cancelled since) sends nothing', () => {
-    expect(composeReminderEmail(reminder([]))).toBeNull();
-    expect(composeReminderEmail(reminder([event({ status: 'cancelled' })]))).toBeNull();
+    expect(composeReminderEmails(reminder([]))).toEqual([]);
+    expect(composeReminderEmails(reminder([event({ status: 'cancelled' })]))).toEqual([]);
   });
 });
 
@@ -97,37 +120,38 @@ function deps(over: Partial<ReminderDependencies> = {}) {
 const report = () => ({ reminders: 0, emails: 0, failed: 0 });
 
 describe('sending reminders', () => {
-  it('one email per claimed person, each finished as sent with its event count', async () => {
+  it('one email per event; each person and day is finished once, as sent, with its event count', async () => {
     const { d, calls } = deps();
     const r = report();
     await deliverReminders([
-      reminder([event(), event({ id: 'ev-2' })]),
+      reminder([event(), event({ id: 'ev-2', start_time: '19:00:00' })]),
       reminder([event()], { user_id: 'player-1', email: 'player@example.org' }),
     ], d, r);
-    expect(calls.sent.map(m => m.to)).toEqual(['guardian@example.org', 'player@example.org']);
+    expect(calls.sent.map(m => m.to)).toEqual(['guardian@example.org', 'guardian@example.org', 'player@example.org']);
     expect(calls.finished).toEqual([
-      ['guardian-1', '2026-10-14', 'sent', 2, 'email-1', null],
-      ['player-1', '2026-10-14', 'sent', 1, 'email-2', null],
+      ['guardian-1', '2026-10-14', 'sent', 2, 'email-2', null],
+      ['player-1', '2026-10-14', 'sent', 1, 'email-3', null],
     ]);
-    expect(r).toEqual({ reminders: 2, emails: 2, failed: 0 });
+    expect(r).toEqual({ reminders: 2, emails: 3, failed: 0 });
   });
 
-  it('carries an idempotency key per person and day, so a retried reminder is one send', async () => {
+  it('carries an idempotency key per person, day and event, so a retried reminder is one send each', async () => {
     const a = deps(); const b = deps();
     await deliverReminders([reminder([event()])], a.d, report());
-    await deliverReminders([reminder([event({ id: 'ev-9' })])], b.d, report());
+    await deliverReminders([reminder([event()])], b.d, report());
     const key = a.calls.sent[0].idempotencyKey;
     expect(key).toMatch(/^trak-reminder-[0-9a-f]{64}$/);
     expect(b.calls.sent[0].idempotencyKey).toBe(key);
     const c = deps();
-    await deliverReminders([reminder([event()], { day: '2026-10-15' })], c.d, report());
-    expect(c.calls.sent[0].idempotencyKey).not.toBe(key);
+    await deliverReminders([reminder([event()], { day: '2026-10-15' }), reminder([event({ id: 'ev-9' })])], c.d, report());
+    expect(c.calls.sent.map(m => m.idempotencyKey)).not.toContain(key);
+    expect(new Set(c.calls.sent.map(m => m.idempotencyKey)).size).toBe(2);
   });
 
   it('stays under Resend\'s 10 a second', async () => {
     const { d, calls } = deps();
-    await deliverReminders(Array.from({ length: 12 }, (_, i) =>
-      reminder([event()], { user_id: `u-${i}`, email: `g${i}@example.org` })), d, report());
+    await deliverReminders(Array.from({ length: 6 }, (_, i) =>
+      reminder([event(), event({ id: 'ev-2' })], { user_id: `u-${i}`, email: `g${i}@example.org` })), d, report());
     const gaps = calls.sentAt.slice(1).map((t, i) => t - calls.sentAt[i]);
     expect(Math.min(...gaps)).toBeGreaterThanOrEqual(SEND_GAP_MS);
   });
@@ -146,6 +170,16 @@ describe('sending reminders', () => {
       ['u-2', '2026-10-14', 'sent', 1, 'ok', null],
     ]);
     expect(r).toEqual({ reminders: 2, emails: 1, failed: 1 });
+  });
+
+  it('one of two emails failing finishes the day as failed, so it is retried; the sent one\'s key stops a second copy', async () => {
+    const send = vi.fn(async (m: PlainEmail): Promise<SendResult> =>
+      m.subject.startsWith('Match') ? { sent: false, reason: 'delivery_failed', status: 502 } : { sent: true, id: 'ok-1' });
+    const { d, calls } = deps({ send });
+    const r = report();
+    await deliverReminders([reminder([event(), event({ id: 'm', event_type: 'match', opponent: 'Rovers', start_time: '19:00:00' })])], d, r);
+    expect(calls.finished).toEqual([['guardian-1', '2026-10-14', 'failed', 1, 'ok-1', 'delivery_failed:502']]);
+    expect(r).toEqual({ reminders: 1, emails: 1, failed: 1 });
   });
 
   it('nothing left to remind is finished as nothing_to_send, with no email', async () => {
