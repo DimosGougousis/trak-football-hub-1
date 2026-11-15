@@ -1,7 +1,7 @@
 import { createContext, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { supabase } from '@/integrations/supabase/client'
@@ -30,7 +30,7 @@ const UNDER: [RegExp, string][] = [
  */
 /** TRAK-441 slice 2: whether a page draws the family app in the coach's look (the academy's family_look switch),
  *  and, on a laptop, the top bar's place for a page's actions (Home's bell). */
-const FamilyLook = createContext<{ framed: boolean; actions: HTMLElement | null }>({ framed: false, actions: null })
+const FamilyLook = createContext<{ framed: boolean; actions: HTMLElement | null; trail: ((page: string | null) => void) | null }>({ framed: false, actions: null, trail: null })
 /** On a laptop the frame has read the switch; on a phone a page that has a new look asks for itself (only those pages
  *  ask, so the others make no extra read). The answer is shared: one read per person. */
 export function useFamilyLook() {
@@ -45,6 +45,18 @@ export function useFamilyLook() {
 export function FrameActions({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
   const { actions } = useContext(FamilyLook)
   return actions ? createPortal(children, actions) : <>{fallback}</>
+}
+
+/** A page one step in (a match): on a laptop the top bar is its trail, "Matches / vs Parkview Athletic", as the coach's
+ *  (TRAK-347), so the page draws none. True when the frame shows it; on a phone the page draws its own. */
+export function useFrameTrail(page: string) {
+  const { trail } = useContext(FamilyLook)
+  useEffect(() => {
+    if (!trail) return
+    trail(page)
+    return () => trail(null)
+  }, [trail, page])
+  return !!trail
 }
 
 export function FamilyFrame() {
@@ -78,6 +90,7 @@ function Framed({ who, name }: { who: 'player' | 'parent'; name: string }) {
   const { t } = useTranslation()
   const academy = useFamilyAcademy(who)
   const [actions, setActions] = useState<HTMLElement | null>(null)
+  const [page, setPage] = useState<string | null>(null)
   const navigate = useNavigate()
   const { pathname } = useLocation()
   // The coach's page widths and laptop sizes (src/index.css), as the mockup draws them.
@@ -95,8 +108,9 @@ function Framed({ who, name }: { who: 'player' | 'parent'; name: string }) {
     ?? UNDER.find(([page]) => page.test(pathname))?.[1] ?? ''
   // Slice 2: the academy's name and logo where the coach's frame has his club's; "Trak" until it's known.
   const brand = academy?.name || t('nav:trak')
-  return <FamilyFramed.Provider value={true}><FamilyLook.Provider value={{ framed: true, actions }}>
-    <SidebarRail label={t('nav:trak')} title={tabs.find(tab => tab.id === active)?.label ?? ''} onWidthChange={setRail}
+  return <FamilyFramed.Provider value={true}><FamilyLook.Provider value={{ framed: true, actions, trail: setPage }}>
+    <SidebarRail label={t('nav:trak')} title={page ?? tabs.find(tab => tab.id === active)?.label ?? ''} onWidthChange={setRail}
+      trail={page ? [<Link key={active} to={active}>{tabs.find(tab => tab.id === active)?.label}</Link>] : undefined}
       brand={{ name: brand, logo: <Avatar name={brand} src={academy?.logo_url ?? undefined} size="sm" /> }}
       items={tabs.slice(0, -1)} footerItem={tabs[tabs.length - 1]}
       profile={{ name, detail: t(`nav:${who}`), avatar: <Avatar name={name} size="sm" /> }}

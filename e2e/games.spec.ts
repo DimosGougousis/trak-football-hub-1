@@ -153,6 +153,9 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       return json([...plans.entries()].filter(([key]) => key.startsWith(`line-up:${one}:`)).map(([, row]) => row))
     }
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    // TRAK-441: the family's look (family_look) is off unless a test sets 'look'; on a laptop its frame reads the academy.
+    if (path === '/rest/v1/rpc/family_feature_on') return json(plans.has('look'))
+    if (path === '/rest/v1/rpc/family_academy') return json({ name: 'Rehearsal FC', logo_url: null })
     // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
     if (path === '/rest/v1/season_plans') return json([])
     if (path === '/rest/v1/coach_calendar_events') {
@@ -617,6 +620,38 @@ test("the player's event page at 390 px: the shared game plan", async ({ page, c
   await expect(pitch.getByText('You', { exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('player-game-plan-1440.png'), fullPage: true })
   expect(await sideways(page)).toBeLessThanOrEqual(0)
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
+// TRAK-441 slice 3.3: with the academy's family_look on, the same match is the coach's match header with tabs.
+test("the player's match page in the coach's look: header, tabs, game plan and logistics at 390 and 1440 px", async ({ page, context }, testInfo) => {
+  const plans = DRAFT()
+  plans.set('share:m-next', { event_id: 'm-next', shared_at: new Date().toISOString() })
+  plans.set('look', {})
+  const { unexpected, errors } = await open(page, context, '/player/event/m-next', 390, 844, plans, PLAYER)
+  await expect(page.getByRole('heading', { level: 1, name: /^vs / })).toBeVisible()
+  const tabs = page.getByRole('tablist', { name: /^vs / })
+  await expect(tabs.getByRole('tab')).toHaveText([/Logistics/, /Game plan/, /Evaluation/])
+  await expect(tabs.getByRole('tab', { name: /Game plan/ })).toHaveAttribute('aria-selected', 'true')
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await tabs.getByRole('tab', { name: /Game plan/ }).click()
+    await expect(page.getByRole('heading', { name: 'Your job' })).toBeVisible()
+    await expect(page.getByText('Stay tight to their winger.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Team instructions' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Line-up' }).getByText('You', { exact: true })).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`family-match-plan-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await tabs.getByRole('tab', { name: 'Logistics' }).click()
+    await expect(page.getByRole('tabpanel')).toBeVisible()
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath(`family-match-logistics-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+  }
+  // On a laptop the top bar is the trail, as the coach's.
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Matches')
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
 })
