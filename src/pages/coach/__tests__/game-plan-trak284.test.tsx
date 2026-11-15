@@ -100,8 +100,8 @@ describe('TRAK-284, TRAK-328: plan step 1, Tactics & analysis', { timeout: 30_00
     const steps = screen.getByRole('navigation', { name: 'Game plan' })
     expect(steps).toHaveTextContent(/Tactics & analysis.*Line-up and jobs.*Review & share/)
     expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent('Tactics & analysis')
-    // Imad, 6 Nov: the bar's Draft badge, as Evaluation's, beside Next; no "only you see it".
-    expect(within(screen.getByRole('button', { name: 'Next: Line-up and jobs' }).parentElement!).getByText('Draft')).toBeInTheDocument()
+    // TRAK-448: no Draft badge beside Next; the match's state sits beside the title. No "only you see it".
+    expect(within(screen.getByRole('button', { name: 'Next: Line-up and jobs' }).parentElement!).queryByText('Draft')).toBeNull()
     expect(screen.queryByText(/only you see it/)).toBeNull()
     // TRAK-328 (Imad, 2 Nov): no empty instruction until the coach adds one, and their line-up is gone.
     expect(screen.queryByRole('group', { name: /^Instruction \d$/ })).toBeNull()
