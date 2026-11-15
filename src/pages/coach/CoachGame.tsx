@@ -15,7 +15,7 @@ import { SAVE_FAILED, failed, pastProblem, type EditSheet } from '@/lib/event-ed
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { blankRepeat, clashMessage, formProblem, formToRow, lockedMessage, rowToForm, savedVenues, startedLocked, type EventRow } from '@/lib/coach-events'
-import { fullTime, gameStatus, type GameTab } from '@/lib/games/loop'
+import { STATE, fullTime, gameState, type GameTab } from '@/lib/games/loop'
 import { formToPlan, planToForm, type PlanForm } from '@/lib/games/plan'
 import { planParts } from '@/lib/games/share'
 import { withReported } from '@/lib/games/lineup'
@@ -105,9 +105,10 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
   const cancelled = row.status === 'cancelled'
   // TRAK-286: who a share would change now. Only asked once the plan is shared; a failed read shows no changes.
   const changes = useGamePlanChanges([row.id], !!sharedAt && !cancelled).data?.get(row.id) ?? []
-  const state = gameStatus({ ...row, ends_at: row.ends_at ?? null }, now,
+  // TRAK-448: beside the title a scheduled plan reads "Plan scheduled"; when it goes out is in Review & share only.
+  const state = STATE[gameState({ ...row, ends_at: row.ends_at ?? null }, now,
     { drafted: !!plan.data, shared: !!sharedAt, sharedAt: sharedAt ?? undefined, changes: changes.length,
-      evaluated: !!evaluation.data?.evaluation, published: !!evaluation.data?.evaluation?.published_at })
+      evaluated: !!evaluation.data?.evaluation, published: !!evaluation.data?.evaluation?.published_at })]
   // The plan as typed, and its step, live here, above the tabs: a panel that isn't shown unmounts. Until the coach
   // types, it is the saved plan, so a retried read still fills the form. Needs you's "Share changes" opens Review & share.
   const [typed, setTyped] = useState<PlanForm | null>(null)

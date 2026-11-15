@@ -14,7 +14,6 @@ import { PublishStep, ReviewPreview, type PublishChoices } from './PublishStep'
 import { GameHistory } from './GameHistory'
 import { LoadError } from '@/components/trak'
 import { Alert } from '@/components/arc/alert/alert'
-import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { Stepper } from '@/components/arc/stepper/stepper'
@@ -168,8 +167,7 @@ export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, 
             onPublish={draft.publish} publishing={draft.publishing} problem={draft.publishProblem} />}
       <div className="flex flex-wrap items-center gap-3">
         {step > 0 && <Button variant="ghost" onClick={() => onStep(step - 1)}>{t('common:back')}</Button>}
-        <span className="arc ml-auto"><Badge>{t('coachHome:stateDraft')}</Badge></span>
-        {step < 2 && <Button onClick={() => onStep(step + 1)}>{next(step)}</Button>}
+        {step < 2 && <Button className="ml-auto" onClick={() => onStep(step + 1)}>{next(step)}</Button>}
       </div>
     </div>
   )

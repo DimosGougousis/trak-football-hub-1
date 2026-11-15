@@ -570,7 +570,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.reload()
     const scheduled = page.getByRole('region', { name: 'Scheduled' })
     await expect(scheduled.getByText(/^Shares \w{3} 19:30$/)).toBeVisible()
-    await expect(page.getByText(/^Shares \w{3} 19:30$/)).toHaveCount(2) // the header's badge too
+    // TRAK-448: beside the title it reads "Plan scheduled"; the time is in this card only.
+    await expect(page.getByText(/^Shares \w{3} 19:30$/)).toHaveCount(1)
+    await expect(matchStatus(page).getByText('Plan scheduled', { exact: true })).toBeVisible()
     const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
     expect(keyboard.missed).toEqual([])
     await scheduled.getByRole('button', { name: 'Change time' }).focus()
@@ -731,7 +733,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
     expect(keyboard.missed).toEqual([])
 
-    await expect(page.getByText('Draft', { exact: true })).toBeVisible()
+    await expect(page.getByText('Draft', { exact: true })).toHaveCount(0)  // TRAK-448: no badge at the bottom
     await saveDraft(page)
     await expect(page.getByText(/^Draft saved /)).toHaveCount(0)
     await expect(matchStatus(page).getByText('Evaluation draft')).toBeVisible()
