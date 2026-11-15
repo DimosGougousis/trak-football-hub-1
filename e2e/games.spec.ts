@@ -776,14 +776,14 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // This match was made before New event asked the competition (Imad, 29 Oct): the Publish step asks it.
     await expect(page.getByText('Select the competition first.')).toBeVisible()
     await page.getByRole('group', { name: 'Competition' }).getByText('League').click()
-    await expect(page.getByRole('button', { name: 'Publish to 2 players and families' })).toBeEnabled()
+    await expect(review.getByRole('button', { name: 'Publish', exact: true })).toBeEnabled()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`publish-step-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])')
     expect(keyboard.missed).toEqual([])
 
-    await page.getByRole('button', { name: 'Publish to 2 players and families' }).click()
+    await review.getByRole('button', { name: 'Publish', exact: true }).click()
     await expect(page.getByText('Published to 2 players and their families. The loop is closed.')).toBeVisible()
     await expect(page.getByRole('region', { name: 'History' }).getByText('Evaluation published. The loop is closed.')).toBeVisible()
     await expect(matchStatus(page).getByText('Published')).toBeVisible()

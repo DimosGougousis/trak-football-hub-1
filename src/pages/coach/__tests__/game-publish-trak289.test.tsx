@@ -1,5 +1,5 @@
 /**
- * TRAK-289 (Games 7/8): publishing the evaluation. "Publish to N players and families" waits for every "Did the plan
+ * TRAK-289 (Games 7/8): publishing the evaluation. "Publish" (TRAK-446; "Publish to N players and families" before) waits for every "Did the plan
  * work?" answer, and asks the competition and home or away when the match has none (Imad, 29 Oct). It saves what's on
  * screen, then publishes. The loop closes: the success alert, the game's History, and nothing left to edit. The preview
  * shows what each player and parent will read. TRAK-375 (Imad, 5 Nov): the Publish step is one Evaluation review card,
@@ -98,7 +98,7 @@ beforeEach(() => {
 })
 afterEach(() => cleanup())
 
-const publishButton = () => screen.getByRole('button', { name: /^Publish to \d+ players? and families$/ })
+const publishButton = () => within(screen.getByRole('region', { name: 'Evaluation review' })).getByRole('button', { name: 'Publish' })
 
 describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
   it('waits for every "Did the plan work?" answer before it publishes', async () => {
@@ -132,7 +132,6 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
     expect(within(screen.getByRole('region', { name: 'Evaluation review' })).getByText('2 of 2 answered')).toBeInTheDocument()
     expect(publishButton()).toBeEnabled()
-    expect(publishButton()).toHaveTextContent('Publish to 2 players and families')
     // Never asked here: the match has its competition and home or away.
     expect(screen.queryByRole('group', { name: 'Competition' })).toBeNull()
     expect(screen.queryByRole('group', { name: 'Home or away' })).toBeNull()
