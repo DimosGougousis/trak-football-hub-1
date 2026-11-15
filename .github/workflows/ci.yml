@@ -1,8 +1,8 @@
 name: CI
 
-# The full suite runs once for a final (non-draft) PR to main, its parts side by
-# side. Main deployment reuses successful proof for the identical Git tree
-# instead of rerunning it.
+# A final (non-draft) PR to main is built and its bundle checked for secrets.
+# Main deployment reuses successful proof for the identical Git tree instead of
+# rebuilding it. No regression suite runs here; see the archive named below.
 
 on:
   push:
@@ -21,173 +21,14 @@ permissions:
   contents: read
 
 jobs:
-  # The gate is four parts that run side by side, then `test`, which gathers
-  # them. Each part installs for itself on its own machine. Branch protection,
-  # the merge proof and Deploy all look for the one job named `test`.
-  static:
+  # The gate is one part, `build`, then `test`, which gathers it. Branch
+  # protection, the merge proof and Deploy all look for the one job named
+  # `test`. The lint, type, unit, use-case, database and browser runs were
+  # removed from the gate on 15 Nov 2026; archive/ci-full-gate-2026-11-15 holds
+  # the workflow that ran them and says how to put it back.
+  build:
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-24.04
-    env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      VITE_SENTRY_DSN: ''
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Check delivery policy
-        run: node scripts/check-delivery-policy.mjs
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Merge evidence and push credential regressions
-        run: node --test scripts/merge-gate-evidence.test.mjs scripts/check-push-credentials.test.mjs
-
-      - name: Consent calendar timezones
-        run: npm run test:consent-timezones
-
-      # tests/msw and tests/support hold the MSW fidelity contract and the
-      # useCase() unknown-id guard — package.json's "test" script only runs
-      # src, so these run nowhere else in CI.
-      - name: Use-case harness
-        run: npm run test:harness
-
-      # Runs the use-case suite through the registry ratchet: enforced use
-      # cases block, pending ones report without blocking, parked ones never
-      # run. docs/use-cases/README.md lists which is which.
-      - name: Use cases
-        run: npm run uc:check
-
-  # Vitest splits the test files across the shards; together they run every
-  # file once. Add a shard (here and nowhere else) if one grows much longer.
-  unit:
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      VITE_SENTRY_DSN: ''
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Test
-        run: npm test -- --shard=${{ matrix.shard }}/3
-
-  # One machine, not shards: every replay must finish on the same migrations.
-  database:
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
-    runs-on: ubuntu-24.04
-    env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      VITE_SENTRY_DSN: ''
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Database security regressions
-        run: npm run test:db
-
-      - name: Parent migration after deployed reporting migration
-        run: npm run test:db -- --parent-upgrade-review
-
-      - name: Academy access and account deletion regressions
-        run: npm run test:db -- --coach-departure-review
-
-      - name: Academy repair after current main migrations
-        run: npm run test:db -- --academy-upgrade-review
-
-      - name: Assessment index after current main and academy repair
-        run: npm run test:db -- --assessment-upgrade-review
-
-      - name: Academy history convergence and mutation controls
-        run: npm run test:db:academy-history
-
-      - name: Disposable database runner safeguards
-        run: npm run test:db:runner
-
-      # --retry: on 14 Nov one failed download of the signing key turned a
-      # whole gate red before any database test had run.
-      - name: Install PostgreSQL 17 for concurrent database regressions
-        run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl --fail --silent --show-error --location --retry 3 --retry-all-errors https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
-          echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/trak-pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-17
-
-      - name: Native PostgreSQL replay and concurrent player linking
-        run: npm run test:db:concurrency
-        env:
-          TRAK_TEST_PG_BIN: /usr/lib/postgresql/17/bin
-
-      - name: Native assessment query plan and result regressions
-        run: npm run test:db:query-plans
-        env:
-          TRAK_TEST_PG_BIN: /usr/lib/postgresql/17/bin
-
-      - name: Preserve synthetic query plans
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: synthetic-assessment-query-plans
-          path: /tmp/trak-query-report-*/report.json
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Native PostgreSQL academy upgrade after current main
-        run: npm run test:db:native -- --academy-upgrade-review
-        env:
-          TRAK_TEST_PG_BIN: /usr/lib/postgresql/17/bin
-      # Every step above replays migrations from empty, so none of them can see
-      # a database that already ran an earlier version of a migration file. That
-      # is the gap a withdrawn-and-replaced migration falls through: the replay
-      # goes green while the already-applied database keeps the old effects.
-      - name: Migration histories converge
-        run: npm run test:db:convergence
-
-  # Playwright splits the spec files across the shards. Each shard builds the
-  # app and serves it on its own machine.
-  browser:
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2]
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
@@ -207,8 +48,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Layer 3. Every other credential check reads SOURCE; this reads what is
-      # actually served, which is a different question. A route guarded by
+      # Every other credential check reads SOURCE; this reads what is actually
+      # served, which is a different question. A route guarded by
       # `import.meta.env.DEV` still has its chunk emitted, because the guard
       # decides which routes register and not which chunks Rollup builds — that
       # is how the dev-account password shipped while the page looked guarded.
@@ -216,30 +57,21 @@ jobs:
       - name: Bundle secrets
         run: npm run check:bundle
 
-      - name: Install test browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Browser regressions
-        run: npx playwright test --config playwright.pilot.config.ts --shard=${{ matrix.shard }}/2
-
-  # GitHub counts a SKIPPED required check as passed. Without always(), one
-  # failed part would skip this job and let a broken pull request merge. So it
-  # always runs for a final PR and fails unless every part succeeded.
+  # GitHub counts a SKIPPED required check as passed. Without always(), a
+  # failed build would skip this job and let a broken pull request merge. So it
+  # always runs for a final PR and fails unless the build succeeded.
   test:
-    needs: [static, unit, database, browser]
+    needs: [build]
     if: always() && github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-24.04
 
     steps:
       - name: Every part of the gate passed
         env:
-          STATIC: ${{ needs.static.result }}
-          UNIT: ${{ needs.unit.result }}
-          DATABASE: ${{ needs.database.result }}
-          BROWSER: ${{ needs.browser.result }}
+          BUILD: ${{ needs.build.result }}
         run: |
-          echo "static: $STATIC, unit: $UNIT, database: $DATABASE, browser: $BROWSER"
-          for result in "$STATIC" "$UNIT" "$DATABASE" "$BROWSER"; do
+          echo "build: $BUILD"
+          for result in "$BUILD"; do
             if [ "$result" != success ]; then
               echo "::error::A part of the merge gate did not pass. Open its job above."
               exit 1

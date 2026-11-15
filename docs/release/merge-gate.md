@@ -21,20 +21,25 @@ Preserve existing migration history and the product's consent/privacy rules.
 
 1. Keep a PR draft while work continues. Mark it ready when the candidate is
    complete and targets current main.
-2. GitHub runs `test` (the full lint, types, source, use-case, database, build,
-   credential and browser suite) and `Base branch still reaches main`. The
-   suite's parts (`static`, `unit`, `database`, `browser`) run side by side on
-   separate machines; `test` is green only when every part passed.
+2. GitHub runs `test` and `Base branch still reaches main`. `test` is green
+   only when its one part, `build`, passed: the production build, then the
+   check that the built bundle holds no credential. No lint, type, unit,
+   use-case, database or browser run is part of the gate (15 November 2026).
 3. Fix failures within this gate. A changed final candidate needs fresh results;
    unchanged contents do not need another local or independent verification run.
 4. Merge only with required checks green and current main included. No human,
    teammate, code-owner, non-author or additional agent approval is required.
    Authors may merge their own PR. Honor explicit merge holds.
 
-Branch pushes and draft PRs do not run the required regression suite. A PR
-changed back to draft stops its in-flight gate. There is no second approval
-stage, mandatory review verdict, or requirement to prove every test red first.
-Keep meaningful regression coverage for changed behavior in the final suite.
+Branch pushes and draft PRs run nothing. A PR changed back to draft stops its
+in-flight gate. There is no second approval stage, mandatory review verdict,
+or requirement to prove every test red first.
+
+The regression tests stay in the repository as optional local tools
+(`package.json` lists them); a green gate says nothing about them. The gate
+that ran them, with its Playwright configuration and specs, is kept in
+[archive/ci-full-gate-2026-11-15](../../archive/ci-full-gate-2026-11-15/README.md),
+which also says how to restore it.
 
 Main remains protected: no direct pushes, force pushes or deletion; required
 checks and resolved blocking conversations stay enforced. The intended settings
