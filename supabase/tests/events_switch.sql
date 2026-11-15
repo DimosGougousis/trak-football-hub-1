@@ -149,7 +149,7 @@ SELECT pg_temp.e81check((SELECT title='A2 event' FROM public.coach_calendar_even
 SELECT pg_temp.e81check((SELECT title='B own event' FROM public.coach_calendar_events WHERE id=pg_temp.e81id(510)),'Readback: B''s event untouched');
 SELECT pg_temp.e81check(NOT EXISTS(SELECT 1 FROM public.coach_calendar_events WHERE id IN
  (pg_temp.e81id(521),pg_temp.e81id(530),pg_temp.e81id(540),pg_temp.e81id(550),pg_temp.e81id(560),pg_temp.e81id(570))),'Readback: no refused event exists');
-SELECT pg_temp.e81check((SELECT count(*)=1 FROM public.academy_features)
+SELECT pg_temp.e81check((SELECT count(*)=1 FROM public.academy_features WHERE feature='events')
  AND EXISTS(SELECT 1 FROM public.academy_features WHERE organization_id=pg_temp.e81id(100) AND feature='events'),'Readback: switches unchanged by app roles');
 
 -- The operator switches the On academy off: one DELETE, no deploy. The very
