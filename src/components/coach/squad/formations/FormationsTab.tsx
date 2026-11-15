@@ -145,7 +145,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
     })
   }
 
-  if (!saved || !current) return <div className="arc grid gap-5">
+  if (!saved || !current) return <div className="arc grid gap-6 laptop:gap-8">
     {header}
     <div className="grid justify-items-center gap-2 rounded-2xl border border-line bg-surface p-8 text-center">
       <p className="text-[15px] font-medium text-ink">{t('coachSquad:fmNone')}</p>
@@ -200,7 +200,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   const starting = new Set(Object.values(current.starters))
   const bench = [...boardPlayers.values()].filter(p => p.canPlay && !starting.has(p.id))
 
-  return <div className="arc grid gap-5">
+  return <div className="arc grid gap-6 laptop:gap-8">
     {header}
     <div role="group" aria-label={t('coachSquad:fmSavedList')} className="grid gap-2 tablet:grid-cols-2 laptop:grid-cols-3">
       {list.map(f => {

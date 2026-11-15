@@ -24,7 +24,7 @@ export function GamePlanSection({ plan, as, coachName, childName, updated = fals
   const goals = plan.player?.goals ?? []
   const job = plan.player?.job ?? ''
   return (
-    <section aria-labelledby={id} className="arc grid gap-3">
+    <section aria-labelledby={id} className="arc grid gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 id={id} className="text-[17px] font-medium text-ink">Game plan</h2>
         {updated && <Badge size="sm" tone="info">Updated</Badge>}

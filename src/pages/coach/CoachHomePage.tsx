@@ -214,7 +214,7 @@ export default function CoachHomePage() {
         {/* TRAK-422 (Kostas, 13 Nov): Home keeps the coach's name as its title, on a laptop too. */}
         {wide && <PageTop className="pt-0" menu={false} title={profile?.full_name || t('nav:coach')} />}
 
-        <div className={wide ? 'grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-6' : 'grid gap-5'}>
+        <div className={wide ? 'grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] items-start gap-8' : 'grid gap-6'}>
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
           {showToday
             // Kostas, 28 Oct: on a phone the week comes first, then today's plan.
@@ -223,7 +223,7 @@ export default function CoachHomePage() {
             : <SquadShape squadLabel={squadLabel} shape={shape} failed={!!roster.error} onRetry={roster.retry} />}
         </div>
         {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
-        {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-6' : 'mt-5'}>
+        {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-8' : 'mt-6'}>
           <NeedsYou items={needsReady ? cards : null} events={[...owedEvents, ...planEvents, ...evaluationEvents, ...stuckEvents, ...positionEvents, ...watchEvents]}
             failed={!!roster.error || owed.failed || gamesFailed}
             onRetry={() => { roster.retry(); owed.retry(); if (evaluations.failed) evaluations.retry(); if (gamesOn) { void games.refetch(); void plans.refetch(); void shares.refetch() } }}
@@ -235,7 +235,7 @@ export default function CoachHomePage() {
         {/* TRAK-350: the season plan, where the academy's switch is on; TRAK-361: the card that folds, one per squad under All. */}
         {user && <SeasonPlanCard coachId={user.id} squads={coachSquad.squads} squadsReady={coachSquad.ready} squadsFailed={coachSquad.failed} onRetry={coachSquad.retry}
           squad={planSquad(coachSquad)} everySquad={everySquad}
-          onPick={coachSquad.pick} className={wide ? 'mt-6' : 'mt-5'} />}
+          onPick={coachSquad.pick} className={wide ? 'mt-8' : 'mt-6'} />}
       </div>
       {user && <StuckSheet coachId={user.id} target={stuckTarget} onClose={() => setStuckTarget(null)} onSwapped={id => navigate(`/coach/squad/player/${id}`)} />}
       <QuickAdd onSaved={() => setWeekVersion(v => v + 1)} />

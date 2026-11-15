@@ -100,7 +100,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
 
     {/* A laptop's pane has room for two columns: facts beside the radar, the latest card beside the earlier ones. */}
     <div className="grid gap-5 laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] laptop:items-start">
-      <div className="grid gap-5">
+      <div className="grid gap-6 laptop:gap-8">
         {placement && <PositionAndRoles coachId={coachId} id={player.id} name={player.name} position={placement.position} />}
         <section aria-label={t('coachSquad:aboutName', { name: first })} className="grid gap-2">
           {factsFailed ? <LoadError what={t('coachSquad:profileWhat', { name: first })} onRetry={onRetryFacts} />

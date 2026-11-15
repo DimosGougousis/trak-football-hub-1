@@ -73,7 +73,7 @@ export default function CoachHowTrakWorks() {
             </div>
           </Stage>
           <Stage id="how-week" step={2} title="weekTitle" intro="weekIntro">
-            <div className="grid gap-3 tablet:grid-cols-2">
+            <div className="grid gap-4 tablet:grid-cols-2">
               {on.events && <Card id="how-scheduling" title="schedulingTitle" lines={['scheduling1', 'scheduling2', 'scheduling3']} />}
               <Card id="how-assessing" title="assessingTitle" lines={['assessingPlayer', on.season && 'assessingDue', on.season && 'assessingObjectives']} />
               {on.training && <Card id="how-training" title="trainingTitle" lines={['training1', 'training2', 'training3']} />}

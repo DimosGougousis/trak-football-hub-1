@@ -117,7 +117,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
 
   if (!answer || asking) {
     return (
-      <div className="arc grid gap-5">
+      <div className="arc grid gap-6 laptop:gap-8">
         <section aria-labelledby="positions-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <div className="grid gap-2">
             <h2 id="positions-question" className="text-lg font-medium text-ink">Do you know where they play yet?</h2>
@@ -144,7 +144,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
   const change = <Button variant="ghost" size="sm" onClick={() => { setChoice(answer); setAsking(true) }}>Change your answer</Button>
   if (answer === 'not_yet') {
     return (
-      <div className="arc grid gap-5">
+      <div className="arc grid gap-6 laptop:gap-8">
         <section aria-labelledby="positions-later" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <h2 id="positions-later" className="text-lg font-medium text-ink">You'll place them later</h2>
           <p className="text-sm text-ink-2">Nobody is placed. A player needs a position before they get objectives.</p>
@@ -203,7 +203,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
   const openedWatch = opened ? watchOf.get(opened.id) : undefined
 
   return (
-    <div className="arc grid gap-5">
+    <div className="arc grid gap-6 laptop:gap-8">
       {opened && <PositionAndRolesSheet coachId={coachId} player={{ id: opened.id, name: opened.player_name, position: opened.position }}
         open onOpenChange={open => { if (!open) setOpenId(null) }} quiet
         saveLabel={next ? `Save · next: ${next.player_name}` : 'Save · back to Positions'} onSaved={() => setOpenId(next?.id ?? null)}
@@ -232,7 +232,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
           </>}
       </section>
 
-      <div className="grid items-start gap-5 laptop:grid-cols-2">
+      <div className="grid items-start gap-4 laptop:grid-cols-2">
         {board.lines.map(line => (
           <section key={line.value} aria-labelledby={`positions-${line.short}`} className="grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
             <h3 id={`positions-${line.short}`} className="text-base font-medium text-ink">{line.line} <span className="font-normal text-ink-3">· {line.players.length}</span></h3>

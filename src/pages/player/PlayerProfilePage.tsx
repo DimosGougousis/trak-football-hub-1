@@ -57,7 +57,7 @@ export default function PlayerProfilePage() {
         <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>Profile</span>
       </div>
 
-      <div className="pt-3.5 pb-4 space-y-2.5">
+      <div className="pt-3.5 pb-4 space-y-4">
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
           <div className="w-[72px] h-[72px] rounded-2xl overflow-hidden bg-raised border border-brand/[0.18] mx-auto mb-3 flex items-center justify-center">

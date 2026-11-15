@@ -54,7 +54,7 @@ export default function HowTrakWorks() {
         </span>
       </div>
 
-      <div className="pt-2 pb-6 space-y-3">
+      <div className="pt-2 pb-6 space-y-4">
         {/* Intro */}
         <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="THE IDEA" />

@@ -168,7 +168,7 @@ function SessionsView() {
           </div>}
 
           {/* Kostas, 3 Nov: as the mockup, the Next training card and Open drafts side by side on a laptop. */}
-          <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start">
+          <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start">
           {next ? <NextTraining key={next.training.id} draft={drafts.data?.get(next.training.id)} training={next.training} phase={next.phase} planned={!!planned.data?.has(next.training.id)}
             sessionId={registers.data?.get(next.training.id) ?? null} onStart={() => setNow(Date.now())}
             onClosed={() => setClosed(next.training.title)} />
@@ -182,7 +182,7 @@ function SessionsView() {
 
           {upcoming.length > 0 && <section aria-labelledby="upcoming" className="min-w-0">
             <h2 id="upcoming" className="mb-2 text-lg font-medium text-ink">{t('coachTraining:upcomingTrainings')}</h2>
-            <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
+            <ul className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
               {(allUpcoming ? upcoming : upcoming.slice(0, UPCOMING_SHOWN)).map(training => {
                 const { day, time } = gameWhen(training)
                 const badge = trainingBadge({ phase: isToday(training) ? 'day' : 'before', planned: !!planned.data?.has(training.id),

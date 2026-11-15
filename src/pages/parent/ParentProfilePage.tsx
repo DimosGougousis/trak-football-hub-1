@@ -23,7 +23,7 @@ export default function ParentProfilePage() {
         <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>Profile</span>
       </div>
 
-      <div className="pt-3.5 pb-4 space-y-2.5">
+      <div className="pt-3.5 pb-4 space-y-4">
         {/* Avatar + Identity */}
         <div className="text-center mb-6">
           {/* TRAK-182 (live run 3): Arc's round avatar, as on the coach's screens. */}

@@ -92,7 +92,7 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
   }
 
   return (
-    <div className="arc grid gap-5">
+    <div className="arc grid gap-6 laptop:gap-8">
       {opened && <PlayerObjectivesSheet coachId={coachId} player={{ id: opened.id, name: opened.player_name, position: opened.position }}
         seasonObjectives={seasonObjectives} open onOpenChange={open => { if (!open) setOpenId(null) }} quiet
         saveLabel={next ? `Save · next: ${next.player_name}` : 'Save · back to the list'} onSaved={() => setOpenId(next?.id ?? null)}
@@ -122,7 +122,7 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
         <span className="justify-self-start"><Button variant="secondary" size="sm" onClick={onPositions}>Go to Positions</Button></span>
       </section>}
 
-      <div className="grid items-start gap-5 laptop:grid-cols-2">
+      <div className="grid items-start gap-4 laptop:grid-cols-2">
         {board.lines.map(line => ({ ...line, players: line.players.filter(p => !elsewhere.has(p.id)) })).filter(line => line.players.length > 0).map(line => (
           <section key={line.value} aria-labelledby={`objectives-${line.short}`} className="grid gap-1 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
             <h3 id={`objectives-${line.short}`} className="text-base font-medium text-ink">{line.line} <span className="font-normal text-ink-3">· {line.players.length}</span></h3>

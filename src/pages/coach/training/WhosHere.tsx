@@ -70,7 +70,7 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
     })
   }
 
-  return <div className="grid gap-5 pt-5">
+  return <div className="grid gap-6 laptop:gap-8 pt-5">
     <header className="arc grid gap-2">
       <CoachTrail current={t('coachTraining:loopHere')} parents={[{ label: day, href: page }]} />
       <h1 className={INNER_TITLE}>{t('coachTraining:whosHereQ')}</h1>

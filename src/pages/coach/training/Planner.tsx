@@ -216,7 +216,7 @@ function PlannerBody({ training, saved, draft, past, players }: {
 
   const steps = [...parts.map(p => ({ id: p.key, label: partName(p.name) })), { id: REVIEW, label: t('coachSchedule:stepReview') }]
 
-  return <div className="grid gap-5 pt-5">
+  return <div className="grid gap-6 laptop:gap-8 pt-5">
     <header className="arc grid gap-2">
       {/* TRAK-367: the trail says which training; its name can be long, so by its day. */}
       <CoachTrail current={t('coachTraining:planSessionDay', { day })} />
@@ -236,7 +236,7 @@ function PlannerBody({ training, saved, draft, past, players }: {
     {!start.only && <div className="arc"><Stepper label={t('coachTraining:planningSteps')} steps={steps} current={step} onStepSelect={go} jumpAhead /></div>}
     {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
 
-    <div className="grid gap-5 laptop:grid-cols-[minmax(0,1fr)_360px] laptop:items-start">
+    <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,1fr)_360px] laptop:items-start">
       {part ? <section aria-label={partName(part.name)} className="arc grid min-w-0 gap-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 gap-1">

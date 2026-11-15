@@ -191,7 +191,7 @@ export default function CoachQuickMatchLog() {
         <div className="w-[34px]" />
       </div>
 
-      <div className="pt-5 pb-32 space-y-5">
+      <div className="pt-5 pb-32 space-y-6 laptop:space-y-8">
         {/* Match date */}
         <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span

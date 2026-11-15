@@ -288,7 +288,7 @@ function PublishStep({ players, entries, latest, waiting, unrated, objectivesUns
     : null
   return (
     <div className="grid gap-5">
-      <div className="grid items-start gap-5 laptop:grid-cols-2">
+      <div className="grid items-start gap-4 laptop:grid-cols-2">
         <section aria-labelledby="evaluation-changed" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="evaluation-changed" className="text-lg font-medium text-ink">What changed</h2>

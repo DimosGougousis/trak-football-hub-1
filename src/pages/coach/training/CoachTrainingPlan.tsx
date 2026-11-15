@@ -215,7 +215,7 @@ function SavedReview({ training, plan, cancelled }: { training: Training; plan: 
     saveOrder(next)
   }
   const drop = () => { if (!sameOrder(parts, partsFromSaved(plan.practices))) saveOrder(parts) }
-  return <div className="mt-6 grid gap-5 laptop:grid-cols-[minmax(0,1fr)_320px] laptop:items-start">
+  return <div className="mt-6 grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,1fr)_320px] laptop:items-start">
     <section aria-labelledby="review" className="arc grid min-w-0 gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="review" className="text-[22px] font-medium text-ink">{t('coachSchedule:stepReview')}</h2>

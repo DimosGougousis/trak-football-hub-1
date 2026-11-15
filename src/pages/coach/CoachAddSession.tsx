@@ -687,7 +687,7 @@ export default function CoachAddSession() {
         <CoachTrail current="Full session" />
       </div>
 
-      <div className="pt-5 pb-32 space-y-5">
+      <div className="pt-5 pb-32 space-y-6 laptop:space-y-8">
 
         <div className="arc">
           <Stepper label="Log steps" steps={steps} current={step} onStepSelect={setStep} />

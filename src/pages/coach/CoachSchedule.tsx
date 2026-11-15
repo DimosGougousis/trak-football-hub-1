@@ -634,7 +634,7 @@ export default function CoachSchedule() {
                 description={t(wide ? 'coachSchedule:addWithCreate' : 'coachSchedule:addWithPlus')} />
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {selectedEvents.map(ev => {
                 const row = ev.row
                 const cancelled = !!row && isCancelled(row)

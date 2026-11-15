@@ -137,7 +137,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           Edits wait here until you share them.
         </Alert>}
 
-      <div className="grid items-start gap-5 laptop:grid-cols-2">
+      <div className="grid items-start gap-4 laptop:grid-cols-2">
         <section aria-labelledby="plan-season" className={card}>
           <h2 id="plan-season" className="text-lg font-medium text-ink">Season</h2>
           <div className="flex items-center justify-between gap-3">

@@ -266,7 +266,7 @@ export default function CoachSessionEdit() {
   return (
     <MobileShell width="read">
       {header}
-      <div className="pt-5 pb-32 space-y-5">
+      <div className="pt-5 pb-32 space-y-6 laptop:space-y-8">
         {isTraining ? (
           <>
             <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
