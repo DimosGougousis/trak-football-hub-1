@@ -6,7 +6,7 @@
  * then the time and the venue) on that visit, whatever the attendance; once
  * opened, it's seen. Someone who never saw the old version is told nothing.
  */
-import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
@@ -56,8 +56,14 @@ async function seeInSessions(event: Record<string, unknown>) {
 }
 
 let n = 0
-beforeEach(() => { PLAYER = { id: `player-134-${++n}` }; signInAs(PLAYER) })
-afterEach(() => cleanup())
+// Today is Tue 10 Nov (Dubai), so both versions of the match are still to come. Without a fixed
+// clock the test broke once 15 Nov 11:00 Dubai had passed: a past match hides "Can't make it".
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-11-10T06:00:00Z'))
+  PLAYER = { id: `player-134-${++n}` }; signInAs(PLAYER)
+})
+afterEach(() => { cleanup(); vi.useRealTimers() })
 
 describe('TRAK-134: a changed event says what changed', () => {
   it('tells a player who said Can\'t make it what moved, once', async () => {
