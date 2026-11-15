@@ -42,6 +42,9 @@ describe('the Next training card', () => {
 })
 
 describe('the card’s loop', () => {
+  it('TRAK-446: no step carries a helper line ("From Events", "Optional")', () => {
+    expect(loopSteps({ current: 1, planned: false, registered: false }).filter(step => 'description' in step)).toEqual([])
+  })
   const errors = (facts: Parameters<typeof loopSteps>[0]) => loopSteps(facts).map(step => 'error' in step ? step.error : null)
 
   it('ticks a step it has passed only if it happened, else says what’s missing', () => {

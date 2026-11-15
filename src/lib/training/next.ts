@@ -28,12 +28,12 @@ export function nextTraining<T extends TrainingEvent>(trainings: T[], now: numbe
   return coming ? { training: coming, phase: today(coming) ? 'day' : 'before' } : null
 }
 
-/** The card's loop: Logistics (from the schedule) → Plan → Who's here → Notes (optional). */
+/** The card's loop: Logistics (from the schedule) → Plan → Who's here → Notes (optional). TRAK-446: no line under a step. */
 export const LOOP = [
-  { id: 'logistics', label: 'Logistics', description: 'From Events' },
+  { id: 'logistics', label: 'Logistics' },
   { id: 'plan', label: 'Plan' },
   { id: 'here', label: 'Who’s here' },
-  { id: 'notes', label: 'Notes', description: 'Optional' },
+  { id: 'notes', label: 'Notes' },
 ]
 
 /** The loop's steps for the card. A step the card has moved past is ticked only if it really happened; otherwise it

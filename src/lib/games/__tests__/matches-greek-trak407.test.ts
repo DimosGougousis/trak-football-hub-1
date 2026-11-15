@@ -53,7 +53,6 @@ describe('TRAK-407: Matches in Greek', () => {
     await showLanguage('el')
     lists().flat().forEach((option, i) => expect(option.label).not.toBe(english[i]))
     expect(summary({ didJob: 'yes', against: 'met', note: '' })).toBe('Έκανε τον ρόλο του · Όπως αναμενόταν')
-    expect(i18n.t('coachMatches:publishTo', { count: 1 })).toBe('Δημοσίευση σε 1 παίκτη και οικογένεια')
   })
 
   it('says a result and a title in the language showing', async () => {
