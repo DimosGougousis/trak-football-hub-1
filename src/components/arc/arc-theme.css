@@ -50,6 +50,7 @@
   --focus-ring: transparent;
   --success: oklch(49% .19 150);
   --warning: oklch(58% .18 75);
+  --attention: oklch(82% .17 90);
   --danger: oklch(54% .21 25);
   --shadow-resting: 0 1px 2px oklch(0% 0 0 / .035);
   --shadow-raised: 0 6px 18px oklch(0% 0 0 / .065), 0 1px 3px oklch(0% 0 0 / .035);
@@ -108,10 +109,21 @@
   --control-fill: rgb(var(--t-brand));
   --success: rgb(var(--t-success));
   --warning: rgb(var(--t-warning));
+  --attention: rgb(var(--t-attention));
   --danger: rgb(var(--t-danger));
+  /* TRAK-370 (Imad, 5 Nov): Arc's current badge. Its info tone keeps the green it had; its categorical colours are
+     Trak's: amber is Trak's orange (stretch, context), sky Trak's blue (lead). */
+  --info: var(--accent);
+  --tone-amber: rgb(var(--t-orange));
+  --tone-sky: rgb(var(--t-info));
   --shadow-resting: 0 1px 2px hsl(0 0% 0% / .06);
   --shadow-raised: 0 8px 22px hsl(0 0% 0% / .08);
   --shadow-floating: 0 22px 55px hsl(0 0% 0% / .14);
+  /* Chart series (Arc Pro radar chart): the child first in Trak green, then the squad in Trak's blue. */
+  --series-1: rgb(var(--t-brand));
+  --series-2: rgb(var(--t-info));
+  --series-3: rgb(var(--t-warning));
+  --series-4: rgb(var(--t-danger));
   --font-display: inherit;
   --font-body: inherit;
 }

@@ -8,6 +8,7 @@ import type { AnimationPlaybackControls, MotionValue, Variants } from "motion/re
 import { motionTokens } from "../lib/motion-tokens";
 import { useToday } from "../lib/use-today";
 import styles from "./calendar.module.css";
+import { useTranslation } from "@/lib/i18n";
 
 export type CalendarDateMatcher = (date: Date) => boolean;
 
@@ -27,6 +28,8 @@ export interface CalendarProps {
   showToday?: boolean;
   /** Trak: event dots under a day; hollow marks distinguish cancellations without colour alone. */
   marks?: (date: Date) => CalendarMark[];
+  /** Trak (TRAK-255): a day with something waiting for the user gets an amber corner, read as "needs you". */
+  attention?: (date: Date) => boolean;
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -123,15 +126,18 @@ export function Calendar({
   className,
   showToday = false,
   marks,
+  attention,
 }: CalendarProps) {
   const titleId = useId();
   const today = useToday();
+  const { t } = useTranslation();
   // Motion preference only counts after hydration, so server and client markup agree.
   const hydrated = useSyncExternalStore(subscribeNothing, clientSnapshot, serverSnapshot);
   const reducedMotion = (useReducedMotion() ?? false) && hydrated;
   const [internalMonth, setInternalMonth] = useState(() => (value ? monthStart(value) : undefined));
   const [focusedDate, setFocusedDate] = useState(value);
-  /** Trak (TRAK-157): the title opens twelve months at a time, so March next year is two taps, not five. */
+  /** Trak (TRAK-157): the title opens twelve months at a time, so March next year is two taps, not five.
+   *  TRAK-256: they start five months before the shown one, so recent months are there too. */
   const [picking, setPicking] = useState<number | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const focusRequest = useRef<string | null>(null);
@@ -277,32 +283,42 @@ export function Calendar({
     return index >= 0 && index < 42 ? index : -1;
   };
 
-  const renderMonth = (paneMonth: Date, present: boolean) => <>
+  const renderMonth = (paneMonth: Date, present: boolean) => {
+    const firstShown = addDays(paneMonth, -weekday(paneMonth));
+    return <>
     <SelectionDisc cell={cellOf(paneMonth)} reduced={reducedMotion} />
     <div className={styles.grid} role="grid" aria-label={formatter.format(paneMonth)}>
     {makeWeeks(paneMonth).map((week) => <div key={dateKey(week[0]!)} className={styles.week} role="row">
       {week.map((date) => {
         const key = dateKey(date);
+        // Trak (TRAK-256): another month's days are marked, and its first shown day names the month.
+        const outside = !sameMonth(date, paneMonth);
+        const monthLabel = outside && (date.getDate() === 1 || sameDay(date, firstShown)) ? shortMonth.format(date) : null;
         const selected = sameDay(date, value);
         const isToday = sameDay(date, today);
         const dots = marks?.(date) ?? [];
+        const needsYou = attention?.(date) ?? false;
         const label = date.toLocaleDateString(locale, { dateStyle: "full" });
         return <button
           key={key}
           type="button"
           role="gridcell"
           data-date={key}
-          aria-label={dots.length ? `${label}, ${dots.length} ${dots.length === 1 ? "event" : "events"}` : label}
+          data-outside={outside || undefined}
+          aria-label={(dots.length ? `${label}, ${dots.length} ${dots.length === 1 ? "event" : "events"}` : label) + (needsYou ? ", needs you" : "")}
+          data-attention={needsYou || undefined}
           aria-selected={selected}
           aria-current={isToday ? "date" : undefined}
           tabIndex={present && key === tabbableKey ? 0 : -1}
           disabled={isDisabled(date)}
           style={present ? numberDelay(key) : undefined}
-          className={cx(styles.day, !sameMonth(date, paneMonth) && styles.outside, selected && styles.selected, isToday && styles.today)}
+          className={cx(styles.day, outside && styles.outside, selected && styles.selected, isToday && styles.today)}
           onFocus={() => setFocusedDate(date)}
           onKeyDown={(event) => onDayKeyDown(event, date)}
           onClick={() => onChange?.(date)}
-        ><span className={styles.dayNumber}>{date.getDate()}</span>
+        >{monthLabel && <span className={styles.monthLabel} data-month-label aria-hidden="true">{monthLabel}</span>}
+          {needsYou && <span className={styles.attention} aria-hidden="true" />}
+          <span className={styles.dayNumber}>{date.getDate()}</span>
           {dots.length > 0 && <span className={styles.marks} aria-hidden="true">{dots.slice(0, 3).map((mark, i) => {
             const { color, hollow } = typeof mark === "string" ? { color: mark, hollow: false } : mark;
             return <span key={i} style={hollow
@@ -314,13 +330,14 @@ export function Calendar({
     </div>)}
     </div>
   </>;
+  };
 
   return <section className={cx(styles.calendar, className)} aria-labelledby={titleId}>
       <div className={styles.header}>
         <h2 id={titleId} className={styles.heading}>
           <span className={styles.srOnly}>{monthLabel}</span>
           <button type="button" className={styles.titleButton} disabled={!month} aria-expanded={picking !== null}
-            aria-label={`${monthLabel}, choose month and year`} onClick={() => setPicking(picking === null ? target : null)}>
+            aria-label={`${monthLabel}, choose month and year`} onClick={() => setPicking(picking === null ? target - 5 : null)}>
             <span className={styles.title} aria-hidden="true">
               <AnimatePresence initial={false} custom={direction}>
                 {month && <motion.span key={monthKey} className={styles.titleRow} custom={direction} variants={reducedMotion || !direction ? titleFade : titleSlide} initial="enter" animate="center" exit="exit">{monthLabel}</motion.span>}
@@ -331,7 +348,7 @@ export function Calendar({
         </h2>
         <span className={styles.srOnly} aria-live="polite">{direction ? monthLabel : ""}</span>
         <div className={styles.navigation}>
-          {showToday && <button type="button" className={styles.todayButton} aria-disabled={todayIdle || undefined} aria-label={today ? `Today, ${today.toLocaleDateString(locale, { dateStyle: "full" })}` : "Today"} onClick={goToToday}>Today</button>}
+          {showToday && <button type="button" className={styles.todayButton} aria-disabled={todayIdle || undefined} aria-label={today ? `${t("coachHome:today")}, ${today.toLocaleDateString(locale, { dateStyle: "full" })}` : t("coachHome:today")} onClick={goToToday}>{t("coachHome:today")}</button>}
           {picking !== null ? <>
             <button type="button" className={styles.navButton} aria-label="Earlier months" onClick={() => setPicking(picking - 12)}><ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" /></button>
             <button type="button" className={styles.navButton} aria-label="Later months" onClick={() => setPicking(picking + 12)}><ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" /></button>

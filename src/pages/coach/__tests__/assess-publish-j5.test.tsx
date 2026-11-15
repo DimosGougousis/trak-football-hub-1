@@ -1,3 +1,4 @@
+// @story J5
 /**
  * J5 (MVP Requirements): six sliders produce the band, then "Message to [first
  * name]: only [first name] sees this." (TRAK-63) and an optional "Private note:
@@ -20,6 +21,7 @@ import { assessStep, nextButton, saveAssessment } from '../../../../tests/suppor
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { ReactNode } from 'react'
+import { pickOption } from '@/test/arc-select'
 
 // TRAK-176: coach screens read the coach's squads through the query cache.
 function queries() {
@@ -51,16 +53,14 @@ function showForm() {
 }
 
 async function choose(player: 'player-a' | 'player-b') {
-  const option = await screen.findByRole('option', { name: 'Alex Synthetic' })
-  await userEvent.selectOptions(option.closest('select') as HTMLSelectElement, player)
+  await pickOption('Player', player === 'player-a' ? 'Alex Synthetic' : 'Bella Synthetic')
   await chooseSessionIfNone()
 }
 
 // TRAK-68: an assessment needs a past session. It stays chosen across players.
 async function chooseSessionIfNone() {
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  const session = screen.getByRole('combobox', { name: 'Session' }) as HTMLSelectElement
-  if (session.value === '') await userEvent.selectOptions(session, 'session-1')
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
+  if (!/vs Synthetic FC/.test(screen.getByRole('combobox', { name: 'Session' }).textContent ?? '')) await pickOption('Session', /vs Synthetic FC/)
 }
 
 const messageBox = () => screen.getByLabelText(/^Message to/i)
@@ -284,6 +284,25 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
     await screen.findByText('Coach home')
     expect(assessed()).toEqual([expect.objectContaining({ published_at: expect.any(String) })])
+  })
+
+  // TRAK-248: the family already sees this assessment's bands, but there's no
+  // message yet. Save draft on a new message must keep the bands where they are;
+  // only the message waits. Taking bands back is the card's Unpublish.
+  it('Save draft on a published assessment keeps its bands published', async () => {
+    server.use(
+      http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: '2026-09-20T19:00:00Z' }])),
+      http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([])),
+    )
+    showForm()
+    await choose('player-a')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+    await screen.findByText('Coach home')
+    expect(shared()).toEqual([expect.objectContaining({ body: 'Good pressing today', published_at: null })])
+    expect(assessed()).toHaveLength(1)
+    expect(assessed()[0]).not.toHaveProperty('published_at', null)
   })
 
   // Kostas's #313 review: "Save draft" on a message the player has read would

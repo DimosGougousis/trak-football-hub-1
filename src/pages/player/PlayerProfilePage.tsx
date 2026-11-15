@@ -5,31 +5,24 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconPassport, IconHowItWorks } from '@/components/icons/TrakIcons'
 import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
-import { trackEvent } from '@/lib/telemetry'
 import { bandForScore } from '@/lib/rating-engine'
-import RatingTrendChart from '@/components/player/RatingTrendChart'
 import { ParentInviteCard } from '@/components/player/ParentInviteCard'
 import { PlayerConnections } from '@/components/player/PlayerConnections'
-
-type TrendFilter = 'last5' | 'last10' | 'all'
+import { useMySeason } from '@/lib/my-season'
 
 export default function PlayerProfilePage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [details, setDetails] = useState<any>(null)
+  // TRAK-437: the position is the one the coach set, nothing if none; never the sign-up value in player_details.
+  const position = useMySeason().data?.position
   const [assessments, setAssessments] = useState<any[]>([])
   const assessment = assessments[0] ?? null
-  const [matchHistory, setMatchHistory] = useState<{ created_at: string; computed_rating: number }[]>([])
-  const [trendFilter, setTrendFilter] = useState<TrendFilter>('all')
 
   useEffect(() => {
     if (!user) return
     supabase.from('player_details').select('*').eq('user_id', user.id).maybeSingle().then(({ data }) => setDetails(data))
-    supabase.from('matches').select('computed_rating, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).then(({ data }) => {
-      if (!data) return
-      setMatchHistory(data.map((m) => ({ created_at: m.created_at ?? '', computed_rating: m.computed_rating })))
-    })
     // Coach assessments, newest first — via squad_players, since
     // coach_assessments.squad_player_id is a row ID, not a user ID.
     supabase.from('squad_players').select('id').eq('linked_player_id', user.id)
@@ -45,19 +38,6 @@ export default function PlayerProfilePage() {
       })
   }, [user])
 
-  // Track chart view once we have enough data
-  useEffect(() => {
-    if (matchHistory.length >= 3) {
-      trackEvent('chart_viewed', { type: 'trend' })
-    }
-  }, [matchHistory])
-
-  const filteredMatches = (() => {
-    if (trendFilter === 'last5') return matchHistory.slice(-5)
-    if (trendFilter === 'last10') return matchHistory.slice(-10)
-    return matchHistory
-  })()
-
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '?'
@@ -70,12 +50,6 @@ export default function PlayerProfilePage() {
     { name: 'Physical', score: assessment.physical },
     { name: 'Coachability', score: assessment.coachability },
   ] : []
-
-  const FILTER_OPTIONS: { key: TrendFilter; label: string }[] = [
-    { key: 'last5', label: 'Last 5' },
-    { key: 'last10', label: 'Last 10' },
-    { key: 'all', label: 'All' },
-  ]
 
   return (
     <MobileShell>
@@ -95,9 +69,9 @@ export default function PlayerProfilePage() {
             {profile?.full_name}
           </p>
           <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
-            {details?.position && (
+            {position && (
               <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
-                style={{ fontFamily: 'var(--t-font-mono)' }}>{details.position}</span>
+                style={{ fontFamily: 'var(--t-font-mono)' }}>{position}</span>
             )}
             {details?.current_club && (
               <span className="h-5 px-2.5 rounded-full bg-raised border border-line text-[8px] font-medium tracking-[0.06em] uppercase text-ink-3 inline-flex items-center"
@@ -110,42 +84,10 @@ export default function PlayerProfilePage() {
           </div>
         </div>
 
-        {/* Performance Trend */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
-          <MetadataLabel text="PERFORMANCE TREND" />
-          {matchHistory.length < 3 ? (
-            <p className="text-[12px] text-ink-3 mt-4 text-center pb-2" style={{ fontFamily: 'var(--t-font)' }}>
-              Log at least 3 matches to see your trend
-            </p>
-          ) : (
-            <>
-              <div className="mt-3">
-                <RatingTrendChart matches={filteredMatches} />
-              </div>
-              <div className="flex gap-1.5 mt-3">
-                {FILTER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    onClick={() => setTrendFilter(opt.key)}
-                    className="h-[26px] px-3 rounded-full text-[9px] font-medium tracking-[0.06em] uppercase transition-colors"
-                    style={{
-                      fontFamily: 'var(--t-font-mono)',
-                      background: trendFilter === opt.key ? 'rgb(var(--t-brand) / 0.13)' : 'rgb(var(--t-raised))',
-                      color: trendFilter === opt.key ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
-                      border: `1px solid ${trendFilter === opt.key ? 'rgb(var(--t-brand) / 0.25)' : 'rgb(var(--t-line))'}`,
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Coach Assessments: the six metrics in their band colours, on a dark card (TRAK-189). */}
+        {/* TRAK-435 (Imad, 12 Nov): no rating trend; a match gets the coach's words, not a rating. */}
+        {/* Coach Assessments: the six metrics in their band colours, on a light card (TRAK-229). */}
         {assessmentCategories.length > 0 && (
-          <div className="trak-dark rounded-[18px] p-4 border border-line bg-surface">
+          <div className="rounded-[18px] p-4 border border-line bg-surface">
             <MetadataLabel text="COACH ASSESSMENTS" />
             <div className="mt-3 space-y-2">
               {assessmentCategories.map(cat => {
@@ -157,7 +99,7 @@ export default function PlayerProfilePage() {
                     <div className="flex-1 h-[5px] rounded-full bg-raised overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: bandInfo.color }} />
                     </div>
-                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: bandInfo.color }}>
+                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: bandInfo.text }}>
                       {bandInfo.word}
                     </span>
                   </div>
@@ -175,7 +117,7 @@ export default function PlayerProfilePage() {
                           <span className="text-[12px] text-ink-2">
                             {new Date(a.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: band.color }}>
+                          <span className="flex items-center gap-2 text-[11px] font-semibold" style={{ color: band.text }}>
                             {band.word}<ChevronRight size={14} className="text-ink-3" />
                           </span>
                         </button>

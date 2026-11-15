@@ -28,6 +28,7 @@ function dependencies() {
     getRole: vi.fn<InviteDeliveryDependencies['getRole']>().mockResolvedValue({ data: 'player', error: null }),
     listInvites: vi.fn<InviteDeliveryDependencies['listInvites']>().mockResolvedValue({ data: [pending], error: null }),
     resendInvite: vi.fn<InviteDeliveryDependencies['resendInvite']>().mockResolvedValue({ data: [pending], error: null }),
+    getFirstName: vi.fn<NonNullable<InviteDeliveryDependencies['getFirstName']>>().mockResolvedValue('Nikos Synthetic'),
     sendInvite: vi.fn<InviteDeliveryDependencies['sendInvite']>().mockResolvedValue({ error: null }),
     sendMagicLink: vi.fn<InviteDeliveryDependencies['sendMagicLink']>().mockResolvedValue({ error: null }),
   };
@@ -50,8 +51,21 @@ describe('parent invite email request boundary', () => {
     expect(deps.getCaller).toHaveBeenCalledWith('player-session');
     expect(deps.getRole).toHaveBeenCalledWith('player-session', playerId);
     expect(deps.listInvites).toHaveBeenCalledWith('player-session');
-    expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite');
+    expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite', 'Nikos');
     expect(deps.resendInvite).not.toHaveBeenCalled();
+  });
+
+  /* Kostas, 21 Oct (#10 on the TRAK-190 sheet): the email says which child
+     invited the parent, so it needs the player's first name (body only). */
+  it("hands the email the player's first name, or nothing when it can't be read", async () => {
+    const deps = dependencies();
+    deps.getFirstName.mockResolvedValue('  Eleni   Synthetic ');
+    await handleInviteRequest(request(), deps);
+    expect(deps.getFirstName).toHaveBeenCalledWith('player-session', playerId);
+    expect(deps.sendInvite).toHaveBeenLastCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite', 'Eleni');
+    deps.getFirstName.mockRejectedValue(new Error('profile read failed'));
+    expect((await handleInviteRequest(request(), deps)).status).toBe(200);
+    expect(deps.sendInvite).toHaveBeenLastCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite', '');
   });
 
   it('rejects missing or invalid authentication before reading invitations', async () => {
@@ -111,7 +125,7 @@ describe('parent invite email request boundary', () => {
       deps.listInvites.mockResolvedValue({ data: [otherChildInvite, pending], error: null });
       const response = await handleInviteRequest(request({ parent_email: pending.parent_email }), deps);
       expect(response.status).toBe(200);
-      expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite');
+      expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite', 'Nikos');
     });
 
     it('CONTROL: the positive case really does send (a handler that never sends cannot pass the negative for the right reason)', async () => {
@@ -148,7 +162,7 @@ describe('parent invite email request boundary', () => {
         request({ parent_email: `  ${pending.parent_email.toUpperCase()}  ` }), deps,
       );
       expect(response.status).toBe(200);
-      expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite');
+      expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite', 'Nikos');
     });
 
     it('reports the matching invite as expired rather than falling through to no_invite', async () => {
@@ -184,7 +198,7 @@ describe('parent invite email request boundary', () => {
       { ...pending, id: otherId, status: 'accepted', parent_email: 'already-joined@example.test' }, pending,
     ], error: null });
     expect((await handleInviteRequest(request(), deps)).status).toBe(200);
-    expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite');
+    expect(deps.sendInvite).toHaveBeenCalledWith(pending.parent_email, 'https://trakfootball.test/parent-invite', 'Nikos');
   });
 
   it.each([undefined, { invite_id: inviteId }])('does not implicitly renew expired invitations', async body => {

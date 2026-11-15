@@ -4,11 +4,14 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MatchCard, LoadError } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
+import { fetchReviews } from '@/lib/games/reviews'
 import { TrainingHistory } from '@/components/player/TrainingHistory'
 import { UpcomingEvents } from '@/components/player/UpcomingEvents'
+import { COMPETITION_LABELS, competitionLabel } from '@/lib/coach-events'
 
-// TRAK-112: the tab holds matches and training, so Training is a chip too.
-const FILTERS = ['All', 'League', 'Cup', 'Friendly', 'Training']
+// TRAK-112: the tab holds matches and training, so Training is a chip too. TRAK-438: the competitions are the coach's
+// own three words (League, Tournament, Friendly), from the one shared list.
+const FILTERS = ['All', ...COMPETITION_LABELS, 'Training']
 const PAGE_SIZE = 20
 
 export default function PlayerMatches() {
@@ -69,6 +72,16 @@ export default function PlayerMatches() {
 
   const retry = () => { setLoading(true); setFailed(false); fetchPage(0, false) }
 
+  // TRAK-289: a Games match's row carries no rating; its review is on the match's event page. A failed read only
+  // leaves the review badges off.
+  const [reviewed, setReviewed] = useState<Map<string, string>>(new Map())
+  useEffect(() => {
+    if (!user) return
+    const abort = new AbortController()
+    fetchReviews(user.id, abort.signal).then(reviews => setReviewed(reviews.bySession), () => {})
+    return () => abort.abort()
+  }, [user])
+
   useEffect(() => {
     if (!user) return
     fetchPage(0, false)
@@ -82,7 +95,7 @@ export default function PlayerMatches() {
   }
 
   const [filter, setFilter] = useState('All')
-  const filtered = filter === 'All' ? matches : matches.filter(m => m.competition === filter)
+  const filtered = filter === 'All' ? matches : matches.filter(m => competitionLabel(m.competition) === filter)
   const showMatches = filter !== 'Training'
   const showTraining = filter === 'All' || filter === 'Training'
 
@@ -143,8 +156,9 @@ export default function PlayerMatches() {
                 scoreUs={m.team_score}
                 scoreThem={m.opponent_score}
                 competition={m.competition}
-                band={scoreToBand(m.computed_rating ?? 6.5)}
-                onClick={() => navigate(`/player/match/${m.id}`)}
+                band={m.computed_rating == null ? null : scoreToBand(m.computed_rating)}
+                review={reviewed.has(m.session_id)}
+                onClick={() => navigate(reviewed.has(m.session_id) ? `/player/event/${reviewed.get(m.session_id)}` : `/player/match/${m.id}`)}
               />
             ))}
           </div>

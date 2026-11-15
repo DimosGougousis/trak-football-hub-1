@@ -36,7 +36,11 @@ test.describe('TRAK-172 parent assessment history', () => {
         const child = params.get('squad_player_id')?.includes(zara) ? zara : alex
         let rows = records(child)
         if (params.has('id')) rows = rows.filter(row => `eq.${row.id}` === params.get('id'))
-        if (params.has('session_id')) rows = rows.filter(row => `eq.${row.session_id}` === params.get('session_id'))
+        // TRAK-439: the training history asks which of its sessions have an assessment with in.(a,b).
+        if (params.has('session_id')) {
+          const asked = params.get('session_id')!
+          rows = rows.filter(row => `eq.${row.session_id}` === asked || (asked.startsWith('in.(') && asked.slice(4, -1).replace(/"/g, '').split(',').includes(row.session_id)))
+        }
         const offset = Number(params.get('offset') ?? 0), limit = Number(params.get('limit') ?? rows.length)
         return json(rows.slice(offset, offset + limit))
       }
@@ -57,8 +61,9 @@ test.describe('TRAK-172 parent assessment history', () => {
           team_score: 1, opponent_score: 0, computed_rating: 8, position: 'ST', age_group: 'U19', minutes_played: 90, goals: 0, assists: 0,
         })).filter(row => !id || row.id === id))
       }
-      if (['player_details', 'recognition_awards'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
-      if (['child_events', 'get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])
+      if (['player_details', 'recognition_awards', 'game_for_family', 'game_review_for_family'] /* TRAK-286, TRAK-289: no shared plan, no review */.some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+      if (url.pathname === '/rest/v1/rpc/family_feature_on') return json(false) // TRAK-441: family_look off
+      if (['child_events', 'season_plan_for_player', 'get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_my_child_logins', 'get_my_approved_children_awaiting_signup'].some(name => url.pathname === `/rest/v1/rpc/${name}`)) return json([])
       if (url.pathname === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
       unexpected.push(`${req.method()} ${url.pathname}`)
       return route.fulfill({ status: 500, body: '{"message":"Unexpected synthetic request"}', contentType: 'application/json' })
@@ -98,7 +103,7 @@ test.describe('TRAK-172 parent assessment history', () => {
     await expect(page.locator(`a[href="/parent/assessment/${alex}-assessment-11"]`)).toBeVisible()
     await page.getByRole('button', { name: 'Load more' }).click()
     await expect(page.locator(`a[href="/parent/assessment/${alex}-assessment-24"]`)).toBeVisible()
-    await page.getByRole('button', { name: 'Events', exact: true }).click()
+    await page.getByRole('tab', { name: 'Events', exact: true }).click()
     await expect(page.getByRole('link', { name: /Alex legacy match/ })).toHaveAttribute('href', `/parent/match/${alex}-legacy-match`)
     await page.getByRole('link', { name: /Alex linked match/ }).click()
     await expect(page.getByRole('heading', { name: 'Coach assessment' })).toBeVisible()
@@ -107,13 +112,13 @@ test.describe('TRAK-172 parent assessment history', () => {
     await page.screenshot({ path: testInfo.outputPath(`match-bands-${width}.png`), fullPage: true })
     await page.getByRole('link', { name: 'Match details', exact: true }).click()
     await expect(page.getByText('vs Alex linked match', { exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Events', exact: true }).click()
+    await page.getByRole('tab', { name: 'Events', exact: true }).click()
     await page.getByRole('link', { name: /Alex legacy match/ }).click()
     await expect(page.getByText('No assessment link is available for this match.')).toBeVisible()
-    await page.getByRole('button', { name: 'Events', exact: true }).click()
+    await page.getByRole('tab', { name: 'Events', exact: true }).click()
     await page.getByRole('link', { name: /Alex linked match/ }).click()
     await page.getByRole('link', { name: 'All assessments', exact: true }).click()
-    await page.getByRole('button', { name: 'Events', exact: true }).click()
+    await page.getByRole('tab', { name: 'Events', exact: true }).click()
     await page.getByRole('link', { name: /Set pieces/ }).click()
     await expect(page.getByRole('heading', { name: 'Coach assessment' })).toBeVisible()
     await expect(page.getByText('10 Oct', { exact: true }) /* assessment 3's date */).toBeVisible()
@@ -123,7 +128,7 @@ test.describe('TRAK-172 parent assessment history', () => {
     await page.getByLabel('Following').selectOption(zara)
     await expect(page.locator(`a[href="/parent/assessment/${zara}-assessment-1"]`)).toBeVisible()
     await expect(page.locator(`a[href^="/parent/assessment/${alex}"]`)).toHaveCount(0)
-    await page.getByRole('button', { name: 'Events', exact: true }).click()
+    await page.getByRole('tab', { name: 'Events', exact: true }).click()
     await expect(page.getByRole('link', { name: /Alex linked match/ })).toHaveCount(0)
     await expect(page.getByRole('link', { name: /Zara legacy match/ })).toHaveAttribute('href', `/parent/match/${zara}-legacy-match`)
     await page.getByRole('link', { name: /Zara linked match/ }).click()

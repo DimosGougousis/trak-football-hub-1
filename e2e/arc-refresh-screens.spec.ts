@@ -1,5 +1,6 @@
 import { test, expect, type BrowserContext } from '@playwright/test'
 import { createRequire } from 'node:module'
+import { openNewEvent } from './new-event'
 
 const require = createRequire(import.meta.url)
 
@@ -15,11 +16,12 @@ const players = [
   { id: 'sq-5', player_name: 'Thiago Silva', position: 'Midfielder', age_group: 'U16', shirt_number: 10 },
 ].map(p => ({ ...p, coach_user_id: ids.coach, status: 'active', linked_player_id: `${p.id}-user`, created_at: '2026-10-01T08:00:00Z' }))
 
-async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false, cancelled = false) {
+async function coachBackend(context: BrowserContext, unexpected: string[], withMatch = false, cancelled = false, sessionHours = 1) {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
   const user = { id: ids.coach, email: 'coach@arc182.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
-  const exp = Math.floor(Date.now() / 1000) + 3600
+  // A test that moves the page's clock forward needs a session that lasts past it.
+  const exp = Math.floor(Date.now() / 1000) + 3600 * sessionHours
   const token = [{ alg: 'HS256', typ: 'JWT' }, { sub: ids.coach, exp, role: 'authenticated' }]
     .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic'
   await context.addInitScript(session => localStorage.setItem('sb-xbykbqolvqyqmipikuae-auth-token', JSON.stringify(session)),
@@ -52,24 +54,41 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
       updated_at: new Date(Date.now() - 3 * 3600_000).toISOString() }
     if (withMatch && path === '/rest/v1/coach_sessions' && url.searchParams.has('event_id')) return json([])
     if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
-    if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'School trip' }])
+    if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'school' }])
     if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(req.postDataJSON()?.p_squad_player_id === 'sq-5')
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
     if (path === '/rest/v1/coach_team_kits') return json([])
+    // TRAK-263: the Players view's profile facts (TRAK-260).
+    if (path === '/rest/v1/squad_player_profiles') return json([])
     if (path === '/rest/v1/telemetry_events') return route.fulfill({ status: 201, body: '' })
+    // TRAK-261: the coach's notification switches (the bell's "Can't make it"); no row means on.
+    if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
+    if (path === '/rest/v1/season_plans') return json([])
+    // TRAK-355: who the coach is watching; no one.
+    if (path === '/rest/v1/player_watches') return json([])
+    // TRAK-353: so a player's page lists their Can also play and roles; there are none.
+    if (path === '/rest/v1/squad_player_also_plays' || path === '/rest/v1/squad_player_roles') return json([])
+    // TRAK-354: so a player's page lists their objectives; there are none.
+    if (path === '/rest/v1/player_objectives') return json([])
+    if (path === '/rest/v1/objective_progress') return json([])
+    if (path === '/rest/v1/rpc/stuck_player_objectives') return json([])
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
-    if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes'].some(t => path === `/rest/v1/${t}`)) return json([])
+    // TRAK-262: notification_settings is Home's Needs you switch (no row: on).
+    if (['matches', 'event_absences', 'recognition_awards', 'coach_shared_feedback', 'player_details', 'coach_assessment_notes', 'notification_settings',
+      // TRAK-286: no game plan, shared or not.
+      'game_plans', 'game_shares', 'game_evaluations', 'game_evaluation_players', 'game_evaluation_notes', 'game_for_family', 'game_for_player', 'game_review_for_family', 'game_review_for_player', 'training_plans', 'training_plan_practices', 'training_notes'].some(t => path === `/rest/v1/${t}`)) return json([])
     unexpected.push(`${req.method()} ${path}`)
     return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
   })
 }
 
 test.describe('TRAK-182 coach screens', () => {
-  test.use({ timezoneId: 'Asia/Dubai' })
+  test.use({ timezoneId: 'Asia/Dubai', deviceScaleFactor: 3 })
   // TRAK-211: the attention levels moved from Home to the Feedback and assessment tab.
   test('TRAK-189 coach Feedback attention levels remain readable in the light theme', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
@@ -102,12 +121,15 @@ test.describe('TRAK-182 coach screens', () => {
   })
 
   for (const [name, path, ready] of [
-    // TRAK-211: Home lists no players; they are on the Feedback and assessment tab.
-    ['home', '/coach/home', 'Assess a player'],
+    // TRAK-262: Home's week, Squad shape and Needs you. TRAK-304: with Training and Games on, Today takes Squad shape's place.
+    ['home', '/coach/home', 'Today'],
     ['feedback', '/coach/feedback', 'Hugo Lloris'],
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
-    ['player', '/coach/player/sq-2', 'Bukayo Saka'],
+    // TRAK-368: the player's own page in Squad; the list behind it is hidden, so wait for the page's own section.
+    ['player', '/coach/squad/player/sq-2', 'Season so far'],
+    // TRAK-418: the coach's own How Trak works, opened from Settings.
+    ['how-trak-works', '/coach/how-trak-works', 'Every week'],
   ] as const) {
     test(`coach ${name}`, async ({ page, context }, testInfo) => {
       const unexpected: string[] = [], errors: string[] = []
@@ -134,7 +156,9 @@ test.describe('TRAK-182 coach screens', () => {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
     await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
     await page.goto('/coach/home')
+    // TRAK-262: tapping the event picks it on the week; Details opens its sheet.
     await page.getByRole('button', { name: /Rivals FC/ }).click()
+    await page.getByRole('button', { name: 'Details' }).click()
     const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
     await expect(sheet.getByRole('heading', { name: 'Attending · 3' })).toBeVisible()
     await expect(sheet.getByText(/not counted yet: waiting for consent/)).toBeVisible()
@@ -151,7 +175,8 @@ test.describe('TRAK-182 coach screens', () => {
     expect(errors).toEqual([])
   })
 
-  // TRAK-182 part 8: the quick-add's four faces: "+", menu, form, check.
+  // TRAK-182 part 8: the quick-add's faces: "+", menu, form, saved. TRAK-259: the "+" is Arc's glass menu in the
+  // phone's glass tab bar; the form opens above it, and a toast says the draft is saved.
   test('coach quick add, its four states', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
@@ -167,7 +192,8 @@ test.describe('TRAK-182 coach screens', () => {
       // motion's springs run in JavaScript: wait until the surface stops moving.
       let last = ''
       for (let i = 0; i < 20; i++) {
-        const box = JSON.stringify(await page.locator('[data-quick-add] > div').first().boundingBox())
+        const box = await page.evaluate(() => JSON.stringify((document.querySelector('[data-quick-add]') ?? document.querySelector('[role="menu"]')
+          ?? document.querySelector('[data-quick-add-trigger]'))?.getBoundingClientRect()))
         if (box === last) return
         last = box; await page.waitForTimeout(80)
       }
@@ -199,10 +225,11 @@ test.describe('TRAK-182 coach screens', () => {
     expect(listBox!.y).toBeGreaterThanOrEqual(0)
     await list.getByRole('option', { name: '5:00 PM' }).click()
     await form.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Draft saved' })).toBeAttached()
+    await expect(page.getByText('Draft saved. Publish it from Events.')).toBeVisible()
     await page.waitForTimeout(300)
     await page.screenshot({ path: testInfo.outputPath('quick-add-4-check.png') })
-    await expect(page.getByRole('button', { name: 'Quick add' })).toBeVisible({ timeout: 3000 })
+    await expect(form).toHaveCount(0, { timeout: 3000 })
+    await expect(page.getByRole('button', { name: 'Quick add', exact: true })).toHaveAttribute('aria-expanded', 'false')
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
@@ -214,10 +241,12 @@ test.describe('TRAK-182 coach screens', () => {
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
     await coachBackend(context, unexpected)
     await page.goto('/coach/schedule')
-    await page.getByRole('button', { name: 'Add event' }).click()
+    await openNewEvent(page)
     const sheet = page.getByRole('dialog', { name: 'New event' })
     await sheet.getByRole('button', { name: 'Match' }).click()
     await sheet.getByLabel('Opponent').fill('Synthetic Rovers')
+    // TRAK-288: with Games on, New event asks a match's competition.
+    await sheet.getByRole('group', { name: 'Competition' }).getByRole('button', { name: 'League' }).click()
     await sheet.getByRole('button', { name: 'Away' }).click()
     await sheet.getByLabel('Venue').fill('Rovers Park')
     await page.waitForTimeout(400)
@@ -243,8 +272,10 @@ test.describe('TRAK-182 coach screens', () => {
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
     await coachBackend(context, unexpected)
     await page.goto('/coach/assess')
-    await page.getByRole('combobox', { name: 'Player' }).selectOption({ label: 'Bukayo Saka' })
-    await page.getByRole('combobox', { name: 'Session' }).selectOption({ index: 1 })
+    await page.getByRole('combobox', { name: 'Player' }).click()
+    await page.getByRole('option', { name: 'Bukayo Saka' }).click()
+    await page.getByRole('combobox', { name: 'Session' }).click()
+    await page.getByRole('option').first().click()
     await page.getByRole('button', { name: 'Next' }).click()
     const slider = page.getByRole('slider', { name: 'Work Rate' })
     await slider.focus()
@@ -272,6 +303,63 @@ test.describe('TRAK-182 coach screens', () => {
 // TRAK-220 (20 Oct live run): menus and the expanded assessment card were
 // see-through on the light theme. Arc's tokens live on `.arc`; a panel Radix
 // portals to <body> has no `.arc` ancestor unless it carries the class itself.
+// TRAK-425 (Imad, 11 Nov): Assess player fills a laptop's page like the other coach pages, and its step strip goes forward
+// as well as back once a player and session are picked. Before that the form is locked, so the strip stays back-only.
+test.describe('TRAK-425 Assess player on a laptop', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 1440, height: 900 } })
+
+  test('fills the page, and the steps can be jumped ahead once a player is picked', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/assess')
+    const steps = page.getByRole('navigation', { name: 'Assessment steps' })
+    await expect(steps).toBeVisible()
+    // Not the old 640 px column: the page uses the room beside the side menu.
+    expect((await steps.boundingBox())!.width).toBeGreaterThan(800)
+    // Nothing picked yet: Review cannot be jumped to.
+    await expect(steps.getByRole('button', { name: /Review/ })).toBeDisabled()
+    await page.getByRole('combobox', { name: 'Player' }).click()
+    await page.getByRole('option', { name: 'Bukayo Saka' }).click()
+    // A picked player shows once: the card (with Change) replaces the list.
+    await expect(page.getByRole('combobox', { name: 'Player' })).toHaveCount(0)
+    await expect(page.getByText('Bukayo Saka')).toHaveCount(1)
+    await page.getByRole('combobox', { name: 'Session' }).click()
+    await page.getByRole('option').first().click()
+    await steps.getByRole('button', { name: /Review/ }).click()
+    await expect(page.getByRole('button', { name: 'Publish' }).or(page.getByRole('button', { name: 'Save' })).first()).toBeVisible()
+    await steps.getByRole('button', { name: /Ratings/ }).click()
+    await expect(page.getByRole('slider', { name: 'Work Rate' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('coach-assess-laptop.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+})
+
+// TRAK-425: on a phone Assess has its own Back and Next bar, so the glass tab bar steps aside: one bar at the bottom, not two.
+test.describe('TRAK-425 Assess player on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
+
+  test('has one bar at the bottom, and its sessions read like the rest of the app', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/assess')
+    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Coach' })).toHaveCount(0)
+    await page.getByRole('combobox', { name: 'Player' }).click()
+    await page.getByRole('option', { name: 'Bukayo Saka' }).click()
+    await page.getByRole('combobox', { name: 'Session' }).click()
+    const labels = await page.getByRole('option').allTextContents()
+    await page.keyboard.press('Escape')
+    expect(labels.length).toBeGreaterThan(0)
+    expect(labels.every(label => / · (Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}/.test(label))).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('coach-assess-phone.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+})
+
 test.describe('TRAK-220 Arc panels opened over the page', () => {
   test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
   // The alpha of an element's computed background colour (0 = see-through).
@@ -281,8 +369,9 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
   test('the card menu, the expanded card and its backdrop are opaque', async ({ page, context }, testInfo) => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
-    await page.goto('/coach/player/sq-2')
-    const card = page.getByRole('article').or(page.locator('[aria-label*="assessment, Bukayo Saka"]')).first()
+    await page.goto('/coach/squad/player/sq-2')
+    // TRAK-368: the player's page is an article too, so the card is picked by its name.
+    const card = page.getByRole('article', { name: /assessment, Bukayo Saka/ }).first()
     await card.getByRole('button', { name: /more actions$/ }).click()
     const menu = page.getByRole('menu')
     await expect(menu.getByRole('menuitem', { name: 'Edit' })).toBeVisible()
@@ -302,6 +391,59 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
     await expect(panel).toBeHidden()
     expect(unexpected).toEqual([])
   })
+
+  // Imad's 23 Oct phone review: on a scrolled page the quick look rose from under the screen. Motion measured the fixed
+  // panel without the page's scroll (it took the panel's layoutScroll for a scroll root) and the card with it, so the
+  // grow began a page-scroll below the card. It must begin where the card sits.
+  test('on a scrolled page, an assessment card grows from where it sits', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    await page.getByRole('button', { name: /^Bukayo Saka/ }).click()
+    const trigger = page.locator('article[aria-label^="Bukayo Saka"]').locator('h3 button').first()
+    // The card a third of the way down, wholly on screen, with the page scrolled.
+    await trigger.evaluate(el => scrollTo({ top: el.closest('article')!.getBoundingClientRect().top + scrollY - 280 }))
+    // As a coach does: scroll, look, then tap.
+    await page.waitForTimeout(150)
+    const scrolled = await page.evaluate(() => scrollY)
+    expect(scrolled, 'the page must be scrolled for this check to mean anything').toBeGreaterThan(100)
+    const cardTop = await trigger.evaluate(el => el.closest('article')!.getBoundingClientRect().top)
+    // A tap where the title is, as a finger does: Playwright's locator click can scroll the page first.
+    const box = (await trigger.boundingBox())!
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    const firstTop = await page.evaluate(() => new Promise<number>(resolve => {
+      const look = () => { const panel = document.querySelector('[role="dialog"]'); if (panel) resolve(panel.getBoundingClientRect().top); else requestAnimationFrame(look) }
+      look()
+    }))
+    expect(Math.abs(firstTop - cardTop), `card at ${Math.round(cardTop)}, quick look began at ${Math.round(firstTop)}, page scrolled ${scrolled}`).toBeLessThan(80)
+    await page.keyboard.press('Escape')
+    expect(unexpected).toEqual([])
+  })
+})
+
+// Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
+// On a phone the profile now takes the list's place, and "All players" returns to the same spot. TRAK-351: on every
+// screen a player opens as their own page, and its Back button returns to the same spot.
+test.describe('Squad Players on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 500 } })
+
+  test("a picked player's page replaces the list, and Back returns to it", async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad')
+    const list = page.getByRole('list', { name: 'Players' })
+    await expect(list).toBeVisible()
+    await page.evaluate(() => scrollTo({ top: 200 }))
+    const before = await page.evaluate(() => scrollY)
+    await page.getByRole('button', { name: /^Thiago Silva/ }).click()
+    const profile = page.locator('article[aria-label^="Thiago Silva"]')
+    await expect(profile).toBeInViewport()
+    await expect(list).toBeHidden()
+    await page.getByRole('button', { name: 'Back' }).click()
+    await expect(list).toBeVisible()
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(before)
+    expect(unexpected).toEqual([])
+  })
 })
 
 // TRAK-221 (20 Oct live run): scrolling the assessment with a finger that
@@ -315,8 +457,10 @@ test.describe('TRAK-221 assessment sliders under a finger', () => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
     await page.goto('/coach/assess')
-    await page.getByRole('combobox', { name: 'Player' }).selectOption({ label: 'Bukayo Saka' })
-    await page.getByRole('combobox', { name: 'Session' }).selectOption({ index: 1 })
+    await page.getByRole('combobox', { name: 'Player' }).click()
+    await page.getByRole('option', { name: 'Bukayo Saka' }).click()
+    await page.getByRole('combobox', { name: 'Session' }).click()
+    await page.getByRole('option').first().click()
     await page.getByRole('button', { name: 'Next' }).click()
     const cdp = await context.newCDPSession(page)
     const finger = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
@@ -364,7 +508,7 @@ test.describe('TRAK-227 date and time pickers in the event form', () => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
     await page.goto('/coach/schedule')
-    await page.getByRole('button', { name: 'Add event' }).click()
+    await openNewEvent(page)
     const sheet = page.getByRole('dialog', { name: 'New event' })
     await sheet.getByRole('button', { name: 'Next', exact: true }).click()
     // Fully inside every scroll area it sits in, and inside the screen.
@@ -407,6 +551,167 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     // A neutral backing keeps the red outline distinct from the green disc.
     await expect(ring.locator('..')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await page.screenshot({ path: testInfo.outputPath('cancelled-calendar-selected.png'), fullPage: true })
+    // TRAK-270 (Tarek, 23 Oct): needs you is a clear yellow, not the warning amber, with a dark edge.
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-attention').trim())).toBe('234 179 8')
+    const needsYou = page.getByRole('group', { name: 'Colour key' }).getByText('Needs you').locator('xpath=preceding-sibling::div[1]')
+    await expect(needsYou.locator('div')).toHaveCSS('background-color', 'rgb(234, 179, 8)')
+    await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
+    // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
+    await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
+    // TRAK-272, TRAK-275: a card's actions are a button group big enough to tap (icons only on a phone), and tapping the card opens its sheet.
+    const share = page.getByRole('group', { name: 'Actions for League' }).getByRole('button', { name: 'Share League' })
+    expect((await share.boundingBox())!.height).toBeGreaterThanOrEqual(36)
+    await page.getByText('Kit: White shirts, black shorts').click()
+    // A match's sheet is titled by its opponent, as on coach Home.
+    await expect(page.getByRole('dialog', { name: 'vs Rivals FC' })).toBeVisible()
+    expect(unexpected).toEqual([])
+  })
+
+  // TRAK-270 (Tarek, 23 Oct): "make it the same way it is on the home screen". A day that needs the
+  // coach (tonight's match, started, not logged) has coach Home's yellow corner flag, tucked into the
+  // day's top-right corner, not a triangle standing out of it.
+  test('TRAK-270 needs you is coach Home\'s corner flag, inside the day', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected, true, false, 36)
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+    await page.clock.setFixedTime(new Date(`${day}T17:00:00Z`)) // 21:00 in Dubai: the 20:00 kick-off has passed
+    await page.goto('/coach/schedule')
+    const cell = page.getByRole('gridcell', { name: /needs you/ })
+    await expect(cell).toHaveCount(1)
+    const flag = cell.locator('[aria-hidden="true"]').filter({ hasNot: page.locator('span') }).first()
+    await expect(flag).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
+    await expect(flag).toHaveCSS('border-top-right-radius', '4px')
+    await expect(flag).toHaveCSS('background-color', 'rgb(234, 179, 8)')
+    const [f, c] = [(await flag.boundingBox())!, (await cell.boundingBox())!]
+    expect(f.x).toBeGreaterThanOrEqual(c.x)
+    expect(f.y).toBeGreaterThanOrEqual(c.y)
+    expect(f.x + f.width).toBeLessThanOrEqual(c.x + c.width)
+    expect(f.y + f.height).toBeLessThanOrEqual(c.y + c.height)
+    await cell.screenshot({ path: testInfo.outputPath('needs-you-corner.png'), scale: 'device' })
     expect(unexpected).toEqual([])
   })
 })
+
+// Imad, 23 Oct: event times follow the phone's own clock. Tonight's away match is 20:00 at a Dubai academy.
+test.describe("Event times on the phone's clock", () => {
+  const kickOff = (timeZone: string, day: string) =>
+    new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(`${day}T16:00:00Z`))
+
+  for (const [timeZone, academyLine] of [['Asia/Dubai', false], ['Europe/Athens', true]] as const) {
+    test(`a phone in ${timeZone}`, async ({ browser }) => {
+      const context = await browser.newContext({ timezoneId: timeZone, viewport: { width: 390, height: 844 } })
+      const page = await context.newPage()
+      const unexpected: string[] = []
+      // A session that lasts past the clock set below.
+      await coachBackend(context, unexpected, true, false, 36)
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+      // TRAK-292: 13:00Z is 17:00 in Dubai and 15:00 (16:00 in summer) in Athens: the match's day on both clocks,
+      // before its 20:00 kick-off, whenever the suite runs. The real clock failed from 20:00 to 22:00 UTC, when
+      // Dubai is already on the next day and Athens isn't.
+      await page.clock.setFixedTime(new Date(`${day}T13:00:00Z`))
+      await page.goto('/coach/home')
+      await page.getByRole('button', { name: /Rivals FC/ }).click()
+      await page.getByRole('button', { name: 'Details' }).click()
+      const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
+      await expect(sheet.getByText(kickOff(timeZone, day), { exact: true })).toBeVisible()
+      if (academyLine) await expect(sheet.getByText('20:00 Dubai time', { exact: true })).toBeVisible()
+      else await expect(sheet.getByText(/Dubai time|Athens time|on this phone/)).toHaveCount(0)
+      expect(unexpected).toEqual([])
+      await context.close()
+    })
+  }
+})
+
+// Imad, 23 Oct: in the "+" form the date and time pickers opened upward and were cut off by the form's own edge (its
+// shape clips while it moves, and the side-picker didn't count `clip`). Once the form has settled they open whole.
+test.describe('The "+" form\'s pickers on a phone', () => {
+  test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
+
+  test('the date calendar and the time list open fully on screen', async ({ page, context }) => {
+    const unexpected: string[] = []
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/home')
+    await page.getByRole('button', { name: 'Quick add' }).click()
+    await page.getByText('New event', { exact: true }).click()
+    await page.waitForTimeout(600)
+    // Whole on screen, and not cut by an ancestor: the point a little inside each corner is the panel itself.
+    const whole = (selector: string) => page.evaluate(sel => {
+      const panel = document.querySelector(sel) as HTMLElement
+      const r = panel.getBoundingClientRect()
+      const inside = [[r.left + 8, r.top + 8], [r.right - 8, r.top + 8], [r.left + 8, r.bottom - 8], [r.right - 8, r.bottom - 8]]
+        .every(([x, y]) => panel.contains(document.elementFromPoint(x, y)))
+      return { top: Math.round(r.top), bottom: Math.round(r.bottom), inside }
+    }, selector)
+    await page.getByRole('button', { name: 'Date', exact: true }).click()
+    await page.waitForTimeout(500)
+    const calendar = await whole('[role="dialog"][aria-label$="calendar"]')
+    expect(calendar.top, JSON.stringify(calendar)).toBeGreaterThanOrEqual(0)
+    expect(calendar.inside, JSON.stringify(calendar)).toBe(true)
+    await page.keyboard.press('Escape')
+    // The form's own Start time (TRAK-350 put the season plan's Start on Home, behind the form).
+    await page.getByRole('dialog', { name: 'New event' }).getByRole('button', { name: /^Start/ }).click()
+    await page.waitForTimeout(500)
+    const times = await whole('[role="listbox"]')
+    expect(times.top, JSON.stringify(times)).toBeGreaterThanOrEqual(0)
+    expect(times.inside, JSON.stringify(times)).toBe(true)
+    expect(unexpected).toEqual([])
+  })
+})
+
+// TRAK-420 (11 Nov review): on a phone the Log page squeezed the trail, "What are you logging?" and History onto one
+// line. The trail gets its own line, the title sits under it, and History touches neither. A laptop shows the trail in
+// its top bar, so the page itself shows only the title and History, on one line.
+test.describe('TRAK-420 Log page header', () => {
+  test.use({ timezoneId: 'Asia/Dubai' })
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+
+  for (const [name, width, height] of [['phone', 390, 844], ['laptop', 1440, 900]] as const) {
+    test(`on a ${name}, the trail, the title and History do not touch`, async ({ page, context }, testInfo) => {
+      const unexpected: string[] = [], errors: string[] = []
+      page.on('pageerror', error => errors.push(error.message))
+      await page.setViewportSize({ width, height })
+      await coachBackend(context, unexpected)
+      // TRAK-426: the Log page is there only where Training or Matches is off; here Training is off.
+      await context.route('**/rest/v1/rpc/feature_on', route => route.fulfill({ contentType: 'application/json',
+        body: JSON.stringify(route.request().postDataJSON()?.p_feature !== 'training') }))
+      await page.goto('/coach/sessions')
+      const title = page.getByRole('heading', { name: 'What are you logging?' })
+      const history = page.getByRole('button', { name: 'History' })
+      await expect(title).toBeVisible()
+      const titleBox = (await title.boundingBox())!, historyBox = (await history.boundingBox())!
+      expect(overlap(titleBox, historyBox), 'title and History overlap').toBe(false)
+      if (name === 'phone') {
+        // On a phone the page's own trail is the only one.
+        const trail = page.getByRole('navigation', { name: 'Breadcrumb' })
+        await expect(trail).toBeVisible()
+        const trailBox = (await trail.boundingBox())!
+        // Its own line: the trail ends above the title and above History.
+        expect(trailBox.y + trailBox.height, 'the trail must sit above the title').toBeLessThanOrEqual(titleBox.y)
+        expect(trailBox.y + trailBox.height, 'the trail must sit above History').toBeLessThanOrEqual(historyBox.y)
+      }
+      await page.waitForTimeout(300)
+      await page.screenshot({ path: testInfo.outputPath(`coach-log-header-${name}.png`) })
+      expect(unexpected).toEqual([])
+      expect(errors).toEqual([])
+    })
+  }
+})
+
+// TRAK-415: below 1024 px the frame drew pages with no `.arc` around them, so a player's radar chart, band chip and
+// avatar lost Arc's colours and sizes. Any part from an Arc stylesheet must sit inside `.arc`.
+for (const width of [390, 820]) {
+  test(`TRAK-415 at ${width} px: a player's page keeps Arc's styling`, async ({ page, context }) => {
+    const unexpected: string[] = []
+    await page.setViewportSize({ width, height: 900 })
+    await coachBackend(context, unexpected)
+    await page.goto('/coach/squad/player/sq-2')
+    await expect(page.getByRole('heading', { name: 'Bukayo Saka', level: 1 })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    const outside = await page.evaluate(() => [...document.querySelectorAll('[class]')]
+      .filter(el => /(?:^|\s)_[A-Za-z]+_[a-z0-9]{4,6}_\d+/.test(el.getAttribute('class') ?? '') && !el.closest('.arc') && el.getBoundingClientRect().width > 0)
+      .map(el => `${el.getAttribute('class')} "${(el.textContent ?? '').trim().slice(0, 30)}"`))
+    expect(outside).toEqual([])
+    expect(unexpected).toEqual([])
+  })
+}

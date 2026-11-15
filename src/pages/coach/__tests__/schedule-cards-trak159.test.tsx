@@ -53,11 +53,12 @@ describe('TRAK-159: the coach calendar cards', () => {
     expect(within(card('Training')).getByText('No time set')).toBeInTheDocument()
   }, 20_000)
 
-  it('a draft has a Publish button that says "Publish" in words', async () => {
+  // TRAK-275 (Tarek, 23 Oct): on a phone the card's actions are icons; the name and tooltip keep the word.
+  it('a draft has a Publish button, named and titled "Publish" on a phone', async () => {
     fixtures()
     renderApp('/coach/schedule')
     const publish = await screen.findByRole('button', { name: 'Publish Finishing' })
-    expect(publish).toHaveTextContent('Publish')
+    expect(publish).toHaveAttribute('title', 'Publish Finishing')
   }, 20_000)
 
   it('a cancelled event is marked red, label and stripe (founders, 12 Oct)', async () => {
@@ -65,7 +66,9 @@ describe('TRAK-159: the coach calendar cards', () => {
     renderApp('/coach/schedule')
     await screen.findByText('Rained off', { selector: 'p' })
     const label = within(card('Rained off')).getByText('Cancelled')
-    expect(label.style.color).toBe(hexToRgb(CANCELLED_COLOR))
+    // TRAK-271: the word is the danger red (the event colour is too light for text); the stripe is the event colour.
+    // TRAK-427: the state is Arc's badge; a cancelled event's is its danger tone.
+    expect(label.closest('[class*="danger"]')).not.toBeNull()
     const stripe = card('Rained off').firstElementChild as HTMLElement
     expect(stripe.style.background).toBe(hexToRgb(CANCELLED_COLOR))
     // TRAK-189: not faded as well. On the light theme a 0.7 fade drops the label to
@@ -75,12 +78,12 @@ describe('TRAK-159: the coach calendar cards', () => {
 })
 
 describe('TRAK-159: one colour per type', () => {
-  // TRAK-231 (20 Oct live run): match magenta, training teal, other green,
-  // cancelled red; tournament blue. (Was blue/purple/orange, 12 and 18 Oct.)
-  it('training teal, match magenta, other green, tournament blue, cancelled red (20 Oct live run)', () => {
-    expect(hue(EVENT_COLOR.training)).toBe('teal')
-    expect(hue(EVENT_COLOR.match)).toBe('magenta')
-    expect(hue(EVENT_COLOR.other)).toBe('green')
+  // TRAK-275 (Tarek, 23 Oct): training green, match purple, other teal, cancelled red; tournament blue.
+  // (Was blue/purple/orange on 12 and 18 Oct, teal/magenta/green on 20 Oct, cyan/pink/green earlier on 23 Oct.)
+  it('training green, match purple, other teal, tournament blue, cancelled red (23 Oct)', () => {
+    expect(hue(EVENT_COLOR.training)).toBe('green')
+    expect(hue(EVENT_COLOR.match)).toBe('purple')
+    expect(hue(EVENT_COLOR.other)).toBe('teal')
     expect(hue(EVENT_COLOR.tournament)).toBe('blue')
     expect(hue(CANCELLED_COLOR)).toBe('red')
   })

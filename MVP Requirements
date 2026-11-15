@@ -86,8 +86,9 @@ See TRAK-84, TRAK-103, TRAK-104, TRAK-107 and TRAK-117.
 
 ### J4 — Coach records a completed session
 
-- Match: date, opponent, result, and each child's position, minutes, goals and
-  assists, without invented defaults.
+- Match: date, opponent, result, and each child's position, goals and assists.
+  Position is never invented; goals and assists start at 0 (Kostas, 21 Oct
+  2026). Minutes are not asked (TRAK-198).
 - Training: date, type, attendance and session notes.
 - Every write checks active consent and the coach's academy assignment.
 - Retries must not duplicate records or silently lose entered data.
@@ -117,7 +118,25 @@ the player before Publish. A partial failure states what saved and what did not.
 Assessments require a completed session attended by the player, with one
 assessment per player per session. `/coach/assess` is the pilot assessment
 screen; Quick Assess remains hidden. Parents never see the coach's message.
-These decisions are recorded in TRAK-63, TRAK-64, TRAK-68 and TRAK-100.
+These decisions are recorded in TRAK-63, TRAK-64, TRAK-68 and TRAK-100. An
+evaluation's assessments (below) are the one kind with no session.
+
+**With the season plan (TRAK-364; draft awaiting Kostas's review).** Academies
+without the `season_plan` switch keep J5 exactly as written above. Where the
+switch is on and a squad's season plan is shared, the squad is evaluated on the
+plan's rhythm: every 2 weeks, every month or every 6 weeks, on a chosen day
+(for every month, the last such day of the month). Dates count in the academy's
+time zone, from the day the plan was first shared. Home shows one Evaluation
+due card for the squad in place of its per-player Assess reminders. A missed
+date stays due, and one evaluation covers every date that has passed. The
+evaluation rates every consented player of the squad on the same six sliders,
+each starting from their latest ratings however they were given. A player with
+no ratings yet must be rated before Publish. Each player may get a note that
+only that player sees, never their family. Publish writes one published
+assessment per player with no session, all at once or not at all, and a failed
+publish keeps everything entered. Families see the bands as they do now. The
+session assessment stays available. Changing the rhythm after sharing waits
+under Not shared yet as the evaluation dates.
 
 ### J6 — Player and parent see the records
 
@@ -234,7 +253,9 @@ authenticated roles, with controls proving the protected data exists.
 - **G6:** withdrawal stops processing and family access; event/calendar access
   must also satisfy J8's next-request check.
 - **G7:** AI processing, player passport/export/sharing, child photos and avatars
-  remain disabled in both UI and backend. Account deletion and access to account
+  remain disabled in both UI and backend. One exception (TRAK-460, Imad, 11 Nov): a
+  coach may keep their own profile picture, visible only to them; the database lets
+  no other role store, set or read a photo. Account deletion and access to account
   data are separate rights. `export_my_account()` exists; a self-service export
   screen is not established by this audit (TRAK-81).
 

@@ -19,6 +19,9 @@ const endpoint = (name: string) => `${SUPABASE_URL}/rest/v1/${name}`
 const clients: QueryClient[] = []
 beforeEach(() => {
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'Alex' }, { player_user_id: 'Zara' }])),
     http.get(endpoint('profiles'), () => HttpResponse.json([{ user_id: 'Alex', full_name: 'Alex Example' }, { user_id: 'Zara', full_name: 'Zara Example' }])),
     http.get(endpoint('matches'), ({ request }) => {
@@ -86,10 +89,10 @@ describe('TRAK-174 parent match links', () => {
     expect(screen.getByRole('link', { name: 'Match details' })).toHaveAttribute('href', '/parent/match/Alex-linked')
     await userEvent.click(screen.getByRole('link', { name: 'Match details' }))
     expect(await screen.findByText('vs Alex linked match')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Events' }))
     await userEvent.click(await screen.findByRole('link', { name: /Alex legacy match/ }))
     expect(await screen.findByText('No assessment link is available for this match.')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Events' }))
     await userEvent.selectOptions(screen.getByLabelText('Following'), 'Zara')
     expect(await screen.findByRole('link', { name: /Zara linked match/ })).toHaveAttribute('href', '/parent/session/Zara-exact-session/assessment')
     expect(screen.queryByRole('link', { name: /Alex linked match/ })).not.toBeInTheDocument()

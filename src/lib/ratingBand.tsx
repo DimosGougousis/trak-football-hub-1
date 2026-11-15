@@ -1,5 +1,4 @@
-import { withAlpha } from '@/lib/with-alpha'
-import { BAND_COLOR } from '@/lib/types'
+import { BANDS, BAND_COLOR } from '@/lib/types'
 export interface RatingBand {
   label: string;
   color: string;
@@ -12,20 +11,19 @@ export function getRatingBand(rating: number): RatingBand {
   if (rating >= 6.4) return { label: 'Steady', color: BAND_COLOR.Steady };
   if (rating >= 5.6) return { label: 'Mixed', color: BAND_COLOR.Mixed };
   if (rating >= 4.8) return { label: 'Developing', color: BAND_COLOR.Developing };
-  return { label: 'Difficult', color: 'rgb(var(--t-ink-3))' };
+  return { label: 'Difficult', color: BAND_COLOR.Difficult };
 }
 
 export const RatingBandPill = ({ rating }: { rating: number }) => {
   const band = getRatingBand(rating);
+  const config = BANDS.find(b => b.word === band.label) ?? BANDS[BANDS.length - 1];
   return (
+    // TRAK-229: as BandPill, the band's light tint with a dot in its colour; the word in Trak's ink.
     <span
-      className="trak-dark inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium leading-none"
-      style={{
-        color: band.color,
-        background: `linear-gradient(${withAlpha(band.color, 0.12)}, ${withAlpha(band.color, 0.12)}), rgb(var(--t-surface))`, // a dark pill
-        border: `1px solid ${withAlpha(band.color, 0.25)}`, // ~25% opacity
-      }}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium leading-none"
+      style={{ color: 'rgb(var(--t-ink))', background: config.bg, border: `1px solid ${config.border}` }}
     >
+      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: band.color }} />
       {band.label}
     </span>
   );

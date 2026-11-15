@@ -1,9 +1,9 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../../../../tests/msw/server'
-import { rpc } from '../../../../tests/msw/supabase'
+import { rpc, table } from '../../../../tests/msw/supabase'
 import { UpcomingEvents } from '../UpcomingEvents'
 
 /**
@@ -19,6 +19,8 @@ const event = (n: number, extra: Record<string, unknown> = {}) => ({
 })
 
 afterEach(cleanup)
+// TRAK-286: no roster row, so no shared game plans to badge.
+beforeEach(() => { server.use(table('squad_players', [])) })
 const mount = () => render(<MemoryRouter><UpcomingEvents playerUserId="player-170" /></MemoryRouter>)
 
 describe('J8.7 Sessions: the next 3 upcoming events, then See more', () => {

@@ -8,6 +8,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import userEvent from '@testing-library/user-event'
+import { pickOption } from '@/test/arc-select'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -78,12 +79,20 @@ function showForm() {
     <Route path="/coach/home" element={<p>Coach home</p>} />
   </Routes></MemoryRouter>, queries())
 }
-const select = (label: string) => screen.getByRole('combobox', { name: label }) as HTMLSelectElement
+const select = (label: string) => screen.getByRole('combobox', { name: label })
+const PLAYER_NAME: Record<string, string> = { 'player-a': 'Alex Synthetic', 'player-b': 'Bella Synthetic' }
 async function choosePlayer(id: string) {
-  await screen.findByRole('option', { name: 'Alex Synthetic' })
-  await userEvent.selectOptions(select('Player'), id)
+  await pickOption('Player', PLAYER_NAME[id])
 }
-const sessionNames = () => [...select('Session').options].filter(o => o.value).map(o => o.textContent)
+// The Session list is the app's own Select: its options exist only while it is open.
+async function sessionNames() {
+  await waitFor(() => expect(select('Session')).toBeEnabled())
+  select('Session').focus()
+  await userEvent.keyboard('{Enter}')
+  const names = (await screen.findAllByRole('option')).map(o => o.textContent)
+  await userEvent.keyboard('{Escape}')
+  return names
+}
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
@@ -91,20 +100,17 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
   it('lists only attended sessions, each with the time it was logged', async () => {
     showForm()
     await choosePlayer('player-a')
-    await screen.findByRole('option', { name: /Set Pieces Training/ })
-    expect(sessionNames()).toEqual([
-      `Finishing Training · 2026-10-01 · logged ${at(LATE)}`,
-      `Set Pieces Training · 2026-10-01 · logged ${at('2026-10-01T13:09:57Z')}`,
+    expect(await sessionNames()).toEqual([
+      `Finishing Training · Thu 1 Oct · logged ${at(LATE)}`,
+      `Set Pieces Training · Thu 1 Oct · logged ${at('2026-10-01T13:09:57Z')}`,
     ])
-    // The rerun's wrong pick: same title and day, nobody present.
-    expect(screen.queryByRole('option', { name: new RegExp(`logged ${at(EARLY)}`) })).toBeNull()
+    // The rerun's wrong pick (same title and day, nobody present) is not in that list.
   })
 
   it('saves against the attended session the coach picked', async () => {
     showForm()
     await choosePlayer('player-a')
-    await screen.findByRole('option', { name: /Set Pieces Training/ })
-    await userEvent.selectOptions(select('Session'), 'session-late')
+    await pickOption('Session', new RegExp(`Finishing Training.*logged ${at(LATE)}`))
     await saveAssessment()
     await screen.findByText('Coach home')
     expect(writes.map(w => w.session_id)).toEqual(['session-late'])
@@ -122,11 +128,12 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
     present['player-b'] = ['session-set']
     showForm()
     await choosePlayer('player-a')
-    await screen.findByRole('option', { name: /Set Pieces Training/ })
-    await userEvent.selectOptions(select('Session'), 'session-late')
-    await userEvent.selectOptions(select('Player'), 'player-b')
-    await waitFor(() => expect(sessionNames()).toEqual([`Set Pieces Training · 2026-10-01 · logged ${at('2026-10-01T13:09:57Z')}`]))
-    expect(select('Session').value).toBe('')
+    await pickOption('Session', new RegExp(`Finishing Training.*logged ${at(LATE)}`))
+    // TRAK-425: a picked player shows once, as a card; Change brings the list back.
+    await userEvent.click(screen.getByRole('button', { name: 'Change' }))
+    await pickOption('Player', 'Bella Synthetic')
+    expect(await sessionNames()).toEqual([`Set Pieces Training · Thu 1 Oct · logged ${at('2026-10-01T13:09:57Z')}`])
+    expect(select('Session')).not.toHaveTextContent(/Finishing Training/)
     expect(nextButton()).toBeDisabled()
   })
 
@@ -135,19 +142,18 @@ describe('TRAK-100: the session picker offers only sessions the player attended'
     showForm()
     await choosePlayer('player-a')
     expect(await screen.findByText(/Couldn't load which sessions Alex was at/)).toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: /Finishing Training/ })).toBeNull()
+    expect(screen.queryByRole('combobox', { name: 'Session' })).toBeNull()
     expect(nextButton()).toBeDisabled()
     attendanceFails = false
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    await screen.findByRole('option', { name: /Set Pieces Training/ })
+    expect(await sessionNames()).toContain(`Set Pieces Training · Thu 1 Oct · logged ${at('2026-10-01T13:09:57Z')}`)
     expect(screen.queryByText(/Couldn't load which sessions/)).toBeNull()
   })
 
   it('no session list until a player is chosen', async () => {
     showForm()
-    await screen.findByRole('option', { name: 'Alex Synthetic' })
+    await waitFor(() => expect(select('Player')).toBeEnabled())
     expect(select('Session')).toBeDisabled()
-    expect(screen.getByRole('option', { name: 'Choose a player first' })).toBeInTheDocument()
-    expect(sessionNames()).toEqual([])
+    expect(select('Session')).toHaveTextContent('Choose a player first')
   })
 })

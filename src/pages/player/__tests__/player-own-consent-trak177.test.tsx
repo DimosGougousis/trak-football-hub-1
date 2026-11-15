@@ -111,7 +111,8 @@ describe('TRAK-177: a 15–17 player\'s own consent', () => {
     setup('player-own-settings-14', { age: 14, consent_age: 15, required: false, own_choice: null })
     server.use(rpc('my_calendar_link', () => []), rpc('my_notification_settings', () => ({ event_reminders: true })))
     renderApp('/settings')
-    await screen.findByText('Calendar')
+    // TRAK-261: Calendar is a section of Arc's settings page (its menu names it too).
+    await screen.findByRole('heading', { name: 'Calendar' })
     expect(screen.queryByRole('button', { name: 'Withdraw my consent' })).not.toBeInTheDocument()
   })
 

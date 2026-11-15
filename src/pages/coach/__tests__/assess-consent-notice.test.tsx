@@ -26,6 +26,7 @@ import CoachQuickAssess from '../CoachQuickAssess'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { pickOption } from '@/test/arc-select'
 
 const COACH = { id: 'coach-1' }
 const RLS_REFUSAL = { code: '42501', details: null, hint: null, message: 'new row violates row-level security policy for table "coach_assessments"' }
@@ -58,11 +59,9 @@ function setup({ consentRequired, insertRefused = false }: { consentRequired: bo
 async function choosePlayer() {
   renderApp('/coach/assess')
   const user = userEvent.setup()
-  const option = await screen.findByRole('option', { name: 'Omar Synthetic' })
-  await user.selectOptions(option.closest('select') as HTMLSelectElement, 'squad-1')
+  await pickOption('Player', 'Omar Synthetic')
   // TRAK-68: the assessment belongs to a past session.
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Session' }), 'session-1')
+  await pickOption('Session', /vs Synthetic FC/)
   return user
 }
 

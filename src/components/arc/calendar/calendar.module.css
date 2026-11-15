@@ -38,6 +38,13 @@
 /* Outside days dim their number, not the button, so a disc gliding onto one keeps its full strength. */
 .day.outside { color: var(--text-muted); }
 /* Trak (TRAK-189): the muted colour already reads as another month; no extra fade, so it keeps 4.5:1. */
+/* Trak (TRAK-256): another month's days also sit on a shaded square, and the first of them names its month,
+   so 1 November never reads as 1 October. The shade darkens whatever is behind it, so it shows on the white
+   Schedule card and on a date picker's grey panel alike (the muted number keeps 4.5:1 on both). A selected
+   one shows the disc instead. */
+.day.outside:not(.selected) { border-radius: 10px; background: var(--surface-muted); background: color-mix(in srgb, var(--foreground) 5%, transparent); }
+.monthLabel { position: absolute; top: 3px; left: 0; right: 0; color: var(--text-secondary); font-size: 9px; font-weight: 600; letter-spacing: .06em; line-height: 1; text-align: center; text-transform: uppercase; pointer-events: none; }
+.day.outside:disabled .monthLabel { opacity: .5; }
 /* Today is a small dot under the number. It takes the number's color, so it flips with it when the disc arrives. */
 .day.today .dayNumber::after { content: ""; position: absolute; top: calc(100% + 4px); left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
 .day.selected, .day.today { font-weight: 500; }
@@ -69,3 +76,9 @@
 .monthChoiceCurrent .monthChoiceYear { color: inherit; opacity: .7; }
 .monthChoice:disabled { cursor: default; opacity: .36; }
 @media (prefers-reduced-motion: reduce) { .titleChevron { transition: none; } }
+
+/* Trak (TRAK-255): an amber corner on a day that needs the user (a register to take, a match to log). Its words are in the day's label. */
+/* TRAK-270: a clear yellow (Tarek, 23 Oct), with a thin dark edge so it shows on white. */
+/* Tarek, 23 Oct: "the same way it is on the home screen": coach Home's corner flag (week-picker.module.css),
+   tucked into the day's top-right corner, not a triangle standing out of it. */
+.attention { position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-top-right-radius: 4px; background: var(--attention); filter: drop-shadow(0 0 .6px var(--warning)); clip-path: polygon(0 0, 100% 0, 100% 100%); pointer-events: none; }

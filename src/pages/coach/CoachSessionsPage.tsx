@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
-import { Plus } from 'lucide-react'
+import { QuickAdd } from '@/components/coach/QuickAdd'
+import { History, Plus } from 'lucide-react'
+import { EmptyState } from '@/components/arc/empty-state/empty-state'
+import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
 
 export default function CoachSessionsPage() {
@@ -15,7 +19,7 @@ export default function CoachSessionsPage() {
      claim about sessions the coach created themselves. */
   const [loadFailed, setLoadFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
-  // TRAK-176: the squad picked on Home, plus whole-roster sessions.
+  // TRAK-176/305: the squad picked at the top (or All), plus whole-roster sessions.
   const { eventInSquad } = useCoachSquad(user?.id)
   const shown = sessions.filter(s => eventInSquad(s.squad))
 
@@ -52,7 +56,9 @@ export default function CoachSessionsPage() {
     <MobileShell>
       {/* Topbar */}
       <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
-        <h1 className="text-[15px] font-semibold text-ink">Sessions</h1>
+        {/* TRAK-334: the trail (Home › Log › Sessions); its last crumb is the page's name. */}
+        <CoachTrail current="Sessions" />
+        <h1 className="sr-only">Sessions</h1>
         <button
           onClick={() => navigate('/coach/sessions')}
           className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-brand active:scale-95 transition-transform"
@@ -69,7 +75,12 @@ export default function CoachSessionsPage() {
             <LoadError what="your sessions" onRetry={retry} retrying={retrying} />
           </div>
         ) : shown.length === 0 ? (
-          <p className="text-ink-3 text-sm mt-4">No sessions logged yet.</p>
+          // TRAK-432: Arc's empty state: icon, one line, and the button that logs one.
+          <div className="arc pt-6">
+            <EmptyState icon={<History size={24} strokeWidth={1.5} />} title="No sessions logged yet"
+              description="A training or match you log shows up here."
+              action={<Button onClick={() => navigate('/coach/sessions')}>Log a session</Button>} />
+          </div>
         ) : (
           <div className="space-y-0">
             {shown.map((s) => (
@@ -126,6 +137,8 @@ export default function CoachSessionsPage() {
       </div>
 
       {/* No Sessions tab: History is opened from Home, so Home stays marked. */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )

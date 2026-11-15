@@ -41,6 +41,22 @@ The app runs at http://localhost:8080.
 
 Without nvm, install Node 22 some other way. npm refuses a different Node major (`devEngines` in `package.json`). Don't bypass it: on Node 24 the enforced assessment test (UC-C04) fails because jsdom's AbortSignal is rejected by Node's native `Request`.
 
+### Squad views demo (local only)
+
+`supabase/seeds/squad_views_demo.sql` fills a **local** Supabase stack with three months of one U10 squad (Rehearsal FC, coach Rami A., synthetic children) for the coach's Squad tab: Snapshot, Attributes, Availability and Games Statistics. Never run it against the shared project.
+
+```bash
+npx --yes supabase@latest start      # needs Docker
+npx --yes supabase@latest db reset   # replays every migration locally
+npx --yes supabase@latest status     # local DB URL, API URL and publishable key
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres
+#   SET trak.dev_password = '<a fresh local value>';
+#   SET trak.local_demo = 'yes';
+#   \i supabase/seeds/squad_views_demo.sql
+```
+
+The seed refuses to run without both settings, and running it again changes nothing. Put the local API URL and publishable key in `.env.local` as `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (the client falls back to production when they are unset), run `npm run dev`, and sign in as `coach.squad-demo@example.com` with that password.
+
 ## Running Tests
 
 These are optional local development commands. The required suite runs once

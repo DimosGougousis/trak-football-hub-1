@@ -17,7 +17,7 @@ export function CategoryBar({ label, score }: CategoryBarProps) {
         <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
           {label}
         </span>
-        <span className="text-xs" style={{ color: config.color }}>
+        <span className="text-xs" style={{ color: config.text }}>
           {config.word}
         </span>
       </div>

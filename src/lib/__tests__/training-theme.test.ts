@@ -30,9 +30,10 @@ describe('the seven themes are the catalogue libraries', () => {
     ])
   })
 
-  it('links to the catalogue opened on a theme, or on everything', () => {
-    expect(catalogueLink('defending')).toBe('/coach/trainings?lib=Tactical+%E2%80%93+Defending')
+  it('links to the Library opened on a theme, or on its first page (TRAK-264)', () => {
+    expect(catalogueLink('defending')).toBe('/coach/trainings/defending')
     expect(catalogueLink(null)).toBe('/coach/trainings')
+    expect(catalogueLink('')).toBe('/coach/trainings')
   })
 
   it('reads back only a known theme', () => {
@@ -62,5 +63,20 @@ describe('the event form stores the theme on trainings only', () => {
     }
     expect(rowToForm(row).theme).toBe('attacking')
     expect(rowToForm({ ...row, training_theme: null }).theme).toBe('')
+  })
+})
+
+// TRAK-419 (11 Nov review): where Training is on, a theme's link opens Training › Drills, as near the theme as Drills can.
+describe('drillsLink', () => {
+  it('opens each theme on its drills where Drills can show them, and plain Drills otherwise', async () => {
+    const { drillsLink } = await import('../training-theme')
+    expect(drillsLink('technical')).toBe('/coach/training/drills/all?show=Technical')
+    expect(drillsLink('goalkeeping')).toBe('/coach/training/drills/all?show=Goalkeeping')
+    expect(drillsLink('attacking')).toBe('/coach/training/drills/all?q=attack')
+    expect(drillsLink('defending')).toBe('/coach/training/drills/all?q=defend')
+    expect(drillsLink('transition')).toBe('/coach/training/drills/all?q=transition')
+    for (const none of ['physical', 'psychological', '', null, undefined, 'session', 'programmes', 'nope']) {
+      expect(drillsLink(none)).toBe('/coach/training/drills')
+    }
   })
 })

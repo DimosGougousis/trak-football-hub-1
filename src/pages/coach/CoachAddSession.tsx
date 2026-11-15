@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel } from '@/components/trak'
+import { MobileShell, MetadataLabel, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useFeature } from '@/components/trak/parked'
 import { matchRating } from '@/lib/match-rating'
 import { trackEvent } from '@/lib/telemetry'
 import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
@@ -17,6 +20,7 @@ import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 type SquadPlayer = {
   id: string
@@ -27,7 +31,8 @@ type SquadPlayer = {
   age: number | null
 }
 
-type Competition = 'League' | 'Cup' | 'Friendly'
+// TRAK-438: the coach's three words everywhere (no "Cup").
+type Competition = 'League' | 'Tournament' | 'Friendly'
 type Venue      = 'Home' | 'Away'
 type CardType   = 'None' | 'Yellow' | 'Red'
 
@@ -42,17 +47,18 @@ type PlayerDetail = {
      hat-trick was stored as 2 and the only vocabulary the form had was the
      rating bucket. The bucket still exists — match-input-keys.ts — but it is
      now derived for the rating engine rather than being the thing recorded. */
-  goals:   number | null
-  assists: number | null
+  goals:   number
+  assists: number
   card:    CardType
 }
 
-/* Nothing about a child's match is pre-filled. This used to start every child
-   at 90 minutes, 0 goals and 0 assists, so a coach who only ticked "played"
-   saved numbers they never entered (MVP Requirements J4). */
+/* J4: no invented defaults for position or age group. Goals and assists start
+   at 0 (Kostas, 21 Oct): an empty "—" between the − and + buttons read as
+   "− − +", and 0 is what most children score. The coach sees the 0 on every
+   played row before saving. */
 const DEFAULT_DETAIL: PlayerDetail = {
   played: false, role: 'starter', position: null,
-  goals: null, assists: null, card: 'None',
+  goals: 0, assists: 0, card: 'None',
 }
 
 const MATCH_POSITIONS = ['Goalkeeper', 'Defender', 'Midfielder', 'Attacker'] as const
@@ -79,8 +85,6 @@ function rosterAgeGroup(p: SquadPlayer): string | null {
 function missingFacts(p: SquadPlayer, d: PlayerDetail): string[] {
   const missing: string[] = []
   if (!d.position) missing.push('position')
-  if (d.goals === null) missing.push('goals')
-  if (d.assists === null) missing.push('assists')
   if (!rosterAgeGroup(p)) missing.push('age group on the roster')
   return missing
 }
@@ -89,6 +93,8 @@ export default function CoachAddSession() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  // TRAK-288: where Games is on, a match is evaluated on its game page, never logged here.
+  const games = useFeature('games')
   // TRAK-182 part 8: the quick-add hands over a played match (opponent,
   // venue, score, date) and the log opens on Squad.
   const [quick] = useState(() => (location.state as { quickMatch?: {
@@ -271,9 +277,9 @@ export default function CoachAddSession() {
   // A squad still loading is not an empty one (TRAK-72). Coaches don't add
   // players: the academy roster decides the squad (#164).
   const rosterEmpty = squad.length === 0 && notReady.length === 0 && !rosterFailed
-  const rosterEmptyText = rosterLoading
-    ? 'Loading your squad…'
-    : 'No squad yet. Players appear here once your academy adds them.'
+  const rosterEmptyText = 'No squad yet. Players appear here once your academy adds them.'
+  // TRAK-335: while the roster loads, Arc's skeleton of player rows in its place.
+  const rosterLoadingSkeleton = (className: string) => <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={3} className={className} />
 
   // Under each player list: why nobody is offered, or who is left out and why.
   const rosterNote = rosterFailed ? (
@@ -344,19 +350,17 @@ export default function CoachAddSession() {
     .filter(p => details[p.id]?.played && stillNeeded(p, details[p.id]).length === 0)
     .filter(p => validateMatchInput({
       minutes: null,
-      goals:   details[p.id].goals as number,
-      assists: details[p.id].assists as number,
+      goals:   details[p.id].goals,
+      assists: details[p.id].assists,
       teamScore: scoreUs === '' ? undefined : Number(scoreUs),
     }).length > 0)
 
   const teamGoalsError = !isMatch ? null : teamGoalsViolation(
-    squad.filter(p => details[p.id]?.played && typeof details[p.id].goals === 'number')
-      .map(p => details[p.id].goals as number),
+    squad.filter(p => details[p.id]?.played).map(p => details[p.id].goals),
     scoreUs === '' ? undefined : Number(scoreUs),
   )
   const teamAssistsError = !isMatch ? null : teamAssistsViolation(
-    squad.filter(p => details[p.id]?.played && typeof details[p.id].assists === 'number')
-      .map(p => details[p.id].assists as number),
+    squad.filter(p => details[p.id]?.played).map(p => details[p.id].assists),
     scoreUs === '' ? undefined : Number(scoreUs),
   )
 
@@ -379,7 +383,7 @@ export default function CoachAddSession() {
   // What the first step still needs, said under Next rather than left to guess.
   const firstStepMissing = isMatch
     ? (!opponent.trim() || scoreUs === '' || scoreThem === '' ? 'Add the opponent and the score.' : null)
-    : type === 'training' ? (trainingFocus.size === 0 ? 'Pick a session focus.' : null)
+    : type === 'training' ? (trainingFocus.size === 0 ? 'Select a session focus.' : null)
     : (!title.trim() ? 'Add a title.' : null)
   const rosterReady = !rosterLoading && !rosterFailed
   // Each step's share of canSave: Next stays shut until that part is right.
@@ -444,8 +448,8 @@ export default function CoachAddSession() {
       // Only the rows this save will write count: a player already written on
       // an earlier attempt is in the saved goals and assists already.
       const toWrite = linkedPlayers.filter(p => !loggedPlayerIds.has(p.linked_player_id!))
-      const newGoals = toWrite.reduce((sum, p) => sum + (details[p.id].goals ?? 0), 0)
-      const newAssists = toWrite.reduce((sum, p) => sum + (details[p.id].assists ?? 0), 0)
+      const newGoals = toWrite.reduce((sum, p) => sum + details[p.id].goals, 0)
+      const newAssists = toWrite.reduce((sum, p) => sum + details[p.id].assists, 0)
       const { data: clash, error: clashErr } = await supabase.rpc('coach_match_score_clash', {
         p_match_date: date,
         p_opponent: opponent.trim(),
@@ -511,7 +515,7 @@ export default function CoachAddSession() {
       .single()
 
       if (error?.code === '23505' && eventId) {
-        toast.error('This match is already logged from its event. Nothing was saved; open it from Schedule to see it.', { duration: 12000 })
+        toast.error('This match is already logged from its event. Nothing was saved; open it from Events to see it.', { duration: 12000 })
         setSaving(false)
         return
       }
@@ -558,8 +562,8 @@ export default function CoachAddSession() {
         // canSave guarantees every played row is complete; these never fall back.
         const position = d.position as string
         const minutes = null
-        const goals = d.goals as number
-        const assists = d.assists as number
+        const goals = d.goals
+        const assists = d.assists
         const computed_rating = matchRating({
           position, competition, venue, opponent,
           scoreUs: Number(scoreUs) || 0, scoreThem: Number(scoreThem) || 0,
@@ -674,18 +678,13 @@ export default function CoachAddSession() {
 
   // ── UI ────────────────────────────────────────────────────────────────────────
   return (
-    <MobileShell>
+    <MobileShell width="read">
+      {/* TRAK-288: an old link or Back that would open the match log goes to the match's evaluation, or to Games. */}
+      {games && type === 'match' && <Navigate replace to={eventId ? `/coach/matches/${eventId}?tab=evaluation` : '/coach/matches'} />}
       {/* Topbar */}
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
-        <button onClick={() => navigate(-1)} aria-label="Back"
-          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center">
-          <ChevronLeft size={14} className="text-ink" />
-        </button>
-        <span className="text-[16px] font-medium text-ink"
-          style={{ fontFamily: 'var(--t-font)' }}>
-          Full Session
-        </span>
-        <div className="w-[34px]" />
+        {/* TRAK-334: the trail, in place of Back; its last crumb is the page's name. */}
+        <CoachTrail current="Full session" />
       </div>
 
       <div className="pt-5 pb-32 space-y-5">
@@ -698,7 +697,7 @@ export default function CoachAddSession() {
         {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text="TYPE" />
           <div className="flex gap-2 mt-3">
-            {(['training', 'match', 'other'] as const).map(t => (
+            {(games ? ['training', 'other'] as const : ['training', 'match', 'other'] as const).map(t => (
               <Chip key={t} active={type === t} onClick={() => setType(t)}>
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </Chip>
@@ -760,7 +759,7 @@ export default function CoachAddSession() {
               <div>
                 <MetadataLabel text="COMPETITION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
-                  {(['League', 'Cup', 'Friendly'] as const).map(c => (
+                  {(['League', 'Tournament', 'Friendly'] as const).map(c => (
                     <Chip key={c} active={competition === c} onClick={() => setCompetition(c)}>{c}</Chip>
                   ))}
                 </div>
@@ -778,7 +777,7 @@ export default function CoachAddSession() {
             {/* Date: the same Arc picker as Log training (TRAK-157, Imad 17 Oct: one picker everywhere). */}
             <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
               <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Select a date"
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>
 
@@ -807,11 +806,11 @@ export default function CoachAddSession() {
                 </div>
               </div>
 
-              {rosterEmpty ? (
+              {rosterEmpty ? (rosterLoading ? rosterLoadingSkeleton('px-4 pb-4') : (
                 <p role="status" className="px-4 pb-4 text-[12px] text-ink-3">
                   {rosterEmptyText}
                 </p>
-              ) : (
+              )) : (
                 <div className="divide-y divide-line">
                   {squad.map(p => {
                     const d = details[p.id] ?? DEFAULT_DETAIL
@@ -927,15 +926,15 @@ export default function CoachAddSession() {
                                   style={{ fontFamily: 'var(--t-font-mono)' }}>{label}</span>
                                 <button
                                   aria-label={`One fewer ${key} for ${p.player_name}`}
-                                  onClick={() => setDetail(p.id, { [key]: value === null ? 0 : Math.max(0, value - 1) })}
+                                  onClick={() => setDetail(p.id, { [key]: Math.max(0, value - 1) })}
                                   className="w-6 h-6 rounded-full bg-raised flex items-center justify-center text-ink-2 text-sm">−</button>
                                 <span className="w-8 text-center text-[13px] text-ink"
                                   style={{ fontFamily: 'var(--t-font-mono)' }}>
-                                  {value ?? '—'}
+                                  {value}
                                 </span>
                                 <button
                                   aria-label={`One more ${key} for ${p.player_name}`}
-                                  onClick={() => setDetail(p.id, { [key]: Math.min(max, (value ?? 0) + 1) })}
+                                  onClick={() => setDetail(p.id, { [key]: Math.min(max, value + 1) })}
                                   className="w-6 h-6 rounded-full bg-raised flex items-center justify-center text-ink-2 text-sm">+</button>
                               </div>
                             ))}
@@ -950,12 +949,12 @@ export default function CoachAddSession() {
                                 return (
                                   <p role="status" className="text-[10px] leading-snug text-warning pl-[52px]"
                                     style={{ fontFamily: 'var(--t-font)' }}>
-                                    Still needed: {missing.join(', ')}. Tap − for 0 goals or assists.
+                                    Still needed: {missing.join(', ')}.
                                   </p>
                                 )
                               }
                               const problems = validateMatchInput({
-                                minutes: null, goals: d.goals as number, assists: d.assists as number,
+                                minutes: null, goals: d.goals, assists: d.assists,
                                 teamScore: scoreUs === '' ? undefined : Number(scoreUs),
                               })
                               if (problems.length === 0) return null
@@ -1109,7 +1108,7 @@ export default function CoachAddSession() {
             {/* Date: Arc's picker, as the event form (TRAK-157, 16 Oct: the native box was too big). Days after today can't be picked. */}
             {step === 0 && <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
               <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Select a date"
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
@@ -1129,10 +1128,10 @@ export default function CoachAddSession() {
                     style={{ fontFamily: 'var(--t-font-mono)' }}>NONE</button>
                 </div>
               </div>
-              {rosterEmpty ? (
+              {rosterEmpty ? (rosterLoading ? rosterLoadingSkeleton('py-2') : (
                 <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
+              )) : (
+                <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
                   {squad.map(p => {
                     const on = attended.has(p.id)
                     return (
@@ -1177,7 +1176,7 @@ export default function CoachAddSession() {
             {/* Date: the same Arc picker as Log training (TRAK-157). */}
             {step === 0 && <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
               <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+                maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Select a date"
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
@@ -1196,10 +1195,10 @@ export default function CoachAddSession() {
                     style={{ fontFamily: 'var(--t-font-mono)' }}>NONE</button>
                 </div>
               </div>
-              {rosterEmpty ? (
+              {rosterEmpty ? (rosterLoading ? rosterLoadingSkeleton('py-2') : (
                 <p role="status" className="text-[12px] text-ink-3 py-2">{rosterEmptyText}</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
+              )) : (
+                <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
                   {squad.map(p => {
                     const on = attended.has(p.id)
                     return (
@@ -1248,14 +1247,14 @@ export default function CoachAddSession() {
         {step === review && (rosterFailed || rosterLoading) && (
           <div className="rounded-[18px] border border-line bg-surface">
             {rosterFailed ? rosterNote : (
-              <p role="status" className="text-[12px] text-ink-2 px-4 py-3" style={{ fontFamily: 'var(--t-font)' }}>Loading your squad…</p>
+              <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={2} className="px-4 py-3" />
             )}
           </div>
         )}
       </div>
 
       {/* Sticky save */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
+      <div className="trak-page-bar fixed bottom-0 -translate-x-1/2 w-full px-5 pb-5 pt-3"
         style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {(step === 0 || step === review) && futureDate && (
           <p role="alert" className="text-[11px] text-center text-warning mb-2"
@@ -1307,6 +1306,9 @@ export default function CoachAddSession() {
           </>}
         </div>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

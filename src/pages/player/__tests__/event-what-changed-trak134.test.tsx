@@ -6,13 +6,19 @@
  * then the time and the venue) on that visit, whatever the attendance; once
  * opened, it's seen. Someone who never saw the old version is told nothing.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, rpcRows, SUPABASE_URL } from '../../../../tests/msw/supabase'
+
+// These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
+// Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
+const phoneTZ = process.env.TZ
+beforeAll(() => { process.env.TZ = 'Asia/Dubai' })
+afterAll(() => { process.env.TZ = phoneTZ })
 
 let PLAYER = { id: 'player-134' }
 const BEFORE = {
@@ -26,6 +32,9 @@ const AFTER = { ...BEFORE, event_date: '2026-11-15', start_time: '11:00:00', sta
 
 function setup(event: Record<string, unknown>) {
   server.use(
+    // TRAK-286: no shared game plan.
+    table('game_for_family', []),
+    table('game_for_player', []),
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('matches', []), table('player_details', []), table('coach_assessments', []), table('recognition_awards', []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),
@@ -34,7 +43,7 @@ function setup(event: Record<string, unknown>) {
     rpcRows('child_events', [event]),
     // 16 at a consent-age-15 academy, and has told the coach they can't make it.
     rpc('my_consent_status', () => ({ required: false, age: 16, consent_age: 15, threshold: 18, own_choice: true })),
-    http.get(`${SUPABASE_URL}/rest/v1/event_absences`, () => HttpResponse.json([{ reason: 'Ill' }])),
+    http.get(`${SUPABASE_URL}/rest/v1/event_absences`, () => HttpResponse.json([{ reason: 'family' }])),
   )
 }
 

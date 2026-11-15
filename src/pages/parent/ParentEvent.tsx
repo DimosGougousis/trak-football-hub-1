@@ -6,10 +6,14 @@ import { MobileShell, NavBar } from '@/components/trak'
 import { ParentFamilyContent, ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { EventDetails } from '@/components/player/EventDetails'
 import { CantMakeIt } from '@/components/parent/CantMakeIt'
+import { SharedGamePlan } from '@/components/player/SharedGamePlan'
+import { SharedGameReview } from '@/components/player/SharedGameReview'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { fetchParentEvent } from '@/lib/parent-data'
 import { changesSinceSeen, markEventOpened } from '@/lib/player-events'
 import { useEventBack } from '@/lib/event-back'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyMatch } from '@/components/player/FamilyMatch'
 
 /**
  * One of the selected child's events (TRAK-131, J8.8): the player's event
@@ -21,6 +25,7 @@ export default function ParentEvent() {
   const { id } = useParams()
   const navigate = useNavigate()
   const backTo = useEventBack('/parent/matches')
+  const look = useFamilyLook()
   const { parentId, selectedChild } = useParentChildren()
   const childId = selectedChild?.id
   const query = useQuery({
@@ -40,18 +45,29 @@ export default function ParentEvent() {
     markEventOpened(parentId, query.data)
   }, [parentId, childId, query.data])
 
+  // TRAK-441 slice 3.3, behind family_look: a match is the coach's match header with tabs. A training keeps this page.
+  const match = look && selectedChild && query.data?.kind === 'match' ? query.data : null
   return (
-    <MobileShell>
-      <div className="pt-3 pb-4 space-y-5">
-        <button type="button" onClick={backTo.go}
+    <MobileShell width={match ? 'wide' : 'page'}>
+      <div className={match ? 'pb-4' : 'pt-3 pb-4 space-y-5'}>
+        {!match && <button type="button" onClick={backTo.go}
           className="flex items-center gap-1 min-h-11 text-sm text-muted-foreground">
           <ChevronLeft size={16} /> {backTo.label}
-        </button>
+        </button>}
         <ParentFamilyContent>
           {query.isError ? <ParentLoadError message="Couldn't load this event." onRetry={() => { void query.refetch() }} />
             : query.isPending ? <ParentLoading />
+              : match ? <FamilyMatch event={match} changes={changes?.key === `${childId}:${match.id}:${match.sequence}` ? changes.lines : []} as="parent" back={backTo}
+                child={{ id: selectedChild!.id, name: selectedChild!.name.split(/\s+/)[0] || selectedChild!.name }}
+                cantMakeIt={<CantMakeIt key={selectedChild!.id} event={match} child={selectedChild!} />} />
               : query.data ? <>
                 <EventDetails event={query.data} changes={changes?.key === `${childId}:${query.data.id}:${query.data.sequence}` ? changes.lines : []} />
+                {/* TRAK-289: once the coach publishes, After the game; the note stays the child's. */}
+                {selectedChild && <SharedGameReview event={query.data} childId={selectedChild.id}
+                  childName={selectedChild.name.split(/\s+/)[0] || selectedChild.name} as="parent" />}
+                {/* TRAK-286: the child's job in the shared plan, and that there's a note, never the note. */}
+                {selectedChild && <SharedGamePlan event={query.data} childId={selectedChild.id}
+                  childName={selectedChild.name.split(/\s+/)[0] || selectedChild.name} as="parent" />}
                 {selectedChild && <CantMakeIt key={selectedChild.id} event={query.data} child={selectedChild} />}
               </>
                 : <p className="text-sm text-muted-foreground">This event isn't available for {selectedChild?.name}.</p>}

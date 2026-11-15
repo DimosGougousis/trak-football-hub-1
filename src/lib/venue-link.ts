@@ -19,6 +19,41 @@ function isMapsLink(url: URL): boolean {
   return /^(www\.)?google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host) && url.pathname.startsWith('/maps')
 }
 
+/** The first Maps place link in some text, as it was typed; null when there is none. */
+function findMapsLink(text: string): string | null {
+  for (const match of text.match(URL_IN_TEXT) ?? []) {
+    const raw = match.replace(/[),.;]+$/, '')
+    try {
+      if (isMapsLink(new URL(raw))) return raw
+    } catch { /* not a URL after all: it stays text */ }
+  }
+  return null
+}
+
+/**
+ * TRAK-255: the coach's form keeps a venue's name and its map link in two
+ * boxes. A venue is still stored as one line, the name then the link
+ * (TRAK-225), so families, emails and the calendar feed read it as before.
+ * One space separates them; any other spacing in the name is kept as typed.
+ */
+export function splitVenue(venue: string): { name: string; link: string } {
+  const link = findMapsLink(venue)
+  if (!link) return { name: venue, link: '' }
+  const at = venue.indexOf(link)
+  const before = venue.slice(0, at).replace(/ $/, '')
+  const after = venue.slice(at + link.length).trim()
+  return { name: after ? `${before.trimEnd()} ${after}` : before, link }
+}
+
+export function joinVenue(name: string, link: string): string {
+  const url = link.trim()
+  if (!url) return name
+  return name.trim() ? `${name} ${url}` : url
+}
+
+/** A pasted or typed Google or Apple Maps place link. */
+export const isMapsUrl = (text: string) => findMapsLink(text.trim()) === text.trim() && text.trim() !== ''
+
 const mapsSearch = (words: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(words)}`
 
 /** The venue's words to show, and the link "Open in Maps" opens. */

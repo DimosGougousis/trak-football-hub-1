@@ -1,15 +1,21 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AccountLanguage } from "@/components/trak/AccountLanguage";
 import { ParentChildrenProvider } from "@/contexts/ParentChildrenContext";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { PlayerConsentWatcher } from "@/components/player/PlayerConsentWatcher";
 import { PlayerSessionWatcher } from "@/components/player/PlayerSessionWatcher";
 import { ParentConsentWatcher } from "@/components/parent/ParentConsentWatcher";
+import { CoachLayout } from "@/components/coach/CoachLayout";
+import { FamilyFrame } from "@/components/trak/FamilyFrame";
+import { CoachFrame } from "@/components/coach/CoachFrame";
+import { OldLog } from "@/components/coach/OldLog";
+import { COACH_HOW_PATH } from "@/lib/coach-places";
 import { ErrorBoundary } from "@/components/trak/ErrorBoundary";
 import { ParkedScreen } from "@/components/trak/ParkedScreen";
 
@@ -38,6 +44,12 @@ const DevSwitcher = import.meta.env.DEV
   ? lazy(() => import("@/components/trak/DevSwitcher").then(m => ({ default: m.DevSwitcher })))
   : null;
 
+/** TRAK-315: /coach/games… is now /coach/matches…, with the same tab and step. */
+function OldGamesLink() {
+  const { pathname, search } = useLocation();
+  return <Navigate replace to={pathname.replace(/^\/coach\/games/, "/coach/matches") + search} />;
+}
+
 const PlayerHome = lazy(() => import("./pages/player/PlayerHome"));
 const PlayerMatches = lazy(() => import("./pages/player/PlayerMatches"));
 const PlayerMatchDetail = lazy(() => import("./pages/player/PlayerMatchDetail"));
@@ -45,6 +57,7 @@ const PlayerEvent = lazy(() => import("./pages/player/PlayerEvent"));
 const PlayerCalendar = lazy(() => import("./pages/player/PlayerCalendar"));
 const PlayerProfilePage = lazy(() => import("./pages/player/PlayerProfilePage"));
 const PlayerFeedback = lazy(() => import("./pages/player/PlayerFeedback"));
+const PlayerSeason = lazy(() => import("./pages/player/PlayerSeason"));
 const HowTrakWorks = lazy(() => import("./pages/HowTrakWorks"));
 
 const CoachHomePage = lazy(() => import("./pages/coach/CoachHomePage"));
@@ -55,12 +68,12 @@ const CoachSessionsPage = lazy(() => import("./pages/coach/CoachSessionsPage"));
 const CoachAddSession = lazy(() => import("./pages/coach/CoachAddSession"));
 const CoachSessionsChooser = lazy(() => import("./pages/coach/CoachSessionsChooser"));
 const CoachSessionEdit = lazy(() => import("./pages/coach/CoachSessionEdit"));
-const CoachProfilePage = lazy(() => import("./pages/coach/CoachProfilePage"));
-const CoachManual = lazy(() => import("./pages/coach/CoachManual"));
-const CoachPlayerProfilePage = lazy(() => import("./pages/coach/CoachPlayerProfilePage"));
+const CoachHowTrakWorks = lazy(() => import("./pages/coach/CoachHowTrakWorks"));
 const TrainingsPage = lazy(() => import("./pages/TrainingsPage"));
+const CoachLibrary = lazy(() => import("./pages/coach/library/CoachLibrary"));
 
 const ParentHome = lazy(() => import("./pages/parent/ParentHome"));
+const ParentSeason = lazy(() => import("./pages/parent/ParentSeason"));
 const ParentMatches = lazy(() => import("./pages/parent/ParentMatches"));
 const ParentAssessments = lazy(() => import("./pages/parent/ParentAssessments"));
 const ParentAssessment = lazy(() => import("./pages/parent/ParentAssessment"));
@@ -72,10 +85,16 @@ const ParentConsent = lazy(() => import("./pages/parent/ParentConsent"));
 // TRAK-85: parked screens show as designed, inside ParkedScreen ("Coming soon"
 // pill; actions say so and send nothing). Their backend writes stay closed (G7).
 const PlayerPassport = lazy(() => import("./pages/player/PlayerPassport"));
-const PlayerEvolutionCard = lazy(() => import("./pages/player/PlayerEvolutionCard"));
 const CoachReviewFeedback = lazy(() => import("./pages/coach/CoachReviewFeedback"));
 const CoachAssistant = lazy(() => import("./pages/coach/CoachAssistant"));
 const CoachSchedule = lazy(() => import("./pages/coach/CoachSchedule"));
+// TRAK-283: Games, parked until the academy's games switch is on.
+const CoachGames = lazy(() => import("./pages/coach/CoachGames"));
+// TRAK-350: the season plan, parked until the academy's season_plan switch is on.
+const CoachSeasonPlan = lazy(() => import("./pages/coach/CoachSeasonPlan"));
+const CoachEvaluation = lazy(() => import("./pages/coach/CoachEvaluation"));
+const CoachGame = lazy(() => import("./pages/coach/CoachGame"));
+const CoachTraining = lazy(() => import("./pages/coach/training/CoachTraining"));
 const CoachRecognition = lazy(() => import("./pages/coach/CoachRecognition"));
 const CoachAwardPlayer = lazy(() => import("./pages/coach/CoachAwardPlayer"));
 const ParentAlerts = lazy(() => import("./pages/parent/ParentAlerts"));
@@ -84,6 +103,12 @@ const ClubSquads = lazy(() => import("./pages/club/ClubSquads"));
 const ClubCoaches = lazy(() => import("./pages/club/ClubCoaches"));
 const ClubProfile = lazy(() => import("./pages/club/ClubProfile"));
 const ClubRadar = lazy(() => import("./pages/club/ClubRadar"));
+
+/** TRAK-368: /coach/player/:id was the older player page; the player's own page in Squad replaced it. */
+function PlayerPageMoved() {
+  const { id } = useParams();
+  return <Navigate to={`/coach/squad/player/${id}`} replace />;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,11 +132,15 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ParentChildrenProvider>
+          {/* TRAK-406: Trak shows the language saved on the signed-in account. */}
+          <AccountLanguage />
           {/* G6: an open player or guardian session drops coach content on withdrawal (TRAK-13, TRAK-88). */}
           <PlayerConsentWatcher />
           {/* TRAK-104: signs out an open app whose session a password reset ended. */}
           <PlayerSessionWatcher />
           <ParentConsentWatcher />
+          {/* TRAK-199: a coach's screens use a tablet's or laptop's width. */}
+          <CoachLayout />
           {DevSwitcher && <DevSwitcher />}
           <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -123,33 +152,42 @@ const App = () => (
             {/* TRAK-168: a shared event link; routes each person to that event. */}
             <Route path="/event/:id" element={<EventLink />} />
             <Route path="/onboarding/:role" element={<OnboardingPage />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/parent-info" element={<ParentInfoPage />} />
             <Route path="/parent-invite" element={<ParentOnboarding />} />
             {DevSetupPage && <Route path="/dev-setup" element={<DevSetupPage />} />}
 
-            {/* Player routes */}
+            {/* Player routes. TRAK-441: inside the family frame (a laptop with the academy's family_look on). */}
+            <Route element={<FamilyFrame />}>
             <Route path="/player/home" element={<RouteGuard allowedRole="player"><PlayerHome /></RouteGuard>} />
             <Route path="/player/matches" element={<RouteGuard allowedRole="player"><PlayerMatches /></RouteGuard>} />
             <Route path="/player/match/:id" element={<RouteGuard allowedRole="player"><PlayerMatchDetail /></RouteGuard>} />
             <Route path="/player/event/:id" element={<RouteGuard allowedRole="player"><PlayerEvent /></RouteGuard>} />
             <Route path="/player/calendar" element={<RouteGuard allowedRole="player"><PlayerCalendar /></RouteGuard>} />
             <Route path="/player/profile" element={<RouteGuard allowedRole="player"><PlayerProfilePage /></RouteGuard>} />
+            {/* TRAK-398: the player's My season page, opened from the Home card. */}
+            <Route path="/player/season" element={<RouteGuard allowedRole="player"><PlayerSeason /></RouteGuard>} />
             <Route path="/player/passport" element={<RouteGuard allowedRole="player"><ParkedScreen><PlayerPassport /></ParkedScreen></RouteGuard>} />
-            <Route path="/player/evolution" element={<RouteGuard allowedRole="player"><ParkedScreen><PlayerEvolutionCard /></ParkedScreen></RouteGuard>} />
+            {/* TRAK-440 (Imad, 11 Nov): Card left the bar; it becomes part of Profile (TRAK-441, slice 6). The parked card (TRAK-30) has no address. */}
+            <Route path="/player/evolution" element={<Navigate to="/player/profile" replace />} />
             <Route path="/player/feedback/:assessmentId" element={<RouteGuard allowedRole="player"><PlayerFeedback /></RouteGuard>} />
             <Route path="/player/trainings" element={<RouteGuard allowedRole="player"><TrainingsPage role="player" /></RouteGuard>} />
-            <Route path="/how-it-works" element={<HowTrakWorks />} />
+            </Route>
 
-            {/* Coach routes */}
+            {/* Coach routes. TRAK-259: inside the coach's frame (the sidebar on a laptop, the glass tab bar on a phone).
+                Settings and How Trak works are shared; the frame shows only for a coach. */}
+            <Route element={<CoachFrame />}>
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/how-it-works" element={<HowTrakWorks />} />
             <Route path="/coach/home" element={<RouteGuard allowedRole="coach"><CoachHomePage /></RouteGuard>} />
-            <Route path="/coach/squad" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
+            {/* TRAK-351: /coach/squad/player/:id is a player's own page, inside Squad so the list keeps its place. */}
+            <Route path="/coach/squad/*" element={<RouteGuard allowedRole="coach"><CoachSquadPage /></RouteGuard>} />
             <Route path="/coach/squad/add" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/squad" replace /></RouteGuard>} />
             <Route path="/coach/assess" element={<RouteGuard allowedRole="coach"><CoachAssessPage /></RouteGuard>} />
             <Route path="/coach/feedback" element={<RouteGuard allowedRole="coach"><CoachFeedbackPage /></RouteGuard>} />
             <Route path="/coach/feedback/:assessmentId" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachReviewFeedback /></ParkedScreen></RouteGuard>} />
-            <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><CoachSessionsChooser /></RouteGuard>} />
-            <Route path="/coach/sessions/list" element={<RouteGuard allowedRole="coach"><CoachSessionsPage /></RouteGuard>} />
+            {/* TRAK-426: where Training and Matches are both on, the old log's pages retire (OldLog says where each goes). */}
+            <Route path="/coach/sessions" element={<RouteGuard allowedRole="coach"><OldLog to="new-training"><CoachSessionsChooser /></OldLog></RouteGuard>} />
+            <Route path="/coach/sessions/list" element={<RouteGuard allowedRole="coach"><OldLog to="past"><CoachSessionsPage /></OldLog></RouteGuard>} />
             {/* Quick match log now resolves to the full session screen, preset to Match.
                  It wrote identical inputs for every attending player — 90 minutes, no
                  goals, no assists — so a squad's computed bands varied only by position.
@@ -157,21 +195,39 @@ const App = () => (
                  each player the same way, with per-player detail available where it
                  matters. CoachQuickMatchLog.tsx is left in the repo, unrouted. */}
             <Route path="/coach/sessions/quick" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
-            <Route path="/coach/sessions/add" element={<RouteGuard allowedRole="coach"><CoachAddSession /></RouteGuard>} />
+            <Route path="/coach/sessions/add" element={<RouteGuard allowedRole="coach"><OldLog to="new-training"><CoachAddSession /></OldLog></RouteGuard>} />
             {/* TRAK-102: a history row opens its session; training and other are editable. */}
-            <Route path="/coach/sessions/:id" element={<RouteGuard allowedRole="coach"><CoachSessionEdit /></RouteGuard>} />
-            <Route path="/coach/profile" element={<RouteGuard allowedRole="coach"><CoachProfilePage /></RouteGuard>} />
-            <Route path="/coach/trainings" element={<RouteGuard allowedRole="coach"><TrainingsPage role="coach" /></RouteGuard>} />
-            <Route path="/coach/manual" element={<CoachManual />} />
+            <Route path="/coach/sessions/:id" element={<RouteGuard allowedRole="coach"><OldLog to="past"><CoachSessionEdit /></OldLog></RouteGuard>} />
+            {/* TRAK-418: the old Profile and the old coach manual are gone; old links and bookmarks land on Settings and
+                on the coach's How Trak works. */}
+            <Route path="/coach/profile" element={<Navigate to="/settings" replace />} />
+            {/* TRAK-264: the coach's Library (the frame's Library tab) and the pages it opens. */}
+            <Route path="/coach/trainings/*" element={<RouteGuard allowedRole="coach"><CoachLibrary /></RouteGuard>} />
+            <Route path="/coach/manual" element={<Navigate to={COACH_HOW_PATH} replace />} />
+            <Route path={COACH_HOW_PATH} element={<RouteGuard allowedRole="coach"><CoachHowTrakWorks /></RouteGuard>} />
             <Route path="/coach/quick-assess" element={<RouteGuard allowedRole="coach"><Navigate to="/coach/assess" replace /></RouteGuard>} />
-            <Route path="/coach/player/:id" element={<RouteGuard allowedRole="coach"><CoachPlayerProfilePage /></RouteGuard>} />
+            {/* TRAK-368: a player's page is in Squad now, with their whole history; old links and bookmarks land there. */}
+            <Route path="/coach/player/:id" element={<PlayerPageMoved />} />
             <Route path="/coach/recognition" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachRecognition /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/award" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAwardPlayer /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/schedule" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="events"><CoachSchedule /></ParkedScreen></RouteGuard>} />
+            <Route path="/coach/matches" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="games"><CoachGames /></ParkedScreen></RouteGuard>} />
+            <Route path="/coach/season-plan/*" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="season_plan"><CoachSeasonPlan /></ParkedScreen></RouteGuard>} />
+            {/* TRAK-364: the squad's evaluation, where the season plan is on; Home's Evaluation due card opens it. */}
+            <Route path="/coach/evaluation" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="season_plan"><CoachEvaluation /></ParkedScreen></RouteGuard>} />
+            <Route path="/coach/matches/:eventId" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="games"><CoachGame /></ParkedScreen></RouteGuard>} />
+            {/* TRAK-315: Games became Matches; an old link or bookmark still opens the same match. */}
+            <Route path="/coach/games/*" element={<OldGamesLink />} />
+            {/* TRAK-294: the Training tab (TRAK-293), behind the academy's training switch. */}
+            <Route path="/coach/training/*" element={<RouteGuard allowedRole="coach"><ParkedScreen unless="training"><CoachTraining /></ParkedScreen></RouteGuard>} />
             <Route path="/coach/assistant" element={<RouteGuard allowedRole="coach"><ParkedScreen><CoachAssistant /></ParkedScreen></RouteGuard>} />
+            </Route>
 
-            {/* Parent routes */}
+            {/* Parent routes, in the family frame too. */}
+            <Route element={<FamilyFrame />}>
             <Route path="/parent/home" element={<RouteGuard allowedRole="parent"><ParentHome /></RouteGuard>} />
+            {/* TRAK-400: the family's Season plan page, opened from the Home card. */}
+            <Route path="/parent/season" element={<RouteGuard allowedRole="parent"><ParentSeason /></RouteGuard>} />
             <Route path="/parent/matches" element={<RouteGuard allowedRole="parent"><ParentMatches /></RouteGuard>} />
             {/* TRAK-171 (live run 3): one Events page for parents, the tab's; old links land there. */}
             <Route path="/parent/events" element={<Navigate to="/parent/matches" replace />} />
@@ -183,6 +239,7 @@ const App = () => (
             <Route path="/parent/alerts" element={<RouteGuard allowedRole="parent"><ParkedScreen><ParentAlerts /></ParkedScreen></RouteGuard>} />
             <Route path="/parent/profile" element={<RouteGuard allowedRole="parent"><ParentProfilePage /></RouteGuard>} />
             <Route path="/parent/consent" element={<RouteGuard allowedRole="parent"><ParentConsent /></RouteGuard>} />
+            </Route>
 
             {/* Club admin routes */}
             <Route path="/club/home" element={<RouteGuard allowedRole="club"><ParkedScreen><ClubHome /></ParkedScreen></RouteGuard>} />

@@ -39,7 +39,7 @@ BEGIN
  BEGIN EXECUTE statement;
  EXCEPTION WHEN OTHERS THEN st := SQLSTATE; msg := SQLERRM;
  END;
- INSERT INTO pg_temp.s157_results VALUES(label, st = '23514' AND msg = 'Pick a start time: every event needs one.', coalesce(st||': '||msg,'no error'));
+ INSERT INTO pg_temp.s157_results VALUES(label, st = '23514' AND msg = 'Select a start time: every event needs one.', coalesce(st||': '||msg,'no error'));
 END $$;
 -- An insert of one of the coach's events in 5 days, as the app writes it.
 CREATE FUNCTION pg_temp.s157event(n integer, starts time, published boolean) RETURNS text LANGUAGE sql AS $$
@@ -62,6 +62,9 @@ INSERT INTO public.profiles(user_id,role,full_name)
  FROM unnest(ARRAY[1,10]) n;
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.s157id(100),pg_temp.s157id(1),'Start Time Academy X','S157X1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES (pg_temp.s157id(10),pg_temp.s157id(100),'U15');
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.s157id(100),'events') ON CONFLICT DO NOTHING;
 

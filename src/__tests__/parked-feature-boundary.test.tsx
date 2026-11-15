@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -19,9 +19,9 @@ const endpoint = (name: string) => `${SUPABASE_URL}/rest/v1/${name}`
 // the "Coming soon" pill. The backend stays closed (pilot_g7.sql,
 // parked_feature_boundary.sql); the actions are in parked-screens-coming-soon.
 const parked: [string, string, RegExp][] = [
-  ['player', '/player/passport', /PLAYER PASSPORT/i], ['player', '/player/evolution', /EVOLUTION CARD/i],
+  ['player', '/player/passport', /PLAYER PASSPORT/i],
   ['coach', '/coach/assistant', /TRY ASKING/i], ['coach', '/coach/feedback/audit-assessment', /Review feedback/i],
-  ['coach', '/coach/schedule', /Calendar/], ['coach', '/coach/recognition', /Give Recognition/], ['coach', '/coach/award', /Give Award/],
+  ['coach', '/coach/schedule', /Events/], ['coach', '/coach/recognition', /Give Recognition/], ['coach', '/coach/award', /Give Award/],
   ['parent', '/parent/alerts', /^Alerts$/], ['club', '/club/home', /Pilot Active/], ['club', '/club/squads', /Filter by age group/],
   ['club', '/club/coaches', /Connected Coaches/], ['club', '/club/profile', /Administrator/], ['club', '/club/radar', /Movement Radar/],
 ]
@@ -78,17 +78,18 @@ describe('TRAK-47 parked feature boundary', () => {
     const asked: unknown[] = []
     server.use(rpc('feature_on', args => { asked.push(args.p_feature); return true }))
     renderApp('/coach/schedule')
-    expect((await screen.findAllByText(/Calendar/, {}, { timeout: 4000 })).length).toBeGreaterThan(0)
-    await waitFor(() => expect(asked).toEqual(['events']))
+    expect((await screen.findAllByText(/Events/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar; TRAK-449: Events
+    // TRAK-283: the coach's frame also asks for Games, to show its tab; TRAK-294 for Training.
+    await waitFor(() => expect([...new Set(asked)].sort()).toEqual(['events', 'games', 'training']))
     await waitFor(() => expect(screen.queryByRole('note', { name: 'This screen is coming soon' })).toBeNull())
   })
 
   it('keeps the coach schedule parked when the switch cannot be read', async () => {
     let asked = 0
-    server.use(rpc('feature_on', () => { asked++; return { status: 500, body: { message: 'Synthetic failure' } } }))
+    server.use(rpc('feature_on', args => { if (args.p_feature === 'events') asked++; return { status: 500, body: { message: 'Synthetic failure' } } }))
     renderApp('/coach/schedule')
-    expect((await screen.findAllByText(/Calendar/, {}, { timeout: 4000 })).length).toBeGreaterThan(0)
-    // The app retries once; both answers are failures.
+    expect((await screen.findAllByText(/Events/, {}, { timeout: 4000 })).length).toBeGreaterThan(0) // TRAK-255: was Calendar; TRAK-449: Events
+    // The app retries once; both answers are failures. (TRAK-283: Games' own asks fail too, uncounted.)
     await waitFor(() => expect(asked).toBe(2), { timeout: 4000 })
     expect(screen.getByRole('note', { name: 'This screen is coming soon' })).toHaveTextContent('Coming soon')
   })
@@ -136,7 +137,7 @@ describe('retained coach entry points', () => {
     expect(screen.queryByRole('button', { name: /add players to your squad/i })).toBeNull()
     cleanup()
     renderApp('/coach/home')
-    expect(await screen.findByRole('button', { name: 'Assess a player' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Squad shape' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /add players to your squad/i })).toBeNull()
     // TRAK-72: the coach invite code is gone from Home.
     expect(screen.queryByText(/TRK-/)).toBeNull()
@@ -147,7 +148,9 @@ describe('retained coach entry points', () => {
       { id: 'synthetic-roster', coach_user_id: account, player_name: 'Synthetic Player', linked_player_id: 'synthetic-player' },
     ])))
     renderApp('/coach/home')
-    await userEvent.click(await screen.findByRole('button', { name: 'Assess a player' }))
+    // TRAK-262: Home's Assess card left; the "+" has Assess player.
+    await userEvent.click(await screen.findByRole('button', { name: 'Quick add' }))
+    await userEvent.click(within(await screen.findByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'Assess player' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
     expect(await screen.findByRole('heading', { name: 'Assessment' })).toBeInTheDocument()
     expect(screen.queryByText('Quick Assess')).toBeNull()

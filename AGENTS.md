@@ -42,6 +42,9 @@ explicitly open; an issue being Done does not prove a newer requirement passed.
 | Database client and generated types | `src/integrations/supabase/` |
 | Rating and bands | `src/lib/rating-engine.ts`, `src/lib/types.ts` (`BANDS`) |
 | Shared UI | `src/components/trak/` |
+| Squad views (Players, Attributes, Availability) | `src/pages/coach/CoachSquadPage.tsx`, `src/components/coach/squad/`, `src/lib/squad/` |
+| Games (one loop per match, behind the `games` switch) | `docs/superpowers/specs/2026-10-27-games-tab-design.md`, `src/pages/coach/CoachGames.tsx`, `src/components/coach/games/`, `src/lib/games/` |
+| Training (plan each training from the Drill Library, My drills = bookmarks, behind the `training` switch) | `docs/superpowers/specs/2026-10-28-training-tab-design.md`, `src/pages/coach/training/`, `src/components/coach/training/`, `src/lib/training/` |
 | Backend permissions and RPCs | `supabase/migrations/` in filename order |
 | Pilot operations and recovery | `docs/pilot-runbook.md`, `docs/release/s5-restore-rehearsal.md` |
 | Use-case contracts | `docs/use-cases/registry.yaml`, `docs/use-cases/OPEN-QUESTIONS.md` |
@@ -59,6 +62,8 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   Auth user ID. Resolve the player's squad rows before querying assessments.
 - Coach match logging uses `log_match_for_player`; direct inserts do not
   substitute for its consent and assignment checks.
+- Wording (TRAK-454, 11 Nov walk-through): write "e.g." (Greek "π.χ."), never "For example"; and "select",
+  never "pick" ("Select a date", "None selected"), in English and Greek.
 - Follow the existing mobile shell and design tokens. Use `BANDS` for band
   wording and colors; keep player-visible messages separate from private notes.
 - The roster owns the child's name. A child email is optional. Use the existing
@@ -69,6 +74,9 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   wording changes. Family reads follow active consent; the known gap is a
   withdrawn child's own attendance (TRAK-147). Squad events follow consent
   since J8.2 (TRAK-125, #254). A published event is cancelled, never deleted.
+- Availability confirmations are coach-marked from the squad's WhatsApp group
+  (`event_confirmations`, TRAK-250). Families never read them, and the coach
+  view never shows an absence reason.
 
 ## Local work and checks
 
@@ -77,9 +85,13 @@ Use Node 22.15+ within 22.x and the npm version in `package.json`.
 Install with `npm ci --legacy-peer-deps`; start with `npm run dev`.
 See README for setup and `package.json` for optional checks.
 
-`package.json` lists optional local commands. `.github/workflows/ci.yml` runs
-the complete required suite once for the final non-draft PR candidate. Reuse
-that result rather than running a separate author/reviewer/verification suite.
+`package.json` lists optional local commands. For the final non-draft PR
+candidate `.github/workflows/ci.yml` only builds the app and checks the built
+bundle for credentials; it runs no lint, type, unit, use-case, database or
+browser test. Run the test for the behaviour you changed yourself: a green
+gate does not cover it. `archive/ci-full-gate-2026-11-15/` is a frozen copy of
+the earlier full gate and its Playwright files, kept for restoring; edit the
+live files, never the copy.
 Workflow actions must run on Node 24: `ci-action-runtimes.test.ts` lists each
 action's first such major, and Dependabot opens a weekly grouped PR for newer
 ones, reviewed like any other change.

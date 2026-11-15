@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { LoadedWeekStrip, WeekStrip, type StripEvent } from '../WeekStrip'
@@ -52,6 +52,10 @@ describe('TRAK-231: the family\'s own "Can\'t make it" shows in the strip', () =
   })
 
   it('the loaded strip reads this child\'s own absences for the week, and only theirs', async () => {
+    // TRAK-291: the loaded strip reads the real clock, so it runs on this file's Wednesday 21 October, as the others do.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(today)
+    onTestFinished(() => { vi.useRealTimers() })
     const asked: string[] = []
     server.use(
       http.get(`${SUPABASE_URL}/rest/v1/squad_players`, ({ request }) => {
@@ -76,14 +80,14 @@ describe('TRAK-231: the family\'s own "Can\'t make it" shows in the strip', () =
   })
 })
 
-describe('TRAK-231: the new event palette', () => {
-  it('match is magenta, training teal, other green', () => {
+describe('TRAK-231: the event palette (TRAK-275, 23 Oct)', () => {
+  it('match is purple, training green, other teal', () => {
     const rgb = (h: string) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16))
     const [mr, mg, mb] = rgb(EVENT_COLOR.match)
-    expect(mr - mg).toBeGreaterThan(80); expect(mb - mg).toBeGreaterThan(80)
+    expect(mb - mr).toBeGreaterThan(60); expect(mr - mg).toBeGreaterThan(60)
     const [tr, tg, tb] = rgb(EVENT_COLOR.training)
-    expect(tg).toBeGreaterThan(tr + 60); expect(tb).toBeGreaterThan(tr + 60)
+    expect(tg).toBeGreaterThan(tr + 60); expect(tg).toBeGreaterThan(tb + 60)
     const [or, og, ob] = rgb(EVENT_COLOR.other)
-    expect(og).toBeGreaterThan(or); expect(og).toBeGreaterThan(ob + 60)
+    expect(og).toBeGreaterThan(or + 60); expect(ob).toBeGreaterThan(or + 60)
   })
 })

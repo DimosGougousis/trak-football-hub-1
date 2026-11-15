@@ -4,7 +4,7 @@ import { followChild } from '@/test/follow-child'
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useParams, useLocation } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ParentChildrenProvider } from '@/contexts/ParentChildrenContext'
 import ParentHome from '../ParentHome'
 import ParentMatches from '../ParentMatches'
@@ -13,6 +13,12 @@ import ParentProfilePage from '../ParentProfilePage'
 import Settings from '@/pages/Settings'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
+
+// These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
+// Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
+const phoneTZ = process.env.TZ
+beforeAll(() => { process.env.TZ = 'Asia/Dubai' })
+afterAll(() => { process.env.TZ = phoneTZ })
 
 const auth = vi.hoisted(() => ({ parentId: 'parent-a' }))
 vi.mock('@/contexts/AuthContext', () => ({
@@ -37,8 +43,23 @@ const assessment = (child: string) => ({
   work_rate: 0, tactical: 0, attitude: 0, technical: 0, physical: 0, coachability: 0,
 })
 
+/** TRAK-436: the coach's review of a match for this child, and the match through child_events. */
+const review = (child: string, publishedAt: string) => [
+  http.get(endpoint('game_review_for_family'), ({ request }) => HttpResponse.json(
+    (new URL(request.url).searchParams.get('squad_player_id') ?? '').includes(`squad-${child}`)
+      ? [{ event_id: `game-${child}`, published_at: publishedAt, our_score: 2, their_score: 1, coach_name: 'Otto Rehhagel' }] : [])),
+  http.post(endpoint('rpc/child_events'), ({ request }) => HttpResponse.json(
+    (new URL(request.url).searchParams.get('id') ?? '').includes(`game-${child}`)
+      ? [{ id: `game-${child}`, event_type: 'match', title: 'League', opponent: 'Rivals FC', home_away: 'home', event_date: '2026-11-08',
+        start_time: '11:00:00', status: 'scheduled', sequence: 1 }] : [])),
+]
+
 function installFamily() {
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_review_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), ({ request }) => {
       const parent = new URL(request.url).searchParams.get('parent_user_id')
       return HttpResponse.json((parent === 'eq.parent-a' ? ['Alex', 'Zara'] : ['Sam'])
@@ -78,6 +99,7 @@ function installFamily() {
     http.post(endpoint('rpc/family_training_history'), () => HttpResponse.json([])),
     // J8.8 (TRAK-131): Home and Matches read the selected child's events.
     http.post(endpoint('rpc/child_events'), () => HttpResponse.json([])),
+    http.post(endpoint('rpc/season_plan_for_player'), () => HttpResponse.json([])), // TRAK-437: the position is the coach's
   )
 }
 
@@ -117,25 +139,26 @@ describe('parent family navigation', () => {
     const user = userEvent.setup()
     renderFamily()
     // TRAK-194: Home lists no matches; the child's line and award show whose Home it is.
-    expect(await screen.findByText('mid · Alex academy · U15')).toBeInTheDocument()
+    expect(await screen.findByText('Alex academy · U15')).toBeInTheDocument()
     await followChild('Zara')
-    expect(screen.queryByText('mid · Alex academy · U15')).not.toBeInTheDocument()
-    expect(await screen.findByText('mid · Zara academy · U15')).toBeInTheDocument()
+    expect(screen.queryByText('Alex academy · U15')).not.toBeInTheDocument()
+    expect(await screen.findByText('Zara academy · U15')).toBeInTheDocument()
     expect(screen.getByText('Zara teamwork')).toBeInTheDocument()
     expect(screen.queryByText('Alex teamwork')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Events' }))
+    await user.click(screen.getByRole('tab', { name: 'Events' }))
     expect(await screen.findByText('Zara opposition')).toBeInTheDocument()
     expect(screen.getByRole('combobox')).toHaveValue('Zara')
     // TRAK-74: alerts are a bell on Home, not a tab.
-    await user.click(screen.getByRole('button', { name: 'Home' }))
+    await user.click(screen.getByRole('tab', { name: 'Home' }))
     await user.click(await screen.findByRole('button', { name: /^Alerts/ }))
     const alertsSheet = await screen.findByRole('dialog', { name: 'Alerts' })
-    expect(await within(alertsSheet).findByText('vs Zara opposition · 0–0')).toBeInTheDocument()
-    expect(within(alertsSheet).queryByText(/vs Alex opposition/)).not.toBeInTheDocument()
+    // TRAK-436: no "Match logged" in the bell; the child's own assessment says whose bell it is.
+    expect(await within(alertsSheet).findByText('New assessment from Coach coach-Zara')).toBeInTheDocument()
+    expect(within(alertsSheet).queryByText(/coach-Alex/)).not.toBeInTheDocument()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Profile' }))
+    await user.click(screen.getByRole('tab', { name: 'Profile' }))
     // TRAK-73: the header counts the linked children. TRAK-181: Profile has no
     // "Following" picker; each child has its own line below.
     expect(await screen.findByText('Parent account · 2 children linked')).toBeInTheDocument()
@@ -147,10 +170,12 @@ describe('parent family navigation', () => {
     expect(within(connections).getByText('Zara')).toBeInTheDocument()
     expect(within(connections).getAllByText('Linked')).toHaveLength(2)
     // TRAK-182 (live run 3): Arc's round avatars, as on the coach's screens: the
-    // parent's initials in the header, and each linked child's beside their name.
+    // parent's initials in the header. TRAK-349: each linked child has their
+    // drawn face beside their name instead of initials.
     expect(screen.getByText('TP')).toBeInTheDocument()
-    expect(within(connections).getByText('A')).toBeInTheDocument()
-    expect(within(connections).getByText('Z')).toBeInTheDocument()
+    expect(connections.querySelectorAll('svg[data-face]')).toHaveLength(2)
+    expect(within(connections).queryByText('A')).not.toBeInTheDocument()
+    expect(within(connections).queryByText('Z')).not.toBeInTheDocument()
   })
 
   it('does not carry child names or match data into another parent account', async () => {
@@ -200,12 +225,12 @@ describe('parent family navigation', () => {
     expect(await screen.findByText('Alex opposition')).toBeInTheDocument()
     expect(screen.getAllByRole('option')).toHaveLength(1)
     installFamily()
-    await userEvent.click(screen.getByRole('button', { name: 'Profile' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Profile' }))
     // TRAK-181: Profile lists the new child; the picker for following them is on the other tabs.
     const connections = await screen.findByRole('list', { name: 'Linked children' })
     expect(await within(connections).findByText('Zara')).toBeInTheDocument()
     expect(screen.getByText('Parent account · 2 children linked')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Events' }))
     expect(await screen.findByRole('option', { name: 'Zara' })).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByRole('combobox'), 'Zara')
     expect(screen.getByRole('combobox')).toHaveValue('Zara')
@@ -221,44 +246,46 @@ describe('parent alerts bell', () => {
     return screen.findByRole('dialog', { name: 'Alerts' })
   }
 
-  it("counts the selected child's unseen alerts, lists matches and assessments but no awards, and Mark all read clears the count", async () => {
+  // TRAK-436: a match reaches the bell as the coach's review, so there is no "Match logged".
+  it("counts the selected child's unseen alerts, lists assessments but no awards or logged matches, and Mark all read clears the count", async () => {
     renderFamily()
     expect(await screen.findByRole('region', { name: 'Recorded matches summary' })).toBeInTheDocument() // TRAK-194: Home's match readout
     expect(screen.queryByRole('button', { name: 'Alerts' })).toBeNull()
-    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 1 unread' })).toBeInTheDocument()
     const sheet = await openAlerts()
-    expect(within(sheet).getByText('vs Alex opposition · 0–0')).toBeInTheDocument()
+    expect(within(sheet).queryByText('Match logged')).toBeNull()
     expect(within(sheet).getByText(/^New assessment from /)).toBeInTheDocument()
     expect(within(sheet).queryByText('Player Of Week')).toBeNull()
     expect(within(sheet).queryByText(/teamwork/)).toBeNull()
     // TRAK-163: Arc's notification center. Closing keeps the count; Mark all read clears it.
     await userEvent.keyboard('{Escape}')
-    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 1 unread' })).toBeInTheDocument()
     await userEvent.click(within(await openAlerts()).getByRole('button', { name: 'Mark all read' }))
     await userEvent.keyboard('{Escape}')
     expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
 
     await followChild('Zara')
-    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 1 unread' })).toBeInTheDocument()
     const zaraSheet = await openAlerts()
-    expect(within(zaraSheet).getByText('vs Zara opposition · 0–0')).toBeInTheDocument()
-    expect(within(zaraSheet).queryByText(/Alex opposition/)).toBeNull()
+    expect(within(zaraSheet).getByText('New assessment from Coach coach-Zara')).toBeInTheDocument()
+    expect(within(zaraSheet).queryByText(/coach-Alex/)).toBeNull()
   })
 
   it('after Mark all read, counts only what arrives later', async () => {
     const { client } = renderFamily()
-    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 1 unread' })).toBeInTheDocument()
     await userEvent.click(within(await openAlerts()).getByRole('button', { name: 'Mark all read' }))
     await userEvent.keyboard('{Escape}')
     expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
-    server.use(http.get(endpoint('matches'), () => HttpResponse.json([
-      match('Alex'), { ...match('Later'), created_at: new Date(Date.now() + 60_000).toISOString() },
-    ])))
-    await act(async () => { await client.invalidateQueries({ queryKey: ['parent', 'parent-a', 'Alex', 'matches'] }) })
+    // TRAK-436: the coach publishes his review of a match.
+    server.use(...review('Alex', new Date(Date.now() + 60_000).toISOString()))
+    await act(async () => { await client.invalidateQueries({ queryKey: ['family-news'] }) })
     expect(await screen.findByRole('button', { name: 'Alerts, 1 unread' })).toBeInTheDocument()
+    expect(within(await openAlerts()).getByText('How Alex’s match went')).toBeInTheDocument()
   })
 
-  it('a match alert opens that match; an assessment alert shows its bands', async () => {
+  it("the coach's review opens the match page at the review; an assessment alert shows its bands", async () => {
+    server.use(...review('Alex', new Date().toISOString()))
     renderFamily()
     const sheet = await openAlerts()
     await userEvent.click(within(sheet).getByRole('button', { name: /New assessment from / }))
@@ -266,14 +293,15 @@ describe('parent alerts bell', () => {
     for (const label of ['Work Rate', 'Tactical', 'Attitude', 'Technical', 'Physical', 'Coachability']) {
       expect(within(bands).getByText(label)).toBeInTheDocument()
     }
-    // TRAK-163: a row opens its details; "Open match" goes to the match.
-    await userEvent.click(within(sheet).getByRole('button', { name: /Match logged/ }))
-    await userEvent.click(await within(sheet).findByRole('button', { name: 'Open match' }))
-    expect(await screen.findByText('Match detail match-Alex')).toBeInTheDocument()
+    // TRAK-436: a row opens its details; "Read review" goes to the match's page, at the review.
+    await userEvent.click(await within(sheet).findByRole('button', { name: /How Alex’s match went/ }))
+    expect(within(sheet).getByText('Match vs Rivals FC (home) · won 2–1')).toBeInTheDocument()
+    await userEvent.click(await within(sheet).findByRole('button', { name: 'Read review' }))
+    expect(await screen.findByText('Event page game-Alex')).toBeInTheDocument()
   })
 
   it('shows a failed read as an error, never as no alerts', async () => {
-    server.use(http.get(endpoint('matches'), fail))
+    server.use(http.get(endpoint('coach_assessments'), fail))
     renderFamily()
     // Home shows the failure; the bell claims no count from the half that loaded.
     expect(await screen.findByRole('alert')).toBeInTheDocument()
@@ -308,7 +336,7 @@ describe('J8.11 events in the parent alerts bell', () => {
 
   it('counts a newly published event and says what it is', async () => {
     renderFamily()
-    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     const sheet = await openAlerts()
     expect(within(sheet).getByText('New: Training')).toBeInTheDocument()
     expect(within(sheet).getByText('Mon 16 Nov, 18:00 · Main pitch')).toBeInTheDocument()
@@ -316,7 +344,7 @@ describe('J8.11 events in the parent alerts bell', () => {
 
   it('the coach moves it: one more on the next load, saying "Changed" and the new time; Mark all read clears it', async () => {
     const { client } = renderFamily()
-    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     await userEvent.click(within(await openAlerts()).getByRole('button', { name: 'Mark all read' }))
     await userEvent.keyboard('{Escape}')
     expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
@@ -358,12 +386,12 @@ describe('J8.11 events in the parent alerts bell', () => {
   it('marking all read for one child leaves the same event unread for the sibling', async () => {
     eventsFor = { Alex: [eventRow('Alex', { id: 'event-shared' })], Zara: [eventRow('Zara', { id: 'event-shared' })] }
     renderFamily()
-    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     await userEvent.click(within(await openAlerts()).getByRole('button', { name: 'Mark all read' }))
     await userEvent.keyboard('{Escape}')
     expect(await screen.findByRole('button', { name: 'Alerts' })).toBeInTheDocument()
     await followChild('Zara')
-    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     expect(within(await openAlerts()).getByText('New: Training')).toBeInTheDocument()
   })
 
@@ -377,7 +405,7 @@ describe('J8.11 events in the parent alerts bell', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
     await followChild('Zara')
-    expect(await screen.findByRole('button', { name: 'Alerts, 3 unread' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Alerts, 2 unread' })).toBeInTheDocument()
     const zaraSheet = await openAlerts()
     expect(within(zaraSheet).getByText('New: Fitness')).toBeInTheDocument()
     expect(within(zaraSheet).queryByText(/Finishing/)).toBeNull()
@@ -404,10 +432,10 @@ describe('J7 parent open', () => {
 
   it('records the shown assessment once, and the sibling\'s when the parent switches child', async () => {
     renderFamily()
-    expect(await screen.findByText('mid · Alex academy · U15')).toBeInTheDocument()
+    expect(await screen.findByText('Alex academy · U15')).toBeInTheDocument()
     await waitFor(async () => expect(await views()).toEqual([{ assessment_id: 'assessment-Alex' }]))
     await followChild('Zara')
-    expect(await screen.findByText('mid · Zara academy · U15')).toBeInTheDocument()
+    expect(await screen.findByText('Zara academy · U15')).toBeInTheDocument()
     await waitFor(async () => expect(await views()).toEqual([{ assessment_id: 'assessment-Alex' }, { assessment_id: 'assessment-Zara' }]))
   })
 
@@ -525,7 +553,7 @@ describe('truthful parent ratings', () => {
     expect(cachedMatches?.map(row => row.id)).toEqual([
       ...historicalMatches.map(row => row.id), 'match-Backfilled',
     ])
-    await userEvent.click(screen.getByRole('button', { name: 'Events' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Events' }))
     expect((await screen.findAllByText(/opposition/))[0]).toHaveTextContent('Fixture 1 opposition')
   })
 
@@ -549,5 +577,30 @@ describe('truthful parent ratings', () => {
     const development = screen.getByRole('region', { name: 'Latest coach assessment' })
     expect(within(development).getAllByText('Difficult')).toHaveLength(7)
     expect(screen.queryByText('Steady')).not.toBeInTheDocument()
+  })
+})
+
+/** TRAK-437: the position under the child's name is the one the coach set, never the one saved at sign-up. */
+describe('TRAK-437: the parent Home shows the coach\'s position', () => {
+  const plan = (position: string | null) => ({
+    squad_player_id: 'squad-Alex', squad: 'U15', coach_name: 'Coach Rami', time_zone: 'Asia/Dubai', starts_on: '2026-09-01', ends_on: '2027-06-30',
+    eval_every: 'month', eval_day: 0, last_evaluation_on: null, position, also_plays: [], roles: [], season_objectives: [], objectives: [],
+    is_new: false, shared_at: '2026-11-01T10:00:00Z',
+  })
+
+  it('shows the position the coach set for the selected child', async () => {
+    server.use(http.post(endpoint('rpc/season_plan_for_player'), async ({ request }) => {
+      const { p_child: child } = await request.json() as { p_child?: string }
+      return HttpResponse.json(child === 'Alex' ? [plan('Midfielder')] : [])
+    }))
+    renderFamily()
+    expect(await screen.findByText('Midfielder · Alex academy · U15')).toBeInTheDocument()
+    expect(screen.queryByText(/^mid · /)).toBeNull()
+  })
+
+  it('shows no position when the coach has set none', async () => {
+    server.use(http.post(endpoint('rpc/season_plan_for_player'), () => HttpResponse.json([plan(null)])))
+    renderFamily()
+    expect(await screen.findByText('Alex academy · U15')).toBeInTheDocument()
   })
 })

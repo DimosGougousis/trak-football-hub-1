@@ -32,6 +32,8 @@ beforeEach(() => {
   account = `training-player-${++sequence}`
   signInAs({ id: account })
   server.use(
+    // TRAK-286: no roster row, so no shared game plan.
+    table('squad_players', []),
     rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [{ id: 'p', user_id: account, role: 'player', full_name: 'Training Player' }]),
     table('matches', []),

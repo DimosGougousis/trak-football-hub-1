@@ -19,21 +19,32 @@ type Reply = { data: Row[] | null; error: unknown }
 
 const database = vi.hoisted(() => ({
   read: vi.fn<(table: string, coachId: string, filter?: string) => Promise<Reply>>(),
+  // Imad, 23 Oct: a logged match's log reads its players through logged_match.
+  rpc: vi.fn<(name: string) => Promise<Reply>>(async () => ({ data: [], error: null })),
 }))
 
-// The feature switch is independent of how the enabled strip loads its week.
-vi.mock('@/components/trak/parked', () => ({ useFeature: () => true }))
+// The feature switch is independent of how the enabled strip loads its week. TRAK-288: Games off, so a match is logged.
+// TRAK-426: the old log's Edit log is asked through useFeatureState (Games off here, so the old log stays).
+vi.mock('@/components/trak/parked', () => ({ useFeature: (feature?: string) => feature !== 'games', useFeatureState: (feature?: string) => ({ on: feature !== 'games', known: true }) }))
+// TRAK-367: Training's Notes have their own tests; none here.
+vi.mock('@/components/coach/training/useTraining', () => ({ useNotedTrainings: () => new Set<string>() }))
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
+    rpc: (name: string) => database.rpc(name),
     from: (table: string) => {
       let coachId = ''
+      let id: string | undefined
       let filter: string | undefined
       const query = {
         select: () => query,
         eq: (column: string, value: string) => {
           if (column === 'coach_user_id') coachId = value
+          if (column === 'id') id = value
           return query
         },
+        // One row, as the session log reads its session.
+        maybeSingle: () => database.read(table, coachId, filter)
+          .then(reply => ({ data: reply.data?.find(row => row.id === id) ?? null, error: reply.error })),
         gte: () => query,
         lte: () => query,
         or: (value: string) => { filter = value; return query },
@@ -68,6 +79,12 @@ async function chooseMonday() {
   fireEvent.click(await screen.findByRole('button', { name: new RegExp(name) }))
 }
 
+// TRAK-262: tapping an event picks it; Details opens its sheet.
+async function openDetails(name: RegExp) {
+  fireEvent.click(await screen.findByRole('button', { name }))
+  fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+}
+
 describe('TRAK-171: coach Home week includes logged sessions', () => {
   beforeEach(() => {
     database.read.mockReset()
@@ -85,18 +102,26 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     await chooseMonday()
 
     expect(await screen.findByRole('button', { name: /Planned training/ })).toBeInTheDocument()
-    // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too, which says
-    // so and links to its saved record (it used to jump straight there).
+    // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too, which says so. Imad, 23 Oct: the sheet shows
+    // the log, read only, with Edit log (it used to say only who came, with Open session).
+    database.rpc.mockResolvedValue(ok([{ user_id: 'u-1', player_name: 'Bukayo Saka', competition: 'League', venue: 'Home', opponent: 'Rovers',
+      goals: 1, assists: 0, card_received: 'None', team_score: 2, opponent_score: 0, played: true }]))
     for (const [title, id] of [['Logged training', 'saved-training'], ['Logged match', 'saved-match']]) {
-      fireEvent.click(await screen.findByRole('button', { name: new RegExp(title) }))
+      await openDetails(new RegExp(title))
       const sheet = await screen.findByRole('dialog', { name: title })
       expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
-      expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', `/coach/sessions/${id}`)
-      // TRAK-182 (live run 3): who came and who didn't, from the saved register.
-      expect(await within(sheet).findByText('Attended · 1')).toBeInTheDocument()
-      expect(within(sheet).getByText("Didn't come · 1")).toBeInTheDocument()
-      fireEvent.click(within(sheet).getByRole('button', { name: "Show names: Didn't come" }))
-      expect(within(within(sheet).getByRole('list', { name: "Didn't come" })).getByText('Beth Mead')).toBeInTheDocument()
+      expect(await within(sheet).findByRole('link', { name: 'Edit log' })).toHaveAttribute('href', `/coach/sessions/${id}`)
+      if (id === 'saved-training') {
+        // TRAK-182 (live run 3): who came and who didn't, from the saved register.
+        expect(await within(sheet).findByText('Attended · 1')).toBeInTheDocument()
+        expect(within(sheet).getByText("Didn't come · 1")).toBeInTheDocument()
+        fireEvent.click(within(sheet).getByRole('button', { name: "Show names: Didn't come" }))
+        expect(within(within(sheet).getByRole('list', { name: "Didn't come" })).getByText('Beth Mead')).toBeInTheDocument()
+      } else {
+        // A match's log: the score and who scored.
+        expect(within(sheet).getByText('2–0')).toBeInTheDocument()
+        expect(within(sheet).getByText('1 goal')).toBeInTheDocument()
+      }
       fireEvent.keyDown(sheet, { key: 'Escape' })
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     }
@@ -111,7 +136,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     render(strip(), queries())
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't load this week/i)
-    expect(screen.queryByText('Nothing planned.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nothing planned')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
     sessionsFailed = false
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
@@ -133,9 +158,9 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
     expect(trigger).toHaveTextContent(/Logged/)
     expect(trigger).not.toHaveTextContent(/18:00|Time to be confirmed/)
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
-    fireEvent.click(trigger)
+    await openDetails(/Completed training/)
     const sheet = await screen.findByRole('dialog', { name: 'Completed training' })
-    expect(within(sheet).getByRole('link', { name: 'Open session' })).toHaveAttribute('href', '/coach/sessions/completed-training')
+    expect(await within(sheet).findByRole('link', { name: 'Edit log' })).toHaveAttribute('href', '/coach/sessions/completed-training')
     expect(within(sheet).queryByText(/18:00|Time to be confirmed/)).not.toBeInTheDocument()
   })
 
@@ -146,7 +171,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       : []))
     render(strip(), queries())
     await chooseMonday()
-    fireEvent.click(await screen.findByRole('button', { name: /vs Rovers/ }))
+    await openDetails(/vs Rovers/)
     const sheet = await screen.findByRole('dialog', { name: /Rovers/ })
     expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('18:00')).toBeInTheDocument()
@@ -162,7 +187,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       : table === 'coach_sessions' ? [{ ...session('logged-kit', 'vs Synthetic United', 'match'), event_id: 'planned-kit' }] : []))
     render(strip(), queries())
     await chooseMonday()
-    fireEvent.click(await screen.findByRole('button', { name: /Synthetic United/ }))
+    await openDetails(/Synthetic United/)
     const sheet = await screen.findByRole('dialog', { name: /Synthetic United/ })
     expect(within(sheet).getByRole('heading', { name: 'Alternate kit' })).toBeInTheDocument()
     expect(within(sheet).getByText('Logged.')).toBeInTheDocument()
@@ -201,7 +226,9 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
 
     expect(screen.queryByRole('button', { name: /Planned training/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Moved completed training/ })).not.toBeInTheDocument()
-    expect(screen.getByText('Nothing planned.')).toBeInTheDocument()
+    // The day left behind can still be leaving; Monday's own list is the one that counts.
+    const list = screen.getByRole('list', { name: `Events on ${format(parseISO(monday), 'EEEE d MMMM')}` })
+    expect(within(list).getByText('Nothing planned')).toBeInTheDocument()
   })
 
   it('TRAK-176: with two squads, the week shows the squad picked and whole-roster events only', async () => {
@@ -214,6 +241,7 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       ]
       : [{ ...session('s-u14', 'U14 logged', 'training'), squad: 'U14' }, { ...session('s-u16', 'U16 logged', 'match'), squad: 'U16' }]))
     localStorage.setItem('trak:coach-squad:coach-1', 'U16')
+    localStorage.setItem('trak:coach-squad-all:coach-1', '0')
     try {
       render(strip(), queries())
       await chooseMonday()
@@ -222,5 +250,27 @@ describe('TRAK-171: coach Home week includes logged sessions', () => {
       expect(screen.getByRole('button', { name: /U16 logged/ })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /U14/ })).toBeNull()
     } finally { localStorage.clear() }
+  })
+
+  // TRAK-266 (Imad, 22 Oct): the colour key's badges only where the coach is needed.
+  it('badges a started event with no register (Needs you) and a clashing draft (Clashes), and nothing else', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-22T12:00:00Z'))
+    try {
+      const at = (id: string, title: string, date: string, time: string, extra: Row = {}) => ({
+        id, coach_user_id: 'coach-1', event_type: 'training', title, event_date: date, start_time: `${time}:00`,
+        starts_at: `${date}T${time}:00Z`, published: true, status: 'scheduled', squad: null, ...extra })
+      database.read.mockImplementation(async table => ok(table === 'coach_calendar_events' ? [
+        at('started', 'Tuesday training', '2026-10-20', '14:00'),
+        at('live', 'Friday training', '2026-10-23', '14:00', { ends_at: '2026-10-23T15:30:00Z' }),
+        at('draft', 'Friday extra', '2026-10-23', '15:00', { published: false }),
+      ] : []))
+      render(strip(), queries())
+      fireEvent.click(await screen.findByRole('button', { name: /Tuesday 20 October/ }))
+      expect(await screen.findByRole('button', { name: /Tuesday training/ })).toHaveTextContent('Needs you')
+      fireEvent.click(screen.getByRole('button', { name: /Friday 23 October/ }))
+      expect(await screen.findByRole('button', { name: /Friday extra/ })).toHaveTextContent('Clashes')
+      expect(screen.getByRole('button', { name: /Friday training/ })).not.toHaveTextContent(/Needs you|Clashes/)
+    } finally { vi.useRealTimers() }
   })
 })

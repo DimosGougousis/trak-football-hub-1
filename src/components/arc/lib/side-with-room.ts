@@ -13,7 +13,8 @@ function visibleBounds(field: HTMLElement): { top: number; bottom: number } {
   let bottom = top + (visible?.height ?? window.innerHeight)
   for (let node = field.parentElement; node; node = node.parentElement) {
     const overflow = getComputedStyle(node).overflowY
-    if (overflow !== 'auto' && overflow !== 'scroll' && overflow !== 'hidden') continue
+    // `clip` cuts a panel off as surely as `hidden` (the "+" form's shape while it moves, Imad 23 Oct).
+    if (overflow !== 'auto' && overflow !== 'scroll' && overflow !== 'hidden' && overflow !== 'clip') continue
     const rect = node.getBoundingClientRect()
     top = Math.max(top, rect.top)
     bottom = Math.min(bottom, rect.bottom)

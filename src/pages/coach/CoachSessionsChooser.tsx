@@ -1,44 +1,49 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MobileShell, NavBar } from '@/components/trak'
-import { ChevronLeft, History } from 'lucide-react'
+import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useFeature } from '@/components/trak/parked'
+import { History } from 'lucide-react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { IconMatch, IconSessions } from '@/components/icons/TrakIcons'
 
 export default function CoachSessionsChooser() {
   const navigate = useNavigate()
   const location = useLocation()
+  // TRAK-288: where Games is on, a match is evaluated on its game page, so the quick match log goes.
+  const games = useFeature('games')
 
   return (
     <MobileShell>
-      {/* Topbar — mirrors PlayerLogChoose */}
-      <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
-        <button
-          onClick={() => navigate('/coach/home')}
-          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center"
-          aria-label="Back"
-        >
-          <ChevronLeft size={14} className="text-ink" />
-        </button>
-        <span
-          className="text-[16px] font-medium text-ink tracking-tight"
-          style={{ fontFamily: 'var(--t-font)' }}
-        >
-          What are you logging?
-        </span>
-        {/* TRAK-193: a button you can see (Kostas missed the old grey caps), 44 px tall. */}
-        <button
-          onClick={() => navigate('/coach/sessions/list')}
-          className="min-h-11 flex items-center gap-1.5 px-3 rounded-[10px] bg-raised border border-line text-[13px] font-medium text-ink active:scale-[0.97] transition-transform"
-          style={{ fontFamily: 'var(--t-font)' }}
-        >
-          <History size={14} aria-hidden="true" className="text-ink-2" />
-          History
-        </button>
-      </div>
+      {/* TRAK-420: on a phone the trail, the title and History were squeezed onto one line. Now the trail has its own
+          line (a phone only: a laptop shows it in the top bar), and the title sits under it with History at its right,
+          the way Past trainings lays out its header. */}
+      <header className="grid gap-3 pt-5 pb-4 border-b border-line">
+        {/* TRAK-334: the trail, in place of Back. */}
+        <CoachTrail current="Log" />
+        <div className="flex items-center justify-between gap-3">
+          <h1
+            className="min-w-0 text-[22px] font-medium tracking-[-0.01em] text-ink"
+            style={{ fontFamily: 'var(--t-font)' }}
+          >
+            What are you logging?
+          </h1>
+          {/* TRAK-193: a button you can see (Kostas missed the old grey caps), 44 px tall. */}
+          <button
+            onClick={() => navigate('/coach/sessions/list')}
+            className="shrink-0 min-h-11 flex items-center gap-1.5 px-3 rounded-[10px] bg-raised border border-line text-[13px] font-medium text-ink active:scale-[0.97] transition-transform"
+            style={{ fontFamily: 'var(--t-font)' }}
+          >
+            <History size={14} aria-hidden="true" className="text-ink-2" />
+            History
+          </button>
+        </div>
+      </header>
 
       {/* Centered choices */}
-      <div className="flex-1 flex flex-col justify-center py-6 gap-4">
+      {/* TRAK-252: side by side on a coach's tablet or laptop. */}
+      <div className="flex-1 flex flex-col justify-center py-6 gap-4 tablet:grid tablet:grid-cols-2">
         {/* Quick Match Log */}
-        <button
+        {!games && <button
           onClick={() => navigate('/coach/sessions/quick')}
           className="w-full bg-surface border border-brand/[0.18] rounded-[24px] p-7 text-left active:scale-[0.98] transition-transform"
         >
@@ -58,7 +63,7 @@ export default function CoachSessionsChooser() {
           <span className="text-xs text-ink-3 leading-relaxed block">
             Opponent, score and who played. Capture the result at full-time.
           </span>
-        </button>
+        </button>}
 
         {/* Full Session */}
         <button
@@ -85,6 +90,8 @@ export default function CoachSessionsChooser() {
       </div>
 
       {/* No Sessions tab: this page is opened from Home, so Home stays marked. */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )

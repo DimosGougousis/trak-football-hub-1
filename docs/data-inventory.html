@@ -232,7 +232,7 @@
     </div>
     <div class="card">
       <h3>Hosting and monitoring</h3>
-      <p class="small">Vercel hosts the web app. Supabase provides database, Auth, storage and Edge Functions. Sentry initializes only in production with a configured DSN; browser tracing samples at 10%, and no session-replay integration is configured. Error and request data need a declared scope and retention period.</p>
+      <p class="small">Vercel hosts the web app. Supabase provides database, Auth, storage and Edge Functions. Sentry initializes only in production with a configured DSN and sends crash reports only (TRAK-251): no browser tracing or page-load timing, no session replay, and default personal data off (no IP address). The trail before an error keeps request and page paths without query strings, and drops clicks and typing, whose labels can name a child. Error and request data need a declared scope and retention period.</p>
       <p class="small">Regions, actual service configuration and transfer arrangements are unverified here. Supplier headquarters and hostname hints do not establish where processing occurs.</p>
     </div>
     <div class="card">

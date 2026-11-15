@@ -1,14 +1,15 @@
 /**
- * [scope] Trainings tab: coaches and players get a Trainings tab in the bottom
- * bar. It shows two training pages exactly as they were designed: the Coaching
- * Session Catalogue and Play It Right. Both are static HTML under
- * public/trainings, shown in a same-site iframe.
+ * [scope] Trainings tab: players get a Trainings tab in the bottom bar. It
+ * shows two training pages exactly as they were designed: the Coaching Session
+ * Catalogue and Play It Right. Both are static HTML under public/trainings,
+ * shown in a same-site iframe. A coach's tab is the Library (TRAK-264,
+ * coach-library-trak264.test.tsx), which still opens Play It Right this way.
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, screen, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderApp } from '../../../tests/support/render-app'
 import { signInAs } from '../../../tests/support/session'
@@ -20,12 +21,15 @@ afterEach(cleanup)
 const CATALOGUE = '/trainings/coaching-session-catalogue.html'
 const PLAY_IT_RIGHT = '/trainings/play-it-right.html'
 
-function coach() {
-  signInAs({ id: 'coach-trainings' })
+// TRAK-419: `training` is the academy's Training switch. Where it is on, the old Library's addresses open Drills.
+// A coach of their own, so the app's cache never carries one switch's answer into the other.
+function coach({ training = false } = {}) {
+  const id = training ? 'coach-trainings-on' : 'coach-trainings'
+  signInAs({ id })
   server.use(
-    table('profiles', [{ id: 'p', user_id: 'coach-trainings', role: 'coach', full_name: 'Synthetic Coach', invite_code: 'ABCD' }]),
+    table('profiles', [{ id: 'p', user_id: id, role: 'coach', full_name: 'Synthetic Coach', invite_code: 'ABCD' }]),
     table('coach_sessions', []), table('squad_players', []), table('coach_details', []),
-    rpc('feature_on', () => true),
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'training' || training),
   )
 }
 
@@ -41,18 +45,18 @@ function player() {
   )
 }
 
-const navTab = (name: string) => within(screen.getByRole('navigation')).getByRole('button', { name: new RegExp(name, 'i') })
+// TRAK-440: the bottom bar is the coach's glass tab bar, its tabs marked by aria-selected.
+const navTab = (name: string) => within(screen.getByRole('tablist', { name: 'Player' })).getByRole('tab', { name: new RegExp(name, 'i') })
 
 describe.each([
-  ['coach', coach, '/coach/trainings'],
   ['player', player, '/player/trainings'],
 ] as const)('Trainings tab for a %s', (_role, signIn, path) => {
   it('is in the bottom bar and marked on its page', async () => {
     signIn()
     renderApp(path)
     await screen.findByRole('heading', { name: 'Trainings' })
-    expect(navTab('Trainings')).toHaveAttribute('aria-current', 'page')
-    expect(navTab('Home')).not.toHaveAttribute('aria-current')
+    expect(navTab('Trainings')).toHaveAttribute('aria-selected', 'true')
+    expect(navTab('Home')).toHaveAttribute('aria-selected', 'false')
   }, 20_000)
 
   it('opens on the Coaching Session Catalogue and switches to Play It Right', async () => {
@@ -188,11 +192,22 @@ describe('the catalogue opens on a theme from New event', () => {
     return { errors, lib: selected?.dataset.lib }
   }
 
-  it('the Trainings tab hands the theme to the catalogue page', async () => {
+  it("a coach's old theme link opens that library in the Library (TRAK-264)", async () => {
     coach()
     renderApp(`/coach/trainings?lib=${encodeURIComponent(DEFENDING)}`)
-    const frame = await screen.findByTitle('Coaching Session Catalogue')
-    expect(frame).toHaveAttribute('src', `${CATALOGUE}?lib=Tactical+%E2%80%93+Defending`)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Defending' })).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/coach/trainings/defending')
+  }, 20_000)
+
+  // TRAK-419 (11 Nov review): where Training is on, Drills is the one library; an old Library address opens it.
+  it('with Training on, the old Library address opens Training › Drills, and a theme its drills', async () => {
+    coach({ training: true })
+    renderApp('/coach/trainings')
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/drills'))
+    cleanup()
+    coach({ training: true })
+    renderApp('/coach/trainings/goalkeeping')
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/drills/all?show=Goalkeeping'))
   }, 20_000)
 
   it('the catalogue selects that library', () => {

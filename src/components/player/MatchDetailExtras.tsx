@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { BAND_COLORS, SELF_RATING_BAND, categoryScoreToBand } from '@/lib/matchDetailHelpers'
+import { BANDS, BAND_TEXT } from '@/lib/types'
 import type { Band } from '@/lib/clubMock'
-import { withAlpha } from '@/lib/with-alpha'
 
 interface Props {
   matchId: string
@@ -125,7 +125,7 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
                       flex: '0 0 80px',
                       fontSize: 11,
                       textAlign: 'right',
-                      color,
+                      color: BAND_TEXT[band],
                     }}
                   >
                     {band}
@@ -183,16 +183,14 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 function BandPill({ band }: { band: Band }) {
-  const color = BAND_COLORS[band]
+  const config = BANDS.find(b => b.word === band) ?? BANDS[BANDS.length - 1]
   return (
+    // TRAK-229: the band's light tint with a dot in its colour; the word in Trak's ink.
     <span
-      className="trak-dark inline-flex items-center px-3 py-1 rounded-full text-xs"
-      style={{
-        color,
-        background: `linear-gradient(${withAlpha(color, 0.12)}, ${withAlpha(color, 0.12)}), rgb(var(--t-surface))`,
-        border: `1px solid ${withAlpha(color, 0.25)}`,
-      }}
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs"
+      style={{ color: 'rgb(var(--t-ink))', background: config.bg, border: `1px solid ${config.border}` }}
     >
+      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: config.color }} />
       {band}
     </span>
   )

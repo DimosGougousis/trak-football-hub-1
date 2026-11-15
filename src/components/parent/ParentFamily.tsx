@@ -4,6 +4,7 @@ import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { BandPill } from '@/components/trak'
 import { HomeTitle } from '@/components/trak/HomeHeader'
 import { DropdownMenu } from '@/components/arc/dropdown-menu/dropdown-menu'
+import { TeamSwitcher } from '@/components/arc/team-switcher/team-switcher'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { ParentAssessment } from '@/lib/parent-data'
@@ -78,6 +79,17 @@ export function ParentChildSwitcher() {
   )
 }
 
+/** TRAK-441 slice 2 (spec, Imad 12 Nov): the parent picks the child with the coach's squad switcher, in the side menu
+ *  where the coach picks a squad. The pick is the one every parent page follows. */
+export function ChildSwitcher() {
+  const { children, selectedChild, selectChild } = useParentChildren()
+  if (!selectedChild) return null
+  const initials = (name: string) => name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
+  return <TeamSwitcher className="arc" manage={false} noun={{ one: 'child', many: 'Children' }} value={selectedChild.id} onSwitch={async () => {}}
+    onValueChange={selectChild} workspaces={children.map(child => ({ id: child.id, name: child.name,
+      logo: <span aria-hidden="true" style={{ fontSize: '.4em', fontWeight: 500 }}>{initials(child.name)}</span> }))} />
+}
+
 export function ParentFamilyContent({ children }: { children: ReactNode }) {
   const family = useParentChildren()
   if (family.loading) return <ParentLoading />
@@ -118,7 +130,7 @@ export function ParentAssessmentBands({ assessment }: { assessment: ParentAssess
           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden="true">
             {rated && <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(10, category.score)) * 10}%`, backgroundColor: band?.color }} />}
           </div>
-          <span className="text-xs w-20 text-right text-muted-foreground" style={band ? { color: band.color } : undefined}>{band?.word ?? 'Not assessed'}</span>
+          <span className="text-xs w-20 text-right text-muted-foreground" style={band ? { color: band.text } : undefined}>{band?.word ?? 'Not assessed'}</span>
         </div>
       })}
     </div>

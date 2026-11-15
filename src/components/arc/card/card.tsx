@@ -171,7 +171,9 @@ export function Card({ title, description, media, action, avatar, meta, status, 
               className={["arc", className, styles.panel].filter(Boolean).join(" ")}
               data-framer-portal-id={group}
               data-returning={returning || undefined}
-              layoutScroll
+              // Trak (Imad, 23 Oct): no layoutScroll here. On a fixed panel Motion took it for a scroll root and measured the
+              // panel without the page's scroll, while the card kept it, so on a scrolled page the grow began a page-scroll
+              // below the card, under the screen.
               style={{ borderRadius: geometry.panel, "--card-measure": geometry.measure ? `${geometry.measure}px` : undefined, ...(landing && returning ? { "--landing-top": `${landing.top}px`, "--landing-left": `${landing.left}px`, "--landing-width": `${landing.width}px`, "--landing-height": `${landing.height}px` } : {}) } as CSSProperties}
               {...(morph ? {
                 ...shared("card", "panel"),

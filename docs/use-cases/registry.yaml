@@ -186,38 +186,47 @@ use_cases:
 
   # ENFORCED 2026-09-21. Its test passed on every uc:check run since the
   # 2026-09-21 merges; Imad approved promoting it (Tarek's offer, #77 thread).
+  # SPEC v3 2026-11-07 (TRAK-364), DRAFT for Kostas's review: with the season
+  # plan on and the squad's plan shared, the squad's evaluation replaces the
+  # per-player Assess marks. Without the switch, nothing changes.
   - id: UC-C03
     actor: coach
     title: View the squad
     requirement: REQ-002
     status: enforced
     tier: [1]
-    spec_version: 2
+    spec_version: 3
     given: A signed-in coach
     when: They open the squad screen
     then:
       - Every player in their squad is listed
       - A coach with an empty squad sees an explicit empty message
       - A failed load is distinguishable from an empty squad
+      - Where the academy's season plan is on and the squad's plan is shared, no player is marked to assess one by one; without it, a player due an assessment is still marked Assess
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 
   # SPEC v2 2026-09-25 (TRAK-68): Imad decided an assessment belongs to a
   # session that already happened, so the session is required. v1 had it
   # optional, and a same-day re-assessment silently moved the first one to
   # another match (second use-case test).
+  # SPEC v3 2026-11-07 (TRAK-364), DRAFT for Kostas's review: the session
+  # assessment stays as v2 everywhere. Where the season plan is on and the
+  # squad's plan is shared, the squad's evaluation also writes assessments,
+  # each with the six scores and no session (the fourth line).
   - id: UC-C04
     actor: coach
     title: Assess a player on six sliders producing a band
     requirement: REQ-002
     status: enforced
     tier: [1, 2]
-    spec_version: 2
+    spec_version: 3
     given: A signed-in coach with at least one squad player and at least one past session
     when: They select a player and a past session, set the six sliders and submit
     then:
       - A coach_assessments row is persisted with all six category scores and the chosen session
       - A band derived from the six scores is shown before submitting
       - Submitting is refused until a player and a session are selected
+      - Where the academy's season plan is on and the squad's plan is shared, its due evaluation publishes all six scores for each consented player, starting from their latest scores, with no session
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 
   # PARKED 2026-09-23 (Q-2026-09-23-01, TRAK-19). J1: coach TRK- codes are not an admission path in the pilot (TRAK-36).
@@ -468,17 +477,20 @@ use_cases:
       - A guardian can reset their no-email child's password and existing child sessions are invalidated, with an open device signing out within 30 seconds
     source: MVP Requirements
 
+  # spec_version 2 (Kostas, 21 Oct 2026): goals and assists start at 0. The
+  # empty "—" between the − and + buttons read as "− − +". Minutes are no
+  # longer asked (TRAK-198); position and age group are still never invented.
   - id: UC-C09
     actor: coach
     title: Log a match for the squad with no invented defaults
     requirement: J4
     status: pending
     tier: [1, 2]
-    spec_version: 1
+    spec_version: 2
     given: A signed-in coach with a squad
-    when: They log a match with date, opponent and result, and each child's position, minutes, goals and assists
+    when: They log a match with date, opponent and result, and each child's position, goals and assists
     then:
-      - Nothing about a child's minutes, goals or assists is pre-filled
+      - Nothing about a child's position or age group is invented; goals and assists start at 0, shown on every played row
       - A child whose guardian has not consented cannot be logged
       - A retry never creates a duplicate match, and a partial failure says what was and was not saved
     source: MVP Requirements
@@ -643,3 +655,25 @@ use_cases:
       - The message has the squad and type, the day and time, the venue and meet time, kit for a match, and a cancellation's reason
       - No child's name and no absence list appear; a cancellation reason that names a squad child or contains a link is left out
     source: https://linear.app/trak-football/issue/TRAK-139
+
+  # ADDED 2026-10-21. TRAK-250 (J8, Squad tab's Availability). Families say
+  # who is coming in the squad's WhatsApp group; the coach ticks them in
+  # Trak. The local demo seed (supabase/seeds/squad_views_demo.sql) sets up
+  # this scene: a match with 8 confirmed, a guardian's "Can't make it" for
+  # one child and one child waiting for consent.
+  - id: UC-E11
+    actor: coach
+    title: Mark who isn't coming to a match from the squad's WhatsApp replies, in the match's line-up
+    requirement: J8
+    status: pending
+    tier: [2]
+    spec_version: 2
+    given: A coach with a published, not-cancelled match for their squad, consented children, one child whose guardian reported "Can't make it" and one child waiting for consent, in an academy where the season plan is on
+    when: They plan the match and open the line-up's Not attending tab, then drag in two more children the WhatsApp group said aren't coming
+    then:
+      - Everyone counts as coming unless they are in Not attending; there are no Confirmed ticks, and Squad has no Availability tab
+      - The child whose guardian reported "Can't make it" starts in Not attending with that tag, never the reason, and stays there until the family undoes the report; the database refuses moving them out
+      - The coach drags the other two in and back out, and the counts and the Review step follow
+      - After Share, a Not attending child and their guardian read "Not in the squad this week" and never why; the child waiting for consent cannot be placed, and the database refuses it too
+      - Only the match's coach writes Not attending; another coach cannot
+    source: TRAK-359 (replaces TRAK-250's Availability path for academies with the season plan)

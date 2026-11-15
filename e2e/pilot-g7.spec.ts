@@ -49,7 +49,7 @@ for (const role of ['player', 'coach', 'club'] as const) {
       return json({ message: 'Unmocked request blocked' }, 500)
     })
 
-    const paths = role === 'player' ? ['/player/passport', '/player/evolution']
+    const paths = role === 'player' ? ['/player/passport']
       : role === 'club' ? ['/club/home', '/club/squads', '/club/coaches', '/club/profile', '/club/radar']
         : ['/coach/assistant', '/coach/feedback/synthetic-assessment', '/coach/schedule', '/coach/recognition', '/coach/award']
     // TRAK-85: each parked route shows its real screen with the "Coming soon" pill.
@@ -60,18 +60,26 @@ for (const role of ['player', 'coach', 'club'] as const) {
     }
     await page.screenshot({ path: testInfo.outputPath('coming-soon-mobile.png'), fullPage: true })
     await page.goto('/settings')
-    // TRAK-103: a player's name is the academy's, shown without an edit button.
-    await expect(role === 'player'
-      ? page.getByText('Synthetic Pilot', { exact: true })
-      : page.getByRole('button', { name: 'Synthetic Pilot', exact: true })).toBeVisible()
+    // TRAK-103: a player's name is the academy's, shown with no field to edit (TRAK-261: others have a name field).
+    if (role === 'player') {
+      await expect(page.getByText('Your academy sets your name.')).toBeVisible()
+      await expect(page.getByRole('textbox', { name: 'Full name' })).toHaveCount(0)
+    } else await expect(page.getByRole('textbox', { name: 'Full name' })).toHaveValue('Synthetic Pilot')
     await expect(page.getByRole('button', { name: 'Delete my account' })).toBeVisible()
-    await expect(page.locator('input[type=file], img')).toHaveCount(0)
-    await expect(page.getByText('Profile photos are coming soon.')).toBeVisible()
+    // TRAK-460 (Imad, 11 Nov): a coach may add their own picture; a player, guardian or club admin still may not (G7).
+    if (role === 'coach') {
+      await expect(page.locator('input[type=file]')).toHaveCount(1)
+      await expect(page.getByRole('button', { name: /^(Add|Change) photo$/ })).toBeVisible()
+      await expect(page.getByText('Profile photos are coming soon.')).toHaveCount(0)
+    } else {
+      await expect(page.locator('input[type=file], img')).toHaveCount(0)
+      await expect(page.getByText('Profile photos are coming soon.')).toBeVisible()
+    }
 
     if (role === 'coach') {
       await page.goto('/coach/squad/add')
       await expect(page).toHaveURL(/\/coach\/squad$/)
-      await expect(page.getByRole('heading', { name: 'Squad' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Squad', exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: /add player/i })).toHaveCount(0)
       await page.goto('/coach/quick-assess')
       await expect(page).toHaveURL(/\/coach\/assess$/)

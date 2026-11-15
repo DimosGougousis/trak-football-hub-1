@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel, LoadError } from '@/components/trak'
+import { MobileShell, MetadataLabel, LoadError, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
 import { MatchEditor } from '@/components/coach/MatchEditor'
 import { localTodayISO } from '@/lib/event-time'
@@ -15,6 +16,7 @@ import {
   TRAINING_DURATIONS, TRAINING_INTENSITIES,
   parseTrainingNotes, parseTrainingTitle, trainingNotes, trainingTitle,
 } from '@/lib/session-form'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /* J4 (TRAK-102): open a saved session and correct it. A coach who missed the
    note or an attendance tick used to have to log a second session, which the
@@ -226,20 +228,15 @@ export default function CoachSessionEdit() {
 
   const header = (
     <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
-      <button onClick={goBack} aria-label="Back"
-        className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center">
-        <ChevronLeft size={14} className="text-ink" />
-      </button>
-      <span className="text-[16px] font-medium text-ink" style={{ fontFamily: 'var(--t-font)' }}>
-        {isMatch ? 'Edit match' : 'Edit session'}
-      </span>
-      <div className="w-[34px]" />
+      {/* TRAK-334: the trail, in place of Back; its last crumb is the page's name. Opened from a link, it sits under
+          the sessions list, where Back went. */}
+      <CoachTrail current={isMatch ? 'Edit match' : 'Edit session'} parents={[{ label: 'Sessions', href: '/coach/sessions/list' }]} />
     </div>
   )
 
   if (status !== 'ready' || !session) {
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5">
           {status === 'failed' ? (
@@ -247,7 +244,7 @@ export default function CoachSessionEdit() {
           ) : status === 'missing' ? (
             <p role="status" className="text-[13px] text-ink-2">This session isn't available. It may have been deleted.</p>
           ) : (
-            <p role="status" className="text-[13px] text-ink-3">Loading the session…</p>
+            <LoadingSkeleton label="Loading the session…" lines={4} rows={2} />
           )}
         </div>
       </MobileShell>
@@ -257,7 +254,7 @@ export default function CoachSessionEdit() {
   if (isMatch) {
     // TRAK-185 part 1: a logged match is corrected here (score, goals, assists, cards).
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5 pb-24">
           <MatchEditor sessionId={session.id} title={session.title} date={session.session_date} />
@@ -267,7 +264,7 @@ export default function CoachSessionEdit() {
   }
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {header}
       <div className="pt-5 pb-32 space-y-5">
         {isTraining ? (
@@ -330,7 +327,7 @@ export default function CoachSessionEdit() {
         {/* TRAK-157: the same Arc picker as the logs; a day after today isn't offered. */}
         <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
           <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-            maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+            maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Select a date"
             format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
         </div>
 
@@ -342,7 +339,7 @@ export default function CoachSessionEdit() {
           {shown.length === 0 ? (
             <p role="status" className="text-[12px] text-ink-3 py-2">No players can be recorded yet.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
               {shown.map(r => {
                 const on = present.has(r.id)
                 const fixed = !r.ready || locked(r)
@@ -381,7 +378,7 @@ export default function CoachSessionEdit() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
+      <div className="trak-page-bar fixed bottom-0 -translate-x-1/2 w-full px-5 pb-5 pt-3"
         style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {futureDate && (
           <p role="alert" className="text-[11px] text-center text-warning mb-2">
@@ -398,6 +395,9 @@ export default function CoachSessionEdit() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

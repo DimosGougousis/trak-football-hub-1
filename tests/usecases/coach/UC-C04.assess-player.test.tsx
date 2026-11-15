@@ -1,13 +1,16 @@
+// @story J5
 import { it, expect } from 'vitest'
 import { setSlider, sliderValue, sliderDisabled } from '../../support/slider'
 import { assessStep, nextButton, saveAssessment } from '../../support/assess-steps'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { pickOption } from '@/test/arc-select'
 import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
 import { signInAs } from '../../support/session'
 import { server } from '../../msw/server'
-import { table, insertInto } from '../../msw/supabase'
+import { table, insertInto, rpc, SUPABASE_URL } from '../../msw/supabase'
+import { http, HttpResponse } from 'msw'
 
 const COACH = { id: 'coach-1' }
 const SQUAD = [
@@ -41,15 +44,13 @@ function signedInCoachWithSquad() {
  * select, so anchor off it with `.closest('select')` instead of guessing at
  * an index or an accessible name that doesn't exist.
  */
-async function findPlayerSelect() {
-  const option = await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
-  return option.closest('select') as HTMLSelectElement
+async function pickPlayer() {
+  await pickOption('Player', 'Nikos Papadopoulos')
 }
 
 // UC-C04 v2 (TRAK-68): the assessment belongs to a past session.
-async function chooseSession(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Session' }), 'session-1')
+async function chooseSession() {
+  await pickOption('Session', /vs Synthetic FC/)
 }
 
 useCase('UC-C04', () => {
@@ -75,9 +76,8 @@ useCase('UC-C04', () => {
     // (initially empty) <select> exists. Wait for the real option to render
     // before selecting it, otherwise this selects against a placeholder-only
     // combobox and fails with "Value not found in options".
-    const playerSelect = await findPlayerSelect()
-    await user.selectOptions(playerSelect, 'squad-1')
-    await chooseSession(user)
+    await pickPlayer()
+    await chooseSession()
 
     // All six sliders default to 5 — an implementation that hardcoded 5 into
     // every column, or wired all six sliders to one shared value, would pass
@@ -127,8 +127,8 @@ useCase('UC-C04', () => {
     server.use(table('coach_assessments', []))
     renderApp('/coach/assess')
     const user = userEvent.setup()
-    await user.selectOptions(await findPlayerSelect(), 'squad-1')
-    await chooseSession(user)
+    await pickPlayer()
+    await chooseSession()
     await assessStep('Ratings')
 
     // All six sliders default to 5, so avg = 5. scoreToBand(5) in
@@ -168,7 +168,7 @@ useCase('UC-C04', () => {
     // disabled state is checked while a player genuinely could be chosen but
     // has not been.
     // TRAK-182: the first step's Next is the way to the save; it stays shut.
-    await findPlayerSelect()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Player' })).toBeEnabled())
     const submit = nextButton()
     expect(submit).toBeDisabled()
 
@@ -180,11 +180,56 @@ useCase('UC-C04', () => {
     expect(inserted).toHaveLength(0)
 
     // A player alone is not enough: the session is required too (v2).
-    await user.selectOptions(await findPlayerSelect(), 'squad-1')
-    await screen.findByRole('option', { name: /vs Synthetic FC/ })
+    await pickPlayer()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
     expect(nextButton()).toBeDisabled()
     await user.click(nextButton())
     expect(inserted).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /^(Save|Publish)$/ })).toBeNull()
   }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
+
+  // v3 (TRAK-364): where the season plan is on and the squad's plan is shared, the due evaluation publishes all six
+  // scores for each consented player, from their latest scores, with no session (the function writes session_id NULL;
+  // supabase/tests/season_evaluations.sql proves the rows).
+  it('publishes the six scores per consented player, from their latest, with no session, in an evaluation', async () => {
+    signedInCoachWithSquad()
+    // Its own coach: the app's query cache outlives a test, and the earlier ones' squad has no age group.
+    const coach = { id: 'coach-uc-c04-evaluation' }
+    signInAs(coach)
+    const DAY = 86_400_000
+    const day = (n: number) => new Date(Date.now() + n * DAY).toISOString().slice(0, 10)
+    const published: Record<string, unknown>[] = []
+    server.use(
+      table('profiles', [{ id: 'p-eval', user_id: coach.id, role: 'coach', full_name: 'Coach Vasilis', invite_code: 'ABCD' }]),
+      table('squad_players', [{ ...SQUAD[0], coach_user_id: coach.id, age_group: 'U16', status: 'active', linked_player_id: 'child-1', created_at: '2026-08-01T08:00:00Z' }]),
+      table('coach_details', [{ user_id: coach.id, organization_id: 'org-1' }]),
+      table('organizations', [{ id: 'org-1', time_zone: 'Asia/Dubai' }]),
+      rpc('feature_on', ({ p_feature }) => p_feature === 'season_plan'),
+      rpc('coach_squad_player_consent_required', () => false),
+      table('season_plans', [{ id: 'plan-1', squad: 'U16', starts_on: day(-120), ends_on: day(200), shared_at: new Date(Date.now() - 90 * DAY).toISOString(),
+        unshared_parts: [], unshared_players: [], eval_every: '2w', eval_day: 0 }]),
+      table('season_evaluations', []), table('player_objectives', []), rpc('stuck_player_objectives', () => []),
+      table('coach_assessments', [{ squad_player_id: 'squad-1', created_at: '2026-08-20T10:00:00Z', published_at: '2026-08-20T10:00:00Z',
+        work_rate: 8, tactical: 7, attitude: 6, technical: 5, physical: 4, coachability: 3 }]),
+      http.post(`${SUPABASE_URL}/rest/v1/rpc/publish_evaluation_with_objectives`, async ({ request }) => {
+        const args = await request.json() as Record<string, unknown> & { p_players: { squad_player_id: string }[] }
+        published.push(args)
+        return HttpResponse.json({ evaluation_id: 'ev-1', assessments: args.p_players.map(p => ({ squad_player_id: p.squad_player_id, assessment_id: 'as-1' })) })
+      }),
+    )
+    renderApp('/coach/evaluation')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /^Nikos Papadopoulos/ }))
+    // The band follows the six scores here too: 8+7+6+5+4+3 is 5.5, Mixed; Coachability up to 9 makes 6.5, Steady.
+    expect(screen.getByText('From last time: Mixed, 5.5. Move only what changed.')).toBeInTheDocument()
+    setSlider(screen.getAllByRole('slider')[5], 9)
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
+    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Mixed → Steady')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Publish to 1 player' }))
+    await waitFor(() => expect(published).toHaveLength(1))
+    expect(published[0]).toMatchObject({ p_plan_id: 'plan-1', p_players: [{ squad_player_id: 'squad-1',
+      work_rate: 8, tactical: 7, attitude: 6, technical: 5, physical: 4, coachability: 9, note: '' }] })
+    expect(published[0]).not.toHaveProperty('p_players.0.session_id')
+  }, 20_000)
 })

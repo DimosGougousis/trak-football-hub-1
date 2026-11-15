@@ -55,6 +55,23 @@ describe('email templates: nothing a link scanner can use up', () => {
     expect(html).toContain('Sign in with the code below to approve {{ .Data.child_first_name }}. Nothing about')
   })
 
+  it('invite-parent.html says which child invited a parent, and keeps the consent promise (Kostas, 21 Oct)', () => {
+    const html = read('invite-parent.html')
+    expect(html).toContain('{{ else if eq (printf "%v" .Data.invited_by) "player" }}')
+    expect(html).toContain('has invited you to Trak as their parent or guardian.')
+    expect(html).toContain('{{ if .Data.player_first_name }}{{ .Data.player_first_name }}{{ else }}Your child{{ end }}')
+    expect(html.split("The coach can't record anything until you approve it, and you can withdraw at any time.").length - 1).toBe(2)
+    expect(html).toContain('gave Trak this email address.')
+  })
+
+  it('reset-password.html and confirm-signup.html look like the others: one TRAK wordmark, "Trak" in the words (Kostas, 21 Oct)', () => {
+    for (const name of ['reset-password.html', 'confirm-signup.html']) {
+      const html = read(name).replace(/<!--[\s\S]*?-->/g, '')
+      expect(html.match(/TRAK/g)).toHaveLength(1)
+      expect(html).toContain('To keep Trak emails out of spam, add <strong>noreply@trakfootball.com</strong> to your contacts.')
+    }
+  })
+
   it('every template is plain ASCII, so a stripped charset cannot turn symbols into mojibake', () => {
     for (const name of ['invite-parent.html', 'magic-link.html', 'reset-password.html', 'confirm-signup.html']) {
       const nonAscii = [...read(name)].filter(ch => ch.charCodeAt(0) > 0x7e)

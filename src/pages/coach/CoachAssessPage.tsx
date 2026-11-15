@@ -1,11 +1,15 @@
+import { currentLanguage, useTranslation } from '@/lib/i18n'
+import { appearanceWord, bandWord } from '@/lib/band-words'
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { Avatar } from '@/components/arc/avatar/avatar'
+import { PlayerFace } from '@/components/trak/PlayerFace'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { fetchWaitReason, WAIT_TITLE, waitText, type WaitReason } from '@/lib/wait-reason'
+import { fetchWaitReason, waitText, type WaitReason } from '@/lib/wait-reason'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import { format, parseISO } from 'date-fns'
 import { MobileShell, BandPill, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SliderInput } from '@/components/trak/SliderInput'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
@@ -13,13 +17,14 @@ import type { BandType } from '@/lib/types'
 import { deriveCardStats } from '@/lib/cardStats'
 import { localTodayISO } from '@/lib/event-time'
 import { trackEvent, startTimer } from '@/lib/telemetry'
-import { ChevronLeft, ChevronDown } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Stepper } from '@/components/arc/stepper/stepper'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { Select } from '@/components/arc/select/select'
-import { APPEARANCE_LABEL } from '@/lib/types'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /* TRAK-219 (20 Oct live run, S7): a match is offered only to a player its log
    marks present, i.e. played (TRAK-100), so "Didn't play" would contradict the
@@ -32,13 +37,13 @@ type MatchAppearance = typeof MATCH_APPEARANCES[number]
     and the private note get their own steps, so player-visible words never sit
     beside private ones. */
 const STEPS = [
-  { id: 'who', label: 'Player' },
-  { id: 'ratings', label: 'Ratings' },
+  { id: 'who', label: 'nav:player' },
+  { id: 'ratings', label: 'coachAssess:stepRatings' },
   // Imad, 16 Oct: one step for both, still two boxes: the message (white)
   // reaches the player, the note (yellow) only the coach, and stands out.
-  { id: 'message', label: 'Message & note' },
-  { id: 'review', label: 'Review' },
-]
+  { id: 'message', label: 'coachAssess:stepMessage' },
+  { id: 'review', label: 'coachSchedule:stepReview' },
+] as const
 
 /* ---------- helpers ---------- */
 
@@ -58,11 +63,14 @@ export default function CoachAssessPage() {
 }
 
 function CoachAssessmentForm() {
+  const { t } = useTranslation()
+  // TRAK-407: the steps' names in the language showing.
+  const steps = STEPS.map(entry => ({ id: entry.id, label: t(entry.label) }))
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const userId = user?.id
-  // TRAK-176: the picker offers the squad picked on Home (a player already chosen stays).
+  // TRAK-176/305: the picker offers the squad picked at the top, or All (a player already chosen stays).
   const { inSquad } = useCoachSquad(userId)
 
   /* --- data --- */
@@ -301,15 +309,16 @@ function CoachAssessmentForm() {
     () => players.find(p => p.id === playerId),
     [players, playerId],
   )
-  const firstName: string = selectedPlayer?.player_name?.trim().split(/\s+/)[0] || 'the player'
+  const firstName: string = selectedPlayer?.player_name?.trim().split(/\s+/)[0] || t('coachAssess:thePlayer')
   const selectedSession = sessionOptions.find(s => s.id === sessionId)
   // TRAK-182 (live run 3, 16 Oct): a training is a training, so Started or Sub isn't asked.
   const isTraining = selectedSession?.session_type === 'training'
   const savedAppearance = isTraining ? 'training' : appearance
   // TRAK-100: the time it was logged tells two same-day, same-title sessions apart.
   const loggedAt = (s: any) => s.created_at
-    ? ` · logged ${new Date(s.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''
-  const sessionLabel = (s: any) => `${s.title || 'Session'}${s.session_date ? ` · ${s.session_date}` : ''}${loggedAt(s)}`
+    ? t('coachAssess:logged', { time: new Date(s.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }) : ''
+  // TRAK-425: the day reads "Mon 9 Nov" as everywhere else; the logged time still tells two same-day, same-title sessions apart (TRAK-100).
+  const sessionLabel = (s: any) => `${s.title || t('coachAssess:sessionFallback')}${s.session_date ? ` · ${format(parseISO(s.session_date), 'EEE d MMM')}` : ''}${loggedAt(s)}`
   const message = shared.trim()
   // True only while the box holds exactly what the family can already read.
   const liveUnchanged = sharedPublished && publishedBody !== null && message === publishedBody.trim()
@@ -321,6 +330,8 @@ function CoachAssessmentForm() {
      from a raw row-level-security error after. The database stays the gate:
      if this check fails we do not block on a guess. */
   const [consentWait, setConsentWait] = useState(false)
+  // TRAK-425: step 1 is done once a player and session can be assessed; only then may the steps be jumped (ahead as well as back).
+  const playerReady = !!playerId && formReady && !consentWait && (isTraining || !!appearance)
   // TRAK-182 (Imad, 15 Oct): one step per screen; the review step saves.
   const [step, setStep] = useState(0)
   useEffect(() => {
@@ -380,7 +391,8 @@ function CoachAssessmentForm() {
         ...cardStats,
         // TRAK-200: Save draft hides the bands from the family; Publish shows them.
         // An already published row keeps its date; a new one takes the database's now().
-        ...(draft ? { published_at: null } : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
+        // TRAK-248: Save draft never takes back bands the family already sees; that's Unpublish.
+        ...(draft ? (assessmentPublished ? {} : { published_at: null }) : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
       }
 
       const { data: saved, error: saveError } = existingId
@@ -401,15 +413,15 @@ function CoachAssessmentForm() {
           if (!isCurrent()) return
           // If the re-check itself fails we cannot say why; do not claim a reason.
           if (waitingError) {
-            toast.error('Not saved, and the reason could not be confirmed. Check your connection and try again.')
+            toast.error(t('coachAssess:notSavedUnconfirmed'))
           } else if (waiting === true) {
             setConsentWait(true)
-            toast.error(`Not saved. ${selectedPlayer?.player_name ?? 'This player'} needs a parent's approval before they can be assessed.`)
+            toast.error(t('coachAssess:notSavedNeedsParent', { name: selectedPlayer?.player_name ?? t('coachAssess:thisPlayer') }))
           } else {
-            toast.error('Not saved. You no longer have access to this player\'s record. They may have left your squad.')
+            toast.error(t('coachAssess:notSavedNoAccess'))
           }
         } else {
-          toast.error(`Could not save assessment: ${saveError.message}`)
+          toast.error(t('coachAssess:couldNotSave', { error: saveError.message }))
         }
         setSaving(false)
         return
@@ -423,7 +435,7 @@ function CoachAssessmentForm() {
       // the assessment saved. Imad reproduced it on #44.
       if (!saved?.id) {
         console.error('Save matched no assessment row', { existingId })
-        toast.error('Nothing was saved — the assessment may have been removed. Reload and try again.')
+        toast.error(t('coachAssess:nothingSaved'))
         setSaving(false)
         return
       }
@@ -439,10 +451,9 @@ function CoachAssessmentForm() {
         if (!isCurrent()) return
         if (noteError) {
           console.error('Note save failed:', noteError)
-          const alsoMessage = writeShared ? ` and the message to ${firstName}` : ''
+          const alsoMessage = writeShared ? t('coachAssess:alsoMessage', { name: firstName }) : ''
           toast.error(
-            `The scores are saved. Not saved: your private note${alsoMessage} (${noteError.message}). ` +
-              `Your text is still here — try again.`,
+            t('coachAssess:noteNotSaved', { also: alsoMessage, error: noteError.message }),
             { duration: 12000 },
           )
           return
@@ -474,9 +485,9 @@ function CoachAssessmentForm() {
           // so the family can already see them; only a draft keeps everything back.
           toast.error(
             (draft
-              ? `The scores${note.trim() ? ' and private note' : ''} are saved as a draft, so nothing reached the family. `
-              : `The scores${note.trim() ? ' and private note' : ''} are saved, and ${firstName} and their family can see the scores. `) +
-              `Not saved: the message to ${firstName} (${sharedError.message}). Your text is still here — try again.`,
+              ? t('coachAssess:scoresDraft', { note: note.trim() ? t('coachAssess:andPrivateNote') : '' })
+              : t('coachAssess:scoresPublished', { note: note.trim() ? t('coachAssess:andPrivateNote') : '', name: firstName })) +
+              t('coachAssess:messageNotSaved', { name: firstName, error: sharedError.message }),
             { duration: 12000 },
           )
           setExistingId(saved.id)
@@ -488,8 +499,8 @@ function CoachAssessmentForm() {
         setPublishedBody(message && !draft ? message : null)
       }
       toast.success(writeShared && message
-        ? draft ? `Saved. Your message is a draft; ${firstName} can't see it yet.` : `Saved. ${firstName} can read your message now.`
-        : 'Assessment saved.')
+        ? draft ? t('coachAssess:savedDraftMsg', { name: firstName }) : t('coachAssess:savedCanRead', { name: firstName })
+        : t('coachAssess:assessmentSaved'))
       trackEvent('assessment_submitted', {
         mode: 'full',
         players: 1,
@@ -505,7 +516,7 @@ function CoachAssessmentForm() {
     } catch (error) {
       if (isCurrent()) {
         console.error('Assessment save interrupted:', error)
-        toast.error('Could not finish saving. Your text is still here — please try again.')
+        toast.error(t('coachAssess:couldNotFinish'))
       }
     } finally {
       if (saveRequest.current === controller) saveRequest.current = null
@@ -533,23 +544,23 @@ function CoachAssessmentForm() {
       if (!isCurrent()) return
       if (error) {
         console.error('Unpublish failed:', error)
-        toast.error(`Not unpublished (${error.message}). ${firstName} can still see the message. Try again.`, { duration: 12000 })
+        toast.error(t('coachAssess:notUnpublished', { error: error.message, name: firstName }), { duration: 12000 })
         return
       }
       // No row back means nothing changed: the message may have been removed,
       // or this coach no longer owns it. Never report a retraction that did
       // not happen.
       if (!data) {
-        toast.error(`Not unpublished: the message could not be found. Reload to see what ${firstName} can read.`, { duration: 12000 })
+        toast.error(t('coachAssess:notUnpublishedMissing', { name: firstName }), { duration: 12000 })
         return
       }
       setSharedPublished(false)
       setPublishedBody(null)
-      toast.success(`Unpublished. ${firstName} can no longer see the message.`)
+      toast.success(t('coachAssess:unpublished', { name: firstName }))
     } catch (error) {
       if (isCurrent()) {
         console.error('Unpublish interrupted:', error)
-        toast.error(`Could not confirm the message was unpublished. ${firstName} may still see it. Try again.`)
+        toast.error(t('coachAssess:couldNotConfirmUnpublish', { name: firstName }))
       }
     } finally {
       if (saveRequest.current === controller) saveRequest.current = null
@@ -558,43 +569,31 @@ function CoachAssessmentForm() {
   }
 
   /* ---- render ---- */
+  // TRAK-425: the page width every coach page uses (a laptop filled, not a 640 px column); a phone is unchanged.
   return (
-    <div className="flex flex-col mx-auto max-w-[430px] bg-ground" style={{ height: '100dvh' }}>
+    <div className="flex flex-col mx-auto w-full trak-wide bg-ground h-dvh">
       {/* ---- header: always visible, never scrolls ---- */}
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
-        <button
-          onClick={() => {
-            // TRAK-179: back to the screen the coach came from (Squad, the
-            // player, their history, Home). Opened directly, with nothing
-            // before it in Trak, fall back to the player or Home.
-            if (location.key !== 'default') { navigate(-1); return }
-            const fromPlayer = (location.state as any)?.preselectedPlayerId
-            navigate(fromPlayer ? `/coach/player/${fromPlayer}` : '/coach/home')
-          }}
-          aria-label="Back"
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line"
-        >
-          <ChevronLeft size={16} className="text-ink-2" />
-        </button>
-        <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px] pointer-events-none">
-          Assessment
-        </h1>
+        {/* TRAK-334: the trail, in place of TRAK-179's Back: the screens the coach came through (Squad, the player,
+            Home); opened from a link, Home. */}
+        <CoachTrail current={t('coachAssess:assessment')} />
+        <h1 className="sr-only">{t('coachAssess:assessment')}</h1>
       </div>
 
       {/* ---- scrollable content ---- */}
       <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-5 pt-4">
-        <div className="arc">
-          <Stepper label="Assessment steps" steps={STEPS} current={step} onStepSelect={setStep} />
+        <div className="arc pb-2">
+          <Stepper label={t('coachAssess:assessmentSteps')} steps={steps} current={step} onStepSelect={setStep} jumpAhead={playerReady} />
         </div>
 
         {/* Shown on every step: a refused save (consent withdrawn mid-edit) says why where the coach is. */}
         {selectedPlayer && consentWait ? (
           <div role="status" className="p-3 rounded-[12px] border border-warning/[0.25] bg-warning/[0.06]">
-            <p className="text-[13px] font-medium text-ink">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
+            <p className="text-[13px] font-medium text-ink">{t(`coachAssess:waitTitle_${waitReason ?? 'unknown'}` as 'coachAssess:waitTitle_unknown')}</p>
             <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
               {waitText(waitReason, selectedPlayer.player_name)}{' '}
-              The form stays locked until then, and nothing about them is recorded.
+              {t('coachAssess:formLocked')}
             </p>
           </div>
         ) : null}
@@ -602,99 +601,72 @@ function CoachAssessmentForm() {
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
           <div className="flex items-center gap-3 p-3 rounded-[12px] bg-surface border border-line">
-            <Avatar name={selectedPlayer.player_name} size="md" className="arc" aria-hidden />
-            <div className="min-w-0">
+            <PlayerFace name={selectedPlayer.player_name} size="md" className="arc" aria-hidden />
+            <div className="min-w-0 flex-1">
               <p className="text-[15px] font-medium text-ink truncate">
                 {selectedPlayer.player_name}
               </p>
               <p className="text-[11px] text-ink-3 truncate">
-                {selectedPlayer.position?.toUpperCase() ?? 'Player'}
+                {selectedPlayer.position?.toUpperCase() ?? t('nav:player')}
                 {selectedPlayer.club ? ` \u00B7 ${selectedPlayer.club}` : ''}
                 {selectedPlayer.age_group ? ` ${selectedPlayer.age_group}` : ''}
                 {selectedPlayer.squad_number ? ` \u00B7 #${selectedPlayer.squad_number}` : ''}
               </p>
             </div>
+            {/* TRAK-425: a picked player shows once, here; Change brings the list back. */}
+            <div className="arc shrink-0">
+              <Button size="sm" variant="secondary" disabled={saving || choicesLoading} onClick={() => setPlayerId('')}>{t('coachAssess:changePlayerButton')}</Button>
+            </div>
           </div>
         ) : null}
 
 
-        {/* player selector dropdown */}
-        <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
-            PLAYER
-          </span>
-          <div className="relative">
-            <select
-              aria-label="Player"
-              disabled={saving || choicesLoading}
-              value={playerId}
-              onChange={e => setPlayerId(e.target.value)}
-              className="w-full px-4 py-3 pr-10 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none appearance-none"
-            >
-              <option value="">{selectedPlayer ? 'Change player...' : 'Select player...'}</option>
-              {players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.player_name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
-          </div>
-        </div>
+        {/* player selector dropdown: only until a player is picked (TRAK-425) */}
+        {!selectedPlayer && <div className="arc">
+          <Select label={t('nav:player')} placeholder={t('coachAssess:selectPlayer')} disabled={saving || choicesLoading} value={playerId} onValueChange={setPlayerId}
+            options={players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => ({ value: p.id, label: p.player_name }))} />
+        </div>}
 
         {/* ---- 3. session selector (required, TRAK-68) ----
             Outside the locked fieldset: the form stays locked until a session
             is chosen, so the coach must be able to choose one. */}
         <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
-            SESSION
-          </span>
           {openState === 'missing' || openState === 'error' ? (
             <p role="alert" className="text-[12px] text-warning">
               {openState === 'missing'
-                ? "We couldn't open that assessment. It may have been removed, or it isn't one of yours."
-                : "We couldn't open that assessment. Check your connection and try again."}
+                ? t('coachAssess:cantOpenMissing')
+                : t('coachAssess:cantOpenError')}
             </p>
           ) : null}
           {!choicesLoading && !choicesError && sessions.length === 0 && !(opened?.session && opened.playerId === playerId) ? (
             <p role="status" className="text-[12px] text-ink-2">
-              No past sessions yet. Log the session first, then assess it.{' '}
-              <Link to="/coach/sessions" className="underline text-brand">Log a session</Link>
+              {t('coachAssess:noPastSessions')}{' '}
+              <Link to="/coach/sessions" className="underline text-brand">{t('coachAssess:logASession')}</Link>
             </p>
           ) : playerId && attendanceError ? (
             <div role="alert" className="text-[12px] text-warning">
-              Couldn't load which sessions {firstName} was at.
-              <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">Retry</button>
+              {t('coachAssess:couldntLoadSessions', { name: firstName })}
+              <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">{t('common:retry')}</button>
             </div>
           ) : !choicesLoading && !choicesError && attendanceReady && sessionOptions.length === 0 ? (
             <p role="status" className="text-[12px] text-ink-2">
-              {firstName} isn't marked present at any past session. Log the session with them present, then assess it.{' '}
-              <Link to="/coach/sessions" className="underline text-brand">Log a session</Link>
+              {t('coachAssess:notPresentAny', { name: firstName })}{' '}
+              <Link to="/coach/sessions" className="underline text-brand">{t('coachAssess:logASession')}</Link>
             </p>
           ) : (
-            <div className="relative">
-              <select
-                aria-label="Session"
-                disabled={saving || choicesLoading || !playerId}
-                value={sessionId}
-                onChange={e => setSessionId(e.target.value)}
-                className="w-full px-4 py-3 pr-10 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none appearance-none"
-              >
-                <option value="" disabled>{playerId ? 'Select session...' : 'Choose a player first'}</option>
-                {sessionOptions.map(s => (
-                  <option key={s.id} value={s.id}>{sessionLabel(s)}</option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
+            <div className="arc">
+              <Select label={t('coachAssess:sessionFallback')} placeholder={playerId ? t('coachAssess:selectSession') : t('coachAssess:choosePlayerFirst')}
+                disabled={saving || choicesLoading || !playerId} value={sessionId} onValueChange={setSessionId}
+                options={sessionOptions.map(s => ({ value: s.id, label: sessionLabel(s) }))} />
             </div>
           )}
           {existingId && formReady && selectedSession ? (
             <p role="status" className="text-[11px] text-ink-2">
-              Editing your assessment for {sessionLabel(selectedSession)}
+              {t('coachAssess:editingFor', { session: sessionLabel(selectedSession) })}
             </p>
           ) : existingId && formReady && openedRowId && opened ? (
             <p role="status" className="text-[11px] text-ink-2">
-              Editing your assessment from {new Date(opened.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} (no session recorded)
+              {t('coachAssess:editingFrom', { day: new Date(opened.createdAt).toLocaleDateString(currentLanguage() === 'en' ? 'en-GB' : currentLanguage(), { day: 'numeric', month: 'short' }) })}
             </p>
           ) : null}
         </div>
@@ -702,10 +674,10 @@ function CoachAssessmentForm() {
         {((playerId && (sessionId || openedRowId) && !formReady) || choicesError) && (
           (choicesError || (loadState.scope === scope && loadState.status === 'error')) ? (
             <div role="alert" className="text-sm text-warning">
-              Could not load this assessment. Retry before editing or saving.
-              <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">Retry</button>
+              {t('coachAssess:couldNotLoad')}
+              <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">{t('common:retry')}</button>
             </div>
-          ) : <p role="status" className="text-sm text-ink-2">Loading assessment…</p>
+          ) : <LoadingSkeleton label={t('coachAssess:loadingAssessment')} rows={2} />
         )}
         </>}
         {/* J5: a player waiting for a parent cannot be opened. If consent is
@@ -716,26 +688,26 @@ function CoachAssessmentForm() {
         {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started or Sub, for a
             match the log has them playing (TRAK-219). A training isn't asked (TRAK-182). ---- */}
         {!isTraining && <div className="arc">
-          <Select label="Appearance" placeholder="Choose" value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
-            options={MATCH_APPEARANCES.map(value => ({ value, label: APPEARANCE_LABEL[value] }))} />
-          {selectedSession && <p className="mt-2 text-sm text-muted-foreground">The match log has {firstName} as played.</p>}
+          <Select label={t('coachAssess:appearance')} placeholder={t('coachHome:choose')} value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
+            options={MATCH_APPEARANCES.map(value => ({ value, label: appearanceWord(value) }))} />
+          {selectedSession && <p className="mt-2 text-sm text-muted-foreground">{t('coachAssess:logHasPlayed', { name: firstName })}</p>}
         </div>}
 
         </>}
         {step === 1 && <>
-        {/* ---- 5. sliders in dark container ---- */}
-        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
-          <SliderInput label="Work Rate"    value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
-          <SliderInput label="Tactical"     value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
-          <SliderInput label="Attitude"     value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
-          <SliderInput label="Technical"    value={technical}    onChange={setTechnical} disabled={!formReady || saving || consentWait} />
-          <SliderInput label="Physical"     value={physical}     onChange={setPhysical} disabled={!formReady || saving || consentWait} />
-          <SliderInput label="Coachability" value={coachability} onChange={setCoachability} disabled={!formReady || saving || consentWait} />
+        {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
+        <div className="rounded-[14px] bg-surface border border-line p-[14px_16px] space-y-5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-10 tablet:gap-y-5">
+          <SliderInput label={t('coachAssess:sliderWorkRate')} value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
+          <SliderInput label={t('coachHome:attributeTactical')} value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label={t('coachHome:attributeAttitude')} value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
+          <SliderInput label={t('coachHome:attributeTechnical')} value={technical}    onChange={setTechnical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label={t('coachHome:attributePhysical')} value={physical}     onChange={setPhysical} disabled={!formReady || saving || consentWait} />
+          <SliderInput label={t('coachAssess:sliderCoachability')} value={coachability} onChange={setCoachability} disabled={!formReady || saving || consentWait} />
         </div>
 
-        {/* ---- 6. overall band card (amber glow) ---- */}
+        {/* ---- 6. overall band card, in the band's light tint (TRAK-229) ---- */}
         <div
-          className="trak-dark flex flex-col items-center gap-2 py-5 rounded-[14px]"
+          className="flex flex-col items-center gap-2 py-5 rounded-[14px]"
           style={{
             background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
@@ -743,18 +715,18 @@ function CoachAssessmentForm() {
           }}
         >
           <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
-            OVERALL BAND
+            {t('coachAssess:overallBand')}
           </span>
           <span
             className="inline-flex items-center justify-center px-5 rounded-full text-[16px] font-semibold"
             style={{
               height: 36,
-              color: overallCfg.color,
+              color: overallCfg.text,
               background: overallCfg.bg,
               border: `1.5px solid ${overallCfg.border}`,
             }}
           >
-            {overallCfg.word}
+            {bandWord(overallCfg.word)}
           </span>
           <span className="text-[13px] text-ink-2 font-medium">
             {(Math.round(avg * 10) / 10).toFixed(1)}
@@ -772,10 +744,10 @@ function CoachAssessmentForm() {
           <div className="flex justify-between items-center">
             <div>
               <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-2" style={{ fontFamily: 'var(--t-font-mono)' }}>
-                Message to {firstName}
+                {t('coachAssess:messageTo', { name: firstName })}
               </label>
               <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
-                Only {firstName} sees this.
+                {t('coachAssess:onlyNameSees', { name: firstName })}
               </p>
             </div>
             <span className="text-[10px] text-ink-3">{shared.length}/300</span>
@@ -788,7 +760,7 @@ function CoachAssessmentForm() {
             }}
             maxLength={300}
             rows={3}
-            placeholder="e.g. Great week. Keep working on your first touch — try the cone drill before training."
+            placeholder={t('coachAssess:messageExample')}
             // Blue: words the player reads. The private note is yellow and the
             // same size, so the two never look interchangeable (TRAK-72 item 7).
             data-tone="message"
@@ -796,12 +768,12 @@ function CoachAssessmentForm() {
           />
           <p role="status" className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font)' }}>
             {liveUnchanged
-              ? `Published. ${firstName} can read it now.`
+              ? t('coachAssess:statusPublished', { name: firstName })
               : sharedPublished
-                ? `Edited. Publish sends ${firstName} the new version.`
+                ? t('coachAssess:statusEdited', { name: firstName })
                 : message
-                  ? `Not sent yet. Publish sends it to ${firstName}.`
-                  : 'Optional.'}
+                  ? t('coachAssess:statusNotSent', { name: firstName })
+                  : t('coachAssess:optional')}
           </p>
         </div>
 
@@ -813,10 +785,10 @@ function CoachAssessmentForm() {
           <div className="flex justify-between items-center">
             <div>
               <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-warning" style={{ fontFamily: 'var(--t-font-mono)' }}>
-                Private note <span className="text-ink-3">— optional</span>
+                {t('coachAssess:privateNote')} <span className="text-ink-3">{t('coachAssess:optionalDash')}</span>
               </label>
               <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
-                Only you can see this.
+                {t('coachAssess:onlyYouCanSee')}
               </p>
             </div>
             <span className="text-[10px] text-ink-3">{note.length}/300</span>
@@ -829,7 +801,7 @@ function CoachAssessmentForm() {
             }}
             maxLength={300}
             rows={3}
-            placeholder="e.g. First touch under pressure, positioning when defending set pieces"
+            placeholder={t('coachAssess:noteExample')}
             data-tone="private"
             className="w-full px-4 py-3 rounded-[10px] bg-warning/[0.08] border border-warning/40 text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
           />
@@ -840,13 +812,13 @@ function CoachAssessmentForm() {
         {step === 3 && <>
           <dl className="rounded-[14px] border border-line divide-y divide-line text-[13px]">
             {([
-              ['Player', selectedPlayer?.player_name ?? ''],
-              ['Session', selectedSession ? sessionLabel(selectedSession) : opened ? 'No session recorded' : ''],
-              ['Appearance', savedAppearance ? APPEARANCE_LABEL[savedAppearance] : ''],
-              ['Overall', `${overallCfg.word} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
-              ['Ratings', `Work rate ${workRate} · Tactical ${tactical} · Attitude ${attitude} · Technical ${technical} · Physical ${physical} · Coachability ${coachability}`],
-              [`Message to ${firstName}`, message || 'None'],
-              ['Private note', <>{note.trim() || 'None'}<span className="block mt-0.5 text-[11px] text-ink-3">Only you see this.</span></>],
+              [t('nav:player'), selectedPlayer?.player_name ?? ''],
+              [t('coachAssess:sessionFallback'), selectedSession ? sessionLabel(selectedSession) : opened ? t('coachAssess:noSessionRecorded') : ''],
+              [t('coachAssess:appearance'), savedAppearance ? appearanceWord(savedAppearance) : ''],
+              [t('coachAssess:overall'), `${bandWord(overallCfg.word)} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
+              [t('coachAssess:stepRatings'), t('coachAssess:ratingsLine', { workRate, tactical, attitude, technical, physical, coachability })],
+              [t('coachAssess:messageTo', { name: firstName }), message || t('coachSchedule:none')],
+              [t('coachAssess:privateNote'), <>{note.trim() || t('coachSchedule:none')}<span className="block mt-0.5 text-[11px] text-ink-3">{t('coachSquad:onlyYou')}</span></>],
             ] as const).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
                 <dt className="w-28 shrink-0 text-ink-3">{term}</dt>
@@ -867,40 +839,43 @@ function CoachAssessmentForm() {
             disabled={saving || !formReady}
             className="w-full py-2.5 rounded-[10px] text-[11px] font-semibold text-ink-2 border border-line disabled:opacity-30"
           >
-            Unpublish message
+            {t('coachAssess:unpublishMessage')}
           </button>
         ) : null}
       </div>
 
-      {/* Above the fixed NavBar (about 66px tall), so Back and Next are never under it. */}
-      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[66px] shrink-0 border-t border-line">
+      {/* TRAK-425: on a phone this page has its own Back and Next bar and the glass tab bar steps aside (BARLESS), as on Add
+          session: one bar at the bottom, not two stacked. It clears the home indicator's inset. */}
+      <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[env(safe-area-inset-bottom)] shrink-0 border-t border-line">
         {step === STEPS.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
-          <Button size="lg" variant="secondary" aria-label={`Back to ${STEPS[step - 1].label}`} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
+          <Button size="lg" variant="secondary" aria-label={t('coachSchedule:backTo', { step: steps[step - 1].label })} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
           {/* Save draft only for a message the player hasn't got: on a published
               one it would take it back (Kostas, #313). That stays Unpublish's job. */}
           {message && !sharedPublished ? <>
             <Button size="lg" variant="secondary" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave(true)}>Save draft</Button>
+              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave(true)}>{t('coachSchedule:saveDraft')}</Button>
             <Button size="lg" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>Publish</Button>
+              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>{t('coachHome:publish')}</Button>
           </> : (
             <Button size="lg" className="flex-1" loading={saving}
               disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>
-              {message && !liveUnchanged ? 'Publish' : 'Save'}
+              {message && !liveUnchanged ? t('coachHome:publish') : t('common:save')}
             </Button>
           )}
         </> : <>
           {/* Named for its step: the header's Back leaves the screen (TRAK-179). */}
-          {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={`Back to ${STEPS[step - 1].label}`}
-            onClick={() => setStep(step - 1)}>Back</Button>}
+          {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={t('coachSchedule:backTo', { step: steps[step - 1].label })}
+            onClick={() => setStep(step - 1)}>{t('common:back')}</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && (!playerId || !formReady || consentWait || (!isTraining && !appearance))}
-            onClick={() => setStep(step + 1)}>Next</Button>
+          <Button size="lg" className="flex-1" disabled={step === 0 && !playerReady}
+            onClick={() => setStep(step + 1)}>{t('coachSchedule:next')}</Button>
         </>}
       </div>
 
       {/* ---- 10. bottom nav ---- */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
       <NavBar role="coach" activeTab="/coach/assess" onNavigate={p => navigate(p)} />
     </div>
   )

@@ -81,7 +81,7 @@ describe('release workflow regression gates', () => {
     expect(permits('supabase', pr)).toBe(false)
     for (const tests of ['failure', 'cancelled', 'skipped']) expect(permits('deploy', { ...pr, tests })).toBe(false)
   })
-  it('runs the full gate only for final PRs, never branch pushes or drafts', () => {
+  it('runs the gate only for final PRs, never branch pushes or drafts', () => {
     expect(workflow.on.push.branches).toEqual(['main'])
     expect(workflow.on.pull_request.types).toEqual(expect.arrayContaining(['ready_for_review', 'synchronize', 'converted_to_draft']))
     const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
@@ -90,6 +90,54 @@ describe('release workflow regression gates', () => {
     expect(permits('deploy', { ...pr, draft: true })).toBe(false)
     expect(permits('test', { ref: 'refs/heads/shared/task' })).toBe(false)
     expect(workflow.concurrency['cancel-in-progress']).toBe("${{ github.event_name == 'pull_request' }}")
-    expect(workflow.jobs.test.steps.find((step: { name: string }) => step.name === 'Install dependencies').run).toBe('npm ci --legacy-peer-deps')
+    for (const job of PARTS) {
+      expect(workflow.jobs[job].steps.find((step: { name: string }) => step.name === 'Install dependencies').run).toBe('npm ci --legacy-peer-deps')
+    }
+  })
+})
+
+// The gate is one part, `build`, then `test` gathers it (15 Nov 2026). Branch protection, the merge proof and
+// Deploy all still look for the one job named `test`. archive/ci-full-gate-2026-11-15 holds the four-part gate.
+const PARTS = ['build']
+type Step = { name?: string; run?: string; uses?: string; env?: Record<string, string> }
+const steps = (job: string): Step[] => workflow.jobs[job].steps
+describe('the merge gate builds and checks the bundle, nothing else', () => {
+  it('runs every part only for a final PR', () => {
+    const pr = { event: 'pull_request', ref: 'refs/pull/25/merge', backend: 'skipped' }
+    for (const job of PARTS) {
+      expect(permits(job, pr)).toBe(true)
+      expect(permits(job, { ...pr, draft: true })).toBe(false)
+      expect(permits(job)).toBe(false)
+    }
+  })
+
+  it('builds, then reads the built bundle for secrets, and runs no regression suite', () => {
+    const ran = steps('build').filter(step => step.run).map(step => step.run)
+    expect(ran).toEqual(['npm ci --legacy-peer-deps', 'npm run build', 'npm run check:bundle'])
+    expect(Object.keys(workflow.jobs)).toEqual(['build', 'test', 'tested-main', 'vercel-credentials', 'supabase', 'deploy'])
+  })
+
+  // GitHub counts a SKIPPED required check as passed. Without always(), a failed build would skip `test` and let
+  // a broken PR merge. So `test` always runs for a final PR, and fails unless the build succeeded.
+  it.each([
+    ['success', 0],
+    ['failure', 1],
+    ['cancelled', 1],
+    ['skipped', 1],
+    ['', 1],
+  ])('test is red unless the build passed: %s', (BUILD, status) => {
+    expect(workflow.jobs.test.needs).toEqual(PARTS)
+    expect(workflow.jobs.test.if).toMatch(/^always\(\) && /)
+    const gate = steps('test')[0]
+    expect(gate.env).toEqual(Object.fromEntries(PARTS.map(job => [job.toUpperCase(), `\${{ needs.${job}.result }}`])))
+    const result = spawnSync('/bin/bash', ['--noprofile', '--norc', '-e', '-c', gate.run!], { encoding: 'utf8', env: { PATH: '', BUILD } })
+    expect(result.status).toBe(status)
+  })
+
+  it('records the merge proof last, on a checkout no test or build has touched', () => {
+    const names = steps('test').map(step => step.name ?? step.uses)
+    expect(names.indexOf('Record tested contents')).toBeGreaterThan(0)
+    expect(steps('test').filter(step => step.run).map(step => step.run)).toHaveLength(2)
+    expect(steps('test').at(-1)!.uses).toMatch(/^actions\/upload-artifact@/)
   })
 })

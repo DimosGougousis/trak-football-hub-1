@@ -1,19 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check, Pencil } from 'lucide-react'
+import { Ban, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
-import { askToEmailFamilies } from '@/lib/event-emails'
-import { Avatar } from '@/components/arc/avatar/avatar'
+import { publishEvent } from '@/lib/event-publish'
+import { FaceDrawing, PlayerFace } from '@/components/trak/PlayerFace'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
 import { TakeRegister } from '@/components/coach/TakeRegister'
-import { clashMessage, startedLocked, type EventRow } from '@/lib/coach-events'
+import { startedLocked, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
+import { useOldLogRetired } from '@/components/coach/old-log'
 import type { StripEvent } from '@/components/trak/WeekStrip'
 import { updatedNote } from '@/lib/alert-read-state'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { i18n, useTranslation } from '@/lib/i18n'
+import { EditIcon } from '@/components/trak/IconAction'
+import { absenceReasonWord } from '@/lib/absence-reasons'
 
 /* TRAK-182: the coach's part of the event sheet. Publish (a draft) or
    Published; after the event, Take register (J8.15). Share (the
@@ -40,7 +45,7 @@ async function fetchEvent(id: string, signal: AbortSignal): Promise<{ row: Event
     supabase.from('coach_sessions').select('id').eq('event_id', id).abortSignal(signal).maybeSingle(),
   ])
   if (event.error) throw event.error
-  if (!event.data) throw new Error('This event is no longer on your schedule.')
+  if (!event.data) throw new Error(i18n.t('coachSchedule:eventGone'))
   // A failed read is an error, not "no register yet" (Kostas, #310): guessing
   // would offer Take register on an event whose register exists.
   if (session.error) throw session.error
@@ -61,7 +66,7 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   if (attendance.error) throw attendance.error
   // TRAK-176: an event for one squad lists that squad only; null is the whole roster.
   const rows = (roster.data ?? []).filter(p => eventSquad == null || p.age_group?.trim() === eventSquad)
-  const reasons = new Map((absences.data ?? []).map(a => [a.squad_player_id, a.reason as string | null]))
+  const reasons = new Map((absences.data ?? []).map(a => [a.squad_player_id, absenceReasonWord(a.reason as string | null)]))
   const current = rows.filter(p => p.status !== 'coach_departed')
   // As the register (TakeRegister): only a child whose consent is active counts
   // (Kostas, #310). A failed check counts as not confirmed.
@@ -69,8 +74,8 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   const required = await Promise.all(current.map(p =>
     supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
       .abortSignal(signal).then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))))
-  const players = current.filter((_, i) => required[i] === false).map(p => ({ id: p.id, name: p.player_name || 'Player' }))
-  const waiting = current.filter((_, i) => required[i] !== false).map(p => ({ id: p.id, name: p.player_name || 'Player' }))
+  const players = current.filter((_, i) => required[i] === false).map(p => ({ id: p.id, name: p.player_name || i18n.t('nav:player') }))
+  const waiting = current.filter((_, i) => required[i] !== false).map(p => ({ id: p.id, name: p.player_name || i18n.t('nav:player') }))
   const present = attendance.data
     ? new Set((attendance.data as { squad_player_id: string; status: string }[]).filter(a => a.status === 'present').map(a => a.squad_player_id))
     : null
@@ -88,11 +93,12 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
 /** Avatars only (Imad, 16 Oct); tapping them, "+N" included, lists the full names. */
 export function People({ heading, people }: { heading: string; people: Person[] }) {
   const [open, setOpen] = useState(false)
+  const { t } = useTranslation()
   return <>
     {people.length > 0 && <>
-      <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} names: ${heading}`}
+      <button type="button" aria-expanded={open} aria-label={t(open ? 'coachSchedule:hideNames' : 'coachSchedule:showNames', { heading })}
         onClick={() => setOpen(o => !o)} className="arc rounded-full focus-visible:ring-2 focus-visible:ring-primary">
-        <AvatarGroup members={people.map(p => ({ name: p.name }))} max={6} size="sm" label={heading} />
+        <AvatarGroup members={people.map(p => ({ name: p.name, fallback: <FaceDrawing name={p.name} /> }))} max={6} size="sm" label={heading} />
       </button>
       {open && (
         <ul aria-label={heading} className="mt-3 space-y-2">
@@ -105,6 +111,8 @@ export function People({ heading, people }: { heading: string; people: Person[] 
 
 export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEvent; coachId: string; onChanged: () => void }) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const { retired: oldLogRetired } = useOldLogRetired()
   const client = useQueryClient()
   const [registering, setRegistering] = useState(false)
   const details = useQuery({ queryKey: ['coach', 'event', event.id], queryFn: ({ signal }) => fetchEvent(event.id, signal) })
@@ -115,13 +123,9 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
     enabled: details.isSuccess,
   })
   const publish = useMutation({
-    mutationFn: async (row: EventRow) => {
-      const { data, error } = await supabase.from('coach_calendar_events').update({ published: true }).eq('id', row.id).select('id')
-      if (error || !data?.length) throw new Error(clashMessage(error) ?? "Couldn't publish. Try again.")
-    },
+    mutationFn: (row: EventRow) => publishEvent(row.id),
     onSuccess: () => {
-      askToEmailFamilies() // TRAK-135: publishing emails families too
-      toast.success('Published to the squad')
+      toast.success(t('coachHome:publishedToSquad'))
       void client.invalidateQueries({ queryKey: ['coach', 'event', event.id] })
       onChanged()
     },
@@ -146,14 +150,15 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
         <div className="flex flex-wrap gap-2">
           {cancelled ? null : canRegister ? (
             <button type="button" onClick={() => setRegistering(true)} className={`${button} bg-brand text-on-brand`}>
-              {sessionId ? 'Edit register' : 'Take register'}
+              {/* TRAK-455: no "Edit" word; a taken register opens again under its own name. */}
+              {sessionId ? t('coachSchedule:register') : t('coachHome:takeRegister')}
             </button>
           ) : row?.published ? (
-            <button type="button" disabled className={`${button} bg-raised text-ink`}><Check size={16} aria-hidden="true" />Published</button>
+            <button type="button" disabled className={`${button} bg-raised text-ink`}><Check size={16} aria-hidden="true" />{t('coachHome:notePublished')}</button>
           ) : (
             <button type="button" disabled={!row || publish.isPending} className={`${button} bg-brand text-on-brand`}
               onClick={() => row && (row.series_id ? navigate(`/coach/schedule?publish=${row.id}`) : publish.mutate(row))}>
-              {publish.isPending ? 'Publishing…' : 'Publish'}
+              {publish.isPending ? t('coachHome:publishing') : t('coachHome:publish')}
             </button>
           )}
           {/* A draft has nothing to share (J8.16); a cancellation is shared with its reason.
@@ -161,26 +166,23 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           {row?.published && !hasStarted(row) && squad.data && (
             // TRAK-168 (Imad, 18 Oct): the phone's share sheet, so the coach picks Viber or WhatsApp.
             <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })} className={quiet}>
-              <ShareIcon size={18} />Share
+              <ShareIcon size={18} />{t('coachSchedule:share')}
             </ShareEventButton>
           )}
           {/* TRAK-185: a logged match is corrected from its event (score, goals, assists, cards). */}
-          {!cancelled && row?.event_type === 'match' && sessionId && (
-            <button type="button" onClick={() => navigate(`/coach/sessions/${sessionId}`)} className={quiet}>
-              <Pencil size={16} aria-hidden="true" />Edit match
-            </button>
+          {/* TRAK-426: where the old log has retired, a match is corrected in its evaluation, not here. TRAK-455: a pencil. */}
+          {!cancelled && row?.event_type === 'match' && sessionId && !oldLogRetired && (
+            <EditIcon label={t('coachSchedule:editMatch')} onClick={() => navigate(`/coach/sessions/${sessionId}`)} />
           )}
           {/* TRAK-230 (Kostas, 21 Oct): once it has started, what families were told is fixed. */}
           {!cancelled && row && startedLocked(row) ? (
-            <p className="basis-full text-[13px] text-ink-2">It has started, so its details are fixed.</p>
+            <p className="basis-full text-[13px] text-ink-2">{t('coachSchedule:startedDetailsFixed')}</p>
           ) : !cancelled && <>
-            <button type="button" onClick={() => navigate(`/coach/schedule?edit=${event.id}`)} className={quiet}>
-              <Pencil size={16} aria-hidden="true" />Edit
-            </button>
+            <EditIcon label={t('coachSchedule:editEvent')} onClick={() => navigate(`/coach/schedule?edit=${event.id}`)} />
             {/* A published event is cancelled, never deleted; a draft is edited or deleted in Schedule. */}
             {row?.published && !hasStarted(row) && (
               <button type="button" onClick={() => navigate(`/coach/schedule?cancel=${event.id}`)} className={quiet}>
-                <Ban size={16} aria-hidden="true" />Cancel event
+                <Ban size={16} aria-hidden="true" />{t('coachSchedule:cancelEvent')}
               </button>
             )}
           </>}
@@ -198,26 +200,26 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
         <section aria-labelledby={`attending-${event.id}`}>
           {/* The heading carries the count; no separate "Coming" line (Imad, 16 Oct). */}
           <h3 id={`attending-${event.id}`} className={heading}>
-            {past ? 'Attended' : 'Attending'}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
+            {past ? t('coachSchedule:attended') : t('coachSchedule:attending')}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
           </h3>
           {!row.published ? (
-            <p className="text-[13px] text-ink-2">Families see this once you publish.</p>
+            <p className="text-[13px] text-ink-2">{t('coachSchedule:familiesSeeOncePublished')}</p>
           ) : squad.isError ? (
-            <p role="alert" className="text-[13px] text-ink-2">Couldn't load who's coming.{' '}
-              <button type="button" className="underline" onClick={() => { void squad.refetch() }}>Retry</button></p>
-          ) : !squad.data ? <p role="status" className="text-[13px] text-ink-2">Loading…</p>
+            <p role="alert" className="text-[13px] text-ink-2">{t('coachSchedule:couldntLoadComing')}{' '}
+              <button type="button" className="underline" onClick={() => { void squad.refetch() }}>{t('common:retry')}</button></p>
+          ) : !squad.data ? <LoadingSkeleton label={t('common:loading')} lines={1} avatar rows={3} />
           : squad.data.coming.length + squad.data.away.length + squad.data.waiting.length === 0 ? (
-            <p className="text-[13px] text-ink-2">No players in your squad yet.</p>
+            <p className="text-[13px] text-ink-2">{t('coachSchedule:noPlayersYet')}</p>
           ) : squad.data.came ? (
-            <People heading="Attended" people={squad.data.came} />
+            <People heading={t('coachSchedule:attended')} people={squad.data.came} />
           ) : <>
-            <People heading={past ? 'Attended' : 'Attending'} people={squad.data.coming} />
+            <People heading={past ? t('coachSchedule:attended') : t('coachSchedule:attending')} people={squad.data.coming} />
             {squad.data.away.length > 0 && <>
-              <h3 className={`${heading} mt-5`}>Can't make it · {squad.data.away.length}</h3>
+              <h3 className={`${heading} mt-5`}>{t('coachSchedule:cantMakeItCount', { count: squad.data.away.length })}</h3>
               <ul className="space-y-2">
                 {squad.data.away.map(p => (
                   <li key={p.id} className="flex items-center gap-3">
-                    <Avatar name={p.name} size="sm" className="arc" aria-hidden />
+                    <PlayerFace name={p.name} size="sm" className="arc" aria-hidden />
                     <span className="text-[14px] text-ink">{p.name}</span>
                     {p.reason && <span className="text-[12px] text-ink-2 truncate">{p.reason}</span>}
                   </li>
@@ -227,7 +229,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           </>}
           {squad.data && squad.data.waiting.length > 0 && (
             // Kostas, 16 Oct: they are on Trak, waiting for consent (a parent's, or their own from the academy's consent age). A count, never names.
-            <p className="text-[12px] text-ink-3 mt-4">{squad.data.waiting.length} not counted yet: waiting for consent</p>
+            <p className="text-[12px] text-ink-3 mt-4">{t('coachSchedule:waitingConsent', { count: squad.data.waiting.length })}</p>
           )}
         </section>
       )}

@@ -56,8 +56,11 @@ async function loginFixture(page: Page, context: BrowserContext, role: 'parent' 
     // TRAK-163: Home's week strip reads this week's events (a read, over POST).
     if (url.pathname === '/rest/v1/rpc/child_events') return json([])
     if (url.pathname === '/rest/v1/rpc/my_session_is_live') return json(true)
+    // TRAK-441: the academy's family_look switch, off.
+    if (url.pathname === '/rest/v1/rpc/family_feature_on') return json(false)
     if (url.pathname === '/rest/v1/rpc/my_roster_name') return json('Ana Synthetic')
     if (url.pathname === '/rest/v1/rpc/get_player_invites_for_current_user') return json([])
+    if (url.pathname === '/rest/v1/rpc/season_plan_for_player') return json([]) // TRAK-397: no shared plan
     if (url.pathname === '/rest/v1/telemetry_events') return json(null, 201)
     if (request.method() === 'GET' && url.pathname.startsWith('/rest/v1/')) return json([])
     unexpected.push(`${request.method()} ${url.pathname}`)
