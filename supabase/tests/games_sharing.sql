@@ -71,6 +71,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.g286id(100),pg_temp.g286id(1),'Sharing On Academy','G286N1'),
  (pg_temp.g286id(101),pg_temp.g286id(2),'Sharing Off Academy','G286F1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.g286id(10),pg_temp.g286id(100)),(pg_temp.g286id(11),pg_temp.g286id(100)),(pg_temp.g286id(12),pg_temp.g286id(101));
 INSERT INTO public.player_details(user_id,date_of_birth)

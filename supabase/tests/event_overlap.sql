@@ -65,6 +65,9 @@ INSERT INTO public.profiles(user_id,role,full_name)
  FROM unnest(ARRAY[1,10,11]) n;
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.o158id(100),pg_temp.o158id(1),'Overlap Academy X','O158X1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES
  (pg_temp.o158id(10),pg_temp.o158id(100),'U15'),(pg_temp.o158id(11),pg_temp.o158id(100),'U17');
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.o158id(100),'events') ON CONFLICT DO NOTHING;
