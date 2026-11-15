@@ -112,7 +112,7 @@ function TodayTraining({ training, squadOf }: { training: Training; squadOf: ((s
           <span className="flex-none text-sm tabular-nums text-ink-3">{t('coachHome:minutes', { count: practice.minutes })}</span>
         </li>)}
       </ol>
-      : <p className="text-sm text-ink-2">{t('coachHome:notPlanned')}</p>}
+      : null}
   </article>
 }
 
