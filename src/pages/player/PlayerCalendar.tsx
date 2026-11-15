@@ -70,7 +70,7 @@ export default function PlayerCalendar() {
         </Link>
         <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Calendar</h1>
         {failed ? <LoadError what="your calendar" onRetry={() => setAttempt(n => n + 1)} /> : <>
-          <div className="arc rounded-[18px] border border-line overflow-hidden flex justify-center px-2 pt-2" style={{ background: 'rgb(var(--t-surface))' }}>
+          <div className="arc rounded-2xl border border-line overflow-hidden flex justify-center px-2 pt-2" style={{ background: 'rgb(var(--t-surface))' }}>
             <Calendar locale="en-GB" showToday value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(day(date))}
               month={month} onMonthChange={next => setMonth(startOfMonth(next))}
               marks={date => onDay(day(date)).map(e => e.status === 'cancelled' ? { color: CANCELLED_COLOR, hollow: true } : EVENT_COLOR[e.kind])} />

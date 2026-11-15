@@ -78,7 +78,7 @@ export default function CoachEvaluation() {
     <div className="min-h-screen bg-ground pb-24">
       <div className={WIDE_COLUMN}>
         <PageTop title="Evaluation" trail={<CoachTrail current="Evaluation" />}
-          below={squad && due?.dueOn && <p className="-mt-2 text-sm text-ink-3">{squad} · due {evalDay(due.dueOn)} · only you see it until you publish</p>} />
+          below={squad && due?.dueOn && <p className="-mt-1 text-sm text-ink-3">{squad} · due {evalDay(due.dueOn)} · only you see it until you publish</p>} />
         {body}
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />

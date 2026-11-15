@@ -278,7 +278,7 @@ export default function DevSetupPage() {
         </p>
       </div>
 
-      <div className="w-full rounded-[14px] p-4 mb-5 space-y-1"
+      <div className="w-full rounded-2xl p-4 mb-5 space-y-1"
         style={{ background: 'rgb(var(--t-brand) / 0.05)', border: '1px solid rgb(var(--t-brand) / 0.15)' }}>
         {[
           { role: 'Coach',  email: 'coach@trak.dev' },
@@ -294,14 +294,14 @@ export default function DevSetupPage() {
       </div>
 
       {steps.length > 0 && (
-        <div className="w-full rounded-[14px] p-4 mb-5 space-y-2"
+        <div className="w-full rounded-2xl p-4 mb-5 space-y-2"
           style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
           {steps.map(s => (
             <div key={s.label} className="flex items-start gap-2 text-[12px]">
               <span className="flex-shrink-0 w-4">{iconFor(s.status)}</span>
               <div>
                 <span className="text-ink-2">{s.label}</span>
-                {s.detail && <p className="text-[10px] text-ink-3 mt-0.5">{s.detail}</p>}
+                {s.detail && <p className="text-[10px] text-ink-3 mt-1">{s.detail}</p>}
               </div>
             </div>
           ))}
@@ -312,13 +312,13 @@ export default function DevSetupPage() {
         <div className="w-full space-y-2">
           <div className="text-center py-3 text-[14px] font-semibold text-brand">All done!</div>
           <button onClick={() => navigate('/')}
-            className="w-full py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm">
+            className="w-full py-4 rounded-xl bg-brand text-on-brand font-bold text-sm">
             Go to app →
           </button>
         </div>
       ) : (
         <button onClick={run} disabled={running}
-          className="w-full py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm disabled:opacity-50 transition-opacity">
+          className="w-full py-4 rounded-xl bg-brand text-on-brand font-bold text-sm disabled:opacity-50 transition-opacity">
           {running ? 'Setting up...' : 'Run Setup →'}
         </button>
       )}

@@ -52,7 +52,7 @@ export function OwnConsentCard({ turned, onChange }: { turned: boolean; onChange
         </div>
       </> : <div style={font} onKeyDown={event => { if (event.key === 'Escape') setFace('bar') }}>
         <h2 id={`${checkId}-h`} ref={heading} tabIndex={-1} className="text-[17px] font-medium text-ink outline-none">Your consent</h2>
-        <p className="text-[13px] text-ink-2 mt-1">{whose}</p>
+        <p className="text-[13px] text-ink-2 mt-2">{whose}</p>
         <p className="text-[13px] text-ink mt-3 leading-relaxed">{OWN_CONSENT_TEXT}</p>
         <label htmlFor={checkId} className="flex items-start gap-2 mt-3 text-[13px] text-ink">
           <input id={checkId} type="checkbox" checked={understood} onChange={e => setUnderstood(e.target.checked)} className="mt-0.5 h-4 w-4" />

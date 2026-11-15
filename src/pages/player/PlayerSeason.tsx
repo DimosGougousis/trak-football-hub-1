@@ -33,7 +33,7 @@ export default function PlayerSeason() {
     body = <p className="text-[13px] text-ink-2" style={font}>Your coach hasn't shared a season plan with you yet.</p>
   } else {
     body = <>
-      <div className="grid gap-1">
+      <div className="grid gap-2">
         <h1 className="m-0 text-[26px] font-medium text-ink" style={{ ...font, letterSpacing: '-0.01em' }}>My season</h1>
         <p className="m-0 text-[15px] text-ink-2" style={font}>{seasonSubtitle(plan)}</p>
       </div>

@@ -68,7 +68,7 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
           <p className="text-center text-[13px] text-ink-2" role="status">This match is unavailable.</p>
         )}
         <button onClick={() => navigate(matchesPath)}
-          className="flex items-center gap-2 mx-auto px-4 py-2 rounded-[10px] text-[12px] text-ink-2 border border-line">
+          className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl text-[12px] text-ink-2 border border-line">
           <ChevronLeft size={14} />
           Back to matches
         </button>
@@ -92,12 +92,12 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
       <div className="pt-6 pb-24 space-y-3">
         {/* Back */}
         <button onClick={() => navigate(-1)}
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line mb-2">
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-xl bg-raised border border-line mb-2">
           <ChevronLeft size={16} className="text-ink-2" />
         </button>
 
         {/* Hero card: result + band */}
-        <div className="relative rounded-[24px] p-5 overflow-hidden"
+        <div className="relative rounded-2xl p-5 overflow-hidden"
           style={{ background: 'linear-gradient(135deg, rgb(var(--t-surface)) 0%, rgb(var(--t-surface)) 100%)', border: '1px solid rgb(var(--t-line))' }}>
           <div className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
             style={{ background: 'radial-gradient(circle, rgb(var(--t-brand) / 0.08) 0%, transparent 70%)' }} />
@@ -128,7 +128,7 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
           See the coach’s review</Link>}
 
         {/* Match info */}
-        <div className="rounded-[18px] p-4 space-y-3"
+        <div className="rounded-2xl p-4 space-y-3"
           style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
           <MetadataLabel text="MATCH INFO" />
           {[
@@ -156,7 +156,7 @@ export default function PlayerMatchDetail({ role = 'player', limitedFor, playerU
             { label: 'Goals', value: match.goals ?? 0 },
             { label: 'Assists', value: match.assists ?? 0 },
           ].map(stat => (
-            <div key={stat.label} className="rounded-[14px] py-4 px-3 text-center"
+            <div key={stat.label} className="rounded-2xl py-4 px-3 text-center"
               style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
               <p className="text-[28px] font-light text-ink leading-none"
                 style={{ fontFamily: 'var(--t-font)', letterSpacing: '-0.03em' }}>{stat.value}</p>

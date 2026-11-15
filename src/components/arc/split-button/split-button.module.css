@@ -2,7 +2,7 @@
 .group { display: inline-flex; align-items: stretch; border: 1px solid var(--accent); border-radius: var(--radius-control); background: var(--accent); transition: transform var(--duration-spring) var(--ease-spring); }
 .group:has(> .primary:active:not(:disabled)) { transform: scale(.97); transition-duration: var(--duration-instant); transition-timing-function: var(--ease-standard); }
 .primary, .trigger { border: 0; background: var(--accent); color: var(--accent-foreground); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
-.primary { position: relative; display: inline-grid; min-height: var(--control-height-md); place-items: center; padding: 0 var(--space-4); border-radius: calc(var(--radius-control) - 1px) 0 0 calc(var(--radius-control) - 1px); font-size: var(--text-sm); font-weight: 500; }
+.primary { position: relative; display: inline-grid; min-height: var(--control-height-md); place-items: center; padding: 0 var(--space-4); border-radius: var(--radius-control) 0 0 calc(var(--radius-control) - 1px); font-size: var(--text-sm); font-weight: 500; }
 /* The slot springs to the width of the next label; the content leads from the start edge and is clipped only while it morphs. */
 .primarySlot { display: inline-flex; min-width: 0; align-items: center; }
 .primarySlot[data-morphing] { clip-path: inset(-50% calc(var(--space-2) * -1)); }
@@ -40,7 +40,7 @@
 /* Radix unmounts when the exit animation ends, so a no-op keyframe times the exit while the transition does the visual work. */
 .menu[data-state="closed"] { opacity: 0; transform: translate(calc(var(--menu-x) * .5), calc(var(--menu-y) * .5)) scale(.985); transition: opacity 130ms var(--ease-standard), transform 130ms var(--ease-standard); animation: menu-exit 130ms linear both; pointer-events: none; }
 /* Highlight follows the pointer and arrow keys instantly, like a native menu. */
-.item { display: flex; min-height: var(--control-height-sm); align-items: center; gap: 10px; padding: 0 11px; border-radius: calc(var(--radius-panel) - 6px); font-size: var(--text-sm); cursor: pointer; outline: none; transition: opacity var(--duration-standard) var(--ease-enter) calc(min(var(--i, 0), 4) * 35ms), transform var(--duration-standard) var(--ease-enter) calc(min(var(--i, 0), 4) * 35ms); }
+.item { display: flex; min-height: var(--control-height-sm); align-items: center; gap: 10px; padding: 0 11px; border-radius: var(--radius-control); font-size: var(--text-sm); cursor: pointer; outline: none; transition: opacity var(--duration-standard) var(--ease-enter) calc(min(var(--i, 0), 4) * 35ms), transform var(--duration-standard) var(--ease-enter) calc(min(var(--i, 0), 4) * 35ms); }
 .item[data-highlighted] { background: var(--surface-muted); }
 .item[data-disabled] { cursor: default; opacity: .45; }
 .destructive { color: var(--danger); }

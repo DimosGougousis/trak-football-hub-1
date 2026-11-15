@@ -18,7 +18,7 @@ const AWARD_TYPES: { value: string; label: string; icon: LucideIcon }[] = [
 function OptPill({ label, icon: Icon, active, onClick }: { label: string; icon?: LucideIcon; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="rounded-[10px] p-[11px_8px] text-center text-[13px] font-medium transition-colors inline-flex items-center justify-center gap-1.5"
+      className="rounded-xl p-[11px_8px] text-center text-[13px] font-medium transition-colors inline-flex items-center justify-center gap-1.5"
       style={{
         background: active ? 'rgb(var(--t-brand) / 0.12)' : 'rgb(var(--t-surface))',
         border: active ? '1.5px solid rgb(var(--t-brand))' : '1.5px solid rgb(var(--t-line))',
@@ -80,7 +80,7 @@ export default function CoachAwardPlayer() {
         {/* Header */}
         <div className="flex items-center gap-3 pt-6">
           <button onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line">
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-xl bg-raised border border-line">
             <ChevronLeft size={16} className="text-ink-2" />
           </button>
           <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px]">
@@ -93,7 +93,7 @@ export default function CoachAwardPlayer() {
           <MetadataLabel text="PLAYER" />
           <div className="relative">
             <select value={playerId} onChange={e => setPlayerId(e.target.value)}
-              className="w-full px-4 py-3 pr-10 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none appearance-none">
+              className="w-full px-4 py-3 pr-10 rounded-xl bg-surface border border-line text-sm text-ink outline-none appearance-none">
               <option value="">{selectedPlayer ? 'Change player...' : 'Select player...'}</option>
               {players.map(p => (
                 <option key={p.id} value={p.id}>{p.player_name}</option>
@@ -105,7 +105,7 @@ export default function CoachAwardPlayer() {
 
         {/* Player card */}
         {selectedPlayer && (
-          <div className="flex items-center gap-3 p-3 rounded-[12px] bg-surface border border-line">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-line">
             <div className="flex items-center justify-center w-[38px] h-[38px] rounded-full text-[13px] font-bold shrink-0"
               style={{ background: 'rgb(var(--t-brand) / 0.14)', color: 'rgb(var(--t-brand))' }}>
               {selectedPlayer.player_name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
@@ -133,7 +133,7 @@ export default function CoachAwardPlayer() {
 
         {/* Selected award preview */}
         {selectedAward && (
-          <div className="flex items-center gap-3 p-4 rounded-[14px]"
+          <div className="flex items-center gap-3 p-4 rounded-2xl"
             style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}>
             <selectedAward.icon size={22} color="rgb(var(--t-brand))" />
             <p className="text-[14px] font-semibold text-brand">{selectedAward.label}</p>
@@ -149,7 +149,7 @@ export default function CoachAwardPlayer() {
             onChange={e => setAwardedFor(e.target.value)}
             maxLength={60}
             placeholder='e.g. "Week of 14 Apr" or "April 2026"'
-            className="w-full px-4 py-3 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none placeholder:text-ink-3"
+            className="w-full px-4 py-3 rounded-xl bg-surface border border-line text-sm text-ink outline-none placeholder:text-ink-3"
           />
         </div>
 
@@ -165,13 +165,13 @@ export default function CoachAwardPlayer() {
             maxLength={150}
             rows={2}
             placeholder="A short message to the player..."
-            className="w-full px-4 py-3 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none resize-none placeholder:text-ink-3"
+            className="w-full px-4 py-3 rounded-xl bg-surface border border-line text-sm text-ink outline-none resize-none placeholder:text-ink-3"
           />
         </div>
 
         {/* Save */}
         <button onClick={handleSave} disabled={!playerId || !awardType || saving}
-          className="w-full py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm disabled:opacity-40 transition-opacity">
+          className="w-full py-4 rounded-xl bg-brand text-on-brand font-bold text-sm disabled:opacity-40 transition-opacity">
           {saving ? 'Saving...' : 'Give Award →'}
         </button>
       </div>

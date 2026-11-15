@@ -544,7 +544,7 @@ export default function PlayerEvolutionCard() {
             className="relative"
             style={{
               width: '100%', maxWidth: CARD_W, aspectRatio: '3 / 4',
-              borderRadius: 24, padding: 2,
+              borderRadius: 16, padding: 2,
               background: `conic-gradient(from 140deg, ${tier.ring}, rgba(255,255,255,0.04) 35%, ${tier.ring} 65%, rgba(255,255,255,0.04) 95%)`,
               boxShadow: `0 0 60px ${tier.glow}, 0 20px 60px rgba(0,0,0,0.6)`,
             }}
@@ -552,7 +552,7 @@ export default function PlayerEvolutionCard() {
             <div
               className="relative w-full h-full overflow-hidden flex flex-col"
               style={{
-                borderRadius: 22,
+                borderRadius: 16,
                 background: 'radial-gradient(120% 80% at 50% 0%, #18181C 0%, #101012 55%, #0A0A0B 100%)',
                 padding: 22,
               }}
@@ -565,7 +565,7 @@ export default function PlayerEvolutionCard() {
 
               {/* Static diagonal sheen */}
               <div className="absolute pointer-events-none" style={{
-                inset: 0, borderRadius: 22, zIndex: 10,
+                inset: 0, borderRadius: 16, zIndex: 10,
                 background: `linear-gradient(105deg, transparent 35%, rgba(255,255,255,${tier.shimmerOpacity}) 50%, transparent 65%)`,
               }} />
 
@@ -699,7 +699,7 @@ export default function PlayerEvolutionCard() {
             style={{
               width: '100%', maxWidth: CARD_W,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '14px 0', borderRadius: 14, border: 'none', cursor: 'pointer',
+              padding: '14px 0', borderRadius: 16, border: 'none', cursor: 'pointer',
               background: tier.label,
               color: tier.darkText ? '#000000' : '#ffffff',
               fontFamily: "'DM Sans', sans-serif",
@@ -731,7 +731,7 @@ export default function PlayerEvolutionCard() {
           </div>
 
           {series1Complete && (
-            <div className="mb-3 px-4 py-3 rounded-[12px] text-center" style={{
+            <div className="mb-3 px-4 py-3 rounded-xl text-center" style={{
               background: 'rgba(200,242,90,0.07)',
               border: '1px solid rgba(200,242,90,0.2)',
             }}>
@@ -752,13 +752,13 @@ export default function PlayerEvolutionCard() {
           </div>
 
           {/* Series 02 stub */}
-          <div className="mt-3 p-4 rounded-[14px] flex items-center gap-3" style={{
+          <div className="mt-3 p-4 rounded-2xl flex items-center gap-3" style={{
             background: '#101012',
             border: '1px solid rgba(255,255,255,0.05)',
             opacity: 0.5,
           }}>
             <div className="flex items-center justify-center" style={{
-              width: 36, height: 36, borderRadius: 10,
+              width: 36, height: 36, borderRadius: 12,
               background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.06)',
               color: 'rgba(255,255,255,0.25)',
             }}>
@@ -810,7 +810,7 @@ export default function PlayerEvolutionCard() {
                 const delta = prev ? snap.ovr - prev.ovr : null
                 const dateStr = new Date(snap.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                 return (
-                  <div key={snap.date + i} className="flex items-center gap-3 px-4 py-3 rounded-[12px]" style={{
+                  <div key={snap.date + i} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{
                     background: '#101012',
                     border: '1px solid rgba(255,255,255,0.06)',
                   }}>
@@ -935,13 +935,13 @@ function EvoRow({ icon: Icon, title, desc, progress, target, status, reward, sta
 
   return (
     <div className="relative p-4" style={{
-      borderRadius: 14,
+      borderRadius: 16,
       background: '#101012',
       border: '1px solid rgba(255,255,255,0.07)',
     }}>
       <div className="flex items-start gap-3">
         <div className="flex items-center justify-center flex-shrink-0" style={{
-          width: 36, height: 36, borderRadius: 10,
+          width: 36, height: 36, borderRadius: 12,
           background: done ? 'rgba(200,242,90,0.12)' : '#0A0A0B',
           border: `1px solid ${done ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.08)'}`,
           color: done ? '#C8F25A' : locked ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.7)',

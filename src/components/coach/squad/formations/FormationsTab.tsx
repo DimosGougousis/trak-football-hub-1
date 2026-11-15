@@ -112,7 +112,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   if (!list || roles.isPending || writes.start.isPending) return <LoadingSkeleton label={t('coachSquad:fmLoading')} lines={3} rows={2} />
 
   const header = <div className="flex flex-wrap items-end justify-between gap-3">
-    <div className="grid gap-0.5">
+    <div className="grid gap-2">
       <h2 className="text-lg font-medium text-ink">{t('coachSquad:fmPlaybook')}</h2>
     </div>
     <Button variant="secondary" onClick={() => { setNamingProblem(null); setNaming({ kind: 'new', format: 11, shape: DEFAULT_FORMATION[11] }) }}>
@@ -218,7 +218,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
 
     <section aria-labelledby="formation-name" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-0.5">
+        <div className="grid gap-1">
           <div className="flex items-center gap-1">
             <h2 id="formation-name" className="text-xl font-medium text-ink">{current.name}</h2>
             <button type="button" aria-label={t('coachSquad:fmRename')} onClick={() => { setNamingProblem(null); setNaming({ kind: 'rename', name: saved.name }) }}

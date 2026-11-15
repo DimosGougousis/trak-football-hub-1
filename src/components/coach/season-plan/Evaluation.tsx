@@ -143,7 +143,7 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
         </button>
         <header className="flex items-center gap-4">
           <PlayerFace name={open.name} size="lg" aria-hidden />
-          <div className="grid gap-0.5">
+          <div className="grid gap-1">
             <p className="text-sm text-ink-3">Evaluation · due {evalDay(dueOn)}</p>
             <h2 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{open.name}</h2>
             {open.detail && <p className="text-sm text-ink-3">{open.detail}</p>}
@@ -179,7 +179,7 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
       {step === 0 ? (
         <section aria-labelledby="evaluation-players" className="grid gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <div className="grid gap-1">
+            <div className="grid gap-2">
               <h2 id="evaluation-players" className="text-lg font-medium text-ink">How is each player doing?</h2>
               <p className="text-sm text-ink-2">{latest.size ? 'Everyone starts where they were last time. Change only who moved.'
                 : 'Nobody has ratings yet: open each player and rate them once. Next time they start from there.'}</p>
@@ -234,7 +234,7 @@ function ObjectivesSection({ name, open, entry, onChange }: {
   if (open.length === 0 && !room) return null
   return (
     <section aria-labelledby="evaluation-objectives" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
-      <div className="grid gap-1">
+      <div className="grid gap-2">
         <h3 id="evaluation-objectives" className="text-lg font-medium text-ink">Objectives</h3>
         <p className="text-sm text-ink-3">{open.length ? `How is ${name} doing on each? Met closes it.` : `${name} has no objectives yet. You can add one.`}</p>
       </div>

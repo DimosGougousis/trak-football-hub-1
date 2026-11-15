@@ -54,7 +54,7 @@ const CoachSessions = () => {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-[28px] text-foreground">Sessions</h1>
           <button onClick={() => setShowNew(!showNew)}
-            className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-primary-foreground text-lg bg-primary">+</button>
+            className="w-[34px] h-[34px] rounded-sm flex items-center justify-center text-primary-foreground text-lg bg-primary">+</button>
         </div>
 
         {/* Filter */}
@@ -123,11 +123,11 @@ const CoachSessions = () => {
                 )}
 
                 <textarea placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)}
-                  className="w-full bg-secondary border border-border rounded-[10px] p-3 text-sm text-foreground outline-none focus:border-primary resize-none"
+                  className="w-full bg-secondary border border-border rounded-xl p-3 text-sm text-foreground outline-none focus:border-primary resize-none"
                   rows={3} />
 
                 <button onClick={handleCreateSession} disabled={!title}
-                  className="w-full rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40">
+                  className="w-full rounded-xl py-3 bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40">
                   Create Session →
                 </button>
               </>
@@ -143,7 +143,7 @@ const CoachSessions = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">{s.title}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-1">
                     {new Date(s.session_date || s.created_at).toLocaleDateString()} · {s.session_type === 'match' ? `${s.competition} · ${s.venue}` : s.training_type || 'Training'}
                   </p>
                 </div>

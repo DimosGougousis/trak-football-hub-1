@@ -72,7 +72,7 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
             value,
             label: format(date, 'EEEEE'),
             // TRAK-171 (Tarek, 16 Oct): today stays marked after another day is picked.
-            accessory: <><span className={value === todayValue ? 'sr-only trak-today' : 'sr-only'}>{format(date, 'EEEE d MMMM')}{value === todayValue && ', today'}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
+            accessory: <><span className={value === todayValue ? 'sr-only trak-today' : 'sr-only'}>{format(date, 'EEEE d MMMM')}{value === todayValue && ', today'}</span>{dots.length > 0 && <span className="inline-flex gap-1" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
               {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[6px] h-[6px] rounded-full"
                 data-absent={event.absent || undefined} style={dotStyle(event)} />)}
             </span>}

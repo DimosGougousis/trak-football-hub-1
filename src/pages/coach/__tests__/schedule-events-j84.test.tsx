@@ -81,7 +81,7 @@ function fixtures() {
   )
 }
 
-const card = (title: string) => screen.getByText(title).closest('div.rounded-\\[14px\\]') as HTMLElement
+const card = (title: string) => screen.getByText(title).closest('div.rounded-2xl') as HTMLElement
 async function open() {
   renderApp('/coach/schedule')
   await screen.findByText('Finishing')

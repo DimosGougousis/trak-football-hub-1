@@ -141,7 +141,7 @@ export function LibraryHome() {
                 <Link to={kindPath(kind.key)} style={{ background: PRACTICE_KIND_COLOURS[kind.key], color: ON_LIBRARY }}
                   className="flex h-full flex-row items-center gap-3.5 rounded-2xl p-4 transition-[filter] hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 tablet:min-h-[150px] tablet:flex-col tablet:items-start tablet:justify-between tablet:p-[18px]">
                   <svg viewBox="0 0 48 48" aria-hidden className="h-[30px] w-[30px] flex-none fill-none stroke-current tablet:h-10 tablet:w-10" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">{GLYPHS[kind.key]}</svg>
-                  <span className="grid gap-0.5">
+                  <span className="grid gap-2">
                     <span className="text-[21px] font-medium leading-tight tablet:text-2xl">{kind.name}</span>
                     <span className="text-[15px] leading-snug">{kind.note}</span>
                   </span>

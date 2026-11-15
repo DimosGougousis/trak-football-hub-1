@@ -119,7 +119,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
     return (
       <div className="arc grid gap-5">
         <section aria-labelledby="positions-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
-          <div className="grid gap-1">
+          <div className="grid gap-2">
             <h2 id="positions-question" className="text-lg font-medium text-ink">Do you know where they play yet?</h2>
             <p className="text-sm text-ink-2">{plural(board.total, 'player')} in {squad}. You can change your answer any time.</p>
           </div>

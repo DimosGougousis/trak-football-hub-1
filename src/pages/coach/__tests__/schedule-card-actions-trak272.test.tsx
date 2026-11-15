@@ -91,7 +91,7 @@ describe('TRAK-272: each Schedule card has a button group of its actions', { tim
     await userEvent.click(document.querySelector('[data-present] [data-date="2026-10-21"]') as HTMLElement)
     const g = group('Recovery')
     expect(names(g)[0]).toBe('Take register for Recovery')
-    expect(within(g.closest('div.rounded-\\[14px\\]') as HTMLElement).getByText('Needs you')).toBeInTheDocument()
+    expect(within(g.closest('div.rounded-2xl') as HTMLElement).getByText('Needs you')).toBeInTheDocument()
   })
 
   it('no card\'s group is solid black: not a draft, not a register that waits', async () => {
@@ -110,7 +110,7 @@ describe('TRAK-272: each Schedule card has a button group of its actions', { tim
 
   it('tapping the card opens its event sheet, as on coach Home', async () => {
     await open()
-    const card = group('Shooting').closest('div.rounded-\\[14px\\]') as HTMLElement
+    const card = group('Shooting').closest('div.rounded-2xl') as HTMLElement
     await userEvent.click(within(card).getByText(/Main pitch/))
     expect(await screen.findByRole('dialog', { name: /Shooting/ })).toBeInTheDocument()
   })

@@ -67,7 +67,7 @@ export default function ClubProfile() {
       {/* Identity */}
       <div className="text-center mb-8 pt-2">
         <div
-          className="w-[72px] h-[72px] rounded-[22px] mx-auto mb-4 overflow-hidden flex items-center justify-center"
+          className="w-[72px] h-[72px] rounded-2xl mx-auto mb-4 overflow-hidden flex items-center justify-center"
           style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}
         >
           <span className="text-2xl font-semibold text-primary" aria-hidden="true">
@@ -135,7 +135,7 @@ export default function ClubProfile() {
           </p>
           <button
             onClick={copyCode}
-            className="mt-3 w-full flex items-center justify-between px-4 py-3 rounded-[12px] transition-colors"
+            className="mt-3 w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors"
             style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.2)' }}
           >
             <span style={{ fontFamily: 'var(--t-font-mono)', fontSize: 18, fontWeight: 500, color: 'rgb(var(--t-brand))', letterSpacing: '0.08em' }}>
@@ -153,7 +153,7 @@ export default function ClubProfile() {
       <div className="space-y-2.5 mb-8">
         <button
           onClick={() => navigate('/how-it-works')}
-          className="w-full flex items-center justify-between rounded-[18px] p-4 text-left transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-4 text-left transition-colors"
           style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
         >
           <div className="flex items-center gap-3">
@@ -175,7 +175,7 @@ export default function ClubProfile() {
 
         <button
           onClick={() => navigate('/settings')}
-          className="w-full flex items-center justify-between rounded-[18px] p-4 text-left transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-4 text-left transition-colors"
           style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
         >
           <div className="flex items-center gap-3">

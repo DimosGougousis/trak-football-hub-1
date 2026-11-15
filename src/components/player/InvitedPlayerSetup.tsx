@@ -113,7 +113,7 @@ export function InvitedPlayerSetup({ role = 'player' }: { role?: 'player' | 'par
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-xl text-foreground">{!guardian && firstName ? `Welcome, ${firstName}` : 'Welcome'}</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-2">
           {guardian
             ? `${academy || 'Your academy'} has added you as ${firstName ? `${firstName}'s` : "a child's"} parent or guardian.`
             : academy ? `${academy} has added you to Trak.` : 'Your academy has added you to Trak.'}{' '}

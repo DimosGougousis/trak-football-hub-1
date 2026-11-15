@@ -76,7 +76,7 @@ function ChildRow({ child, pressed, busy, onToggle }: {
           <span className="block truncate text-[14px] font-medium text-ink">{child.name}</span>
           <span className="block truncate text-[11px] text-ink-3">{isPosition(child.position) ? t(POSITION_WORD[child.position]) : child.position ?? t('coachSquad:positionNotSet')}</span>
           {child.absent && (
-            <span className="mt-1 inline-block rounded-[8px] px-2 py-0.5 text-[11px] font-medium text-ink"
+            <span className="mt-1 inline-block rounded-sm px-2 py-0.5 text-[11px] font-medium text-ink"
               style={{ background: 'rgb(var(--t-warning) / 0.18)' }}>{t('coachSquad:reportedCantMakeIt')}</span>
           )}
         </span>
@@ -101,7 +101,7 @@ function Column({ slug, title, note, rows, pressed, busy, onToggle }: {
   const { t } = useTranslation()
   const id = `availability-${slug}`
   return (
-    <section aria-labelledby={id} className="min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface">
+    <section aria-labelledby={id} className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface">
       <div className="flex items-center justify-between gap-2 px-4 pt-4">
         <h3 id={id} className="text-[15px] font-medium text-ink">{title}</h3>
         <Chip>{rows.length}</Chip>
@@ -190,11 +190,11 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     return (
       <div className="pt-2">
         <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">{t('coachSquad:tabAvailability')}</h2>
-        <div className="mt-5 rounded-[14px] border border-line bg-surface p-5">
+        <div className="mt-5 rounded-2xl border border-line bg-surface p-5">
           <p className="text-[15px] font-medium text-ink-2">{t('coachSquad:noUpcoming')}</p>
           <p className="mt-1 text-[12px] text-ink-3">{t('coachSquad:publishToSee')}</p>
           <Link to="/coach/schedule"
-            className="mt-4 inline-flex min-h-11 items-center rounded-[10px] border border-line-strong px-4 text-[13px] font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-line-strong px-4 text-[13px] font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             {t('coachSquad:openSchedule')}
           </Link>
         </div>
@@ -218,7 +218,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     if (toggle.isPending) return
     toggle.mutate({ eventId: event.id, childId: child.id, name: child.name, confirm: !confirmedIds.has(child.id) })
   }
-  const stepButton = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] border border-line-strong text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  const stepButton = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-line-strong text-ink disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
   return (
     <div className="pt-2">
@@ -241,7 +241,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
       <p role="status" aria-live="polite" className="sr-only">{moved?.text ?? ''}</p>
 
       {toggle.error && (
-        <p role="alert" className="mt-3.5 rounded-[12px] px-4 py-3 text-[13px] text-ink"
+        <p role="alert" className="mt-3.5 rounded-xl px-4 py-3 text-[13px] text-ink"
           style={{ background: 'rgb(var(--t-danger) / 0.1)', border: '1px solid rgb(var(--t-danger) / 0.35)' }}>
           {toggle.error.message || t('coachSquad:couldntUpdateConfirmation')}
         </p>
@@ -260,7 +260,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
                     rows={split.notConfirmed} pressed={false} busy={toggle.isPending} onToggle={toggleChild} />
                 </div>
                 {split.notEligible.length > 0 && (
-                  <div className="mt-3.5 rounded-[12px] px-4 py-3 text-[13px] text-ink"
+                  <div className="mt-3.5 rounded-xl px-4 py-3 text-[13px] text-ink"
                     style={{ background: 'rgb(var(--t-warning) / 0.12)', border: '1px solid rgb(var(--t-warning) / 0.35)' }}>
                     <b className="font-medium">{t('coachSquad:notEligibleLabel')}</b>{' '}
                     {split.notEligible.map(p => p.name).join(', ')}{t('coachSquad:notEligibleWhy', { count: split.notEligible.length })}
@@ -279,7 +279,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
                     </p>
                   )}
                 </Card>
-                <p className="rounded-[12px] border border-line bg-raised px-4 py-3 text-[13px] text-ink-2">
+                <p className="rounded-xl border border-line bg-raised px-4 py-3 text-[13px] text-ink-2">
                   {t('coachSquad:whatsappNote')}
                 </p>
               </aside>

@@ -34,7 +34,7 @@ export default function LibraryHome() {
           {LIBRARIES.map(library => (
             <li key={library.key}>
               <Link to={libraryPath(library.key)}
-                className="relative flex h-24 flex-col justify-between overflow-hidden rounded-[8px] p-3 tablet:h-[132px] tablet:rounded-[10px] tablet:p-4 laptop:h-[150px] laptop:p-[18px]"
+                className="relative flex h-24 flex-col justify-between overflow-hidden rounded-sm p-3 tablet:h-[132px] tablet:rounded-xl tablet:p-4 laptop:h-[150px] laptop:p-[18px]"
                 style={{ background: library.colour, color: ON_LIBRARY }}>
                 <span className="text-[17px] font-bold leading-[1.15] tablet:text-[18px] laptop:text-[24px]">{library.label}</span>
                 <span className="text-[12px] font-medium">{SESSIONS.filter(s => s.library === library.name).length} sessions</span>

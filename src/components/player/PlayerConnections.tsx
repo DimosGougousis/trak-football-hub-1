@@ -47,7 +47,7 @@ export function PlayerConnections() {
   }, [userId, attempt])
 
   return (
-    <section aria-label="Connections" className="rounded-[18px] px-4 pt-4 pb-1 border border-line bg-surface">
+    <section aria-label="Connections" className="rounded-2xl px-4 pt-4 pb-1 border border-line bg-surface">
       <MetadataLabel text="CONNECTIONS" />
       {state === 'loading' && <p role="status" className="py-3 text-sm text-ink-2">Loading connections…</p>}
       {state === 'error' && <div role="alert" className="py-3 text-sm text-ink-2">

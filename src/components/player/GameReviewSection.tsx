@@ -6,7 +6,7 @@ import { words, type Review } from '@/lib/games/reviews'
    to them. TRAK-319 (Imad, 30 Oct): the parent reads the score and how it went against what was asked: never the job,
    "did the job" or the note. The coach's Publish step previews with this same component. */
 
-const panel = 'rounded-[18px] border border-line bg-surface px-4 py-3'
+const panel = 'rounded-2xl border border-line bg-surface px-4 py-3'
 
 export function GameReviewSection({ review, as, childName }: {
   review: Review
@@ -25,16 +25,16 @@ export function GameReviewSection({ review, as, childName }: {
       </div>
       {as === 'player' && review.job && <div className={panel}>
         <h3 className="text-[13px] font-medium text-ink">Your job</h3>
-        <p className="mt-1 whitespace-pre-line text-[13px] text-ink-2">{review.job}</p>
+        <p className="mt-2 whitespace-pre-line text-[13px] text-ink-2">{review.job}</p>
       </div>}
       <div className={`${panel} grid gap-1`}>
         {as === 'player' && said.didJob && <p className="text-[15px] font-medium text-ink">{said.didJob}</p>}
         <p className="text-[13px] text-ink-2">What we asked: {said.asked}</p>
         <p className="text-[13px] text-ink">{said.against}.</p>
       </div>
-      {as === 'player' && review.note && <div className="rounded-[18px] px-4 py-3" style={{ background: 'rgb(var(--t-attention) / 0.15)' }}>
+      {as === 'player' && review.note && <div className="rounded-2xl px-4 py-3" style={{ background: 'rgb(var(--t-attention) / 0.15)' }}>
         <h3 className="text-[13px] font-medium text-ink">From {coach ?? 'your coach'} · just for you</h3>
-        <p className="mt-1 whitespace-pre-line text-[13px] text-ink">{review.note}</p>
+        <p className="mt-2 whitespace-pre-line text-[13px] text-ink">{review.note}</p>
       </div>}
     </section>
   )

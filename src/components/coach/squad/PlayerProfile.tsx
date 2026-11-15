@@ -85,7 +85,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
 
   const header = <div className="flex items-center gap-4">
     <PlayerFace name={player.name} size="lg" />
-    <div className="grid min-w-0 gap-0.5">
+    <div className="grid min-w-0 gap-2">
       <h3 className="truncate text-xl font-medium text-ink">{player.name}</h3>
       <p className="text-sm text-ink-2">{[player.shirt != null && `#${player.shirt}`, player.position, squad].filter(Boolean).join(' · ')}</p>
     </div>
@@ -122,7 +122,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
       </div>
 
       <section aria-labelledby={`season-${player.id}`}>
-        <div className="grid gap-0.5">
+        <div className="grid gap-2">
           <h4 id={`season-${player.id}`} className="text-base font-medium text-ink">{t('coachSquad:seasonSoFar')}</h4>
           {seasonFailed ? <LoadError what={t('coachSquad:seasonWhat', { name: first })} onRetry={onRetrySeason} /> : <p className="text-sm text-ink-3">{season
             ? t('coachSquad:seasonAverage', { count: season.count, since })

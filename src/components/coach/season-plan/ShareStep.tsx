@@ -70,12 +70,12 @@ export function ShareStep({ coachId, squad, plan, seasonObjectives, onBack, onSe
       <section aria-labelledby="share-what" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
         <h2 id="share-what" className="text-lg font-medium text-ink">What goes out</h2>
         <dl className="m-0 grid gap-3">
-          <div className="grid gap-0.5 tablet:grid-cols-[12rem_1fr]">
+          <div className="grid gap-1 tablet:grid-cols-[12rem_1fr]">
             <dt className="text-sm text-ink-3">Season</dt>
             <dd className="m-0 text-sm text-ink">{dated ? `${day(plan!.starts_on!)} – ${day(plan!.ends_on!)}` : <span className="text-warning">No dates yet</span>}</dd>
           </div>
           {/* TRAK-364: the rhythm, and the first date from today: the plan counts from the day it's shared. */}
-          <div className="grid gap-0.5 tablet:grid-cols-[12rem_1fr]">
+          <div className="grid gap-1 tablet:grid-cols-[12rem_1fr]">
             <dt className="text-sm text-ink-3">Evaluation</dt>
             <dd className="m-0 text-sm text-ink">{(() => {
               const { every, day: weekday } = rhythmOf(plan ?? {})
@@ -83,17 +83,17 @@ export function ShareStep({ coachId, squad, plan, seasonObjectives, onBack, onSe
               return `${rhythmText(every, weekday).replace(/^e/, 'E')}${first ? ` · first ${evalDay(first, true)}` : ''}`
             })()}</dd>
           </div>
-          <div className="grid gap-0.5 tablet:grid-cols-[12rem_1fr]">
+          <div className="grid gap-1 tablet:grid-cols-[12rem_1fr]">
             <dt className="text-sm text-ink-3">Season objectives</dt>
             <dd className="m-0 text-sm text-ink">{seasonObjectives.length
-              ? <ul className="m-0 grid list-none gap-0.5 p-0">{seasonObjectives.map(o => <li key={o.id}>{o.title}</li>)}</ul>
+              ? <ul className="m-0 grid list-none gap-1 p-0">{seasonObjectives.map(o => <li key={o.id}>{o.title}</li>)}</ul>
               : 'None'}</dd>
           </div>
-          <div className="grid gap-0.5 tablet:grid-cols-[12rem_1fr]">
+          <div className="grid gap-1 tablet:grid-cols-[12rem_1fr]">
             <dt className="text-sm text-ink-3">Positions</dt>
             <dd className="m-0 text-sm text-ink">{board.placed} of {players(board.total)} placed</dd>
           </div>
-          <div className="grid gap-0.5 tablet:grid-cols-[12rem_1fr]">
+          <div className="grid gap-1 tablet:grid-cols-[12rem_1fr]">
             <dt className="text-sm text-ink-3">Player objectives</dt>
             <dd className="m-0 text-sm text-ink">{withSome} of {players(placed.length)} {withSome === 1 ? 'has' : 'have'} one or two</dd>
           </div>

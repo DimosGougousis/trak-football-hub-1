@@ -25,7 +25,7 @@ export function LoadError({
 
   return (
     <div
-      className="rounded-[18px] p-5 border text-center"
+      className="rounded-2xl p-5 border text-center"
       style={{ borderColor: 'rgb(var(--t-line))', background: 'rgb(var(--t-raised))' }}
       role="alert"
     >
@@ -42,7 +42,7 @@ export function LoadError({
         <button
           onClick={onRetry}
           disabled={retrying}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-[10px] text-[12px] text-ink-2 border border-line active:bg-raised disabled:opacity-40"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] text-ink-2 border border-line active:bg-raised disabled:opacity-40"
           style={{ fontFamily: 'var(--t-font-mono)' }}
         >
           <RefreshCw size={13} className={retrying ? 'animate-spin' : undefined} />

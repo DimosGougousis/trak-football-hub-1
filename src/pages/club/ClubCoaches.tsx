@@ -162,7 +162,7 @@ export default function ClubCoaches() {
                 {c.inviteCode && (
                   <button
                     onClick={() => copyCode(c.inviteCode!)}
-                    className="px-2 py-1 rounded-[8px] transition-colors"
+                    className="px-2 py-1 rounded-sm transition-colors"
                     style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'rgb(var(--t-brand))', background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.2)' }}>
                     TRK-{c.inviteCode}
                   </button>
@@ -179,7 +179,7 @@ export default function ClubCoaches() {
               <button
                 onClick={() => handleRemoveCoach(c.userId, c.name)}
                 disabled={removing === c.userId}
-                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-[10px] transition-colors"
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl transition-colors"
                 style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', color: 'rgb(var(--t-ink-3))', fontSize: 12 }}
               >
                 <UserMinus size={13} />

@@ -83,7 +83,7 @@ describe('TRAK-218: a series refused for an overlap', { timeout: 30_000 }, () =>
   it('a draft that would clash says so on the schedule, before Publish is tapped', async () => {
     fixtures([game(today), row('d-clash', today), row('d-free', today, { title: 'Recovery', start_time: '19:00:00', end_time: '20:00:00' })])
     await open('Game Day')
-    const card = (title: string) => screen.getByText(title, { selector: 'p' }).closest('div.rounded-\\[14px\\]') as HTMLElement
+    const card = (title: string) => screen.getByText(title, { selector: 'p' }).closest('div.rounded-2xl') as HTMLElement
     expect(within(card('Training')).getByText('Clashes with Game Day, 17:00–18:30. Change the time to publish it.')).toBeInTheDocument()
     expect(within(card('Recovery')).queryByText(/Clashes with/)).toBeNull()
     expect(within(card('Game Day')).queryByText(/Clashes with/)).toBeNull()

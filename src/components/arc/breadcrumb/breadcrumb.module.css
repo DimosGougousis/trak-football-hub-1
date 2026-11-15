@@ -3,7 +3,7 @@
 .list li { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--leading-body); white-space: nowrap; }
 .list li > svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--border-strong); stroke-width: 1.75; }
 /* Each crumb reserves the width of its medium weight label, so becoming the current page never shifts the path. */
-.list a, .list li > span, .list li > button { display: inline-flex; flex-direction: column; border-radius: 7px; padding: 4px 2px; }
+.list a, .list li > span, .list li > button { display: inline-flex; flex-direction: column; border-radius: 8px; padding: 4px 2px; }
 .list a::after, .list li > span::after, .list li > button::after { height: 0; overflow: hidden; content: attr(data-label); font-weight: 500; visibility: hidden; user-select: none; pointer-events: none; }
 .list li > button { border: 0; margin: 0; background: none; font: inherit; line-height: inherit; text-align: start; cursor: pointer; }
 .list a, .list li > button { color: var(--text-secondary); text-decoration: underline 1px; text-decoration-color: transparent; text-underline-offset: 4px; transition: color var(--duration-fast) var(--ease-standard), text-decoration-color var(--duration-fast) var(--ease-standard); }

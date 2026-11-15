@@ -20,7 +20,7 @@ const LogChooser = () => {
         <div className="w-full max-w-[320px]">
           <button
             onClick={() => navigate('/log/match')}
-            className="w-full flex flex-col items-center justify-center gap-3 rounded-[18px] p-7 border border-primary/20 cursor-pointer transition-all active:scale-95 active:border-primary bg-card"
+            className="w-full flex flex-col items-center justify-center gap-3 rounded-2xl p-7 border border-primary/20 cursor-pointer transition-all active:scale-95 active:border-primary bg-card"
           >
             <Goal size={48} strokeWidth={1.25} className="text-primary" />
             <div className="text-center">

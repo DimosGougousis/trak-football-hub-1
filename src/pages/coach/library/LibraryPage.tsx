@@ -120,13 +120,13 @@ export default function LibraryPage() {
 
 function Header({ library, sessions, topics }: { library: Library; sessions: number; topics: number }) {
   return (
-    <header className="relative -mx-5 overflow-hidden px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-[12px] tablet:px-7 tablet:pt-6"
+    <header className="relative -mx-5 overflow-hidden px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-xl tablet:px-7 tablet:pt-6"
       style={{ background: library.colour, color: ON_LIBRARY }}>
       <span aria-hidden className="absolute -right-10 -bottom-16 h-52 w-52 rounded-full border-2 tablet:-right-16 tablet:-bottom-24 tablet:h-[300px] tablet:w-[300px]" style={{ borderColor: ON_LIBRARY_RING }} />
       {/* TRAK-334: the trail, in place of Back, white on the library's colour. */}
       <CoachTrail current={library.label} style={ON_COLOUR_TRAIL} />
       <p className="mt-14 text-[12px] font-semibold tracking-[0.1em] tablet:mt-16">LIBRARY</p>
-      <h1 className="mt-0.5 text-[40px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[54px]">{library.label}</h1>
+      <h1 className="mt-1 text-[40px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[54px]">{library.label}</h1>
       <p className="mt-2 text-[14px] font-medium tablet:text-[16px]">{plural(sessions, 'session')} · {plural(topics, 'topic')}</p>
     </header>
   )
@@ -162,7 +162,7 @@ function OpenSession({ session, onClose }: { session: LibrarySession; onClose: (
   const library = libraryOf(session)
   return (
     <article aria-label={titleParts(session).title} className="grid gap-6 p-6">
-      <div className="flex items-start gap-5 rounded-[12px] p-5" style={{ background: library.tint }}>
+      <div className="flex items-start gap-5 rounded-xl p-5" style={{ background: library.tint }}>
         <PitchArt seed={session.id} colour={library.colour} className="w-24 flex-none xl:w-[132px]" />
         <SessionHeading session={session} level={2} />
         <CloseButton onClose={onClose} />

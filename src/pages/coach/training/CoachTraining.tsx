@@ -259,7 +259,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
           {/* TRAK-367: always there to add one, until the training starts and its details are fixed. Edit opens the form at
               the note, in Schedule, which alone can save it to this training and the ones after. */}
           {(message || !locked) && <p className="flex items-start gap-2 rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
-            <Info aria-hidden size={16} className="mt-0.5 flex-none text-ink-3" />
+            <Info aria-hidden size={16} className="mt-1 flex-none text-ink-3" />
             <span className="min-w-0 flex-1 break-words"><span className="font-medium text-ink">{t('coachSchedule:messageToPlayers')}{message && ':'}</span> {message}</span>
             {/* TRAK-455: editing the message is a pencil; adding one keeps its words. */}
             {!locked && (message ? <EditIcon label={t('coachTraining:editMessage')} to={`/coach/schedule?edit=${training.id}&step=${NOTE_STEP}`} className="-my-2.5" />

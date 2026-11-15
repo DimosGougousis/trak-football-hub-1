@@ -81,7 +81,7 @@ export function ResultStep({ eventId, form, onFormChange, starters, bench, goals
       <section aria-labelledby="evaluation-played" className={card}>
         <div>
           <h2 id="evaluation-played" className="text-lg font-medium text-ink">{t('coachMatches:whoPlayed')}</h2>
-          <p className="mt-1 text-sm text-ink-3">{starters.length ? t('coachMatches:untickHint') : t('coachMatches:tickEveryone')}</p>
+          <p className="mt-2 text-sm text-ink-3">{starters.length ? t('coachMatches:untickHint') : t('coachMatches:tickEveryone')}</p>
         </div>
         {starters.length + bench.length === 0 ? <p className="text-sm text-ink-2">{t('coachMatches:nobodyRecordable')}</p> : <>
           {starters.length > 0 && <fieldset className="grid gap-2">

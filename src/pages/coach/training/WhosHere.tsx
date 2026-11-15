@@ -102,7 +102,7 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
     </section>
       : <section aria-labelledby="today" className={`arc grid gap-4 rounded-2xl border border-line bg-surface p-5 ${checked ? '' : 'opacity-60'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1">
+          <div className="grid gap-2">
             <h2 id="today" className="text-lg font-medium text-ink">{checked ? t('coachTraining:todaysPlanFor', { players: players(count) }) : size ? t('coachTraining:yourPlanForAll', { size }) : t('coachTraining:yourPlanForSquad')}</h2>
             <p className="text-sm text-ink-3">{!checked ? t('coachTraining:checksOnceDone')
               : count === size ? t('coachTraining:everyoneWorks')
@@ -155,7 +155,7 @@ function PartColumn({ part, index, count, squad, adaptation, choice, onChoose, o
     {adaptation && (adaptation.status === 'same'
       ? <p className="text-sm text-brand">{adaptation.message}</p>
       : <p className="flex gap-1.5 rounded-lg bg-raised p-2.5 text-sm text-ink">
-        <Sparkles aria-hidden size={16} className="mt-0.5 flex-none text-brand" />
+        <Sparkles aria-hidden size={16} className="mt-1 flex-none text-brand" />
         <span>{adaptation.status === 'unknown' ? adaptation.message : <><span className="font-medium">{t('coachTraining:trakSuggests')}</span> {adaptation.message}</>}</span></p>)}
     <div className="mt-auto grid justify-items-start gap-1.5 pt-1">
       {offer && <SegmentedControl label={t('coachTraining:whatToDo', { part: part.name })} value={choice}

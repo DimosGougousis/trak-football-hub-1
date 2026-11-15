@@ -16,7 +16,7 @@ const ordinal = (n: number) => ['1st', '2nd', '3rd', '4th'][n] ?? `${n + 1}th`
 
 /** A match moment in a list: its picture, its title, and what kind of call it is. */
 export function MomentRow({ moment, part, onSelect, selected = false }: { moment: Moment; part: Part; onSelect?: () => void; selected?: boolean }) {
-  const cls = 'flex h-16 w-full min-w-0 items-center gap-3 rounded-[6px] px-2 text-left tablet:h-[68px] tablet:px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  const cls = 'flex h-16 w-full min-w-0 items-center gap-3 rounded-sm px-2 text-left tablet:h-[68px] tablet:px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
   const body = <>
     <MomentArt colour={part.colour} rank={moment.type === 'rank'} />
     <span className="flex min-w-0 flex-1 flex-col">
@@ -35,7 +35,7 @@ export function Strip({ panels }: { panels: Panel[] }) {
   return (
     <ol className="grid gap-2.5" aria-label="The moment">
       {panels.map((panel, i) => {
-        if ('cap' in panel) return <li key={i} className="rounded-[10px] bg-raised px-4 py-3 text-[15px] leading-snug text-ink">{panel.cap}</li>
+        if ('cap' in panel) return <li key={i} className="rounded-xl bg-raised px-4 py-3 text-[15px] leading-snug text-ink">{panel.cap}</li>
         const thinks = 'think' in panel
         const who = speaker(panel.who)
         return (
@@ -64,7 +64,7 @@ function Option({ badge, text, feedback, chosen, best, tags, onClick, done }: {
   return (
     <li>
       <button type="button" onClick={onClick} disabled={done} aria-pressed={chosen}
-        className="flex w-full items-start gap-3 rounded-[10px] border bg-surface p-3 text-left disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="flex w-full items-start gap-3 rounded-xl border bg-surface p-3 text-left disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         style={{ borderColor: done && best ? 'rgb(var(--t-brand))' : chosen ? 'rgb(var(--t-ink))' : 'rgb(var(--t-line))', borderWidth: done && best ? 2 : 1 }}>
         <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[13px] font-semibold"
           style={chosen ? { background: 'rgb(var(--t-ink))', color: 'rgb(var(--t-surface))' } : { background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-ink))' }}>{badge}</span>
@@ -129,7 +129,7 @@ export function WhyCards({ why }: { why: Why }) {
       <h2 className={`${h2} mb-2.5`}>Why it matters</h2>
       <ul className="grid gap-2 tablet:grid-cols-3">
         {([['For you', why.you], ['For the club', why.club], ['For the game', why.game]] as const).map(([who, text]) => (
-          <li key={who} className="rounded-[10px] bg-raised p-3.5">
+          <li key={who} className="rounded-xl bg-raised p-3.5">
             <span className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-2">{who}</span>
             <span className="mt-1 block text-[15px] leading-snug text-ink">{text}</span>
           </li>
@@ -141,7 +141,7 @@ export function WhyCards({ why }: { why: Why }) {
 
 function Tip({ label, text, part }: { label: string; text: string; part: Part }) {
   return (
-    <p className="rounded-[10px] p-3.5 text-[15px] leading-snug text-ink" style={{ background: part.tint, boxShadow: `inset 3px 0 0 ${part.colour}` }}>
+    <p className="rounded-xl p-3.5 text-[15px] leading-snug text-ink" style={{ background: part.tint, boxShadow: `inset 3px 0 0 ${part.colour}` }}>
       <span className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-2">{label}</span>{text}
     </p>
   )
@@ -160,24 +160,24 @@ export function MomentView({ moment, pane, onClose }: { moment: Moment; pane?: b
   return (
     <article aria-label={moment.title} className={pane ? 'grid gap-6 p-6' : 'grid gap-6'}>
       {pane ? (
-        <div className="flex items-start gap-4 rounded-[12px] p-5" style={{ background: part.tint }}>
+        <div className="flex items-start gap-4 rounded-xl p-5" style={{ background: part.tint }}>
           <MomentArt colour={part.colour} size={72} rank={moment.type === 'rank'} />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] text-ink-2">Match moment · {part.name}</p>
-            <h2 className="mt-0.5 text-[28px] font-bold leading-tight text-ink">{moment.title}</h2>
-            <p className="mt-1 text-[14px] text-ink-2">{meta}</p>
+            <h2 className="mt-1 text-[28px] font-bold leading-tight text-ink">{moment.title}</h2>
+            <p className="mt-2 text-[14px] text-ink-2">{meta}</p>
           </div>
           {onClose && <CloseButton onClose={onClose} />}
         </div>
       ) : (
-        <header className="-mx-5 px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-[12px] tablet:px-7 tablet:pt-6" style={{ background: part.tint }}>
+        <header className="-mx-5 px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-xl tablet:px-7 tablet:pt-6" style={{ background: part.tint }}>
           {/* TRAK-334: the trail, in place of Back; opened from a link, under its part. */}
           <CoachTrail current={moment.title} parents={[{ label: 'Play It Right', href: PIR_PATH }, { label: part.name, href: partPath(part) }]} />
           <div className="mt-4 flex items-center gap-4 tablet:gap-6">
             <MomentArt colour={part.colour} size={84} rank={moment.type === 'rank'} />
             <div className="min-w-0 flex-1">
               <p className="text-[13px] text-ink-2 tablet:text-[14px]">Match moment · {part.name}</p>
-              <h1 className="mt-0.5 text-[30px] font-bold leading-[1.08] tracking-[-0.01em] text-ink tablet:text-[42px]">{moment.title}</h1>
+              <h1 className="mt-1 text-[30px] font-bold leading-[1.08] tracking-[-0.01em] text-ink tablet:text-[42px]">{moment.title}</h1>
               <p className="mt-1.5 text-[14px] text-ink-2">{meta}</p>
             </div>
           </div>
@@ -187,7 +187,7 @@ export function MomentView({ moment, pane, onClose }: { moment: Moment; pane?: b
         <Strip panels={moment.panels} />
         <Call key={moment.id} id={moment.id} question={moment.q} options={moment.opts} feedback={moment.fb} rank={moment.type === 'rank'} onReveal={setAnswered} />
         {answered && <>
-          <section className="rounded-[12px] border border-line bg-surface p-4">
+          <section className="rounded-xl border border-line bg-surface p-4">
             <h2 className={`${h2} mb-1.5`}>What the coach saw</h2>
             <p className="text-[15px] leading-relaxed text-ink">{moment.coach}</p>
           </section>
@@ -209,12 +209,12 @@ export function SeniorStory({ part, story }: { part: Part; story: SeniorPart }) 
     <div className="grid max-w-[880px] gap-6">
       <section>
         <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-2">The story</p>
-        <h2 className="mt-0.5 text-[24px] font-bold leading-tight text-ink tablet:text-[28px]">{story.title}</h2>
+        <h2 className="mt-1 text-[24px] font-bold leading-tight text-ink tablet:text-[28px]">{story.title}</h2>
         <p className="mt-2 text-[15px] leading-relaxed text-ink">{story.scene}</p>
       </section>
       <ol className="grid gap-2 tablet:grid-cols-3">
         {story.steps.map((step, i) => (
-          <li key={i} className="rounded-[10px] bg-raised p-3.5">
+          <li key={i} className="rounded-xl bg-raised p-3.5">
             <span className="block text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: part.colour }}>{i + 1}. {story.stepLabels[i]}</span>
             <span className="mt-1 block text-[15px] leading-snug text-ink">{step}</span>
           </li>

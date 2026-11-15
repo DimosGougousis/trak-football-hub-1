@@ -146,10 +146,10 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
         data-testid="fixture-drop-zone"
         onDragOver={e => e.preventDefault()}
         onDrop={onDrop}
-        className="rounded-[18px] border border-dashed border-line-strong px-4 py-6 text-center"
+        className="rounded-2xl border border-dashed border-line-strong px-4 py-6 text-center"
       >
         <FileUp size={22} className="mx-auto text-ink-3" />
-        <label className="mt-3 inline-block cursor-pointer rounded-[12px] bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand">
+        <label className="mt-3 inline-block cursor-pointer rounded-xl bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand">
           {t('coachSchedule:fxChoose')}
           <input
             type="file"
@@ -168,7 +168,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
       </div>
 
       {fileProblem && (
-        <div role="alert" className="rounded-[14px] border border-destructive/40 px-4 py-3 text-[13px] text-destructive">
+        <div role="alert" className="rounded-2xl border border-destructive/40 px-4 py-3 text-[13px] text-destructive">
           {fileProblem.map(p => <p key={p}>{p}</p>)}
         </div>
       )}
@@ -193,7 +193,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                 <li
                   key={row.line}
                   aria-label={t('coachSchedule:fxLine', { line: row.line })}
-                  className={`rounded-[14px] border px-4 py-3 ${row.fixture ? 'border-line' : 'border-destructive/60'}`}
+                  className={`rounded-2xl border px-4 py-3 ${row.fixture ? 'border-line' : 'border-destructive/60'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -234,7 +234,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                             value={row.values[field]}
                             placeholder={placeholder.startsWith('coachSchedule:') ? t(placeholder as 'coachSchedule:fxEmptyForTraining') : placeholder}
                             onChange={e => update(row.line, field, e.target.value)}
-                            className="mt-1 w-full rounded-[10px] bg-raised px-2 py-1.5 text-[13px] text-ink outline-none"
+                            className="mt-1 w-full rounded-xl bg-raised px-2 py-1.5 text-[13px] text-ink outline-none"
                           />
                         </label>
                       ))}
@@ -258,7 +258,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
               type="button"
               onClick={() => void confirm()}
               disabled={saving || needFixing > 0 || toAdd.length === 0}
-              className="w-full rounded-[14px] bg-brand py-3 text-[14px] font-semibold text-on-brand disabled:opacity-40"
+              className="w-full rounded-2xl bg-brand py-3 text-[14px] font-semibold text-on-brand disabled:opacity-40"
             >
               {t('coachSchedule:fxAdd', { count: toAdd.length })}
             </button>

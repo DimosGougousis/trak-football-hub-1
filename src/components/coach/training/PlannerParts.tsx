@@ -19,7 +19,7 @@ export function DrillTile({ drill, picked, tag, onPick }: { drill: PlanDrill; pi
   // TRAK-404 (Kostas, 10 Nov): the name only (and why it's offered); View drill, under the tile, has the rest.
   // As the mockup (Kostas, 3 Nov): the tick sits in the corner of the picked drill.
   return <button type="button" aria-pressed={picked} onClick={onPick}
-    className={`relative flex h-full w-full flex-col items-start gap-1.5 rounded-[14px] border p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${picked ? 'border-2 border-brand bg-brand/5' : 'border-line bg-surface hover:bg-raised'}`}>
+    className={`relative flex h-full w-full flex-col items-start gap-1.5 rounded-2xl border p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${picked ? 'border-2 border-brand bg-brand/5' : 'border-line bg-surface hover:bg-raised'}`}>
     {picked && <span className="absolute right-3 top-3 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-brand text-on-brand">
       <Check aria-hidden size={13} /></span>}
     <span className="pr-7 text-[15px] font-medium leading-snug text-ink break-words">{drill.name}</span>
@@ -29,7 +29,7 @@ export function DrillTile({ drill, picked, tag, onPick }: { drill: PlanDrill; pi
 
 export function ActionTile({ icon, label, note, onClick }: { icon: 'plus' | 'search'; label: string; note?: string; onClick: () => void }) {
   return <button type="button" onClick={onClick}
-    className="flex h-full min-h-[72px] w-full flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed border-line bg-surface p-3.5 text-center text-brand hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+    className="flex h-full min-h-[72px] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-line bg-surface p-3.5 text-center text-brand hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
     {icon === 'plus' ? <Plus aria-hidden size={18} /> : <Search aria-hidden size={18} />}
     <span className="text-[15px] font-medium text-ink">{label}</span>
     {note && <span className="text-[13px] text-ink-3">{note}</span>}
@@ -41,7 +41,7 @@ export function TimeBar({ parts, length, current }: { parts: Part[]; length: num
   const { t } = useTranslation()
   const total = totalMinutes(parts)
   return <div role="img" aria-label={length ? t('coachTraining:minutesPlannedOf', { total, length }) : t('coachTraining:minutesPlanned', { total })}
-    className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-raised">
+    className="flex h-3 w-full gap-1 overflow-hidden rounded-full bg-raised">
     {parts.map((part, i) => part.minutes > 0 && <span key={part.key} title={t('coachTraining:partMinutes', { name: partName(part.name), minutes: part.minutes })}
       className={part.key === current ? 'ring-2 ring-inset ring-ink/40' : ''}
       style={{ flexGrow: part.minutes, background: partColour(i, parts.length) }} />)}
@@ -159,7 +159,7 @@ function PlanRow({ part, index, count, onEdit, onRemove, onMove, onDrop, busy }:
     className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-surface py-3">
     <MoveHandle name={partName(part.name)} index={index} count={count} controls={controls} onMove={onMove} busy={busy} />
     <span className="w-10 flex-none text-center text-base font-medium text-ink">{part.minutes}<span className="block text-[11px] font-normal text-ink-3">{t('coachTraining:minShort')}</span></span>
-    <span className="grid min-w-0 flex-[1_1_11rem] gap-0.5">
+    <span className="grid min-w-0 flex-[1_1_11rem] gap-1">
       <span className="flex items-center gap-1.5 text-[13px] text-ink-3">
         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: partColour(index, count) }} />{partLine(part, index)}</span>
       <span className={`text-[15px] font-medium break-words ${part.drill ? 'text-ink' : 'text-ink-3'}`}>{part.drill?.name ?? t('coachTraining:noDrillYet')}</span>

@@ -581,7 +581,7 @@ export default function CoachSchedule() {
         {/* TRAK-252: on a coach's laptop the month and the chosen day stand side by side. */}
         <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
         {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
-        <div className="arc rounded-[18px] border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
+        <div className="arc rounded-2xl border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
           {/* TRAK-271: room between the last row of days and the legend's line. */}
           <div className="flex justify-center px-2 pt-2 pb-4">
             {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
@@ -701,7 +701,7 @@ export default function CoachSchedule() {
                       if ((event.target as HTMLElement).closest('button, a, [role="menuitem"], [role="group"]')) return
                       cardTriggers.current.get(ev.id)?.click()
                     }}
-                    className="rounded-[14px] px-4 py-3 flex items-start gap-3 cursor-pointer"
+                    className="rounded-2xl px-4 py-3 flex items-start gap-3 cursor-pointer"
                     style={{ background: 'rgb(var(--t-surface))', border: row && !row.published && !cancelled ? '1.5px dashed rgb(var(--t-line-strong))' : '1px solid rgb(var(--t-line))' }}>
                     <div className="w-1 self-stretch rounded-full flex-shrink-0"
                       style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
@@ -727,7 +727,7 @@ export default function CoachSchedule() {
                             : user && <EventSheetCoach event={sheetEvent} coachId={user.id} onChanged={() => void loadData()} />}
                         </EventSheet>
                       ) : titleText}
-                      <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
+                      <p className="text-[9px] mt-1" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
                         {/* TRAK-159: a scheduled event says its time, or that it has none. */}
                         {ev.time
                           ? <><span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>{' · '}</>
@@ -738,7 +738,7 @@ export default function CoachSchedule() {
                         {place?.text ? ` · ${place.text}` : ''}
                       </p>
                       {row?.kit && (
-                        <p className="text-[9px] mt-0.5" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>{t('coachSchedule:kitLine', { kit: row.kit })}</p>
+                        <p className="text-[9px] mt-1" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>{t('coachSchedule:kitLine', { kit: row.kit })}</p>
                       )}
                       {/* TRAK-255 (TRAK-225's link): the venue opens in Maps from the coach's day too. */}
                       {place && (
@@ -767,13 +767,13 @@ export default function CoachSchedule() {
                       </div>
                       {row && !cancelled && clashes.has(row.id) && (() => {
                         const c = clashes.get(row.id)!
-                        return <p className="text-[11px] mt-0.5 text-warning" style={font}>
+                        return <p className="text-[11px] mt-1 text-warning" style={font}>
                           {t('coachSchedule:clashLine', { title: c.title, start: c.start, end: c.end })}
                         </p>
                       })()}
                       {row?.published && !cancelled && user && <EventAbsences coachId={user.id} eventId={row.id} />}
                       {cancelled && row?.cancel_reason && (
-                        <p className="text-[11px] mt-0.5 text-ink-3" style={font}>{row.cancel_reason}</p>
+                        <p className="text-[11px] mt-1 text-ink-3" style={font}>{row.cancel_reason}</p>
                       )}
                     </div>
                     {/* TRAK-275: outline always; a draft or a waiting register is never a black block. */}
@@ -803,7 +803,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachSchedule:cancelEvent')}
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:cancelTitle', { title: sheet.row.title })}</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -820,7 +820,7 @@ export default function CoachSchedule() {
             </Field>
             {sheet.error && <p role="alert" className="text-[12px] text-danger" style={font}>{sheet.error}</p>}
             <button onClick={confirmCancel} disabled={saving}
-              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium"
+              className="w-full py-3.5 rounded-xl text-[14px] font-medium"
               style={{ background: 'rgb(var(--t-danger))', color: 'rgb(var(--t-on-brand))', opacity: saving ? 0.6 : 1 }}>
               {saving ? t('coachSchedule:cancelling') : t('coachSchedule:cancelEvent')}
             </button>
@@ -838,7 +838,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachSchedule:eventCancelled')}
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:eventCancelled')}</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -846,7 +846,7 @@ export default function CoachSchedule() {
             </p>
             {/* Nothing is sent until the coach picks a chat (the phone's share sheet, or WhatsApp's link). */}
             <ShareEventButton text={whatsAppShareText(shareableFromRow(sheet.row, sheet.row.squad ?? squad.label), { childNames: squad.childNames })}
-              className="w-full py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2 bg-brand text-on-brand">
+              className="w-full py-3.5 rounded-xl text-[14px] font-medium flex items-center justify-center gap-2 bg-brand text-on-brand">
               <ShareIcon size={18} />{t('coachSchedule:share')}
             </ShareEventButton>
             <button onClick={() => setSheet({ kind: 'closed' })}
@@ -863,7 +863,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachSchedule:importFixtures')}
-            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>{t('coachSchedule:importFixtures')}</span>
@@ -885,7 +885,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachHome:takeRegister')}
-            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[16px] font-medium text-ink" style={font}>
@@ -910,7 +910,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.action === 'publish' ? t('coachSchedule:publishEvent') : t('coachSchedule:deleteDraft')}
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {t(sheet.action === 'publish' ? 'coachSchedule:publishTitle' : 'coachSchedule:deleteTitle', { title: sheet.row.title, day: formatEventDay(sheet.row.event_date!) })}
@@ -922,12 +922,12 @@ export default function CoachSchedule() {
             </p>
             {sheet.error && <p role="alert" className="text-[12px] text-danger" style={font}>{sheet.error}</p>}
             <button onClick={() => seriesAction('one')}
-              className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+              className="w-full py-3 rounded-xl text-[14px] font-medium"
               style={{ background: sheet.action === 'publish' ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))', color: sheet.action === 'publish' ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink))' }}>
               {t('coachSchedule:onlyThisWeek')}
             </button>
             <button onClick={() => seriesAction('following')}
-              className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+              className="w-full py-3 rounded-xl text-[14px] font-medium"
               style={{ background: sheet.action === 'publish' ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))', color: sheet.action === 'publish' ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink))' }}>
               {t('coachSchedule:thisAndFollowing')}
             </button>
@@ -944,7 +944,7 @@ export default function CoachSchedule() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center"
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
           <div role="dialog" aria-label={t('coachSchedule:notPublished')}
-            className="w-full max-w-sheet rounded-t-[24px] p-5 space-y-3"
+            className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:notPublished')}</span>
             <p className="text-[12px] text-ink-2" style={font}>
@@ -965,7 +965,7 @@ export default function CoachSchedule() {
                 setViewYear(y); setViewMonth(m - 1); setSelected(date)
                 setSheet({ kind: 'closed' })
               }}
-                className="w-full py-3 rounded-[12px] text-[14px] font-medium"
+                className="w-full py-3 rounded-xl text-[14px] font-medium"
                 style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
                 {t('coachSchedule:showDay', { day: formatEventDay(sheet.weeks[0].date) })}
               </button>

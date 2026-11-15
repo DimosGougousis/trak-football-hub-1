@@ -259,7 +259,7 @@ function AccountSettings({ userId }: { userId: string }) {
       content: <>
         <div className="mb-4 flex items-center gap-4">
           {role === 'player' ? <PlayerFace name={displayName || '?'} size="xl" /> : <Avatar name={displayName || '?'} src={photo ?? undefined} size="xl" />}
-          <div className="grid min-w-0 gap-0.5">
+          <div className="grid min-w-0 gap-1">
             <strong className="truncate text-sm font-medium text-ink">{displayName || '—'}</strong>
             <span className="truncate text-sm text-ink-3">{subtitle}</span>
             {role === 'coach'
@@ -517,7 +517,7 @@ function NotificationSwitch({ userId, column, words }: { userId: string; column:
   }
   return (
     <div className="flex items-start justify-between gap-4 py-3">
-      <div className="grid gap-0.5">
+      <div className="grid gap-1">
         <span className="text-sm text-ink">{label}</span>
         <span className="text-xs text-ink-3">{hint}</span>
       </div>

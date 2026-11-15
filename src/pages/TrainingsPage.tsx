@@ -38,7 +38,7 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
                 type="button"
                 aria-selected={selected}
                 onClick={() => setParams(p.id === PAGES[0].id ? {} : { page: p.id }, { replace: true })}
-                className="min-h-11 rounded-[10px] border text-[13px] font-medium transition-colors"
+                className="min-h-11 rounded-xl border text-[13px] font-medium transition-colors"
                 style={{
                   fontFamily: 'var(--t-font)',
                   background: selected ? 'rgb(var(--t-brand) / 0.06)' : 'rgb(var(--t-raised))',

@@ -65,7 +65,7 @@ export function LibraryChips({ programmesOn = false }: { programmesOn?: boolean 
 export function SearchBox({ placeholder = 'Search drills' }: { placeholder?: string }) {
   return (
     <Link to={`${LIBRARY_PATH}/search`}
-      className="mt-4 flex h-12 items-center gap-2.5 rounded-[8px] border px-3.5 text-ink laptop:max-w-[560px] laptop:rounded-[10px]"
+      className="mt-4 flex h-12 items-center gap-2.5 rounded-sm border px-3.5 text-ink laptop:max-w-[560px] laptop:rounded-xl"
       style={{ background: 'rgb(var(--t-surface))', borderColor: 'rgb(var(--t-line))' }}>
       <SearchIcon />
       <span className="text-[16px] text-ink-3">{placeholder}</span>
@@ -77,7 +77,7 @@ export function SearchBox({ placeholder = 'Search drills' }: { placeholder?: str
 export function PlayItRightRow() {
   return (
     <Link to={`${LIBRARY_PATH}/play-it-right`}
-      className="flex h-16 items-center gap-3 overflow-hidden rounded-[8px] pr-3.5 tablet:h-20 tablet:gap-4 laptop:h-24"
+      className="flex h-16 items-center gap-3 overflow-hidden rounded-sm pr-3.5 tablet:h-20 tablet:gap-4 laptop:h-24"
       style={{ background: 'rgb(var(--t-raised))' }}>
       <span className="flex h-16 w-16 flex-none items-center justify-center text-on-brand tablet:h-20 tablet:w-20 laptop:h-24 laptop:w-24" style={{ background: 'rgb(var(--t-brand))' }}>
         <PitchIcon />
@@ -95,7 +95,7 @@ export function PlayItRightRow() {
  *  session's page, or, given `onSelect` (a laptop's list), shows it beside the list. */
 export function SessionRow({ session, onSelect, selected = false }: { session: LibrarySession; onSelect?: () => void; selected?: boolean }) {
   const { title } = titleParts(session)
-  const cls = 'flex h-16 w-full min-w-0 items-center gap-3 rounded-[6px] px-2 text-left tablet:h-[68px] tablet:px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  const cls = 'flex h-16 w-full min-w-0 items-center gap-3 rounded-sm px-2 text-left tablet:h-[68px] tablet:px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
   const body = <>
     <PitchArt seed={session.id} colour={libraryOf(session).colour} size={48} />
     <span className="flex min-w-0 flex-1 flex-col">
@@ -114,7 +114,7 @@ export function ProgrammeRow({ programme, tinted = false, showLibrary = false }:
   const library = libraryOf(programme)
   const line = [showLibrary ? library.label : 'Six-week programme', programme.ages.length === 0 ? 'every age' : '']
   return (
-    <Link to={sessionPath(programme)} className="flex h-[72px] min-w-0 items-center gap-3 rounded-[8px] px-2.5"
+    <Link to={sessionPath(programme)} className="flex h-[72px] min-w-0 items-center gap-3 rounded-sm px-2.5"
       style={tinted ? { background: 'rgb(var(--t-raised))' } : undefined}>
       <ProgrammeArt colour={library.colour} size={52} />
       <span className="flex min-w-0 flex-1 flex-col">
@@ -191,7 +191,7 @@ export function SessionDetail({ session, compact = false }: { session: LibrarySe
         {programme && (
           <section>
             <h2 className={`${h2} mb-2 font-bold text-ink`}>Part of a six-week programme</h2>
-            <Link to={sessionPath(programme)} className="flex h-16 items-center gap-3 rounded-[8px] px-2.5" style={{ background: 'rgb(var(--t-raised))' }}>
+            <Link to={sessionPath(programme)} className="flex h-16 items-center gap-3 rounded-sm px-2.5" style={{ background: 'rgb(var(--t-raised))' }}>
               <ProgrammeArt colour={library.colour} size={44} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-[16px] font-semibold text-ink">{titleParts(programme).title}</span>
@@ -238,8 +238,8 @@ export function BesideList<T extends { id: string }>({ label, items, open, row, 
 
   return (
     // No overflow clipping on the card: it would stop the open item from sticking.
-    <div className="grid rounded-[14px] border border-line bg-surface" style={{ gridTemplateColumns: 'minmax(280px, 34%) minmax(0, 1fr)' }}>
-      <ul aria-label={label} className="grid content-start gap-0.5 border-r border-line p-2">
+    <div className="grid rounded-2xl border border-line bg-surface" style={{ gridTemplateColumns: 'minmax(280px, 34%) minmax(0, 1fr)' }}>
+      <ul aria-label={label} className="grid content-start gap-1 border-r border-line p-2">
         {items.map(item => <li key={item.id} className="min-w-0">{row(item, item.id === open?.id)}</li>)}
       </ul>
       <div className="min-w-0">

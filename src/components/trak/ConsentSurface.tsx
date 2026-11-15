@@ -23,7 +23,7 @@ export function ConsentSurface({ face, labelledBy, aboveNav = false, chip = fals
         transition={{ type: 'spring', bounce: 0, visualDuration: 0.35 }}
         className={`arc pointer-events-auto border border-line bg-surface/95 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl ${chip
           ? 'size-11 rounded-full overflow-hidden'
-          : 'w-full max-w-[398px] max-h-[85dvh] overflow-y-auto rounded-[22px] p-5'}`}>
+          : 'w-full max-w-[398px] max-h-[85dvh] overflow-y-auto rounded-2xl p-5'}`}>
         <motion.div key={face} className={chip ? 'size-full' : undefined} initial={reduced ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}>
           {children}

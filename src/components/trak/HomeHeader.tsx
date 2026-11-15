@@ -34,7 +34,7 @@ export function HomeHeader({ calendarTo, center, right, left }: { calendarTo: st
 function CalendarLink({ to, label }: { to: string; label?: string }) {
   const { t } = useTranslation()
   return <Link to={to} aria-label={label ?? t('common:calendar')}
-    className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center border border-line bg-card text-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+    className="w-[42px] h-[42px] rounded-xl flex items-center justify-center border border-line bg-card text-ink/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
     <CalendarDays size={19} strokeWidth={1.75} aria-hidden="true" />
   </Link>
 }

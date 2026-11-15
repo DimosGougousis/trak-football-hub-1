@@ -132,7 +132,7 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
       </div>
 
       {(parked.length > 0 || ready.length > 0) && <section aria-labelledby="objectives-watching" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
-        <div className="grid gap-1">
+        <div className="grid gap-2">
           <h3 id="objectives-watching" className="text-base font-medium text-ink">Watching <span className="font-normal text-ink-3">· {parked.length}</span></h3>
           <p className="text-sm text-ink-3">{parked.length ? `Trak reminds you ${ruleText(watchOf.get(parked[0].id)!.rule)}, or after 4 weeks at the latest. Nothing goes out while you watch.` : 'Nobody is waiting on a reminder.'}</p>
         </div>

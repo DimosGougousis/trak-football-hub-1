@@ -102,7 +102,7 @@ export default function CoachGames() {
               {/* TRAK-284: plan drafts. TRAK-288: evaluation drafts. */}
               <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5">
                 <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
-                <p className="mt-1 text-sm text-ink-3">{t('coachMatches:draftsNote')}</p>
+                <p className="mt-2 text-sm text-ink-3">{t('coachMatches:draftsNote')}</p>
                 {drafts.length === 0 ? <p className="mt-4 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p> : <ul className="mt-3 divide-y divide-line">
                   {drafts.map(({ game, what, saved, tab }) => <li key={`${tab}:${game.id}`} className="flex items-center justify-between gap-3 py-3">
                     <span className="grid min-w-0">
@@ -164,7 +164,7 @@ function NextGame({ game, state, step, onKickOff }: {
         <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
         <Badge tone={state.tone}>{shown(MATCH_WORD, state.label)}</Badge>
       </div>
-      <div className="grid min-w-0 gap-1">
+      <div className="grid min-w-0 gap-2">
         <p className="text-[22px] font-medium tracking-[-0.01em] text-ink break-words">{gameTitle(game)}</p>
         <p className="text-sm text-ink-2">{[day, details(game, time)].filter(Boolean).join(' · ')}</p>
         {academy && <p className="text-sm text-ink-3">{academy}</p>}
@@ -223,7 +223,7 @@ function TopScorers({ scorers }: { scorers: UseQueryResult<Scorer[]> }) {
   return (
     <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5">
       <h2 id="top-scorers" className="text-lg font-medium text-ink">{t('coachMatches:topScorers')}</h2>
-      <p className="mt-1 text-sm text-ink-3">{t('coachMatches:topScorersNote')}</p>
+      <p className="mt-2 text-sm text-ink-3">{t('coachMatches:topScorersNote')}</p>
       {scorers.error ? <div className="mt-3"><LoadError what={t('coachMatches:scorersWhat')} onRetry={() => void scorers.refetch()} retrying={scorers.isFetching} /></div>
         : scorers.isPending ? <LoadingSkeleton label={t('coachMatches:loadingScorers')} lines={1} avatar rows={3} className="mt-3" />
         : rows.length === 0 ? <p className="mt-3 text-sm text-ink-2">{t('coachMatches:noGoalsYet')}</p>

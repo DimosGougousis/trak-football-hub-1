@@ -85,7 +85,7 @@ export default function CoachSeasonPlan() {
         {shared && editing ? <CoachTrail className="mt-5" current="Season plan" />
           // TRAK-378: on a phone the avatar opens the side menu, where the squad picker is (TRAK-376).
           : <PageTop title="Season plan" trail={<CoachTrail current="Season plan" />}
-            below={squad && !season.isPending && <p className="-mt-2 text-sm text-ink-3">{squad} · {sharedOn ? `Shared ${shortDate(sharedOn)}` : season.plan ? 'Draft, only you see it' : 'Not started'}</p>} />}
+            below={squad && !season.isPending && <p className="-mt-1 text-sm text-ink-3">{squad} · {sharedOn ? `Shared ${shortDate(sharedOn)}` : season.plan ? 'Draft, only you see it' : 'Not started'}</p>} />}
         {!squad ? <p className="text-sm text-ink-2">Select one squad in the menu to plan its season.</p>
           : season.error || objectives.error ? (
             <div className="arc grid justify-items-start gap-3">

@@ -29,7 +29,7 @@ import { currentLanguage, useTranslation } from '@/lib/i18n'
    into each short form, then folds back. */
 type View = 'fab' | 'menu' | 'event' | 'match'
 
-const field = 'w-full rounded-[12px] border border-line bg-ground px-3 py-2.5 text-[16px] text-ink placeholder-ink-3 outline-none focus-visible:ring-2 focus-visible:ring-primary'
+const field = 'w-full rounded-xl border border-line bg-ground px-3 py-2.5 text-[16px] text-ink placeholder-ink-3 outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
 /** Home or away as two pressed buttons: it starts unanswered, as on Schedule,
  *  so a fixture is never saved as Home because nobody chose (Tarek, #319). */

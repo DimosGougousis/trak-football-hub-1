@@ -176,7 +176,7 @@ export default function PlayerMatches() {
             <button
               onClick={loadMore}
               disabled={loadingMore}
-              className="w-full mt-2 py-3 rounded-[12px] text-[11px] tracking-[0.08em] uppercase text-ink-3 border border-line bg-transparent active:bg-raised transition-colors disabled:opacity-40"
+              className="w-full mt-2 py-3 rounded-xl text-[11px] tracking-[0.08em] uppercase text-ink-3 border border-line bg-transparent active:bg-raised transition-colors disabled:opacity-40"
               style={{ fontFamily: 'var(--t-font-mono)' }}
             >
               {loadingMore ? 'Loading…' : pageFailed ? 'Retry' : 'Load more'}
