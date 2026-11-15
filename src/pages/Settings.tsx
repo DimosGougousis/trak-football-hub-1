@@ -314,14 +314,14 @@ function AccountSettings({ userId }: { userId: string }) {
         <ParentChildCredentials key={userId} />
       </div>,
     }, {
-      id: 'consent', label: 'Consent', icon: ShieldCheck, description: "What your children's coaches may record, approved or withdrawn.",
+      id: 'consent', label: 'Consent', icon: ShieldCheck,
       content: <ParentConsent />,
     }] : []),
     // TRAK-406: the two consent sections stay in English until counsel says whether consent wording must be in Greek
     // (TRAK-22); the same goes for the consent screen.
     // TRAK-177: a 15–17 player at a consent-age-15 academy, who agreed for themselves, withdraws here.
     ...(role === 'player' && decidesOwnConsent(consent.data) ? [{
-      id: 'consent', label: 'Consent', icon: ShieldCheck, description: 'You agreed for yourself. You can withdraw it here.',
+      id: 'consent', label: 'Consent', icon: ShieldCheck,
       content: <OwnConsentSettings Section={Bare} />,
     }] : []),
     // TRAK-136 (J8.13): the reminder 2 days before each event goes to guardians and to players with their own

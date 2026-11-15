@@ -170,12 +170,13 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     expect(ordered(card)).toBe(false)
   })
 
-  it('a training today not planned yet says so, with Plan this session', async () => {
+  it('a training today not planned yet offers Plan this session, and says it once', async () => {
     home({ events: [event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })] })
     renderApp('/coach/home')
     const training = await within(await today()).findByRole('article', { name: 'Training, Finishing' })
-    await waitFor(() => expect(within(training).getByText('Not planned yet.')).toBeInTheDocument())
-    expect(within(training).getByRole('link', { name: 'Plan this session' })).toHaveAttribute('href', '/coach/training/t2')
+    expect(await within(training).findByRole('link', { name: 'Plan this session' })).toHaveAttribute('href', '/coach/training/t2')
+    // TRAK-443 (Imad, 15 Nov): the link says it; no "Not planned yet." line under it.
+    expect(within(training).queryByText('Not planned yet.')).toBeNull()
   })
 
   it('a match today shows its game plan: formation and goals, with the game a tap away', async () => {
