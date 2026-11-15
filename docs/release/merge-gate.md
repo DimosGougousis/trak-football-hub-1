@@ -24,7 +24,8 @@ Preserve existing migration history and the product's consent/privacy rules.
 2. GitHub runs `test` and `Base branch still reaches main`. `test` is green
    only when its one part, `build`, passed: the production build, then the
    check that the built bundle holds no credential. No lint, type, unit,
-   use-case, database or browser run is part of the gate (15 November 2026).
+   use-case, database or browser run is part of the gate (15 November 2026,
+   TRAK-471).
 3. Fix failures within this gate. A changed final candidate needs fresh results;
    unchanged contents do not need another local or independent verification run.
 4. Merge only with required checks green and current main included. No human,
