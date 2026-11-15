@@ -88,7 +88,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
   }
   const plan = season.plan
   if (!plan) {
-    return <section aria-labelledby={`season-plan-${squad}`} className={`${card} flex items-center gap-4 ${className ?? ''}`}>
+    return <section aria-labelledby={`season-plan-${squad}`} className={`${card} !flex items-center gap-4 ${className ?? ''}`}>
       <div className="grid min-w-0 flex-1 gap-0.5">
         <h2 id={`season-plan-${squad}`} className="text-base font-medium text-ink">{squad} season plan</h2>
         <p className="truncate text-sm text-ink-3">Not started</p>
