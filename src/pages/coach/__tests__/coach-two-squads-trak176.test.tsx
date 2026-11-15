@@ -16,6 +16,7 @@ import type { StripEvent } from '@/components/trak/WeekStrip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { localTodayISO, toInstant } from '@/lib/event-time'
+import { listOptions } from '@/test/arc-select'
 
 // TRAK-426: the event sheet asks whether the old log has retired; rendered on its own here, without the signed-in frame.
 vi.mock('@/components/coach/old-log', () => ({ useOldLogRetired: () => ({ retired: false, known: true }) }))
@@ -186,8 +187,8 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
     localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/assess')
-    const picker = await screen.findByRole('combobox', { name: 'Player' })
-    await waitFor(() => expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual(['Select player...', 'Bo Lind']))
+    await screen.findByRole('combobox', { name: 'Player' })
+    await waitFor(async () => expect(await listOptions('Player')).toEqual(['Bo Lind']))
   })
 
   it('Schedule opens on All, naming each squad; a squad tapped lists its events and whole-roster ones (Imad, 24 Oct)', async () => {
