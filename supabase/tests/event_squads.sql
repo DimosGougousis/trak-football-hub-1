@@ -52,6 +52,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
  (pg_temp.sq(20),'player','Under Fourteen'),(pg_temp.sq(21),'player','Under Sixteen'),(pg_temp.sq(22),'player','Other Fourteen'),
  (pg_temp.sq(30),'parent','Guardian Fourteen'),(pg_temp.sq(31),'parent','Guardian Sixteen'),(pg_temp.sq(32),'parent','Guardian Other');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES (pg_temp.sq(100),pg_temp.sq(1),'Squads Academy','SQ176A');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.academy_features(organization_id,feature) VALUES (pg_temp.sq(100),'events') ON CONFLICT DO NOTHING;
 INSERT INTO public.coach_details(user_id,organization_id) VALUES (pg_temp.sq(10),pg_temp.sq(100)),(pg_temp.sq(11),pg_temp.sq(100));
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES

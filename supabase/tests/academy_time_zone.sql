@@ -76,6 +76,9 @@ INSERT INTO public.profiles(user_id,role,full_name)
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.tz175id(100),pg_temp.tz175id(1),'Clock Academy D','TZ175D'),
  (pg_temp.tz175id(101),pg_temp.tz175id(2),'Clock Academy A','TZ175A');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 
 -- ── 1. The setting: Dubai unless the operator says otherwise ─────────────
 SELECT pg_temp.tz175check((SELECT time_zone = 'Asia/Dubai' FROM public.organizations WHERE id = pg_temp.tz175id(100)),

@@ -18,7 +18,7 @@ afterEach(async () => {
 })
 
 const labels = () => [
-  ...LOOP_STEPS, ...LOOP.flatMap(step => [step.label, ...(step.description ? [step.description] : [])]),
+  ...LOOP_STEPS, ...LOOP.map(step => step.label),
   ...loopSteps({ current: 3, planned: false, registered: false }).flatMap(step => ('error' in step && step.error ? [step.error] : [])),
   ...AGAIN.map(a => a.label),
   trainingBadge({ phase: 'after', planned: true }).label, trainingBadge({ phase: 'day', planned: true }).label,

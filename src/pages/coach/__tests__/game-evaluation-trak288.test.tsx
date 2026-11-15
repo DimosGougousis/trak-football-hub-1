@@ -127,6 +127,8 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     backend(120 * MINUTE)
     renderApp('/coach/matches/g1?tab=evaluation')
     const played = await screen.findByRole('region', { name: 'Who played' })
+    // TRAK-446: no helper line under the title.
+    expect(within(played).queryByText(/Untick a starter|Tick everyone who played/)).toBeNull()
     expect(within(within(played).getByRole('group', { name: 'Started' })).getAllByRole('checkbox').map(box => box.getAttribute('aria-checked')))
       .toEqual(['true', 'true'])
     expect(within(played).getByRole('checkbox', { name: 'Traianos Dellas' })).toBeChecked()
@@ -192,8 +194,9 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     await user.type(within(open).getByRole('textbox', { name: 'Note to Theodoros' }), 'Brave all game.')
     expect(screen.getByRole('button', { name: /^Theodoros Zagorakis/ })).toHaveTextContent('Did part of the job · Above')
 
-    // TRAK-374: a Draft badge, no moon, no "sleep on it", no "only you see it", and no "Draft saved" alert.
-    expect(screen.getByText('Draft', { exact: true })).toBeInTheDocument()
+    // TRAK-374: no moon, no "sleep on it", no "only you see it", and no "Draft saved" alert. TRAK-448: no Draft badge
+    // at the bottom either; the match's state sits beside the title.
+    expect(screen.queryByText('Draft', { exact: true })).toBeNull()
     expect(screen.queryByText(/only you see it|sleep on it/i)).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Save draft' }))
     expect(await screen.findByRole('button', { name: 'Saved' })).toBeInTheDocument()
@@ -236,7 +239,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     const steps = screen.getByRole('navigation', { name: 'Evaluation' })
     expect(within(steps).getAllByRole('button').map(step => step.textContent?.replace(/, Not started$/, ''))).toEqual(['1Result', '2Player evaluation', '3Publish'])
     await user.click(within(steps).getByRole('button', { name: /Publish/ }))
-    expect(await screen.findByRole('button', { name: /^Publish to/ })).toBeInTheDocument()
+    expect(within(await screen.findByRole('region', { name: 'Evaluation review' })).getByRole('button', { name: 'Publish' })).toBeInTheDocument()
     await user.click(within(steps).getByRole('button', { name: /Player evaluation/ }))
     expect(screen.getByRole('button', { name: /^Theodoros Zagorakis/ })).toBeInTheDocument()
   })

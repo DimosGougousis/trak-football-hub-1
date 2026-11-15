@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import type { PlayerEvent } from '@/lib/player-events'
-import { sharedPlan, type SharedPlan } from './share'
+import { lineUpOf, sharedPlan, type LineUp, type SharedPlan } from './share'
 
 /* TRAK-286 (Games 4/8): a child's shared game plans, read as the child or as one of their guardians. The database
    opens only that child's copies, and the job and the note to the child alone (game_for_family, game_for_player); a match that's
@@ -17,9 +17,10 @@ export async function rosterRows(childId: string, signal: AbortSignal) {
 }
 
 /** One match's plan as this reader may read it, or null when it isn't shared with this child. The coach's name comes
- *  with the copy: a player can't read their coach's profile (TRAK-300). */
+ *  with the copy: a player can't read their coach's profile (TRAK-300). TRAK-441: a player reads the squad's line-up
+ *  too; a guardian's page never asks for it (the database wouldn't open it either). */
 export async function fetchSharedPlan(childId: string, eventId: string, asPlayer: boolean, signal: AbortSignal):
-  Promise<{ plan: SharedPlan; coachName: string | null } | null> {
+  Promise<{ plan: SharedPlan; coachName: string | null; lineUp: LineUp | null } | null> {
   const rows = await rosterRows(childId, signal)
   if (!rows.length) return null
   const { data: family, error } = await supabase.from('game_for_family').select('squad_player_id, role, changed_at, coach_name')
@@ -29,7 +30,11 @@ export async function fetchSharedPlan(childId: string, eventId: string, asPlayer
   const player = asPlayer ? await supabase.from('game_for_player').select('goals, job, note, changed_at').eq('event_id', eventId)
     .eq('squad_player_id', family.squad_player_id).abortSignal(signal).retry(false).maybeSingle() : null
   if (player?.error) throw player.error
-  return { plan: sharedPlan(family, player?.data ?? null), coachName: family.coach_name.trim() || null }
+  const lineUp = asPlayer ? await supabase.from('game_lineup_for_players').select('squad_player_id, role, slot, name, formation')
+    .eq('event_id', eventId).abortSignal(signal).retry(false) : null
+  if (lineUp?.error) throw lineUp.error
+  return { plan: sharedPlan(family, player?.data ?? null), coachName: family.coach_name.trim() || null,
+    lineUp: lineUpOf(lineUp?.data ?? [], family.squad_player_id) }
 }
 
 /** The child's matches with a shared plan: true when a later share changed it for this reader. */

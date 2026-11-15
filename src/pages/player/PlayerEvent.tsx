@@ -11,6 +11,8 @@ import { CantMakeIt } from '@/components/parent/CantMakeIt'
 import { SharedGamePlan } from '@/components/player/SharedGamePlan'
 import { SharedGameReview } from '@/components/player/SharedGameReview'
 import { useEventBack } from '@/lib/event-back'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyMatch } from '@/components/player/FamilyMatch'
 
 /**
  * The event page (TRAK-130, J8.7): every detail of one of the squad's events.
@@ -23,6 +25,7 @@ export default function PlayerEvent() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const backTo = useEventBack('/player/matches')
+  const look = useFamilyLook()
   const [reloadKey, setReloadKey] = useState(0)
   const [result, setResult] = useState<{ id: string; reloadKey: number; event: Event | null; failed: boolean; changes: string[] } | null>(null)
 
@@ -86,12 +89,16 @@ export default function PlayerEvent() {
     </>
   }
 
+  // TRAK-441 slice 3.3, behind family_look: a match is the coach's match header with tabs. A training keeps this page.
+  const match = look && user && current?.event?.kind === 'match' ? current.event : null
   return (
-    <MobileShell>
-      <div className="pt-12 pb-28 space-y-5">
-        {back}
-        {body}
-      </div>
+    <MobileShell width={match ? 'wide' : 'page'}>
+      {match ? <div className="pb-28"><FamilyMatch event={match} changes={current!.changes} child={{ id: user!.id, name: '' }} as="player" back={backTo}
+        cantMakeIt={forThemselves && <CantMakeIt event={match} child={{ id: user!.id, name: 'you' }} self />} /></div>
+        : <div className="pt-12 pb-28 space-y-5">
+          {back}
+          {body}
+        </div>}
       <NavBar role="player" activeTab="/player/matches" onNavigate={navigate} />
     </MobileShell>
   )

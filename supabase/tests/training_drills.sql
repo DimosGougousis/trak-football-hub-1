@@ -51,6 +51,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.t294id(100),pg_temp.t294id(1),'Training On Academy','T294N1'),
  (pg_temp.t294id(101),pg_temp.t294id(2),'Training Off Academy','T294F1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.t294id(10),pg_temp.t294id(100)),(pg_temp.t294id(11),pg_temp.t294id(100)),(pg_temp.t294id(12),pg_temp.t294id(101));
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES(pg_temp.t294id(20),'2000-01-01');
@@ -60,8 +63,8 @@ SELECT pg_temp.t294check(pg_temp.t294refused(format('INSERT INTO public.academy_
   pg_temp.t294id(100),'trainings'),'23514'),'1 a misspelt name is still refused, not silently off');
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.t294id(100),'training');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES(pg_temp.t294id(102),pg_temp.t294id(3),'New Academy','T294W1');
-SELECT pg_temp.t294check((SELECT array_agg(feature ORDER BY feature) FROM public.academy_features WHERE organization_id=pg_temp.t294id(102))=ARRAY['events'],
-  '1 a new academy starts with events on and Training off');
+SELECT pg_temp.t294check((SELECT array_agg(feature ORDER BY feature) FROM public.academy_features WHERE organization_id=pg_temp.t294id(102))=ARRAY['events','games','training'],
+  '1 a new academy starts with events, Games and Training on');
 
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.t294actor(10);

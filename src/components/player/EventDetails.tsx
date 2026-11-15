@@ -11,8 +11,10 @@ import { venueParts } from '@/lib/venue-link'
  * Cancelled stays visible, with the coach's reason. Kit and the family note
  * show on every kind of event (TRAK-161).
  */
-export function EventDetails({ event: e, changes = [] }: {
+export function EventDetails({ event: e, changes = [], bare = false }: {
   event: PlayerEvent
+  /** TRAK-441: under the match header, which already says who, the day, the time and the venue. */
+  bare?: boolean
   /** TRAK-134: what moved since this device last saw it (changesSinceSeen). */
   changes?: string[]
 }) {
@@ -26,16 +28,15 @@ export function EventDetails({ event: e, changes = [] }: {
   // Imad, 23 Oct: "20:00 (19:00 Athens time)": this phone's clock, with the academy's only when they differ.
   const academy = academyLine(e)
   const rows: [string, string][] = [
-    ['Date', eventDay(e)],
-    ['Time', `${eventTime(e)}${academy && e.time ? ` (${academy})` : ''}`],
+    ...(bare ? [] : [['Date', eventDay(e)], ['Time', `${eventTime(e)}${academy && e.time ? ` (${academy})` : ''}`]] as [string, string][]),
     ...(e.meetTime ? [['Meet', meetText(e, e.meetTime)] as [string, string]] : []),
-    ...(venue ? [['Venue', venue] as [string, string]] : []),
+    ...(venue && !bare ? [['Venue', venue] as [string, string]] : []),
     ...(e.kit && !e.kitSnapshot ? [['Kit', e.kit] as [string, string]] : []),
     ...(e.familyNote ? [['Notes', e.familyNote] as [string, string]] : []),
   ]
   return (
     <div className="space-y-4">
-      <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{eventHeading(e)}</h1>
+      {!bare && <h1 className={`text-[22px] font-medium ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{eventHeading(e)}</h1>}
       {changes.length > 0 && (
         <div role="status" aria-label="What changed" className="rounded-2xl px-4 py-3 border border-primary/40">
           <p className="text-[13px] font-semibold text-primary">Changed since you last looked</p>
@@ -50,6 +51,7 @@ export function EventDetails({ event: e, changes = [] }: {
           {e.cancelReason && <p className="text-[13px] text-ink-2 mt-1">{e.cancelReason}</p>}
         </div>
       )}
+      {rows.length > 0 &&
       <ul aria-label="Event details" className="rounded-2xl divide-y divide-line"
         style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
         {rows.map(([label, value]) => (
@@ -58,7 +60,7 @@ export function EventDetails({ event: e, changes = [] }: {
             <span className="text-ink text-right">{value}</span>
           </li>
         ))}
-      </ul>
+      </ul>}
       {place && !cancelled && (
         <a href={place.mapsUrl} target="_blank" rel="noopener noreferrer"
           className="inline-flex min-h-11 items-center gap-1.5 px-1 text-[13px] text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded-md">

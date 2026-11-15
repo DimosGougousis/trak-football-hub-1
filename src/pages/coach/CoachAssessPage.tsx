@@ -17,7 +17,7 @@ import type { BandType } from '@/lib/types'
 import { deriveCardStats } from '@/lib/cardStats'
 import { localTodayISO } from '@/lib/event-time'
 import { trackEvent, startTimer } from '@/lib/telemetry'
-import { ChevronLeft, ChevronDown } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { CoachTrail } from '@/components/coach/CoachTrail'
@@ -622,36 +622,15 @@ function CoachAssessmentForm() {
 
 
         {/* player selector dropdown: only until a player is picked (TRAK-425) */}
-        {!selectedPlayer && <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
-            {t('coachAssess:playerCaps')}
-          </span>
-          <div className="relative">
-            <select
-              aria-label={t('nav:player')}
-              disabled={saving || choicesLoading}
-              value={playerId}
-              onChange={e => setPlayerId(e.target.value)}
-              className="w-full px-4 py-3 pr-10 rounded-xl bg-surface border border-line text-sm text-ink outline-none appearance-none"
-            >
-              <option value="">{t('coachAssess:selectPlayer')}</option>
-              {players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.player_name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
-          </div>
+        {!selectedPlayer && <div className="arc">
+          <Select label={t('nav:player')} placeholder={t('coachAssess:selectPlayer')} disabled={saving || choicesLoading} value={playerId} onValueChange={setPlayerId}
+            options={players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => ({ value: p.id, label: p.player_name }))} />
         </div>}
 
         {/* ---- 3. session selector (required, TRAK-68) ----
             Outside the locked fieldset: the form stays locked until a session
             is chosen, so the coach must be able to choose one. */}
         <div className="space-y-1.5">
-          <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
-            {t('coachAssess:sessionCaps')}
-          </span>
           {openState === 'missing' || openState === 'error' ? (
             <p role="alert" className="text-[12px] text-warning">
               {openState === 'missing'
@@ -675,20 +654,10 @@ function CoachAssessmentForm() {
               <Link to="/coach/sessions" className="underline text-brand">{t('coachAssess:logASession')}</Link>
             </p>
           ) : (
-            <div className="relative">
-              <select
-                aria-label={t('coachAssess:sessionFallback')}
-                disabled={saving || choicesLoading || !playerId}
-                value={sessionId}
-                onChange={e => setSessionId(e.target.value)}
-                className="w-full px-4 py-3 pr-10 rounded-xl bg-surface border border-line text-sm text-ink outline-none appearance-none"
-              >
-                <option value="" disabled>{playerId ? t('coachAssess:selectSession') : t('coachAssess:choosePlayerFirst')}</option>
-                {sessionOptions.map(s => (
-                  <option key={s.id} value={s.id}>{sessionLabel(s)}</option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
+            <div className="arc">
+              <Select label={t('coachAssess:sessionFallback')} placeholder={playerId ? t('coachAssess:selectSession') : t('coachAssess:choosePlayerFirst')}
+                disabled={saving || choicesLoading || !playerId} value={sessionId} onValueChange={setSessionId}
+                options={sessionOptions.map(s => ({ value: s.id, label: sessionLabel(s) }))} />
             </div>
           )}
           {existingId && formReady && selectedSession ? (

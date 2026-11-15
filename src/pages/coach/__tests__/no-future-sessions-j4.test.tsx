@@ -1,3 +1,4 @@
+// @story J4
 /**
  * TRAK-67 (J4): the second use-case test logged a training dated 29 Sep on
  * 25 Sep; it landed in History with the whole squad marked present. J4 records

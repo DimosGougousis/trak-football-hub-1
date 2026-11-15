@@ -11,7 +11,6 @@ import type { useWhoCanCome } from './useGames'
 import { TacticsAndAnalysis } from './TacticsAndAnalysis'
 import { LineUpAndJobs } from './LineUpAndJobs'
 import { ShareStep } from './ShareStep'
-import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { Stepper } from '@/components/arc/stepper/stepper'
 
@@ -159,9 +158,8 @@ export function GamePlan({ game, form, draft, who, step, onStep, sharedAt, chang
             sharing={sharing} problem={shareProblem} locked={locked} onStep={onStep} onEditLogistics={onEditLogistics} picking={picking} onPicking={onPicking} />}
       <div className="flex flex-wrap items-center gap-3">
         {step > 0 && <Button variant="ghost" onClick={() => onStep(step - 1)}>{t('common:back')}</Button>}
-        {/* Imad, 6 Nov: Evaluation's Draft badge, with no "only you see it". */}
-        {!locked && <span className="arc ml-auto"><Badge>{t('coachHome:stateDraft')}</Badge></span>}
-        {step < 2 && <Button className={locked ? 'ml-auto' : undefined} onClick={() => onStep(step + 1)}>{step === 0 ? t('coachMatches:nextLineUp') : t('coachMatches:nextReview')}</Button>}
+        {/* TRAK-448: no Draft badge here; the match's state sits beside the title. */}
+        {step < 2 && <Button className="ml-auto" onClick={() => onStep(step + 1)}>{step === 0 ? t('coachMatches:nextLineUp') : t('coachMatches:nextReview')}</Button>}
       </div>
     </div>
   )

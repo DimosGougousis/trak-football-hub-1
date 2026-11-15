@@ -1,3 +1,4 @@
+// @story J4
 /**
  * J4 (MVP Requirements): the coach logs each child's position, minutes, goals
  * and assists "with no invented defaults". The form used to start every child

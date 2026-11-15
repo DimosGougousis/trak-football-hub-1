@@ -88,7 +88,6 @@
   .footer { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px; }
   .selection .swap > * { white-space: normal; }
   .footerActions { justify-content: flex-end; }
-  .footerActions > :last-child { flex: 1; }
 }
 @container (max-width: 360px) {
   .legend { display: none; }

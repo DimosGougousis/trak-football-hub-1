@@ -76,6 +76,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
  (pg_temp.svid(30),'parent','Guardian One'),(pg_temp.svid(31),'parent','Guardian Two'),(pg_temp.svid(32),'parent','Guardian Three');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.svid(100),pg_temp.svid(1),'Squad Views A','SV250A'),(pg_temp.svid(101),pg_temp.svid(2),'Squad Views B','SV250B');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.academy_features(organization_id,feature) VALUES
  (pg_temp.svid(100),'events'),(pg_temp.svid(101),'events') ON CONFLICT DO NOTHING;
 INSERT INTO public.coach_details(user_id,organization_id) VALUES

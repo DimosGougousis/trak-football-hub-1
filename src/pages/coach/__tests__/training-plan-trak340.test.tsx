@@ -319,6 +319,14 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('button', { name: 'Back' }))
   })
 
+  it('with no draft, Open drafts says so in Matches\u2019 words and explains nothing (Imad, 15 Nov)', async () => {
+    database([training('soon', onTheMinute(Date.now() + DAY), { title: 'Pressing triggers' })])
+    renderApp('/coach/training')
+    const box = await screen.findByRole('region', { name: 'Open drafts' }, { timeout: 5000 })
+    expect(within(box).getByText('No drafts open.')).toBeInTheDocument()
+    expect(box).not.toHaveTextContent(/Only you see|waits here/)
+  })
+
   it('with a draft, the Next training card says so and Continue plan carries on where the coach stopped', async () => {
     const user = userEvent.setup()
     const parts = partsFromShape(standardShape(), 15, usageOf([]))
@@ -330,6 +338,8 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     expect(within(card).getByText('You stopped at Rondo.')).toBeInTheDocument()
     // Kostas, 3 Nov: Open drafts sits beside the card, as the mockup.
     expect(within(screen.getByRole('region', { name: 'Open drafts' })).getByText(/stopped at Rondo/)).toBeInTheDocument()
+    // Imad, 15 Nov: no helper line under the box's title (TRAK-442's rule).
+    expect(screen.getByRole('region', { name: 'Open drafts' })).not.toHaveTextContent(/Only you see/)
     await user.click(within(card).getByRole('button', { name: 'Continue plan' }))
     expect(await part('Rondo')).toBeInTheDocument()
   })

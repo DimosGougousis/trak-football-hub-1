@@ -52,6 +52,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.t339id(100),pg_temp.t339id(1),'Training On Academy','T339N1'),
  (pg_temp.t339id(101),pg_temp.t339id(2),'Training Off Academy','T339F1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.t339id(10),pg_temp.t339id(100)),(pg_temp.t339id(11),pg_temp.t339id(100)),(pg_temp.t339id(12),pg_temp.t339id(101));
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES(pg_temp.t339id(20),'2000-01-01');

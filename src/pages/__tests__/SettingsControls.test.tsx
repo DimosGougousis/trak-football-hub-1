@@ -100,6 +100,8 @@ describe('settings controls reflect supported behavior', () => {
       expect(screen.getByRole('heading', { name: 'Family' })).toBeInTheDocument()
       expect(screen.getByRole('heading', { name: 'Consent' })).toBeInTheDocument()
     }
+    // TRAK-459: no section has a line under its title, Consent included (Imad, 15 Nov).
+    expect(document.querySelectorAll('section > header > p')).toHaveLength(0)
     expect(localStorage.getItem('trak.settings.v1')).toBe(legacy)
   })
 

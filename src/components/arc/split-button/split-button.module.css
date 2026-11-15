@@ -2,7 +2,7 @@
 .group { display: inline-flex; align-items: stretch; border: 1px solid var(--accent); border-radius: var(--radius-control); background: var(--accent); transition: transform var(--duration-spring) var(--ease-spring); }
 .group:has(> .primary:active:not(:disabled)) { transform: scale(.97); transition-duration: var(--duration-instant); transition-timing-function: var(--ease-standard); }
 .primary, .trigger { border: 0; background: var(--accent); color: var(--accent-foreground); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
-.primary { position: relative; display: inline-grid; min-height: var(--control-height-md); place-items: center; padding: 0 var(--space-4); border-radius: var(--radius-control) 0 0 calc(var(--radius-control) - 1px); font-size: var(--text-sm); font-weight: 500; }
+.primary { position: relative; display: inline-grid; min-height: var(--control-height-md); place-items: center; padding: 0 var(--space-4); border-radius: calc(var(--radius-control) - 1px) 0 0 calc(var(--radius-control) - 1px); font-size: var(--text-sm); font-weight: 500; }
 /* The slot springs to the width of the next label; the content leads from the start edge and is clipped only while it morphs. */
 .primarySlot { display: inline-flex; min-width: 0; align-items: center; }
 .primarySlot[data-morphing] { clip-path: inset(-50% calc(var(--space-2) * -1)); }

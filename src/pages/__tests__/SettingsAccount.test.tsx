@@ -281,7 +281,9 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     await screen.findByText('Synthetic Academy')
     expect(screen.getByText('U15')).toBeInTheDocument()
     expect(screen.getByText('Head Coach')).toBeInTheDocument()
-    expect(screen.getByText('Your academy sets these. Ask them if something is wrong.')).toBeInTheDocument()
+    // TRAK-459: no section has a line under its title.
+    expect(screen.queryByText(/Your academy sets these/)).toBeNull()
+    expect(document.querySelectorAll('section header p')).toHaveLength(0)
     expect(screen.queryByText('Typed club')).toBeNull()
     expect(screen.queryByPlaceholderText('Club name')).toBeNull()
     expect(screen.queryByRole('combobox')).toBeNull()
@@ -295,7 +297,7 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
     profiles.a.role = 'coach'
     server.use(http.get(`${url}/rest/v1/coach_details`, ({ request }) => rowResponse(request, { current_club: 'Typed club', team: null, coach_role: null, organization_id: null })))
     mount(); await ready()
-    await screen.findByText('Your academy sets these. Ask them if something is wrong.')
+    await screen.findByRole('heading', { name: 'Club' })
     expect(screen.getAllByText('—')).toHaveLength(3)
     expect(screen.queryByText('Typed club')).toBeNull()
   })

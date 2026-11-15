@@ -975,6 +975,33 @@ export type Database = {
         }
         Relationships: []
       }
+      game_lineup_for_players: {
+        Row: {
+          event_id: string
+          formation: string | null
+          name: string
+          role: string
+          slot: number | null
+          squad_player_id: string
+        }
+        Insert: {
+          event_id: string
+          formation?: string | null
+          name: string
+          role: string
+          slot?: number | null
+          squad_player_id: string
+        }
+        Update: {
+          event_id?: string
+          formation?: string | null
+          name?: string
+          role?: string
+          slot?: number | null
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       game_plan_players: {
         Row: {
           context: string[]

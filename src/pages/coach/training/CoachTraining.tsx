@@ -230,7 +230,6 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   // A step the card has moved past is ticked only if it really happened; otherwise it says what's missing (live check,
   // 3 Nov: a training ended with no register showed Who's here ticked).
   const steps = loopSteps({ current, planned, registered: !!sessionId }).map(step => ({ ...step, label: shownWord(TRAINING_WORD, step.label),
-    ...('description' in step && step.description ? { description: shownWord(TRAINING_WORD, step.description) } : {}),
     ...('error' in step && step.error ? { error: shownWord(TRAINING_WORD, step.error) } : {}) }))
   const message = training.family_note?.trim()
   const locked = startedLocked(training)
@@ -299,8 +298,7 @@ function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[]
   const { t } = useTranslation()
   return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
-    <p className="text-sm text-ink-3">{t('coachTraining:onlyYouDraft')}</p>
-    {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">{t('coachTraining:noDraftsWaiting')}</p>
+    {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p>
       : <ul className="mt-1 divide-y divide-line border-t border-line">
         {drafts.map(({ training, draft }) => <li key={training.id} className="flex items-center justify-between gap-3 py-3">
           <span className="grid min-w-0">

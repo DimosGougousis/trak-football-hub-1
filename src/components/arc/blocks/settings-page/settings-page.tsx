@@ -16,7 +16,6 @@ import { useTranslation } from "@/lib/i18n";
 export interface SettingsSection {
   id: string;
   label: string;
-  description: string;
   icon: LucideIcon;
   content: ReactNode;
   /** Unsaved changes in this section: a dot in the menu. */
@@ -168,7 +167,6 @@ export function SettingsPage({ title, sections, bar, titleId }: { title: string;
           {sections.map(item => <section key={item.id} id={sectionId(item.id)} data-section={item.id} className={styles.pane} aria-labelledby={`${sectionId(item.id)}-heading`}>
             <header className={styles.paneHead}>
               <h2 id={`${sectionId(item.id)}-heading`} tabIndex={-1}>{item.label}</h2>
-              <p>{item.description}</p>
             </header>
             {item.content}
           </section>)}

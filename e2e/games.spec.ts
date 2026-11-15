@@ -82,6 +82,14 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     if (path === '/rest/v1/game_for_player') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
       goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
       job: 'Stay tight to their winger.', note: '', changed_at: null }] : [])
+    // TRAK-441: the line-up the squad's players read: names and places only. sq-1 is the player himself.
+    if (path === '/rest/v1/game_lineup_for_players') return json(plans.has('share:m-next') ? [
+      ...['Antonios Nikopolidis', 'Takis Fyssas', 'Traianos Dellas', 'Michalis Kapsis', 'Giourkas Seitaridis', 'Stelios Giannakopoulos',
+        'Theodoros Zagorakis', 'Kostas Katsouranis', 'Giorgos Karagounis', 'Angelos Charisteas', 'Zisis Vryzas'].map((name, i) => (
+        { event_id: 'm-next', squad_player_id: i === 4 ? 'sq-1' : `sq-xi-${i}`, role: 'starter', slot: i + 1, name, formation: '4-4-2' })),
+      ...['Angelos Basinas', 'Vassilios Tsiartas', 'Dimitrios Papadopoulos'].map((name, i) => (
+        { event_id: 'm-next', squad_player_id: `sq-bench-${i}`, role: 'bench', slot: null, name, formation: '4-4-2' })),
+    ] : [])
     // TRAK-288: the evaluation draft as save_game_evaluation keeps it, under `evaluation:<match>`.
     if (path === '/rest/v1/rpc/save_game_evaluation') {
       const body = req.postDataJSON() as Record<string, unknown>
@@ -145,6 +153,9 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       return json([...plans.entries()].filter(([key]) => key.startsWith(`line-up:${one}:`)).map(([, row]) => row))
     }
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
+    // TRAK-441: the family's look (family_look) is off unless a test sets 'look'; on a laptop its frame reads the academy.
+    if (path === '/rest/v1/rpc/family_feature_on') return json(plans.has('look'))
+    if (path === '/rest/v1/rpc/family_academy') return json({ name: 'Rehearsal FC', logo_url: null })
     // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
     if (path === '/rest/v1/season_plans') return json([])
     if (path === '/rest/v1/coach_calendar_events') {
@@ -570,7 +581,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.reload()
     const scheduled = page.getByRole('region', { name: 'Scheduled' })
     await expect(scheduled.getByText(/^Shares \w{3} 19:30$/)).toBeVisible()
-    await expect(page.getByText(/^Shares \w{3} 19:30$/)).toHaveCount(2) // the header's badge too
+    // TRAK-448: beside the title it reads "Plan scheduled"; the time is in this card only.
+    await expect(page.getByText(/^Shares \w{3} 19:30$/)).toHaveCount(1)
+    await expect(matchStatus(page).getByText('Plan scheduled', { exact: true })).toBeVisible()
     const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
     expect(keyboard.missed).toEqual([])
     await scheduled.getByRole('button', { name: 'Change time' }).focus()
@@ -594,9 +607,51 @@ test("the player's event page at 390 px: the shared game plan", async ({ page, c
   await expect(section.getByText('1 · Win it back in their half')).toBeVisible()
   await expect(section.getByText('Your job')).toBeVisible()
   await expect(section.getByText('Stay tight to their winger.')).toBeVisible()
+  // TRAK-441: the whole line-up on the coach's pitch, his own place marked, and the bench.
+  const lineUp = page.getByRole('region', { name: 'Line-up' })
+  const pitch = lineUp.getByRole('group', { name: 'The starting line-up, 4-4-2' })
+  await expect(pitch.getByText('You', { exact: true })).toBeVisible()
+  await expect(pitch.getByText('Antonios', { exact: true })).toBeVisible()
+  await expect(lineUp.getByRole('list', { name: 'Bench' }).getByRole('listitem')).toHaveText(['Angelos', 'Dimitrios', 'Vassilios'])
   await page.waitForTimeout(500)
   await page.screenshot({ path: testInfo.outputPath('player-game-plan-390.png'), fullPage: true })
   expect(await sideways(page)).toBeLessThanOrEqual(0)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(pitch.getByText('You', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('player-game-plan-1440.png'), fullPage: true })
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  expect(unexpected).toEqual([])
+  expect(errors).toEqual([])
+})
+
+// TRAK-441 slice 3.3: with the academy's family_look on, the same match is the coach's match header with tabs.
+test("the player's match page in the coach's look: header, tabs, game plan and logistics at 390 and 1440 px", async ({ page, context }, testInfo) => {
+  const plans = DRAFT()
+  plans.set('share:m-next', { event_id: 'm-next', shared_at: new Date().toISOString() })
+  plans.set('look', {})
+  const { unexpected, errors } = await open(page, context, '/player/event/m-next', 390, 844, plans, PLAYER)
+  await expect(page.getByRole('heading', { level: 1, name: /^vs / })).toBeVisible()
+  const tabs = page.getByRole('tablist', { name: /^vs / })
+  await expect(tabs.getByRole('tab')).toHaveText([/Logistics/, /Game plan/, /Evaluation/])
+  await expect(tabs.getByRole('tab', { name: /Game plan/ })).toHaveAttribute('aria-selected', 'true')
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await tabs.getByRole('tab', { name: /Game plan/ }).click()
+    await expect(page.getByRole('heading', { name: 'Your job' })).toBeVisible()
+    await expect(page.getByText('Stay tight to their winger.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Team instructions' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Line-up' }).getByText('You', { exact: true })).toBeVisible()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: testInfo.outputPath(`family-match-plan-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+    await tabs.getByRole('tab', { name: 'Logistics' }).click()
+    await expect(page.getByRole('tabpanel')).toBeVisible()
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: testInfo.outputPath(`family-match-logistics-${width}.png`), fullPage: true })
+    expect(await sideways(page)).toBeLessThanOrEqual(0)
+  }
+  // On a laptop the top bar is the trail, as the coach's.
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Matches')
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
 })
@@ -731,7 +786,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])', true)
     expect(keyboard.missed).toEqual([])
 
-    await expect(page.getByText('Draft', { exact: true })).toBeVisible()
+    await expect(page.getByText('Draft', { exact: true })).toHaveCount(0)  // TRAK-448: no badge at the bottom
     await saveDraft(page)
     await expect(page.getByText(/^Draft saved /)).toHaveCount(0)
     await expect(matchStatus(page).getByText('Evaluation draft')).toBeVisible()
@@ -776,14 +831,14 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // This match was made before New event asked the competition (Imad, 29 Oct): the Publish step asks it.
     await expect(page.getByText('Select the competition first.')).toBeVisible()
     await page.getByRole('group', { name: 'Competition' }).getByText('League').click()
-    await expect(page.getByRole('button', { name: 'Publish to 2 players and families' })).toBeEnabled()
+    await expect(review.getByRole('button', { name: 'Publish', exact: true })).toBeEnabled()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`publish-step-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     const keyboard = await everyControlByKeyboard(page, '[role="tabpanel"]:not([hidden])')
     expect(keyboard.missed).toEqual([])
 
-    await page.getByRole('button', { name: 'Publish to 2 players and families' }).click()
+    await review.getByRole('button', { name: 'Publish', exact: true }).click()
     await expect(page.getByText('Published to 2 players and their families. The loop is closed.')).toBeVisible()
     await expect(page.getByRole('region', { name: 'History' }).getByText('Evaluation published. The loop is closed.')).toBeVisible()
     await expect(matchStatus(page).getByText('Published')).toBeVisible()
