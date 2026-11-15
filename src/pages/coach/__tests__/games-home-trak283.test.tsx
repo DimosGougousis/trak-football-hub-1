@@ -89,6 +89,8 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
     ])
     renderApp('/coach/matches')
     await screen.findByRole('region', { name: 'Your matches' })
+    // TRAK-446: no helper line under Drafts.
+    expect(screen.queryByText(/Only you see a draft/)).toBeNull()
     // All squads (TRAK-266): every match. TRAK-326: the one played 3 days ago first, as it waits for its evaluation;
     // then soonest first; the one played 20 days ago, outside the two weeks, last.
     expect(cards()).toEqual(['/coach/matches/past-new', '/coach/matches/soon', '/coach/matches/later', '/coach/matches/past-old'])
@@ -220,6 +222,8 @@ describe('TRAK-321: Top scorers and assists', { timeout: 20_000 }, () => {
     renderApp('/coach/matches')
     const grid = await screen.findByRole('table')
     await waitFor(() => expect(within(grid).getAllByRole('row')).toHaveLength(3))
+    // TRAK-446: no helper line under the title.
+    expect(screen.queryByText(/from your published evaluations/)).toBeNull()
     const rows = within(grid).getAllByRole('row').slice(1).map(row => row.textContent)
     expect(rows).toEqual(['1Angelos Charisteas212', '2Giorgos Karagounis112'])
   })

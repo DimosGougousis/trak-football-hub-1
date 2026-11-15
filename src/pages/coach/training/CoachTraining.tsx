@@ -230,7 +230,6 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   // A step the card has moved past is ticked only if it really happened; otherwise it says what's missing (live check,
   // 3 Nov: a training ended with no register showed Who's here ticked).
   const steps = loopSteps({ current, planned, registered: !!sessionId }).map(step => ({ ...step, label: shownWord(TRAINING_WORD, step.label),
-    ...('description' in step && step.description ? { description: shownWord(TRAINING_WORD, step.description) } : {}),
     ...('error' in step && step.error ? { error: shownWord(TRAINING_WORD, step.error) } : {}) }))
   const message = training.family_note?.trim()
   const locked = startedLocked(training)
