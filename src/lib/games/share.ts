@@ -61,6 +61,27 @@ export function sharedPlan(family: FamilyRow, player: PlayerRow | null): SharedP
   }
 }
 
+/** TRAK-441: the line-up a player reads (game_lineup_for_players): names and places only. */
+export type LineUp = {
+  /** "4-4-2", or null for a plan saved without one: then there is no pitch to draw. */
+  formation: string | null
+  /** Each starter by place (1 is the keeper). A place whose player isn't listed stays empty. */
+  starters: Map<number, { name: string; you: boolean }>
+  bench: { name: string; you: boolean }[]
+}
+type LineUpRow = { squad_player_id: string; role: string; slot: number | null; name: string; formation: string | null }
+
+/** The shared line-up, or null when none went out (a plan shared before line-ups did). `own` is the reader's roster row. */
+export function lineUpOf(rows: LineUpRow[], own: string): LineUp | null {
+  if (!rows.length) return null
+  const entry = (row: LineUpRow) => ({ name: row.name, you: row.squad_player_id === own })
+  return {
+    formation: rows[0].formation,
+    starters: new Map(rows.filter(row => row.role === 'starter' && row.slot != null).map(row => [row.slot!, entry(row)])),
+    bench: rows.filter(row => row.role === 'bench').map(entry).sort((a, b) => a.name.localeCompare(b.name)),
+  }
+}
+
 /** TRAK-290: a scheduled share's moment as the academy's day and time ("2026-10-29", "19:30"), for the Share at…
  *  form, which is on the academy's clock as every form is. The academy's offset is read from the match's own wall
  *  clock and instant, as academyClock does; a match with no time yet leaves the phone's clock. */
