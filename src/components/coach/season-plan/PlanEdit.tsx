@@ -98,7 +98,7 @@ function DatesEdit({ coachId, squad, plan }: { coachId: string; squad: string; p
 
   return (
     <EditScreen part="dates" problem={problem} saving={save.isPending} canSave={changed && !bad} onSave={() => save.mutate()}>
-      <section aria-label="Your season" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+      <section aria-label="Your season" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="grid gap-4 tablet:grid-cols-2">
           <DatePicker label="Starts" value={isoToDate(startsOn)} onChange={edit(setStartsOn)} />
           <DatePicker label="Ends" value={isoToDate(endsOn)} onChange={edit(setEndsOn)} minDate={isoToDate(startsOn)} />
@@ -138,7 +138,7 @@ function EvaluationEdit({ coachId, squad, plan }: { coachId: string; squad: stri
 
   return (
     <EditScreen part="evaluation" problem={problem} saving={save.isPending} canSave={changed} onSave={() => save.mutate()}>
-      <section aria-label="Evaluation" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+      <section aria-label="Evaluation" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <EvaluationRhythm every={rhythm.every} day={rhythm.day} line={line} onChange={next => { setRhythm(next); setProblem(null) }} />
       </section>
     </EditScreen>
@@ -204,7 +204,7 @@ function ReminderEdit({ coachId, squad, plan }: { coachId: string; squad: string
 
   return (
     <EditScreen part="reminder" problem={problem} saving={set.isPending} canSave={!training.isPending && current !== saved} onSave={save}>
-      <section aria-label="Watching reminder" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+      <section aria-label="Watching reminder" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div role="group" aria-labelledby="reminder-edit" className="grid gap-2">
           <span id="reminder-edit" className="text-sm font-medium text-ink">Remind me about players I’m watching after</span>
           <div className="flex flex-wrap gap-2">

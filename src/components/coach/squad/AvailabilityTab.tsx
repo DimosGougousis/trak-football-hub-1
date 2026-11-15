@@ -190,7 +190,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
     return (
       <div className="pt-2">
         <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">{t('coachSquad:tabAvailability')}</h2>
-        <div className="mt-5 rounded-2xl border border-line bg-surface p-5">
+        <div className="mt-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <p className="text-[15px] font-medium text-ink-2">{t('coachSquad:noUpcoming')}</p>
           <p className="mt-1 text-[12px] text-ink-3">{t('coachSquad:publishToSee')}</p>
           <Link to="/coach/schedule"

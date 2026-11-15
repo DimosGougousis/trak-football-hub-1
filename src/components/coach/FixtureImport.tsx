@@ -234,7 +234,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
                             value={row.values[field]}
                             placeholder={placeholder.startsWith('coachSchedule:') ? t(placeholder as 'coachSchedule:fxEmptyForTraining') : placeholder}
                             onChange={e => update(row.line, field, e.target.value)}
-                            className="mt-1 w-full rounded-xl bg-raised px-2 py-1.5 text-[13px] text-ink outline-none"
+                            className="mt-1 w-full rounded-xl bg-raised px-3 py-1.5 text-[13px] text-ink outline-none"
                           />
                         </label>
                       ))}

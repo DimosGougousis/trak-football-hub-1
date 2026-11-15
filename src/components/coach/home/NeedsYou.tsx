@@ -42,8 +42,8 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
       <h2 id="needs-you-title" className="text-lg font-medium text-ink">{t('coachHome:needsYouTitle')} {count !== null && <span className="text-ink-3 font-normal">{count}</span>}</h2>
     </div>
     {failed ? <LoadError what={t('coachHome:needsYouWhat')} onRetry={onRetry} />
-      : !items ? <LoadingSkeleton label={t('coachHome:needsYouLoading')} lines={2} rows={2} className="h-[148px] content-start overflow-hidden rounded-2xl border border-line bg-surface p-5" />
-      : count === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-ink-2">{t('coachHome:needsYouNone')}</p>
+      : !items ? <LoadingSkeleton label={t('coachHome:needsYouLoading')} lines={2} rows={2} className="h-[148px] content-start overflow-hidden rounded-2xl border border-line bg-surface p-5 laptop:p-6" />
+      : count === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{t('coachHome:needsYouNone')}</p>
       : <div className="arc -mx-1">
         <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label={t('coachHome:needsYouList')}>
           <ul className="flex gap-3 px-1 pb-1">
@@ -63,7 +63,7 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
             </li>)}
             {shown.flatMap(card => 'item' in card ? [card.item] : []).map(item => <li key={`${item.kind}:${item.playerId}`} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
               <button type="button" onClick={() => onOpen(item)}
-                className="flex h-full w-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 text-left transition-transform active:scale-[.98] motion-reduce:transition-none">
+                className="flex h-full w-full flex-col gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-left transition-transform active:scale-[.98] motion-reduce:transition-none">
                 <span className="flex items-center gap-3">
                   <PlayerFace name={item.name} size="md" />
                   <span className="grid min-w-0">

@@ -213,7 +213,7 @@ const DetailRow = ({ label, value, editing, onChange, type = 'text' }: {
     <span className="text-xs text-muted-foreground">{label}</span>
     {editing ? (
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className="bg-secondary border border-border rounded-lg px-2 py-1 text-sm text-foreground text-right w-40" />
+        className="bg-secondary border border-border rounded-lg px-3 py-1 text-sm text-foreground text-right w-40" />
     ) : (
       <span className="text-sm text-foreground font-medium">{value || '—'}</span>
     )}

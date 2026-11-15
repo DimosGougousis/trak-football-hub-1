@@ -100,7 +100,7 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
           onSuccess: () => setOpenId(next?.id ?? null), onError: () => setProblem("Couldn't start watching. Check your connection and try again."),
         }) }} />}
 
-      <section aria-labelledby="objectives-progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+      <section aria-labelledby="objectives-progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="objectives-progress" className="text-lg font-medium text-ink">Everyone's objectives</h2>
         <p id="objectives-count" className="text-sm text-ink-2">{withSome} of {plural(placed.length, 'player')} {withSome === 1 ? 'has' : 'have'} one or two</p>
         <Progress value={withSome} max={Math.max(placed.length, 1)} aria-labelledby="objectives-count" />
@@ -110,12 +110,12 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
 
       {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
 
-      {ready.length > 0 && <section aria-labelledby="objectives-ready" className="grid gap-1 rounded-2xl border border-line bg-surface p-5">
+      {ready.length > 0 && <section aria-labelledby="objectives-ready" className="grid gap-1 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h3 id="objectives-ready" className="text-base font-medium text-ink">Ready to set up <span className="font-normal text-ink-3">· {ready.length}</span></h3>
         <ul className="m-0 list-none divide-y divide-line p-0">{ready.map(row)}</ul>
       </section>}
 
-      {board.unplaced.length > 0 && <section aria-labelledby="objectives-unplaced" className="grid gap-2 rounded-2xl border border-line bg-surface p-5">
+      {board.unplaced.length > 0 && <section aria-labelledby="objectives-unplaced" className="grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h3 id="objectives-unplaced" className="text-base font-medium text-ink">No position yet <span className="font-normal text-ink-3">· {board.unplaced.length}</span></h3>
         <p className="text-sm text-ink-3">Objectives come from the player's position. Give them one first.</p>
         <p className="text-sm text-ink-2">{board.unplaced.map(p => p.player_name).join(', ')}</p>
@@ -124,14 +124,14 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
 
       <div className="grid items-start gap-5 laptop:grid-cols-2">
         {board.lines.map(line => ({ ...line, players: line.players.filter(p => !elsewhere.has(p.id)) })).filter(line => line.players.length > 0).map(line => (
-          <section key={line.value} aria-labelledby={`objectives-${line.short}`} className="grid gap-1 rounded-2xl border border-line bg-surface p-5">
+          <section key={line.value} aria-labelledby={`objectives-${line.short}`} className="grid gap-1 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
             <h3 id={`objectives-${line.short}`} className="text-base font-medium text-ink">{line.line} <span className="font-normal text-ink-3">· {line.players.length}</span></h3>
             <ul className="m-0 list-none divide-y divide-line p-0">{line.players.map(row)}</ul>
           </section>
         ))}
       </div>
 
-      {(parked.length > 0 || ready.length > 0) && <section aria-labelledby="objectives-watching" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+      {(parked.length > 0 || ready.length > 0) && <section aria-labelledby="objectives-watching" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="grid gap-2">
           <h3 id="objectives-watching" className="text-base font-medium text-ink">Watching <span className="font-normal text-ink-3">· {parked.length}</span></h3>
           <p className="text-sm text-ink-3">{parked.length ? `Trak reminds you ${ruleText(watchOf.get(parked[0].id)!.rule)}, or after 4 weeks at the latest. Nothing goes out while you watch.` : 'Nobody is waiting on a reminder.'}</p>

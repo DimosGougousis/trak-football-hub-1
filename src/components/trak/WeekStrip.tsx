@@ -163,7 +163,7 @@ export function LoadedWeekStrip({ load, loadKey, renderSheet, renderPrimary, abs
 
   if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
   if (!week || week.monday !== dates[0]) return picker
-    ? <LoadingSkeleton label={i18n.t('coachHome:weekLoading')} lines={4} rows={2} className="h-[320px] content-start rounded-2xl border border-line bg-surface p-5" />
+    ? <LoadingSkeleton label={i18n.t('coachHome:weekLoading')} lines={4} rows={2} className="h-[320px] content-start rounded-2xl border border-line bg-surface p-5 laptop:p-6" />
     : null
   const refresh = () => setAttempt(n => n + 1)
   const show = (events: StripEvent[]) => picker

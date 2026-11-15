@@ -195,7 +195,7 @@ export default function CoachReviewFeedback() {
         {loading ? (
           <LoadingSkeleton label="Loading…" rows={2} />
         ) : error ? (
-          <div role="alert" className="rounded-2xl p-4 border border-line bg-surface">
+          <div role="alert" className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
             <p className="text-[13px] text-ink-2">{error}</p>
           </div>
         ) : (
@@ -230,7 +230,7 @@ export default function CoachReviewFeedback() {
                 )}
 
                 {draft.points.map((point, i) => (
-                  <div key={i} className="rounded-2xl p-4 border border-line bg-surface space-y-2">
+                  <div key={i} className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-2">
                     <MetadataLabel text={`POINT ${i + 1}`} />
                     <input
                       value={point.title}
@@ -251,7 +251,7 @@ export default function CoachReviewFeedback() {
                   </div>
                 ))}
 
-                <div className="rounded-2xl p-4 border border-line bg-surface space-y-2">
+                <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-2">
                   <MetadataLabel text="CLOSING" />
                   <textarea
                     value={draft.encouragement}

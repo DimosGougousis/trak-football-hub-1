@@ -216,7 +216,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
       })}
     </div>
 
-    <section aria-labelledby="formation-name" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="formation-name" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
           <div className="flex items-center gap-1">

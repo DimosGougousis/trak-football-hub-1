@@ -93,7 +93,7 @@ function useQueryParam(key: string): [string, (value: string) => void] {
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
 const Empty = ({ children }: { children: ReactNode }) =>
-  <p className="rounded-2xl border border-line bg-surface p-4 text-[15px] text-ink-2">{children}</p>
+  <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-[15px] text-ink-2">{children}</p>
 
 const GroupLabel = ({ id, children }: { id: string; children: ReactNode }) =>
   <h2 id={id} className="mb-2.5 text-xs font-medium uppercase tracking-[0.08em] text-ink-3">{children}</h2>
@@ -342,7 +342,7 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
   }
 
   return <div className="grid items-start gap-4 laptop:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
-    <div className="grid gap-3.5 rounded-2xl border border-line bg-surface p-4">
+    <div className="grid gap-3.5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-center justify-end gap-2.5" role="group" aria-label="Players today">
         <span className="text-sm text-ink-2">Players today</span>
         <button type="button" className={STEPPER_BUTTON} aria-label="One player fewer" disabled={players <= PLAYERS_TODAY.min} onClick={() => count(-1)}><Minus aria-hidden size={18} /></button>
@@ -359,7 +359,7 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
       <ChangeNote changed={changed} />
       <DetailList details={fitted.details} changed={changed} />
     </div>
-    <div className="grid gap-5 rounded-2xl border border-line bg-surface p-4">
+    <div className="grid gap-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <AboutDrill drill={drill} />
       <div className="grid gap-2.5">
         <AddToTraining drill={drill} players={players} level={level} />
@@ -396,7 +396,7 @@ export function ChangePractice() {
           options={CHARACTERISTICS.map(c => ({ value: c.key, label: c.name }))}
           onValueChange={next => { if (next[0]) go(next[0], 0) }} />
       </div>
-      <section aria-labelledby="practice-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-4">
+      <section aria-labelledby="practice-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="practice-question" className="max-w-[60ch] text-xl font-medium leading-snug text-ink">{shown.question}</h2>
         {shown.rules
           ? <ul className="grid gap-3 tablet:grid-cols-3" aria-label="Three rules">

@@ -87,7 +87,7 @@ export default function PlayerProfilePage() {
         {/* TRAK-435 (Imad, 12 Nov): no rating trend; a match gets the coach's words, not a rating. */}
         {/* Coach Assessments: the six metrics in their band colours, on a light card (TRAK-229). */}
         {assessmentCategories.length > 0 && (
-          <div className="rounded-2xl p-4 border border-line bg-surface">
+          <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
             <MetadataLabel text="COACH ASSESSMENTS" />
             <div className="mt-3 space-y-2">
               {assessmentCategories.map(cat => {
@@ -132,7 +132,7 @@ export default function PlayerProfilePage() {
         {/* My Passport */}
         <button
           onClick={() => navigate('/player/passport')}
-          className="w-full flex items-center justify-between rounded-2xl p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-5 laptop:p-6 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -158,7 +158,7 @@ export default function PlayerProfilePage() {
         {/* How TRAK works link */}
         <button
           onClick={() => navigate('/how-it-works')}
-          className="w-full flex items-center justify-between rounded-2xl p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-5 laptop:p-6 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -178,7 +178,7 @@ export default function PlayerProfilePage() {
         {/* Settings entry */}
         <button
           onClick={() => navigate('/settings')}
-          className="w-full flex items-center justify-between rounded-2xl p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-5 laptop:p-6 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-raised flex items-center justify-center">

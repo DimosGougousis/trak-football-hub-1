@@ -189,7 +189,7 @@ function SessionsView() {
                   draft: drafts.data?.has(training.id) })
                 return <li key={training.id}>
                   <Link to={`${TRAINING_PATH}/${training.id}`}
-                    className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                    className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6 transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                     <span className="grid min-w-0">
                       <span className="truncate text-base font-medium text-ink">{training.title}</span>
                       <span className="truncate text-sm text-ink-3">{[isToday(training) ? t('coachHome:today') : day, time, everySquad ? training.squad : null].filter(Boolean).join(' · ')}</span>
@@ -240,7 +240,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   const plan = () => navigate(planPath(training.id))
 
   return (
-    <section aria-labelledby="next-training" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="next-training" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 gap-1">
           {/* Kostas, 30 Oct: no "Next training" heading; the name and badge lead the card. */}
@@ -297,7 +297,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
 function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[] }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5">
+  return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
     <p className="text-sm text-ink-3">{t('coachTraining:onlyYouDraft')}</p>
     {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">{t('coachTraining:noDraftsWaiting')}</p>
@@ -390,7 +390,7 @@ function PastTrainings() {
                   const count = sessionId ? here.data?.get(sessionId) : undefined
                   const answer = againLabel(training.notes?.again)
                   const again = answer ? shownWord(TRAINING_WORD, answer) : null
-                  return <li key={training.id} className="arc flex flex-wrap items-start gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5">
+                  return <li key={training.id} className="arc flex flex-wrap items-start gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                     <div className="grid min-w-0 flex-[1_1_16rem] gap-1.5">
                       <p className="text-sm text-ink-3">{[day, everySquad ? training.squad : null, count != null ? t('coachTraining:hereCount', { count }) : null].filter(Boolean).join(' · ')}</p>
                       <p className="text-lg font-medium text-ink break-words">{training.title}</p>

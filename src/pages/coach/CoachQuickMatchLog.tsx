@@ -193,7 +193,7 @@ export default function CoachQuickMatchLog() {
 
       <div className="pt-5 pb-32 space-y-5">
         {/* Match date */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span
             className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-3"
             style={{ fontFamily: 'var(--t-font-mono)' }}
@@ -211,7 +211,7 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Opponent + score */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span
             className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-3"
             style={{ fontFamily: 'var(--t-font-mono)' }}
@@ -274,7 +274,7 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Competition + venue chips */}
-        <div className="rounded-2xl p-4 border border-line bg-surface space-y-4">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
           <div>
             <span
               className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-2"
@@ -304,7 +304,7 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Attendance */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <div className="flex items-center justify-between mb-3">
             <span
               className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"

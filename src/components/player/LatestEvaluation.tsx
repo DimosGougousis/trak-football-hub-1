@@ -22,7 +22,7 @@ export function LatestEvaluation({ assessment, readerId, childId = readerId, hre
   href?: string
 }) {
   const fresh = !wasOpened(readerId, childId, 'evaluation', assessment.id, assessment.created_at ?? '')
-  return <section aria-labelledby="latest-evaluation" className="arc grid gap-4 rounded-2xl border border-line bg-surface p-5">
+  return <section aria-labelledby="latest-evaluation" className="arc grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <div className="flex items-center justify-between gap-3">
       <h2 id="latest-evaluation" className="text-lg font-medium text-ink">Latest evaluation</h2>
       <span className="flex items-center gap-2 text-sm text-ink-3">

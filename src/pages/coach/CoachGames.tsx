@@ -92,7 +92,7 @@ export default function CoachGames() {
           ) : <>
             <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
               {next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
-                <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5">
+                <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                   <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
                   <p className="mt-2 text-sm text-ink-2">{t('coachMatches:noMatchComing')}</p>
                   <Link to="/coach/schedule" state={ADD_MATCH}
@@ -100,7 +100,7 @@ export default function CoachGames() {
                 </section>
               )}
               {/* TRAK-284: plan drafts. TRAK-288: evaluation drafts. */}
-              <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5">
+              <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                 <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
                 <p className="mt-2 text-sm text-ink-3">{t('coachMatches:draftsNote')}</p>
                 {drafts.length === 0 ? <p className="mt-4 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p> : <ul className="mt-3 divide-y divide-line">
@@ -159,7 +159,7 @@ function NextGame({ game, state, step, onKickOff }: {
   const { t } = useTranslation()
   const { day, time, academy } = gameWhen(game)
   return (
-    <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
         <Badge tone={state.tone}>{shown(MATCH_WORD, state.label)}</Badge>
@@ -221,7 +221,7 @@ function TopScorers({ scorers }: { scorers: UseQueryResult<Scorer[]> }) {
   const rows = scorers.data ?? []
   const cell = 'py-1.5 pl-2 text-right tabular-nums'
   return (
-    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 id="top-scorers" className="text-lg font-medium text-ink">{t('coachMatches:topScorers')}</h2>
       <p className="mt-2 text-sm text-ink-3">{t('coachMatches:topScorersNote')}</p>
       {scorers.error ? <div className="mt-3"><LoadError what={t('coachMatches:scorersWhat')} onRetry={() => void scorers.refetch()} retrying={scorers.isFetching} /></div>

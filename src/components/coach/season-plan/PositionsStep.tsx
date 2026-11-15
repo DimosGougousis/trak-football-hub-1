@@ -118,7 +118,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
   if (!answer || asking) {
     return (
       <div className="arc grid gap-5">
-        <section aria-labelledby="positions-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+        <section aria-labelledby="positions-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <div className="grid gap-2">
             <h2 id="positions-question" className="text-lg font-medium text-ink">Do you know where they play yet?</h2>
             <p className="text-sm text-ink-2">{plural(board.total, 'player')} in {squad}. You can change your answer any time.</p>
@@ -145,7 +145,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
   if (answer === 'not_yet') {
     return (
       <div className="arc grid gap-5">
-        <section aria-labelledby="positions-later" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+        <section aria-labelledby="positions-later" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <h2 id="positions-later" className="text-lg font-medium text-ink">You'll place them later</h2>
           <p className="text-sm text-ink-2">Nobody is placed. A player needs a position before they get objectives.</p>
           {watching.list.length > 0 && <p className="text-sm text-ink-2">Watching {plural(watching.list.length, 'player')} first. Nothing goes out until you share the plan.</p>}
@@ -211,7 +211,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
           onSuccess: () => setOpenId(next?.id ?? null), onError: () => setProblem(WATCH_FAILED),
         }) }} />}
       {watching.list.some(w => !w.ready) && <p className="text-sm text-ink-3">Watching {plural(watching.list.filter(w => !w.ready).length, 'player')}: Trak reminds you {ruleText(watching.list[0].rule)}, or after 4 weeks at the latest.</p>}
-      <section aria-labelledby="positions-progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+      <section aria-labelledby="positions-progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="positions-progress" className="text-lg font-medium text-ink">{board.placed} of {board.total} placed</h2>
           {change}
@@ -222,7 +222,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
       </section>
       {problem && <Alert tone="danger" title={problem} />}
 
-      <section aria-labelledby="positions-unplaced" className="grid gap-2 rounded-2xl border border-line bg-surface p-5">
+      <section aria-labelledby="positions-unplaced" className="grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h3 id="positions-unplaced" className="text-base font-medium text-ink">No position yet <span className="font-normal text-ink-3">· {board.unplaced.length}</span></h3>
         {board.unplaced.length === 0
           ? <p className="text-sm text-ink-2">Everyone is placed.</p>
@@ -234,7 +234,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
 
       <div className="grid items-start gap-5 laptop:grid-cols-2">
         {board.lines.map(line => (
-          <section key={line.value} aria-labelledby={`positions-${line.short}`} className="grid gap-2 rounded-2xl border border-line bg-surface p-5">
+          <section key={line.value} aria-labelledby={`positions-${line.short}`} className="grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
             <h3 id={`positions-${line.short}`} className="text-base font-medium text-ink">{line.line} <span className="font-normal text-ink-3">· {line.players.length}</span></h3>
             {line.players.length === 0 ? <p className="text-sm text-ink-3">None yet.</p> : <ul className="divide-y divide-line">{line.players.map(row)}</ul>}
           </section>

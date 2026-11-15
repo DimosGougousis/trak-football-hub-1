@@ -6,7 +6,7 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-2xl bg-surface border border-line p-4 space-y-3">
+    <div className="rounded-2xl bg-surface border border-line p-5 laptop:p-6 space-y-3">
       <Skeleton className="h-3 w-24" />
       <Skeleton className="h-8 w-40" />
       <div className="space-y-2">
@@ -21,7 +21,7 @@ export function CardSkeleton() {
 
 export function MatchCardSkeleton() {
   return (
-    <div className="rounded-2xl bg-surface border border-line p-4">
+    <div className="rounded-2xl bg-surface border border-line p-5 laptop:p-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <Skeleton className="h-4 w-24" />

@@ -83,14 +83,14 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
       <p className="mt-2 text-[12px] text-ink-3">{t('coachSquad:attrSub', { count: WEEKS })}</p>
 
       {!recorded || !focus ? (
-        <div className="mt-5 rounded-2xl border border-line bg-surface p-5">
+        <div className="mt-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <p className="text-[15px] font-medium text-ink-2">{t('coachSquad:noAssessmentsWeeks', { count: WEEKS })}</p>
           <p className="mt-1 text-[12px] text-ink-3">{t('coachSquad:onceAssess')}</p>
         </div>
       ) : (
         <div className="mt-5 grid gap-4 laptop:grid-cols-[minmax(0,1fr)_300px]">
           {/* The table scrolls inside its card, never the page. Nothing focusable sits in it, so no ring is clipped. */}
-          <div className="min-w-0 rounded-2xl border border-line bg-surface p-2.5">
+          <div className="min-w-0 rounded-2xl border border-line bg-surface p-3">
             <div tabIndex={0} role="region" aria-label={t('coachSquad:heatmapLabel')}
               className="overflow-x-auto rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
               <table className="w-full min-w-[620px] border-collapse">

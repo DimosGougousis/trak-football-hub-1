@@ -694,7 +694,7 @@ export default function CoachAddSession() {
         </div>
 
         {/* Session type */}
-        {step === 0 && <div className="rounded-2xl p-4 border border-line bg-surface">
+        {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="TYPE" />
           <div className="flex gap-2 mt-3">
             {(games ? ['training', 'other'] as const : ['training', 'match', 'other'] as const).map(t => (
@@ -710,7 +710,7 @@ export default function CoachAddSession() {
           <>
             {step === 0 && <>
             {/* Match header */}
-            <div className="rounded-2xl p-4 border border-line bg-surface">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="OPPONENT" />
               {/* TRAK-235: a log of a planned match is that match, so its opponent
                   comes from the event; changing it belongs on the event. */}
@@ -755,7 +755,7 @@ export default function CoachAddSession() {
             </div>
 
             {/* Competition + venue */}
-            <div className="rounded-2xl p-4 border border-line bg-surface space-y-4">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="COMPETITION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -1009,7 +1009,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Match notes */}
-            {step === 2 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="MATCH NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="How did the match go? Key moments, things to work on…"
@@ -1021,7 +1021,7 @@ export default function CoachAddSession() {
           /* ── TRAINING ──────────────────────────────────────────────────────── */
           <>
             {/* Session focus — required */}
-            {step === 0 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -1053,7 +1053,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Duration + Intensity on one card, on the Notes step (TRAK-182, live run 3: four steps, as a match) */}
-            {step === 2 && <div className="rounded-2xl p-4 border border-line bg-surface space-y-4">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -1097,7 +1097,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Optional theme / title */}
-            {step === 0 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
@@ -1113,7 +1113,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Attendance */}
-            {step === 1 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 1 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
                   style={{ fontFamily: 'var(--t-font-mono)' }}>
@@ -1154,7 +1154,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Notes */}
-            {step === 2 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="SESSION NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="What went well? What needs more work next session?"
@@ -1165,7 +1165,7 @@ export default function CoachAddSession() {
         ) : (
           /* ── OTHER ─────────────────────────────────────────────────────────── */
           <>
-            {step === 0 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="TITLE" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Gym, Video Analysis, Team Talk…"
@@ -1180,7 +1180,7 @@ export default function CoachAddSession() {
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
-            {step === 1 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 1 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
                   style={{ fontFamily: 'var(--t-font-mono)' }}>
@@ -1220,7 +1220,7 @@ export default function CoachAddSession() {
               {rosterNote}
             </div>}
 
-            {step === 2 && <div className="rounded-2xl p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="Optional…"

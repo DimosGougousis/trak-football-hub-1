@@ -49,7 +49,7 @@ export function TodayPlan({ trainingOn, gamesOn, inView, squadOf = null }: {
   const next = today.length ? null : items.find(ahead) ?? null
 
   // min-w-0 and minmax(0, 1fr) all the way down: a name cut with "…" must not widen the card, or the page, to its length.
-  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5" aria-labelledby="today-plan-title">
+  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6" aria-labelledby="today-plan-title">
     <div className="grid gap-2">
       <h2 id="today-plan-title" className="text-lg font-medium text-ink">{t('coachHome:today')}</h2>
       {!today.length && !pending && !failed && <p className="text-sm text-ink-3">{t('coachHome:nothingToday')}</p>}

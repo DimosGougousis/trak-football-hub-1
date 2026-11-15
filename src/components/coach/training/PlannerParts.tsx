@@ -66,7 +66,7 @@ export function SessionCard({ parts, length, current, onOpen, onReorder, onMove,
   const { t } = useTranslation()
   const fit = fitLine(totalMinutes(parts), length)
   const at = parts.findIndex(p => p.key === current)
-  return <aside aria-labelledby="your-session" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5">
+  return <aside aria-labelledby="your-session" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <div className="flex items-baseline justify-between gap-3">
       <h2 id="your-session" className="text-lg font-medium text-ink">{t('coachTraining:yourSession')}</h2>
       <TotalLine parts={parts} length={length} />

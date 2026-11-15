@@ -56,7 +56,7 @@ export default function HowTrakWorks() {
 
       <div className="pt-2 pb-6 space-y-3">
         {/* Intro */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="THE IDEA" />
           <p className="text-[13px] text-ink-2 mt-2.5 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
             TRAK turns every match into a story, not a number. Instead of a raw score,
@@ -66,7 +66,7 @@ export default function HowTrakWorks() {
         </div>
 
         {/* TRAK-229: the bands on a light card like the rest, each in its light tint. */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="PERFORMANCE BANDS" />
           <div className="mt-3 space-y-2.5">
             {BANDS.map(b => {
@@ -95,7 +95,7 @@ export default function HowTrakWorks() {
         </div>
 
         {/* Rating Engine */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="THE RATING ENGINE" />
           <div className="mt-2.5 space-y-2.5 text-[12px] text-ink-2 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>
@@ -116,7 +116,7 @@ export default function HowTrakWorks() {
         </div>
 
         {/* Why bands not numbers: it names three bands in their readable shades (TRAK-229). */}
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="WHY WORDS, NOT NUMBERS" />
           <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>

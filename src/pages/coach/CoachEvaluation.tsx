@@ -55,7 +55,7 @@ export default function CoachEvaluation() {
     body = <div className="arc grid gap-4">
       {published !== null && <Alert tone="success" title={`Published to ${published} ${published === 1 ? 'player' : 'players'}.`}>
         Each sees their band and your note. Their families see the band, never the note.</Alert>}
-      <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-ink-2">{due?.next
+      <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{due?.next
         ? `The next evaluation opens ${evalDay(due.next, true)}. Everyone starts where they were last time; you change only who moved.`
         : 'No more evaluations this season.'} <span className="text-ink-3">You evaluate {rhythmText(every, day)}.</span></p>
       <div><Button variant="secondary" onClick={() => navigate('/coach/home')}>Back to Home</Button></div>

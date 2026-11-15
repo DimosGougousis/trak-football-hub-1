@@ -59,7 +59,7 @@ export default function ParentProfilePage() {
         {/* How TRAK works link */}
         <button
           onClick={() => navigate('/how-it-works')}
-          className="w-full flex items-center justify-between rounded-2xl p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-5 laptop:p-6 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -79,7 +79,7 @@ export default function ParentProfilePage() {
         {/* Settings entry */}
         <button
           onClick={() => navigate('/settings')}
-          className="w-full flex items-center justify-between rounded-2xl p-4 border border-line bg-surface text-left hover:bg-surface transition-colors"
+          className="w-full flex items-center justify-between rounded-2xl p-5 laptop:p-6 border border-line bg-surface text-left hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-raised flex items-center justify-center">

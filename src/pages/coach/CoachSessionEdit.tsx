@@ -269,7 +269,7 @@ export default function CoachSessionEdit() {
       <div className="pt-5 pb-32 space-y-5">
         {isTraining ? (
           <>
-            <div className="rounded-2xl p-4 border border-line bg-surface">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -290,7 +290,7 @@ export default function CoachSessionEdit() {
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 border border-line bg-surface space-y-4">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -309,7 +309,7 @@ export default function CoachSessionEdit() {
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 border border-line bg-surface">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Theme"
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
@@ -317,7 +317,7 @@ export default function CoachSessionEdit() {
             </div>
           </>
         ) : (
-          <div className="rounded-2xl p-4 border border-line bg-surface">
+          <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
             <MetadataLabel text="TITLE" />
             <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Title"
               className="w-full bg-transparent text-[16px] text-ink placeholder-ink-3 outline-none mt-2" />
@@ -331,7 +331,7 @@ export default function CoachSessionEdit() {
             format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
         </div>
 
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-3"
             style={{ fontFamily: 'var(--t-font-mono)' }}>
             ATTENDED · {present.size}
@@ -370,7 +370,7 @@ export default function CoachSessionEdit() {
           )}
         </div>
 
-        <div className="rounded-2xl p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text={isTraining ? 'SESSION NOTES' : 'NOTES'} />
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} aria-label="Notes"
             placeholder="What went well? What needs more work next session?"

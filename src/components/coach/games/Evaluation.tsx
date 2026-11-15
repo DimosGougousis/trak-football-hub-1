@@ -148,7 +148,7 @@ export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, 
         </Alert>
         <div className="grid gap-4 tablet:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] tablet:items-start">
           {/* A div, not a section: the timeline is the History region itself. */}
-          <div className="grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5">
+          <div className="grid min-w-0 content-start gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
             <h2 className="text-lg font-medium text-ink">{t('coachMatches:history')}</h2>
             <GameHistory game={game} planCreatedAt={planCreatedAt} savedAt={savedAt} publishedAt={publishedAt} />
           </div>
