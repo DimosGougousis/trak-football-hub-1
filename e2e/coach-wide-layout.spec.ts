@@ -187,6 +187,23 @@ test("a coach's Settings is Arc's settings page in the wide column on a laptop",
   expect(unexpected).toEqual([])
 })
 
+// TRAK-459: on a laptop the section menu stays in view when a section further down opens.
+test("TRAK-459: Settings' section menu stays in view when a section opens on a laptop", async ({ page, context }, testInfo) => {
+  await open(page, context, 'coach', '/settings', 1440, 900)
+  const menu = page.getByRole('navigation', { name: 'Settings sections' })
+  await menu.getByRole('button', { name: 'Account' }).click()
+  await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeInViewport()
+  await expect(menu.getByRole('button', { name: 'Profile' })).toBeInViewport({ ratio: 1 })
+  await expect(menu.getByRole('button', { name: 'Account' })).toBeInViewport({ ratio: 1 })
+  await page.screenshot({ path: testInfo.outputPath('coach-settings-account-1440.png') })
+  // A phone keeps its row of sections at the top, as before.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await menu.getByRole('button', { name: 'Profile' }).click()
+  await menu.getByRole('button', { name: 'Account' }).click()
+  await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeInViewport()
+  await expect(menu.getByRole('button', { name: 'Account' })).toBeInViewport({ ratio: 1 })
+})
+
 test("the Calendar's sheets stop at the Arc bottom sheet's width on a tablet", async ({ page, context }) => {
   const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 820, 1180)
   await openNewEvent(page)

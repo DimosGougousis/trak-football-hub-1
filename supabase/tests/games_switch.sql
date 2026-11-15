@@ -45,6 +45,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.g283id(100),pg_temp.g283id(1),'Games On Academy','G283N1'),
  (pg_temp.g283id(101),pg_temp.g283id(2),'Games Off Academy','G283F1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.g283id(10),pg_temp.g283id(100)),(pg_temp.g283id(12),pg_temp.g283id(101)),(pg_temp.g283id(13),NULL);
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES(pg_temp.g283id(20),'2000-01-01');
@@ -56,8 +59,8 @@ INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.g283
 SELECT pg_temp.g283check(EXISTS(SELECT 1 FROM public.academy_features WHERE organization_id=pg_temp.g283id(100) AND feature='games'),
   '1 the operator switches Games on with one row');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES(pg_temp.g283id(102),pg_temp.g283id(3),'New Academy','G283W1');
-SELECT pg_temp.g283check((SELECT array_agg(feature ORDER BY feature) FROM public.academy_features WHERE organization_id=pg_temp.g283id(102))=ARRAY['events'],
-  '1 a new academy starts with events on and Games off');
+SELECT pg_temp.g283check((SELECT array_agg(feature ORDER BY feature) FROM public.academy_features WHERE organization_id=pg_temp.g283id(102))=ARRAY['events','games','training'],
+  '1 a new academy starts with events, Games and Training on');
 
 -- ── 2. Who gets Games ──────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;

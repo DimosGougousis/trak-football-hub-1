@@ -34,13 +34,21 @@ const FAMILY = { event_id: 'g1', squad_player_id: 'zagorakis', role: 'starter', 
 const OWN = { event_id: 'g1', squad_player_id: 'zagorakis', goals: GOALS, job: 'Stay tight to their winger.', note: '',
   shared_at: '2099-11-10T15:30:00Z', changed_at: null }
 
-function setup({ family = [FAMILY], own = [OWN], events = [MATCH] }: { family?: object[]; own?: object[]; events?: object[] } = {}) {
+// TRAK-441: what Share wrote for the whole squad to read (game_lineup_for_players): names and places only.
+const LINE_UP = [
+  { event_id: 'g1', squad_player_id: 'nikopolidis', role: 'starter', slot: 1, name: 'Antonios Nikopolidis', formation: '4-4-2' },
+  { event_id: 'g1', squad_player_id: 'zagorakis', role: 'starter', slot: 5, name: 'Theodoros Zagorakis', formation: '4-4-2' },
+  { event_id: 'g1', squad_player_id: 'fyssas', role: 'bench', slot: null, name: 'Takis Fyssas', formation: '4-4-2' },
+]
+
+function setup({ family = [FAMILY], own = [OWN], events = [MATCH], lineUp = [] }: { family?: object[]; own?: object[]; events?: object[]; lineUp?: object[] } = {}) {
   // TRAK-300: a player reads only their own profile, never the coach's (the database's rule); the name for the note
   // comes with the copy.
   const profiles = [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Theodoros Zagorakis' }]
   server.use(
     table('game_for_family', family as Record<string, unknown>[]),
     table('game_for_player', own as Record<string, unknown>[]),
+    table('game_lineup_for_players', lineUp as Record<string, unknown>[]),
     http.get(`${SUPABASE_URL}/rest/v1/profiles`, ({ request }) => {
       const asked = new URL(request.url).searchParams.get('user_id') ?? ''
       const rows = profiles.filter(profile => asked.includes(profile.user_id))
@@ -79,6 +87,27 @@ describe('TRAK-286: the shared game plan on the player\'s event page', { timeout
       note: 'Second game at right-back. Proud of you.', context: ['out_of_position'], expectation: 'stretch' }])
     render(<GamePlanSection as="player" coachName="Otto Rehhagel" childName="Theodoros" plan={previewOf(form, 'zagorakis', 'player')} />)
     expect(screen.getByRole('region', { name: 'Game plan' }).textContent).toBe(page)
+  })
+
+  it('TRAK-441: shows the whole line-up on the coach\'s pitch, his own place marked "You", and the bench', async () => {
+    setup({ lineUp: LINE_UP })
+    renderApp('/player/event/g1')
+    const card = await screen.findByRole('region', { name: 'Line-up' })
+    expect(within(card).getByText('4-4-2')).toBeInTheDocument()
+    const pitch = within(card).getByRole('group', { name: 'The starting line-up, 4-4-2' })
+    expect(within(pitch).getByText('Antonios')).toBeInTheDocument()
+    expect(within(pitch).getByText('You')).toBeInTheDocument()
+    expect(within(pitch).queryByText('Theodoros')).toBeNull()
+    expect(within(within(card).getByRole('list', { name: 'Bench' })).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Takis'])
+    // Names and places only: the card holds nobody's job or note.
+    expect(card.textContent).not.toMatch(/job|note|winger/i)
+  })
+
+  it('TRAK-441: a plan shared before line-ups went out has no Line-up card', async () => {
+    setup()
+    renderApp('/player/event/g1')
+    await screen.findByRole('region', { name: 'Game plan' })
+    expect(screen.queryByRole('region', { name: 'Line-up' })).toBeNull()
   })
 
   it('a later share that changed their plan reads Updated on the event card and the page', async () => {

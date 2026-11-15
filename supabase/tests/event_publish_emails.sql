@@ -61,6 +61,9 @@ INSERT INTO public.profiles(user_id,role,full_name)
   CASE n WHEN 1 THEN 'club' WHEN 10 THEN 'coach' WHEN 20 THEN 'player' ELSE 'parent' END::public.user_role, 'Synthetic '||n
  FROM unnest(ARRAY[1,10,20,30]) n;
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES (pg_temp.p135id(100),pg_temp.p135id(1),'Publish Academy','P135A1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES (pg_temp.p135id(10),pg_temp.p135id(100),'U15');
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES (pg_temp.p135id(20), current_date - interval '10 years');
 INSERT INTO public.player_parent_links(player_user_id,parent_user_id) VALUES (pg_temp.p135id(20),pg_temp.p135id(30));

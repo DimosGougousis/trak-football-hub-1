@@ -65,16 +65,18 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); cleanup(); localStorage.clear() })
 
 describe('TRAK-290: the morning-after nudge', { timeout: 30_000 }, () => {
-  it('TRAK-374 (Imad, 5 Nov): the evaluation itself has no draft alert, before or after 09:00; a Draft badge instead', async () => {
+  it('TRAK-374 (Imad, 5 Nov): the evaluation itself has no draft alert, before or after 09:00; its state is beside the title (TRAK-448)', async () => {
     vi.setSystemTime(EVENING)
     renderApp('/coach/matches/match-1?tab=evaluation')
-    expect(await screen.findByText('Draft', { exact: true })).toBeInTheDocument()
+    expect(await within(await screen.findByRole('heading', { level: 1 }).then(title => title.parentElement!)).findByText('Evaluation draft')).toBeInTheDocument()
+    expect(screen.queryByText('Draft', { exact: true })).toBeNull()
     expect(screen.queryByText(/^Draft saved|We’ll remind you|Only you can see it\./)).toBeNull()
     cleanup()
 
     vi.setSystemTime(MORNING)
     renderApp('/coach/matches/match-1?tab=evaluation')
-    expect(await screen.findByText('Draft', { exact: true })).toBeInTheDocument()
+    expect(await within(await screen.findByRole('heading', { level: 1 }).then(title => title.parentElement!)).findByText('Evaluation draft')).toBeInTheDocument()
+    expect(screen.queryByText('Draft', { exact: true })).toBeNull()
     expect(screen.queryByText(/Good morning|^Draft saved/)).toBeNull()
   })
 
