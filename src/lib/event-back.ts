@@ -14,6 +14,6 @@ export function useEventBack(list: string) {
   const navigate = useNavigate()
   const from = (useLocation().state as { from?: string } | null)?.from
   return from && LABEL[from]
-    ? { label: LABEL[from], go: () => navigate(-1) }
-    : { label: LABEL[list], go: () => navigate(list) }
+    ? { label: LABEL[from], href: from, go: () => navigate(-1) }
+    : { label: LABEL[list], href: list, go: () => navigate(list) }
 }

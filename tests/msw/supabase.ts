@@ -94,6 +94,8 @@ export function authHandlers(): HttpHandler[] {
     // TRAK-426: every academy feature is off unless a test switches it on, as the app treats a failed read. Answered at
     // once, so a page that waits for a switch (the old log's pages) isn't held by a failed read and its retry.
     http.post(`${SUPABASE_URL}/rest/v1/rpc/feature_on`, () => HttpResponse.json(false)),
+    // TRAK-441: the family's event pages ask for family_look.
+    http.post(`${SUPABASE_URL}/rest/v1/rpc/family_feature_on`, () => HttpResponse.json(false)),
     // TRAK-133: Home and Settings ask whether this person has a calendar link.
     // None unless a test says so; the calendar tests register their own replies.
     http.post(`${SUPABASE_URL}/rest/v1/rpc/my_calendar_link`, () => HttpResponse.json([])),
