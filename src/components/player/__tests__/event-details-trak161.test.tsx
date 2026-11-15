@@ -86,3 +86,24 @@ describe('TRAK-161 toPlayerEvent reads the family note', () => {
     expect(toPlayerEvent({ ...row, notes: 'Coach only' })?.familyNote).toBeNull()
   })
 })
+
+// TRAK-225 (20 Oct live run, S4): the family event page opens the venue in Maps too.
+describe('TRAK-225: the venue opens in Maps on the event page', () => {
+  it('a pasted Maps link opens that place; the row shows the name and the side', () => {
+    const url = 'https://www.google.com/maps/place/Olympiacos+Stadium/@37.94,23.66,17z'
+    render(<EventDetails event={{ ...match, venue: `Olympiacos Stadium ${url}` }} />)
+    const list = screen.getByRole('list', { name: 'Event details' })
+    expect(within(list).getByText('Olympiacos Stadium (Away)')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', url)
+  })
+
+  it('a plain venue opens a search for it', () => {
+    render(<EventDetails event={training} />)
+    expect(screen.getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Main%20pitch')
+  })
+
+  it('a cancelled event offers no directions', () => {
+    render(<EventDetails event={{ ...training, status: 'cancelled' }} />)
+    expect(screen.queryByRole('link', { name: 'Open in Maps' })).toBeNull()
+  })
+})

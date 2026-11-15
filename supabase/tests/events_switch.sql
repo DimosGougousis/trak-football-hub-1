@@ -46,7 +46,7 @@ BEGIN
 END $$;
 CREATE FUNCTION pg_temp.e81insert(coach integer, event integer) RETURNS text LANGUAGE sql AS $$
  SELECT format('INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time) VALUES(%L,%L,%L,%L,%L)',
-  pg_temp.e81id(event),pg_temp.e81id(coach),'Synthetic training','2026-11-02 16:00+00','20:00')
+  pg_temp.e81id(event),pg_temp.e81id(coach),'Synthetic training','2054-11-02 16:00+00','20:00')
 $$;
 
 -- Two academies: On (100) and Off (101). Coach A and colleague A2 are in On,
@@ -67,9 +67,9 @@ INSERT INTO public.coach_details(user_id,organization_id) VALUES
  (pg_temp.e81id(12),pg_temp.e81id(101)),(pg_temp.e81id(13),NULL);
 INSERT INTO public.player_details(user_id,date_of_birth) VALUES(pg_temp.e81id(20),'2000-01-01');
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,starts_at,start_time,published) VALUES
- (pg_temp.e81id(500),pg_temp.e81id(10),'A own event','2026-11-01','18:00',true),
- (pg_temp.e81id(501),pg_temp.e81id(11),'A2 event','2026-11-01','18:00',true),
- (pg_temp.e81id(510),pg_temp.e81id(12),'B own event','2026-11-01','18:00',true);
+ (pg_temp.e81id(500),pg_temp.e81id(10),'A own event','2054-11-01','18:00',true),
+ (pg_temp.e81id(501),pg_temp.e81id(11),'A2 event','2054-11-01','18:00',true),
+ (pg_temp.e81id(510),pg_temp.e81id(12),'B own event','2054-11-01','18:00',true);
 
 -- A new academy starts with events on (TRAK-124, Imad 16 Oct): creating it
 -- added its switch row, with no operator step.
@@ -149,7 +149,7 @@ SELECT pg_temp.e81check((SELECT title='A2 event' FROM public.coach_calendar_even
 SELECT pg_temp.e81check((SELECT title='B own event' FROM public.coach_calendar_events WHERE id=pg_temp.e81id(510)),'Readback: B''s event untouched');
 SELECT pg_temp.e81check(NOT EXISTS(SELECT 1 FROM public.coach_calendar_events WHERE id IN
  (pg_temp.e81id(521),pg_temp.e81id(530),pg_temp.e81id(540),pg_temp.e81id(550),pg_temp.e81id(560),pg_temp.e81id(570))),'Readback: no refused event exists');
-SELECT pg_temp.e81check((SELECT count(*)=1 FROM public.academy_features)
+SELECT pg_temp.e81check((SELECT count(*)=1 FROM public.academy_features WHERE feature='events')
  AND EXISTS(SELECT 1 FROM public.academy_features WHERE organization_id=pg_temp.e81id(100) AND feature='events'),'Readback: switches unchanged by app roles');
 
 -- The operator switches the On academy off: one DELETE, no deploy. The very

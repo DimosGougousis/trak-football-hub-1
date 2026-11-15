@@ -21,7 +21,7 @@ export function ConsentSurface({ face, labelledBy, aboveNav = false, chip = fals
     <div className={`fixed inset-x-0 bottom-0 z-40 flex ${chip ? 'justify-start' : 'justify-center'} px-4 pointer-events-none ${aboveNav ? 'pb-[82px]' : 'pb-[max(16px,env(safe-area-inset-bottom))]'}`}>
       <motion.section layout={!reduced} role={chip ? undefined : 'region'} aria-labelledby={chip ? undefined : labelledBy}
         transition={{ type: 'spring', bounce: 0, visualDuration: 0.35 }}
-        className={`arc pointer-events-auto border border-white/10 bg-[#141416]/95 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl ${chip
+        className={`arc pointer-events-auto border border-line bg-surface/95 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl ${chip
           ? 'size-11 rounded-full overflow-hidden'
           : 'w-full max-w-[398px] max-h-[85dvh] overflow-y-auto rounded-[22px] p-5'}`}>
         <motion.div key={face} className={chip ? 'size-full' : undefined} initial={reduced ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}

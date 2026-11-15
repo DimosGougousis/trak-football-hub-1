@@ -53,11 +53,12 @@ describe('TRAK-159: the coach calendar cards', () => {
     expect(within(card('Training')).getByText('No time set')).toBeInTheDocument()
   }, 20_000)
 
-  it('a draft has a Publish button that says "Publish" in words', async () => {
+  // TRAK-275 (Tarek, 23 Oct): on a phone the card's actions are icons; the name and tooltip keep the word.
+  it('a draft has a Publish button, named and titled "Publish" on a phone', async () => {
     fixtures()
     renderApp('/coach/schedule')
     const publish = await screen.findByRole('button', { name: 'Publish Finishing' })
-    expect(publish).toHaveTextContent('Publish')
+    expect(publish).toHaveAttribute('title', 'Publish Finishing')
   }, 20_000)
 
   it('a cancelled event is marked red, label and stripe (founders, 12 Oct)', async () => {
@@ -65,17 +66,25 @@ describe('TRAK-159: the coach calendar cards', () => {
     renderApp('/coach/schedule')
     await screen.findByText('Rained off', { selector: 'p' })
     const label = within(card('Rained off')).getByText('Cancelled')
-    expect(label.style.color).toBe(hexToRgb(CANCELLED_COLOR))
+    // TRAK-271: the word is the danger red (the event colour is too light for text); the stripe is the event colour.
+    // TRAK-427: the state is Arc's badge; a cancelled event's is its danger tone.
+    expect(label.closest('[class*="danger"]')).not.toBeNull()
     const stripe = card('Rained off').firstElementChild as HTMLElement
     expect(stripe.style.background).toBe(hexToRgb(CANCELLED_COLOR))
+    // TRAK-189: not faded as well. On the light theme a 0.7 fade drops the label to
+    // 3.8:1 and the details to 3.1:1 (axe, 19 Oct); red, label and stripe say it already.
+    expect(card('Rained off').style.opacity).not.toBe('0.7')
   }, 20_000)
 })
 
 describe('TRAK-159: one colour per type', () => {
-  it('training blue, match green, other orange, cancelled red (founders, 12 Oct; replaces 11 Oct\'s match red)', () => {
-    expect(hue(EVENT_COLOR.training)).toBe('blue')
-    expect(hue(EVENT_COLOR.match)).toBe('green')
-    expect(hue(EVENT_COLOR.other)).toBe('orange')
+  // TRAK-275 (Tarek, 23 Oct): training green, match purple, other teal, cancelled red; tournament blue.
+  // (Was blue/purple/orange on 12 and 18 Oct, teal/magenta/green on 20 Oct, cyan/pink/green earlier on 23 Oct.)
+  it('training green, match purple, other teal, tournament blue, cancelled red (23 Oct)', () => {
+    expect(hue(EVENT_COLOR.training)).toBe('green')
+    expect(hue(EVENT_COLOR.match)).toBe('purple')
+    expect(hue(EVENT_COLOR.other)).toBe('teal')
+    expect(hue(EVENT_COLOR.tournament)).toBe('blue')
     expect(hue(CANCELLED_COLOR)).toBe('red')
   })
 
@@ -91,7 +100,7 @@ function hexToRgb(hex: string): string {
 }
 
 /** The colour family a hex reads as, by its hue angle. */
-function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'other' {
+function hue(hex: string): 'red' | 'orange' | 'green' | 'teal' | 'blue' | 'purple' | 'magenta' | 'other' {
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
   if (d === 0) return 'other'
@@ -99,7 +108,10 @@ function hue(hex: string): 'red' | 'orange' | 'green' | 'blue' | 'other' {
   h = (h * 60 + 360) % 360
   if (h < 15 || h >= 345) return 'red'
   if (h < 40) return 'orange'
-  if (h >= 90 && h < 160) return 'green'
+  if (h >= 60 && h < 160) return 'green'
+  if (h >= 160 && h < 195) return 'teal'
   if (h >= 195 && h < 250) return 'blue'
+  if (h >= 250 && h < 300) return 'purple'
+  if (h >= 300 && h < 345) return 'magenta'
   return 'other'
 }

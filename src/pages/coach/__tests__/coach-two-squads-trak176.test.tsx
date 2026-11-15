@@ -1,7 +1,8 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { expectSquadPicked, pickSquad, squadsOffered } from '../../../../tests/support/squad-switcher'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -15,6 +16,10 @@ import type { StripEvent } from '@/components/trak/WeekStrip'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { localTodayISO, toInstant } from '@/lib/event-time'
+import { listOptions } from '@/test/arc-select'
+
+// TRAK-426: the event sheet asks whether the old log has retired; rendered on its own here, without the signed-in frame.
+vi.mock('@/components/coach/old-log', () => ({ useOldLogRetired: () => ({ retired: false, known: true }) }))
 
 /**
  * TRAK-176 (Imad, 14 Oct): the pilot coach runs U14 and U16 with one login.
@@ -34,13 +39,22 @@ let sessionsInserted: Record<string, unknown>[]
 
 function coachReads(players: typeof TWO) {
   server.use(
+    // TRAK-355: who the coach is watching; no one.
+    table('player_watches', []),
+    // TRAK-361: under All, Home's card reads each squad's plan.
+    table('season_plans', []),
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Angelos Basinas', invite_code: 'ABCD' }]),
     table('coach_details', [{ user_id: COACH.id, team: 'U16s', coach_role: 'Head Coach' }]),
     table('coach_assessments', []),
     table('session_attendance', []),
     table('event_absences', []),
     rpc('coach_squad_player_consent_required', () => false),
-    rpc('feature_on', () => true),
+    // TRAK-426: Training off, so the old log (Sessions, Full session) is still there for these checks.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'training'),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     http.get(`${SUPABASE_URL}/rest/v1/coach_sessions`, () => HttpResponse.json([], { headers: { 'Content-Range': '*/0' } })),
     http.get(`${SUPABASE_URL}/rest/v1/squad_players`, () => HttpResponse.json(players)),
     http.get(EVENTS, () => HttpResponse.json([])),
@@ -61,28 +75,31 @@ beforeEach(() => { inserted = []; sessionsInserted = []; signInAs(COACH) })
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
 
 describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
-  it('Home offers the squads, and Squad shows only the one picked', async () => {
+  it('Home offers the squads, and remembers the one picked', async () => {
     coachReads(TWO)
     renderApp('/coach/home')
-    const pick = await screen.findByRole('combobox', { name: 'Squad' })
-    expect(pick).toHaveValue('U14')
-    expect(within(pick).getAllByRole('option').map(o => o.textContent)).toEqual(['U14', 'U16'])
-    await userEvent.selectOptions(pick, 'U16')
-    cleanup()
-    // Remembered on this device.
-    renderApp('/coach/squad')
-    expect(await screen.findByText('Bo Lind')).toBeInTheDocument()
-    expect(screen.queryByText('Ade Okafor')).toBeNull()
+    // TRAK-266: pills, All first and picked; a squad tapped is remembered for what's made next.
+    // TRAK-305, TRAK-324: one switcher in the frame; the pick, All included, is what every page shows.
+    expect(await squadsOffered()).toEqual(['All squads', 'U14', 'U16'])
+    await expectSquadPicked('All')
+    await pickSquad('U16')
+    // Remembered on this device, which is what the Squad page reads (TRAK-250 tests it there).
+    await waitFor(() => expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16'))
+    expect(localStorage.getItem(`trak:coach-squad-all:${COACH.id}`)).toBe('0')
   })
 
   it('a coach with one squad sees their name and no squad picker', async () => {
     // Another coach: the app's query cache outlives a test, and would hold the first one's squads.
     signInAs({ id: 'coach-176-one' })
     coachReads(TWO.map(p => ({ ...p, coach_user_id: 'coach-176-one', age_group: 'U14' })))
-    renderApp('/coach/home')
+    // TRAK-211: Home lists no players now. The Feedback page's list shows the squads have answered
+    // (TRAK-259: it left the nav, so it opens by its address).
+    renderApp('/coach/feedback')
+    expect(await screen.findByText('Ade Okafor', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Squad: / })).toBeNull()
+    await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
     expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
-    await screen.findByText('Ade Okafor')
-    expect(screen.queryByRole('combobox', { name: 'Squad' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Squad: / })).toBeNull()
   })
 
   it('a new event from quick add is saved for the squad picked', async () => {
@@ -158,6 +175,7 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
       { id: 's3', coach_user_id: COACH.id, title: 'Whole roster session', session_type: 'training', session_date: '2026-10-12', squad: null },
     ])))
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/sessions/list')
     expect(await screen.findByText('U16 session')).toBeInTheDocument()
     expect(screen.getByText('Whole roster session')).toBeInTheDocument()
@@ -167,22 +185,31 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
   it('Assess offers the squad picked', async () => {
     coachReads(TWO)
     localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad-all:${COACH.id}`, '0')
     renderApp('/coach/assess')
-    const picker = await screen.findByRole('combobox', { name: 'Player' })
-    await waitFor(() => expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual(['Select player...', 'Bo Lind']))
+    await screen.findByRole('combobox', { name: 'Player' })
+    await waitFor(async () => expect(await listOptions('Player')).toEqual(['Bo Lind']))
   })
 
-  it('Schedule lists the squad picked and whole-roster events', async () => {
-    coachReads(TWO)
+  it('Schedule opens on All, naming each squad; a squad tapped lists its events and whole-roster ones (Imad, 24 Oct)', async () => {
+    // Another coach: the app's query cache outlives a test, and holds the pick an earlier test made.
+    const coach = 'coach-176-schedule'
+    signInAs({ id: coach })
+    coachReads(TWO.map(p => ({ ...p, coach_user_id: coach })))
     const event = (id: string, title: string, squad: string | null) => ({
-      id, coach_user_id: COACH.id, title, event_type: 'training', event_date: localTodayISO(), start_time: '18:00:00',
+      id, coach_user_id: coach, title, event_type: 'training', event_date: localTodayISO(), start_time: '18:00:00',
       starts_at: toInstant(localTodayISO(), '18:00'), ends_at: null, published: true, status: 'scheduled', series_id: null, squad,
     })
     server.use(http.get(EVENTS, () => HttpResponse.json([event('e1', 'U14 training', 'U14'), event('e2', 'U16 training', 'U16'), event('e3', 'Whole roster training', null)])))
-    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
+    localStorage.setItem(`trak:coach-squad:${coach}`, 'U16')
     renderApp('/coach/schedule')
+    expect(await screen.findByText('U14 training', { selector: 'p' })).toBeInTheDocument()
+    await expectSquadPicked('All')
+    expect(screen.getByText(/· U14/)).toBeInTheDocument()
+    expect(screen.getByText(/· All squads/)).toBeInTheDocument()
+    await pickSquad('U16')
     expect(await screen.findByText('U16 training', { selector: 'p' })).toBeInTheDocument()
     expect(screen.getByText('Whole roster training', { selector: 'p' })).toBeInTheDocument()
-    expect(screen.queryByText('U14 training', { selector: 'p' })).toBeNull()
+    await waitFor(() => expect(screen.queryByText('U14 training', { selector: 'p' })).toBeNull())
   })
 })

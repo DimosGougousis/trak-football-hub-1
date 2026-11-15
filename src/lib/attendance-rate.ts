@@ -4,7 +4,7 @@ const DAY = 24 * 60 * 60 * 1000
 
 /**
  * TRAK-182 (Imad, 18 Oct; pilot coach's item 15): a player's training
- * attendance, on the same rules as coach Home's Player overview (TRAK-197,
+ * attendance, on the same rules as the coach's Feedback and assessment tab (TRAK-197, TRAK-211,
  * player-attention.ts), so the two never disagree:
  * - trainings only (a player not picked for a match didn't miss it);
  * - the player's squad's trainings, or whole-roster ones;

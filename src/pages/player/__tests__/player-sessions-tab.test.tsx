@@ -20,6 +20,8 @@ const TRAINING = { session_id: 'session-1', session_date: '2026-10-04', focus: [
 beforeEach(() => {
   signInAs(PLAYER)
   server.use(
+    // TRAK-286: no roster row, so no shared game plan.
+    table('squad_players', []),
     rpcRows('child_events', []), // TRAK-130: the Sessions tab also reads upcoming events
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('matches', [MATCH]),
@@ -33,11 +35,12 @@ const matchShown = () => screen.queryByText('vs Synthetic United')
 const trainingShown = () => screen.queryByRole('region', { name: 'Training' })
 
 describe('TRAK-112: the player Sessions tab', () => {
-  it('is called Sessions, in the nav and the heading', async () => {
+  // TRAK-440 (Imad, 12 Nov): the tab is Matches; the page keeps its heading until its own slice (TRAK-441, 4).
+  it('is the Matches tab, marked as the open tab', async () => {
     renderApp('/player/matches')
     expect(await screen.findByRole('heading', { name: 'Sessions' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sessions' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Matches' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Matches' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tab', { name: 'Sessions' })).toBeNull()
   })
 
   it('All shows matches and training; League only matches; Training only training', async () => {
@@ -55,9 +58,27 @@ describe('TRAK-112: the player Sessions tab', () => {
     expect(matchShown()).toBeNull()
     expect(screen.queryByText(/No past .*matches yet/)).toBeNull()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cup' }))
+    // TRAK-438: the coach's three words; no Cup chip.
+    expect(screen.queryByRole('button', { name: 'Cup' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Tournament' }))
     // TRAK-170: the list is past matches, so it says so, for the chosen competition.
-    expect(screen.getByText('No past cup matches yet.')).toBeInTheDocument()
+    expect(screen.getByText('No past tournament matches yet.')).toBeInTheDocument()
     expect(trainingShown()).toBeNull()
+  })
+
+  // TRAK-438: a match published as a tournament is under Tournament; one logged before as "Cup" counts as one too.
+  it('Tournament holds tournament matches, and an old "Cup" one', async () => {
+    server.use(table('matches', [
+      { ...MATCH, id: 'match-t', opponent: 'Tournament Rovers', competition: 'Tournament' },
+      { ...MATCH, id: 'match-c', opponent: 'Old Cup City', competition: 'Cup', match_date: '2026-09-20', created_at: '2026-09-20T18:00:00Z' },
+      MATCH,
+    ]))
+    renderApp('/player/matches')
+    expect(await screen.findByText('vs Tournament Rovers')).toBeInTheDocument()
+    expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(expect.arrayContaining(['All', 'League', 'Tournament', 'Friendly', 'Training']))
+    await userEvent.click(screen.getByRole('button', { name: 'Tournament' }))
+    expect(screen.getByText('vs Tournament Rovers')).toBeInTheDocument()
+    expect(screen.getByText('vs Old Cup City')).toBeInTheDocument()
+    expect(matchShown()).toBeNull()
   })
 })

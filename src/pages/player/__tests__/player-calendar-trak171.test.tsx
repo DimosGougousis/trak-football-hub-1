@@ -13,6 +13,7 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, rpcRows, rpcError, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { CANCELLED_COLOR } from '@/lib/coach-events'
 
 const PLAYER = { id: 'player-calendar-171' }
 const event = (id: string, extra: Record<string, unknown> = {}) => ({
@@ -42,6 +43,18 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
 describe("TRAK-171: the player's month calendar", () => {
+  it('uses a hollow ring for a cancelled event on the selected calendar day', async () => {
+    setup([{ ...MATCH, status: 'cancelled' }])
+    renderApp('/player/calendar')
+    const month = await screen.findByRole('grid', { name: /November 2026/ })
+    const cell = await within(month).findByRole('gridcell', { name: /14 November 2026, 1 event/ })
+    const dot = cell.querySelector('span[aria-hidden="true"] > span') as HTMLElement
+    expect(dot).not.toBeNull()
+    expect(dot.style.background).toBe('transparent')
+    expect(dot.style.borderColor).toBe(CANCELLED_COLOR.toLowerCase())
+    expect(dot.style.borderStyle).toBe('solid')
+  })
+
   it("shows the month with a dot per event, today's events, and another day's on tap", async () => {
     setup()
     renderApp('/player/calendar')

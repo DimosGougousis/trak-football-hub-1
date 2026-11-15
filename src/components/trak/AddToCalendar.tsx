@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { isGuardianCreatedChild } from '@/lib/child-login'
 import { relativeLabel } from '@/lib/alert-read-state'
 import {
-  CALENDAR_APP_LABEL, calendarApps, createCalendarLink, feedLinks, fetchCalendarLink, openCalendarLink,
+  CALENDAR_APP_LABEL, calendarApps, createCalendarLink, feedLinks, fetchCalendarLink, startCalendarHandoff,
   revokeCalendarLink, type CalendarApp, type FeedLinks,
 } from '@/lib/calendar-link'
 
@@ -14,7 +14,7 @@ import {
    and they have one (TRAK-132), so a link is made only on a tap, never when a
    screen opens, and one link serves every app tapped in this visit. */
 
-const font = { fontFamily: "'DM Sans', sans-serif" }
+const font = { fontFamily: 'var(--t-font)' }
 // A guardian-created child login has no mailbox, and change emails skip it
 // (TRAK-135), so it's never promised one (Kostas, #286).
 const howItWorks = (childLogin: boolean) => childLogin
@@ -42,6 +42,8 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // TRAK-228: the browser blocked the calendar's tab; a link to tap instead.
+  const [blocked, setBlocked] = useState<{ url: string; label: string } | null>(null)
   // Compact (the Home card): the device's own calendar, the rest on request.
   const [showOthers, setShowOthers] = useState(!compact)
   const [first, ...others] = calendarApps(typeof navigator === 'undefined' ? '' : navigator.userAgent)
@@ -58,14 +60,19 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
     }
   }
 
-  async function add(pick: (l: FeedLinks) => string) {
+  // TRAK-228: Apple's link opens the Calendar app; the others are web pages,
+  // opened in their own tab so Trak stays open.
+  async function add(pick: (l: FeedLinks) => string, label: string, web: boolean) {
     if (busy) return
+    const handoff = startCalendarHandoff(web)
     setBusy(true)
     setError(null)
+    setBlocked(null)
     const l = await linksForThisVisit()
     setBusy(false)
-    if (!l) return
-    openCalendarLink(pick(l))
+    if (!l) { handoff.cancel(); return }
+    const url = pick(l)
+    if (!handoff.go(url)) { setBlocked({ url, label }); return }
     onAdded?.()
   }
 
@@ -86,9 +93,9 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
   }
 
   const button = (app: CalendarApp, primary = false) => (
-    <button key={app} type="button" disabled={busy} onClick={() => void add(l => l[app])}
+    <button key={app} type="button" disabled={busy} onClick={() => void add(l => l[app], CALENDAR_APP_LABEL[app], app !== 'apple')}
       className="w-full py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-60"
-      style={{ ...font, background: primary ? '#C8F25A' : 'rgba(255,255,255,0.08)', color: primary ? '#000' : 'rgba(255,255,255,0.88)' }}>
+      style={{ ...font, background: primary ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))', color: primary ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink))' }}>
       Add to {CALENDAR_APP_LABEL[app]}
     </button>
   )
@@ -98,21 +105,26 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
       {button(first, true)}
       {!showOthers ? (
         <button type="button" onClick={() => setShowOthers(true)}
-          className="w-full py-2 text-[13px] text-white/60" style={font}>Other calendar</button>
+          className="w-full py-2 text-[13px] text-ink-2" style={font}>Other calendar</button>
       ) : <>
-      <p className="pt-1 text-[11px] text-white/45" style={font}>Other calendar</p>
+      <p className="pt-1 text-[11px] text-ink-3" style={font}>Other calendar</p>
       {others.map(app => button(app))}
-      <button type="button" disabled={busy} onClick={() => void add(l => l.outlookWork)}
+      <button type="button" disabled={busy} onClick={() => void add(l => l.outlookWork, 'Outlook', true)}
         className="w-full py-2.5 rounded-[12px] text-[13px] disabled:opacity-60"
-        style={{ ...font, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)' }}>
+        style={{ ...font, background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-ink))' }}>
         Add to Outlook (work or school)
       </button>
       <button type="button" disabled={busy} onClick={() => void copy()}
-        className="w-full py-2.5 text-[13px] text-white/60 disabled:opacity-60" style={font}>
+        className="w-full py-2.5 text-[13px] text-ink-2 disabled:opacity-60" style={font}>
         {copied ? 'Link copied' : 'Copy calendar link'}
       </button>
       </>}
-      {error && <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{error}</p>}
+      {blocked && <p className="text-[12px] text-ink-2" style={font}>
+        Your browser stopped the new tab.{' '}
+        <a href={blocked.url} target="_blank" rel="noopener noreferrer" onClick={() => onAdded?.()}
+          className="font-medium text-brand underline">Open {blocked.label}</a>
+      </p>}
+      {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
     </div>
   )
 }
@@ -153,28 +165,28 @@ export function CalendarSettings() {
 
   return (
     <div className="py-3.5 space-y-3">
-      <p className="text-[13px] text-white/85" style={font}>
+      <p className="text-[13px] text-ink" style={font}>
         {status.isPending ? 'Checking…'
           : status.isError ? "Couldn't check your calendar link."
             : status.data ? syncedText(status.data.lastFetchedAt) : 'Not added yet'}
       </p>
-      <p className="text-[12px] text-white/50 leading-relaxed" style={font}>{howItWorks(isGuardianCreatedChild(user))}</p>
+      <p className="text-[12px] text-ink-2 leading-relaxed" style={font}>{howItWorks(isGuardianCreatedChild(user))}</p>
       {status.data && !revoked && (
-        <p className="text-[12px] text-white/50 leading-relaxed" style={font}>
+        <p className="text-[12px] text-ink-2 leading-relaxed" style={font}>
           Adding Trak again gives you a new link: calendars you added before stop updating until you add them again.
         </p>
       )}
-      {revoked && <p role="status" className="text-[12px] text-white/70" style={font}>
+      {revoked && <p role="status" className="text-[12px] text-ink-2" style={font}>
         Your old link no longer works. Add Trak to your calendars again below.
       </p>}
       <AddToCalendarButtons key={visit} />
       {status.data && (
         <button type="button" disabled={revoking} onClick={() => void newLink()}
-          className="w-full py-2.5 text-[13px] disabled:opacity-60" style={{ ...font, color: '#f87171' }}>
+          className="w-full py-2.5 text-[13px] disabled:opacity-60" style={{ ...font, color: 'rgb(var(--t-danger))' }}>
           Get a new link
         </button>
       )}
-      {error && <p role="alert" className="text-[12px] text-[#f87171]" style={font}>{error}</p>}
+      {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
     </div>
   )
 }
@@ -199,14 +211,14 @@ export function CalendarHomePrompt({ hasEvents }: { hasEvents: boolean }) {
   const hide = () => { writeSkipped(user.id); setHidden(true) }
   return (
     <section aria-label="Add Trak to your calendar" className="rounded-xl border p-4 my-4 space-y-3"
-      style={{ borderColor: 'rgba(200,242,90,0.3)', background: 'rgba(200,242,90,0.06)' }}>
+      style={{ borderColor: 'rgb(var(--t-brand) / 0.3)', background: 'rgb(var(--t-brand) / 0.06)' }}>
       <div className="flex items-center gap-2">
-        <CalendarPlus size={16} color="#C8F25A" aria-hidden="true" />
-        <p className="text-[14px] font-medium text-white/90" style={font}>Add Trak to your calendar</p>
+        <CalendarPlus size={16} color="rgb(var(--t-brand))" aria-hidden="true" />
+        <p className="text-[14px] font-medium text-ink" style={font}>Add Trak to your calendar</p>
       </div>
-      <p className="text-[12px] text-white/55 leading-relaxed" style={font}>{howItWorks(isGuardianCreatedChild(user))}</p>
+      <p className="text-[12px] text-ink-2 leading-relaxed" style={font}>{howItWorks(isGuardianCreatedChild(user))}</p>
       <AddToCalendarButtons onAdded={hide} compact />
-      <button type="button" onClick={hide} className="w-full py-2 text-[13px] text-white/50" style={font}>Not now</button>
+      <button type="button" onClick={hide} className="w-full py-2 text-[13px] text-ink-2" style={font}>Not now</button>
     </section>
   )
 }

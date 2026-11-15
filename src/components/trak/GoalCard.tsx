@@ -18,18 +18,18 @@ export function GoalCard({ title, category, targetNumber, currentNumber, progres
   return (
     <TrakCard>
       <button onClick={onTap} className="w-full text-left space-y-2">
-        <p className="text-sm text-[rgba(255,255,255,0.88)]">{title}</p>
+        <p className="text-sm text-ink">{title}</p>
         <MetadataLabel text={category} />
         {progress !== null && (
-          <div className="h-1.5 rounded-full bg-[#202024] overflow-hidden">
+          <div className="h-1.5 rounded-full bg-raised overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#C8F25A] transition-all"
+              className="h-full rounded-full bg-brand transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
         )}
         {progressLevel && !isAutoTracked && (
-          <span className="text-xs text-[rgba(255,255,255,0.45)]">
+          <span className="text-xs text-ink-3">
             {progressLevel.replace(/_/g, ' ')}
           </span>
         )}

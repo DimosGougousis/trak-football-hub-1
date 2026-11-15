@@ -1,9 +1,12 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { MobileShell, NavBar } from '@/components/trak'
+import { NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 
 /* The two training pages are static HTML in public/trainings, kept exactly as
    designed (white, their own fonts and scripts). vercel.json lets only
-   /trainings/* run inline scripts and be framed, and only by this site. */
+   /trainings/* run inline scripts and be framed, and only by this site.
+   Unlike the rest of the app, the frame is not held to the 430px phone
+   column: on a tablet or desktop it spans the whole window. */
 const PAGES = [
   { id: 'sessions', tab: 'Coaching sessions', title: 'Coaching Session Catalogue', src: '/trainings/coaching-session-catalogue.html' },
   { id: 'play-it-right', tab: 'Play It Right', title: 'Play It Right', src: '/trainings/play-it-right.html' },
@@ -13,13 +16,15 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const page = PAGES.find(p => p.id === params.get('page')) ?? PAGES[0]
+  // New event's theme link: the catalogue opens on that library.
+  const lib = page.id === 'sessions' ? params.get('lib') : null
 
   return (
-    <MobileShell>
-      <div className="pt-3 pb-3 border-b border-white/[0.07] grid gap-3">
+    <div className="min-h-screen bg-ground pb-24">
+      <div className="mx-auto w-full max-w-[760px] px-5 pt-3 pb-3 border-b border-line grid gap-3">
         <h1
-          className="text-[16px] font-medium text-white/88 tracking-tight text-center"
-          style={{ fontFamily: "'DM Sans', sans-serif" }}
+          className="text-[16px] font-medium text-ink tracking-tight text-center"
+          style={{ fontFamily: 'var(--t-font)' }}
         >
           Trainings
         </h1>
@@ -35,10 +40,10 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
                 onClick={() => setParams(p.id === PAGES[0].id ? {} : { page: p.id }, { replace: true })}
                 className="min-h-11 rounded-[10px] border text-[13px] font-medium transition-colors"
                 style={{
-                  fontFamily: "'DM Sans', sans-serif",
-                  background: selected ? 'rgba(200,242,90,0.06)' : '#17171A',
-                  borderColor: selected ? '#C8F25A' : 'rgba(255,255,255,0.11)',
-                  color: selected ? '#C8F25A' : 'rgba(255,255,255,0.7)',
+                  fontFamily: 'var(--t-font)',
+                  background: selected ? 'rgb(var(--t-brand) / 0.06)' : 'rgb(var(--t-raised))',
+                  borderColor: selected ? 'rgb(var(--t-brand))' : 'rgb(var(--t-line))',
+                  color: selected ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-2))',
                 }}
               >
                 {p.tab}
@@ -51,13 +56,15 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
       <iframe
         key={page.id}
         title={page.title}
-        src={page.src}
+        src={lib ? `${page.src}?${new URLSearchParams({ lib })}` : page.src}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-        className="block -mx-5 w-[calc(100%+40px)] border-0 bg-white"
-        style={{ height: 'calc(100dvh - 186px)' }}
+        // TRAK-199: beside a coach's laptop side menu there is no bottom bar, so the frame runs to the bottom (index.css).
+        className="trak-trainings-frame block w-full h-[calc(100dvh-186px)] border-0 bg-surface"
       />
 
+      {/* TRAK-254: "+ Create" in a coach's side menu on a laptop. */}
+      {role === 'coach' && <QuickAdd sideMenuOnly />}
       <NavBar role={role} activeTab={`/${role}/trainings`} onNavigate={navigate} />
-    </MobileShell>
+    </div>
   )
 }

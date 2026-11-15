@@ -1,6 +1,6 @@
 -- @trak-suite mode=--event-emails in-all=true
 -- TRAK-135 (J8.12): a cancellation (any date) or a today/tomorrow change to a
--- published event queues one email notice; drafts, publishing and changes
+-- published event queues one email notice; drafts and changes
 -- further out queue nothing; quick edits join one notice that keeps the
 -- first "before". Recipients follow the app's read rule (TRAK-125): consented
 -- children on that coach's squad in that academy, and their guardians, once
@@ -82,6 +82,9 @@ INSERT INTO public.profiles(user_id,role,full_name)
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES
  (pg_temp.e135id(100),pg_temp.e135id(1),'Emails Academy X','E135X1'),
  (pg_temp.e135id(101),pg_temp.e135id(1),'Emails Academy Y','E135Y1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id,team) VALUES
  (pg_temp.e135id(10),pg_temp.e135id(100),'U15'),(pg_temp.e135id(11),pg_temp.e135id(100),'U17');
 INSERT INTO public.player_details(user_id,date_of_birth)
@@ -104,8 +107,18 @@ INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,start
  SELECT pg_temp.e135id(600+i), pg_temp.e135id(10), 'Training '||i, 'training',
   pg_temp.e135at(d, t0), pg_temp.e135day(d), t0, t1, 'Pitch 2', p
  FROM (VALUES (0,5,true,time '17:00',time '18:30'),(1,5,true,time '19:00',time '20:30'),(2,1,true,time '17:00',time '18:30'),
-              (3,0,false,time '17:00',time '18:30'),(4,0,true,time '17:00',time '18:30'),(5,5,true,time '15:00',time '16:30'),
+              (5,5,true,time '15:00',time '16:30'),
               (6,3,false,time '17:00',time '18:30')) v(i,d,p,t0,t1);
+-- 603 and 604 start an hour from now, so they haven't started whenever this runs:
+-- TRAK-230 locks a started event, and at a fixed 17:00 Dubai both were locked
+-- from 13:00 UTC on, failing every run after it. Late in the evening the hour
+-- falls on tomorrow, the same today-or-tomorrow email window, and neither
+-- check depends on which of the two days it is.
+INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,venue,published)
+ SELECT pg_temp.e135id(600+i), pg_temp.e135id(10), 'Training '||i, 'training',
+  soon, (soon AT TIME ZONE 'Asia/Dubai')::date, (soon AT TIME ZONE 'Asia/Dubai')::time, 'Pitch 2', p
+ FROM (SELECT date_trunc('minute', now() + interval '1 hour') AS soon) s,
+      (VALUES (3,false),(4,true)) v(i,p);
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published)
  VALUES (pg_temp.e135id(610),pg_temp.e135id(11),'B training','training',pg_temp.e135at(0,'17:00'),pg_temp.e135day(0),'17:00',true);
 
@@ -148,7 +161,8 @@ SELECT pg_temp.e135check((SELECT before->>'start_time' = '17:00:00' AND before->
 SELECT pg_temp.e135check(pg_temp.e135notices(603)='none','1 cancelling a draft queues nothing',pg_temp.e135notices(603));
 SELECT pg_temp.e135check(pg_temp.e135notices(604)='none','1 a title change queues nothing',pg_temp.e135notices(604));
 SELECT pg_temp.e135check(pg_temp.e135notices(605)='changed/pending','1 moving onto tomorrow queues a notice',pg_temp.e135notices(605));
-SELECT pg_temp.e135check(pg_temp.e135notices(606)='none','1 publishing queues nothing',pg_temp.e135notices(606));
+-- TRAK-135 (16 Oct): publishing now emails too (event_publish_emails.sql has the cases).
+SELECT pg_temp.e135check(pg_temp.e135notices(606)='published/pending','1 publishing a draft 3 days out queues a published notice',pg_temp.e135notices(606));
 SELECT pg_temp.e135check((SELECT before ? 'cancel_reason' AND NOT (before ? 'notes')
   FROM public.event_change_notices WHERE event_id=pg_temp.e135id(600)),'1 a notice carries the cancel reason (scrubbed in the email), never notes');
 
@@ -184,8 +198,8 @@ RESET ROLE;
 UPDATE public.event_change_notices SET due_at = now() - interval '1 second';
 SET LOCAL ROLE service_role;
 INSERT INTO e135_claim SELECT 1, public.claim_event_change_notices();
-SELECT pg_temp.e135check((SELECT jsonb_array_length(claimed) = 3 FROM e135_claim WHERE n = 1),
- '4 the three due notices are claimed',(SELECT jsonb_array_length(claimed)::text FROM e135_claim WHERE n = 1));
+SELECT pg_temp.e135check((SELECT jsonb_array_length(claimed) = 4 FROM e135_claim WHERE n = 1),
+ '4 the four due notices are claimed (three changes, one publish)',(SELECT jsonb_array_length(claimed)::text FROM e135_claim WHERE n = 1));
 SELECT pg_temp.e135check((SELECT x->'event'->>'start_time' = '18:30:00' AND x->'event'->>'venue' = 'Pitch 4'
   AND x->'before'->>'start_time' = '17:00:00' AND x->>'squad' = 'U15' AND x->>'academy' = 'Emails Academy X'
   FROM e135_claim, jsonb_array_elements(claimed) x WHERE n = 1 AND x->>'notice_id' =
@@ -231,8 +245,10 @@ SELECT pg_temp.e135check(pg_temp.e135notices(602)='changed/pending,changed/sendi
 -- Coach A moves to academy Y; their squad rows stay in X. An event A
 -- publishes in Y and then cancels emails nobody: no X family reads it.
 UPDATE public.coach_details SET organization_id=pg_temp.e135id(101) WHERE user_id=pg_temp.e135id(10);
+-- In 2 days, a day with none of coach A's other events: today it could overlap
+-- 604, which starts an hour from whenever this runs (TRAK-158).
 INSERT INTO public.coach_calendar_events(id,coach_user_id,title,event_type,starts_at,event_date,start_time,published,organization_id)
- VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(0,'20:00'),pg_temp.e135day(0),'20:00',true,pg_temp.e135id(101));
+ VALUES (pg_temp.e135id(620),pg_temp.e135id(10),'Y training','training',pg_temp.e135at(2,'20:00'),pg_temp.e135day(2),'20:00',true,pg_temp.e135id(101));
 SELECT pg_temp.e135check((SELECT organization_id = pg_temp.e135id(101) FROM public.coach_calendar_events WHERE id = pg_temp.e135id(620))
   AND pg_temp.e135to(620) = 'none' AND pg_temp.e135to(600) = '020,024,026,030,031',
  '5 coach A''s event in academy Y emails none of their academy X families',pg_temp.e135to(620));

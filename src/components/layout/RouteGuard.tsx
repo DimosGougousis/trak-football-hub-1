@@ -18,24 +18,24 @@ function ProfileMissingScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] flex flex-col items-center justify-center px-8 text-center">
-      <h1 className="text-[20px] font-semibold text-white/90 mb-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="min-h-screen bg-ground flex flex-col items-center justify-center px-8 text-center">
+      <h1 className="text-[20px] font-semibold text-ink mb-2" style={{ fontFamily: 'var(--t-font)' }}>
         Finishing account setup
       </h1>
-      <p className="text-[13px] text-white/45 mb-8 max-w-[300px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <p className="text-[13px] text-ink-3 mb-8 max-w-[300px]" style={{ fontFamily: 'var(--t-font)' }}>
         Your account isn't fully set up yet. This can happen if something
         interrupted sign-up. Tap retry to finish setting up your account.
       </p>
       <button
         onClick={retry}
         disabled={retrying}
-        className="w-full max-w-[280px] py-4 rounded-[10px] bg-[#C8F25A] text-black font-bold text-sm disabled:opacity-50"
+        className="w-full max-w-[280px] py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm disabled:opacity-50"
       >
         {retrying ? 'Retrying…' : 'Retry setup'}
       </button>
       <button
         onClick={() => signOut()}
-        className="mt-4 text-[12px] text-white/30 hover:text-white/60"
+        className="mt-4 text-[12px] text-ink-3 hover:text-ink-2"
       >
         Sign out
       </button>
@@ -53,7 +53,7 @@ export function RouteGuard({ allowedRole, children }: { allowedRole: string; chi
     return <>{children}</>
   }
 
-  if (loading) return <div className="min-h-screen bg-[#0A0A0B]" />
+  if (loading) return <div className="min-h-screen bg-ground" />
 
   if (!user) return <Navigate to="/" replace />
 

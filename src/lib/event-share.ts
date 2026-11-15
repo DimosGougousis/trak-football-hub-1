@@ -95,6 +95,12 @@ const KIND_HEAD: Record<ShareableEvent['kind'], string> = {
   tournament: '🏆 TOURNAMENT',
   other: '📣 EVENT',
 }
+const CANCELLED_NOUN: Record<ShareableEvent['kind'], string> = {
+  training: 'training',
+  match: 'match',
+  tournament: 'tournament',
+  other: 'event',
+}
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -123,19 +129,22 @@ export function whatsAppShareText(event: ShareableEvent, options: ShareOptions):
   const day = dayLabel(event.date)
   const start = event.startTime ? clock(event.startTime) : 'time to be confirmed'
 
+  const side = isMatch ? (event.homeAway === 'home' ? ' (Home)' : event.homeAway === 'away' ? ' (Away)' : '') : ''
+
+  // TRAK-168: Tarek's cancellation wording (option A, 18 Oct). What is off and
+  // when sit in the first two lines, which is what the chat list shows. No
+  // venue (Imad, 18 Oct): the event is off, so where it was doesn't matter.
   if (event.status === 'cancelled') {
     return [
-      `*❌ CANCELLED | ${what}*`,
-      `📅 Date: ${day}`,
-      venue && `🏟️ Venue: ${venue}`,
+      `*❌ CANCELLED | ${what}${side}*`,
+      event.startTime ? `📅 ${day} @ ${start}` : `📅 ${day}`,
       reason && `📌 Reason: ${reason}`,
-      'Please note this session will not go ahead as scheduled.',
-      `🔗 Updated event info: ${eventLink(event.id)}`,
+      `This ${CANCELLED_NOUN[event.kind]} won't go ahead.`,
+      `🔗 Event details: ${eventLink(event.id)}`,
     ].filter(Boolean).join('\n')
   }
 
   if (isMatch) {
-    const side = event.homeAway === 'home' ? ' (Home)' : event.homeAway === 'away' ? ' (Away)' : ''
     const meet = text(event.meetTime)
     const kit = clean(event.kit)
     return [

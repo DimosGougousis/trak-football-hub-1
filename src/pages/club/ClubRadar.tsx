@@ -4,6 +4,7 @@ import { ClubShell, ClubCard, SectionLabel } from '@/components/club/ClubShell'
 import { supabase } from '@/integrations/supabase/client'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
+import { withAlpha } from '@/lib/with-alpha'
 
 const THRESHOLD = 7.5
 const MIN_ASSESSMENTS = 2
@@ -125,30 +126,30 @@ export default function ClubRadar() {
       {/* Page header */}
       <div className="pb-5">
         <div className="flex items-center gap-1.5 mb-1">
-          <TrendingUp size={13} color="#C8F25A" />
+          <TrendingUp size={13} color="rgb(var(--t-brand))" />
           <span style={{
-            fontFamily: "'DM Mono', monospace",
+            fontFamily: 'var(--t-font-mono)',
             fontSize: 9,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.45)',
+            color: 'rgb(var(--t-ink-3))',
           }}>
             Movement Radar
           </span>
         </div>
         <h1 style={{
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: 'var(--t-font)',
           fontSize: 28,
           fontWeight: 300,
-          color: 'rgba(255,255,255,0.88)',
+          color: 'rgb(var(--t-ink))',
           lineHeight: 1.15,
         }}>
           Players to Watch
         </h1>
         <p style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--t-font-mono)',
           fontSize: 10,
-          color: 'rgba(255,255,255,0.28)',
+          color: 'rgb(var(--t-ink-3))',
           marginTop: 5,
         }}>
           Avg score ≥ 7.5 · 2+ assessments · last 60 days
@@ -157,7 +158,7 @@ export default function ClubRadar() {
 
       {/* Content */}
       {loading ? (
-        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>Loading…</div>
+        <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>Loading…</div>
       ) : players.length === 0 ? (
         <ClubCard className="p-6">
           <div className="flex flex-col items-center text-center gap-3">
@@ -165,17 +166,17 @@ export default function ClubRadar() {
               width: 44,
               height: 44,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.04)',
+              background: 'rgb(var(--t-raised))',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <TrendingUp size={20} color="rgba(255,255,255,0.2)" />
+              <TrendingUp size={20} color="rgb(var(--t-ink-3))" />
             </div>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>
+            <p style={{ fontFamily: 'var(--t-font)', fontSize: 14, color: 'rgb(var(--t-ink-2))' }}>
               No players above the threshold yet
             </p>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.28)', lineHeight: 1.6 }}>
+            <p style={{ fontFamily: 'var(--t-font)', fontSize: 12, color: 'rgb(var(--t-ink-3))', lineHeight: 1.6 }}>
               Players need at least 2 assessments in the last 60 days to appear here. Keep your coaches assessing regularly.
             </p>
           </div>
@@ -195,10 +196,10 @@ export default function ClubRadar() {
                     width: 40,
                     height: 40,
                     borderRadius: 999,
-                    background: 'rgba(200,242,90,0.1)',
-                    color: '#C8F25A',
+                    background: 'rgb(var(--t-brand) / 0.1)',
+                    color: 'rgb(var(--t-brand))',
                     fontSize: 13,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'var(--t-font)',
                     fontWeight: 500,
                   }}
                 >
@@ -207,13 +208,13 @@ export default function ClubRadar() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(255,255,255,0.88)' }}>
+                  <div style={{ fontFamily: 'var(--t-font)', fontSize: 14, color: 'rgb(var(--t-ink))' }}>
                     {p.name}
                   </div>
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+                  <div style={{ fontFamily: 'var(--t-font)', fontSize: 12, color: 'rgb(var(--t-ink-3))', marginTop: 1 }}>
                     {p.position} · {p.team}
                   </div>
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 3 }}>
+                  <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'rgb(var(--t-ink-3))', marginTop: 3 }}>
                     {p.assessmentCount} assessments · speak to {p.coachName}
                   </div>
                 </div>
@@ -222,11 +223,11 @@ export default function ClubRadar() {
                 <span
                   className="shrink-0 px-2.5 py-1 rounded-full"
                   style={{
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'var(--t-font)',
                     fontSize: 11,
                     color: p.bandColor,
-                    background: `${p.bandColor}1F`,
-                    border: `1px solid ${p.bandColor}40`,
+                    background: `${withAlpha(p.bandColor, 0.12)}`,
+                    border: `1px solid ${withAlpha(p.bandColor, 0.25)}`,
                   }}
                 >
                   {p.band}

@@ -17,7 +17,7 @@ export function AlertCard({ type, childName, detail, timestamp }: AlertCardProps
     <TrakCard>
       <div className="space-y-1">
         <MetadataLabel text={`${labels[type]} \u00b7 ${new Date(timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`} />
-        <p className="text-sm text-[rgba(255,255,255,0.88)]">{childName} {detail}</p>
+        <p className="text-sm text-ink">{childName} {detail}</p>
       </div>
     </TrakCard>
   )

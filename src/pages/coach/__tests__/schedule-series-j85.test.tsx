@@ -1,7 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+// @story J8
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { chooseCardAction, endActions, openNewEvent } from '../../../../tests/support/schedule-actions'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -59,7 +62,9 @@ function fixtures() {
     table('coach_sessions', []),
     // TRAK-176: a new event waits for the coach's squads.
     table('squad_players', []),
-    rpc('feature_on', () => true),
+    // TRAK-294: Training off, so its nav tab doesn't add a second "Training" to the page.
+    // TRAK-288: Games off too: with it on, a new match asks its competition.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'training' && p_feature !== 'games'),
     http.post(EVENTS, write('post')),
     http.patch(EVENTS, write('patch')),
     http.delete(EVENTS, write('delete')),
@@ -79,15 +84,17 @@ async function open() {
 
 // Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
 describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
-  afterEach(() => { server.events.removeAllListeners() })
+  afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
   beforeEach(() => {
+    // TRAK-230: this week's 18:00 training is still to come, so it can be edited.
+    atMorningToday()
     signInAs(COACH)
     fixtures()
   })
 
   it('creates 8 weeks of Monday and Wednesday training in one save: 16 drafts, one series', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 2')
     await eventStep(sheet, 'When')
@@ -118,7 +125,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
   // TRAK-182: Review's Publish puts the whole new series out: one insert, one publish.
   it('publishes a new series from Review', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickDate(userEvent, 'Date', MONDAY)
@@ -134,13 +141,15 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     expect(writes[0].body).toHaveLength(8)
     expect(writes[1]).toMatchObject({ method: 'patch', body: { published: true } })
     expect(writes[1].query).toMatch(/^\?id=in\.\(written-0,written-1,/)
+    // TRAK-135: one nudge; the server makes one email per person for the 8 weeks.
+    await waitFor(() => expect(emailNudges).toBe(1))
   })
 
   // Imad's #263 review: the repeat controls hide for a match, but hiding them
   // didn't switch the repeat off, so Save wrote a series of identical matches.
   it('switching a repeating training to a match saves one match, never a series', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickDate(userEvent, 'Date', MONDAY)
@@ -164,7 +173,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
 
   it("won't save a series that ends before it starts, and says so", async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '18:00')
@@ -221,15 +230,17 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
 
   it('cancels only this week, or this and following weeks', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel Training' }))
+    await chooseCardAction('Training', 'Cancel')
     let sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     expect(within(sheet).getByRole('button', { name: 'Only this week' })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel event' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.w1&select=id', body: { status: 'cancelled' } })
 
+    // TRAK-168: one cancelled week is offered to the team group; Done closes it.
+    await userEvent.click(within(await screen.findByRole('dialog', { name: 'Event cancelled' })).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel Training' }))
+    await chooseCardAction('Training', 'Cancel')
     sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'This and following weeks' }))
     await userEvent.click(within(sheet).getByRole('button', { name: 'Cancel event' }))
@@ -247,6 +258,15 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     })
     // TRAK-135: each cancel asks for the families' email; the series is one email per person.
     await waitFor(() => expect(emailNudges).toBe(2))
+    // TRAK-168 (Imad, 18 Oct): the share is still offered, for this week's event
+    // only; the following weeks get no message.
+    const done = await screen.findByRole('dialog', { name: 'Event cancelled' })
+    // What the toast used to say stays: the cancel, and the drafts removed after it.
+    expect(done).toHaveTextContent('1 unpublished draft removed.')
+    const shared = within(done).getByRole('link', { name: /Share/ })
+    const text = decodeURIComponent(new URL(shared.getAttribute('href')!).searchParams.get('text')!)
+    expect(text).toContain('/event/w1')
+    expect(text.match(/trakfootball\.com\/event\//g)).toHaveLength(1)
   })
 
   it('publishes this and following draft weeks in one go', async () => {
@@ -261,12 +281,13 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
       query: `?series_id=eq.series-1&event_date=gte.${today}&published=eq.false&status=eq.scheduled&select=id`,
       body: { published: true },
     })
+    await waitFor(() => expect(emailNudges).toBe(1)) // TRAK-135
   })
 
   it('deletes only this draft week, never a published one', async () => {
     rows = rows.map(r => ({ ...r, published: false }))
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Training' }))
+    await chooseCardAction('Training', 'Delete')
     const sheet = screen.getByRole('dialog', { name: 'Delete draft' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Only this week' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -276,6 +297,7 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
   it('marks a series week as Weekly on its card', async () => {
     await open()
     // TRAK-159: the time leads the card.
-    expect(screen.getByText(/Training · Weekly/)).toHaveTextContent('18:00 · Training · Weekly')
+    // TRAK-255: the type word is in its own colour, so the line is read as a whole.
+    expect(screen.getByText((_, el) => el?.tagName === 'P' && /Training · Weekly/.test(el.textContent ?? ''))).toHaveTextContent('18:00 · Training · Weekly')
   })
 })

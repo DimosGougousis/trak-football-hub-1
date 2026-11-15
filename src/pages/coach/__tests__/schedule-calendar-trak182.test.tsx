@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -25,7 +26,10 @@ const row = (id: string, date: string, over: Record<string, unknown>) => ({
 })
 const fullDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'full' })
 
+// TRAK-255: today's 17:00 and 19:00 events are still to come, so no day reads "needs you" yet.
+afterEach(() => vi.useRealTimers())
 beforeEach(() => {
+  atMorningToday()
   signInAs(COACH)
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
@@ -41,6 +45,19 @@ beforeEach(() => {
 })
 
 describe('TRAK-182: Schedule month on Arc\'s calendar', () => {
+  it('shows a hollow ring for cancelled events, while scheduled events stay filled', async () => {
+    renderApp('/coach/schedule')
+    const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })
+    const cancelled = screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` })
+    const ring = cancelled.querySelector<HTMLElement>('[aria-hidden="true"] > span')!
+    expect(ring.style.background).toBe('transparent')
+    expect(ring.style.borderStyle).toBe('solid')
+    expect(parseFloat(ring.style.borderWidth)).toBeGreaterThan(0)
+    const filled = busy.querySelector<HTMLElement>('[aria-hidden="true"] > span')!
+    expect(filled.style.background).not.toBe('transparent')
+    expect(filled.style.borderStyle).not.toBe('solid')
+  })
+
   it('counts each day\'s events, starts weeks on Monday, and lists a tapped day', async () => {
     renderApp('/coach/schedule')
     const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })

@@ -1,5 +1,6 @@
 import { format, parseISO } from 'date-fns'
-import { displayEventTime } from './event-time'
+import { academyClock, displayEventTime, meetLead, phoneClock, phoneEventTime } from './event-time'
+import { readKitSnapshot, type EventKitSnapshot } from './kit-templates'
 
 /**
  * What a player sees of their squad's events (J8.7, TRAK-130).
@@ -26,13 +27,17 @@ export interface PlayerEvent {
   id: string
   kind: EventKind
   title: string | null
-  /** YYYY-MM-DD, the day the coach chose. */
+  /** YYYY-MM-DD, the event's day on this phone's clock (Imad, 23 Oct); the academy's day when there's no time yet. */
   date: string
-  /** HH:MM as the coach typed it, or null while not known. */
+  /** HH:MM on this phone's clock, or null while not known. */
   time: string | null
+  /** HH:MM on this phone's clock. */
   meetTime: string | null
+  /** The day and time as the coach typed them, on the academy's clock (TRAK-175). */
+  academy?: { date: string; time: string | null }
   venue: string | null
   kit: string | null
+  kitSnapshot?: EventKitSnapshot | null
   opponent: string | null
   homeAway: 'home' | 'away' | null
   status: 'scheduled' | 'cancelled'
@@ -59,11 +64,12 @@ const text = (v: unknown): string | null => (typeof v === 'string' && v.trim() ?
 const clock = (v: unknown): string | null => (typeof v === 'string' && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : null)
 
 export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null {
-  const shown = displayEventTime({
+  const when = {
     event_date: row.event_date as string | null,
     start_time: row.start_time as string | null,
     starts_at: row.starts_at as string | null,
-  })
+  }
+  const shown = phoneEventTime(when)
   if (!shown.date || typeof row.id !== 'string') return null
   const kind = KINDS.has(row.event_type as EventKind) ? (row.event_type as EventKind) : 'other'
   const homeAway = row[EVENT_COLUMNS.homeAway]
@@ -74,9 +80,11 @@ export function toPlayerEvent(row: Record<string, unknown>): PlayerEvent | null 
     title: text(row.title),
     date: shown.date,
     time: shown.time,
-    meetTime: clock(row[EVENT_COLUMNS.meetTime]),
+    meetTime: phoneClock(when, clock(row[EVENT_COLUMNS.meetTime])),
+    academy: displayEventTime(when),
     venue: text(row.venue),
     kit: text(row[EVENT_COLUMNS.kit]),
+    kitSnapshot: readKitSnapshot(row.kit_snapshot),
     opponent: text(row.opponent),
     homeAway: homeAway === 'home' || homeAway === 'away' ? homeAway : null,
     status: row[EVENT_COLUMNS.status] === 'cancelled' ? 'cancelled' : 'scheduled',
@@ -110,6 +118,16 @@ export function eventHeading(event: PlayerEvent): string {
 export const eventDay = (event: PlayerEvent) => format(parseISO(event.date), 'EEE d MMM')
 /** The coach's time, or "Time to be confirmed": never midnight. */
 export const eventTime = (event: PlayerEvent) => event.time ?? 'Time to be confirmed'
+
+/** "16:15, 45 min before kick-off", on this phone's clock as the start is (Imad, 23 Oct). */
+export function meetText(event: PlayerEvent, meet: string): string {
+  const lead = event.time ? meetLead(meet, event.time, event.kind) : null
+  return `${meet}${lead ? `, ${lead}` : ''}`
+}
+
+/** TRAK-223: "19:00 Athens time" when this phone's clock differs from the academy's that day, else null. */
+export const academyLine = (event: PlayerEvent) =>
+  academyClock({ ...(event.academy ?? { date: event.date, time: event.time }), startsAt: event.startsAt })
 
 // ── "Changed" until opened ──────────────────────────────────────────────────
 // Per device, like the parent bell (ParentAlertsBell): for each event, the
@@ -158,10 +176,10 @@ export function markEventOpened(userId: string, event: PlayerEvent) {
 // first showed them, moved on when the event is opened. A changed event's page
 // compares, so it can say "Moved: Sat 17 Oct → Sun 18 Oct" on that visit.
 
-type EventSnapshot = { sequence: number; date: string; time: string | null; venue: string | null }
+type EventSnapshot = { sequence: number; date: string; time: string | null; venue: string | null; startsAt?: string | null }
 
 const snapshotKey = (userId: string) => `trak:event-snapshots:${userId}`
-const snapshotOf = (e: PlayerEvent): EventSnapshot => ({ sequence: e.sequence, date: e.date, time: e.time, venue: e.venue })
+const snapshotOf = (e: PlayerEvent): EventSnapshot => ({ sequence: e.sequence, date: e.date, time: e.time, venue: e.venue, startsAt: e.startsAt })
 
 function readSnapshots(userId: string): Record<string, EventSnapshot> {
   try {
@@ -187,8 +205,11 @@ export function noteEventSnapshots(userId: string, events: PlayerEvent[]) {
 
 /** What moved since this device's copy, one line each. Nothing for a cancellation (it says so itself). */
 export function changesSinceSeen(userId: string, event: PlayerEvent): string[] {
-  const before = readSnapshots(userId)[event.id]
-  if (!before || event.sequence <= before.sequence || event.status === 'cancelled') return []
+  const saved = readSnapshots(userId)[event.id]
+  if (!saved || event.sequence <= saved.sequence || event.status === 'cancelled') return []
+  // The old copy is read on this phone's clock now, so a phone that changed zone since never reads as a moved event.
+  const before = saved.startsAt && saved.time
+    ? { ...saved, ...phoneEventTime({ event_date: saved.date, start_time: saved.time, starts_at: saved.startsAt }) } : saved
   const lines: string[] = []
   if (before.date !== event.date) lines.push(`Moved: ${format(parseISO(before.date), 'EEE d MMM')} → ${eventDay(event)}`)
   if (before.time !== event.time) lines.push(`Time: ${before.time ?? 'to be confirmed'} → ${event.time ?? 'to be confirmed'}`)

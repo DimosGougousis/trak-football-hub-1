@@ -18,7 +18,11 @@ export type SelfRatingFlag = 'fair' | 'generous' | 'way off'
 
 export interface BandConfig {
   word: string
+  /** The band's colour, for bars, dots and lines (at least 3:1 on Trak's light screen). */
   color: string
+  /** The band's word written in colour: a darker shade, at least 4.5:1 on the screen and on `bg`. */
+  text: string
+  /** A pill's light tint, and its edge. */
   bg: string
   border: string
   minScore: number
@@ -26,15 +30,27 @@ export interface BandConfig {
 
 // Bands span the full 0..10 slider range. 5 sits squarely in "Mixed" (the neutral middle).
 // Edges:  0–2 Difficult · 2–4 Developing · 4–6 Mixed · 6–7 Steady · 7–8 Good · 8–9 Standout · 9–10 Exceptional
+// TRAK-458 (Kostas, 13 Nov, "full spectrum"): each band its own bright hue, so any two tell apart at a glance:
+// green, teal, blue, violet, yellow, orange, red. `color` is the bright fill (black words on it, 5:1 or more);
+// `text` its darker shade for a word written in colour (4.5:1 on the page and on `bg`); `border` a darker edge, so a
+// light fill (yellow, teal) still reads as a shape on the page. The word is always shown, so colour is never the only
+// signal. (Before: TRAK-229's greens, slate and three close clays.)
 export const BANDS: BandConfig[] = [
-  { word: 'Exceptional', color: '#C8F25A', bg: 'rgba(200,242,90,0.15)', border: 'rgba(200,242,90,0.3)', minScore: 9 },
-  { word: 'Standout',    color: '#86efac', bg: 'rgba(134,239,172,0.13)', border: 'rgba(134,239,172,0.26)', minScore: 8 },
-  { word: 'Good',        color: '#4ade80', bg: 'rgba(74,222,128,0.13)',  border: 'rgba(74,222,128,0.24)',  minScore: 7 },
-  { word: 'Steady',      color: '#60a5fa', bg: 'rgba(96,165,250,0.13)',  border: 'rgba(96,165,250,0.24)',  minScore: 6 },
-  { word: 'Mixed',       color: '#fb923c', bg: 'rgba(251,146,60,0.13)',  border: 'rgba(251,146,60,0.24)',  minScore: 4 },
-  { word: 'Developing',  color: '#a78bfa', bg: 'rgba(167,139,250,0.13)', border: 'rgba(167,139,250,0.24)', minScore: 2 },
-  { word: 'Difficult',   color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', minScore: 0 },
+  { word: 'Exceptional', color: '#0A9F4A', text: '#087938', bg: '#d8f0e2', border: '#077235', minScore: 9 },
+  { word: 'Standout',    color: '#14B8A6', text: '#0d796e', bg: '#d9f4f1', border: '#0e8478', minScore: 8 },
+  { word: 'Good',        color: '#2F7FE0', text: '#2768b8', bg: '#deebfa', border: '#225ba1', minScore: 7 },
+  { word: 'Steady',      color: '#8B5CF6', text: '#754dcf', bg: '#ece5fe', border: '#6442b1', minScore: 6 },
+  { word: 'Mixed',       color: '#F2B705', text: '#8c6a03', bg: '#fdf3d7', border: '#ae8404', minScore: 4 },
+  { word: 'Developing',  color: '#F07A1A', text: '#a85512', bg: '#fdeada', border: '#ad5813', minScore: 2 },
+  { word: 'Difficult',   color: '#E0413A', text: '#bc3731', bg: '#fae1df', border: '#a12f2a', minScore: 0 },
 ]
+
+/** TRAK-189: each band's colour by name, from BANDS, for the few places that
+ *  name a band directly. Every band keeps its own colour so they tell apart. */
+export const BAND_COLOR = Object.fromEntries(BANDS.map(b => [b.word, b.color])) as
+  Record<'Exceptional' | 'Standout' | 'Good' | 'Steady' | 'Mixed' | 'Developing' | 'Difficult', string>
+/** TRAK-229: a band's word written in colour uses this readable shade, never `color`. */
+export const BAND_TEXT = Object.fromEntries(BANDS.map(b => [b.word, b.text])) as typeof BAND_COLOR
 
 // The one way to turn a band into its colours. Before this existed, seven call
 // sites each wrote `BANDS.find(b => b.word.toLowerCase() === band)` with their

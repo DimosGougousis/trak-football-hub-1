@@ -90,6 +90,8 @@ beforeEach(() => {
     http.post(endpoint('rpc/get_children_awaiting_consent'), () => HttpResponse.json([])),
     // J8.8 (TRAK-131): Home reads the selected child's events.
     http.post(endpoint('rpc/child_events'), () => HttpResponse.json([])),
+    http.post(endpoint('rpc/season_plan_for_player'), () => HttpResponse.json([])), // TRAK-399: Home's Season plan card
+    http.post(endpoint('rpc/family_feature_on'), () => HttpResponse.json(false)), // TRAK-441: family_look off, today's Home
     http.post(endpoint('telemetry_events'), () => new HttpResponse(null, { status: 201 })),
     http.all('*', ({ request }) => { unexpected.push(`${request.method} ${request.url}`); return new HttpResponse(null, { status: 500 }) }),
   )
@@ -162,14 +164,14 @@ describe('parent Profile consent withdrawal through real App and SDK', () => {
   })
   it('drops the selected child history cache after withdrawal before the normal stale interval', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Home' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
     // TRAK-194: Home lists no matches; its summary card is the cached match data on screen.
     await screen.findByRole('region', { name: 'Recorded matches summary' })
     expect(matchReads).toBe(1)
-    await userEvent.click(screen.getByRole('button', { name: 'Profile' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Profile' }))
     await confirm()
     await screen.findByText('Your consent for Amber Synthetic has been withdrawn.')
-    await userEvent.click(screen.getByRole('button', { name: 'Home' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
     await waitFor(() => expect(matchReads).toBe(2))
     expect(screen.queryByRole('region', { name: 'Recorded matches summary' })).not.toBeInTheDocument()
   })

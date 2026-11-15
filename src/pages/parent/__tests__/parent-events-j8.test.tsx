@@ -1,3 +1,4 @@
+// @story J8
 /**
  * TRAK-131 (J8.8): the parent sees the selected child's upcoming events: a
  * "Next up" card on home, an "Upcoming" list on Matches and an event page,
@@ -262,7 +263,7 @@ describe('TRAK-171 (live run 3): the parent tab is Events, one page', () => {
   it('the tab and the page say Events; an old Events link lands on the same page', async () => {
     renderAt('/parent/events')
     expect(await screen.findByRole('heading', { name: 'Events' })).toBeInTheDocument()
-    expect(within(screen.getByRole('navigation')).getByRole('button', { name: 'Events' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Parent' })).getByRole('tab', { name: 'Events' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Matches' })).not.toBeInTheDocument()
     // The page's other half, played matches and training, is there too.
     expect(await screen.findByText(/opposition|No matches yet/)).toBeInTheDocument()

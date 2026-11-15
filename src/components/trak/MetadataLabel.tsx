@@ -5,8 +5,8 @@ export const MetadataLabel = memo(
     return (
       <span
         ref={ref}
-        className="text-[9px] font-medium tracking-[0.12em] uppercase text-[rgba(255,255,255,0.45)]"
-        style={{ fontFamily: "'DM Mono', monospace" }}
+        className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3"
+        style={{ fontFamily: 'var(--t-font-mono)' }}
       >
         {text}
       </span>

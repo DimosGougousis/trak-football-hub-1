@@ -74,7 +74,32 @@ export async function fetchCalendarLink(): Promise<CalendarLinkStatus | null> {
   return row ? { createdAt: row.created_at, lastFetchedAt: row.last_fetched_at } : null
 }
 
-/** Hands the link to the phone: the calendar app, or Google's or Outlook's page. */
-export function openCalendarLink(url: string) {
-  window.location.assign(url)
+export interface CalendarHandoff {
+  /** Sends the person to `url`. False when the browser blocked the new tab. */
+  go: (url: string) => boolean
+  /** Nothing to open after all (the link couldn't be made). */
+  cancel: () => void
+}
+
+/**
+ * Hands the link to the phone. Apple's webcal:// link opens the Calendar
+ * app's subscribe prompt and leaves the page where it is. TRAK-228: Google's
+ * and Outlook's prompts are web pages, so they open in a tab of their own and
+ * Trak stays open. Call this in the tap itself: the tab is opened now, before
+ * the personal link exists, because a browser blocks a tab opened after that
+ * wait. It is pointed at the page once the link is made.
+ */
+export function startCalendarHandoff(web: boolean): CalendarHandoff {
+  if (!web) return { go: url => { window.location.assign(url); return true }, cancel: () => {} }
+  const tab = window.open('', '_blank')
+  // The calendar's page must not be able to reach back into Trak.
+  if (tab) tab.opener = null
+  return {
+    go: url => {
+      if (!tab || tab.closed) return false
+      tab.location.href = url
+      return true
+    },
+    cancel: () => { tab?.close() },
+  }
 }

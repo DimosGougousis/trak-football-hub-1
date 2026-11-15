@@ -1,106 +1,65 @@
-import { forwardRef } from 'react'
+import { CalendarDays, House, TrafficCone, UserRound, type LucideIcon } from 'lucide-react'
+import { createContext, useContext } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { Role } from '@/lib/types'
-import {
-  IconHome,
-  IconLog,
-  IconGoals,
-  IconRecognition,
-  IconProfile,
-  IconSquad,
-  IconSessions,
-  IconMatch,
-  IconTraining,
-  ACTIVE_COLOR,
-  DEFAULT_COLOR,
-} from '@/components/icons/TrakIcons'
-
-type IconComponent = (props: { size?: number; color?: string }) => JSX.Element
+import { useTranslation } from '@/lib/i18n'
+import { GlassTabBar } from '@/components/arc/glass-tabbar/glass-tabbar'
+import { PitchIcon } from '@/components/icons/PitchIcon'
 
 interface NavItem {
-  label: string
+  /** Its word in nav.json (TRAK-406). */
+  label: 'home' | 'matches' | 'trainings' | 'profile' | 'events'
   path: string
-  Icon: IconComponent
+  Icon: LucideIcon | typeof PitchIcon
 }
 
-function getNavItems(role: Role): NavItem[] {
-  if (role === 'player') return [
-    { label: 'Home', path: '/player/home', Icon: IconHome },
-    { label: 'Sessions', path: '/player/matches', Icon: IconMatch },  // TRAK-112: matches and training
-    { label: 'Trainings', path: '/player/trainings', Icon: IconTraining },
-    { label: 'Card', path: '/player/evolution', Icon: IconRecognition },
-    { label: 'Profile', path: '/player/profile', Icon: IconProfile },
-  ]
-  if (role === 'coach') return [
-    { label: 'Home', path: '/coach/home', Icon: IconHome },
-    { label: 'Squad', path: '/coach/squad', Icon: IconSquad },
-    { label: 'Sessions', path: '/coach/sessions', Icon: IconSessions },
-    { label: 'Trainings', path: '/coach/trainings', Icon: IconTraining },
-    { label: 'Profile', path: '/coach/profile', Icon: IconProfile },
-  ]
-  return [
-    { label: 'Home',    path: '/parent/home',    Icon: IconHome },
-    { label: 'Events',  path: '/parent/matches', Icon: IconMatch },
-    { label: 'Profile', path: '/parent/profile', Icon: IconProfile },
-  ]
+/** TRAK-440 (Imad, 11-12 Nov): the coach's tabs and icons. The player's Card leaves the bar (it becomes part of
+ *  Profile); "Sessions" is Matches. */
+export const FAMILY_TABS: Record<'player' | 'parent', NavItem[]> = {
+  player: [
+    { label: 'home', path: '/player/home', Icon: House },
+    { label: 'matches', path: '/player/matches', Icon: PitchIcon },
+    { label: 'trainings', path: '/player/trainings', Icon: TrafficCone },
+    { label: 'profile', path: '/player/profile', Icon: UserRound },
+  ],
+  parent: [
+    { label: 'home', path: '/parent/home', Icon: House },
+    { label: 'events', path: '/parent/matches', Icon: CalendarDays },
+    { label: 'profile', path: '/parent/profile', Icon: UserRound },
+  ],
 }
 
 interface NavBarProps {
   role: Role
   activeTab: string
   onNavigate: (path: string) => void
+  /** Coach pages only, and now unused: the coach's frame (TRAK-259) owns their nav. */
+  sideMenuOnly?: boolean
 }
 
-export const NavBar = forwardRef<HTMLElement, NavBarProps>(
-  function NavBar({ role, activeTab, onNavigate }, ref) {
-    const items = getNavItems(role)
-    return (
-      <nav
-      ref={ref}
-      className="fixed bottom-0 w-full max-w-[430px] mx-auto left-1/2 -translate-x-1/2 flex justify-around items-center px-4 py-2 border-t border-white/[0.07] z-50"
-      style={{
-        background: 'rgba(10, 10, 11, 0.96)',
-        paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
-        willChange: 'auto',
-      }}
-    >
-      {items.map(item => {
-        // TRAK-186: a tab stays marked on every page under it (Sessions → History).
-        const isActive = activeTab === item.path || activeTab.startsWith(`${item.path}/`)
-        const Icon = item.Icon
-        return (
-          <button
-            key={item.path}
-            onClick={() => onNavigate(item.path)}
-            aria-current={isActive ? 'page' : undefined}
-            className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all relative"
-            style={{
-              background: isActive ? 'rgba(200,242,90,0.06)' : 'transparent',
-              minWidth: 52,
-            }}
-          >
-            <Icon size={20} color={isActive ? ACTIVE_COLOR : DEFAULT_COLOR} />
-            <span
-              style={{
-                fontFamily: "'DM Mono', monospace",
-                fontWeight: 500,
-                fontSize: '9px',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase' as const,
-                color: isActive ? '#C8F25A' : 'rgba(255,255,255,0.35)',
-              }}
-            >
-              {item.label}
-            </span>
-            {isActive && (
-              <span
-                className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                style={{ background: '#C8F25A' }}
-              />
-            )}
-          </button>
-        )
-      })}
-      </nav>
-    )
-  },
-)
+/** TRAK-441: inside the family frame (a laptop, the academy's family_look on) the side menu is the nav. */
+export const FamilyFramed = createContext(false)
+
+/** A player's and a parent's bar: the coach's glass tab bar (CoachFrame's, TRAK-440). A coach's nav is the frame's. */
+export function NavBar({ role, activeTab, onNavigate }: NavBarProps) {
+  const { t } = useTranslation()
+  const { pathname } = useLocation()
+  const framed = useContext(FamilyFramed)
+  if (role === 'coach' || framed) return null
+  // As before: everyone but a player (a parent, a club account) gets the parent's tabs.
+  const who = role === 'player' ? 'player' : 'parent'
+  const items = FAMILY_TABS[who]
+  // TRAK-186: a tab stays marked on every page under it (Events → an event).
+  const active = items.find(item => activeTab === item.path || activeTab.startsWith(`${item.path}/`))?.path ?? ''
+  return (
+    <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="mx-auto max-w-[406px]">
+        {/* On a page under a tab (an event under Events), its marked tab goes back to the tab's page. */}
+        <GlassTabBar label={t(`nav:${who}`)} value={active} onValueChange={onNavigate}
+          onReselect={path => { if (pathname !== path) onNavigate(path) }}
+          style={{ ['--glass-active' as string]: 'rgb(var(--t-brand))' }}
+          items={items.map(({ label, path, Icon }) => ({ value: path, label: t(`nav:${label}`), icon: <Icon /> }))} />
+      </div>
+    </div>
+  )
+}

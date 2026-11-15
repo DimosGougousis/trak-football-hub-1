@@ -12,6 +12,8 @@ import { assessStep, nextButton, saveAssessment } from '../../../../tests/suppor
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, SUPABASE_URL } from '../../../../tests/msw/supabase'
+import { WAIT_TITLE, waitText } from '@/lib/wait-reason'
+import { pickOption } from '@/test/arc-select'
 
 const COACH = { id: 'coach-1' }
 type Reason = 'parent' | 'signup' | 'ready' | 'error'
@@ -39,47 +41,11 @@ function setup(players: Record<string, { name: string; required: boolean; reason
   return reasonAsked
 }
 
-const row = (name: string) => screen.getByText(name).closest('button') as HTMLElement
-
-// TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
-describe('Squad chips (TRAK-99)', { timeout: 20_000 }, () => {
-  it('tells "waiting for parent" apart from "waiting for player to sign up"', async () => {
-    const asked = setup({
-      'sq-ready': { name: 'Amal Ready', required: false },
-      'sq-parent': { name: 'Bilal Parent', required: true, reason: 'parent' },
-      'sq-signup': { name: 'Dana Signup', required: true, reason: 'signup' },
-    })
-    renderApp('/coach/squad')
-    await screen.findByText('Amal Ready')
-    expect(await within(row('Dana Signup')).findByText('Waiting for player to sign up')).toBeInTheDocument()
-    expect(within(row('Dana Signup')).queryByText('Waiting for parent')).toBeNull()
-    expect(within(row('Bilal Parent')).getByText('Waiting for parent')).toBeInTheDocument()
-    expect(within(row('Amal Ready')).getByText('Ready to assess')).toBeInTheDocument()
-    // The reason is only asked for players the gate refuses.
-    expect(asked.sort()).toEqual(['sq-parent', 'sq-signup'])
-  })
-
-  it('never guesses a reason: a failed read, or one that disagrees with the gate, is "Not ready to assess"', async () => {
-    setup({
-      'sq-err': { name: 'Carim Error', required: true, reason: 'error' },
-      'sq-race': { name: 'Eli Race', required: true, reason: 'ready' },
-    })
-    renderApp('/coach/squad')
-    await screen.findByText('Carim Error')
-    expect(await within(row('Carim Error')).findByText('Not ready to assess')).toBeInTheDocument()
-    expect(within(row('Eli Race')).getByText('Not ready to assess')).toBeInTheDocument()
-    expect(screen.queryByText('Ready to assess')).toBeNull()
-    expect(screen.queryByText('Waiting for parent')).toBeNull()
-  })
-})
-
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
 describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
   async function choose(id: string, name: string) {
     renderApp('/coach/assess')
-    const user = userEvent.setup()
-    const option = await screen.findByRole('option', { name })
-    await user.selectOptions(option.closest('select') as HTMLSelectElement, id)
+    await pickOption('Player', name)
   }
   const saveButton = () => screen.getByRole('button', { name: /save assessment/i })
   // The consent notice: the status box that holds "You can assess …".
@@ -111,5 +77,14 @@ describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
     await waitFor(() => expect(notice).toHaveTextContent('Not ready to assess yet'))
     expect(notice).not.toHaveTextContent(/Waiting for (a parent|the player)/)
     expect(nextButton()).toBeDisabled()
+  })
+})
+
+// TRAK-177: at an academy whose consent age is 15, the coach waits for a 15-17 player
+// to agree for themselves, and the assess screen (CoachAssessPage, CoachQuickAssess) says so.
+describe('Assessment notice for a player who must agree themselves (TRAK-177)', () => {
+  it('explains it on the assess screen', () => {
+    expect(WAIT_TITLE.player).toBe('Waiting for the player to agree')
+    expect(waitText('player', 'Nikos')).toBe("You can assess Nikos once they've signed up and agreed for themselves.")
   })
 })

@@ -17,6 +17,10 @@ import { LoadedWeekStrip, WeekStrip, weekDays, type StripEvent } from '@/compone
 import { EventSheet } from '@/components/trak/EventSheet'
 import { EventSheetCoach } from '@/components/coach/EventSheetCoach'
 
+// TRAK-426: the sheet asks whether the old log has retired (Training and Matches both on). Rendered here without the
+// signed-in frame, so it answers "not retired": these checks are about the sheet, not the switches.
+vi.mock('@/components/coach/old-log', () => ({ useOldLogRetired: () => ({ retired: false, known: true }) }))
+
 const endpoint = (name: string) => `${SUPABASE_URL}/rest/v1/${name}`
 const today = new Date()
 const day = weekDays(today).find(d => d >= today.toLocaleDateString('en-CA')) ?? weekDays(today)[6]
@@ -50,10 +54,19 @@ beforeEach(() => {
       { id: 'sp-1', player_name: 'Bukayo Saka', age_group: 'U14', status: 'active' }, { id: 'sp-2', player_name: 'Beth Mead', age_group: 'U14', status: 'active' },
       { id: 'sp-3', player_name: 'Cole Palmer', age_group: 'U14', status: 'active' }, { id: 'sp-4', player_name: 'Declan Rice', age_group: 'U14', status: 'coach_departed' }])),
     http.get(endpoint('session_attendance'), () => HttpResponse.json([{ squad_player_id: 'sp-1', status: 'present' }, { squad_player_id: 'sp-3', status: 'absent' }])),
-    http.get(endpoint('event_absences'), () => HttpResponse.json([{ squad_player_id: 'sp-2', reason: 'School trip' }])),
+    http.get(endpoint('event_absences'), () => HttpResponse.json([{ squad_player_id: 'sp-2', reason: 'school' }])),
   )
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+
+/** "Updated 3h ago" is yesterday shortly after midnight (Tarek, #369, 19 Oct): pin
+ *  Date at noon on the same day. Only Date is faked; animation timers stay real. */
+function atNoonToday() {
+  const noon = new Date(today)
+  noon.setHours(12, 0, 0, 0)
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(noon)
+}
 
 function Where() { return <p data-testid="where">{useLocation().pathname + useLocation().search}</p> }
 function From() { return <p data-testid="from">{(useLocation().state as { from?: string } | null)?.from}</p> }
@@ -83,15 +96,22 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText(format(parseISO(day), 'EEE MMM d'))).toBeInTheDocument()
     expect(within(sheet).getByText('Kick-off')).toBeInTheDocument()
     expect(within(sheet).getByText('17:00')).toBeInTheDocument()
-    const meet = within(sheet).getByText('16:15')
+    // TRAK-223: the meet line says how long before kick-off it is.
+    const meet = within(sheet).getByText('16:15, 45 min before kick-off')
     expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
     expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
-    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
+    // TRAK-230: an event still to come is edited from here.
+    expect(within(sheet).getByRole('button', { name: 'Edit event' })).toBeInTheDocument()
+    // TRAK-135: publishing emails families, so the app asks the server to send.
+    let nudges = 0
+    server.use(http.post(`${SUPABASE_URL}/functions/v1/send-event-emails`, () => { nudges++; return HttpResponse.json({ accepted: true }, { status: 202 }) }))
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(patched).toEqual([{ published: true }]))
+    await waitFor(() => expect(nudges).toBe(1))
   })
 
   it('stays open while the week reloads after Publish', async () => {
@@ -122,7 +142,7 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).queryByText('Published.')).toBeNull()
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     // J8.16's pre-written message, with the event's own link, not a bare link to paste.
-    const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
+    const share = await within(sheet).findByRole('link', { name: 'Share' })
     const text = decodeURIComponent(share.getAttribute('href')!.replace('https://wa.me/?text=', ''))
     expect(text).toContain('U14 Match vs Rivals FC')
     expect(text).toContain('https://trakfootball.com/event/ev-1')
@@ -134,8 +154,8 @@ describe('TRAK-182: the event sheet', () => {
       .toEqual(['Bukayo Saka', 'Cole Palmer'])
     expect(within(sheet).getByRole('heading', { name: "Can't make it · 1" })).toBeInTheDocument()
     expect(within(sheet).getByText('Beth Mead')).toBeInTheDocument()
-    expect(within(sheet).getByText('School trip')).toBeInTheDocument()
-    await user.click(within(sheet).getByRole('button', { name: 'Edit' }))
+    expect(within(sheet).getByText('School')).toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: 'Edit event' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/coach/schedule?edit=ev-1')
   })
 
@@ -160,9 +180,9 @@ describe('TRAK-182: the event sheet', () => {
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 1' })).toBeInTheDocument()
     await user.click(within(sheet).getByRole('button', { name: 'Show names: Attended' }))
     expect(within(within(sheet).getByRole('list', { name: 'Attended' })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Bukayo Saka'])
-    expect(within(sheet).getByRole('button', { name: 'Edit register' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Register' })).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
-    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
   })
 
   it('offers no Cancel once a match has started (a match has no register)', async () => {
@@ -173,7 +193,10 @@ describe('TRAK-182: the event sheet', () => {
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
-    expect(within(sheet).queryByRole('link', { name: 'Share to WhatsApp' })).toBeNull()
+    // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit.
+    expect(within(sheet).getByText('It has started, so its details are fixed.')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Edit event' })).toBeNull()
+    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
     // Decided 16 Oct: a past event's sheet has no meet time and no family note; the kit stays.
     expect(within(sheet).queryByText('Meet')).toBeNull()
@@ -251,6 +274,7 @@ describe('TRAK-182: the event sheet', () => {
   })
 
   it('tells families when the coach changed the event after publishing', async () => {
+    atNoonToday()
     const user = userEvent.setup()
     renderStrip([event({ sequence: 2, updatedAt: new Date(Date.now() - 5 * 60_000).toISOString() })], 'parent')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
@@ -259,16 +283,31 @@ describe('TRAK-182: the event sheet', () => {
   })
   it('puts the coach\'s "Updated" line between the buttons and Attending', async () => {
     eventRow = row({ published: true })
+    atNoonToday()
     const user = userEvent.setup()
     renderStrip([event({ sequence: 1, updatedAt: new Date(Date.now() - 3 * 3600_000).toISOString() })], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     const updated = within(sheet).getByText('Updated 3h ago.')
-    const share = await within(sheet).findByRole('link', { name: 'Share to WhatsApp' })
+    const share = await within(sheet).findByRole('link', { name: 'Share' })
     expect(share.querySelector('svg')).not.toBeNull()
     const attending = await within(sheet).findByRole('heading', { name: /^Attending/ })
     expect(share.compareDocumentPosition(updated) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(updated.compareDocumentPosition(attending) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getAllByText('Updated 3h ago.')).toHaveLength(1)
+  })
+})
+
+// TRAK-225 (20 Oct live run, S4): a Google Maps link typed into the venue.
+describe('TRAK-225: a venue with a Maps link', () => {
+  it('opens that place, and shows the venue name without the raw link', async () => {
+    const user = userEvent.setup()
+    const url = 'https://maps.app.goo.gl/AbC123xyz'
+    renderStrip([event({ venue: `Rivals Park, ${url}` })], 'parent')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(within(sheet).getByRole('link', { name: 'Open in Maps' })).toHaveAttribute('href', url)
+    expect(within(sheet).getByText('Rivals Park')).toBeInTheDocument()
+    expect(within(sheet).queryByText(/goo\.gl/)).toBeNull()
   })
 })

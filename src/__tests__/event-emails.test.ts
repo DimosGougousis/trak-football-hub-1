@@ -39,10 +39,12 @@ const cancelled = (id = 'n-1', over: Partial<EventFields> = {}, recipients?: Cla
   notice(id, over, { ...over, status: 'cancelled' }, recipients);
 
 describe('the email a family reads', () => {
-  it('a cancellation: what, when, where and the squad, with no coach message', () => {
+  // Kostas's wording (TRAK-190, 20 Oct): CANCELLED in capitals in the body only; no squad line.
+  it('a cancellation: what, when and where, with no coach message', () => {
     const email = composeEventEmail('guardian@example.org', [cancelled()])!;
-    expect(email.subject).toBe('Training cancelled: Wed 14 Oct');
-    expect(email.text).toContain('CANCELLED: U15 training\nWas: Wednesday 14 October, 17:00–18:30 at Academy Pitch 2\nSquad: U15, Synthetic FC');
+    expect(email.subject).toBe('Training cancelled on Wed 14 Oct');
+    expect(email.text).toContain('Your coach has CANCELLED a training session.\n\nU15 training\nWednesday 14 October, 17:00 – 18:30\nAcademy Pitch 2\n\n');
+    expect(email.text).not.toMatch(/Squad|Can't make it|Please arrive/);
     expect(email.text).toContain('https://trakfootball.com');
     expect(emailProblem(email)).toBeNull();
   });
@@ -50,13 +52,21 @@ describe('the email a family reads', () => {
   it('a change: each changed field old → new, then the event now', () => {
     const email = composeEventEmail('guardian@example.org', [notice('n-1', {},
       { start_time: '18:30:00', end_time: '20:00:00', venue: 'Pitch 4', meet_time: '18:00:00' })])!;
-    expect(email.subject).toBe('Training changed: Wed 14 Oct');
+    expect(email.subject).toBe('Training changed on Wed 14 Oct');
     expect(email.text).toContain([
-      'CHANGED: U15 training',
-      'Time: 17:00–18:30 → 18:30–20:00',
+      'Your coach has CHANGED a training session.',
+      '',
+      'U15 training',
+      'What changed:',
+      'Time: 17:00 – 18:30 → 18:30 – 20:00',
       'Meet: not set → 18:00',
       'Venue: Academy Pitch 2 → Pitch 4',
-      'Now: Wednesday 14 October, 18:30–20:00 at Pitch 4',
+      '',
+      'Wednesday 14 October, 18:30 – 20:00',
+      'Pitch 4',
+      'Please arrive by 18:00',
+      '',
+      `If your child can't make it, tap "Can't make it" in Trak so the coach knows.`,
     ].join('\n'));
   });
 
@@ -83,9 +93,10 @@ describe('the email a family reads', () => {
       cancelled('n-1'),
       cancelled('n-3', { event_date: '2026-10-28', starts_at: '2026-10-28T13:00:00Z' }),
     ])!;
-    expect(email.subject).toBe('3 events cancelled');
-    const days = [...email.text.matchAll(/Was: (\w+ \d+ \w+)/g)].map(m => m[1]);
-    expect(days).toEqual(['Wednesday 14 October', 'Wednesday 21 October', 'Wednesday 28 October']);
+    expect(email.subject).toBe('3 trainings cancelled on Trak');
+    expect(email.text).toContain('Your coach has CANCELLED 3 trainings.\n\n');
+    const days = [...email.text.matchAll(/^(\w{3} \d+ \w{3}), /gm)].map(m => m[1]);
+    expect(days).toEqual(['Wed 14 Oct', 'Wed 21 Oct', 'Wed 28 Oct']);
   });
 
   it('replaces links the coach typed, so the sender doesn\'t refuse the whole email', () => {
@@ -94,8 +105,8 @@ describe('the email a family reads', () => {
       title: 'Training www.club.example/info', venue: `Al Barsha Pitch 2 ${maps}`,
     })])!;
     expect(email.text).toContain(`Al Barsha Pitch 2 ${LINK_PLACEHOLDER}`);
-    expect(email.subject).toBe('Training cancelled: Wed 14 Oct');
-    expect(email.text).toContain(`CANCELLED: Training ${LINK_PLACEHOLDER}\n`);
+    expect(email.subject).toBe('Training cancelled on Wed 14 Oct');
+    expect(email.text).toContain(`\nTraining ${LINK_PLACEHOLDER}\n`);
     expect(email.text).not.toContain('goo.gl');
     expect(emailProblem(email)).toBeNull();
     expect(withoutLinks('Meet at\nhttps://wa.me/123  gate')).toBe(`Meet at ${LINK_PLACEHOLDER} gate`);
@@ -107,9 +118,9 @@ describe('the email a family reads', () => {
       starts_at: '2026-10-14T14:30:00Z',
     })])!;
     // Only starts_at: its Dubai date and time (UTC+4).
-    expect(email.subject).toBe('Match cancelled: Wed 14 Oct');
-    expect(email.text).toContain('CANCELLED: Match vs Synthetic Rovers\n');
-    expect(email.text).toContain('Was: Wednesday 14 October, 18:30 at Academy Pitch 2');
+    expect(email.subject).toBe('Match cancelled on Wed 14 Oct');
+    expect(email.text).toContain('Your coach has CANCELLED a match.\n\nMatch vs Synthetic Rovers\n');
+    expect(email.text).toContain('Wednesday 14 October, 18:30\nAcademy Pitch 2');
   });
 });
 
@@ -121,12 +132,12 @@ describe('no child name, no coach-typed subject (J8 check 6)', () => {
 
   it('the subject says only the kind of event and the day', () => {
     const email = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { title: 'Lucas birthday kickabout' }))])!;
-    expect(email.subject).toBe('Training cancelled: Wed 14 Oct');
+    expect(email.subject).toBe('Training cancelled on Wed 14 Oct');
     const match = composeEventEmail('guardian@example.org', [squad(notice('n-1',
       { event_type: 'match', title: '', opponent: 'Synthetic Rovers' }, { event_type: 'match', title: '', opponent: 'Synthetic Rovers', start_time: '18:00:00' }))])!;
-    expect(match.subject).toBe('Match changed: Wed 14 Oct');
+    expect(match.subject).toBe('Match changed on Wed 14 Oct');
     expect(composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { event_type: 'tournament' }))])!.subject)
-      .toBe('Tournament cancelled: Wed 14 Oct');
+      .toBe('Tournament cancelled on Wed 14 Oct');
   });
 
   it('a title, opponent or venue naming a squad child is left out of the body', () => {
@@ -134,19 +145,20 @@ describe('no child name, no coach-typed subject (J8 check 6)', () => {
       title: 'Extra session for Lucas', venue: "Theo's garden",
     }))])!;
     expect(`${email.subject}\n${email.text}`).not.toMatch(/Lucas|Theo/i);
-    expect(email.text).toContain('CANCELLED: Training\nWas: Wednesday 14 October, 17:00–18:30\n');
+    // The title is dropped, so a training goes unnamed; the venue is dropped too.
+    expect(email.text).toContain('CANCELLED a training session.\n\nWednesday 14 October, 17:00 – 18:30\n\nSee the full schedule');
     const match = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', {
       title: '', event_type: 'match', opponent: 'Hernandez Academy',
     }))])!;
-    expect(match.text).toContain('CANCELLED: Match\n');
+    expect(match.text).toContain('Your coach has CANCELLED a match.\n\nMatch\n');
     // "Al" alone is not a name: an ordinary venue stays.
     const venue = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { venue: 'Al Barsha Pitch 2' }))])!;
-    expect(venue.text).toContain('at Al Barsha Pitch 2');
+    expect(venue.text).toContain('\nAl Barsha Pitch 2\n');
   });
 
   it('the cancel reason is shown when it names no child and has no link', () => {
     const email = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { cancel_reason: 'Pitch closed for\nmaintenance' }))])!;
-    expect(email.text).toContain('CANCELLED: U15 training\nWas: Wednesday 14 October, 17:00–18:30 at Academy Pitch 2\nReason: Pitch closed for maintenance\n');
+    expect(email.text).toContain('U15 training\nWednesday 14 October, 17:00 – 18:30\nAcademy Pitch 2\nReason: Pitch closed for maintenance\n');
     for (const reason of ['Lucas is ill', 'theo away', 'New date: maps.app.goo.gl/x', 'See https://club.example']) {
       const leaky = composeEventEmail('guardian@example.org', [squad(cancelled('n-1', { cancel_reason: reason }))])!;
       expect(leaky.text, reason).not.toContain('Reason:');
@@ -162,9 +174,9 @@ describe('no child name, no coach-typed subject (J8 check 6)', () => {
 
   it('ends with who to ask: the coach about the event, Trak about the app', () => {
     const email = composeEventEmail('guardian@example.org', [squad(cancelled())])!;
-    // Imad's wording (10 Oct). No Reply-To: event questions are the coach's.
-    expect(email.text.endsWith('Questions about this event? Ask your coach/academy. '
-      + 'Feedback or questions about the app? Send us an email at support@trakfootball.com')).toBe(true);
+    // Kostas's footer (TRAK-190, 20 Oct). No Reply-To (Imad, 10 Oct): event questions are the coach's.
+    expect(email.text.endsWith('You get this email because you or your child is in this squad on Trak.\n\n'
+      + 'Questions about this event? Ask your coach or academy.\nQuestions about the app? Email support@trakfootball.com')).toBe(true);
     expect(emailProblem(email)).toBeNull();
   });
 });

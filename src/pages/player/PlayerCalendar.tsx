@@ -65,15 +65,15 @@ export default function PlayerCalendar() {
   return (
     <MobileShell>
       <div className="pt-3 pb-24 space-y-4">
-        <Link to="/player/home" className="inline-flex min-h-11 items-center gap-1 text-[13px] text-white/50 focus-visible:ring-2 focus-visible:ring-primary rounded-md">
+        <Link to="/player/home" className="inline-flex min-h-11 items-center gap-1 text-[13px] text-ink-2 focus-visible:ring-2 focus-visible:ring-primary rounded-md">
           <ChevronLeft size={16} aria-hidden="true" /> Home
         </Link>
-        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-white/95">Calendar</h1>
+        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">Calendar</h1>
         {failed ? <LoadError what="your calendar" onRetry={() => setAttempt(n => n + 1)} /> : <>
-          <div className="arc rounded-[18px] border border-white/[0.07] overflow-hidden flex justify-center px-2 pt-2" style={{ background: '#101012' }}>
+          <div className="arc rounded-[18px] border border-line overflow-hidden flex justify-center px-2 pt-2" style={{ background: 'rgb(var(--t-surface))' }}>
             <Calendar locale="en-GB" showToday value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(day(date))}
               month={month} onMonthChange={next => setMonth(startOfMonth(next))}
-              marks={date => onDay(day(date)).map(e => e.status === 'cancelled' ? CANCELLED_COLOR : EVENT_COLOR[e.kind])} />
+              marks={date => onDay(day(date)).map(e => e.status === 'cancelled' ? { color: CANCELLED_COLOR, hollow: true } : EVENT_COLOR[e.kind])} />
           </div>
           <section aria-label="Day" className="arc">
             {events
@@ -82,7 +82,7 @@ export default function PlayerCalendar() {
                     {forThemselves && user && <CantMakeIt event={event} child={{ id: user.id, name: 'you' }} self />}
                   </EventSheet>
                 )} />
-              : <p role="status" className="text-[13px] text-white/45 py-2">Loading…</p>}
+              : <p role="status" className="text-[13px] text-ink-3 py-2">Loading…</p>}
           </section>
         </>}
       </div>

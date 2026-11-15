@@ -18,7 +18,8 @@ import { CalendarHomePrompt, CalendarSettings } from '@/components/trak/AddToCal
 const nav = vi.hoisted(() => ({ opened: [] as string[] }))
 vi.mock('@/lib/calendar-link', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/calendar-link')>()),
-  openCalendarLink: (url: string) => { nav.opened.push(url) },
+  // TRAK-228: every app's link is handed over through the tap's handoff.
+  startCalendarHandoff: () => ({ go: (url: string) => { nav.opened.push(url); return true }, cancel: () => {} }),
 }))
 const auth = vi.hoisted(() => ({ user: { id: 'parent-cal', email: 'p@example.test', app_metadata: {} } as Record<string, unknown> }))
 vi.mock('@/contexts/AuthContext', () => ({

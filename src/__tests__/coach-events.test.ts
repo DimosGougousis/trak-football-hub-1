@@ -72,11 +72,11 @@ describe('coach event form', () => {
   })
 
   it('refuses an impossible date, a missing start time, and an untitled "other"', () => {
-    expect(formProblem({ ...match, date: '2026-02-31' })).toBe('Pick a real date and time')
+    expect(formProblem({ ...match, date: '2026-02-31' })).toBe('Select a real date and time')
     // TRAK-157: every event needs a start time, with or without a meet time.
-    expect(formProblem({ ...match, time: '' })).toBe('Pick a start time')
-    expect(formProblem({ ...match, time: '', meetTime: '' })).toBe('Pick a start time')
-    expect(formProblem({ ...blankForm('2026-10-20'), title: 'Training' })).toBe('Pick a start time')
+    expect(formProblem({ ...match, time: '' })).toBe('Select a start time')
+    expect(formProblem({ ...match, time: '', meetTime: '' })).toBe('Select a start time')
+    expect(formProblem({ ...blankForm('2026-10-20'), title: 'Training' })).toBe('Select a start time')
     expect(formProblem({ ...blankForm('2026-10-20'), kind: 'other', time: '18:00' })).toBe('Say what the event is')
     expect(formProblem(match)).toBeNull()
   })
@@ -93,6 +93,14 @@ describe('coach event form', () => {
       { venue: 'Rovers Park', starts_at: '2026-10-05T10:00:00Z' },
       { venue: 'pitch 1 ', starts_at: '2026-10-09T10:00:00Z' },
       { venue: null, starts_at: '2026-10-10T10:00:00Z' },
-    ])).toEqual(['pitch 1', 'Rovers Park'])
+    ])).toEqual([{ name: 'pitch 1', link: '' }, { name: 'Rovers Park', link: '' }])
+  })
+
+  // TRAK-255: offered by name with the link it was last used with; a bare link has no name to offer.
+  it('offers a venue saved with a map link by its name, and never a bare link', () => {
+    expect(savedVenues([
+      { venue: 'Municipal Stadium https://maps.app.goo.gl/abc123', starts_at: '2026-10-05T10:00:00Z' },
+      { venue: 'https://maps.app.goo.gl/zzz999', starts_at: '2026-10-09T10:00:00Z' },
+    ])).toEqual([{ name: 'Municipal Stadium', link: 'https://maps.app.goo.gl/abc123' }])
   })
 })

@@ -19,13 +19,16 @@ export const CONSENT_NOTICE_VERSION = '2026-10-19.1'
 /**
  * TRAK-177: a 15–17 player's own consent, where the academy's consent age is
  * 15 (Greece). Provisional wording from the Greek legal pack, until a Greek
- * lawyer signs off. Bump the version whenever the text changes.
+ * lawyer signs off. Bump the version whenever the text changes. TRAK-135
+ * (Kostas's wording, Imad agreed 21 Oct): the guardian's events line from
+ * TRAK-166, in the player's own words, since they get event emails too.
  */
-export const OWN_CONSENT_NOTICE_VERSION = '2026-10-15.1-own'
+export const OWN_CONSENT_NOTICE_VERSION = '2026-10-21.1-own'
 export const OWN_CONSENT_TEXT =
   'I understand how Trak works and agree that my academy may keep my coaching records in Trak: ' +
   'my coach\'s ratings and assessments, my sessions and matches, and messages my coach publishes for me. ' +
-  'I can change my mind and withdraw at any time in Settings. If I do not agree, I still get the same coaching.'
+  'I can change my mind and withdraw at any time in Settings. If I do not agree, I still get the same coaching. ' +
+  "Events: my training and match schedule is shown in the app and, if I choose, in my phone's calendar through a private link. Trak emails me when an event is added, changed or cancelled, and again two days before it. I can turn the reminder off in Settings."
 
 /** Whole years from a valid YYYY-MM-DD, using the database's UTC calendar day. */
 export const ageFromDateOfBirth = (dob: string): number | null => {

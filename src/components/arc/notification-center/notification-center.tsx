@@ -17,7 +17,7 @@ export interface NotificationItem {
   tone?: "info" | "success" | "warning";
   /** A local portrait asset for person-generated updates. */
   actor?: { name: string; photo: string };
-  /** Trak (TRAK-163): shown in place of the description when the row is expanded. */
+  /** Trak (TRAK-163): shown under the description when the row is expanded (TRAK-226: the description itself is never repeated). */
   details?: ReactNode;
   /** Trak (TRAK-163): a primary action in the expanded row, e.g. open the event. */
   action?: { label: string; onSelect: () => void };
@@ -216,13 +216,14 @@ export function NotificationCenter({ notifications: initial, label = "Notificati
                         variants={{ exit: (isBulk: boolean) => reduce ? fadeOut : { opacity: 0, scale: .3, transition: { ...exitFast, delay: isBulk ? cascade(index) : 0 } } }}
                         initial={reduce ? { opacity: 0 } : { opacity: 0, scale: .3 }} animate={{ opacity: 1, scale: 1 }} exit="exit" transition={reduce ? instant : motionTokens.spring.snappy} />}</AnimatePresence>
                     </span>
-                    <span className={styles.itemPreview}>{item.description ?? (item.actor ? `From ${item.actor.name}` : "View update details")}</span>
+                    {/* Trak (TRAK-226): opened, the line unfolds in full here rather than being said again below. */}
+                    <span className={expandedId === item.id ? styles.itemPreviewFull : styles.itemPreview} data-full={expandedId === item.id}>{item.description ?? (item.actor ? `From ${item.actor.name}` : "View update details")}</span>
                   </button>
                   <time className={styles.time}>{item.time}</time>
                 </div>
                 <AnimatePresence initial={false}>
                   {expandedId === item.id && <motion.div className={styles.details} initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={reduce ? fadeOut : { height: 0, opacity: 0, transition: { height: motionTokens.spring.smooth, opacity: exitFast } }} transition={height}>
-                    {item.details ?? <p>{item.description ?? (item.actor ? `${item.actor.name} shared an update with you.` : "This update is ready to review.")}</p>}
+                    {item.details}
                     <div className={styles.itemActions}>
                       {item.action && <button type="button" onClick={() => { if (!item.read) toggleRead(item); setOpen(false); item.action!.onSelect(); }}>{item.action.label}</button>}
                       <button type="button" onClick={() => toggleRead(item)}><MorphWidth reduce={reduce} morphKey={item.read ? "read" : "unread"}>

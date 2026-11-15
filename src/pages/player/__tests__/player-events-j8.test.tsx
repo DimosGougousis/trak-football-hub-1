@@ -1,3 +1,4 @@
+// @story J8
 /**
  * TRAK-130 (J8.7): the player sees their squad's upcoming events: a "Next up"
  * card on home that never pushes the coach's message down, a list in the
@@ -5,7 +6,7 @@
  * a changed event says "Changed" until the player opens it. A failed read
  * says so, never an empty schedule.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -13,6 +14,12 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, tableError, rpc, SUPABASE_URL, rpcRows, rpcError } from '../../../../tests/msw/supabase'
+
+// These checks are about something else; the phone sits in the academy's zone (Dubai), as Trak's families' do.
+// Event times follow the phone's clock (Imad, 23 Oct), so CI's UTC clock would move every time.
+const phoneTZ = process.env.TZ
+beforeAll(() => { process.env.TZ = 'Asia/Dubai' })
+afterAll(() => { process.env.TZ = phoneTZ })
 
 const PLAYER = { id: 'player-events-j8' }
 const ASSESSMENT = { id: 'assessment-1', squad_player_id: 'squad-1', coach_user_id: 'coach-1', created_at: '2026-10-01T10:00:00Z',
@@ -30,6 +37,9 @@ const UNTIMED_EVENT = event('ev-3', { event_date: '2026-11-21', start_time: null
 
 function setup(events: unknown[] | 'fail' = [MATCH_EVENT, TRAINING_EVENT, UNTIMED_EVENT]) {
   server.use(
+    // TRAK-286: no shared game plan.
+    table('game_for_family', []),
+    table('game_for_player', []),
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Synthetic Player' }]),
     table('matches', []), table('player_details', []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),

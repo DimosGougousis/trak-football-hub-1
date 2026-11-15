@@ -1,3 +1,4 @@
+// @story J5
 /**
  * J5 (MVP Requirements): six sliders produce the band, then "Message to [first
  * name]: only [first name] sees this." (TRAK-63) and an optional "Private note:
@@ -18,7 +19,9 @@ import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { assessStep, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type { ReactNode } from 'react'
+import { pickOption } from '@/test/arc-select'
 
 // TRAK-176: coach screens read the coach's squads through the query cache.
 function queries() {
@@ -39,7 +42,7 @@ interface Write { table: string; method: 'post' | 'patch'; body: Record<string, 
 let writes: Write[]
 // refuseNote: the private-note write is refused. sharedGone: an update to the
 // shared message matches no row (removed, or no longer this coach's).
-let faults: { refuseNote: boolean; sharedGone: boolean }
+let faults: { refuseNote: boolean; sharedGone: boolean; sharedFails?: boolean }
 let consent: { required: boolean; afterRefusal: boolean; refuseInsert: boolean; refused: boolean }
 
 function showForm() {
@@ -50,16 +53,14 @@ function showForm() {
 }
 
 async function choose(player: 'player-a' | 'player-b') {
-  const option = await screen.findByRole('option', { name: 'Alex Synthetic' })
-  await userEvent.selectOptions(option.closest('select') as HTMLSelectElement, player)
+  await pickOption('Player', player === 'player-a' ? 'Alex Synthetic' : 'Bella Synthetic')
   await chooseSessionIfNone()
 }
 
 // TRAK-68: an assessment needs a past session. It stays chosen across players.
 async function chooseSessionIfNone() {
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  const session = screen.getByRole('combobox', { name: 'Session' }) as HTMLSelectElement
-  if (session.value === '') await userEvent.selectOptions(session, 'session-1')
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
+  if (!/vs Synthetic FC/.test(screen.getByRole('combobox', { name: 'Session' }).textContent ?? '')) await pickOption('Session', /vs Synthetic FC/)
 }
 
 const messageBox = () => screen.getByLabelText(/^Message to/i)
@@ -67,11 +68,12 @@ const noteBox = () => screen.getByLabelText(/^Private note/i)
 const toMessage = async () => { await assessStep('Message'); return messageBox() }
 const toNote = async () => { await assessStep('Note'); return noteBox() }
 const shared = () => writes.filter(w => w.table === 'coach_shared_feedback').map(w => w.body)
+const assessed = () => writes.filter(w => w.table === 'coach_assessments').map(w => w.body)
 
 beforeEach(() => {
   writes = []
   consent = { required: false, afterRefusal: false, refuseInsert: false, refused: false }
-  faults = { refuseNote: false, sharedGone: false }
+  faults = { refuseNote: false, sharedGone: false, sharedFails: false }
   server.use(
     http.get(endpoint('squad_players'), () => HttpResponse.json([
       { id: 'player-a', player_name: 'Alex Synthetic' },
@@ -95,6 +97,10 @@ beforeEach(() => {
         if (table === 'coach_assessments' && consent.refuseInsert) {
           consent.refused = true
           return HttpResponse.json(RLS_REFUSAL, { status: 403 })
+        }
+        // sharedFails: the message write fails after the assessment row has saved.
+        if (table === 'coach_shared_feedback' && faults.sharedFails) {
+          return HttpResponse.json({ message: 'Synthetic outage' }, { status: 503 })
         }
         if (table === 'coach_assessment_notes' && faults.refuseNote) {
           return HttpResponse.json(RLS_REFUSAL, { status: 403 })
@@ -142,12 +148,15 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     const note = await toNote() as HTMLTextAreaElement
     expect(message.dataset.tone).toBe('message')
     expect(note.dataset.tone).toBe('private')
-    expect(messageClass).toMatch(/border-white\//)
-    expect(messageClass).not.toMatch(/sky-|amber-/)
-    expect(note.className).toMatch(/border-amber-/)
+    // TRAK-189: the plain text-box roles (they were white-at-N% on the dark theme).
+    expect(messageClass).toMatch(/\bbg-raised\b/)
+    expect(messageClass).toMatch(/\bborder-line-strong\b/)
+    expect(messageClass).not.toMatch(/sky-|amber-|warning/)
+    // TRAK-189: the private note's colour is the warning role (it was Tailwind's amber).
+    expect(note.className).toMatch(/border-warning\//)
     expect(message.rows).toBe(note.rows)
-    expect(messageClass.replace(/(bg|border)-(white|amber)\S+/g, ''))
-      .toBe(note.className.replace(/(bg|border)-(white|amber)\S+/g, ''))
+    expect(messageClass.replace(/(bg|border)-(raised|line-strong|warning)\S*/g, ''))
+      .toBe(note.className.replace(/(bg|border)-(raised|line-strong|warning)\S*/g, ''))
   })
 
   // MVP Requirements J5: the message reaches the player only on Publish (published_at set)…
@@ -245,6 +254,55 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
     await screen.findByText('Coach home')
     expect(shared()).toEqual([expect.objectContaining({ body: 'Good pressing today', published_at: null })])
+    // TRAK-200 (Imad, 18 Oct): a draft's bands stay hidden from the family too.
+    expect(assessed()).toEqual([expect.objectContaining({ published_at: null })])
+  })
+
+  // TRAK-200: Publish shows the bands; a new assessment saves published.
+  it('Publish saves the assessment published, never as a draft', async () => {
+    showForm()
+    await choose('player-b')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    await screen.findByText('Coach home')
+    expect(assessed()).toHaveLength(1)
+    expect(assessed()[0].published_at).not.toBeNull()
+  })
+
+  // TRAK-200: a draft opened again and published becomes visible to the family.
+  it('publishing a saved draft publishes its bands', async () => {
+    server.use(
+      http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: null }])),
+      http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([{ body: 'Draft for Alex', published_at: null }])),
+    )
+    showForm()
+    await choose('player-a')
+    await toMessage()
+    await screen.findByDisplayValue('Draft for Alex')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    await screen.findByText('Coach home')
+    expect(assessed()).toEqual([expect.objectContaining({ published_at: expect.any(String) })])
+  })
+
+  // TRAK-248: the family already sees this assessment's bands, but there's no
+  // message yet. Save draft on a new message must keep the bands where they are;
+  // only the message waits. Taking bands back is the card's Unpublish.
+  it('Save draft on a published assessment keeps its bands published', async () => {
+    server.use(
+      http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: '2026-09-20T19:00:00Z' }])),
+      http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([])),
+    )
+    showForm()
+    await choose('player-a')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+    await screen.findByText('Coach home')
+    expect(shared()).toEqual([expect.objectContaining({ body: 'Good pressing today', published_at: null })])
+    expect(assessed()).toHaveLength(1)
+    expect(assessed()[0]).not.toHaveProperty('published_at', null)
   })
 
   // Kostas's #313 review: "Save draft" on a message the player has read would
@@ -394,5 +452,43 @@ describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, 
     await userEvent.click(screen.getByRole('button', { name: 'Unpublish message' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unpublish message' })).toBeEnabled())
     expect(screen.getByText(/Published\. Alex can read it now/)).toBeInTheDocument()
+  })
+})
+
+// Imad's handoff, 20 Oct: the scores save before the message. On Publish they are
+// visible to the family at once (TRAK-200), so a failed message must not say
+// "nothing new reached the family"; on Save draft they aren't, so it may.
+describe('J5: a failed message save says what the family can see', { timeout: 20_000 }, () => {
+  it('on Publish: the scores are already visible, so it never says nothing reached the family', async () => {
+    const error = vi.spyOn(toast, 'error')
+    faults.sharedFails = true
+    showForm()
+    await choose('player-b')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+    await waitFor(() => expect(error).toHaveBeenCalled())
+    const said = String(error.mock.calls.at(-1)![0])
+    expect(assessed()[0].published_at).not.toBeNull()
+    expect(said).not.toMatch(/nothing new reached the family/)
+    expect(said).toMatch(/Bella and their family can see the scores/)
+    expect(said).toMatch(/Not saved: the message to Bella/)
+    error.mockRestore()
+  })
+
+  it('on Save draft: the scores stay hidden, so the family sees nothing yet', async () => {
+    const error = vi.spyOn(toast, 'error')
+    faults.sharedFails = true
+    showForm()
+    await choose('player-b')
+    await userEvent.type(await toMessage(), 'Good pressing today')
+    await assessStep('Review')
+    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
+    await waitFor(() => expect(error).toHaveBeenCalled())
+    const said = String(error.mock.calls.at(-1)![0])
+    expect(assessed()[0].published_at).toBeNull()
+    expect(said).toMatch(/nothing reached the family/)
+    expect(said).toMatch(/Not saved: the message to Bella/)
+    error.mockRestore()
   })
 })

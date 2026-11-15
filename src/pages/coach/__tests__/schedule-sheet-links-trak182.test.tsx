@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
@@ -21,7 +22,10 @@ const row = (over: Record<string, unknown>) => ({
   cancel_reason: null, series_id: null, ...over,
 })
 
+// TRAK-230: today's 17:00 and 19:00 events are still to come, so the links open them.
+afterEach(() => vi.useRealTimers())
 beforeEach(() => {
+  atMorningToday()
   signInAs(COACH)
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),

@@ -76,7 +76,7 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
           key={v}
           points={ringPoints(v)}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgb(var(--t-ink-3))"
           strokeWidth="1"
         />
       ))}
@@ -89,7 +89,7 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
           <line key={i}
             x1={ox.toFixed(1)} y1={oy.toFixed(1)}
             x2={ex.toFixed(1)} y2={ey.toFixed(1)}
-            stroke="rgba(255,255,255,0.09)" strokeWidth="1"
+            stroke="rgb(var(--t-ink-3))" strokeWidth="1"
           />
         )
       })}
@@ -98,8 +98,8 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
       {prevScores && (
         <polygon
           points={polygonPoints(prevScores)}
-          fill="rgba(255,255,255,0.04)"
-          stroke="rgba(255,255,255,0.18)"
+          fill="rgb(var(--t-ink-3))"
+          stroke="rgb(var(--t-ink-3))"
           strokeWidth="1"
           strokeDasharray="3 3"
         />
@@ -108,8 +108,8 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
       {/* ── Current score polygon ── */}
       <polygon
         points={polygonPoints(scores)}
-        fill="rgba(200,242,90,0.14)"
-        stroke="rgba(200,242,90,0.7)"
+        fill="rgb(var(--t-brand) / 0.14)"
+        stroke="rgb(var(--t-brand) / 0.7)"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
@@ -121,7 +121,7 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
         const [x, y] = axisPoint(i, (clamped / 10) * MAX_R)
         return (
           <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="3.5"
-            fill="#C8F25A" stroke="#0c160c" strokeWidth="1.5" />
+            fill="rgb(var(--t-brand))" stroke="rgb(var(--t-surface))" strokeWidth="1.5" />
         )
       })}
 
@@ -139,7 +139,7 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
               fontSize: 8,
               fontWeight: 700,
               fontFamily: 'monospace',
-              fill: '#C8F25A',
+              fill: 'rgb(var(--t-brand))',
               userSelect: 'none',
             }}
           >
@@ -159,8 +159,8 @@ export const AssessmentRadar: FC<{ scores: AssessmentScores; prevScores?: Assess
             style={{
               fontSize: 7.5,
               fontWeight: 600,
-              fontFamily: "'DM Mono', monospace",
-              fill: 'rgba(255,255,255,0.38)',
+              fontFamily: 'var(--t-font-mono)',
+              fill: 'rgb(var(--t-ink-3))',
               userSelect: 'none',
               letterSpacing: '0.05em',
             }}

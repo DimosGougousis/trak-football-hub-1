@@ -51,6 +51,9 @@ afterAll(() => {
 
 beforeEach(() => {
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'child-1' }])),
     http.get(endpoint('profiles'), ({ request }) => {
       const filter = new URL(request.url).searchParams.get('user_id') ?? ''

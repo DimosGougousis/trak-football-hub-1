@@ -31,9 +31,9 @@ export function OwnConsentCard({ turned, onChange }: { turned: boolean; onChange
     onChange()
   }
 
-  const font = { fontFamily: "'DM Sans', sans-serif" }
+  const font = { fontFamily: 'var(--t-font)' }
   if (done) return (
-    <div role="status" className="rounded-xl border border-primary/30 bg-primary/10 p-4 my-4 text-[13px] text-white/88" style={font}>
+    <div role="status" className="rounded-xl border border-primary/30 bg-primary/10 p-4 my-4 text-[13px] text-ink" style={font}>
       {done === 'agreed'
         ? 'Thanks, your coach can now record your progress. You can withdraw any time in Settings.'
         : "Understood. Your coach won't record your progress in Trak, and you still get the same coaching. You can change your mind in Settings."}
@@ -43,18 +43,18 @@ export function OwnConsentCard({ turned, onChange }: { turned: boolean; onChange
   return (
     <ConsentSurface face={face} labelledBy={`${checkId}-h`} aboveNav>
       {face === 'bar' ? <>
-        <p id={`${checkId}-h`} className="text-[16px] font-medium text-white/95" style={font}>Your coach would like to record your progress in Trak.</p>
-        <p className="text-[13px] text-white/60 mt-1" style={font}>{whose}</p>
+        <p id={`${checkId}-h`} className="text-[16px] font-medium text-ink" style={font}>Your coach would like to record your progress in Trak.</p>
+        <p className="text-[13px] text-ink-2 mt-1" style={font}>{whose}</p>
         <div className="flex gap-2 mt-4">
           <Button size="lg" className="flex-1" onClick={() => setFace('details')}>Approve</Button>
           <Button size="lg" variant="secondary" className="flex-1" loading={busy} onClick={() => { void choose(false) }}>Reject</Button>
           <Button size="lg" variant="ghost" onClick={() => setFace('details')}>Details</Button>
         </div>
       </> : <div style={font} onKeyDown={event => { if (event.key === 'Escape') setFace('bar') }}>
-        <h2 id={`${checkId}-h`} ref={heading} tabIndex={-1} className="text-[17px] font-medium text-white/95 outline-none">Your consent</h2>
-        <p className="text-[13px] text-white/60 mt-1">{whose}</p>
-        <p className="text-[13px] text-white/80 mt-3 leading-relaxed">{OWN_CONSENT_TEXT}</p>
-        <label htmlFor={checkId} className="flex items-start gap-2 mt-3 text-[13px] text-white/85">
+        <h2 id={`${checkId}-h`} ref={heading} tabIndex={-1} className="text-[17px] font-medium text-ink outline-none">Your consent</h2>
+        <p className="text-[13px] text-ink-2 mt-1">{whose}</p>
+        <p className="text-[13px] text-ink mt-3 leading-relaxed">{OWN_CONSENT_TEXT}</p>
+        <label htmlFor={checkId} className="flex items-start gap-2 mt-3 text-[13px] text-ink">
           <input id={checkId} type="checkbox" checked={understood} onChange={e => setUnderstood(e.target.checked)} className="mt-0.5 h-4 w-4" />
           I understand and I'm choosing for myself.
         </label>
@@ -89,7 +89,7 @@ export function OwnConsentSettings({ Section }: { Section: (props: { label: stri
     if (error) { setError(error.message); return }
     setWithdrawn(true)
   }
-  const text = 'text-[12px] text-white/70 leading-relaxed'
+  const text = 'text-[12px] text-ink-2 leading-relaxed'
   return (
     <Section label="Your consent">
       {withdrawn ? <p role="status" className={text}>You withdrew your consent. Your coach can't record your progress in Trak. You can agree again on Home.</p>
@@ -97,8 +97,8 @@ export function OwnConsentSettings({ Section }: { Section: (props: { label: stri
           <p className={text}>You agreed for yourself that your coach can record your progress in Trak.</p>
           {confirming ? <div className="flex gap-2 mt-3">
             <button type="button" onClick={() => { void withdraw() }} className="min-h-11 px-4 rounded-lg border border-destructive text-sm text-destructive">Yes, withdraw</button>
-            <button type="button" onClick={() => setConfirming(false)} className="min-h-11 px-4 rounded-lg border border-border text-sm text-white/80">Cancel</button>
-          </div> : <button type="button" onClick={() => setConfirming(true)} className="min-h-11 px-4 mt-3 rounded-lg border border-border text-sm text-white/80">Withdraw my consent</button>}
+            <button type="button" onClick={() => setConfirming(false)} className="min-h-11 px-4 rounded-lg border border-border text-sm text-ink">Cancel</button>
+          </div> : <button type="button" onClick={() => setConfirming(true)} className="min-h-11 px-4 mt-3 rounded-lg border border-border text-sm text-ink">Withdraw my consent</button>}
         </>}
       {error && <p role="alert" className="text-[12px] text-destructive mt-2">{error}</p>}
     </Section>

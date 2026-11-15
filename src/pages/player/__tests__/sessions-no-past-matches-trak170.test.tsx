@@ -23,6 +23,9 @@ const UPCOMING = {
 beforeEach(() => {
   signInAs(PLAYER)
   server.use(
+    // TRAK-286: no shared game plan.
+    table('game_for_family', []),
+    table('game_for_player', []),
     table('profiles', [{ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Kostas Tsimikas' }]),
     table('matches', []), table('player_details', []), table('coach_assessments', []), table('recognition_awards', []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1' }]),

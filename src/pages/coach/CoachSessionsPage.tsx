@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { CoachTrail } from '@/components/coach/CoachTrail'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
-import { Plus } from 'lucide-react'
+import { QuickAdd } from '@/components/coach/QuickAdd'
+import { History, Plus } from 'lucide-react'
+import { EmptyState } from '@/components/arc/empty-state/empty-state'
+import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
 
 export default function CoachSessionsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [sessions, setSessions] = useState<any[]>([])
   /* Three states, not two. `[]` alone cannot distinguish "the coach has logged
      nothing" from "we could not ask" — and the empty copy below is a factual
      claim about sessions the coach created themselves. */
   const [loadFailed, setLoadFailed] = useState(false)
   const [retrying, setRetrying] = useState(false)
-  // TRAK-176: the squad picked on Home, plus whole-roster sessions.
+  // TRAK-176/305: the squad picked at the top (or All), plus whole-roster sessions.
   const { eventInSquad } = useCoachSquad(user?.id)
   const shown = sessions.filter(s => eventInSquad(s.squad))
 
@@ -52,14 +55,16 @@ export default function CoachSessionsPage() {
   return (
     <MobileShell>
       {/* Topbar */}
-      <div className="flex items-center justify-between px-5 py-[10px] border-b border-white/[0.07] shrink-0">
-        <h1 className="text-[15px] font-semibold text-white/90">Sessions</h1>
+      <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
+        {/* TRAK-334: the trail (Home › Log › Sessions); its last crumb is the page's name. */}
+        <CoachTrail current="Sessions" />
+        <h1 className="sr-only">Sessions</h1>
         <button
           onClick={() => navigate('/coach/sessions')}
-          className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-[#C8F25A] active:scale-95 transition-transform"
+          className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-brand active:scale-95 transition-transform"
           aria-label="New session"
         >
-          <Plus size={16} className="text-black" strokeWidth={2.5} />
+          <Plus size={16} className="text-on-brand" strokeWidth={2.5} />
         </button>
       </div>
 
@@ -70,7 +75,12 @@ export default function CoachSessionsPage() {
             <LoadError what="your sessions" onRetry={retry} retrying={retrying} />
           </div>
         ) : shown.length === 0 ? (
-          <p className="text-white/45 text-sm mt-4">No sessions logged yet.</p>
+          // TRAK-432: Arc's empty state: icon, one line, and the button that logs one.
+          <div className="arc pt-6">
+            <EmptyState icon={<History size={24} strokeWidth={1.5} />} title="No sessions logged yet"
+              description="A training or match you log shows up here."
+              action={<Button onClick={() => navigate('/coach/sessions')}>Log a session</Button>} />
+          </div>
         ) : (
           <div className="space-y-0">
             {shown.map((s) => (
@@ -79,13 +89,13 @@ export default function CoachSessionsPage() {
                 type="button"
                 key={s.id}
                 onClick={() => navigate(`/coach/sessions/${s.id}`)}
-                className="w-full text-left flex items-center gap-3 py-3 border-b border-white/[0.05] active:bg-white/[0.03]"
+                className="w-full text-left flex items-center gap-3 py-3 border-b border-line active:bg-raised"
               >
                 {/* Icon */}
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-[#202024] flex items-center justify-center shrink-0">
+                <div className="w-[34px] h-[34px] rounded-[10px] bg-raised flex items-center justify-center shrink-0">
                   <span
                     className={`text-[13px] font-semibold ${
-                      isMatch(s) ? 'text-green-400' : 'text-white/[0.45]'
+                      isMatch(s) ? 'text-success' : 'text-ink-3'
                     }`}
                   >
                     {isMatch(s) ? 'M' : 'T'}
@@ -94,14 +104,14 @@ export default function CoachSessionsPage() {
 
                 {/* Title + metadata */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-white/[0.88] truncate">
+                  <p className="text-[13px] font-medium text-ink truncate">
                     {isMatch(s)
                       ? s.opponent || s.title || 'Match'
                       : s.title || 'Training'}
                   </p>
                   <p
-                    className="text-[9px] text-white/[0.22] mt-0.5 truncate"
-                    style={{ fontFamily: "'DM Mono', monospace" }}
+                    className="text-[9px] text-ink-3 mt-0.5 truncate"
+                    style={{ fontFamily: 'var(--t-font-mono)' }}
                   >
                     {isMatch(s) ? 'Match' : 'Training'}
                     {s.session_date ? ` · ${formatDate(s.session_date)}` : ''}
@@ -111,12 +121,12 @@ export default function CoachSessionsPage() {
 
                 {/* Badge */}
                 {isMatch(s) ? (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-green-500/15 text-green-400">
+                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
                     {s.result || 'W'}
                     {s.score ? ` ${s.score}` : ''}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.45)]">
+                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-raised text-ink-3">
                     {s.focus || 'Tactical'}
                   </span>
                 )}
@@ -126,7 +136,10 @@ export default function CoachSessionsPage() {
         )}
       </div>
 
-      <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />
+      {/* No Sessions tab: History is opened from Home, so Home stays marked. */}
+      {/* TRAK-254: "+ Create" in the side menu on a laptop; no "+" here on a phone. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

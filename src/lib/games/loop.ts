@@ -1,0 +1,122 @@
+/* TRAK-283 (Games 1/8): where a match is in its loop (TRAK-282), from the event alone. The plan (TRAK-284 to 287)
+   and the evaluation (TRAK-288, 289) add their own states. The clock is an instant (now, starts_at, ends_at), so
+   the device's time zone never matters: the database sets both instants on the academy's clock (TRAK-175). */
+import { format } from 'date-fns'
+import { dateLocale, i18n } from '@/lib/i18n'
+
+export type GameEvent = { id: string; published: boolean; starts_at: string; ends_at: string | null }
+export type GameState = 'logistics' | 'plan' | 'planDraft' | 'scheduled' | 'shared' | 'changes' | 'locked' | 'fullTime' | 'evaluationDraft' | 'published'
+export type GameTab = 'logistics' | 'plan' | 'evaluation'
+/** Where the plan is: saved as a draft (TRAK-284), shared, and how many players' copies an edit since would change
+ *  (TRAK-286); when it was shared, or goes out if that's still to come (TRAK-290). And whether an evaluation draft is
+ *  saved (TRAK-288). */
+export type PlanProgress = { drafted?: boolean; shared?: boolean; sharedAt?: string; changes?: number; evaluated?: boolean; published?: boolean }
+/** The next action opens a tab; `step: 'share'` opens the plan's Share step. */
+export type GameAction = { label: string; tab: GameTab; step?: 'share' }
+
+/** Each state's badge and the one next action, if any. TRAK-333 (Imad, 2 Nov): shorter labels, and no loop stepper
+ *  on Matches, so a state no longer carries a place on it. */
+export const STATE: Record<GameState, {
+  label: string; tone: 'neutral' | 'info' | 'warning' | 'success'; action?: GameAction
+}> = {
+  // Publishing the match in Schedule is "share the logistics" (TRAK-282, step 1).
+  logistics: { label: 'Logistics not shared', tone: 'neutral', action: { label: 'Share logistics', tab: 'logistics' } },
+  plan: { label: 'Plan not written', tone: 'warning', action: { label: 'Write plan', tab: 'plan' } },
+  // TRAK-284: a draft only the coach sees. Sharing it (TRAK-286) closes it. TRAK-344 (Imad, 3 Nov): "Draft", not
+  // "Plan not shared"; Home's Needs you line still says why the match needs the coach.
+  planDraft: { label: 'Draft', tone: 'warning', action: { label: 'Share plan', tab: 'plan', step: 'share' } },
+  // TRAK-290: shared at a time still to come. Nothing to do: what's saved by then goes out.
+  scheduled: { label: 'Plan scheduled', tone: 'info' },
+  shared: { label: 'Plan shared', tone: 'success' },
+  // TRAK-286: edits after sharing wait until the coach shares them.
+  changes: { label: 'Changes not shared', tone: 'warning', action: { label: 'Share changes', tab: 'plan', step: 'share' } },
+  locked: { label: 'Locked at kick-off', tone: 'info' },
+  // TRAK-288: the evaluation opens at full time. Which past matches still owe one is the week's rule (coachWeek).
+  fullTime: { label: 'Full time', tone: 'neutral', action: { label: 'Evaluate', tab: 'evaluation' } },
+  // TRAK-288: a draft only the coach sees, until it's published (TRAK-289).
+  evaluationDraft: { label: 'Evaluation draft', tone: 'warning', action: { label: 'Publish', tab: 'evaluation' } },
+  // TRAK-289: the loop closes.
+  published: { label: 'Published', tone: 'success' },
+}
+
+/** Full time: the event's end, or 90 minutes after kick-off when it has none, as the database reads it (event_wall_end). */
+export function fullTime(game: GameEvent): number {
+  return game.ends_at ? Date.parse(game.ends_at) : Date.parse(game.starts_at) + 90 * 60_000
+}
+
+const MINUTE = 60_000
+const HALF_TIME = 15 * MINUTE
+
+/** TRAK-373 (Imad, 5 Nov): the match clock, from kick-off to full time. Half-time is 15 minutes in the middle of the
+ *  match's slot, so each half is (slot − 15) ÷ 2; a slot of 30 minutes or less has no break. The minute is counted as
+ *  on TV (Imad's pick): the first minute is 1', 14 minutes played is 15', so two halves of 45 read 1'–45', HT, 46'–90'.
+ *  `share`: how much of the playing time has gone. */
+export function matchClock(game: GameEvent, now: number): { minute: number | 'HT'; share: number } | 'before' | 'over' {
+  const kickOff = Date.parse(game.starts_at)
+  const end = fullTime(game)
+  if (now < kickOff) return 'before'
+  if (now >= end) return 'over'
+  const pause = end - kickOff > 2 * HALF_TIME ? HALF_TIME : 0
+  const playing = end - kickOff - pause
+  const elapsed = now - kickOff
+  if (pause && elapsed >= playing / 2 && elapsed < playing / 2 + pause) return { minute: 'HT', share: 0.5 }
+  const played = elapsed < playing / 2 ? elapsed : elapsed - pause
+  return { minute: Math.floor(played / MINUTE) + 1, share: played / playing }
+}
+
+export function gameState(game: GameEvent, now: number, plan: PlanProgress = {}): GameState {
+  if (!game.published) return 'logistics' // a draft can still be published after its time (TRAK-230)
+  if (now < Date.parse(game.starts_at)) {
+    if (plan.shared && plan.sharedAt && now < Date.parse(plan.sharedAt)) return 'scheduled'
+    return plan.shared ? (plan.changes ? 'changes' : 'shared') : plan.drafted ? 'planDraft' : 'plan'
+  }
+  return now < fullTime(game) ? 'locked' : plan.published ? 'published' : plan.evaluated ? 'evaluationDraft' : 'fullTime'
+}
+
+/** A game's state as its badge shows it. A scheduled plan says when it goes out, on this phone's clock, as every
+ *  screen time is (TRAK-290: "Shares Thu 19:30"). */
+export function gameStatus(game: GameEvent, now: number, plan: PlanProgress = {}) {
+  const state = gameState(game, now, plan)
+  return state === 'scheduled' && plan.sharedAt
+    ? { ...STATE.scheduled, label: i18n.t('coachMatches:sharesAt', { when: format(new Date(plan.sharedAt), 'EEE HH:mm', { locale: dateLocale() }) }) }
+    : STATE[state]
+}
+
+const VIEW_PLAN: GameAction = { label: 'View plan', tab: 'plan' }
+const LOGISTICS: GameAction = { label: 'Logistics', tab: 'logistics' }
+
+/** TRAK-333 (Imad, 2 Nov): a match's split button. The main action is the next one, or View plan when the plan is shared
+ *  or scheduled and nothing is due (it opens Review & share, TRAK-332); behind the chevron, the match's other pages. None
+ *  while the match is on or once it's published. */
+export function matchActions(state: GameState): { main: GameAction; more: GameAction[] } | null {
+  const main = STATE[state].action ?? (state === 'shared' || state === 'scheduled' ? VIEW_PLAN : null)
+  if (!main) return null
+  const more = main.tab === 'logistics' ? [VIEW_PLAN] : main.tab === 'plan' && state !== 'changes' ? [LOGISTICS] : [VIEW_PLAN, LOGISTICS]
+  return { main, more }
+}
+
+/** The game page's address for a next action. */
+export const actionLink = (eventId: string, action: Omit<GameAction, 'label'>) =>
+  `/coach/matches/${eventId}?tab=${action.tab}${action.step ? `&step=${action.step}` : ''}`
+
+const WEEK = 7 * 24 * 60 * 60_000
+
+/** Needs you (TRAK-284): matches whose logistics are shared and that kick off within 7 days, soonest first. A
+ *  cancelled match isn't one of the coach's games. Home asks each for "Plan not shared" or, once shared, "Changes not
+ *  shared" (TRAK-286). */
+export function needsAPlan<T extends GameEvent>(games: T[], now: number): T[] {
+  const kickOff = (game: T) => Date.parse(game.starts_at)
+  return games.filter(game => game.published && kickOff(game) > now && kickOff(game) <= now + WEEK)
+    .sort((a, b) => kickOff(a) - kickOff(b))
+}
+
+/** TRAK-326 (Imad, 31 Oct): matches that kicked off in the last two weeks first, newest first, as they wait for their
+ *  evaluation (Home's Needs you looks back as far); then upcoming soonest first; then older ones newest first. The
+ *  next game is the soonest that hasn't kicked off. */
+export function orderGames<T extends GameEvent>(games: T[], now: number): { next: T | null; games: T[] } {
+  const kickOff = (game: T) => Date.parse(game.starts_at)
+  const upcoming = games.filter(game => kickOff(game) > now).sort((a, b) => kickOff(a) - kickOff(b))
+  const past = games.filter(game => kickOff(game) <= now).sort((a, b) => kickOff(b) - kickOff(a))
+  const recent = past.filter(game => kickOff(game) > now - 2 * WEEK)
+  return { next: upcoming[0] ?? null, games: [...recent, ...upcoming, ...past.slice(recent.length)] }
+}

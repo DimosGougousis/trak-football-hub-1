@@ -5,7 +5,7 @@ export function AcademyDashboardHeader({ club, coaches }: { club: string; coache
   if (coaches !== null) return <ClubHeader club={club} coaches={coaches} />
   return (
     <div className="mb-6">
-      <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: 28, color: 'rgba(255,255,255,0.88)' }}>
+      <h1 style={{ fontFamily: 'var(--t-font)', fontWeight: 300, fontSize: 28, color: 'rgb(var(--t-ink))' }}>
         {club}
       </h1>
       <div className="mt-3 flex gap-2">

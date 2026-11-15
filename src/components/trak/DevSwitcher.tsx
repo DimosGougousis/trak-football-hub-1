@@ -6,9 +6,9 @@ import { requireDevPassword } from '@/lib/dev-credentials'
 
 const DEV_ACCOUNTS = [
   { role: 'coach',  label: 'Coach',  email: 'coach@trak.dev',  color: 'hsl(40,78%,60%)' },
-  { role: 'player', label: 'Player', email: 'player@trak.dev', color: '#C8F25A' },
+  { role: 'player', label: 'Player', email: 'player@trak.dev', color: 'rgb(var(--t-brand))' },
   { role: 'parent', label: 'Parent', email: 'parent@trak.dev', color: 'hsl(214,60%,57%)' },
-  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgba(255,255,255,0.7)' },
+  { role: 'club',   label: 'Admin',  email: 'club@trak.dev',   color: 'rgb(var(--t-ink-2))' },
 ] as const
 
 export function DevSwitcher() {
@@ -37,19 +37,19 @@ export function DevSwitcher() {
     <div className="fixed z-[9999]" style={{ bottom: '80px', right: '12px' }}>
       {open && (
         <div className="mb-2 rounded-[12px] overflow-hidden shadow-2xl"
-          style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.12)', minWidth: 220 }}>
+          style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', minWidth: 220 }}>
           {DEV_ACCOUNTS.map(acc => (
             <button
               key={acc.role}
               onClick={() => switchTo(acc)}
               disabled={busy !== null}
-              className="w-full px-4 py-3 text-left text-[13px] font-medium flex items-center gap-2.5 hover:bg-white/[0.06] transition-colors disabled:opacity-50 border-b border-white/[0.06] last:border-0"
+              className="w-full px-4 py-3 text-left text-[13px] font-medium flex items-center gap-2.5 hover:bg-raised transition-colors disabled:opacity-50 border-b border-line last:border-0"
             >
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: acc.color }} />
               <span style={{ color: acc.color }}>
                 {busy === acc.role ? 'Switching...' : acc.label}
               </span>
-              <span className="text-[10px] text-white/30 ml-auto" style={{ fontFamily: "'DM Mono', monospace" }}>
+              <span className="text-[10px] text-ink-3 ml-auto" style={{ fontFamily: 'var(--t-font-mono)' }}>
                 {acc.email.replace('@trak.dev', '')}
               </span>
             </button>
@@ -61,9 +61,9 @@ export function DevSwitcher() {
           onClick={() => setOpen(o => !o)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold tracking-wider transition-all"
           style={{
-            background: open ? 'rgba(200,242,90,0.18)' : 'rgba(10,10,11,0.85)',
-            border: `1px solid ${open ? 'rgba(200,242,90,0.45)' : 'rgba(255,255,255,0.14)'}`,
-            color: open ? '#C8F25A' : 'rgba(255,255,255,0.35)',
+            background: open ? 'rgb(var(--t-brand) / 0.18)' : 'rgb(var(--t-ground) / 0.85)',
+            border: `1px solid ${open ? 'rgb(var(--t-brand) / 0.45)' : 'rgb(var(--t-line-strong))'}`,
+            color: open ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink-3))',
             backdropFilter: 'blur(10px)',
           }}>
           {open ? <><X size={10} /> close</> : <><ArrowLeftRight size={10} /> DEV</>}

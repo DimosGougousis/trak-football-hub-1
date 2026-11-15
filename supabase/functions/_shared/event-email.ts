@@ -1,7 +1,8 @@
-// TRAK-135 (J8.12): the wording of a cancellation or change email. Pure, so
-// tests pin exactly what a family reads. Plain text for a phone: what
-// changed, old → new, the squad, the date and the venue. No child names, no
-// notes, and no link but the plain trakfootball.com page.
+// TRAK-135 (J8.12): the wording of a cancellation, change or publish email,
+// in Kostas's words (TRAK-190, 20 Oct). Pure, so tests pin exactly what a
+// family reads. Plain text for a phone: what the coach did, then each event's
+// day, time, venue, meet time and kit (for a change, what moved, old → new).
+// No child names, no notes, and no link but the plain trakfootball.com page.
 // Coach-typed text (title, venue, opponent, cancel reason) has its links
 // replaced, because sendPlainEmail() refuses a whole email over one Google
 // Maps link, and is left out if it names a child in the squad (the calendar
@@ -23,12 +24,14 @@ export interface EventFields {
   meet_time: string | null;
   venue: string | null;
   cancel_reason: string | null;
+  /** TRAK-190: matches say the kit. Optional: notices queued before 20 Oct don't carry it. */
+  kit?: string | null;
 }
 export interface EventRecipient { user_id: string; email: string }
 /** One claimed notice, as claim_event_change_notices() returns it. */
 export interface ClaimedNotice {
   notice_id: string;
-  kind: 'cancelled' | 'changed';
+  kind: 'cancelled' | 'changed' | 'published';
   before: EventFields;
   event: EventFields;
   squad: string | null;
@@ -40,7 +43,8 @@ export interface ClaimedNotice {
 
 export const LINK_PLACEHOLDER = '(link in the Trak app)';
 export const TRAK_URL = 'https://trakfootball.com';
-/** Imad, 10 Oct: no Reply-To; event questions go to the coach, app questions to Trak. */
+/** Imad, 10 Oct: no Reply-To; event questions go to the coach, app questions to Trak.
+ *  The reminder email's footer; the event emails use Kostas's (TRAK-190) in composeEventEmail. */
 export const WHO_TO_ASK = 'Questions about this event? Ask your coach/academy. '
   + 'Feedback or questions about the app? Send us an email at support@trakfootball.com';
 const SUBJECT_MAX = 150;
@@ -89,6 +93,9 @@ export const longDay = (date: string | null) => dayName(date, 'long');
 /** "Wed 14 Oct" */
 export const shortDay = (date: string | null) => dayName(date, 'short');
 
+/** The event emails' own spacing (Kostas, TRAK-190): "18:00 – 19:30". Reminders keep timeRange's. */
+const spaced = (range: string) => range.replace('–', ' – ');
+
 /** "17:00–18:30", "17:00" or "time to be confirmed". */
 export function timeRange(e: EventFields): string {
   const start = startTime(e);
@@ -112,14 +119,17 @@ export function eventName(e: EventFields, names: RegExp[] = []): string {
   return kindLabel(e);
 }
 
-export type EventChange = { what: 'cancelled' } | { what: 'changed'; lines: string[] };
+export type EventChange = { what: 'cancelled' } | { what: 'changed'; lines: string[] } | { what: 'published' };
 
 /**
  * What families need to hear, from the event as they last saw it to now, or
  * null when nothing they'd notice changed (edits that cancelled out).
  */
-export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { child_names?: string[] }): EventChange | null {
+export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { kind?: ClaimedNotice['kind']; child_names?: string[] }): EventChange | null {
   const { before, event } = notice;
+  // TRAK-135: newly published. Families never saw the draft, so no "old → new";
+  // cancelled inside the 15 s window, they never heard of it: nothing to send.
+  if (notice.kind === 'published') return event.status === 'scheduled' ? { what: 'published' } : null;
   const names = namePatterns(notice.child_names ?? []);
   if (event.status === 'cancelled') return before.status === 'cancelled' ? null : { what: 'cancelled' };
   if (event.status !== 'scheduled' || before.status !== 'scheduled') return null;
@@ -128,7 +138,7 @@ export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { 
   const was = { date: eventDate(before), time: timeRange(before) };
   const now = { date: eventDate(event), time: timeRange(event) };
   if (was.date !== now.date) lines.push(`Date: ${shortDay(was.date)} → ${shortDay(now.date)}`);
-  if (was.time !== now.time) lines.push(`Time: ${was.time} → ${now.time}`);
+  if (was.time !== now.time) lines.push(`Time: ${spaced(was.time)} → ${spaced(now.time)}`);
   const meetWas = hhmm(before.meet_time);
   const meetNow = hhmm(event.meet_time);
   if (meetWas !== meetNow) lines.push(`Meet: ${meetWas ?? 'not set'} → ${meetNow ?? 'not set'}`);
@@ -138,23 +148,63 @@ export function eventChange(notice: Pick<ClaimedNotice, 'before' | 'event'> & { 
   return lines.length ? { what: 'changed', lines } : null;
 }
 
-function squadLine(notice: Pick<ClaimedNotice, 'squad' | 'academy'>, names: RegExp[]): string | null {
-  const parts = [clean(notice.squad, names), clean(notice.academy, names)].filter(Boolean);
-  return parts.length ? `Squad: ${parts.join(', ')}` : null;
+// ── Kostas's wording (TRAK-190, 20 Oct) ─────────────────────────────────────
+
+/** What a family is told an event is, the way the app names it: "Match vs Panionios U14 (away)". */
+function emailEventName(e: EventFields, names: RegExp[]): string {
+  if (e.event_type === 'match') {
+    const opponent = clean(e.opponent, names);
+    const side = e.home_away === 'home' || e.home_away === 'away' ? ` (${e.home_away})` : '';
+    if (opponent) return `Match vs ${opponent}${side}`;
+  }
+  return clean(e.title, names) || kindLabel(e);
 }
 
-function block(notice: ClaimedNotice, change: EventChange): string {
+/** One email about one event names it only when the opener doesn't already: a plain "Training" goes unnamed. */
+function namedAlone(e: EventFields, names: RegExp[]): boolean {
+  if (e.event_type !== 'training') return true;
+  const title = clean(e.title, names);
+  return !!title && title.toLowerCase() !== 'training';
+}
+
+const NOUN: Record<string, { one: string; word: string; many: string }> = {
+  training: { one: 'a training session', word: 'training', many: 'trainings' },
+  match: { one: 'a match', word: 'match', many: 'matches' },
+  tournament: { one: 'a tournament', word: 'tournament', many: 'tournaments' },
+};
+const noun = (e: EventFields) => NOUN[e.event_type ?? ''] ?? { one: 'an event', word: 'event', many: 'events' };
+/** "trainings" when every event is one, else "events". */
+const plural = (events: EventFields[]) => {
+  const kinds = new Set(events.map(e => noun(e).many));
+  return kinds.size === 1 ? [...kinds][0] : 'events';
+};
+
+const VERB = { published: 'added', cancelled: 'CANCELLED', changed: 'CHANGED' } as const;
+
+type Item = { notice: ClaimedNotice; change: EventChange };
+
+/** One event: its name (when it needs one), day and time, venue, then what to bring and when to arrive. */
+function block({ notice, change }: Item, inList: boolean, sharedReason: boolean): string {
   const e = notice.event;
   const names = namePatterns(notice.child_names ?? []);
   const venue = clean(e.venue, names);
-  const when = `${longDay(eventDate(e))}, ${timeRange(e)}`;
-  const reason = cancelReason(e, names);
-  const lines = change.what === 'cancelled'
-    ? [`CANCELLED: ${eventName(e, names)}`, `Was: ${when}${venue ? ` at ${venue}` : ''}`, ...(reason ? [`Reason: ${reason}`] : [])]
-    : [`CHANGED: ${eventName(e, names)}`, ...change.lines, `Now: ${when}${venue ? ` at ${venue}` : ''}`];
-  const squad = squadLine(notice, names);
-  return [...lines, ...(squad ? [squad] : [])].join('\n');
+  const meet = hhmm(e.meet_time);
+  const kit = e.event_type === 'match' ? clean(e.kit, names) : '';
+  const reason = change.what === 'cancelled' && !sharedReason ? cancelReason(e, names) : null;
+  const day = inList ? shortDay(eventDate(e)) : longDay(eventDate(e));
+  const now = [
+    `${day}, ${spaced(timeRange(e))}`,
+    ...(venue ? [venue] : []),
+    ...(change.what !== 'cancelled' && meet ? [`Please arrive by ${meet}`] : []),
+    ...(change.what !== 'cancelled' && kit ? [`Kit: ${kit}`] : []),
+    ...(reason ? [`Reason: ${reason}`] : []),
+  ];
+  const name = inList || namedAlone(e, names) ? [emailEventName(e, names)] : [];
+  if (change.what !== 'changed') return [...name, ...now].join('\n');
+  return [...name, 'What changed:', ...change.lines, '', ...now].join('\n');
 }
+
+const MAX_LISTED = 5;
 
 const oneLine = (text: string) => {
   const line = text.replace(/\s+/g, ' ').trim();
@@ -164,31 +214,64 @@ const oneLine = (text: string) => {
 /**
  * One email to one person, covering every notice they're owed in this send
  * (a series cancelled at once is one email, not six). Notices with nothing
- * to say are left out; null when none is left.
+ * to say are left out; null when none is left. Kostas (TRAK-190): the first 5
+ * events are listed, then "...and N more"; the subject keeps the whole count.
  */
 export function composeEventEmail(to: string, notices: ClaimedNotice[]): PlainEmail | null {
   const items = notices
     .map(notice => ({ notice, change: eventChange(notice) }))
-    .filter((item): item is { notice: ClaimedNotice; change: EventChange } => item.change !== null)
+    .filter((item): item is Item => item.change !== null)
     .sort((a, b) => (eventDate(a.notice.event) ?? '').localeCompare(eventDate(b.notice.event) ?? ''));
   if (!items.length) return null;
 
+  const single = items.length === 1;
+  // One section per thing the coach did, most urgent first; one section when it's all the same.
+  const sections = (['cancelled', 'changed', 'published'] as const)
+    .map(what => ({ what, items: items.filter(item => item.change.what === what) }))
+    .filter(section => section.items.length);
+
   let subject: string;
-  if (items.length === 1) {
-    const { notice, change } = items[0];
+  if (single) {
     // Generic, never coach-typed: a subject shows on lock screens and in previews.
-    subject = `${kindLabel(notice.event)} ${change.what}: ${shortDay(eventDate(notice.event))}`;
+    const { notice, change } = items[0];
+    const day = shortDay(eventDate(notice.event));
+    subject = change.what === 'published'
+      ? `New ${noun(notice.event).word} on ${day}`
+      : `${kindLabel(notice.event)} ${change.what} on ${day}`;
+  } else if (sections.length === 1) {
+    const { what } = sections[0];
+    const kinds = plural(items.map(item => item.notice.event));
+    subject = what === 'published' ? `${items.length} new ${kinds} on Trak` : `${items.length} ${kinds} ${what} on Trak`;
   } else {
-    subject = items.every(item => item.change.what === 'cancelled')
-      ? `${items.length} events cancelled`
-      : `${items.length} schedule changes`;
+    subject = `${items.length} schedule changes on Trak`;
   }
 
+  let room = MAX_LISTED;
+  const body = sections.flatMap(({ what, items: these }) => {
+    const shown = these.slice(0, Math.max(room, 0));
+    room -= shown.length;
+    if (!shown.length) return [];
+    const events = these.map(item => item.notice.event);
+    const opener = these.length === 1
+      ? `Your coach has ${VERB[what]} ${noun(events[0]).one}.`
+      : `Your coach has ${VERB[what]} ${these.length} ${plural(events)}${what === 'published' ? ' to the schedule' : ''}.`;
+    // Several cancelled for one reason: said once, after them (Kostas, 20 Oct).
+    const reasons = what === 'cancelled' && these.length > 1
+      ? these.map(item => cancelReason(item.notice.event, namePatterns(item.notice.child_names ?? []))) : [];
+    const shared = reasons.length && reasons[0] && reasons.every(r => r === reasons[0]) ? reasons[0] : null;
+    return [opener, ...shown.map(item => block(item, !single, !!shared)), ...(shared ? [`Reason: ${shared}`] : [])];
+  });
+  const hidden = items.length - Math.min(items.length, MAX_LISTED);
+
+  const attending = items.some(item => item.change.what !== 'cancelled');
+  const canMakeIt = attending
+    ? [`If your child can't make it${single ? '' : ' to any of these'}, tap "Can't make it" in Trak so the coach knows.`] : [];
   const text = [
-    ...items.map(item => block(item.notice, item.change)),
-    `See the full schedule in Trak: ${TRAK_URL}`,
+    ...body,
+    ...(hidden ? [`...and ${hidden} more. See them all in Trak.`] : []),
+    [...canMakeIt, `See the full schedule: ${TRAK_URL}`].join('\n'),
     'You get this email because you or your child is in this squad on Trak.',
-    WHO_TO_ASK,
+    `Questions about ${single ? 'this event' : 'these events'}? Ask your coach or academy.\nQuestions about the app? Email support@trakfootball.com`,
   ].join('\n\n');
   return { to, subject: oneLine(subject), text };
 }

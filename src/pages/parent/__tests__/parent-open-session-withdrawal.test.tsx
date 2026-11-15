@@ -32,6 +32,8 @@ beforeEach(() => {
     { id: 'c', user_id: CHILD, role: 'player', full_name: 'Linked Child' },
   ]
   server.use(
+    // TRAK-286: no roster row, so no shared game plan.
+    table('squad_players', []),
     // The parent's own profile and the child's name come from the same table.
     http.get(`${SUPABASE_URL}/rest/v1/profiles`, ({ request }) => {
       const filter = new URL(request.url).searchParams.get('user_id') ?? ''

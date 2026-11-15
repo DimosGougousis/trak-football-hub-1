@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, MetadataLabel, LoadError } from '@/components/trak'
+import { MobileShell, MetadataLabel, LoadError, NavBar } from '@/components/trak'
+import { QuickAdd } from '@/components/coach/QuickAdd'
 import { SessionChip as Chip } from '@/components/coach/SessionChip'
+import { MatchEditor } from '@/components/coach/MatchEditor'
 import { localTodayISO } from '@/lib/event-time'
 import { dateAsDay, dayAsDate } from '@/lib/coach-events'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
@@ -14,12 +16,13 @@ import {
   TRAINING_DURATIONS, TRAINING_INTENSITIES,
   parseTrainingNotes, parseTrainingTitle, trainingNotes, trainingTitle,
 } from '@/lib/session-form'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 
 /* J4 (TRAK-102): open a saved session and correct it. A coach who missed the
    note or an attendance tick used to have to log a second session, which the
    family then saw twice. Training and other sessions are editable: date,
-   focus/title, notes, attendance. A match opens read-only; editing a logged
-   match (score, scorers) is out of scope for TRAK-102. */
+   focus/title, notes, attendance. A logged match opens MatchEditor (TRAK-185):
+   its score and each player's goals, assists and card. */
 
 type Session = {
   id: string
@@ -224,29 +227,24 @@ export default function CoachSessionEdit() {
   }
 
   const header = (
-    <div className="flex items-center justify-between pt-3 pb-2 border-b border-white/[0.07]">
-      <button onClick={goBack} aria-label="Back"
-        className="w-[34px] h-[34px] bg-[#17171A] border border-white/[0.11] rounded-[10px] flex items-center justify-center">
-        <ChevronLeft size={14} className="text-white/88" />
-      </button>
-      <span className="text-[16px] font-medium text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-        {isMatch ? 'Match' : 'Edit session'}
-      </span>
-      <div className="w-[34px]" />
+    <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
+      {/* TRAK-334: the trail, in place of Back; its last crumb is the page's name. Opened from a link, it sits under
+          the sessions list, where Back went. */}
+      <CoachTrail current={isMatch ? 'Edit match' : 'Edit session'} parents={[{ label: 'Sessions', href: '/coach/sessions/list' }]} />
     </div>
   )
 
   if (status !== 'ready' || !session) {
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
         <div className="pt-5">
           {status === 'failed' ? (
             <LoadError what="this session" onRetry={() => setAttempt(n => n + 1)} retrying={false} />
           ) : status === 'missing' ? (
-            <p role="status" className="text-[13px] text-white/55">This session isn't available. It may have been deleted.</p>
+            <p role="status" className="text-[13px] text-ink-2">This session isn't available. It may have been deleted.</p>
           ) : (
-            <p role="status" className="text-[13px] text-white/45">Loading the session…</p>
+            <LoadingSkeleton label="Loading the session…" lines={4} rows={2} />
           )}
         </div>
       </MobileShell>
@@ -254,33 +252,24 @@ export default function CoachSessionEdit() {
   }
 
   if (isMatch) {
-    const attended = rows.filter(r => r.saved === 'present').map(r => r.name)
+    // TRAK-185 part 1: a logged match is corrected here (score, goals, assists, cards).
     return (
-      <MobileShell>
+      <MobileShell width="read">
         {header}
-        <div className="pt-5 pb-24 space-y-5">
-          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-            <p className="text-[16px] text-white/88">{session.title}</p>
-            <p className="text-[11px] text-white/45 mt-1" style={{ fontFamily: "'DM Mono', monospace" }}>{session.session_date}</p>
-            {session.notes && <p className="text-[13px] text-white/70 mt-3 whitespace-pre-line">{session.notes}</p>}
-          </div>
-          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-            <MetadataLabel text={`PLAYED · ${attended.length}`} />
-            <p className="text-[13px] text-white/70 mt-2">{attended.length ? attended.join(', ') : 'Nobody recorded.'}</p>
-          </div>
-          <p className="text-[12px] text-white/40">A logged match can't be edited yet.</p>
+        <div className="pt-5 pb-24">
+          <MatchEditor sessionId={session.id} title={session.title} date={session.session_date} />
         </div>
       </MobileShell>
     )
   }
 
   return (
-    <MobileShell>
+    <MobileShell width="read">
       {header}
       <div className="pt-5 pb-32 space-y-5">
         {isTraining ? (
           <>
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -290,18 +279,18 @@ export default function CoachSessionEdit() {
                       onClick={() => setFocus(prev => { const n = new Set(prev); if (n.has(key)) { n.delete(key) } else { n.add(key) } return n })}
                       className="text-left px-3 py-2.5 rounded-[12px] transition-colors"
                       style={{
-                        background: on ? 'rgba(200,242,90,0.10)' : 'rgba(0,0,0,0.3)',
-                        border: `1px solid ${on ? 'rgba(200,242,90,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                        background: on ? 'rgb(var(--t-brand) / 0.10)' : 'rgb(var(--t-raised))',
+                        border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
                       }}>
-                      <p className="text-[13px] font-medium" style={{ color: on ? '#C8F25A' : 'rgba(255,255,255,0.78)' }}>{key}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)', fontFamily: "'DM Mono', monospace" }}>{sub}</p>
+                      <p className="text-[13px] font-medium" style={{ color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink))' }}>{key}</p>
+                      <p className="text-[9px] mt-0.5" style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font-mono)' }}>{sub}</p>
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012] space-y-4">
+            <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -320,37 +309,37 @@ export default function CoachSessionEdit() {
               </div>
             </div>
 
-            <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+            <div className="rounded-[18px] p-4 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Theme"
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
-                className="w-full bg-transparent text-[15px] text-white/88 placeholder-white/20 outline-none mt-2" />
+                className="w-full bg-transparent text-[15px] text-ink placeholder-ink-3 outline-none mt-2" />
             </div>
           </>
         ) : (
-          <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+          <div className="rounded-[18px] p-4 border border-line bg-surface">
             <MetadataLabel text="TITLE" />
             <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Title"
-              className="w-full bg-transparent text-[16px] text-white/88 placeholder-white/20 outline-none mt-2" />
+              className="w-full bg-transparent text-[16px] text-ink placeholder-ink-3 outline-none mt-2" />
           </div>
         )}
 
         {/* TRAK-157: the same Arc picker as the logs; a day after today isn't offered. */}
-        <div className="arc" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="arc" style={{ fontFamily: 'var(--t-font)' }}>
           <DatePicker label="Session date" className="arc-trak-field" value={dayAsDate(date)} clearable={false}
-            maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Pick a date"
+            maxDate={dayAsDate(localTodayISO())} onChange={d => { if (d) setDate(dateAsDay(d)) }} placeholder="Select a date"
             format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
         </div>
 
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
-          <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-white/45 mb-3"
-            style={{ fontFamily: "'DM Mono', monospace" }}>
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
+          <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-3"
+            style={{ fontFamily: 'var(--t-font-mono)' }}>
             ATTENDED · {present.size}
           </span>
           {shown.length === 0 ? (
-            <p role="status" className="text-[12px] text-white/40 py-2">No players can be recorded yet.</p>
+            <p role="status" className="text-[12px] text-ink-3 py-2">No players can be recorded yet.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 tablet:grid-cols-3 gap-2">
               {shown.map(r => {
                 const on = present.has(r.id)
                 const fixed = !r.ready || locked(r)
@@ -358,14 +347,14 @@ export default function CoachSessionEdit() {
                   <button key={r.id} type="button" aria-pressed={on} disabled={fixed} onClick={() => toggle(r)}
                     className="text-left px-3 py-2.5 rounded-[10px] transition-colors disabled:cursor-default"
                     style={{
-                      background: on ? 'rgba(200,242,90,0.08)' : 'rgba(0,0,0,0.35)',
-                      border: `1px solid ${on ? 'rgba(200,242,90,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                      color: on ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
+                      background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
+                      border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
+                      color: on ? 'rgb(var(--t-ink))' : 'rgb(var(--t-ink-2))',
                       fontSize: 13,
                     }}>
                     {r.name}
                     {fixed && (
-                      <span className="block text-[10px] text-white/40 mt-0.5">
+                      <span className="block text-[10px] text-ink-3 mt-0.5">
                         {locked(r) ? 'Assessed on this session' : `Kept as saved: ${r.waitReason}`}
                       </span>
                     )}
@@ -375,37 +364,40 @@ export default function CoachSessionEdit() {
             </div>
           )}
           {waiting.length > 0 && (
-            <p className="text-[11px] text-white/40 pt-3">
+            <p className="text-[11px] text-ink-3 pt-3">
               Not recorded until a parent approves: {waiting.map(r => `${r.name} (${r.waitReason})`).join(', ')}
             </p>
           )}
         </div>
 
-        <div className="rounded-[18px] p-4 border border-white/[0.07] bg-[#101012]">
+        <div className="rounded-[18px] p-4 border border-line bg-surface">
           <MetadataLabel text={isTraining ? 'SESSION NOTES' : 'NOTES'} />
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} aria-label="Notes"
             placeholder="What went well? What needs more work next session?"
-            className="w-full bg-transparent text-[14px] text-white/88 placeholder-white/20 outline-none resize-none mt-2" />
+            className="w-full bg-transparent text-[14px] text-ink placeholder-ink-3 outline-none resize-none mt-2" />
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 pb-5 pt-3"
-        style={{ background: 'linear-gradient(180deg,rgba(10,10,11,0) 0%,#0A0A0B 35%)' }}>
+      <div className="trak-page-bar fixed bottom-0 -translate-x-1/2 w-full px-5 pb-5 pt-3"
+        style={{ background: 'linear-gradient(180deg,rgb(var(--t-ground) / 0) 0%,rgb(var(--t-ground)) 35%)' }}>
         {futureDate && (
-          <p role="alert" className="text-[11px] text-center text-[rgb(251,191,36)] mb-2">
+          <p role="alert" className="text-[11px] text-center text-warning mb-2">
             A session can't be dated in the future.
           </p>
         )}
         <button onClick={handleSave} disabled={!canSave}
           className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
           style={{
-            background: canSave ? '#C8F25A' : 'rgba(255,255,255,0.06)',
-            color: canSave ? '#000' : 'rgba(255,255,255,0.3)',
+            background: canSave ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))',
+            color: canSave ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink-3))',
             opacity: saving ? 0.6 : 1,
           }}>
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+      {/* TRAK-254: on a laptop this page keeps the side menu and "+ Create"; a phone shows neither here. */}
+      <QuickAdd sideMenuOnly />
+      <NavBar role="coach" sideMenuOnly activeTab="/coach/home" onNavigate={navigate} />
     </MobileShell>
   )
 }

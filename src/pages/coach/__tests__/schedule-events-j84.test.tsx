@@ -1,8 +1,11 @@
+// @story J8
 import { readFileSync } from 'node:fs'
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { atMorningToday } from '../../../../tests/support/clock'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
+import { chooseCardAction, endActions, openNewEvent } from '../../../../tests/support/schedule-actions'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -62,7 +65,12 @@ function fixtures() {
     http.get(EVENTS, () => HttpResponse.json(rows)),
     table('coach_sessions', []),
     table('squad_players', []), // TRAK-139: the squad label for the WhatsApp message
-    rpc('feature_on', () => true),
+    // TRAK-288: Games off unless a test turns it on: with it on, a new match asks its competition.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'games'),
+    // TRAK-286: no game plan, shared or not.
+    table('game_plans', []),
+    table('game_shares', []),
+    rpc('game_plan_changes', () => []),
     http.post(EVENTS, write('post')),
     http.patch(EVENTS, write('patch')),
     http.delete(EVENTS, write('delete')),
@@ -84,15 +92,17 @@ async function open() {
 
 // Picking through Arc's pickers takes a few seconds on a busy runner (TRAK-157).
 describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 }, () => {
-  afterEach(() => { server.events.removeAllListeners() })
+  afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
   beforeEach(() => {
+    // TRAK-230: today's 16:00–18:30 events are still to come, so they can be edited.
+    atMorningToday()
     signInAs(COACH)
     fixtures()
   })
 
   it('creates a match with every field as a draft only the coach sees', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
     await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
@@ -107,7 +117,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     // TRAK-182: Review shows everything before the save.
     await eventStep(sheet, 'Review')
     for (const [term, value] of [['Opponent', 'Synthetic United (Away)'], ['Title', 'vs Synthetic United'], ['Venue', 'United Ground'],
-      ['Kickoff', '16:00'], ['Meet', '15:15'], ['Length', '75 min'], ['Kit', 'Red shirts'], ['Note for families', 'None']]) {
+      ['Kickoff', '16:00'], ['Meet', '15:15'], ['Length', '75 min'], ['Kit', 'Red shirts'], ['Message to players', 'None']]) {
       expect(within(sheet).getByText(term).nextElementSibling).toHaveTextContent(value)
     }
     await saveEventWith(sheet, 'Save draft')
@@ -138,13 +148,13 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
   // under it. Dora had typed "Shin guards are optional" into Kit.
   it('gives a training Kit and a note for families', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '17:00')
     await eventStep(sheet, 'For families')
     await userEvent.type(within(sheet).getByLabelText('Kit'), 'Green kits')
-    const note = within(sheet).getByLabelText('Note for families')
+    const note = within(sheet).getByLabelText('Message to players')
     expect(note).toHaveAttribute('maxlength', '200')
     expect(within(sheet).getByText(/players and parents see this/i)).toBeInTheDocument()
     await userEvent.type(note, 'Bring extra water, it is a hot day')
@@ -161,28 +171,28 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
   it('warns as the coach types a note families won\'t see', async () => {
     server.use(table('squad_players', [{ age_group: 'U15', player_name: 'Omar Haddad', status: 'active' }]))
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '17:00')
     await eventStep(sheet, 'For families')
-    const note = within(sheet).getByLabelText('Note for families')
+    const note = within(sheet).getByLabelText('Message to players')
     await userEvent.type(note, 'Bring water')
     expect(within(sheet).queryByText(/families won't see this note/i)).toBeNull()
     await userEvent.type(note, ', Omar brings the bibs')
-    expect(await within(sheet).findByText("Families won't see this note: it names a player.")).toBeInTheDocument()
+    expect(await within(sheet).findByText("Players and parents won't see this message: it names a player.")).toBeInTheDocument()
     await userEvent.clear(note)
     await userEvent.type(note, 'Directions: maps.app.goo.gl/abc')
-    expect(within(sheet).getByText("Families won't see this note: it has a link.")).toBeInTheDocument()
+    expect(within(sheet).getByText("Players and parents won't see this message: it has a link.")).toBeInTheDocument()
     expect(note).toHaveAccessibleDescription(/it has a link/)
     // Review says it again, before the coach saves.
     await eventStep(sheet, 'Review')
-    expect(within(sheet).getByText("Families won't see this note: it has a link.")).toBeInTheDocument()
+    expect(within(sheet).getByText("Players and parents won't see this message: it has a link.")).toBeInTheDocument()
   })
 
   it('picks a venue the coach has used before', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const options = [...document.querySelectorAll('#saved-venues option')].map(o => (o as HTMLOptionElement).value)
     // Most recent first: the 18:30 match, then the 17:00 training.
     expect(options).toEqual(['Rovers Park', 'Academy Pitch 2'])
@@ -190,7 +200,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
 
   it('says what is missing and sends nothing', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
     // TRAK-182: Next stops on the step that can fix it, and says what's missing.
@@ -202,9 +212,9 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await next()
 
     // TRAK-157: no event saves without a start time; there is no "no time".
-    expect(timeShown('Kickoff')).toBe('Pick a start time')
+    expect(timeShown('Kickoff')).toBe('Select a start time')
     await next()
-    expect(within(sheet).getByRole('alert')).toHaveTextContent('Pick a start time')
+    expect(within(sheet).getByRole('alert')).toHaveTextContent('Select a start time')
     expect(within(sheet).queryByText(/time not set/i)).toBeNull()
 
     await pickTime(userEvent, 'Kickoff', '16:00')
@@ -222,7 +232,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     'keeps what was typed and says what failed when $mode ($why)', async ({ mode }) => {
       await open()
       failWrites = mode
-      await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+      await openNewEvent()
       const sheet = screen.getByRole('dialog', { name: 'New event' })
       await userEvent.type(within(sheet).getByLabelText('Venue'), 'Academy Pitch 1')
       await eventStep(sheet, 'When')
@@ -242,14 +252,14 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await userEvent.click(screen.getByRole('button', { name: 'Publish Finishing' }))
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.draft-1&select=id', body: { published: true } })
-    // Publishing isn't a change families need emailing about (TRAK-135).
-    expect(emailNudges).toBe(0)
+    // TRAK-135 (16 Oct): publishing emails families too, so the app asks the server to send.
+    await waitFor(() => expect(emailNudges).toBe(1))
   })
 
   // TRAK-182 (Imad's 7c): Review's Publish saves, then publishes what it saved.
   it('publishes a new event from Review', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '17:00')
@@ -260,7 +270,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect((writes[0].body as Record<string, unknown>[])[0]).toMatchObject({ published: false })
     expect(writes[1]).toMatchObject({ method: 'patch', query: '?id=in.(written)&select=id', body: { published: true } })
     expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
-    expect(emailNudges).toBe(0)
+    await waitFor(() => expect(emailNudges).toBe(1)) // TRAK-135
   })
 
   it('publishes a draft it edits, from Review', async () => {
@@ -272,6 +282,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect(writes[0]).toMatchObject({ method: 'patch', query: '?id=eq.draft-1&select=id' })
     expect(writes[0].body).not.toHaveProperty('published')
     expect(writes[1]).toMatchObject({ method: 'patch', query: '?id=in.(draft-1)&select=id', body: { published: true } })
+    await waitFor(() => expect(emailNudges).toBe(1)) // TRAK-135
   })
 
   // A clash (TRAK-158) refuses the publish, not the save: the draft stays, said plainly.
@@ -288,6 +299,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     await saveEventWith(screen.getByRole('dialog', { name: 'Edit event' }), 'Publish')
     expect(await screen.findByText(/Saved as a draft, not published\. This overlaps vs Synthetic Rovers/)).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(emailNudges).toBe(0) // TRAK-135: a refused publish emails nobody
   })
 
   it('edits a published event live, without touching published', async () => {
@@ -321,8 +333,8 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
   it('cancels a published event: it stays, marked Cancelled, and nothing is deleted', async () => {
     await open()
     // A published event has no Delete: families have seen it.
-    expect(screen.queryByRole('button', { name: 'Delete vs Synthetic Rovers' })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel vs Synthetic Rovers' }))
+    expect(endActions('vs Synthetic Rovers')).toEqual(['Cancel'])
+    await chooseCardAction('vs Synthetic Rovers', 'Cancel')
     const sheet = screen.getByRole('dialog', { name: 'Cancel event' })
     await userEvent.type(within(sheet).getByLabelText('Reason (optional)'), 'Pitch waterlogged')
     rows = [DRAFT, { ...LIVE, status: 'cancelled', cancel_reason: 'Pitch waterlogged' }]
@@ -334,8 +346,9 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     })
     expect(await within(card('vs Synthetic Rovers')).findByText('Cancelled')).toBeInTheDocument()
     expect(within(card('vs Synthetic Rovers')).getByText('Pitch waterlogged')).toBeInTheDocument()
-    // A cancelled event can't be edited, published or cancelled again.
-    expect(within(card('vs Synthetic Rovers')).queryAllByRole('button')).toEqual([])
+    // A cancelled event can't be edited, published or cancelled again: its card opens its sheet (the title) and shares the cancellation.
+    expect(within(card('vs Synthetic Rovers')).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent?.trim()))
+      .toEqual(['vs Synthetic Rovers', 'Share vs Synthetic Rovers'])
     expect(writes.some(w => w.method === 'delete')).toBe(false)
     // TRAK-135: and the families' cancellation email is sent.
     expect(emailNudges).toBe(1)
@@ -343,7 +356,7 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
 
   it('deletes only a draft nobody has seen', async () => {
     await open()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Finishing' }))
+    await chooseCardAction('Finishing', 'Delete')
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({ method: 'delete', query: '?id=eq.draft-1&select=id' })
     expect(emailNudges).toBe(0)
@@ -376,13 +389,73 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     }))
     await open()
     expect(await screen.findByText('Recovery session')).toBeInTheDocument()
-    expect(screen.queryByText(/We couldn't load your calendar/)).toBeNull()
+    expect(screen.queryByText(/We couldn't load your events/)).toBeNull()
     expect(asked.length).toBeGreaterThan(0)
   })
 
   it('says the calendar failed to load instead of showing it empty', async () => {
     server.use(http.get(EVENTS, () => HttpResponse.json({ message: 'Synthetic failure' }, { status: 500 })))
     renderApp('/coach/schedule')
-    expect(await screen.findByText(/We couldn't load your calendar/)).toBeInTheDocument()
+    expect(await screen.findByText(/We couldn't load your events/)).toBeInTheDocument()
+  })
+})
+
+// TRAK-283 (Games 1/8): with Games on, a match just published offers its next step, the game plan.
+describe('TRAK-283: a match just published offers its game plan', { timeout: 20_000 }, () => {
+  afterEach(() => { server.events.removeAllListeners(); vi.useRealTimers() })
+  beforeEach(() => {
+    atMorningToday()
+    // TRAK-288: Games on. The app keeps a switch's answer for 30 s, so the academy with Games is another coach's.
+    signInAs({ id: 'coach-1-games' })
+    fixtures()
+    server.use(rpc('feature_on', () => true))
+    rows = [DRAFT, row({ id: 'match-1', title: 'vs Parkview Athletic', event_type: 'match', opponent: 'Parkview Athletic',
+      starts_at: toInstant(today, '20:00'), start_time: '20:00:00' })]
+  })
+  // By keyboard: a toast's button is reachable without a pointer (and jsdom has no pointer capture for Sonner's swipe).
+  const takeNextStep = async () => {
+    const button = await screen.findByRole('button', { name: 'Write the game plan' })
+    button.focus()
+    await userEvent.keyboard('{Enter}')
+  }
+
+  it("the list's Publish: Write the game plan opens the match's game page", async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish vs Parkview Athletic' }))
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    await takeNextStep()
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/match-1?tab=plan'))
+  })
+
+  it("Review's Publish of a new match offers it too", async () => {
+    await open()
+    await openNewEvent()
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Match' }))
+    await userEvent.type(within(sheet).getByLabelText('Opponent'), 'Synthetic United')
+    // TRAK-288: with Games on, New event asks a match's competition.
+    await userEvent.click(within(within(sheet).getByRole('group', { name: 'Competition' })).getByRole('button', { name: 'League' }))
+    await eventStep(sheet, 'When')
+    await pickTime(userEvent, 'Kickoff', '16:00')
+    await saveEventWith(sheet, 'Publish')
+    await takeNextStep()
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/written?tab=plan'))
+  })
+
+  it('a training gets the usual toast only', async () => {
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish Finishing' }))
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Write the game plan' })).toBeNull()
+  })
+
+  it('so does a match where Games is off', async () => {
+    // The app keeps a switch's answer for 30 s, so the academy without Games is another coach's.
+    signInAs({ id: 'coach-1-no-games' })
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature === 'events'))
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Publish vs Parkview Athletic' }))
+    expect(await screen.findByText('Published to the squad')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Write the game plan' })).toBeNull()
   })
 })

@@ -121,39 +121,98 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* TRAK-189: Jost (SIL Open Font License), self-hosted like DM Sans. It stands in
+   for Futura, which is built into Apple devices but can't be shipped without a
+   paid web licence: --t-font asks for Futura first. Neither has a Greek subset. */
+@font-face {
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jost-normal-variable-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url('/fonts/jost-normal-variable-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 100%;
+    /* TRAK-189: Trak's own colours, by role, as RGB channels so Tailwind's /alpha
+       works (bg-brand/10). Screens use these, never a hex code or white-at-N%:
+       hard-coded-colours.test.ts fails on a new one. Values are still today's
+       dark look; the light palette replaces them once Imad approves it. */
+    --t-ground: 246 245 241;        /* the screen */
+    --t-surface: 255 255 255;       /* cards, sheets */
+    --t-raised: 238 237 231;        /* chips, quiet buttons, tracks */
+    --t-ink: 26 36 33;        /* headings and body */
+    --t-ink-2: 87 97 92;      /* supporting lines */
+    --t-ink-3: 94 102 98;      /* labels, timestamps, placeholders */
+    --t-line: 226 224 216;          /* card edges, dividers */
+    --t-line-strong: 133 139 135;   /* text boxes, pickers */
+    --t-brand: 11 102 35;       /* main buttons, selected states */
+    --t-on-brand: 255 255 255;         /* text on the brand colour */
+    --t-scrim: 0 0 0;            /* behind a modal, at an opacity */
+    --t-on-bright: 0 0 0;        /* text on bright band and status colours, in every theme */
+    --t-danger: 180 35 24;
+    --t-success: 11 102 35;
+    --t-info: 59 91 169;
+    --t-warning: 138 83 0;
+    /* TRAK-270 (Tarek, 23 Oct): "needs you" marks in a clear yellow. A mark only, never text:
+       its edge and any words beside it stay --t-warning for contrast. */
+    --t-attention: 234 179 8; /* TRAK-275: back to TRAK-270's #EAB308 (Tarek, 23 Oct) */
+    --t-orange: 156 69 22;
+    --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
+    --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
 
-    --card: 240 4% 6.5%;
-    --card-foreground: 0 0% 100%;
+    /* TRAK-199: how wide a page (.trak-page), a page of text or a form (.trak-read),
+       every page in a coach's menu and a list or calendar page (.trak-wide, TRAK-252,
+       TRAK-307) and a bottom sheet (max-w-sheet) are, and the laptop rail beside
+       them. A phone's 430 px for everyone; a coach's screens widen on a tablet or a
+       laptop, below.
+       app-width-setting.test.ts fails on a 430px in a coach screen. */
+    --page-w: 430px;
+    --read-w: 430px;
+    --wide-w: 430px;
+    --sheet-w: 430px;
+    --rail-w: 0px;
 
-    --popover: 240 4% 6.5%;
-    --popover-foreground: 0 0% 100%;
+    --background: 48 18% 95%;
+    --foreground: 160 16% 12%;
 
-    --primary: 73 85% 65%;
-    --primary-foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 16% 12%;
 
-    --secondary: 240 3% 10%;
-    --secondary-foreground: 0 0% 100%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 16% 12%;
 
-    --muted: 240 3% 10%;
-    --muted-foreground: 0 0% 45%;
+    --primary: 136 81% 22%;
+    --primary-foreground: 0 0% 100%;
 
-    --accent: 73 85% 65%;
-    --accent-foreground: 0 0% 0%;
+    --secondary: 51 13% 92%;
+    --secondary-foreground: 160 16% 12%;
 
-    --destructive: 0 85% 60%;
+    --muted: 51 13% 92%;
+    --muted-foreground: 150 5% 36%;
+
+    --accent: 136 81% 22%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 4 77% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 100% / 0.07;
-    --input: 240 3% 13%;
-    --ring: 73 85% 65%;
+    --border: 48 15% 87%;
+    --input: 140 3% 53%;
+    --ring: 136 81% 22%;
 
     --radius: 0.75rem;
 
@@ -172,12 +231,78 @@
     --sidebar-ring: 73 85% 65%;
 
     /* Text opacity tokens */
-    --t1: rgba(255,255,255,0.88);
-    --t2: rgba(255,255,255,0.45);
-    --t3: rgba(255,255,255,0.22);
+    --t1: rgb(var(--t-ink));
+    --t2: rgb(var(--t-ink-3));
+    --t3: rgb(var(--t-ink-3) / 0.6);
 
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--t-font);
   }
+}
+
+/* TRAK-189: dark islands in the light app. Everything inside a .trak-dark element
+   takes Trak's dark colours: the band cards (Tarek, 17 Oct: the bands keep their
+   bright colours so they tell apart, which needs a dark card) and the parked
+   player card's artwork. */
+.trak-dark {
+  color-scheme: dark;
+  --t-ground: 10 10 11; --t-surface: 16 16 18; --t-raised: 23 23 26;
+  --t-ink: 224 224 225; --t-ink-2: 160 160 163; --t-ink-3: 138 138 141;
+  --t-line: 30 30 33; --t-line-strong: 72 72 76;
+  --t-brand: 200 242 90; --t-on-brand: 0 0 0;
+  --t-danger: 248 113 113; --t-success: 74 222 128; --t-info: 96 165 250;
+  --t-warning: 251 191 36; --t-attention: 250 204 21; --t-orange: 251 146 60;
+  --background: 0 0% 4%; --foreground: 0 0% 100%;
+  --card: 240 4% 6.5%; --card-foreground: 0 0% 100%;
+  --muted: 240 3% 10%; --muted-foreground: 0 0% 60%;
+  --border: 0 0% 100% / 0.07; --primary: 73 85% 65%; --primary-foreground: 0 0% 0%;
+  color: rgb(var(--t-ink));
+}
+
+/* TRAK-199 (team decision, 21 Oct): a coach's screens use a tablet's or a
+   laptop's width; players and parents keep the phone column on every device.
+   CoachLayout sets html[data-layout="coach"] while a coach is signed in. Layout
+   only: the same screens, words and Arc components. A phone, upright or turned
+   sideways (under 500 px tall), keeps today's layout. Sheets stop at 36rem, the
+   Arc bottom sheet's width; pages of text or forms at 640 px, so a line stays
+   readable. TRAK-307 (Kostas, 29 Oct): ONE width for every page in a coach's menu
+   (Home, Schedule, Squad, Games, Training, Settings, Library), Squad's and Games':
+   the page fills the screen beside the menu, 32 px from each side (WIDE_COLUMN in
+   MobileShell.tsx), up to 1,280 px, on a tablet and a laptop alike. */
+@media (min-width: 768px) and (min-height: 500px) {
+  :root[data-layout="coach"] { --page-w: 720px; --read-w: 640px; --wide-w: 1280px; --sheet-w: 36rem; }
+}
+
+/* Tablet sideways and laptop: a coach's pages sit right of the sidebar (TRAK-259,
+   CoachFrame, which sets --rail-w to its width). TRAK-463 (11 Nov walk-through,
+   replaces TRAK-307's 1,280 px cap here): the wide column fills the screen beside
+   the sidebar, 32 px from each side. The same query as SIDE_MENU_QUERY in
+   src/lib/side-menu-screen.ts. */
+@media (min-width: 1024px) and (min-height: 500px) {
+  :root[data-layout="coach"] { --wide-w: calc(100vw - var(--rail-w, 0px)); }
+  /* With no bottom bar, the room kept for it goes: Assess's Back and Next sit at
+     the bottom, and the Trainings frame runs down to it (below the frame's 60 px
+     top bar and its own 105 px header). */
+  :root[data-layout="coach"] .trak-bar-room { margin-bottom: 0; }
+  :root[data-layout="coach"] .trak-trainings-frame { height: calc(100dvh - 165px); }
+
+  /* TRAK-254: easier to read on a laptop. Each fixed text size a coach screen uses
+     is two pixels larger (titles a little more), Arc's text sizes follow, and grey
+     supporting text is one step darker. A phone keeps today's sizes. */
+  :root[data-layout="coach"] { --t-ink-3: 74 82 78; }
+  :root[data-layout="coach"] .arc { --text-xs: .875rem; --text-sm: 1rem; --text-base: 1.0625rem; }
+  :root[data-layout="coach"] .text-xs { font-size: .875rem; }
+  :root[data-layout="coach"] .text-sm { font-size: 1rem; }
+  :root[data-layout="coach"] .text-\[8px\] { font-size: 10px; }
+  :root[data-layout="coach"] .text-\[9px\] { font-size: 11px; }
+  :root[data-layout="coach"] .text-\[10px\] { font-size: 12px; }
+  :root[data-layout="coach"] .text-\[11px\] { font-size: 13px; }
+  :root[data-layout="coach"] .text-\[12px\] { font-size: 14px; }
+  :root[data-layout="coach"] .text-\[13px\] { font-size: 15px; }
+  :root[data-layout="coach"] .text-\[14px\] { font-size: 16px; }
+  :root[data-layout="coach"] .text-\[15px\] { font-size: 17px; }
+  :root[data-layout="coach"] .text-\[16px\] { font-size: 18px; }
+  :root[data-layout="coach"] .text-\[17px\] { font-size: 19px; }
+  :root[data-layout="coach"] .text-\[22px\] { font-size: 26px; }
 }
 
 @layer base {
@@ -191,7 +316,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--t-font);
     font-weight: 400;
     text-transform: none;
     letter-spacing: normal;
@@ -202,6 +327,17 @@
   .app-container {
     @apply max-w-[430px] mx-auto min-h-screen relative;
   }
+
+  /* TRAK-199: a page's column. Its width, and --col-w for what is fixed to it
+     (the "+", a bottom save bar), so those line up with the page on any screen. */
+  .trak-page { --col-w: var(--page-w); max-width: var(--col-w); }
+  .trak-read { --col-w: var(--read-w); max-width: var(--col-w); }
+  .trak-wide { --col-w: var(--wide-w); max-width: var(--col-w); }
+  /* A bar fixed to the bottom of a page: centred on the page, right of the rail. */
+  .trak-page-bar { left: calc(50% + var(--rail-w) / 2); max-width: var(--col-w, var(--page-w)); }
+
+  /* The bottom bar's tab names (players and parents; a coach has the frame's, TRAK-259). */
+  .trak-nav-label { font-family: var(--t-font-mono); font-weight: 500; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 
   /* Section labels: DM Mono, 9px, 500, uppercase, spaced */
   .section-label {

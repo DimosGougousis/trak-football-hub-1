@@ -37,6 +37,7 @@
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
 .wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px; display: grid; gap: 24px; }
+@media (min-width: 1024px) { .wrap { max-width: 1180px; } }
 h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
 p { margin: 0; }
 .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -241,7 +242,7 @@ function render() {
   const base = DATA.filter(d => !state.lib || d.library === state.lib).length;
   $("shown").textContent = rows.length;
   $("of").textContent = `of ${base} sessions shown`;
-  if (!rows.length) { $("out").innerHTML = `<p class="locked">No sessions match these filters. Clear the search or pick a different age group.</p>`; return; }
+  if (!rows.length) { $("out").innerHTML = `<p class="locked">No sessions match these filters. Clear the search or select a different age group.</p>`; return; }
   let html = "";
   for (const lib of LIBS) {
     for (const topic of TOPIC_ORDER[lib.name]) {
@@ -264,6 +265,9 @@ $("reset").onclick = () => {
   ["q", "age", "fmt", "skill"].forEach(id => $(id).value = "");
   render();
 };
+// New event's theme link opens the catalogue on that library (?lib=).
+const asked = new URLSearchParams(location.search).get("lib");
+if (LIBS.some(l => l.name === asked)) state.lib = asked;
 render();
 </script>
 </body>

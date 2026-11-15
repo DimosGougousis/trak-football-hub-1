@@ -42,8 +42,12 @@
 .itemTitle strong { overflow: hidden; font-size: var(--text-sm); font-weight: 500; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
 .unreadDot { display: block; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--foreground); }
 .itemPreview { overflow: hidden; color: var(--text-secondary); font-size: var(--text-xs); line-height: var(--leading-body); text-overflow: ellipsis; white-space: nowrap; }
+/* Trak (TRAK-226): the same line, in full, while the row is open. */
+.itemPreviewFull { color: var(--text-secondary); font-size: var(--text-xs); line-height: var(--leading-body); white-space: normal; overflow-wrap: anywhere; }
 .time { flex: none; padding-top: 4px; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .details { overflow: hidden; padding-left: 47px; }
+.details > :first-child:not(.itemActions) { margin-top: 12px; }
+.details > .itemActions:first-child { padding-top: 10px; }
 .details p { margin: 12px 0; color: var(--text-secondary); font-size: var(--text-xs); line-height: var(--leading-body); }
 .itemActions { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 5px; }
 .itemActions button { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; overflow: clip; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--foreground); font: inherit; font-size: var(--text-xs); line-height: 1; white-space: nowrap; cursor: pointer; transition: transform var(--duration-spring) var(--ease-spring), border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); }

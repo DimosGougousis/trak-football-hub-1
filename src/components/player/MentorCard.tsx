@@ -6,17 +6,17 @@ interface Props {
 
 export function MentorCard({ variant }: Props) {
   const isDaily = variant === 'daily'
-  const accent = isDaily ? '#C8F25A' : '#60a5fa'
+  const accent = isDaily ? 'rgb(var(--t-brand))' : 'rgb(var(--t-info))'
   const label = isDaily ? 'Today' : 'This week'
   const text = isDaily ? getDailyMessage() : getWeeklyTip()
 
   return (
     <div
       style={{
-        background: '#101012',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgb(var(--t-surface))',
+        borderTop: '1px solid rgb(var(--t-line))',
+        borderRight: '1px solid rgb(var(--t-line))',
+        borderBottom: '1px solid rgb(var(--t-line))',
         borderLeft: `3px solid ${accent}`,
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
@@ -27,23 +27,23 @@ export function MentorCard({ variant }: Props) {
     >
       <div
         style={{
-          fontFamily: "'DM Mono', monospace",
+          fontFamily: 'var(--t-font-mono)',
           fontSize: 9,
           fontWeight: 500,
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
-          color: 'rgba(255,255,255,0.22)',
+          color: 'rgb(var(--t-ink-3))',
         }}
       >
         {label}
       </div>
       <p
         style={{
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: 'var(--t-font)',
           fontSize: 12,
           lineHeight: 1.7,
           fontStyle: 'italic',
-          color: 'rgba(255,255,255,0.88)',
+          color: 'rgb(var(--t-ink))',
           marginTop: 6,
         }}
       >

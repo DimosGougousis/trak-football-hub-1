@@ -2,73 +2,39 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { MobileShell, NavBar, BandPill, MetadataLabel, LoadError } from '@/components/trak'
+import { MobileShell, NavBar, MetadataLabel, LoadError } from '@/components/trak'
 import { CardSkeleton, MatchCardSkeleton, Skeleton } from '@/components/trak'
-import { BANDS, type BandType } from '@/lib/types'
-import { scoreToBand } from '@/lib/rating-engine'
-import { dedupeMatches } from '@/lib/match-dedupe'
 import { toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
-import { PlayerAlertsBell, type PublishedAssessmentAlert } from '@/components/player/PlayerAlertsBell'
+import { PlayerHomeBell, type PublishedAssessmentAlert } from '@/components/player/PlayerAlertsBell'
 import { HomeHeader, HomeTitle } from '@/components/trak/HomeHeader'
+import { FrameActions, useFamilyLook } from '@/components/trak/FamilyFrame'
+import { ForYou } from '@/components/trak/ForYou'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
-import { CantMakeIt } from '@/components/parent/CantMakeIt'
+import { CantMakeIt, CantMakeItButton } from '@/components/parent/CantMakeIt'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { trackEvent } from '@/lib/telemetry'
-import CardRevealModal from '@/components/player/CardRevealModal'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
-import { AssessmentBands } from '@/components/player/AssessmentBands'
+import { MySeasonCard } from '@/components/player/MySeasonCard'
+import { LatestEvaluation } from '@/components/player/LatestEvaluation'
+import { SeasonSoFar } from '@/components/player/SeasonSoFar'
+import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
+import { progressSummary, useEvaluationProgress } from '@/lib/evaluation-progress'
+import { useMySeason } from '@/lib/my-season'
 
-const QUOTES = [
-  { text: "The more difficult the victory, the greater the happiness in winning.", author: "Pelé" },
-  { text: "You have to fight to reach your dream. You have to sacrifice and work hard for it.", author: "Lionel Messi" },
-  { text: "I learned all about life with a ball at my feet.", author: "Ronaldinho" },
-  { text: "Talent without working hard is nothing.", author: "Cristiano Ronaldo" },
-  { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
-  { text: "The secret is to believe in your dreams; in your potential that you can be like your star.", author: "Zinedine Zidane" },
-  { text: "Set your goals high, and don't stop till you get there.", author: "Bo Jackson" },
-  { text: "If you fail to prepare, you prepare to fail.", author: "Roy Keane" },
-  { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke" },
-  { text: "Push yourself because no one else is going to do it for you.", author: "" },
-  { text: "Success is no accident. It is hard work, perseverance, learning, and sacrifice.", author: "Pelé" },
-  { text: "The difference between the impossible and the possible lies in determination.", author: "Tommy Lasorda" },
-  { text: "When you're not training, someone else is.", author: "" },
-  { text: "Every champion was once a contender that refused to give up.", author: "Rocky Balboa" },
-  { text: "I am not the best, but I'm giving everything to be the best.", author: "Kylian Mbappé" },
-  { text: "Great things never come from comfort zones.", author: "" },
-  { text: "Champions keep playing until they get it right.", author: "Billie Jean King" },
-  { text: "Pain is temporary. Glory is forever.", author: "" },
-  { text: "Be hungry, be humble, be the hardest worker in the room.", author: "" },
-  { text: "The only place success comes before work is in the dictionary.", author: "Vince Lombardi" },
-  { text: "Believe in yourself and all that you are.", author: "" },
-  { text: "Every session is a chance to get better.", author: "" },
-  { text: "Dream big. Work hard. Stay focused.", author: "" },
-  { text: "There is no substitute for hard work.", author: "Thomas Edison" },
-  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
-  { text: "Small steps every day lead to big results.", author: "" },
-  { text: "Your only competition is who you were yesterday.", author: "" },
-  { text: "Leave everything on the pitch.", author: "" },
-  { text: "The best view comes after the hardest climb.", author: "" },
-  { text: "Winners are not people who never fail, but people who never quit.", author: "" },
-]
-
-function getDailyQuote() {
-  const now = new Date()
-  const dayOfYear = Math.floor(
-    (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
-  )
-  return QUOTES[dayOfYear % QUOTES.length]
-}
 
 export default function PlayerHome() {
   const { user, profile } = useAuth()
+  const look = useFamilyLook()
   const navigate = useNavigate()
   const location = useLocation()
-  const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [details, setDetails] = useState<any>(null)
   const [coachAssessment, setCoachAssessment] = useState<any>(null)
+  // TRAK-172 (Imad, 19 Oct): the latest five, as the parent's swipe cards. Set and cleared with coachAssessment.
+  const [recentAssessments, setRecentAssessments] = useState<any[]>([])
   const [coachName, setCoachName] = useState('')
   const [upcomingEvents, setUpcomingEvents] = useState<PlayerEvent[]>([])
   type ConsentStatus = { required: boolean; invited_parent: string | null; age?: number | null
@@ -99,8 +65,6 @@ export default function PlayerHome() {
     return () => { cancelled = true }
   }, [user, consentReload])
 
-  const [showReveal, setShowReveal] = useState(false)
-  const [newMatchCount, setNewMatchCount] = useState(0)
   const [coachAssessmentNote, setCoachAssessmentNote] = useState<string | null>(null)
   const [assessmentAlert, setAssessmentAlert] = useState<PublishedAssessmentAlert | null>(null)
   // A failed feedback read must not look like "no feedback yet".
@@ -118,10 +82,23 @@ export default function PlayerHome() {
 
   // J7 counts published messages the player opens. The message is read here now
   // (TRAK-71), not behind a tap, so showing it is opening it.
-  const shownAssessmentId = coachAssessmentNote && !feedbackLoadFailed ? coachAssessment?.id : undefined
+  // TRAK-441: the new Home doesn't show the message (it's on the evaluation's page), so it doesn't count it.
+  const shownAssessmentId = !look && coachAssessmentNote && !feedbackLoadFailed ? coachAssessment?.id : undefined
   useEffect(() => {
     if (shownAssessmentId) trackEvent('feedback_opened', { assessment_id: shownAssessmentId })
   }, [shownAssessmentId])
+
+  // TRAK-401: an evaluation's assessment card says how the objectives went. Only evaluation assessments are asked for; a
+  // failed read leaves the card as it was (the evaluation page says it when it can't load).
+  const evaluationIds = recentAssessments.filter(a => a.evaluation_id).map(a => a.id as string)
+  const evaluationProgress = useEvaluationProgress(evaluationIds)
+  // TRAK-437: the position is the one the coach set (the season plan's read, shared with the My season card), nothing if none; never the sign-up value.
+  const position = useMySeason().data?.position
+  const progressLines: Record<string, string> = {}
+  for (const [id, p] of evaluationProgress.data ?? []) {
+    const line = progressSummary(p.objectives)
+    if (line) progressLines[id] = line
+  }
 
   useEffect(() => {
     if (!user) return
@@ -142,6 +119,7 @@ export default function PlayerHome() {
     // A successful empty read must not retain values from the previous load.
     const clearCoach = () => {
       setCoachAssessment(null)
+      setRecentAssessments([])
       setCoachName('')
       setCoachAssessmentNote(null)
       setAssessmentAlert(null)
@@ -154,37 +132,7 @@ export default function PlayerHome() {
       setUpcomingEvents([])
     }
 
-    const matchesRequest = supabase.from('matches').select('*').eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (cancelled) return
-        // A failed read is not an empty season — without this the home screen
-        // showed a player with a full record the same blank card as a new one.
-        if (error) { fail(); return }
-
-        const deduped = dedupeMatches(data)
-        setMatches(deduped)
-
-        // Card reveal — show once when new matches have been logged since last visit
-        try {
-          const storageKey = `trak_last_match_count_${user.id}`
-          const stored = localStorage.getItem(storageKey)
-          if (stored === null) {
-            // First ever open — record count silently, no reveal
-            localStorage.setItem(storageKey, String(deduped.length))
-          } else {
-            const lastSeen = parseInt(stored, 10)
-            if (deduped.length > lastSeen) {
-              setNewMatchCount(deduped.length - lastSeen)
-              setShowReveal(true)
-            }
-          }
-        } catch {
-          // Reveal bookkeeping is optional when browser storage is unavailable.
-          // It must not prevent the successful card reads from finishing.
-        }
-      })
-    const detailsRequest = supabase.from('player_details').select('position, current_club, age_group').eq('user_id', user.id).maybeSingle()
+    const detailsRequest = supabase.from('player_details').select('current_club, age_group').eq('user_id', user.id).maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return
         // These sibling reads used to destructure only `data`, so a failure
@@ -207,7 +155,7 @@ export default function PlayerHome() {
           .select('*')
           .in('squad_player_id', ids)
           .order('created_at', { ascending: false })
-          .limit(1)
+          .limit(5)
         if (cancelled) return
         if (assessError) { fail(); return }
         if (!assessments?.length) clearCoach()
@@ -234,6 +182,7 @@ export default function PlayerHome() {
           // The assessment, its coach and its message change together, so a
           // background refresh never pairs a new assessment with an old message.
           setCoachAssessment(latest)
+          setRecentAssessments(assessments)
           setCoachName(cp?.full_name || '')
           // Assign unconditionally, including null. The previous version only
           // assigned a truthy body, so once feedback had been displayed it
@@ -261,8 +210,12 @@ export default function PlayerHome() {
             const published = sharedRow as { body?: string; published_at?: string } | null
             const body = published?.body?.trim()
             setCoachAssessmentNote(body || null)
-            setAssessmentAlert(body && published?.published_at && Number.isFinite(Date.parse(published.published_at))
-              ? { id: latest.id, userId: user.id, publishedAt: published.published_at, coachName: cp?.full_name ?? '' } : null)
+            // TRAK-401: an evaluation exists only once published, with or without a note, so
+            // it alerts at its own time like the parent's bell. A session assessment still
+            // waits for its published message (TRAK-171).
+            const publishedAt = body && published?.published_at ? published.published_at : latest.evaluation_id ? latest.created_at : null
+            setAssessmentAlert(publishedAt && Number.isFinite(Date.parse(publishedAt))
+              ? { id: latest.id, userId: user.id, publishedAt, hasMessage: !!body, coachName: cp?.full_name ?? '' } : null)
           }
         }
 
@@ -299,7 +252,7 @@ export default function PlayerHome() {
     // clears loadFailed. A callback that throws, instead of resolving with
     // { error }, ends in the same retryable error rather than an endless
     // skeleton (Kostas and Imad, #133).
-    Promise.all([matchesRequest, detailsRequest, squadRequest]).then(() => {
+    Promise.all([detailsRequest, squadRequest]).then(() => {
       if (cancelled) return
       if (!failed) setLoadFailed(false)
       setLoading(false)
@@ -315,83 +268,6 @@ export default function PlayerHome() {
     return () => { cancelled = true }
   }, [user, reloadKey])
 
-  const getBandDistribution = () => {
-    const dist: Record<string, number> = {}
-    BANDS.forEach(b => { dist[b.word.toLowerCase()] = 0 })
-    matches.forEach(m => {
-      const band = scoreToBand(m.computed_rating || 6.5)
-      dist[band] = (dist[band] || 0) + 1
-    })
-    return dist
-  }
-
-  const getSeasonBand = (): BandType => {
-    if (matches.length === 0) return 'steady'
-    const dist = getBandDistribution()
-    let maxBand: BandType = 'steady'
-    let maxCount = 0
-    Object.entries(dist).forEach(([band, count]) => {
-      if (count > maxCount) { maxCount = count; maxBand = band as BandType }
-    })
-    return maxBand
-  }
-
-  const seasonBand = getSeasonBand()
-  const distribution = getBandDistribution()
-
-  const seasonBandConfig = BANDS.find(b => b.word.toLowerCase() === seasonBand) ?? BANDS[3]
-
-  // Next milestone — how many more matches at the next band are needed to flip the season band
-  const nextMilestone = (() => {
-    const BAND_ORDER: BandType[] = ['difficult', 'developing', 'mixed', 'steady', 'good', 'standout', 'exceptional']
-    const currentIdx = BAND_ORDER.indexOf(seasonBand)
-    if (currentIdx >= BAND_ORDER.length - 1 || matches.length === 0) return null
-    const nextBand = BAND_ORDER[currentIdx + 1]
-    const currentCount = distribution[seasonBand] || 0
-    const nextCount = distribution[nextBand] || 0
-    const needed = Math.max(1, currentCount - nextCount + 1)
-    const nextConfig = BANDS.find(b => b.word.toLowerCase() === nextBand)!
-    return { needed, nextConfig }
-  })()
-
-  const handleRevealDismiss = () => {
-    if (!user) return
-    setShowReveal(false)
-    localStorage.setItem(`trak_last_match_count_${user.id}`, String(matches.length))
-  }
-
-  const totalGoals = matches.reduce((s, m) => s + (m.goals || 0), 0)
-  const totalAssists = matches.reduce((s, m) => s + (m.assists || 0), 0)
-
-  // Consistency streak — consecutive matches at Steady+ (≥ 6.0) from most recent
-  const streakCount = (() => {
-    let count = 0
-    for (const m of matches) {
-      if ((m.computed_rating ?? 0) >= 6.0) count++
-      else break
-    }
-    return count
-  })()
-  const lastMatch = matches[0]
-
-  // Trend: calculate last 5 match ratings normalized to bar heights
-  const trendMatches = matches.slice(0, 5).reverse()
-  const trendHeights = trendMatches.map((m, i) => {
-    const r = m.computed_rating || 6.5
-    return Math.max(20, Math.min(100, ((r - 4) / 6) * 100))
-  })
-  const isImproving = trendMatches.length >= 2 &&
-    (trendMatches[trendMatches.length - 1]?.computed_rating || 0) > (trendMatches[0]?.computed_rating || 0)
-
-  // Band summary abbreviations
-  const bandAbbrev = [
-    { key: 'exceptional', abbr: 'E', color: '#C8F25A' },
-    { key: 'standout', abbr: 'St', color: '#86efac' },
-    { key: 'good', abbr: 'G', color: '#4ade80' },
-    { key: 'steady', abbr: 'Sy', color: '#60a5fa' },
-    { key: 'mixed', abbr: 'M', color: '#fb923c' },
-    { key: 'developing', abbr: 'D', color: '#a78bfa' },
-  ]
 
   if (loading) return (
     <MobileShell>
@@ -415,22 +291,32 @@ export default function PlayerHome() {
     </MobileShell>
   )
 
+  const bell = user && <PlayerHomeBell key={user.id} userId={user.id}
+    events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
+    assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
+    onRetry={() => setReloadKey(k => k + 1)} />
+  const name = profile?.full_name || 'Player'
+  // TRAK-441 slice 2 (Imad, 13 Nov), behind family_look: the coach's Home. A phone: avatar, name, calendar, bell. A
+  // laptop: no header, the bell in the top bar; two columns, as the coach's Home.
+  const header = look
+    ? <FrameActions fallback={<HomeHeader calendarTo="/player/calendar" left={<span className="arc flex"><Avatar name={name} size="md" /></span>}
+        center={<HomeTitle>{name}</HomeTitle>} right={bell} />}>{bell}</FrameActions>
+    : <HomeHeader calendarTo="/player/calendar" center={<HomeTitle>{name}</HomeTitle>} right={bell} />
   return (
-    <MobileShell>
+    <MobileShell width={look ? 'wide' : 'page'}>
       <div className="pt-3 pb-4">
         {/* TRAK-163: calendar, the player's name, the bell; then the next seven days. */}
-        <HomeHeader calendarTo="/player/calendar" center={<HomeTitle>{profile?.full_name || 'Player'}</HomeTitle>}
-          right={user && <PlayerAlertsBell key={user.id} userId={user.id}
-            events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
-            assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
-            onRetry={() => setReloadKey(k => k + 1)} />} />
+        {header}
         {/* TRAK-194 (Kostas, 16 Oct): one quiet line, as parent Home has it, not a greeting and chips that look like buttons. */}
-        {details && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">
-          {[details.position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
+        {!look && details && <p className="text-xs text-muted-foreground text-center -mt-1 pb-4">
+          {[position, details.current_club, details.age_group].filter(Boolean).join(' · ')}
         </p>}
-        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger}>
+        <div className={look ? 'grid grid-cols-[minmax(0,1fr)] gap-5 laptop:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] laptop:items-start laptop:gap-6' : ''}>
+        <div className={look ? 'grid grid-cols-[minmax(0,1fr)] content-start gap-5' : ''}>
+        {user && <LoadedWeekStrip key={user.id} loadKey={user.id} absentFor={user.id} picker={look} renderSheet={(event, trigger) => <EventSheet event={event} role="player" trigger={trigger}>
           {reportsForSelf && <CantMakeIt event={event} child={{ id: user.id, name: 'you' }} self />}
         </EventSheet>}
+          renderPrimary={reportsForSelf ? event => <CantMakeItButton event={event} child={{ id: user.id, name: 'you' }} self /> : undefined}
           load={(from, to) => supabase.rpc('child_events', { p_child: user.id })
             .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
         {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
@@ -438,11 +324,11 @@ export default function PlayerHome() {
 
         {mayHaveMissedHistory && (
           <div className="rounded-xl border p-4 my-4" role="status"
-            style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.03)' }}>
-            <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            style={{ borderColor: 'rgb(var(--t-line))', background: 'rgb(var(--t-raised))' }}>
+            <p className="text-[13px] text-ink" style={{ fontFamily: 'var(--t-font)' }}>
               Is anything missing?
             </p>
-            <p className="text-[12px] text-white/55 mt-1 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[12px] text-ink-2 mt-1 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
               Your coach may already have you on their list under a slightly different
               spelling. If you've been assessed before and nothing is showing here, ask
               them to check the name on your record.
@@ -457,10 +343,10 @@ export default function PlayerHome() {
         )}
         {consent?.required && !decidesForSelf && (
           <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 my-4">
-            <p className="text-[13px] text-white/88" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[13px] text-ink" style={{ fontFamily: 'var(--t-font)' }}>
               Waiting for your parent
             </p>
-            <p className="text-[12px] text-white/55 mt-1 leading-relaxed" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[12px] text-ink-2 mt-1 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
               Your account needs a parent or guardian's approval before your coach can record your progress.
             </p>
           </div>
@@ -468,241 +354,44 @@ export default function PlayerHome() {
 
         {user && <PlayerParentInviteCard playerUserId={user.id} hideWhenLinked />}
 
-        {/* Hero Card */}
-        <div className="relative rounded-[24px] p-5 mb-3.5 overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <div className="absolute -bottom-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.08) 0%, transparent 70%)' }} />
+        {/* TRAK-436: what's new from the coach, one card each, before the season (the coach's "Needs you"). */}
+        {look && user && <ForYou childId={user.id} as="player" />}
 
-          <div className="flex items-start justify-between mb-4 relative z-10">
-            <div>
-              <MetadataLabel text="THIS SEASON" />
-              {matches.length > 0 ? (
-                <>
-                  <p className="text-[52px] leading-none mt-2" style={{
-                    fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.04em',
-                    color: BANDS.find(b => b.word.toLowerCase() === seasonBand)?.color
-                  }}>
-                    {BANDS.find(b => b.word.toLowerCase() === seasonBand)?.word}
-                  </p>
-                  {lastMatch && (
-                    <p className="text-[9px] text-white/22 mt-1.5 tracking-[0.04em]" style={{ fontFamily: "'DM Mono', monospace" }}>
-                      Last match · {lastMatch.competition || 'Match'}
-                    </p>
-                  )}
-                </>
-              ) : (
-                /* ── Welcome state (no matches yet) ── */
-                <div className="mt-2">
-                  <p className="text-[34px] leading-tight text-white/70"
-                    style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 300, letterSpacing: '-0.03em' }}>
-                    Your card<br />is ready.
-                  </p>
-                  <p className="text-[10px] text-white/28 mt-2"
-                    style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                    Play. Get assessed. Watch it evolve.
-                  </p>
-
-                  {/* Band journey — Difficult → Exceptional */}
-                  <div className="flex items-end gap-0 mt-4">
-                    {[...BANDS].reverse().map((band, i, arr) => {
-                      const isLast = i === arr.length - 1
-                      const abbrs = ['DIF','DEV','MIX','STY','GD','STO','EXC']
-                      return (
-                        <div key={band.word} className="flex items-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{
-                              background: isLast ? band.color : 'rgba(255,255,255,0.10)',
-                              boxShadow: isLast ? `0 0 8px rgba(200,242,90,0.5)` : 'none',
-                            }} />
-                            <span className="text-[7px]" style={{
-                              fontFamily: "'DM Mono', monospace",
-                              color: isLast ? band.color : 'rgba(255,255,255,0.18)',
-                            }}>{abbrs[i]}</span>
-                          </div>
-                          {!isLast && (
-                            <div className="w-3 h-px mb-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Coach connection */}
-                  <p className="text-[9px] text-white/30 mt-3 tracking-[0.04em]"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>
-                    {coachName
-                      ? `↳ ${coachName} has you in their squad`
-                      : 'Your coach will log your first match soon.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Trend mini-chart */}
-            {trendHeights.length > 0 && (
-              <div className="text-right">
-                <p className="text-[9px] font-medium tracking-[0.12em] uppercase text-white/22 mb-2"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>Trend</p>
-                <div className="flex items-end gap-[3px] h-8 justify-end">
-                  {trendHeights.map((h, i) => (
-                    <div key={i} className="w-2.5 rounded-t" style={{
-                      height: `${h}%`,
-                      background: i >= trendHeights.length - 2
-                        ? (i === trendHeights.length - 1 ? '#C8F25A' : 'rgba(200,242,90,0.35)')
-                        : 'rgba(255,255,255,0.08)',
-                    }} />
-                  ))}
-                </div>
-                {streakCount >= 3 ? (
-                  <p className="text-[10px] font-medium text-[#C8F25A] mt-1.5"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>{streakCount} in a row</p>
-                ) : isImproving ? (
-                  <p className="text-[10px] font-medium text-[#C8F25A] mt-1.5"
-                    style={{ fontFamily: "'DM Mono', monospace" }}>↑ improving</p>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {/* Band summary strip */}
-          {matches.length > 0 && (
-            <div className="flex items-center justify-between px-3 py-2.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgba(0,0,0,0.3)' }}>
-              <div className="flex items-center gap-[7px]">
-                <div className="w-[5px] h-[5px] rounded-full bg-white/20" />
-                <span className="text-[9px] font-medium tracking-[0.08em] uppercase text-white/22"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>Season bands</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                {bandAbbrev.filter(b => distribution[b.key] > 0).map(b => (
-                  <span key={b.key} className="text-xs" style={{ fontFamily: "'DM Sans', sans-serif", color: b.color }}>
-                    {distribution[b.key]} {b.abbr}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Next milestone */}
-          {matches.length > 0 && (
-            <div className="flex items-center justify-between px-3 py-2 mt-1.5 rounded-[10px] relative z-10"
-              style={{ background: 'rgba(0,0,0,0.2)' }}>
-              <span className="text-[9px] tracking-[0.06em] text-white/25"
-                style={{ fontFamily: "'DM Mono', monospace" }}>
-                Next milestone
-              </span>
-              {nextMilestone ? (
-                <span className="text-[9px] font-medium tracking-[0.04em]"
-                  style={{ fontFamily: "'DM Mono', monospace", color: nextMilestone.nextConfig.color }}>
-                  {nextMilestone.needed} more {nextMilestone.nextConfig.word} → {nextMilestone.nextConfig.word} season
-                </span>
-              ) : (
-                <span className="text-[9px] tracking-[0.04em] text-white/20"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
-                  Season high — Exceptional ✦
-                </span>
-              )}
-            </div>
-          )}
+        {/* TRAK-397: the season plan the coach shared; nothing here when there is none. */}
+        {user && <MySeasonCard key={user.id} />}
         </div>
+        <div className={look ? 'grid grid-cols-[minmax(0,1fr)] content-start gap-5' : ''}>
 
-        {/* Stats grid */}
-        {matches.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mt-3.5">
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{matches.length}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Matches</span>
-            </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{totalGoals}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Goals</span>
-            </div>
-            <div className="rounded-[10px] py-[11px] px-2 text-center" style={{ background: 'rgba(0,0,0,0.35)' }}>
-              <p className="text-[22px] font-normal text-white/88 leading-none" style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.02em' }}>{totalAssists}</p>
-              <span className="text-[8px] font-medium tracking-[0.1em] uppercase text-white/22 mt-[5px] block" style={{ fontFamily: "'DM Mono', monospace" }}>Assists</span>
-            </div>
-          </div>
-        )}
-
-        {/* Daily Quote */}
-        {(() => {
-          const quote = getDailyQuote()
-          return (
-            <div className="mt-4 rounded-[18px] px-5 py-4"
-              style={{ background: '#101012', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-[9px] tracking-[0.14em] uppercase text-white/25 mb-3"
-                style={{ fontFamily: "'DM Mono', monospace" }}>Today</p>
-              <p className="text-[15px] font-light leading-[1.5] text-white/75"
-                style={{ fontFamily: "'DM Sans', sans-serif", letterSpacing: '-0.01em' }}>
-                "{quote.text}"
-              </p>
-              {quote.author ? (
-                <p className="text-[9px] text-white/28 mt-2.5 tracking-[0.06em]"
-                  style={{ fontFamily: "'DM Mono', monospace" }}>
-                  — {quote.author}
-                </p>
-              ) : null}
-            </div>
-          )
-        })()}
-
-        {/* Coach Assessment */}
-        {coachAssessment && (
+        {/* Coach assessments: the parent's swipe cards (TRAK-172, Imad 19 Oct), each opening
+            that assessment; the coach's message on the latest stays below (TRAK-71). */}
+        {/* TRAK-441 slice 2.5: the coach's look shows the latest evaluation's bands; its note is on its own page. */}
+        {look && user && coachAssessment && <LatestEvaluation assessment={coachAssessment} readerId={user.id} />}
+        {look && user && <SeasonSoFar key={user.id} childId={user.id} />}
+        {!look && coachAssessment && (
           <div className="mt-5">
-            <MetadataLabel text="LATEST COACH ASSESSMENT" />
-            <div className="relative rounded-[24px] p-5 mt-2.5 overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #101012 0%, #0f0f12 100%)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="absolute -bottom-[40px] -right-[40px] w-[160px] h-[160px] rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(200,242,90,0.06) 0%, transparent 70%)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-[13px] font-medium text-white/88">{coachName || 'Coach'}</p>
-                    <p className="text-[9px] text-white/22 mt-0.5 tracking-[0.04em]"
-                      style={{ fontFamily: "'DM Mono', monospace" }}>
-                      {new Date(coachAssessment.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    </p>
-                  </div>
-                  <BandPill band={scoreToBand(
-                    (coachAssessment.work_rate + coachAssessment.tactical + coachAssessment.attitude +
-                     coachAssessment.technical + coachAssessment.physical + coachAssessment.coachability) / 6
-                  )} />
-                </div>
-
-                {/* Category bars */}
-                <AssessmentBands scores={coachAssessment} />
-
-                {/* TRAK-71: the coach's message in full, here, with no tap-through. */}
-                {feedbackLoadFailed ? (
-                  <p role="alert" className="mt-4 text-[12px] text-white/55">
-                    Couldn't load your coach's message.{' '}
-                    <button type="button" onClick={() => setReloadKey(k => k + 1)} className="underline text-[#C8F25A]">Retry</button>
-                  </p>
-                ) : coachAssessmentNote ? (
-                  <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                    <MetadataLabel text="MESSAGE FROM YOUR COACH" />
-                    <p className="mt-1.5 text-[13px] leading-relaxed text-white/80 whitespace-pre-line">{coachAssessmentNote}</p>
-                  </div>
-                ) : null}
+            <ParentAssessmentCarousel key={recentAssessments.map(a => a.id).join(',')} assessments={recentAssessments}
+              allHref={null} openHref={id => `/player/feedback/${encodeURIComponent(id)}`} progressLines={progressLines} />
+            {feedbackLoadFailed ? (
+              <p role="alert" className="mt-4 text-[12px] text-ink-2">
+                Couldn't load your coach's message.{' '}
+                <button type="button" onClick={() => setReloadKey(k => k + 1)} className="underline text-brand">Retry</button>
+              </p>
+            ) : coachAssessmentNote ? (
+              <div className="mt-4 rounded-xl border border-border bg-card p-5">
+                <MetadataLabel text="MESSAGE FROM YOUR COACH" />
+                {coachName && <p className="mt-1.5 text-[13px] font-medium text-foreground">{coachName}</p>}
+                <p className="mt-1.5 text-[13px] leading-relaxed text-foreground whitespace-pre-line">{coachAssessmentNote}</p>
               </div>
-            </div>
+            ) : null}
           </div>
         )}
 
+        </div>
+        </div>
         {/* TRAK-194: no "Recent matches" here; the Sessions tab lists every match. */}
       </div>
       <NavBar role="player" activeTab={location.pathname} onNavigate={navigate} />
 
-      {showReveal && lastMatch && (
-        <CardRevealModal
-          bandWord={seasonBandConfig.word}
-          bandColor={seasonBandConfig.color}
-          newMatchCount={newMatchCount}
-          latestMatch={lastMatch}
-          onDismiss={handleRevealDismiss}
-        />
-      )}
     </MobileShell>
   )
 }

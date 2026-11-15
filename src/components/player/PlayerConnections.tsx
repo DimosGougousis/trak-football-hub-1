@@ -47,10 +47,10 @@ export function PlayerConnections() {
   }, [userId, attempt])
 
   return (
-    <section aria-label="Connections" className="rounded-[18px] px-4 pt-4 pb-1 border border-white/[0.07] bg-[#101012]">
+    <section aria-label="Connections" className="rounded-[18px] px-4 pt-4 pb-1 border border-line bg-surface">
       <MetadataLabel text="CONNECTIONS" />
-      {state === 'loading' && <p role="status" className="py-3 text-sm text-white/50">Loading connections…</p>}
-      {state === 'error' && <div role="alert" className="py-3 text-sm text-white/50">
+      {state === 'loading' && <p role="status" className="py-3 text-sm text-ink-2">Loading connections…</p>}
+      {state === 'error' && <div role="alert" className="py-3 text-sm text-ink-2">
         Connections could not be loaded. <button onClick={() => setAttempt(value => value + 1)} className="underline">Retry connections</button>
       </div>}
       {state === 'ready' && <>
@@ -64,13 +64,13 @@ export function PlayerConnections() {
 function ConnectionRow({ label, names }: { label: string; names: string[] }) {
   const connected = names.length > 0
   return (
-    <div className="py-3 flex items-center gap-2 border-b border-white/[0.05] last:border-b-0">
+    <div className="py-3 flex items-center gap-2 border-b border-line last:border-b-0">
       {/* Green when linked, red when not; the words say it too. */}
       <span aria-hidden="true" className="w-2 h-2 rounded-full flex-shrink-0"
-        style={{ background: connected ? '#C8F25A' : 'rgba(248,113,113,0.85)' }} />
+        style={{ background: connected ? 'rgb(var(--t-brand))' : 'rgb(var(--t-danger) / 0.85)' }} />
       <div className="min-w-0">
-        <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/45" style={{ fontFamily: "'DM Mono', monospace" }}>{label}</div>
-        <div className={`truncate text-[13px] ${connected ? 'text-white/88' : 'text-white/40'}`}>{connected ? names.join(', ') : 'Not connected'}</div>
+        <div className="text-[9px] font-medium uppercase tracking-[0.12em] text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{label}</div>
+        <div className={`truncate text-[13px] ${connected ? 'text-ink' : 'text-ink-3'}`}>{connected ? names.join(', ') : 'Not connected'}</div>
       </div>
     </div>
   )

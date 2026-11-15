@@ -9,6 +9,7 @@ import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { eventStep, saveEventWith } from '../../../../tests/support/event-steps'
 import { pickTime } from '../../../../tests/support/arc-pickers'
 import { logStep, saveLog } from '../../../../tests/support/log-steps'
+import { openNewEvent } from '../../../../tests/support/schedule-actions'
 
 // The import is parked for coaches (schedule-import-parked-j86); switched on here, as schedule-import-j86 does.
 vi.mock('@/lib/fixture-import', async importOriginal => ({
@@ -50,7 +51,8 @@ function fixtures(events: Record<string, unknown>[] = []) {
     http.get(EVENTS, () => HttpResponse.json(events)),
     table('squad_players', ROSTER),
     table('event_absences', []),
-    rpc('feature_on', () => true),
+    // TRAK-288: Games off, so a match is still logged as today.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'games'),
     rpc('coach_squad_player_consent_required', () => false),
     rpc('coach_match_score_clash', () => null),
     rpc('log_match_for_player', () => 'match-row'),
@@ -82,13 +84,29 @@ describe('TRAK-176: the squad picked is saved on every way an event is made', { 
   it("Schedule's Save draft saves the squad picked", async () => {
     fixtures()
     renderApp('/coach/schedule')
-    await userEvent.click(await screen.findByRole('button', { name: 'Add event' }))
+    await openNewEvent()
     const sheet = screen.getByRole('dialog', { name: 'New event' })
     await eventStep(sheet, 'When')
     await pickTime(userEvent, 'Start', '17:30')
     await saveEventWith(sheet, 'Save draft')
     await waitFor(() => expect(eventInserts).toHaveLength(1))
     expect(eventInserts[0]).toMatchObject({ coach_user_id: COACH.id, published: false, squad: 'U16' })
+  })
+
+  it("Imad, 24 Oct: New event names its squad, and saves the one chosen in the form (here every squad)", async () => {
+    fixtures()
+    renderApp('/coach/schedule')
+    await openNewEvent()
+    const sheet = screen.getByRole('dialog', { name: 'New event' })
+    const squads = within(sheet).getByRole('group', { name: 'Squad' })
+    // It starts on the squad picked last.
+    expect(within(squads).getByRole('button', { name: 'U16', pressed: true })).toBeInTheDocument()
+    await userEvent.click(within(squads).getByRole('button', { name: 'All squads' }))
+    await eventStep(sheet, 'When')
+    await pickTime(userEvent, 'Start', '17:30')
+    await saveEventWith(sheet, 'Save draft')
+    await waitFor(() => expect(eventInserts).toHaveLength(1))
+    expect(eventInserts[0]).toMatchObject({ coach_user_id: COACH.id, published: false, squad: null })
   })
 
   it('a fixture import saves every fixture for the squad picked', async () => {

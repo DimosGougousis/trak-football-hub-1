@@ -58,7 +58,7 @@ export default function EventLink() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isParent, id, childrenLoading, attempt, children.map(c => c.id).join(',')])
 
-  if (loading) return <div className="min-h-screen bg-[#0A0A0B]" />
+  if (loading) return <div className="min-h-screen bg-ground" />
   if (!user) return <Navigate to="/" replace />
   if (profile?.role === 'player') return <Navigate to={`/player/event/${id}`} replace />
   if (profile?.role === 'coach') return <Navigate to="/coach/schedule" replace />
@@ -67,7 +67,7 @@ export default function EventLink() {
       onRetry={() => { setLookupFailed(false); setAttempt(a => a + 1) }} /></MobileShell>
   }
   if (isParent) {
-    return parentReady ? <Navigate to={`/parent/event/${id}`} replace /> : <div className="min-h-screen bg-[#0A0A0B]" />
+    return parentReady ? <Navigate to={`/parent/event/${id}`} replace /> : <div className="min-h-screen bg-ground" />
   }
   return <Navigate to={profile?.role === 'club' ? '/club/home' : '/'} replace />
 }

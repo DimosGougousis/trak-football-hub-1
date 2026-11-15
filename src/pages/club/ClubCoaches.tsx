@@ -142,20 +142,20 @@ export default function ClubCoaches() {
       <SectionLabel>Connected Coaches</SectionLabel>
       <div className="mt-3 mb-6 space-y-3">
         {loading ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>Loading…</div>
+          <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>Loading…</div>
         ) : coaches.length === 0 ? (
-          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, paddingTop: 8 }}>No coaches connected yet. Trak sets up your coaches' accounts.</div>
+          <div style={{ color: 'rgb(var(--t-ink-3))', fontSize: 13, paddingTop: 8 }}>No coaches connected yet. Trak sets up your coaches' accounts.</div>
         ) : (
           coaches.map(c => (
             <ClubCard key={c.userId} className="p-4">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center shrink-0"
-                  style={{ width: 44, height: 44, borderRadius: 999, background: 'rgba(200,242,90,0.1)', color: '#C8F25A', fontSize: 14 }}>
+                  style={{ width: 44, height: 44, borderRadius: 999, background: 'rgb(var(--t-brand) / 0.1)', color: 'rgb(var(--t-brand))', fontSize: 14 }}>
                   {initials(c.name)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.88)' }}>{c.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                  <div style={{ fontSize: 15, color: 'rgb(var(--t-ink))' }}>{c.name}</div>
+                  <div style={{ fontSize: 12, color: 'rgb(var(--t-ink-3))' }}>
                     {c.coachRole} · {c.team}
                   </div>
                 </div>
@@ -163,7 +163,7 @@ export default function ClubCoaches() {
                   <button
                     onClick={() => copyCode(c.inviteCode!)}
                     className="px-2 py-1 rounded-[8px] transition-colors"
-                    style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#C8F25A', background: 'rgba(200,242,90,0.08)', border: '1px solid rgba(200,242,90,0.2)' }}>
+                    style={{ fontFamily: 'var(--t-font-mono)', fontSize: 10, color: 'rgb(var(--t-brand))', background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.2)' }}>
                     TRK-{c.inviteCode}
                   </button>
                 )}
@@ -180,7 +180,7 @@ export default function ClubCoaches() {
                 onClick={() => handleRemoveCoach(c.userId, c.name)}
                 disabled={removing === c.userId}
                 className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-[10px] transition-colors"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}
+                style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', color: 'rgb(var(--t-ink-3))', fontSize: 12 }}
               >
                 <UserMinus size={13} />
                 {removing === c.userId ? 'Removing…' : 'Remove from academy'}
@@ -190,7 +190,7 @@ export default function ClubCoaches() {
         )}
       </div>
 
-      <div className="px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 1.5 }}>
+      <div className="px-4 py-3" style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', borderRadius: 12, color: 'rgb(var(--t-ink-3))', fontSize: 12, lineHeight: 1.5 }}>
         Players join through your academy's roster, not codes.
       </div>
     </ClubShell>
@@ -199,11 +199,11 @@ export default function ClubCoaches() {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="px-3 py-2" style={{ background: '#0A0A0B', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)' }}>
+    <div className="px-3 py-2" style={{ background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))', borderRadius: 12 }}>
+      <div style={{ fontFamily: 'var(--t-font-mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgb(var(--t-ink-3))' }}>
         {label}
       </div>
-      <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.88)', marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 16, color: 'rgb(var(--t-ink))', marginTop: 2 }}>{value}</div>
     </div>
   )
 }

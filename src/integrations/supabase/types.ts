@@ -47,6 +47,79 @@ export type Database = {
         }
         Relationships: []
       }
+      objective_progress: {
+        Row: { evaluation_id: string; player_objective_id: string; status: string }
+        Insert: { evaluation_id: string; player_objective_id: string; status: string }
+        Update: { evaluation_id?: string; player_objective_id?: string; status?: string }
+        Relationships: [
+          {
+            foreignKeyName: "objective_progress_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "season_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_progress_player_objective_id_fkey"
+            columns: ["player_objective_id"]
+            isOneToOne: false
+            referencedRelation: "player_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      objective_stuck_choices: {
+        Row: {
+          after_evaluation_id: string
+          choice: string
+          chosen_at: string
+          chosen_by: string | null
+          id: string
+          new_objective_id: string | null
+          player_objective_id: string
+        }
+        Insert: {
+          after_evaluation_id: string
+          choice: string
+          chosen_at?: string
+          chosen_by?: string | null
+          id?: string
+          new_objective_id?: string | null
+          player_objective_id: string
+        }
+        Update: {
+          after_evaluation_id?: string
+          choice?: string
+          chosen_at?: string
+          chosen_by?: string | null
+          id?: string
+          new_objective_id?: string | null
+          player_objective_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "objective_stuck_choices_after_evaluation_id_fkey"
+            columns: ["after_evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "season_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_stuck_choices_new_objective_id_fkey"
+            columns: ["new_objective_id"]
+            isOneToOne: false
+            referencedRelation: "player_objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "objective_stuck_choices_player_objective_id_fkey"
+            columns: ["player_objective_id"]
+            isOneToOne: false
+            referencedRelation: "player_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           admin_user_id: string
@@ -209,11 +282,13 @@ export type Database = {
           coachability: number
           consistency: number
           created_at: string | null
+          evaluation_id: string | null
           flag: string | null
           id: string
           impact: number
           organization_id: string | null
           physical: number
+          published_at: string | null
           private_note: string | null
           session_id: string | null
           spirit: number
@@ -233,11 +308,13 @@ export type Database = {
           coachability?: number
           consistency?: number
           created_at?: string | null
+          evaluation_id?: string | null
           flag?: string | null
           id?: string
           impact?: number
           organization_id?: string | null
           physical?: number
+          published_at?: string | null
           private_note?: string | null
           session_id?: string | null
           spirit?: number
@@ -257,11 +334,13 @@ export type Database = {
           coachability?: number
           consistency?: number
           created_at?: string | null
+          evaluation_id?: string | null
           flag?: string | null
           id?: string
           impact?: number
           organization_id?: string | null
           physical?: number
+          published_at?: string | null
           private_note?: string | null
           session_id?: string | null
           spirit?: number
@@ -273,6 +352,13 @@ export type Database = {
           workrate?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "coach_assessments_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "season_evaluations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coach_assessments_session_id_fkey"
             columns: ["session_id"]
@@ -293,6 +379,7 @@ export type Database = {
         Row: {
           cancel_reason: string | null
           coach_user_id: string
+          competition: string | null
           created_at: string
           ends_at: string | null
           end_time: string | null
@@ -303,7 +390,9 @@ export type Database = {
           home_away: string | null
           id: string
           kit: string | null
+          kit_snapshot: Json | null
           family_note: string | null
+          training_theme: string | null
           meet_time: string | null
           notes: string | null
           opponent: string | null
@@ -321,6 +410,7 @@ export type Database = {
         Insert: {
           cancel_reason?: string | null
           coach_user_id: string
+          competition?: string | null
           created_at?: string
           ends_at?: string | null
           end_time?: string | null
@@ -331,7 +421,9 @@ export type Database = {
           home_away?: string | null
           id?: string
           kit?: string | null
+          kit_snapshot?: Json | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -349,6 +441,7 @@ export type Database = {
         Update: {
           cancel_reason?: string | null
           coach_user_id?: string
+          competition?: string | null
           created_at?: string
           ends_at?: string | null
           end_time?: string | null
@@ -359,7 +452,9 @@ export type Database = {
           home_away?: string | null
           id?: string
           kit?: string | null
+          kit_snapshot?: Json | null
           family_note?: string | null
+          training_theme?: string | null
           meet_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -373,6 +468,114 @@ export type Database = {
           title?: string
           updated_at?: string
           venue?: string | null
+        }
+        Relationships: []
+      }
+      coach_team_kits: {
+        Row: {
+          id: string
+          coach_user_id: string
+          organization_id: string
+          squad: string
+          kits: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          coach_user_id: string
+          organization_id?: string
+          squad?: string
+          kits: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          coach_user_id?: string
+          organization_id?: string
+          squad?: string
+          kits?: Json
+          updated_at?: string
+        }
+        Relationships: [{
+          foreignKeyName: "coach_team_kits_organization_id_fkey"
+          columns: ["organization_id"]
+          isOneToOne: false
+          referencedRelation: "organizations"
+          referencedColumns: ["id"]
+        }]
+      }
+      coach_drill_bookmarks: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          drill: string
+        }
+        Insert: {
+          coach_user_id?: string
+          created_at?: string
+          drill: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          drill?: string
+        }
+        Relationships: []
+      }
+      coach_drills: {
+        Row: {
+          group_size: number | null
+          part_type: string | null
+          players_kind: string | null
+          area: string
+          coach_user_id: string
+          conditions: string
+          created_at: string
+          direction: string
+          how: string
+          id: string
+          minutes: number
+          name: string
+          numbers: string
+          targets: string
+          tell: string
+          updated_at: string
+        }
+        Insert: {
+          group_size?: number | null
+          part_type?: string | null
+          players_kind?: string | null
+          area?: string
+          coach_user_id?: string
+          conditions?: string
+          created_at?: string
+          direction?: string
+          how?: string
+          id?: string
+          minutes: number
+          name: string
+          numbers?: string
+          targets?: string
+          tell?: string
+          updated_at?: string
+        }
+        Update: {
+          group_size?: number | null
+          part_type?: string | null
+          players_kind?: string | null
+          area?: string
+          coach_user_id?: string
+          conditions?: string
+          created_at?: string
+          direction?: string
+          how?: string
+          id?: string
+          minutes?: number
+          name?: string
+          numbers?: string
+          targets?: string
+          tell?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -475,21 +678,498 @@ export type Database = {
         }
         Relationships: []
       }
+      event_confirmations: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string
+          event_id: string
+          squad_player_id: string
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by: string
+          event_id: string
+          squad_player_id: string
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string
+          event_id?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
+          cant_make_it_alerts: boolean
           event_reminders: boolean
+          needs_you: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          cant_make_it_alerts?: boolean
           event_reminders?: boolean
+          needs_you?: boolean
           updated_at?: string
           user_id?: string
         }
         Update: {
+          cant_make_it_alerts?: boolean
           event_reminders?: boolean
+          needs_you?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      formation_copies: {
+        Row: {
+          by_default: boolean
+          copied_at: string
+          event_id: string
+          formation_id: string
+          not_coming: number
+          skipped: number
+        }
+        Insert: {
+          by_default?: boolean
+          copied_at?: string
+          event_id: string
+          formation_id: string
+          not_coming: number
+          skipped: number
+        }
+        Update: {
+          by_default?: boolean
+          copied_at?: string
+          event_id?: string
+          formation_id?: string
+          not_coming?: number
+          skipped?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formation_copies_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formation_copies_formation_id_fkey"
+            columns: ["formation_id"]
+            isOneToOne: false
+            referencedRelation: "formations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formation_players: {
+        Row: {
+          formation_id: string
+          slot: number
+          squad_player_id: string
+        }
+        Insert: {
+          formation_id: string
+          slot: number
+          squad_player_id: string
+        }
+        Update: {
+          formation_id?: string
+          slot?: number
+          squad_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formation_players_formation_id_fkey"
+            columns: ["formation_id"]
+            isOneToOne: false
+            referencedRelation: "formations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formation_players_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formations: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          format: number
+          id: string
+          is_default: boolean
+          name: string
+          shape: string
+          squad: string
+          updated_at: string
+        }
+        Insert: {
+          coach_user_id: string
+          created_at?: string
+          format: number
+          id?: string
+          is_default?: boolean
+          name: string
+          shape: string
+          squad: string
+          updated_at?: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          format?: number
+          id?: string
+          is_default?: boolean
+          name?: string
+          shape?: string
+          squad?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      game_evaluation_notes: {
+        Row: {
+          event_id: string
+          note: string
+          squad_player_id: string
+        }
+        Insert: {
+          event_id: string
+          note: string
+          squad_player_id: string
+        }
+        Update: {
+          event_id?: string
+          note?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_evaluation_players: {
+        Row: {
+          against_expectation: string
+          did_job: string
+          event_id: string
+          played: boolean
+          squad_player_id: string
+        }
+        Insert: {
+          against_expectation?: string
+          did_job?: string
+          event_id: string
+          played: boolean
+          squad_player_id: string
+        }
+        Update: {
+          against_expectation?: string
+          did_job?: string
+          event_id?: string
+          played?: boolean
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_evaluations: {
+        Row: {
+          event_id: string
+          goals: Json
+          how_they_scored: string
+          our_score: number | null
+          plan_worked: (string | null)[]
+          published_at: string | null
+          remind_at: string | null
+          saved_at: string
+          their_score: number | null
+        }
+        Insert: {
+          event_id: string
+          goals?: Json
+          how_they_scored?: string
+          our_score?: number | null
+          plan_worked?: (string | null)[]
+          published_at?: string | null
+          remind_at?: string | null
+          saved_at?: string
+          their_score?: number | null
+        }
+        Update: {
+          event_id?: string
+          goals?: Json
+          how_they_scored?: string
+          our_score?: number | null
+          plan_worked?: (string | null)[]
+          published_at?: string | null
+          remind_at?: string | null
+          saved_at?: string
+          their_score?: number | null
+        }
+        Relationships: []
+      }
+      game_for_family: {
+        Row: {
+          changed_at: string | null
+          coach_name: string
+          event_id: string
+          has_note: boolean
+          job: string
+          role: string
+          shared_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          coach_name?: string
+          event_id: string
+          has_note?: boolean
+          job?: string
+          role: string
+          shared_at?: string
+          squad_player_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          coach_name?: string
+          event_id?: string
+          has_note?: boolean
+          job?: string
+          role?: string
+          shared_at?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_for_player: {
+        Row: {
+          changed_at: string | null
+          event_id: string
+          goals: Json
+          job: string
+          note: string
+          shared_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          event_id: string
+          goals?: Json
+          job?: string
+          note?: string
+          shared_at?: string
+          squad_player_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          event_id?: string
+          goals?: Json
+          job?: string
+          note?: string
+          shared_at?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_lineup_for_players: {
+        Row: {
+          event_id: string
+          formation: string | null
+          name: string
+          role: string
+          slot: number | null
+          squad_player_id: string
+        }
+        Insert: {
+          event_id: string
+          formation?: string | null
+          name: string
+          role: string
+          slot?: number | null
+          squad_player_id: string
+        }
+        Update: {
+          event_id?: string
+          formation?: string | null
+          name?: string
+          role?: string
+          slot?: number | null
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_plan_players: {
+        Row: {
+          context: string[]
+          created_at: string
+          event_id: string
+          expectation: string
+          job: string
+          note: string
+          role: string
+          slot: number | null
+          squad_player_id: string
+          updated_at: string
+        }
+        Insert: {
+          context?: string[]
+          created_at?: string
+          event_id: string
+          expectation?: string
+          job?: string
+          note?: string
+          role?: string
+          slot?: number | null
+          squad_player_id: string
+          updated_at?: string
+        }
+        Update: {
+          context?: string[]
+          created_at?: string
+          event_id?: string
+          expectation?: string
+          job?: string
+          note?: string
+          role?: string
+          slot?: number | null
+          squad_player_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      game_plans: {
+        Row: {
+          created_at: string
+          event_id: string
+          format: number
+          formation: string | null
+          goals: Json
+          key_players: Json
+          scouting: string
+          strength: string | null
+          their_formation: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          format?: number
+          formation?: string | null
+          goals?: Json
+          key_players?: Json
+          scouting?: string
+          strength?: string | null
+          their_formation?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          format?: number
+          formation?: string | null
+          goals?: Json
+          key_players?: Json
+          scouting?: string
+          strength?: string | null
+          their_formation?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      game_review_for_family: {
+        Row: {
+          against_expectation: string
+          coach_name: string
+          context: string[]
+          did_job: string | null
+          event_id: string
+          expectation: string
+          has_note: boolean
+          job: string
+          our_score: number
+          published_at: string
+          session_id: string | null
+          squad_player_id: string
+          their_score: number
+        }
+        Insert: {
+          against_expectation: string
+          coach_name?: string
+          context?: string[]
+          did_job?: string | null
+          event_id: string
+          expectation: string
+          has_note?: boolean
+          job?: string
+          our_score: number
+          published_at?: string
+          session_id?: string | null
+          squad_player_id: string
+          their_score: number
+        }
+        Update: {
+          against_expectation?: string
+          coach_name?: string
+          context?: string[]
+          did_job?: string | null
+          event_id?: string
+          expectation?: string
+          has_note?: boolean
+          job?: string
+          our_score?: number
+          published_at?: string
+          session_id?: string | null
+          squad_player_id?: string
+          their_score?: number
+        }
+        Relationships: []
+      }
+      game_review_for_player: {
+        Row: {
+          did_job: string | null
+          event_id: string
+          job: string
+          note: string
+          squad_player_id: string
+        }
+        Insert: {
+          did_job?: string | null
+          event_id: string
+          job?: string
+          note?: string
+          squad_player_id: string
+        }
+        Update: {
+          did_job?: string | null
+          event_id?: string
+          job?: string
+          note?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      game_shares: {
+        Row: {
+          changed: number
+          event_id: string
+          id: number
+          shared_at: string
+        }
+        Insert: {
+          changed: number
+          event_id: string
+          id?: never
+          shared_at?: string
+        }
+        Update: {
+          changed?: number
+          event_id?: string
+          id?: never
+          shared_at?: string
         }
         Relationships: []
       }
@@ -500,7 +1180,7 @@ export type Database = {
           body_condition: string | null
           card_received: string | null
           competition: string
-          computed_rating: number
+          computed_rating: number | null
           created_at: string | null
           goals: number
           id: string
@@ -523,7 +1203,7 @@ export type Database = {
           body_condition?: string | null
           card_received?: string | null
           competition: string
-          computed_rating?: number
+          computed_rating?: number | null
           created_at?: string | null
           goals?: number
           id?: string
@@ -546,7 +1226,7 @@ export type Database = {
           body_condition?: string | null
           card_received?: string | null
           competition?: string
-          computed_rating?: number
+          computed_rating?: number | null
           created_at?: string | null
           goals?: number
           id?: string
@@ -668,6 +1348,89 @@ export type Database = {
         }
         Relationships: []
       }
+      player_objectives: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          retired_at: string | null
+          season_objective_id: string | null
+          shared_at: string | null
+          slot: number
+          source: string
+          squad_player_id: string
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          retired_at?: string | null
+          season_objective_id?: string | null
+          shared_at?: string | null
+          slot: number
+          source: string
+          squad_player_id: string
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          retired_at?: string | null
+          season_objective_id?: string | null
+          shared_at?: string | null
+          slot?: number
+          source?: string
+          squad_player_id?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_objectives_season_objective_id_fkey"
+            columns: ["season_objective_id"]
+            isOneToOne: false
+            referencedRelation: "season_objectives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_objectives_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_watches: {
+        Row: {
+          since: string
+          squad_player_id: string
+          started_by: string | null
+        }
+        Insert: {
+          since?: string
+          squad_player_id: string
+          started_by?: string | null
+        }
+        Update: {
+          since?: string
+          squad_player_id?: string
+          started_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_watches_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: true
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_parent_links: {
         Row: {
           created_at: string | null
@@ -696,6 +1459,7 @@ export type Database = {
           full_name: string
           id: string
           invite_code: string | null
+          language: string | null
           nationality: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -706,6 +1470,7 @@ export type Database = {
           full_name: string
           id?: string
           invite_code?: string | null
+          language?: string | null
           nationality?: string | null
           role: Database["public"]["Enums"]["user_role"]
           user_id: string
@@ -716,6 +1481,7 @@ export type Database = {
           full_name?: string
           id?: string
           invite_code?: string | null
+          language?: string | null
           nationality?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
@@ -766,6 +1532,203 @@ export type Database = {
           },
         ]
       }
+      season_evaluations: {
+        Row: {
+          due_on: string
+          id: string
+          plan_id: string
+          published_at: string
+          published_by: string | null
+        }
+        Insert: {
+          due_on: string
+          id?: string
+          plan_id: string
+          published_at?: string
+          published_by?: string | null
+        }
+        Update: {
+          due_on?: string
+          id?: string
+          plan_id?: string
+          published_at?: string
+          published_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_evaluations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "season_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_objectives: {
+        Row: {
+          created_at: string
+          id: string
+          looks_like: string
+          place: number
+          plan_id: string
+          retired_at: string | null
+          shared_looks_like: string | null
+          shared_title: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          looks_like?: string
+          place: number
+          plan_id: string
+          retired_at?: string | null
+          shared_looks_like?: string | null
+          shared_title?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          looks_like?: string
+          place?: number
+          plan_id?: string
+          retired_at?: string | null
+          shared_looks_like?: string | null
+          shared_title?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_objectives_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "season_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_plan_player_shares: {
+        Row: {
+          changed_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          changed_at: string
+          squad_player_id: string
+        }
+        Update: {
+          changed_at?: string
+          squad_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_plan_player_shares_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: true
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_plan_seen: {
+        Row: {
+          seen_at: string
+          squad_player_id: string
+          viewer_user_id: string
+        }
+        Insert: {
+          seen_at?: string
+          squad_player_id: string
+          viewer_user_id: string
+        }
+        Update: {
+          seen_at?: string
+          squad_player_id?: string
+          viewer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_plan_seen_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_plans: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          ends_on: string | null
+          eval_day: number
+          eval_every: string
+          id: string
+          last_shared_at: string | null
+          positions_known: string | null
+          shared_at: string | null
+          shared_ends_on: string | null
+          shared_eval_day: number | null
+          shared_eval_every: string | null
+          shared_starts_on: string | null
+          squad: string
+          starts_on: string | null
+          unshared_parts: string[]
+          unshared_players: string[]
+          updated_at: string
+          watch_rule: string
+        }
+        Insert: {
+          coach_user_id?: string
+          created_at?: string
+          ends_on?: string | null
+          eval_day?: number
+          eval_every?: string
+          id?: string
+          last_shared_at?: string | null
+          positions_known?: string | null
+          shared_at?: string | null
+          shared_ends_on?: string | null
+          shared_eval_day?: number | null
+          shared_eval_every?: string | null
+          shared_starts_on?: string | null
+          squad: string
+          starts_on?: string | null
+          unshared_parts?: string[]
+          unshared_players?: string[]
+          updated_at?: string
+          watch_rule?: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          ends_on?: string | null
+          eval_day?: number
+          eval_every?: string
+          id?: string
+          last_shared_at?: string | null
+          positions_known?: string | null
+          shared_at?: string | null
+          shared_ends_on?: string | null
+          shared_eval_day?: number | null
+          shared_eval_every?: string | null
+          shared_starts_on?: string | null
+          squad?: string
+          starts_on?: string | null
+          unshared_parts?: string[]
+          unshared_players?: string[]
+          updated_at?: string
+          watch_rule?: string
+        }
+        Relationships: []
+      }
       session_attendance: {
         Row: {
           created_at: string | null
@@ -801,6 +1764,64 @@ export type Database = {
           },
           {
             foreignKeyName: "session_attendance_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_player_also_plays: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          position: string
+          squad_player_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          position: string
+          squad_player_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          position?: string
+          squad_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_player_also_plays_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_player_roles: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          role: string
+          squad_player_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          role: string
+          squad_player_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          role?: string
+          squad_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_player_roles_squad_player_id_fkey"
             columns: ["squad_player_id"]
             isOneToOne: false
             referencedRelation: "squad_players"
@@ -847,6 +1868,259 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_player_profiles: {
+        Row: {
+          nationality: string | null
+          preferred_foot: string | null
+          squad_player_id: string
+          traits: string[]
+          updated_at: string
+        }
+        Insert: {
+          nationality?: string | null
+          preferred_foot?: string | null
+          squad_player_id: string
+          traits?: string[]
+          updated_at?: string
+        }
+        Update: {
+          nationality?: string | null
+          preferred_foot?: string | null
+          squad_player_id?: string
+          traits?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_player_profiles_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: true
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_position_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          from_position: string | null
+          id: string
+          squad_player_id: string
+          to_position: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          from_position?: string | null
+          id?: string
+          squad_player_id: string
+          to_position: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          from_position?: string | null
+          id?: string
+          squad_player_id?: string
+          to_position?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_position_history_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_notes: {
+        Row: {
+          again: string | null
+          coach_user_id: string
+          created_at: string
+          event_id: string
+          note: string
+          updated_at: string
+        }
+        Insert: {
+          again?: string | null
+          coach_user_id?: string
+          created_at?: string
+          event_id: string
+          note?: string
+          updated_at?: string
+        }
+        Update: {
+          again?: string | null
+          coach_user_id?: string
+          created_at?: string
+          event_id?: string
+          note?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_drafts: {
+        Row: {
+          body: Json
+          coach_user_id: string
+          created_at: string
+          event_id: string
+          step: number
+          updated_at: string
+        }
+        Insert: {
+          body: Json
+          coach_user_id?: string
+          created_at?: string
+          event_id: string
+          step?: number
+          updated_at?: string
+        }
+        Update: {
+          body?: Json
+          coach_user_id?: string
+          created_at?: string
+          event_id?: string
+          step?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_drafts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_practices: {
+        Row: {
+          group_size: number | null
+          part: string
+          part_type: string | null
+          players_kind: string | null
+          trak_drill: string | null
+          trak_level: number | null
+          area: string
+          conditions: string
+          direction: string
+          drill_id: string | null
+          event_id: string
+          how: string
+          library_session: string | null
+          minutes: number
+          name: string
+          numbers: string
+          position: number
+          source: string
+          targets: string
+          tell: string
+        }
+        Insert: {
+          group_size?: number | null
+          part?: string
+          part_type?: string | null
+          players_kind?: string | null
+          trak_drill?: string | null
+          trak_level?: number | null
+          area?: string
+          conditions?: string
+          direction?: string
+          drill_id?: string | null
+          event_id: string
+          how?: string
+          library_session?: string | null
+          minutes: number
+          name: string
+          numbers?: string
+          position: number
+          source?: string
+          targets?: string
+          tell?: string
+        }
+        Update: {
+          group_size?: number | null
+          part?: string
+          part_type?: string | null
+          players_kind?: string | null
+          trak_drill?: string | null
+          trak_level?: number | null
+          area?: string
+          conditions?: string
+          direction?: string
+          drill_id?: string | null
+          event_id?: string
+          how?: string
+          library_session?: string | null
+          minutes?: number
+          name?: string
+          numbers?: string
+          position?: number
+          source?: string
+          targets?: string
+          tell?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_practices_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "coach_drills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plan_practices_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["event_id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          note: string
+          coach_user_id: string
+          created_at: string
+          event_id: string
+          updated_at: string
+        }
+        Insert: {
+          note?: string
+          coach_user_id?: string
+          created_at?: string
+          event_id: string
+          updated_at?: string
+        }
+        Update: {
+          note?: string
+          coach_user_id?: string
+          created_at?: string
+          event_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -864,6 +2138,7 @@ export type Database = {
           meet_time: string | null
           venue: string | null
           kit: string | null
+          kit_snapshot: Json | null
           opponent: string | null
           home_away: string | null
           status: string
@@ -872,6 +2147,10 @@ export type Database = {
           updated_at: string
           family_note: string | null
         }[]
+      }
+      child_training_attendance: {
+        Args: { p_child: string }
+        Returns: { attended: number; total: number }[]
       }
       coach_match_score_clash: {
         Args: {
@@ -887,6 +2166,13 @@ export type Database = {
           saved_goals: number
           team_score: number
           opponent_score: number
+        }[]
+      }
+      coach_player_birth_dates: {
+        Args: { p_squad?: string }
+        Returns: {
+          squad_player_id: string
+          date_of_birth: string
         }[]
       }
       create_parent_invite: {
@@ -910,6 +2196,39 @@ export type Database = {
       }
       revoke_my_calendar_link: { Args: never; Returns: boolean }
       feature_on: { Args: { p_feature: string }; Returns: boolean }
+      family_academy: {
+        Args: { p_child: string }
+        Returns: { logo_url: string | null; name: string }[]
+      }
+      family_feature_on: { Args: { p_feature: string }; Returns: boolean }
+      game_plan_changes: {
+        Args: { p_event_ids: string[] }
+        Returns: { event_id: string; squad_player_id: string }[]
+      }
+      share_game_plan: {
+        Args: { p_event_id: string; p_talked?: boolean }
+        Returns: number
+      }
+      schedule_game_plan: {
+        Args: { p_at?: string; p_event_id: string; p_talked?: boolean }
+        Returns: number
+      }
+      publish_game_evaluation: {
+        Args: { p_event_id: string; p_competition?: string | null; p_home_away?: string | null }
+        Returns: Json
+      }
+      save_game_evaluation: {
+        Args: {
+          p_event_id: string
+          p_our_score: number
+          p_their_score: number
+          p_goals: Json
+          p_how_they_scored: string
+          p_plan_worked: (string | null)[]
+          p_players: Json
+        }
+        Returns: string
+      }
       get_children_awaiting_consent: {
         Args: never
         Returns: {
@@ -964,6 +2283,28 @@ export type Database = {
         Args: { p_event_id: string; p_child: string }
         Returns: undefined
       }
+      confirm_event_attendance: {
+        Args: { p_event_id: string; p_squad_player_id: string }
+        Returns: undefined
+      }
+      unconfirm_event_attendance: {
+        Args: { p_event_id: string; p_squad_player_id: string }
+        Returns: undefined
+      }
+      coach_squad_season: {
+        Args: { p_from: string; p_to: string; p_squad?: string | null }
+        Returns: {
+          match_date: string
+          opponent: string | null
+          session_id: string | null
+          team_score: number
+          opponent_score: number
+          squad_player_id: string
+          minutes_played: number | null
+          goals: number
+          assists: number
+        }[]
+      }
       record_parental_consent: {
         Args: {
           p_player_user_id: string
@@ -1001,6 +2342,94 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_player_objectives: {
+        Args: { p_objectives: Json; p_squad_player_id: string }
+        Returns: undefined
+      }
+      save_player_position_and_roles: {
+        Args: {
+          p_also_plays: string[]
+          p_position: string
+          p_roles: string[]
+          p_squad_player_id: string
+        }
+        Returns: undefined
+      }
+      delete_formation: { Args: { p_id: string }; Returns: undefined }
+      load_default_formation: { Args: { p_event_id: string }; Returns: Json }
+      set_default_formation: { Args: { p_default: boolean; p_id: string }; Returns: undefined }
+      use_formation_for_matches: { Args: { p_event_ids: string[]; p_formation_id: string }; Returns: Json }
+      undo_formation_copy: { Args: { p_event_ids: string[]; p_formation_id: string }; Returns: Json }
+      save_formation: {
+        Args: {
+          p_format: number
+          p_id: string | null
+          p_name: string
+          p_shape: string
+          p_squad: string
+          p_starters: Json
+        }
+        Returns: string
+      }
+      start_formations: {
+        Args: { p_formations: Json; p_squad: string }
+        Returns: boolean
+      }
+      save_training_plan: {
+        Args: { p_event_id: string; p_practices: Json; p_note?: string }
+        Returns: undefined
+      }
+      set_player_position: {
+        Args: { p_squad_player_id: string; p_position: string }
+        Returns: string
+      }
+      share_season_plan: {
+        Args: { p_plan_id: string; p_talked?: boolean }
+        Returns: string
+      }
+      publish_evaluation: {
+        Args: { p_due_on: string; p_plan_id: string; p_players: Json }
+        Returns: Json
+      }
+      publish_evaluation_with_objectives: {
+        Args: { p_due_on: string; p_objectives: Json; p_plan_id: string; p_players: Json }
+        Returns: Json
+      }
+      resolve_stuck_objective: {
+        Args: { p_choice: string; p_player_objective_id: string; p_title?: string }
+        Returns: undefined
+      }
+      stuck_player_objectives: {
+        Args: never
+        Returns: { player_objective_id: string; squad_player_id: string }[]
+      }
+      evaluation_progress: {
+        Args: { p_assessments: string[]; p_child?: string }
+        Returns: { assessment_id: string; due_on: string; objectives: Json }[]
+      }
+      season_plan_for_player: {
+        Args: { p_child?: string }
+        Returns: {
+          also_plays: string[]
+          coach_name: string
+          ends_on: string | null
+          eval_day: number | null
+          eval_every: string | null
+          is_new: boolean
+          last_evaluation_on: string | null
+          objectives: Json
+          position: string | null
+          roles: string[]
+          season_objectives: Json
+          shared_at: string | null
+          squad: string
+          squad_player_id: string
+          starts_on: string | null
+          time_zone: string
+        }[]
+      }
+      mark_season_plan_seen: { Args: { p_child?: string }; Returns: undefined }
+      watch_players: { Args: { p_squad_player_ids: string[] }; Returns: number }
       take_event_register: {
         Args: { p_event_id: string; p_present: string[] }
         Returns: string

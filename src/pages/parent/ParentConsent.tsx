@@ -237,10 +237,10 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
     const { name, state } = invitation
     if (embedded) return (
       <ConsentSurface face="invitation" labelledBy="consent-title" aboveNav>
-        <p id="consent-title" role="status" className="text-[15px] text-white/90">
+        <p id="consent-title" role="status" className="text-[15px] text-ink">
           {state === 'sent' ? `We've emailed ${name} an invitation to join.` : state === 'sending' ? `Emailing ${name}…` : `We couldn't email ${name} yet.`}
         </p>
-        <p className="text-[13px] text-white/60 mt-1">Your approval is saved. {name} creates their own account from that email.</p>
+        <p className="text-[13px] text-ink-2 mt-1">Your approval is saved. {name} creates their own account from that email.</p>
         <div className="flex gap-2 mt-4">
           <ArcButton size="lg" variant="secondary" className="flex-1" disabled={state === 'sending'}
             onClick={() => { void inviteChild(invitation.rosterChildId, name) }}>Send again</ArcButton>
@@ -274,8 +274,8 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
 
   if (loadError && embedded) return (
     <ConsentSurface face="error" labelledBy="consent-title" aboveNav>
-      {savedFor && <p role="status" className="text-[13px] text-white/60 mb-1">Approval saved for {savedFor}.</p>}
-      <p id="consent-title" role="alert" className="text-[15px] text-white/90">{loadError}</p>
+      {savedFor && <p role="status" className="text-[13px] text-ink-2 mb-1">Approval saved for {savedFor}.</p>}
+      <p id="consent-title" role="alert" className="text-[15px] text-ink">{loadError}</p>
       <ArcButton size="lg" variant="secondary" className="w-full mt-4" onClick={() => { void load() }}>Retry</ArcButton>
     </ConsentSurface>
   )
@@ -326,7 +326,7 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
     <ConsentSurface face="chip" chip aboveNav={embedded}>
       <button type="button" aria-label={children.length > 1 ? 'Review approvals' : `Review ${firstName}'s approval`} aria-haspopup="dialog"
         onClick={() => { setSkipped([]); setFace('bar') }}
-        className="grid size-full place-items-center text-white/85 focus-visible:ring-2 focus-visible:ring-primary rounded-full">
+        className="grid size-full place-items-center text-ink focus-visible:ring-2 focus-visible:ring-primary rounded-full">
         <InfoIcon />
       </button>
     </ConsentSurface>
@@ -357,9 +357,9 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
   const surface = (
       <ConsentSurface face={face} labelledBy="consent-title" aboveNav={embedded}>
         {face === 'bar' ? <>
-          {embedded && children.length > 1 && <p className="text-[13px] text-white/50 mb-1">{children.indexOf(child) + 1} of {children.length} waiting</p>}
-          <p id="consent-title" className="text-[16px] font-medium text-white/95">Approve {firstName}'s Trak account?</p>
-          <p className="text-[14px] text-white/65 mt-1">Their coach records how they train and play, and you see their progress.</p>
+          {embedded && children.length > 1 && <p className="text-[13px] text-ink-2 mb-1">{children.indexOf(child) + 1} of {children.length} waiting</p>}
+          <p id="consent-title" className="text-[16px] font-medium text-ink">Approve {firstName}'s Trak account?</p>
+          <p className="text-[14px] text-ink-2 mt-1">Their coach records how they train and play, and you see their progress.</p>
           <div className="flex gap-2 mt-4">
             <ArcButton size="lg" className="flex-1" onClick={() => setFace('details')}>Approve</ArcButton>
             <ArcButton size="lg" variant="secondary" className="flex-1" onClick={reject}>Reject</ArcButton>
@@ -370,42 +370,42 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
           {/* Imad, 16 Oct: a way back, as Arc's panel has. */}
           <div className="flex items-start justify-between gap-3">
             <h2 id="consent-title" tabIndex={-1} ref={panelHeading}
-              className="text-[17px] font-medium text-white/95 outline-none">Approve {firstName}'s Trak account</h2>
+              className="text-[17px] font-medium text-ink outline-none">Approve {firstName}'s Trak account</h2>
             <button type="button" aria-label="Close details" disabled={submitting} onClick={() => setFace('bar')}
-              className="-mr-2 -mt-1 grid size-8 shrink-0 place-items-center rounded-full text-white/60 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
+              className="-mr-2 -mt-1 grid size-8 shrink-0 place-items-center rounded-full text-ink-2 hover:bg-raised focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
               <X size={16} aria-hidden="true" />
             </button>
           </div>
           {/* Locked while the approval saves, so the stored choices are the ones on screen. */}
           <fieldset disabled={submitting} className="contents">
           <div className="mt-4">
-            <p className="text-[13px] text-white/55 mb-2">You are {firstName}'s</p>
+            <p className="text-[13px] text-ink-2 mb-2">You are {firstName}'s</p>
             <SegmentedControl label={`Your relationship to ${firstName}`} value={relationship}
               onValueChange={value => updateDraft({ relationship: value as ApprovalDraft['relationship'] })}
               options={[{ value: 'parent', label: 'Parent' }, { value: 'legal_guardian', label: 'Legal guardian' }]} />
           </div>
-          <ul className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+          <ul className="mt-4 divide-y divide-line border-y border-line">
             {CONSENT_PURPOSES.map(purpose => (
               <li key={purpose.key} className="py-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p id={`purpose-${purpose.key}`} className="text-[15px] text-white/90">{purpose.label}</p>
+                  <p id={`purpose-${purpose.key}`} className="text-[15px] text-ink">{purpose.label}</p>
                   {purpose.required
-                    ? <span className="text-[12px] text-white/50">Always on with approval</span>
+                    ? <span className="text-[12px] text-ink-2">Always on with approval</span>
                     : <Switch aria-labelledby={`purpose-${purpose.key}`} checked={Boolean(optional[purpose.key])} disabled={submitting}
                         onCheckedChange={checked => updateDraft({ optional: { ...optional, [purpose.key]: checked } })} />}
                 </div>
-                <p className="text-[13px] text-white/60 mt-1">{withChild(purpose.detail, firstName)}</p>
+                <p className="text-[13px] text-ink-2 mt-1">{withChild(purpose.detail, firstName)}</p>
               </li>
             ))}
           </ul>
           </fieldset>
-          <p className="text-[12px] text-white/55 mt-3 leading-relaxed">{consentStatement(firstName)}</p>
+          <p className="text-[12px] text-ink-2 mt-3 leading-relaxed">{consentStatement(firstName)}</p>
           <div className="flex gap-2 mt-4">
             <ArcButton size="lg" className="flex-1" loading={submitting} onClick={() => { void handleSubmit() }}>Approve</ArcButton>
             <ArcButton size="lg" variant="secondary" className="flex-1" disabled={submitting} onClick={reject}>Reject</ArcButton>
           </div>
         </div> : <>
-          <p id="consent-title" role="status" className="text-[15px] text-white/90">
+          <p id="consent-title" role="status" className="text-[15px] text-ink">
             Not approved. {firstName} stays waiting, and nothing about them is recorded. You can approve any time from Home.
           </p>
           <div className="flex gap-2 mt-4">

@@ -22,7 +22,9 @@ export interface InviteDeliveryDependencies {
   getRole(jwt: string, userId: string): Promise<Result<string | null>>;
   listInvites(jwt: string): Promise<Result<DeliveryInvite[] | null>>;
   resendInvite(jwt: string, inviteId: string): Promise<Result<DeliveryInvite[] | null>>;
-  sendInvite(email: string, redirectTo: string): Promise<{ error: DeliveryError | null }>;
+  /** The player's full name, for "Nikos has invited you" (Kostas, 21 Oct). Optional: the email says "Your child" without it. */
+  getFirstName?(jwt: string, userId: string): Promise<string | null>;
+  sendInvite(email: string, redirectTo: string, playerFirstName: string): Promise<{ error: DeliveryError | null }>;
   sendMagicLink(email: string, redirectTo: string): Promise<{ error: DeliveryError | null }>;
   now?: () => number;
 }
@@ -121,7 +123,11 @@ export async function handleInviteRequest(req: Request, deps: InviteDeliveryDepe
     // Tokenless email recovery is intentional: Auth redirects may omit tokens.
     // The database matches the verified recipient email, including other children.
     const redirectTo = `${deps.siteUrl.replace(/\/+$/, '')}/parent-invite`;
-    const { error: inviteError } = await deps.sendInvite(invite.parent_email, redirectTo);
+    // The email names the child who invited them (body only). A failed read
+    // must not stop the invitation: it then says "Your child".
+    const fullName = await deps.getFirstName?.(jwt, caller.id).catch(() => null);
+    const firstName = fullName?.trim().split(/\s+/)[0] ?? '';
+    const { error: inviteError } = await deps.sendInvite(invite.parent_email, redirectTo, firstName);
     if (!inviteError) return json({ sent: true, via: 'invite', redirectTo });
 
     const existingAccount = inviteError.code === 'email_exists' || inviteError.code === 'user_already_exists' ||

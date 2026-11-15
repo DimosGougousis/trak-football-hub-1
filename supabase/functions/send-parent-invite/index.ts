@@ -46,8 +46,15 @@ serve(async (req) => {
       async resendInvite(jwt, inviteId) {
         return await callerClient(jwt).rpc('resend_parent_invite', { p_invite_id: inviteId });
       },
-      async sendInvite(email, redirectTo) {
-        return await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { invited_as: 'parent' } });
+      async getFirstName(jwt, userId) {
+        const { data } = await callerClient(jwt).from('profiles').select('full_name').eq('user_id', userId).maybeSingle();
+        return data?.full_name ?? null;
+      },
+      // invited_by: 'player' picks invite-parent.html's "<name> has invited you" version.
+      async sendInvite(email, redirectTo, playerFirstName) {
+        return await admin.auth.admin.inviteUserByEmail(email, {
+          redirectTo, data: { invited_as: 'parent', invited_by: 'player', player_first_name: playerFirstName },
+        });
       },
       async sendMagicLink(email, redirectTo) {
         return await publicAuth.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo, shouldCreateUser: false } });

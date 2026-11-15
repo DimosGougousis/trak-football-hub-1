@@ -49,6 +49,9 @@ beforeEach(() => {
   assessments = [...Array.from({ length: 24 }, (_, i) => makeAssessment('Alex', i + 1)), makeAssessment('Zara', 1)]
   failAssessments = false; hiddenAssessments = false; assessmentRequests = []; feedbackReads = 0
   server.use(
+    // TRAK-286: no shared game plan.
+    http.get(endpoint('game_for_family'), () => HttpResponse.json([])),
+    http.get(endpoint('game_for_player'), () => HttpResponse.json([])),
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'Alex' }, { player_user_id: 'Zara' }])),
     http.get(endpoint('profiles'), ({ request }) => {
       const filter = new URL(request.url).searchParams.get('user_id') ?? ''
@@ -69,7 +72,8 @@ beforeEach(() => {
         const id = params.get('id')
         const session = params.get('session_id')
         return (!squad || squad.includes(row.squad_player_id)) && (!id || id === `eq.${row.id}`)
-          && (!session || session === `eq.${row.session_id}`)
+          // TRAK-439: the training history asks which of its sessions have an assessment with in.(a,b).
+          && (!session || session === `eq.${row.session_id}` || (session.startsWith('in.(') && session.slice(4, -1).replace(/"/g, '').split(',').includes(row.session_id)))
       })
       if (params.get('order')?.startsWith('created_at.desc')) {
         rows.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id))
@@ -176,6 +180,30 @@ describe('TRAK-172 parent assessment history', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Following' }), 'Zara')
     expect(await screen.findByRole('link', { name: /Zara first touch/ })).toHaveAttribute('href', '/parent/session/Zara-session-1/assessment')
     expect(screen.queryByText('Alex first touch')).not.toBeInTheDocument()
+  })
+
+  // TRAK-204 (Kostas, 19 Oct, live check on iPhone): an event opened by mistake needs a way straight back.
+  it('Back on an assessment returns to the screen it was opened from', async () => {
+    renderAt('/parent/matches')
+    await userEvent.click(await within(await screen.findByRole('region', { name: 'Training' })).findByRole('link', { name: /Alex first touch/ }))
+    await screen.findByRole('heading', { name: 'Coach assessment' })
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('region', { name: 'Training' })).toBeInTheDocument()
+
+    cleanup()
+    renderAt()
+    const region = await screen.findByRole('region', { name: 'Latest coach assessment' })
+    await userEvent.click(within(await within(region).findByRole('group', { name: 'Assessment 1 of 5' })).getByRole('link', { name: 'Open assessment' }))
+    await screen.findByRole('heading', { name: 'Coach assessment' })
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('region', { name: 'Latest coach assessment' })).toBeInTheDocument()
+  })
+
+  it('Back on an assessment opened with nothing behind it goes to Events', async () => {
+    renderAt('/parent/assessment/Alex-assessment-1')
+    await screen.findByRole('heading', { name: 'Coach assessment' })
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('region', { name: 'Training' })).toBeInTheDocument()
   })
 
   it('reaches assessments older than the old ten-record limit and loads the next page', async () => {
