@@ -24,5 +24,10 @@
   "reasonSchool": "School",
   "reasonFamily": "Family",
   "reasonTravel": "Travel",
-  "reasonOther": "Other"
+  "reasonOther": "Other",
+  "lineUp": "Line-up",
+  "bench": "Bench",
+  "you": "You",
+  "starting": "Starting",
+  "startingLineUp": "The starting line-up, {{formation}}"
 }

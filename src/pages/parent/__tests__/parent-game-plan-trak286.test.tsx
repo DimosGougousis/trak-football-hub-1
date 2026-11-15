@@ -36,12 +36,14 @@ const MATCH = {
 const NAMES: Record<string, string> = { zagorakis: 'Theodoros Zagorakis', 'coach-1': 'Otto Rehhagel' }
 let FAMILY: Record<string, unknown>[]
 let askedForPlayerCopy: string[]
+let askedForLineUp: string[]
 
 beforeEach(() => {
   // TRAK-319: Share writes the family's copy with the role only.
   FAMILY = [{ event_id: 'g1', squad_player_id: 'zagorakis-squad', role: 'starter', job: '', has_note: false,
     shared_at: '2099-11-10T15:30:00Z', changed_at: null, coach_name: 'Otto Rehhagel' }]
   askedForPlayerCopy = []
+  askedForLineUp = []
   server.use(
     http.get(endpoint('player_parent_links'), () => HttpResponse.json([{ player_user_id: 'zagorakis' }])),
     http.get(endpoint('profiles'), ({ request }) => {
@@ -58,6 +60,7 @@ beforeEach(() => {
     http.get(endpoint('game_for_family'), ({ request }) =>
       (request.headers.get('Accept') ?? '').includes('vnd.pgrst.object') ? HttpResponse.json(FAMILY[0] ?? null) : HttpResponse.json(FAMILY)),
     http.get(endpoint('game_for_player'), ({ request }) => { askedForPlayerCopy.push(request.url); return HttpResponse.json([]) }),
+    http.get(endpoint('game_lineup_for_players'), ({ request }) => { askedForLineUp.push(request.url); return HttpResponse.json([]) }),
   )
 })
 const clients: QueryClient[] = []
@@ -78,6 +81,9 @@ describe('TRAK-286: the shared game plan on a guardian\'s event page', () => {
     expect(within(section).getByText('Theodoros: Starting')).toBeInTheDocument()
     expect(section).not.toHaveTextContent(/Stay tight|job|note|Proud of you|Win the second ball/)
     expect(askedForPlayerCopy).toEqual([])
+    // TRAK-441: a parent's page has no line-up, and never asks for one.
+    expect(askedForLineUp).toEqual([])
+    expect(screen.queryByRole('region', { name: 'Line-up' })).toBeNull()
     const page = section.textContent
     cleanup()
 
@@ -101,5 +107,8 @@ describe('TRAK-286: the shared game plan on a guardian\'s event page', () => {
     const card = await within(await screen.findByRole('region', { name: 'Upcoming' })).findByRole('link', { name: /Parkview/ })
     expect(await within(card).findByText('Plan shared')).toBeInTheDocument()
     expect(askedForPlayerCopy).toEqual([])
+    // TRAK-441: a parent's page has no line-up, and never asks for one.
+    expect(askedForLineUp).toEqual([])
+    expect(screen.queryByRole('region', { name: 'Line-up' })).toBeNull()
   })
 })

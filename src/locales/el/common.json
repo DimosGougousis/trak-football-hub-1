@@ -24,5 +24,10 @@
   "reasonSchool": "Σχολείο",
   "reasonFamily": "Οικογένεια",
   "reasonTravel": "Ταξίδι",
-  "reasonOther": "Άλλο"
+  "reasonOther": "Άλλο",
+  "lineUp": "Ενδεκάδα",
+  "bench": "Πάγκος",
+  "you": "Εσύ",
+  "starting": "Βασικοί",
+  "startingLineUp": "Η αρχική ενδεκάδα, {{formation}}"
 }

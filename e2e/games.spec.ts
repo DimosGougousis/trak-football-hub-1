@@ -82,6 +82,14 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     if (path === '/rest/v1/game_for_player') return json(plans.has('share:m-next') ? [{ event_id: 'm-next', squad_player_id: 'sq-1',
       goals: [{ title: 'Win it back in their half', looks_like: 'Press when their keeper plays short.' }],
       job: 'Stay tight to their winger.', note: '', changed_at: null }] : [])
+    // TRAK-441: the line-up the squad's players read: names and places only. sq-1 is the player himself.
+    if (path === '/rest/v1/game_lineup_for_players') return json(plans.has('share:m-next') ? [
+      ...['Antonios Nikopolidis', 'Takis Fyssas', 'Traianos Dellas', 'Michalis Kapsis', 'Giourkas Seitaridis', 'Stelios Giannakopoulos',
+        'Theodoros Zagorakis', 'Kostas Katsouranis', 'Giorgos Karagounis', 'Angelos Charisteas', 'Zisis Vryzas'].map((name, i) => (
+        { event_id: 'm-next', squad_player_id: i === 4 ? 'sq-1' : `sq-xi-${i}`, role: 'starter', slot: i + 1, name, formation: '4-4-2' })),
+      ...['Angelos Basinas', 'Vassilios Tsiartas', 'Dimitrios Papadopoulos'].map((name, i) => (
+        { event_id: 'm-next', squad_player_id: `sq-bench-${i}`, role: 'bench', slot: null, name, formation: '4-4-2' })),
+    ] : [])
     // TRAK-288: the evaluation draft as save_game_evaluation keeps it, under `evaluation:<match>`.
     if (path === '/rest/v1/rpc/save_game_evaluation') {
       const body = req.postDataJSON() as Record<string, unknown>
@@ -596,8 +604,18 @@ test("the player's event page at 390 px: the shared game plan", async ({ page, c
   await expect(section.getByText('1 · Win it back in their half')).toBeVisible()
   await expect(section.getByText('Your job')).toBeVisible()
   await expect(section.getByText('Stay tight to their winger.')).toBeVisible()
+  // TRAK-441: the whole line-up on the coach's pitch, his own place marked, and the bench.
+  const lineUp = page.getByRole('region', { name: 'Line-up' })
+  const pitch = lineUp.getByRole('group', { name: 'The starting line-up, 4-4-2' })
+  await expect(pitch.getByText('You', { exact: true })).toBeVisible()
+  await expect(pitch.getByText('Antonios', { exact: true })).toBeVisible()
+  await expect(lineUp.getByRole('list', { name: 'Bench' }).getByRole('listitem')).toHaveText(['Angelos', 'Dimitrios', 'Vassilios'])
   await page.waitForTimeout(500)
   await page.screenshot({ path: testInfo.outputPath('player-game-plan-390.png'), fullPage: true })
+  expect(await sideways(page)).toBeLessThanOrEqual(0)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(pitch.getByText('You', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('player-game-plan-1440.png'), fullPage: true })
   expect(await sideways(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
