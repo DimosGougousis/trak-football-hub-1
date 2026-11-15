@@ -4,13 +4,15 @@
 // Vault, never a project key), or the operator by hand; nobody else. It takes no input: the
 // database decides the day and who is due, and hands each person out once.
 //
-// One email per person, paced within Resend's 10 requests/second and retried
-// like J8.12's. Each carries an idempotency key made from the person and the
-// day, so a reminder taken back after a crash can't arrive twice. Every
-// outcome is written back (sent, failed with a reason code, or nothing left
-// to send); a write that fails leaves the row "sending", and the database
-// takes it back after 10 minutes. Responses and logs carry no addresses.
-import { composeReminderEmail, remindable, type ClaimedReminder } from '../_shared/event-reminder.ts';
+// One email per event (TRAK-243, Kostas, 21 Oct), paced within Resend's 10
+// requests/second and retried like J8.12's. Each carries an idempotency key
+// made from the person, the day and the event, so a reminder taken back after
+// a crash or a failure can't arrive twice. Each person's day is still one row:
+// its outcome is written back once (sent; failed with a reason code if any of
+// its emails failed, so it is retried; or nothing left to send); a write that
+// fails leaves the row "sending", and the database takes it back after 10
+// minutes. Responses and logs carry no addresses.
+import { composeReminderEmails, type ClaimedReminder } from '../_shared/event-reminder.ts';
 import type { PlainEmail, SendResult } from '../_shared/send-email.ts';
 import { isScheduler, reasonCode, sendPaced } from '../send-event-emails/handler.ts';
 import { corsHeaders, json, sameSecret } from '../send-roster-invites/handler.ts';
@@ -30,9 +32,9 @@ export interface ReminderDependencies {
 }
 export interface ReminderReport { reminders: number; emails: number; failed: number }
 
-/** Resend's idempotency key for one person's reminder for one day (kept 24 h). */
-export async function reminderKey(userId: string, day: string): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${userId}|${day}`)));
+/** Resend's idempotency key for one person's reminder of one event on one day (kept 24 h). */
+export async function reminderKey(userId: string, day: string, eventId: string): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${userId}|${day}|${eventId}`)));
   return `trak-reminder-${Array.from(digest, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
@@ -40,24 +42,23 @@ export async function deliverReminders(reminders: ClaimedReminder[], deps: Remin
   const pace = { last: -Infinity };
   for (const reminder of reminders) {
     report.reminders++;
-    const composed = composeReminderEmail(reminder);
-    let outcome: ReminderOutcome = 'nothing_to_send';
+    const composed = composeReminderEmails(reminder);
+    let outcome: ReminderOutcome = composed.length ? 'sent' : 'nothing_to_send';
     let count = 0;
     let providerId: string | null = null;
     let error: string | null = null;
-    if (composed) {
-      const result = await sendPaced({ ...composed, idempotencyKey: await reminderKey(reminder.user_id, reminder.day) }, deps, pace);
+    for (const { eventId, email } of composed) {
+      const result = await sendPaced({ ...email, idempotencyKey: await reminderKey(reminder.user_id, reminder.day, eventId) }, deps, pace);
       if (result.sent) {
-        outcome = 'sent';
-        count = remindable(reminder.events).length;
+        count++;
         providerId = result.id;
         report.emails++;
-      } else {
+      } else if (outcome !== 'failed') {
         outcome = 'failed';
         error = reasonCode(result);
-        report.failed++;
       }
     }
+    if (outcome === 'failed') report.failed++;
     try {
       await deps.finish(reminder.user_id, reminder.day, outcome, count, providerId, error);
     } catch {
