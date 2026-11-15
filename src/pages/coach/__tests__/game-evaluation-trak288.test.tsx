@@ -194,8 +194,9 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     await user.type(within(open).getByRole('textbox', { name: 'Note to Theodoros' }), 'Brave all game.')
     expect(screen.getByRole('button', { name: /^Theodoros Zagorakis/ })).toHaveTextContent('Did part of the job · Above')
 
-    // TRAK-374: a Draft badge, no moon, no "sleep on it", no "only you see it", and no "Draft saved" alert.
-    expect(screen.getByText('Draft', { exact: true })).toBeInTheDocument()
+    // TRAK-374: no moon, no "sleep on it", no "only you see it", and no "Draft saved" alert. TRAK-448: no Draft badge
+    // at the bottom either; the match's state sits beside the title.
+    expect(screen.queryByText('Draft', { exact: true })).toBeNull()
     expect(screen.queryByText(/only you see it|sleep on it/i)).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Save draft' }))
     expect(await screen.findByRole('button', { name: 'Saved' })).toBeInTheDocument()
