@@ -64,6 +64,9 @@ INSERT INTO public.profiles(user_id,role,full_name) VALUES
  (pg_temp.g288id(20),'player','Theodoros Zagorakis'),(pg_temp.g288id(21),'player','Angelos Charisteas'),
  (pg_temp.g288id(22),'player','Giorgos Karagounis'),(pg_temp.g288id(30),'parent','Traianos Dellas'),(pg_temp.g288id(31),'parent','Michalis Kapsis');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES(pg_temp.g288id(100),pg_temp.g288id(1),'Evaluation Academy','G288N1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES(pg_temp.g288id(10),pg_temp.g288id(100)),(pg_temp.g288id(11),pg_temp.g288id(100));
 INSERT INTO public.player_details(user_id,date_of_birth) SELECT pg_temp.g288id(n), current_date - interval '14 years' FROM unnest(ARRAY[20,21,22]) n;
 INSERT INTO public.player_parent_links(player_user_id,parent_user_id) VALUES(pg_temp.g288id(20),pg_temp.g288id(30)),(pg_temp.g288id(21),pg_temp.g288id(31));

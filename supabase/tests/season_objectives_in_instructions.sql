@@ -50,6 +50,9 @@ INSERT INTO auth.users(id,email,email_confirmed_at)
 INSERT INTO public.profiles(user_id,role,full_name) VALUES
  (pg_temp.oi363id(1),'club','Synthetic Admin'),(pg_temp.oi363id(10),'coach','Synthetic Coach One'),(pg_temp.oi363id(11),'coach','Synthetic Coach Two');
 INSERT INTO public.organizations(id,admin_user_id,name,join_code) VALUES (pg_temp.oi363id(100),pg_temp.oi363id(1),'Instructions Academy','I363N1');
+-- Academies start with Matches and Training on (20261115140000). This suite switches them by hand, as an operator
+-- still can: its academies start with neither.
+DELETE FROM public.academy_features WHERE feature IN ('games','training');
 INSERT INTO public.coach_details(user_id,organization_id) VALUES (pg_temp.oi363id(10),pg_temp.oi363id(100)),(pg_temp.oi363id(11),pg_temp.oi363id(100));
 INSERT INTO public.squad_players(id,coach_user_id,player_name,age_group) VALUES
  (pg_temp.oi363id(40),pg_temp.oi363id(10),'Synthetic Player Pat','U16'),(pg_temp.oi363id(41),pg_temp.oi363id(10),'Synthetic Player Uri','U14'),
