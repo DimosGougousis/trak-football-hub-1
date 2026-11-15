@@ -49,9 +49,9 @@ describe('TRAK-12: staff are set up by Trak', () => {
         return HttpResponse.json(null)
       }),
     )
-    // TRAK-418: the old Profile page is gone; its address opens Settings, whose Club section says the academy sets it.
+    // TRAK-418: the old Profile page is gone; its address opens Settings, whose Club section is read-only (TRAK-459: with no line under its title).
     renderApp('/coach/profile')
-    expect(await screen.findByText(/Your academy sets these/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Club' })).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('TRK-XXXX')).toBeNull()
     expect(screen.queryByRole('button', { name: /^join$/i })).toBeNull()
     await waitFor(() => expect(joins).toEqual([]))

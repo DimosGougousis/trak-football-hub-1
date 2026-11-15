@@ -255,7 +255,6 @@ function AccountSettings({ userId }: { userId: string }) {
   const sections: SettingsSection[] = [
     {
       id: 'profile', label: t('settings:profile'), icon: UserRound, pending: nameChanged ? 1 : 0,
-      description: t('settings:profileDescription'),
       content: <>
         <div className="mb-4 flex items-center gap-4">
           {role === 'player' ? <PlayerFace name={displayName || '?'} size="xl" /> : <Avatar name={displayName || '?'} src={photo ?? undefined} size="xl" />}
@@ -290,7 +289,7 @@ function AccountSettings({ userId }: { userId: string }) {
     },
     // TRAK-72 item 11: a coach's club, age group and role come from the academy (Trak sets up staff, TRAK-12).
     ...(role === 'coach' ? [{
-      id: 'club', label: t('settings:club'), icon: Building2, description: t('settings:clubDescription'),
+      id: 'club', label: t('settings:club'), icon: Building2,
       content: roleData === 'loading' ? <p role="status" className="text-sm text-ink-3">{t('settings:loadingProfile')}</p>
         : roleData === 'error' ? <div role="alert" className="text-sm text-ink-3">
             <p>{t('settings:profileLoadError')}</p>
@@ -304,12 +303,12 @@ function AccountSettings({ userId }: { userId: string }) {
     }] : []),
     // TRAK-406: everyone picks the language Trak shows them; it is saved on their account.
     {
-      id: 'language', label: t('settings:language'), icon: Languages, description: t('settings:languageDescription'),
+      id: 'language', label: t('settings:language'), icon: Languages,
       content: <LanguageChoice userId={userId} />,
     },
     // TRAK-261 (Imad, 22 Oct): a parent's linked children and consent are here too, as on their Profile tab.
     ...(role === 'parent' ? [{
-      id: 'family', label: t('settings:family'), icon: Users, description: t('settings:familyDescription'),
+      id: 'family', label: t('settings:family'), icon: Users,
       content: <div className="grid gap-3">
         <ParentFamilyContent><ParentConnections /></ParentFamilyContent>
         <ParentChildCredentials key={userId} />
@@ -328,32 +327,32 @@ function AccountSettings({ userId }: { userId: string }) {
     // TRAK-136 (J8.13): the reminder 2 days before each event goes to guardians and to players with their own
     // email; a child's username login never gets email. TRAK-261: a coach's two in-app switches.
     ...(role === 'coach' ? [{
-      id: 'notifications', label: t('settings:notifications'), icon: Bell, description: t('settings:notificationsCoachDescription'),
+      id: 'notifications', label: t('settings:notifications'), icon: Bell,
       content: <SettingsRows>
         <NotificationSwitch userId={userId} column="cant_make_it_alerts" words="cantMakeIt" />
         <NotificationSwitch userId={userId} column="needs_you" words="needsYou" />
       </SettingsRows>,
     }] : (role === 'parent' || (role === 'player' && !childLogin)) ? [{
-      id: 'notifications', label: t('settings:notifications'), icon: Bell, description: t('settings:notificationsEmailDescription'),
+      id: 'notifications', label: t('settings:notifications'), icon: Bell,
       content: <EventReminders userId={userId} />,
     }] : []),
     // TRAK-133 (J8.10): add Trak to a phone calendar, see when it last synced, get a new link.
     ...((role === 'player' || role === 'parent') ? [{
-      id: 'calendar', label: t('settings:calendar'), icon: CalendarDays, description: t('settings:calendarDescription'),
+      id: 'calendar', label: t('settings:calendar'), icon: CalendarDays,
       content: <CalendarSettings />,
     }] : []),
     ...(role === 'club' ? [{
-      id: 'access', label: t('settings:access'), icon: ShieldCheck, description: t('settings:accessDescription'),
+      id: 'access', label: t('settings:access'), icon: ShieldCheck,
       content: <p className="text-sm text-ink-2">{t('settings:accessText')}</p>,
     }] : []),
     // TRAK-261 (Imad, 22 Oct): Arc's Billing becomes How Trak works, for everyone.
     {
-      id: 'how', label: t('settings:howTrakWorks'), icon: BookOpen, description: t('settings:howDescription'),
+      id: 'how', label: t('settings:howTrakWorks'), icon: BookOpen,
       // TRAK-418: a coach reads a page written for a coach; players and parents keep theirs.
       content: <Link to={role === 'coach' ? COACH_HOW_PATH : '/how-it-works'} className="text-sm font-medium text-brand">{t('settings:howLink')}</Link>,
     },
     {
-      id: 'account', label: t('settings:account'), icon: KeyRound, description: t('settings:accountDescription'),
+      id: 'account', label: t('settings:account'), icon: KeyRound,
       content: <SettingsRows>
         <SettingsRow label={t('settings:password')}>
           <Button type="button" variant="secondary" size="sm" onClick={changePassword} disabled={!!pending}>{childLogin ? t('settings:askGuardian') : t('settings:sendResetEmail')}</Button>
