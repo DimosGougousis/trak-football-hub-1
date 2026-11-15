@@ -13,6 +13,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { WAIT_TITLE, waitText } from '@/lib/wait-reason'
+import { pickOption } from '@/test/arc-select'
 
 const COACH = { id: 'coach-1' }
 type Reason = 'parent' | 'signup' | 'ready' | 'error'
@@ -44,9 +45,7 @@ function setup(players: Record<string, { name: string; required: boolean; reason
 describe('Assessment notice (TRAK-99)', { timeout: 20_000 }, () => {
   async function choose(id: string, name: string) {
     renderApp('/coach/assess')
-    const user = userEvent.setup()
-    const option = await screen.findByRole('option', { name })
-    await user.selectOptions(option.closest('select') as HTMLSelectElement, id)
+    await pickOption('Player', name)
   }
   const saveButton = () => screen.getByRole('button', { name: /save assessment/i })
   // The consent notice: the status box that holds "You can assess …".

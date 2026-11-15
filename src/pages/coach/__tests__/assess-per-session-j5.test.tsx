@@ -9,6 +9,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { assessStep, chooseAppearanceIfAsked, nextButton, saveAssessment } from '../../../../tests/support/assess-steps'
 import userEvent from '@testing-library/user-event'
+import { listOptions, pickOption } from '@/test/arc-select'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -93,14 +94,13 @@ function showForm() {
     <Route path="/coach/home" element={<p>Coach home</p>} />
   </Routes></MemoryRouter>, queries())
 }
-const select = (label: string) => screen.getByRole('combobox', { name: label }) as HTMLSelectElement
+const PLAYER_NAME: Record<string, string> = { 'player-a': 'Alex Synthetic', 'player-b': 'Bella Synthetic' }
+const SESSION_NAME: Record<string, RegExp> = { 'session-a': /vs Olympiacos Academy/, 'session-b': /Finishing training/ }
 async function choosePlayer(id: string) {
-  await screen.findByRole('option', { name: 'Alex Synthetic' })
-  await userEvent.selectOptions(select('Player'), id)
+  await pickOption('Player', PLAYER_NAME[id])
 }
 async function chooseSession(id: string) {
-  await screen.findByRole('option', { name: /Finishing training/ })
-  await userEvent.selectOptions(select('Session'), id)
+  await pickOption('Session', SESSION_NAME[id])
 }
 const saveButton = () => screen.getByRole('button', { name: /Save Assessment/ })
 
@@ -109,16 +109,17 @@ describe('TRAK-68: an assessment belongs to a session that already happened', { 
   it('offers only past sessions, and no "No session" choice', async () => {
     showForm()
     await choosePlayer('player-b')
-    await screen.findByRole('option', { name: /vs Olympiacos Academy/ })
-    expect(screen.getByRole('option', { name: /Finishing training/ })).toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: /Planned training/ })).toBeNull()
-    expect(screen.queryByRole('option', { name: /No session/ })).toBeNull()
+    const sessions = (await listOptions('Session')).join(' | ')
+    expect(sessions).toMatch(/vs Olympiacos Academy/)
+    expect(sessions).toMatch(/Finishing training/)
+    expect(sessions).not.toMatch(/Planned training/)
+    expect(sessions).not.toMatch(/No session/)
   })
 
   it('cannot save until a session is chosen', async () => {
     showForm()
     await choosePlayer('player-b')
-    await screen.findByRole('option', { name: /Finishing training/ })
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
     expect(nextButton()).toBeDisabled()
     await chooseSession('session-a')
     await chooseAppearanceIfAsked()

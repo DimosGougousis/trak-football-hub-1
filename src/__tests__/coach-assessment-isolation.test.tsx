@@ -10,6 +10,7 @@ import { server } from '../../tests/msw/server'
 import { SUPABASE_URL } from '../../tests/msw/supabase'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { pickOption } from '@/test/arc-select'
 
 // TRAK-176: coach screens read the coach's squads through the query cache.
 function queries() {
@@ -49,19 +50,18 @@ const feedbackBox = () => screen.getByPlaceholderText(/Great week/)
 
 // TRAK-68: an assessment needs a past session. It stays chosen across players.
 async function chooseSessionIfNone() {
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  const session = screen.getByRole('combobox', { name: 'Session' }) as HTMLSelectElement
-  if (session.value === '') await userEvent.selectOptions(session, 'session-1')
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
+  if (!/vs Synthetic FC/.test(screen.getByRole('combobox', { name: 'Session' }).textContent ?? '')) await pickOption('Session', /vs Synthetic FC/)
 }
 
 // TRAK-182: the player is chosen on the first step; the message and note have their own.
+const PLAYER_NAME: Record<string, string> = { 'player-a': 'Alex Synthetic', 'player-b': 'Bella Synthetic' }
 async function selectPlayer(player: string) {
   if (!screen.queryByRole('combobox', { name: 'Player' })) await assessStep('Player')
   // TRAK-425: a picked player shows once, as a card; Change brings the list back.
   const change = screen.queryByRole('button', { name: 'Change' })
   if (change) await userEvent.click(change)
-  await screen.findByRole('option', { name: 'Alex Synthetic' })
-  await userEvent.selectOptions(selector(), player)
+  await pickOption('Player', PLAYER_NAME[player])
   await chooseSessionIfNone()
   await waitFor(() => expect(reads).toContain(player))
 }

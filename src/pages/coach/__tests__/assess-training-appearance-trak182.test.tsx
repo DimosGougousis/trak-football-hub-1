@@ -6,6 +6,7 @@
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { pickOption } from '@/test/arc-select'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -59,12 +60,10 @@ function showForm() {
     <Route path="/coach/home" element={<p>Coach home</p>} />
   </Routes></MemoryRouter>, queries())
 }
-const select = (label: string) => screen.getByRole('combobox', { name: label }) as HTMLSelectElement
+const SESSION_NAME: Record<string, RegExp> = { 'session-gym': /Gym work/, 'session-match': /vs PAOK U16/ }
 async function choose(sessionId: string) {
-  await screen.findByRole('option', { name: 'Kostas Tsimikas' })
-  await userEvent.selectOptions(select('Player'), 'player-a')
-  await screen.findByRole('option', { name: /Gym work/ })
-  await userEvent.selectOptions(select('Session'), sessionId)
+  await pickOption('Player', 'Kostas Tsimikas')
+  await pickOption('Session', SESSION_NAME[sessionId])
   // Loaded: a training opens Next; a match first asks Appearance (enabled once the form is ready).
   await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Appearance' }) ?? screen.getByRole('button', { name: 'Next' })).toBeEnabled())
 }
