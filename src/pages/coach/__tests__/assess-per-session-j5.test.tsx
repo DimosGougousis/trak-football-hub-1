@@ -1,3 +1,4 @@
+// @story J5
 /**
  * TRAK-68 (J5, decided 25 Sep): an assessment belongs to a session. The session
  * is required, only sessions that already happened are offered, and there is one
