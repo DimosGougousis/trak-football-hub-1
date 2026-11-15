@@ -1,3 +1,4 @@
+// @story J5
 import { it, expect } from 'vitest'
 import { setSlider, sliderValue, sliderDisabled } from '../../support/slider'
 import { assessStep, nextButton, saveAssessment } from '../../support/assess-steps'

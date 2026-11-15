@@ -1,3 +1,4 @@
+// @story J8
 /**
  * TRAK-130 (J8.7): the player sees their squad's upcoming events: a "Next up"
  * card on home that never pushes the coach's message down, a list in the
