@@ -41,7 +41,7 @@ export default function SearchPage() {
     <MobileShell width="wide">
       <div className="pt-3.5 pb-36 tablet:pt-7 laptop:pt-8">
         <div className="flex items-center gap-2.5">
-          <label className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-[8px] border-2 border-ink px-3.5 text-ink laptop:max-w-[560px]" style={{ background: 'rgb(var(--t-surface))' }}>
+          <label className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-sm border-2 border-ink px-3.5 text-ink laptop:max-w-[560px]" style={{ background: 'rgb(var(--t-surface))' }}>
             <SearchIcon />
             <span className="sr-only">Search the Library</span>
             {/* The coach tapped the search box to get here, so the keyboard opens. */}
@@ -93,7 +93,7 @@ export default function SearchPage() {
 function TopResult({ session }: { session: LibrarySession }) {
   const library = libraryOf(session)
   return (
-    <Link to={sessionPath(session)} className="flex flex-col gap-3.5 rounded-[8px] bg-raised p-4 tablet:max-w-[480px]">
+    <Link to={sessionPath(session)} className="flex flex-col gap-3.5 rounded-sm bg-raised p-4 tablet:max-w-[480px]">
       {session.is_programme ? <ProgrammeArt colour={library.colour} size={92} /> : <PitchArt seed={session.id} colour={library.colour} size={92} />}
       <span className="flex flex-col gap-1">
         <span className="text-[24px] font-bold leading-tight text-ink">{titleParts(session).title}</span>

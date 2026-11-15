@@ -140,7 +140,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
                 <li key={p.id}>
                   <button type="button" onClick={() => toggle(p.id)} aria-pressed={on}
                     aria-label={t(on ? 'coachSchedule:playerPresent' : 'coachSchedule:playerAbsent', { name: p.name })}
-                    className={`w-full flex items-center gap-3 rounded-[12px] px-3 ${wide ? 'py-2' : 'py-2.5'} text-left`}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 ${wide ? 'py-2' : 'py-2.5'} text-left`}
                     style={{ background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))', border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}` }}>
                     <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
                       style={{ background: on ? 'rgb(var(--t-brand))' : 'transparent', border: on ? 'none' : '1px solid rgb(var(--t-line-strong))' }}>
@@ -174,7 +174,7 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       {error && <p role="alert" className="text-[12px] text-danger" style={font}>{error}</p>}
       {loaded.players.length > 0 && (
         <button type="button" onClick={save} disabled={saving}
-          className={`${wide ? 'w-full tablet:w-auto tablet:px-8' : 'w-full'} py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-50`}
+          className={`${wide ? 'w-full tablet:w-auto tablet:px-8' : 'w-full'} py-3 rounded-xl text-[14px] font-medium disabled:opacity-50`}
           style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
           {saving ? t('coachSchedule:savingDots') : wide ? t('coachSchedule:doneHere', { count: present.size }) : t('coachSchedule:saveRegister')}
         </button>

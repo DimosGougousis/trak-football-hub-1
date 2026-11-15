@@ -87,7 +87,7 @@ function Picker({ coachId, player, first, seasonObjectives, saved, saveLabel, sa
   }
 
   return <form onSubmit={submit} className="grid gap-5 pb-4">
-    <div className="grid gap-1">
+    <div className="grid gap-2">
       <h3 className="text-base font-medium text-ink">Select one or two objectives for {first}</h3>
       <p className="text-sm text-ink-3">Six for {AS[player.position]}. {picked.length} of {MAX_PLAYER_OBJECTIVES} selected.</p>
     </div>

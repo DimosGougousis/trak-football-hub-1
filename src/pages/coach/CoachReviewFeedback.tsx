@@ -183,7 +183,7 @@ export default function CoachReviewFeedback() {
       <div className="flex items-center gap-3 px-5 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgb(var(--t-line))' }}>
         <button onClick={() => navigate(-1)} aria-label="Back"
-          className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line">
+          className="flex items-center justify-center w-[34px] h-[34px] rounded-xl bg-raised border border-line">
           <ChevronLeft size={16} className="text-ink-2" />
         </button>
         <h1 className="flex-1 text-center text-[17px] font-semibold text-ink -ml-[34px] pointer-events-none">
@@ -195,7 +195,7 @@ export default function CoachReviewFeedback() {
         {loading ? (
           <LoadingSkeleton label="Loading…" rows={2} />
         ) : error ? (
-          <div role="alert" className="rounded-[14px] p-4 border border-line bg-surface">
+          <div role="alert" className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
             <p className="text-[13px] text-ink-2">{error}</p>
           </div>
         ) : (
@@ -209,7 +209,7 @@ export default function CoachReviewFeedback() {
               <button
                 onClick={generate}
                 disabled={generating}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-[12px] text-[14px] font-medium text-on-brand disabled:opacity-40"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-medium text-on-brand disabled:opacity-40"
                 style={{ background: 'rgb(var(--t-brand))' }}
               >
                 {generating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
@@ -220,7 +220,7 @@ export default function CoachReviewFeedback() {
             {draft && (
               <>
                 {published && (
-                  <div className="rounded-[12px] px-3 py-2.5"
+                  <div className="rounded-xl px-3 py-2.5"
                     style={{ background: 'rgb(var(--t-brand) / 0.06)', border: '1px solid rgb(var(--t-brand) / 0.18)' }}>
                     <p className="text-[11px] text-brand">
                       Sent — {playerName.split(' ')[0]} can read this now. Editing and sending
@@ -230,7 +230,7 @@ export default function CoachReviewFeedback() {
                 )}
 
                 {draft.points.map((point, i) => (
-                  <div key={i} className="rounded-[14px] p-4 border border-line bg-surface space-y-2">
+                  <div key={i} className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-2">
                     <MetadataLabel text={`POINT ${i + 1}`} />
                     <input
                       value={point.title}
@@ -251,7 +251,7 @@ export default function CoachReviewFeedback() {
                   </div>
                 ))}
 
-                <div className="rounded-[14px] p-4 border border-line bg-surface space-y-2">
+                <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-2">
                   <MetadataLabel text="CLOSING" />
                   <textarea
                     value={draft.encouragement}
@@ -265,7 +265,7 @@ export default function CoachReviewFeedback() {
                 <button
                   onClick={publish}
                   disabled={publishing}
-                  className="w-full py-3.5 rounded-[12px] text-[14px] font-medium text-on-brand disabled:opacity-40"
+                  className="w-full py-3.5 rounded-xl text-[14px] font-medium text-on-brand disabled:opacity-40"
                   style={{ background: 'rgb(var(--t-brand))' }}
                 >
                   {publishing ? 'Sending…' : published ? 'Send update' : `Send to ${playerName.split(' ')[0] || 'player'}`}
@@ -274,7 +274,7 @@ export default function CoachReviewFeedback() {
                 <button
                   onClick={generate}
                   disabled={generating}
-                  className="w-full py-3 rounded-[12px] text-[12px] text-ink-3 border border-line disabled:opacity-40"
+                  className="w-full py-3 rounded-xl text-[12px] text-ink-3 border border-line disabled:opacity-40"
                 >
                   {generating ? 'Drafting…' : 'Draft again'}
                 </button>

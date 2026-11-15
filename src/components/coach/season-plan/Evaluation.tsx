@@ -143,13 +143,13 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
         </button>
         <header className="flex items-center gap-4">
           <PlayerFace name={open.name} size="lg" aria-hidden />
-          <div className="grid gap-0.5">
+          <div className="grid gap-1">
             <p className="text-sm text-ink-3">Evaluation · due {evalDay(dueOn)}</p>
             <h2 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{open.name}</h2>
             {open.detail && <p className="text-sm text-ink-3">{open.detail}</p>}
           </div>
         </header>
-        <section aria-labelledby="evaluation-ratings" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+        <section aria-labelledby="evaluation-ratings" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <div className="flex items-center justify-between gap-3">
             <h3 id="evaluation-ratings" className="text-lg font-medium text-ink">Ratings</h3>
             <span className="flex items-center gap-2 text-sm text-ink-2"><BandChip ratings={entry.ratings} move={bandMove(entry.ratings, before)} />{average(entry.ratings)}</span>
@@ -179,14 +179,14 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
       {step === 0 ? (
         <section aria-labelledby="evaluation-players" className="grid gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <div className="grid gap-1">
+            <div className="grid gap-2">
               <h2 id="evaluation-players" className="text-lg font-medium text-ink">How is each player doing?</h2>
               <p className="text-sm text-ink-2">{latest.size ? 'Everyone starts where they were last time. Change only who moved.'
                 : 'Nobody has ratings yet: open each player and rate them once. Next time they start from there.'}</p>
             </div>
             <span className="text-sm text-ink-3">{changed.length ? `${count(changed.length, 'player')} changed` : 'Nobody changed yet'}</span>
           </div>
-          {players.length === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-ink-2">Nobody in {squad} can be evaluated yet.</p>
+          {players.length === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">Nobody in {squad} can be evaluated yet.</p>
             : <ul aria-label="Players" className="m-0 grid list-none gap-0 divide-y divide-line rounded-2xl border border-line bg-surface px-4 py-1">
               {players.map(p => {
                 const entry = entryOf(p.id), before = latest.get(p.id) ?? null
@@ -233,8 +233,8 @@ function ObjectivesSection({ name, open, entry, onChange }: {
   const addition = cleanAddition(text, [...open.map(o => o.title), ...entry.add], PLAYER_OBJECTIVE_MAX)
   if (open.length === 0 && !room) return null
   return (
-    <section aria-labelledby="evaluation-objectives" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
-      <div className="grid gap-1">
+    <section aria-labelledby="evaluation-objectives" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+      <div className="grid gap-2">
         <h3 id="evaluation-objectives" className="text-lg font-medium text-ink">Objectives</h3>
         <p className="text-sm text-ink-3">{open.length ? `How is ${name} doing on each? Met closes it.` : `${name} has no objectives yet. You can add one.`}</p>
       </div>
@@ -288,8 +288,8 @@ function PublishStep({ players, entries, latest, waiting, unrated, objectivesUns
     : null
   return (
     <div className="grid gap-5">
-      <div className="grid items-start gap-5 laptop:grid-cols-2">
-        <section aria-labelledby="evaluation-changed" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+      <div className="grid items-start gap-4 laptop:grid-cols-2">
+        <section aria-labelledby="evaluation-changed" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="evaluation-changed" className="text-lg font-medium text-ink">What changed</h2>
             <span className="text-sm text-ink-3">{changed.length}</span>
@@ -306,7 +306,7 @@ function PublishStep({ players, entries, latest, waiting, unrated, objectivesUns
               </li>))}
             </ul>}
         </section>
-        <section aria-labelledby="evaluation-bands" className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
+        <section aria-labelledby="evaluation-bands" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <h2 id="evaluation-bands" className="text-lg font-medium text-ink">Bands</h2>
           <ul className="m-0 grid list-none gap-2 p-0">{BANDS.map(band => {
             const here = moves.filter(m => entries[m.p.id].rated && bandOf(m.now).word === band.word)
@@ -318,7 +318,7 @@ function PublishStep({ players, entries, latest, waiting, unrated, objectivesUns
           })}</ul>
         </section>
       </div>
-      <section aria-label="Who sees what" className="grid gap-1 rounded-2xl border border-line bg-surface p-5">
+      <section aria-label="Who sees what" className="grid gap-1 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <p className="text-sm text-ink">Each player sees their band and your note to them. Their family sees the band, never the note. Nobody sees another player’s.</p>
         <p className="text-sm text-ink-3">{count(players.length, 'player')} · {count(changed.length, 'change')} · {count(notes, 'note')}
           {waiting.length ? ` · not in it: ${waiting.join(', ')}, waiting for a parent` : ''}</p>

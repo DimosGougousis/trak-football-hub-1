@@ -61,7 +61,7 @@ export default function CoachSessionsPage() {
         <h1 className="sr-only">Sessions</h1>
         <button
           onClick={() => navigate('/coach/sessions')}
-          className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-brand active:scale-95 transition-transform"
+          className="flex items-center justify-center w-8 h-8 rounded-sm bg-brand active:scale-95 transition-transform"
           aria-label="New session"
         >
           <Plus size={16} className="text-on-brand" strokeWidth={2.5} />
@@ -92,7 +92,7 @@ export default function CoachSessionsPage() {
                 className="w-full text-left flex items-center gap-3 py-3 border-b border-line active:bg-raised"
               >
                 {/* Icon */}
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-raised flex items-center justify-center shrink-0">
+                <div className="w-[34px] h-[34px] rounded-xl bg-raised flex items-center justify-center shrink-0">
                   <span
                     className={`text-[13px] font-semibold ${
                       isMatch(s) ? 'text-success' : 'text-ink-3'
@@ -110,7 +110,7 @@ export default function CoachSessionsPage() {
                       : s.title || 'Training'}
                   </p>
                   <p
-                    className="text-[9px] text-ink-3 mt-0.5 truncate"
+                    className="text-[9px] text-ink-3 mt-1 truncate"
                     style={{ fontFamily: 'var(--t-font-mono)' }}
                   >
                     {isMatch(s) ? 'Match' : 'Training'}
@@ -121,12 +121,12 @@ export default function CoachSessionsPage() {
 
                 {/* Badge */}
                 {isMatch(s) ? (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
+                  <span className="inline-flex items-center h-5 px-2 rounded text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
                     {s.result || 'W'}
                     {s.score ? ` ${s.score}` : ''}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-raised text-ink-3">
+                  <span className="inline-flex items-center h-5 px-2 rounded text-[9px] font-medium uppercase tracking-[0.05em] bg-raised text-ink-3">
                     {s.focus || 'Tactical'}
                   </span>
                 )}

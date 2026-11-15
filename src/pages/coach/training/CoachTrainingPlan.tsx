@@ -215,8 +215,8 @@ function SavedReview({ training, plan, cancelled }: { training: Training; plan: 
     saveOrder(next)
   }
   const drop = () => { if (!sameOrder(parts, partsFromSaved(plan.practices))) saveOrder(parts) }
-  return <div className="mt-6 grid gap-5 laptop:grid-cols-[minmax(0,1fr)_320px] laptop:items-start">
-    <section aria-labelledby="review" className="arc grid min-w-0 gap-4 rounded-2xl border border-line bg-surface p-5">
+  return <div className="mt-6 grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,1fr)_320px] laptop:items-start">
+    <section aria-labelledby="review" className="arc grid min-w-0 gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="review" className="text-[22px] font-medium text-ink">{t('coachSchedule:stepReview')}</h2>
         <TotalLine parts={parts} length={length} />
@@ -231,7 +231,7 @@ function SavedReview({ training, plan, cancelled }: { training: Training; plan: 
       {!cancelled && <div><Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus aria-hidden size={16} />{t('coachTraining:addAPart')}</Button></div>}
       {plan.note && <div className="rounded-xl bg-raised px-4 py-3 text-sm text-ink-2"><span className="font-medium text-ink">{t('coachTraining:yourNote')}</span> {plan.note}</div>}
     </section>
-    <aside aria-labelledby="players" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5">
+    <aside aria-labelledby="players" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 id="players" className="text-lg font-medium text-ink">{t('coachTraining:players')}</h2>
       <p className="text-sm text-ink-2">{t('coachTraining:plannedSquadHere')}</p>
     </aside>

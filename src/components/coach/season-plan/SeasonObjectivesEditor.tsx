@@ -23,7 +23,7 @@ export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onCha
   const set = (key: string, patch: Partial<EditableObjective>) => onChange(objectives.map(o => (o.key === key ? { ...o, ...patch } : o)))
 
   return (
-    <section aria-labelledby="season-objectives" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="season-objectives" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="season-objectives" className="text-lg font-medium text-ink">Season objectives</h2>
         <span className="text-sm text-ink-3">{objectives.length} of {MAX_SEASON_OBJECTIVES}</span>

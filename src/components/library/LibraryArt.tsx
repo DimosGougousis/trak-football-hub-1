@@ -63,7 +63,7 @@ export function PitchArt({ seed, colour, size, wide = false, className = '' }: {
  *  "make the call", a numbered list for "rank three". */
 export function MomentArt({ colour, size = 48, rank = false }: { colour: string; size?: number; rank?: boolean }) {
   return (
-    <span aria-hidden className="flex flex-none items-center justify-center rounded-[4px]" style={{ background: colour, width: size, height: size }}>
+    <span aria-hidden className="flex flex-none items-center justify-center rounded" style={{ background: colour, width: size, height: size }}>
       <svg viewBox="0 0 24 24" width={size * 0.56} height={size * 0.56} fill="none" stroke={ON_LIBRARY} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
         {rank
           ? <><path d="M10 6h10M10 12h10M10 18h10" /><path d="M4 5.5l1.2-.8V8M3.8 11.2a1.2 1.2 0 1 1 1.6 1.7L3.8 14.5h2.4M3.8 17h2.2l-1.2 1.4a1 1 0 1 1-1 1.6" strokeWidth={1.4} /></>
@@ -78,7 +78,7 @@ export function ProgrammeArt({ colour, size, label }: { colour: string; size: nu
   const lip = Math.max(6, Math.round(size / 18))
   return (
     <span aria-hidden className="relative block flex-none" style={{ width: size, height: size + lip }}>
-      <span className="absolute top-0 rounded-t-[4px]" style={{ left: lip, right: lip, height: lip * 2, background: colour, opacity: 0.45 }} />
+      <span className="absolute top-0 rounded-t" style={{ left: lip, right: lip, height: lip * 2, background: colour, opacity: 0.45 }} />
       <span className="absolute left-0 flex flex-col"
         style={{
           top: lip, width: size, height: size, background: colour, color: ON_LIBRARY, borderRadius: size >= 120 ? 8 : 4,

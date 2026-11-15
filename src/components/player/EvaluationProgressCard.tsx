@@ -12,7 +12,7 @@ const font = { fontFamily: 'var(--t-font)' }
 export function EvaluationProgressCard({ objectives }: { objectives: EvaluationObjective[] }) {
   if (objectives.length === 0) return null
   return (
-    <section aria-label="Progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-4">
+    <section aria-label="Progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 className="text-[15px] font-medium text-ink-2" style={font}>Progress</h2>
       <ul className="m-0 grid list-none gap-3.5 p-0">
         {objectives.map(o => (

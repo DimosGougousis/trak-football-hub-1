@@ -70,7 +70,7 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
     })
   }
 
-  return <div className="grid gap-5 pt-5">
+  return <div className="grid gap-6 laptop:gap-8 pt-5">
     <header className="arc grid gap-2">
       <CoachTrail current={t('coachTraining:loopHere')} parents={[{ label: day, href: page }]} />
       <h1 className={INNER_TITLE}>{t('coachTraining:whosHereQ')}</h1>
@@ -82,7 +82,7 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
         <span className="text-ink-3">{t('coachTraining:registerSaved')}</span></p>
       <Button size="sm" variant="secondary" onClick={() => setEditing(true)}><Pencil aria-hidden size={14} />{t('coachTraining:change')}</Button>
     </section>
-      : <section aria-labelledby="register" className="arc grid gap-3 rounded-2xl border border-line bg-surface p-5">
+      : <section aria-labelledby="register" className="arc grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="register" className="text-lg font-medium text-ink">{t('coachTraining:untick')}</h2>
         {registerWhy && !sessionId ? <p className="text-sm text-ink-2">{registerWhy === 'The register opens once the event has started'
           ? t('coachTraining:hereOpens') : t('coachTraining:hereWhy', { why: whyWord(registerWhy) })}</p>
@@ -95,14 +95,14 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
         <p className="text-sm text-ink-3">{t('coachTraining:everyoneTicked')}</p>
       </section>}
 
-    {!parts.length ? <section aria-labelledby="today" className="arc grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-5">
+    {!parts.length ? <section aria-labelledby="today" className="arc grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 id="today" className="text-lg font-medium text-ink">{t('coachTraining:noPlanToday')}</h2>
       <p className="text-sm text-ink-2">{t('coachTraining:registerAnyway')}</p>
       <Button variant="secondary" onClick={() => navigate(planPath(training.id))}>{t('coachTraining:planSession')}</Button>
     </section>
       : <section aria-labelledby="today" className={`arc grid gap-4 rounded-2xl border border-line bg-surface p-5 ${checked ? '' : 'opacity-60'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1">
+          <div className="grid gap-2">
             <h2 id="today" className="text-lg font-medium text-ink">{checked ? t('coachTraining:todaysPlanFor', { players: players(count) }) : size ? t('coachTraining:yourPlanForAll', { size }) : t('coachTraining:yourPlanForSquad')}</h2>
             <p className="text-sm text-ink-3">{!checked ? t('coachTraining:checksOnceDone')
               : count === size ? t('coachTraining:everyoneWorks')
@@ -154,8 +154,8 @@ function PartColumn({ part, index, count, squad, adaptation, choice, onChoose, o
       : planned?.ok && squad ? t('coachTraining:plannedFor', { squad, text: planned.text }) : ''}</p>
     {adaptation && (adaptation.status === 'same'
       ? <p className="text-sm text-brand">{adaptation.message}</p>
-      : <p className="flex gap-1.5 rounded-lg bg-raised p-2.5 text-sm text-ink">
-        <Sparkles aria-hidden size={16} className="mt-0.5 flex-none text-brand" />
+      : <p className="flex gap-1.5 rounded-lg bg-raised p-3 text-sm text-ink">
+        <Sparkles aria-hidden size={16} className="mt-1 flex-none text-brand" />
         <span>{adaptation.status === 'unknown' ? adaptation.message : <><span className="font-medium">{t('coachTraining:trakSuggests')}</span> {adaptation.message}</>}</span></p>)}
     <div className="mt-auto grid justify-items-start gap-1.5 pt-1">
       {offer && <SegmentedControl label={t('coachTraining:whatToDo', { part: part.name })} value={choice}

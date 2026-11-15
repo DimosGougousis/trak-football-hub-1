@@ -212,7 +212,7 @@ function PlayerInvitations({ playerUserId, showWhenEmpty, hideWhenLinked }: { pl
           {revealed === invite.id && canShare && <label className="block mt-3 text-xs text-muted-foreground">
             Copy this link and send it to your parent
             <input readOnly value={`${window.location.origin}/parent-invite?token=${encodeURIComponent(invite.invite_token)}`}
-              onFocus={event => event.target.select()} className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground" />
+              onFocus={event => event.target.select()} className="mt-1 w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground" />
           </label>}
         </div>
       })}

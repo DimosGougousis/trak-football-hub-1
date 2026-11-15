@@ -40,12 +40,12 @@ export default function ParentMatches() {
                   : matches.length === 0 ? <p className="text-sm text-muted-foreground">No matches yet.</p>
                     : <SeeMoreList items={matches} render={match => <Link key={match.id} to={reviewOf(match) ? `/parent/event/${reviewOf(match)}` : parentMatchHref(match)}
                       state={{ matchId: match.id, childId: selectedChild?.id }}
-                      className="flex items-stretch gap-3 rounded-[14px] p-3.5"
+                      className="flex items-stretch gap-3 rounded-2xl p-3.5"
                       style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
                       <div aria-hidden="true" className="w-1 rounded-full flex-shrink-0" style={{ background: EVENT_COLOR.match }} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium text-ink truncate">{match.opponent || match.competition || 'Match'}</p>
-                        <p className="text-[11px] mt-0.5 text-ink-2">
+                        <p className="text-[11px] mt-1 text-ink-2">
                           {[formatParentDate(match.match_date ?? match.created_at), match.competition, match.venue].filter(Boolean).join(' · ')}
                         </p>
                       </div>

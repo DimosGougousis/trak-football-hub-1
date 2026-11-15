@@ -496,7 +496,7 @@ export const PitchDiagram: FC<{ data: DiagramData }> = ({ data }) => {
   const isHalf  = data.pitch === 'half'
 
   return (
-    <div className="mt-3 rounded-[14px] overflow-hidden"
+    <div className="mt-3 rounded-2xl overflow-hidden"
       style={{ border: '1px solid rgba(255,255,255,0.09)' }}>
 
       {/* Title bar */}

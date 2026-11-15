@@ -589,9 +589,9 @@ function CoachAssessmentForm() {
 
         {/* Shown on every step: a refused save (consent withdrawn mid-edit) says why where the coach is. */}
         {selectedPlayer && consentWait ? (
-          <div role="status" className="p-3 rounded-[12px] border border-warning/[0.25] bg-warning/[0.06]">
+          <div role="status" className="p-3 rounded-xl border border-warning/[0.25] bg-warning/[0.06]">
             <p className="text-[13px] font-medium text-ink">{t(`coachAssess:waitTitle_${waitReason ?? 'unknown'}` as 'coachAssess:waitTitle_unknown')}</p>
-            <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
+            <p className="text-[12px] text-ink-2 leading-relaxed mt-1">
               {waitText(waitReason, selectedPlayer.player_name)}{' '}
               {t('coachAssess:formLocked')}
             </p>
@@ -600,7 +600,7 @@ function CoachAssessmentForm() {
         {step === 0 && <>
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
-          <div className="flex items-center gap-3 p-3 rounded-[12px] bg-surface border border-line">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-line">
             <PlayerFace name={selectedPlayer.player_name} size="md" className="arc" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-medium text-ink truncate">
@@ -696,7 +696,7 @@ function CoachAssessmentForm() {
         </>}
         {step === 1 && <>
         {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
-        <div className="rounded-[14px] bg-surface border border-line p-[14px_16px] space-y-5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-10 tablet:gap-y-5">
+        <div className="rounded-2xl bg-surface border border-line p-[14px_16px] space-y-5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-10 tablet:gap-y-5">
           <SliderInput label={t('coachAssess:sliderWorkRate')} value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
           <SliderInput label={t('coachHome:attributeTactical')} value={tactical}     onChange={setTactical} disabled={!formReady || saving || consentWait} />
           <SliderInput label={t('coachHome:attributeAttitude')} value={attitude}     onChange={setAttitude} disabled={!formReady || saving || consentWait} />
@@ -707,7 +707,7 @@ function CoachAssessmentForm() {
 
         {/* ---- 6. overall band card, in the band's light tint (TRAK-229) ---- */}
         <div
-          className="flex flex-col items-center gap-2 py-5 rounded-[14px]"
+          className="flex flex-col items-center gap-2 py-5 rounded-2xl"
           style={{
             background: `linear-gradient(${overallCfg.bg}, ${overallCfg.bg}), rgb(var(--t-surface))`,
             border: `1px solid ${overallCfg.border}`,
@@ -746,7 +746,7 @@ function CoachAssessmentForm() {
               <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-2" style={{ fontFamily: 'var(--t-font-mono)' }}>
                 {t('coachAssess:messageTo', { name: firstName })}
               </label>
-              <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
+              <p className="text-[10px] text-ink-3 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 {t('coachAssess:onlyNameSees', { name: firstName })}
               </p>
             </div>
@@ -764,7 +764,7 @@ function CoachAssessmentForm() {
             // Blue: words the player reads. The private note is yellow and the
             // same size, so the two never look interchangeable (TRAK-72 item 7).
             data-tone="message"
-            className="w-full px-4 py-3 rounded-[10px] bg-raised border border-line-strong text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
+            className="w-full px-4 py-3 rounded-xl bg-raised border border-line-strong text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
           />
           <p role="status" className="text-[10px] text-ink-3" style={{ fontFamily: 'var(--t-font)' }}>
             {liveUnchanged
@@ -787,7 +787,7 @@ function CoachAssessmentForm() {
               <label htmlFor="assess-note" className="text-[9px] font-medium tracking-[0.12em] uppercase text-warning" style={{ fontFamily: 'var(--t-font-mono)' }}>
                 {t('coachAssess:privateNote')} <span className="text-ink-3">{t('coachAssess:optionalDash')}</span>
               </label>
-              <p className="text-[10px] text-ink-3 mt-0.5" style={{ fontFamily: 'var(--t-font)' }}>
+              <p className="text-[10px] text-ink-3 mt-1" style={{ fontFamily: 'var(--t-font)' }}>
                 {t('coachAssess:onlyYouCanSee')}
               </p>
             </div>
@@ -803,14 +803,14 @@ function CoachAssessmentForm() {
             rows={3}
             placeholder={t('coachAssess:noteExample')}
             data-tone="private"
-            className="w-full px-4 py-3 rounded-[10px] bg-warning/[0.08] border border-warning/40 text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
+            className="w-full px-4 py-3 rounded-xl bg-warning/[0.08] border border-warning/40 text-sm text-ink outline-none resize-none placeholder:text-ink-3 disabled:opacity-40"
           />
         </div>
 
         </>}
         {/* ---- 9. review and save (TRAK-182) ---- */}
         {step === 3 && <>
-          <dl className="rounded-[14px] border border-line divide-y divide-line text-[13px]">
+          <dl className="rounded-2xl border border-line divide-y divide-line text-[13px]">
             {([
               [t('nav:player'), selectedPlayer?.player_name ?? ''],
               [t('coachAssess:sessionFallback'), selectedSession ? sessionLabel(selectedSession) : opened ? t('coachAssess:noSessionRecorded') : ''],
@@ -818,7 +818,7 @@ function CoachAssessmentForm() {
               [t('coachAssess:overall'), `${bandWord(overallCfg.word)} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               [t('coachAssess:stepRatings'), t('coachAssess:ratingsLine', { workRate, tactical, attitude, technical, physical, coachability })],
               [t('coachAssess:messageTo', { name: firstName }), message || t('coachSchedule:none')],
-              [t('coachAssess:privateNote'), <>{note.trim() || t('coachSchedule:none')}<span className="block mt-0.5 text-[11px] text-ink-3">{t('coachSquad:onlyYou')}</span></>],
+              [t('coachAssess:privateNote'), <>{note.trim() || t('coachSchedule:none')}<span className="block mt-1 text-[11px] text-ink-3">{t('coachSquad:onlyYou')}</span></>],
             ] as const).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
                 <dt className="w-28 shrink-0 text-ink-3">{term}</dt>
@@ -837,7 +837,7 @@ function CoachAssessmentForm() {
             type="button"
             onClick={() => void handleUnpublish()}
             disabled={saving || !formReady}
-            className="w-full py-2.5 rounded-[10px] text-[11px] font-semibold text-ink-2 border border-line disabled:opacity-30"
+            className="w-full py-2.5 rounded-xl text-[11px] font-semibold text-ink-2 border border-line disabled:opacity-30"
           >
             {t('coachAssess:unpublishMessage')}
           </button>

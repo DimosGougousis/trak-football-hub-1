@@ -222,7 +222,7 @@ export default function PlayerPassport() {
         <div ref={scaleRef} style={{ transform: `scale(${cardScale})`, transformOrigin: 'top left' }}>
         <div
           ref={cardRef}
-          style={{ width: CARD_W, background: '#0D0D0F', borderRadius: 24, overflow: 'hidden', position: 'relative', ...SANS }}
+          style={{ width: CARD_W, background: '#0D0D0F', borderRadius: 16, overflow: 'hidden', position: 'relative', ...SANS }}
         >
 
           {/* Centred watermark */}
@@ -299,7 +299,7 @@ export default function PlayerPassport() {
                     <div key={label} style={{
                       display: 'inline-block', verticalAlign: 'top',
                       width: COL3_W, marginRight: i < 2 ? COL3_GAP : 0,
-                      padding: '14px 0', borderRadius: 14, textAlign: 'center',
+                      padding: '14px 0', borderRadius: 16, textAlign: 'center',
                       background: 'rgba(255,255,255,0.03)',
                       border: '1px solid rgba(255,255,255,0.07)',
                       boxSizing: 'border-box',
@@ -326,7 +326,7 @@ export default function PlayerPassport() {
                 {seasons.map((s, si) => (
                   <div key={s.label} style={{
                     width: CONTENT, boxSizing: 'border-box',
-                    padding: '14px 16px', borderRadius: 14,
+                    padding: '14px 16px', borderRadius: 16,
                     marginBottom: si < seasons.length - 1 ? 10 : 0,
                     background: 'rgba(255,255,255,0.03)',
                     border: '1px solid rgba(255,255,255,0.07)',
@@ -466,7 +466,7 @@ export default function PlayerPassport() {
             onClick={handleShare} disabled={exporting || loading}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '14px 0', borderRadius: 14, marginRight: 12, border: 'none', cursor: 'pointer',
+              padding: '14px 0', borderRadius: 16, marginRight: 12, border: 'none', cursor: 'pointer',
               background: exporting ? 'rgba(200,242,90,0.5)' : '#C8F25A',
               color: '#000', fontSize: 14, fontWeight: 500, opacity: loading ? 0.4 : 1, ...SANS,
             }}
@@ -478,7 +478,7 @@ export default function PlayerPassport() {
             onClick={handleDownload} disabled={exporting || loading}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '14px 0', borderRadius: 14, cursor: 'pointer',
+              padding: '14px 0', borderRadius: 16, cursor: 'pointer',
               background: 'transparent', border: '1px solid rgba(255,255,255,0.12)',
               color: 'rgba(255,255,255,0.7)', fontSize: 14, opacity: loading ? 0.4 : 1, ...SANS,
             }}

@@ -168,7 +168,7 @@ function SessionsView() {
           </div>}
 
           {/* Kostas, 3 Nov: as the mockup, the Next training card and Open drafts side by side on a laptop. */}
-          <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start">
+          <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start">
           {next ? <NextTraining key={next.training.id} draft={drafts.data?.get(next.training.id)} training={next.training} phase={next.phase} planned={!!planned.data?.has(next.training.id)}
             sessionId={registers.data?.get(next.training.id) ?? null} onStart={() => setNow(Date.now())}
             onClosed={() => setClosed(next.training.title)} />
@@ -182,14 +182,14 @@ function SessionsView() {
 
           {upcoming.length > 0 && <section aria-labelledby="upcoming" className="min-w-0">
             <h2 id="upcoming" className="mb-2 text-lg font-medium text-ink">{t('coachTraining:upcomingTrainings')}</h2>
-            <ul className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
+            <ul className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(190px,1fr))]">
               {(allUpcoming ? upcoming : upcoming.slice(0, UPCOMING_SHOWN)).map(training => {
                 const { day, time } = gameWhen(training)
                 const badge = trainingBadge({ phase: isToday(training) ? 'day' : 'before', planned: !!planned.data?.has(training.id),
                   draft: drafts.data?.has(training.id) })
                 return <li key={training.id}>
                   <Link to={`${TRAINING_PATH}/${training.id}`}
-                    className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                    className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6 transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                     <span className="grid min-w-0">
                       <span className="truncate text-base font-medium text-ink">{training.title}</span>
                       <span className="truncate text-sm text-ink-3">{[isToday(training) ? t('coachHome:today') : day, time, everySquad ? training.squad : null].filter(Boolean).join(' · ')}</span>
@@ -239,7 +239,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   const plan = () => navigate(planPath(training.id))
 
   return (
-    <section aria-labelledby="next-training" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="next-training" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 gap-1">
           {/* Kostas, 30 Oct: no "Next training" heading; the name and badge lead the card. */}
@@ -258,7 +258,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
           {/* TRAK-367: always there to add one, until the training starts and its details are fixed. Edit opens the form at
               the note, in Schedule, which alone can save it to this training and the ones after. */}
           {(message || !locked) && <p className="flex items-start gap-2 rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
-            <Info aria-hidden size={16} className="mt-0.5 flex-none text-ink-3" />
+            <Info aria-hidden size={16} className="mt-1 flex-none text-ink-3" />
             <span className="min-w-0 flex-1 break-words"><span className="font-medium text-ink">{t('coachSchedule:messageToPlayers')}{message && ':'}</span> {message}</span>
             {/* TRAK-455: editing the message is a pencil; adding one keeps its words. */}
             {!locked && (message ? <EditIcon label={t('coachTraining:editMessage')} to={`/coach/schedule?edit=${training.id}&step=${NOTE_STEP}`} className="-my-2.5" />
@@ -296,7 +296,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
 function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[] }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5">
+  return <section aria-labelledby="open-drafts" className="arc grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
     {drafts.length === 0 ? <p className="pt-1 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p>
       : <ul className="mt-1 divide-y divide-line border-t border-line">
@@ -388,7 +388,7 @@ function PastTrainings() {
                   const count = sessionId ? here.data?.get(sessionId) : undefined
                   const answer = againLabel(training.notes?.again)
                   const again = answer ? shownWord(TRAINING_WORD, answer) : null
-                  return <li key={training.id} className="arc flex flex-wrap items-start gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5">
+                  return <li key={training.id} className="arc flex flex-wrap items-start gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                     <div className="grid min-w-0 flex-[1_1_16rem] gap-1.5">
                       <p className="text-sm text-ink-3">{[day, everySquad ? training.squad : null, count != null ? t('coachTraining:hereCount', { count }) : null].filter(Boolean).join(' · ')}</p>
                       <p className="text-lg font-medium text-ink break-words">{training.title}</p>

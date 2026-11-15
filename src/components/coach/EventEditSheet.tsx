@@ -88,7 +88,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
         {TRAINING_THEMES.map(option => {
           const on = option.key === theme
           return (
-            <label key={option.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
+            <label key={option.key} className="flex items-start gap-2 rounded-xl px-3 py-2 cursor-pointer transition-colors"
               style={{
                 background: on ? withAlpha(EVENT_COLOR.training, 0.1) : 'rgb(var(--t-ground))',
                 border: `1px solid ${on ? withAlpha(EVENT_COLOR.training, 0.33) : 'rgb(var(--t-line))'}`,
@@ -98,7 +98,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
                 className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: EVENT_COLOR.training }} />
               <span className="min-w-0">
                 <span className={`block text-[13px] leading-tight text-ink ${on ? 'font-medium' : ''}`}>{t(THEME_WORD[option.key])}</span>
-                {!drills && <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t('coachSchedule:themeCount', { sessions: option.sessions, count: option.topics })}</span>}
+                {!drills && <span className="block text-[11px] text-ink-3 mt-1 whitespace-nowrap">{t('coachSchedule:themeCount', { sessions: option.sessions, count: option.topics })}</span>}
               </span>
             </label>
           )
@@ -218,7 +218,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
       style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div role="dialog" aria-label={sheet.row ? t('coachSchedule:editEvent') : t('coachSchedule:newEvent')}
-        className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
+        className="w-full max-w-sheet rounded-t-2xl px-5 pt-5 space-y-3 overflow-y-auto"
         style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: '85vh', marginBottom: 64 }}>
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-medium text-ink" style={font}>
@@ -407,7 +407,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
         </>}
 
         {datePassed && (sheet.step === 1 || sheet.step === REVIEW) && (
-          <div role="alert" className="rounded-[12px] p-3 space-y-2 border border-danger/30 bg-danger/[0.06]">
+          <div role="alert" className="rounded-xl p-3 space-y-2 border border-danger/30 bg-danger/[0.06]">
             <p className="text-[12px] text-danger" style={font}>{datePassed}</p>
             <div className="flex gap-2">
               {/* TRAK-288: where Games is on, a played match is a New event Match, evaluated on its game page. */}

@@ -177,7 +177,7 @@ export default function CoachQuickMatchLog() {
       <div className="flex items-center justify-between pt-3 pb-2 border-b border-line">
         <button
           onClick={() => navigate('/coach/sessions')}
-          className="w-[34px] h-[34px] bg-raised border border-line rounded-[10px] flex items-center justify-center"
+          className="w-[34px] h-[34px] bg-raised border border-line rounded-xl flex items-center justify-center"
           aria-label="Back"
         >
           <ChevronLeft size={14} className="text-ink" />
@@ -191,9 +191,9 @@ export default function CoachQuickMatchLog() {
         <div className="w-[34px]" />
       </div>
 
-      <div className="pt-5 pb-32 space-y-5">
+      <div className="pt-5 pb-32 space-y-6 laptop:space-y-8">
         {/* Match date */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span
             className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-3"
             style={{ fontFamily: 'var(--t-font-mono)' }}
@@ -211,7 +211,7 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Opponent + score */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span
             className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-3"
             style={{ fontFamily: 'var(--t-font-mono)' }}
@@ -237,7 +237,7 @@ export default function CoachQuickMatchLog() {
                 value={scoreUs}
                 onChange={e => setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2))}
                 placeholder="0"
-                className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                className="w-full bg-ground border border-line rounded-xl py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
                 style={{ fontFamily: 'var(--t-font)' }}
               />
             </div>
@@ -247,7 +247,7 @@ export default function CoachQuickMatchLog() {
                 style={{ fontFamily: 'var(--t-font-mono)' }}
               >RESULT</span>
               <div
-                className="w-full py-3 rounded-[12px] text-center text-[28px]"
+                className="w-full py-3 rounded-xl text-center text-[28px]"
                 style={{
                   fontFamily: 'var(--t-font)',
                   color: result === 'W' ? 'rgb(var(--t-brand))' : result === 'L' ? 'rgb(var(--t-ink-3))' : 'rgb(var(--t-ink-2))',
@@ -266,7 +266,7 @@ export default function CoachQuickMatchLog() {
                 value={scoreThem}
                 onChange={e => setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2))}
                 placeholder="0"
-                className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                className="w-full bg-ground border border-line rounded-xl py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
                 style={{ fontFamily: 'var(--t-font)' }}
               />
             </div>
@@ -274,7 +274,7 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Competition + venue chips */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
           <div>
             <span
               className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 block mb-2"
@@ -304,7 +304,7 @@ export default function CoachQuickMatchLog() {
         </div>
 
         {/* Attendance */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <div className="flex items-center justify-between mb-3">
             <span
               className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
@@ -338,7 +338,7 @@ export default function CoachQuickMatchLog() {
                   <button
                     key={p.id}
                     onClick={() => togglePlayer(p.id)}
-                    className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                    className="text-left px-3 py-2.5 rounded-xl transition-colors"
                     style={{
                       background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
                       border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
@@ -366,7 +366,7 @@ export default function CoachQuickMatchLog() {
         <button
           onClick={handleSave}
           disabled={!canSave || saving}
-          className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
+          className="w-full py-3.5 rounded-xl text-[14px] font-medium transition-opacity"
           style={{
             background: canSave ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))',
             color: canSave ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink-3))',

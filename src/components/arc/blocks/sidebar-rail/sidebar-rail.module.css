@@ -16,7 +16,7 @@
 .mark { display: grid; width: 28px; height: 28px; flex: none; place-items: center; }
 /* Trak (Kostas, 29 Oct): the labels clip their own box (so the rail can close over them), and Futura and Jost draw
    their g, q and p below a short line. A 1.5 line holds a whole letter; the rows keep their height. */
-.stack { display: grid; min-width: 0; gap: 0; line-height: 1.5; }
+.stack { display: grid; min-width: 0; gap: 4px; line-height: 1.5; }
 .stack strong { overflow: hidden; font-size: 13px; font-weight: 500; text-overflow: clip; }
 .stack span { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); text-overflow: clip; }
 

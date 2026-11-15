@@ -90,9 +90,9 @@ export default function CoachGames() {
                 action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_MATCH })}>{t('coachMatches:addMatch')}</Button>} />
             </div>
           ) : <>
-            <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
               {next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
-                <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5">
+                <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                   <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
                   <p className="mt-2 text-sm text-ink-2">{t('coachMatches:noMatchComing')}</p>
                   <Link to="/coach/schedule" state={ADD_MATCH}
@@ -100,7 +100,7 @@ export default function CoachGames() {
                 </section>
               )}
               {/* TRAK-284: plan drafts. TRAK-288: evaluation drafts. */}
-              <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5">
+              <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                 <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
                 {drafts.length === 0 ? <p className="mt-4 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p> : <ul className="mt-3 divide-y divide-line">
                   {drafts.map(({ game, what, saved, tab }) => <li key={`${tab}:${game.id}`} className="flex items-center justify-between gap-3 py-3">
@@ -158,12 +158,12 @@ function NextGame({ game, state, step, onKickOff }: {
   const { t } = useTranslation()
   const { day, time, academy } = gameWhen(game)
   return (
-    <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
         <Badge tone={state.tone}>{shown(MATCH_WORD, state.label)}</Badge>
       </div>
-      <div className="grid min-w-0 gap-1">
+      <div className="grid min-w-0 gap-2">
         <p className="text-[22px] font-medium tracking-[-0.01em] text-ink break-words">{gameTitle(game)}</p>
         <p className="text-sm text-ink-2">{[day, details(game, time)].filter(Boolean).join(' · ')}</p>
         {academy && <p className="text-sm text-ink-3">{academy}</p>}
@@ -220,7 +220,7 @@ function TopScorers({ scorers }: { scorers: UseQueryResult<Scorer[]> }) {
   const rows = scorers.data ?? []
   const cell = 'py-1.5 pl-2 text-right tabular-nums'
   return (
-    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 id="top-scorers" className="text-lg font-medium text-ink">{t('coachMatches:topScorers')}</h2>
       {scorers.error ? <div className="mt-3"><LoadError what={t('coachMatches:scorersWhat')} onRetry={() => void scorers.refetch()} retrying={scorers.isFetching} /></div>
         : scorers.isPending ? <LoadingSkeleton label={t('coachMatches:loadingScorers')} lines={1} avatar rows={3} className="mt-3" />

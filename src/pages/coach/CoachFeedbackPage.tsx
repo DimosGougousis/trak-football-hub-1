@@ -130,7 +130,7 @@ export default function CoachFeedbackPage() {
             in the page's own column (MobileShell already gives it its sides). */}
         <PageTop title={t('coachAssess:fbTitle')} className="pb-3" />
 
-        <section aria-label={t('coachAssess:fbTitle')} className="rounded-[18px] border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
+        <section aria-label={t('coachAssess:fbTitle')} className="rounded-2xl border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
           {failed ? (
             <p role="alert" className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>
               {t('coachAssess:couldntLoadPlayers')}{' '}
@@ -141,7 +141,7 @@ export default function CoachFeedbackPage() {
           ) : overview.players === 0 ? (
             <div>
               <p className="text-[13px] font-medium text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>{t('coachSquad:preparingTitle')}</p>
-              <p className="text-[10px] mt-0.5 text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{t('coachSquad:preparingBody')}</p>
+              <p className="text-[10px] mt-1 text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{t('coachSquad:preparingBody')}</p>
             </div>
           ) : overview.rows.length === 0 ? (
             // Everyone left is waiting for a parent: nothing can be said about them yet.
@@ -154,7 +154,7 @@ export default function CoachFeedbackPage() {
             <ul className="flex flex-col gap-2 tablet:grid tablet:grid-cols-2">
               {overview.rows.map(row => (
                 <li key={row.playerId}
-                  className="flex items-center gap-3 rounded-[10px] py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
+                  className="flex items-center gap-3 rounded-xl py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
                   style={{ background: 'rgb(var(--t-raised))', borderLeft: `3px solid ${LEVEL[row.level].color}` }}
                   // TRAK-179: the player's profile, as Squad → Open profile.
                   {...openable(t('coachAssess:openProfileLevel', { name: row.name, level: t(LEVEL[row.level].word) }), () => navigate(`/coach/squad/player/${row.playerId}`))}>
@@ -167,7 +167,7 @@ export default function CoachFeedbackPage() {
                         style={{ fontFamily: 'var(--t-font-mono)', color: LEVEL[row.level].color }}>{t(LEVEL[row.level].word)}</span>
                     </p>
                     {row.reasons.map(reason => (
-                      <p key={reason} className="text-[11px] text-ink-2 mt-[2px]" style={{ fontFamily: 'var(--t-font)' }}>{reason}</p>
+                      <p key={reason} className="text-[11px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>{reason}</p>
                     ))}
                   </div>
                 </li>
@@ -229,7 +229,7 @@ function FeedbackTable({ rows, show, onShow, onOpen, onAssess }: {
               <td className="py-2.5 pr-3 text-[12px] text-ink-2">{row.reasons.join(' · ')}</td>
               <td className="py-2.5 text-right">
                 <button type="button" onClick={() => onAssess(row.playerId)}
-                  className="rounded-[10px] px-3 py-1.5 text-[12px] font-medium border border-line text-ink hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  className="rounded-xl px-3 py-1.5 text-[12px] font-medium border border-line text-ink hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                   {t('coachHome:assess')}
                 </button>
               </td>

@@ -27,8 +27,8 @@ export function SquadShape({ squadLabel, shape, failed, onRetry }: {
     shape.thisMonth && { key: 'now', label: t('coachHome:thisMonth'), values: shape.thisMonth },
     shape.lastMonth && { key: 'before', label: t('coachHome:lastMonth'), values: shape.lastMonth },
   ].filter(entry => !!entry) : []
-  return <section className="arc rounded-2xl border border-line bg-surface p-5" aria-labelledby="squad-shape-title">
-    <div className="grid gap-0.5">
+  return <section className="arc rounded-2xl border border-line bg-surface p-5 laptop:p-6" aria-labelledby="squad-shape-title">
+    <div className="grid gap-2">
       <h2 id="squad-shape-title" className="text-lg font-medium text-ink">{t('coachHome:shapeTitle')}</h2>
       <p className="text-sm text-ink-3">{squadLabel}</p>
     </div>

@@ -7,7 +7,7 @@ export function SquadLoadError({ onRetry, title }: { onRetry: () => void; title?
   return (
     <div role="alert" className="flex flex-col items-center text-center pt-14 px-6">
       <div
-        className="w-14 h-14 rounded-[16px] flex items-center justify-center mb-4"
+        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
         style={{ background: 'rgb(var(--t-warning) / 0.08)', border: '1px solid rgb(var(--t-warning) / 0.15)' }}
       >
         <WifiOff size={22} className="text-warning" strokeWidth={1.5} />
@@ -21,7 +21,7 @@ export function SquadLoadError({ onRetry, title }: { onRetry: () => void; title?
       <button
         type="button"
         onClick={onRetry}
-        className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-on-brand"
+        className="px-5 py-2.5 rounded-xl text-[13px] font-medium text-on-brand"
         style={{ background: 'rgb(var(--t-brand))' }}
       >
         {t('coachSquad:tryAgain')}

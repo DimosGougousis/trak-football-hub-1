@@ -57,7 +57,7 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
       : <>{held.length === 0 ? <p className="text-sm text-ink-2">No objective yet.</p> : <ul className="m-0 grid list-none gap-3 p-0">
         {held.map(o => {
           const supports = plan.find(s => s.id === o.seasonObjectiveId)?.title
-          return <li key={o.id} className="grid gap-0.5 border-t border-line pt-2.5">
+          return <li key={o.id} className="grid gap-1 border-t border-line pt-2.5">
             <span className="text-[17px] font-medium text-ink">{o.title}</span>
             <span className="text-sm text-ink-3">{supports ? `Supports: ${supports}` : o.source === 'own' ? 'Your own' : 'Their own'} · since {since(o.since)}</span>
           </li>

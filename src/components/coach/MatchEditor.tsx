@@ -81,7 +81,7 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
   )
   if (rows.length === 0) {
     return <div className="space-y-5">
-      <div className="rounded-[18px] p-4 border border-line bg-surface">{heading}</div>
+      <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">{heading}</div>
       <p className="text-[12px] text-ink-3">This match was logged before matches could be edited, so it stays as it is.</p>
     </div>
   }
@@ -155,10 +155,10 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
     )
   }
 
-  const scoreBox = 'w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  const scoreBox = 'w-full bg-ground border border-line rounded-xl py-3 text-center text-[28px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-primary'
   return (
     <div className="space-y-5">
-      <div className="rounded-[18px] p-4 border border-line bg-surface">
+      <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
         {heading}
         <div className="grid grid-cols-2 gap-3 mt-4">
           <label className="text-center">
@@ -174,7 +174,7 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
         </div>
       </div>
 
-      <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
+      <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
         <MetadataLabel text={`PLAYED · ${played.length}`} />
         {dirty && played.length > 1 && <p className="text-[11px] text-ink-3">Save your changes first, then mark who didn't play.</p>}
         {editable.map(r => (
@@ -210,7 +210,7 @@ export function MatchEditor({ sessionId, title, date }: { sessionId: string; tit
       </div>
 
       {notPlayed.length > 0 && (
-        <div className="rounded-[18px] p-4 border border-line bg-surface space-y-3">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-3">
           <MetadataLabel text={`DIDN'T PLAY · ${notPlayed.length}`} />
           <p className="text-[11px] text-ink-3">On the match, but not counted in their stats.</p>
           <ul aria-label="Didn't play" className="space-y-2">

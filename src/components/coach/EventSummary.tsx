@@ -38,7 +38,7 @@ export function EventSummary({ form, repeat, noteProblem, squad }: {
     [t('coachSchedule:messageToPlayers'), form.familyNote.trim() || t('coachSchedule:none')],
   ]
   return <>
-    <dl className="rounded-[14px] border border-line divide-y divide-line" style={font}>
+    <dl className="rounded-2xl border border-line divide-y divide-line" style={font}>
       {rows.map(([term, value]) => (
         <div key={term} className="flex gap-3 px-3 py-2.5 text-[13px]">
           <dt className="w-[38%] shrink-0 text-ink-3">{term}</dt>

@@ -1,6 +1,6 @@
 .root {
   /* Concentric with the panel: its radius minus the 1px border and the 4px list padding. */
-  --row-radius: calc(var(--radius-panel) - 5px);
+  --row-radius: var(--radius-control);
   /* Search row, six workspace rows, two action rows and two hairlines. Fixed, so filtering and the create and join views never resize the menu. */
   --panel-h: calc(48px + 296px + 88px + 2px);
   position: relative;
@@ -64,7 +64,7 @@
 .tile svg { display: block; }
 .tileLetter { background: var(--foreground); color: var(--background); }
 .initial { font-size: .44em; font-weight: 500; letter-spacing: 0; }
-.tileEmpty { width: 40px; height: 40px; border: 1px dashed var(--border); border-radius: 11px; }
+.tileEmpty { width: 40px; height: 40px; border: 1px dashed var(--border); border-radius: 12px; }
 
 /* Panel */
 .panel {

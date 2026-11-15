@@ -39,7 +39,7 @@ function fixtures() {
   )
 }
 
-const card = (title: string) => screen.getByText(title, { selector: 'p' }).closest('div.rounded-\\[14px\\]') as HTMLElement
+const card = (title: string) => screen.getByText(title, { selector: 'p' }).closest('div.rounded-2xl') as HTMLElement
 
 describe('TRAK-159: the coach calendar cards', () => {
   beforeEach(() => signInAs(COACH))

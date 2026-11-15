@@ -36,7 +36,7 @@ export function SeasonPlanSections({ plan, child }: { plan: MySeason; child?: st
       <h2 className={heading} style={font}>Squad objectives</h2>
       <ul className="m-0 grid list-none gap-2.5 p-0">
         {plan.season_objectives.map(o => (
-          <li key={o.id} className="grid gap-0.5">
+          <li key={o.id} className="grid gap-1">
             <span className="text-[16px] font-medium text-ink" style={font}>{o.title}</span>
             {o.looks_like && <span className="text-[14px] text-ink-2" style={font}>{o.looks_like}</span>}
           </li>

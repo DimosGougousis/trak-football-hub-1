@@ -18,7 +18,7 @@ export function BandPreview({ matchInput, visible }: BandPreviewProps) {
   return (
     <div className="fixed bottom-20 left-0 right-0 mx-auto max-w-[430px] px-5 z-40">
       <div
-        className="flex items-center justify-center gap-3 py-3 rounded-[14px] border"
+        className="flex items-center justify-center gap-3 py-3 rounded-2xl border"
         style={{ background: config.bg, borderColor: config.border }}
       >
         <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-line-strong" style={{ fontFamily: 'var(--t-font-mono)' }}>

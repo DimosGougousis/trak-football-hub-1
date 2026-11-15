@@ -29,7 +29,7 @@ function ProfileMissingScreen() {
       <button
         onClick={retry}
         disabled={retrying}
-        className="w-full max-w-[280px] py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm disabled:opacity-50"
+        className="w-full max-w-[280px] py-4 rounded-xl bg-brand text-on-brand font-bold text-sm disabled:opacity-50"
       >
         {retrying ? 'Retrying…' : 'Retry setup'}
       </button>

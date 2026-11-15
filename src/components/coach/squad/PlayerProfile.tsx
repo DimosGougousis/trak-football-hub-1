@@ -85,7 +85,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
 
   const header = <div className="flex items-center gap-4">
     <PlayerFace name={player.name} size="lg" />
-    <div className="grid min-w-0 gap-0.5">
+    <div className="grid min-w-0 gap-2">
       <h3 className="truncate text-xl font-medium text-ink">{player.name}</h3>
       <p className="text-sm text-ink-2">{[player.shirt != null && `#${player.shirt}`, player.position, squad].filter(Boolean).join(' · ')}</p>
     </div>
@@ -100,7 +100,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
 
     {/* A laptop's pane has room for two columns: facts beside the radar, the latest card beside the earlier ones. */}
     <div className="grid gap-5 laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] laptop:items-start">
-      <div className="grid gap-5">
+      <div className="grid gap-6 laptop:gap-8">
         {placement && <PositionAndRoles coachId={coachId} id={player.id} name={player.name} position={placement.position} />}
         <section aria-label={t('coachSquad:aboutName', { name: first })} className="grid gap-2">
           {factsFailed ? <LoadError what={t('coachSquad:profileWhat', { name: first })} onRetry={onRetryFacts} />
@@ -122,7 +122,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
       </div>
 
       <section aria-labelledby={`season-${player.id}`}>
-        <div className="grid gap-0.5">
+        <div className="grid gap-2">
           <h4 id={`season-${player.id}`} className="text-base font-medium text-ink">{t('coachSquad:seasonSoFar')}</h4>
           {seasonFailed ? <LoadError what={t('coachSquad:seasonWhat', { name: first })} onRetry={onRetrySeason} /> : <p className="text-sm text-ink-3">{season
             ? t('coachSquad:seasonAverage', { count: season.count, since })

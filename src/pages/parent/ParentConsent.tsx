@@ -423,7 +423,7 @@ function ParentConsentAccount({ parentId, embedded = false }: { parentId: string
         {savedFor && <p role="status" className="text-sm text-muted-foreground">Approval saved for {savedFor}.</p>}
         {picker}
         <div>
-          <h1 className="text-2xl text-foreground mb-1 break-words">{child.full_name} is waiting for your approval</h1>
+          <h1 className="text-2xl text-foreground mb-2 break-words">{child.full_name} is waiting for your approval</h1>
           <p className="text-sm text-muted-foreground">Nothing about {firstName} is recorded until you approve.</p>
         </div>
       </div>

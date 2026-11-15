@@ -29,12 +29,12 @@ function ChildSeason({ child }: { child: ParentChild }) {
   if (isError) return <LoadError what={`${name}'s season`} onRetry={() => { void refetch() }} retrying={isFetching} />
   if (!plan) return <p className="text-[13px] text-ink-2" style={font}>{name}'s coach hasn't shared a season plan yet.</p>
   return <>
-    <div className="grid gap-1">
+    <div className="grid gap-2">
       <h1 className="m-0 text-[26px] font-medium text-ink" style={{ ...font, letterSpacing: '-0.01em' }}>{name}'s season</h1>
       <p className="m-0 text-[15px] text-ink-2" style={font}>{seasonSubtitle(plan)}</p>
     </div>
     <SeasonPlanSections plan={plan} child={name} />
-    <p className="m-0 rounded-[14px] bg-raised px-3.5 py-3 text-[14px] text-ink-2" style={font}>
+    <p className="m-0 rounded-2xl bg-raised px-3.5 py-3 text-[14px] text-ink-2" style={font}>
       Your coach updates this at each evaluation. You can read it here; nothing needs a reply.
     </p>
   </>

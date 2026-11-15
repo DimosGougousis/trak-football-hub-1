@@ -89,7 +89,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
   const plan = season.plan
   if (!plan) {
     return <section aria-labelledby={`season-plan-${squad}`} className={`${card} !flex items-center gap-4 ${className ?? ''}`}>
-      <div className="grid min-w-0 flex-1 gap-0.5">
+      <div className="grid min-w-0 flex-1 gap-2">
         <h2 id={`season-plan-${squad}`} className="text-base font-medium text-ink">{squad} season plan</h2>
         <p className="truncate text-sm text-ink-3">Not started</p>
       </div>
@@ -102,7 +102,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
     <section aria-label={`${squad} season plan`} className={`${card} ${className ?? ''}`}>
       <button type="button" aria-expanded={open} aria-controls={`season-plan-body-${squad}`} onClick={toggle}
         className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <span className="grid min-w-0 gap-0.5">
+        <span className="grid min-w-0 gap-1">
           <span className="text-base font-medium text-ink">{squad} season plan{years}</span>
           <span className="truncate text-sm text-ink-3">{planState(plan)}</span>
         </span>
@@ -158,7 +158,7 @@ function SharedBody({ coachId, squad, plan }: { coachId: string; squad: string; 
     <div className="grid gap-2 border-t border-line pt-3">
       <button type="button" aria-expanded={playersOpen} aria-controls={`season-plan-players-${squad}`} onClick={() => setPlayersOpen(!playersOpen)}
         className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <span className="grid gap-0.5">
+        <span className="grid gap-1">
           <span className="text-sm font-medium text-ink">Player objectives</span>
           <span className="text-sm text-ink-3">{players(working)} working on objectives{watchCount ? ` · ${watchCount} watching` : ''}</span>
         </span>

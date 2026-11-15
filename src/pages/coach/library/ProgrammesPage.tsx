@@ -35,7 +35,7 @@ export default function ProgrammesPage() {
         <LibraryChips programmesOn />
 
         <h2 className="mt-6 text-[20px] font-bold text-ink tablet:text-[24px]">Six-week programmes</h2>
-        <p className="mt-1 text-[14px] text-ink-2">One session a week for six weeks. {programmes.length} programmes.</p>
+        <p className="mt-2 text-[14px] text-ink-2">One session a week for six weeks. {programmes.length} programmes.</p>
 
         {band && forBand.length > 0 && <>
           <h3 className={group}>For {ageLabel(band).toLowerCase()}{coachSquad.squads.length ? ` (${coachSquad.squads.join(' and ')})` : ''}</h3>

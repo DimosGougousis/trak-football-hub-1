@@ -94,7 +94,7 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
 
   const button = (app: CalendarApp, primary = false) => (
     <button key={app} type="button" disabled={busy} onClick={() => void add(l => l[app], CALENDAR_APP_LABEL[app], app !== 'apple')}
-      className="w-full py-3 rounded-[12px] text-[14px] font-medium disabled:opacity-60"
+      className="w-full py-3 rounded-xl text-[14px] font-medium disabled:opacity-60"
       style={{ ...font, background: primary ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))', color: primary ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink))' }}>
       Add to {CALENDAR_APP_LABEL[app]}
     </button>
@@ -110,7 +110,7 @@ function AddToCalendarButtons({ onAdded, compact = false }: { onAdded?: () => vo
       <p className="pt-1 text-[11px] text-ink-3" style={font}>Other calendar</p>
       {others.map(app => button(app))}
       <button type="button" disabled={busy} onClick={() => void add(l => l.outlookWork, 'Outlook', true)}
-        className="w-full py-2.5 rounded-[12px] text-[13px] disabled:opacity-60"
+        className="w-full py-2.5 rounded-xl text-[13px] disabled:opacity-60"
         style={{ ...font, background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-ink))' }}>
         Add to Outlook (work or school)
       </button>

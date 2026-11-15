@@ -41,7 +41,7 @@ const CoachHome = () => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl text-foreground">Coach Dashboard</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-2">
               {profile.full_name} · {coachDetails?.current_club || '—'}
             </p>
           </div>
@@ -100,7 +100,7 @@ const CoachHome = () => {
 };
 
 const StatBox = ({ label, value, color }: { label: string; value: number | string; color?: string }) => (
-  <div className="bg-card border border-border rounded-[10px] p-3 text-center">
+  <div className="bg-card border border-border rounded-xl p-3 text-center">
     <p className={`text-2xl leading-none ${color || 'text-foreground'}`}>{value}</p>
     <p className="section-label mt-1">{label}</p>
   </div>

@@ -118,7 +118,7 @@ export default function ResetPassword() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-[15px] rounded-[14px] text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
+              className="w-full py-[15px] rounded-2xl text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
               style={{
                 background: loading ? 'rgb(var(--t-brand) / 0.5)' : 'rgb(var(--t-brand))',
                 color: 'rgb(var(--t-ground))',
@@ -177,7 +177,7 @@ function FloatingInput({
         style={{
           background: 'rgb(var(--t-raised))',
           border: `1px solid ${focused ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
-          borderRadius: 14,
+          borderRadius: 16,
           padding: value || focused ? '24px 16px 10px' : '16px',
           color: 'rgb(var(--t-ink))',
           fontFamily: 'var(--t-font)',

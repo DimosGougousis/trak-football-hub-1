@@ -49,8 +49,8 @@ export function TodayPlan({ trainingOn, gamesOn, inView, squadOf = null }: {
   const next = today.length ? null : items.find(ahead) ?? null
 
   // min-w-0 and minmax(0, 1fr) all the way down: a name cut with "…" must not widen the card, or the page, to its length.
-  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5" aria-labelledby="today-plan-title">
-    <div className="grid gap-0.5">
+  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6" aria-labelledby="today-plan-title">
+    <div className="grid gap-2">
       <h2 id="today-plan-title" className="text-lg font-medium text-ink">{t('coachHome:today')}</h2>
       {!today.length && !pending && !failed && <p className="text-sm text-ink-3">{t('coachHome:nothingToday')}</p>}
     </div>
@@ -130,7 +130,7 @@ function TodayMatch({ game, squadOf }: { game: Game; squadOf: ((squad: unknown) 
     {plan.data && (plan.data.formation || goals.length > 0) ? <dl className="grid gap-1 text-[15px]">
       {plan.data.formation && <div className="flex gap-3"><dt className="w-20 flex-none text-sm text-ink-3">{t('coachHome:formation')}</dt><dd className="text-ink">{plan.data.formation}</dd></div>}
       {goals.length > 0 && <div className="flex gap-3"><dt className="w-20 flex-none text-sm text-ink-3">{t('coachHome:goals')}</dt>
-        <dd className="min-w-0 text-ink"><ul className="grid gap-0.5">{goals.map(goal => <li key={goal}>{goal}</li>)}</ul></dd></div>}
+        <dd className="min-w-0 text-ink"><ul className="grid gap-1">{goals.map(goal => <li key={goal}>{goal}</li>)}</ul></dd></div>}
     </dl>
       : plan.isSuccess && <p className="text-sm text-ink-2">{t('coachHome:noGamePlan')}</p>}
   </article>

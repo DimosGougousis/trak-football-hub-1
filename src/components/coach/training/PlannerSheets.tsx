@@ -43,7 +43,7 @@ export function AddPartSheet({ open, onClose, onAdd }: { open: boolean; onClose:
         <div className="grid grid-cols-1 gap-2 tablet:grid-cols-2">
           {PART_TYPES.map(type => <button key={type.key} type="button" aria-pressed={picked === type.key}
             onClick={() => { setPicked(type.key); setName(''); setProblem(null) }}
-            className={`grid gap-0.5 rounded-xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${picked === type.key ? 'border-brand bg-brand/10' : 'border-line bg-surface'}`}>
+            className={`grid gap-1 rounded-xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${picked === type.key ? 'border-brand bg-brand/10' : 'border-line bg-surface'}`}>
             <span className="text-[15px] font-medium text-ink">{partName(type.name)}</span>
             <span className="text-sm text-ink-3">{partNote(type.key)}</span>
           </button>)}
@@ -112,7 +112,7 @@ export function MoreDrillsSheet({ part, players, usage, bookmarks, onClose, onPi
               const picked = isSameDrill(d, part.drill)
               const tag = tagFor(d, part.type, all, usage, bookmarks)
               return <li key={lib.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="grid min-w-0 flex-1 gap-0.5">
+                <div className="grid min-w-0 flex-1 gap-1">
                   <p className="text-[15px] font-medium text-ink break-words">{lib.name}</p>
                   <p className="text-[13px] text-ink-3">{[d.numbers, d.area].filter(Boolean).join(' · ')}</p>
                   {tag && <p className="text-[13px] text-brand">{tag}</p>}

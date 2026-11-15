@@ -58,7 +58,7 @@ describe('TRAK-214 guardian Events: Match history', () => {
     const card = await within(history).findByRole('link', { name: /Synthetic Rovers 1/ })
     // The same box as an Upcoming card (UpcomingEventCard): rounded, padded, one per match.
     // (jsdom drops rgb(var(--t-…)) colours, so the surface and border are checked in the browser.)
-    expect(card).toHaveClass('rounded-[14px]', 'p-3.5')
+    expect(card).toHaveClass('rounded-2xl', 'p-3.5')
     expect(card).toHaveTextContent('Synthetic Rovers 1')
     expect(card).toHaveTextContent('League · Home')
     expect(card).toHaveTextContent('W 2–1')

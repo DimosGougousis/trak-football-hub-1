@@ -96,7 +96,7 @@ type PlaceProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 export function BoardPlace({ at, on, over, face, line, size, style, ...button }: PlaceProps) {
   const { t } = useTranslation()
   return <button type="button" {...button} aria-pressed={on}
-    className={`absolute grid w-[56px] -translate-x-1/2 -translate-y-1/2 select-none justify-items-center gap-[3px] rounded-xl p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-safe:transition-colors tablet:w-[76px] ${
+    className={`absolute grid w-[56px] -translate-x-1/2 -translate-y-1/2 select-none justify-items-center gap-1 rounded-xl p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-safe:transition-colors tablet:w-[76px] ${
       over ? 'bg-brand/20 ring-2 ring-brand' : on ? 'bg-brand/15 ring-2 ring-brand' : ''}`}
     style={{ ...style, ...at }}>
     {face ? <>
@@ -212,7 +212,7 @@ export function FormationBoard({ title, shape, format, starters, players, bench,
     </div>
 
     <section aria-labelledby="formation-bench" className="grid content-start gap-3">
-      <div className="grid gap-0.5">
+      <div className="grid gap-2">
         <h3 id="formation-bench" className="text-base font-medium text-ink">{t('coachSquad:fmBench')} <span className="font-normal text-ink-3">· {bench.length}</span></h3>
         <p className="text-sm text-ink-3">{t('coachSquad:fmBenchHelp')}</p>
       </div>
