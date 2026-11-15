@@ -20,6 +20,7 @@ import { assessStep, nextButton, saveAssessment } from '../../../../tests/suppor
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { ReactNode } from 'react'
+import { pickOption } from '@/test/arc-select'
 
 // TRAK-176: coach screens read the coach's squads through the query cache.
 function queries() {
@@ -51,16 +52,14 @@ function showForm() {
 }
 
 async function choose(player: 'player-a' | 'player-b') {
-  const option = await screen.findByRole('option', { name: 'Alex Synthetic' })
-  await userEvent.selectOptions(option.closest('select') as HTMLSelectElement, player)
+  await pickOption('Player', player === 'player-a' ? 'Alex Synthetic' : 'Bella Synthetic')
   await chooseSessionIfNone()
 }
 
 // TRAK-68: an assessment needs a past session. It stays chosen across players.
 async function chooseSessionIfNone() {
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  const session = screen.getByRole('combobox', { name: 'Session' }) as HTMLSelectElement
-  if (session.value === '') await userEvent.selectOptions(session, 'session-1')
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
+  if (!/vs Synthetic FC/.test(screen.getByRole('combobox', { name: 'Session' }).textContent ?? '')) await pickOption('Session', /vs Synthetic FC/)
 }
 
 const messageBox = () => screen.getByLabelText(/^Message to/i)

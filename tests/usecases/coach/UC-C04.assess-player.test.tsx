@@ -3,6 +3,7 @@ import { setSlider, sliderValue, sliderDisabled } from '../../support/slider'
 import { assessStep, nextButton, saveAssessment } from '../../support/assess-steps'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { pickOption } from '@/test/arc-select'
 import { useCase } from '../../support/use-case'
 import { renderApp } from '../../support/render-app'
 import { signInAs } from '../../support/session'
@@ -42,15 +43,13 @@ function signedInCoachWithSquad() {
  * select, so anchor off it with `.closest('select')` instead of guessing at
  * an index or an accessible name that doesn't exist.
  */
-async function findPlayerSelect() {
-  const option = await screen.findByRole('option', { name: 'Nikos Papadopoulos' })
-  return option.closest('select') as HTMLSelectElement
+async function pickPlayer() {
+  await pickOption('Player', 'Nikos Papadopoulos')
 }
 
 // UC-C04 v2 (TRAK-68): the assessment belongs to a past session.
-async function chooseSession(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole('option', { name: /vs Synthetic FC/ })
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Session' }), 'session-1')
+async function chooseSession() {
+  await pickOption('Session', /vs Synthetic FC/)
 }
 
 useCase('UC-C04', () => {
@@ -76,9 +75,8 @@ useCase('UC-C04', () => {
     // (initially empty) <select> exists. Wait for the real option to render
     // before selecting it, otherwise this selects against a placeholder-only
     // combobox and fails with "Value not found in options".
-    const playerSelect = await findPlayerSelect()
-    await user.selectOptions(playerSelect, 'squad-1')
-    await chooseSession(user)
+    await pickPlayer()
+    await chooseSession()
 
     // All six sliders default to 5 — an implementation that hardcoded 5 into
     // every column, or wired all six sliders to one shared value, would pass
@@ -128,8 +126,8 @@ useCase('UC-C04', () => {
     server.use(table('coach_assessments', []))
     renderApp('/coach/assess')
     const user = userEvent.setup()
-    await user.selectOptions(await findPlayerSelect(), 'squad-1')
-    await chooseSession(user)
+    await pickPlayer()
+    await chooseSession()
     await assessStep('Ratings')
 
     // All six sliders default to 5, so avg = 5. scoreToBand(5) in
@@ -169,7 +167,7 @@ useCase('UC-C04', () => {
     // disabled state is checked while a player genuinely could be chosen but
     // has not been.
     // TRAK-182: the first step's Next is the way to the save; it stays shut.
-    await findPlayerSelect()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Player' })).toBeEnabled())
     const submit = nextButton()
     expect(submit).toBeDisabled()
 
@@ -181,8 +179,8 @@ useCase('UC-C04', () => {
     expect(inserted).toHaveLength(0)
 
     // A player alone is not enough: the session is required too (v2).
-    await user.selectOptions(await findPlayerSelect(), 'squad-1')
-    await screen.findByRole('option', { name: /vs Synthetic FC/ })
+    await pickPlayer()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
     expect(nextButton()).toBeDisabled()
     await user.click(nextButton())
     expect(inserted).toHaveLength(0)
