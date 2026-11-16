@@ -174,7 +174,7 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     home({ events: [event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })] })
     renderApp('/coach/home')
     const training = await within(await today()).findByRole('article', { name: 'Training, Finishing' })
-    expect(await within(training).findByRole('link', { name: 'Plan this session' })).toHaveAttribute('href', '/coach/training/t2')
+    expect(await within(training).findByRole('link', { name: 'Plan this session' })).toHaveAttribute('href', '/coach/training/t2?tab=plan')
     // TRAK-443 (Imad, 15 Nov): the link says it; no "Not planned yet." line under it.
     expect(within(training).queryByText('Not planned yet.')).toBeNull()
   })

@@ -113,7 +113,7 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
     expect(within(card).getByRole('link', { name: 'Edit the message to players' })).toHaveAttribute('href', '/coach/schedule?edit=soon&step=2')
     expect(within(card).getByRole('button', { name: 'Use a past plan' })).toBeInTheDocument()
     await user.click(within(card).getByRole('button', { name: 'Plan session' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon/plan'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan'))
     expect(screen.queryByRole('dialog', { name: 'How do you want to plan it?' })).toBeNull()
   })
 
@@ -125,10 +125,12 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
     expect(await within(card).findByText('Plan ready')).toBeInTheDocument()
     expect(within(card).queryByRole('button', { name: 'Plan session' })).toBeNull()
     await user.click(within(card).getByRole('button', { name: 'Edit plan' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon/plan'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan'))
     window.history.back()
+    // TRAK-456: the training's page is a region of that name too, so the card is looked for once Training is back.
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training'))
     await user.click(within(await nextCard('Training soon')).getByRole('button', { name: 'Review plan' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/soon'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan'))
   })
 
   it('on the day: Today, and Who’s here opens the register', async () => {
@@ -140,7 +142,7 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
     expect(within(card).getByRole('button', { name: 'Review plan' })).toBeInTheDocument()
     // TRAK-342: Who's here is its own page.
     await user.click(within(card).getByRole('button', { name: 'Who’s here' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/today/here'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/today?tab=after'))
     expect(await screen.findByRole('button', { name: 'Mohamed Salah: present' })).toBeInTheDocument()
   })
 
@@ -232,7 +234,7 @@ describe('TRAK-339: Past trainings', { timeout: 30_000 }, () => {
     await user.click(within(list).getByRole('button', { name: /^Use this plan: Pressing/ }))
     const pick = await screen.findByRole('dialog', { name: 'Copy Pressing into which training?' })
     await user.click(within(pick).getByRole('button', { name: /^Copy here: Counter-attacks/ }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/next/plan'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/next?tab=plan'))
     expect(await screen.findByText(/Copied from Pressing, .+ then save it\./)).toBeInTheDocument()
   })
 

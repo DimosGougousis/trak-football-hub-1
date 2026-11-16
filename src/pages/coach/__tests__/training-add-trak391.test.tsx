@@ -89,7 +89,8 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 
-const rows = () => within(screen.getByRole('list', { name: 'The plan' })).getAllByRole('listitem')
+// TRAK-456: Review & share lists the Logistics first, then the parts.
+const rows = () => within(screen.getByRole('list', { name: 'The plan' })).getAllByRole('listitem').slice(1)
   .map(item => item.textContent?.replace(/\s+/g, ' ').trim() ?? '')
 const openPicker = async (user: ReturnType<typeof userEvent.setup>) => {
   const add = await screen.findByRole('button', { name: 'Add to training' })
@@ -122,7 +123,7 @@ describe('TRAK-391: Add to training', { timeout: 30_000 }, () => {
     await user.click(within(list).getByRole('button', { name: `Add to Pressing triggers, ${gameWhen(training('soon', soon, '')).day}` }))
     // Plan session at Review: Trak's five, then the drill as a sixth part. Nothing saved yet.
     expect(await screen.findByText('Pass between defenders is added at the end. Check the plan, then save it.')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Review' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Training plan review' })).toBeInTheDocument()
     const parts = rows()
     expect(parts).toHaveLength(6)
     expect(parts[5]).toContain('Pass between defenders')
@@ -153,14 +154,14 @@ describe('TRAK-391: Add to training', { timeout: 30_000 }, () => {
     const list = await openPicker(user)
     expect(within(list).getAllByRole('listitem').map(li => li.textContent?.split(' · ').at(-1)?.replace(/Add$/, ''))).toEqual(['Planned', 'Draft'])
     await user.click(within(list).getByRole('button', { name: /^Add to Pressing triggers/ }))
-    await screen.findByRole('heading', { name: 'Review' })
+    await screen.findByRole('region', { name: 'Training plan review' })
     expect(rows().map(r => r.includes('Four corners') ? 'corners' : r.includes('Our warm-up') ? 'warm-up' : r.includes('Our game') ? 'game' : r))
       .toEqual(['warm-up', 'game', 'corners'])
     cleanup()
 
     renderApp(drillPath(corners.id))
     await user.click(within(await openPicker(user)).getByRole('button', { name: /^Add to Rondos/ }))
-    await screen.findByRole('heading', { name: 'Review' })
+    await screen.findByRole('region', { name: 'Training plan review' })
     expect(rows()).toHaveLength(2)
     expect(rows()[0]).toContain('Shooting')
     expect(rows()[1]).toContain('Four corners')
@@ -176,7 +177,7 @@ describe('TRAK-391: Add to training', { timeout: 30_000 }, () => {
     renderApp(drillPath(keep.id))
     const day = gameWhen(training('planned', soon, '')).day
     const added = await screen.findByRole('link', { name: `Added to ${day}` })
-    expect(added).toHaveAttribute('href', '/coach/training/planned/plan')
+    expect(added).toHaveAttribute('href', '/coach/training/planned?tab=plan')
 
     await user.click(screen.getByRole('button', { name: 'Add to another training' }))
     const list = await screen.findByRole('list', { name: 'Trainings coming up' })

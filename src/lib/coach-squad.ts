@@ -85,3 +85,16 @@ export function useCoachSquad(coachId: string | null | undefined) {
     eventInSquad: (eventSquad: string | null | undefined) => everySquad || squad === null || eventSquad == null || eventSquad === squad,
   }
 }
+
+/** The coach's roster for a Share message: it names the squad and leaves out players' names (J8.16), as the event
+ *  sheet's Share. The week's Share and a training's Review & share (TRAK-456) read it. */
+export function useWeekRoster(coachId: string | undefined) {
+  return useQuery({
+    queryKey: ['coach', coachId, 'week-roster'], enabled: !!coachId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('squad_players').select('player_name, age_group, status').eq('coach_user_id', coachId!)
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}

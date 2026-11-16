@@ -1,38 +1,37 @@
 import { useTranslation } from '@/lib/i18n'
 import { whyWord } from '@/lib/training/words'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Pencil, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { registerProblem } from '@/lib/event-register'
-import { planPath, type PlannerState } from '@/lib/training/plans'
 import { libraryOf, partColour, partLine, partsFromSaved, type Part } from '@/lib/training/parts'
 import { adapt, setupFor, playersOf, applySuggestion, type Adaptation } from '@/lib/training/turnout'
-import { gameWhen } from '@/components/coach/games/useGames'
 import { useHere, useRegisters, useSavePlan, useSquadSize, type Plan, type Training } from '@/components/coach/training/useTraining'
 import { TakeRegister } from '@/components/coach/TakeRegister'
-import { MenuTrail } from '@/components/coach/MenuTrail'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
-import { INNER_TITLE } from '@/components/coach/PageTop'
+import { EditIcon } from '@/components/trak/IconAction'
 
 /* TRAK-342 (Training redo 4/5, spec TRAK-338, 2 Nov prototype): Who's here. The coach takes the register first (the
    existing one, TRAK-138; several names a row so a squad fits a laptop screen, Kostas 2 Nov). Once it's saved, and only
    then (Kostas, 2 Nov: not live per tap), each part of the plan shows what Trak suggests for the players who came: no
    change, a new set-up, or a swap. The coach uses it, keeps the part as planned, or changes it themselves; Save
    today's plan saves the plan whole. TRAK-393: a Library drill is fitted again for those here, at its level; using
-   the suggestion takes the new set-up, which View then shows. */
+   the suggestion takes the new set-up, which View then shows. TRAK-456: it is the first part of a training page's After
+   training tab, under the page's header; changing the plan opens the Training plan tab (`onPlan`, at a part when given). */
 
-const TRAINING_PATH = '/coach/training'
 type Choice = 'use' | 'keep'
 
-export function WhosHere({ training, plan }: { training: Training; plan: Plan | null }) {
+export function WhosHere({ training, plan, onPlan, onSaved }: {
+  training: Training; plan: Plan | null; onPlan: (part?: number) => void
+  /** Today's plan is saved. */
+  onSaved: () => void
+}) {
   const { user } = useAuth()
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const client = useQueryClient()
   const registers = useRegisters()
   const sessionId = registers.data?.get(training.id) ?? null
@@ -43,8 +42,6 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
   const [choices, setChoices] = useState<Record<string, Choice>>({})
   const [problem, setProblem] = useState<string | null>(null)
   const parts = useMemo(() => partsFromSaved(plan?.practices ?? []), [plan?.practices])
-  const { day, time } = gameWhen(training)
-  const page = `${TRAINING_PATH}/${training.id}`
   const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date())
   const count = sessionId ? here.data?.get(sessionId) ?? null : null
   const size = squad.data ?? null
@@ -62,25 +59,20 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
       const a = adaptations.get(p.key)
       return a && choiceOf(p.key) === 'use' ? applySuggestion(p, a) : p
     })
-    if (next.every((p, i) => p === parts[i])) return navigate(page)
+    if (next.every((p, i) => p === parts[i])) return onPlan()
     setProblem(null)
     save.mutate({ parts: next, note: plan?.note ?? '' }, {
-      onSuccess: () => { toast.success(t('coachTraining:todaysPlanSaved', { players: players(count ?? 0) })); navigate(page) },
+      onSuccess: () => { toast.success(t('coachTraining:todaysPlanSaved', { players: players(count ?? 0) })); onSaved(); onPlan() },
       onError: () => setProblem(t('coachTraining:todaysPlanFailed')),
     })
   }
 
-  return <div className="grid gap-6 laptop:gap-8 pt-5">
-    <header className="arc grid gap-2">
-      <MenuTrail current={t('coachTraining:loopHere')} parents={[{ label: day, href: page }]} />
-      <h1 className={INNER_TITLE}>{t('coachTraining:whosHereQ')}</h1>
-      <p className="text-sm text-ink-2">{[training.title, day, time, training.venue].filter(Boolean).join(' · ')}</p>
-    </header>
-
+  return <>
     {sessionId && !editing ? <section aria-label={t('coachTraining:register')} className="arc flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-5 py-3.5">
       <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">{size ? t('coachTraining:hereOf', { count: count ?? '…', size }) : t('coachTraining:hereOnly', { count: count ?? '…' })}</span>
         <span className="text-ink-3">{t('coachTraining:registerSaved')}</span></p>
-      <Button size="sm" variant="secondary" onClick={() => setEditing(true)}><Pencil aria-hidden size={14} />{t('coachTraining:change')}</Button>
+      {/* TRAK-456: Edit is a pencil, never the word. */}
+      <EditIcon label={t('coachTraining:change')} onClick={() => setEditing(true)} />
     </section>
       : <section aria-labelledby="register" className="arc grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="register" className="text-lg font-medium text-ink">{t('coachTraining:untick')}</h2>
@@ -98,9 +90,9 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
     {!parts.length ? <section aria-labelledby="today" className="arc grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 id="today" className="text-lg font-medium text-ink">{t('coachTraining:noPlanToday')}</h2>
       <p className="text-sm text-ink-2">{t('coachTraining:registerAnyway')}</p>
-      <Button variant="secondary" onClick={() => navigate(planPath(training.id))}>{t('coachTraining:planSession')}</Button>
+      <Button variant="secondary" onClick={() => onPlan()}>{t('coachTraining:planSession')}</Button>
     </section>
-      : <section aria-labelledby="today" className={`arc grid gap-4 rounded-2xl border border-line bg-surface p-5 ${checked ? '' : 'opacity-60'}`}>
+      : <section aria-labelledby="today" className={`arc grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6 ${checked ? '' : 'opacity-60'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-2">
             <h2 id="today" className="text-lg font-medium text-ink">{checked ? t('coachTraining:todaysPlanFor', { players: players(count) }) : size ? t('coachTraining:yourPlanForAll', { size }) : t('coachTraining:yourPlanForSquad')}</h2>
@@ -116,18 +108,16 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
           {parts.map((part, i) => <li key={part.key}>
             <PartColumn part={part} index={i} count={parts.length} squad={size} adaptation={adaptations.get(part.key)} choice={choiceOf(part.key)}
               onChoose={choice => setChoices(c => ({ ...c, [part.key]: choice }))}
-              onChange={() => navigate(planPath(training.id), { state: { editPart: i } satisfies PlannerState })} />
+              onChange={() => onPlan(i)} />
           </li>)}
         </ol>
       </section>}
 
     {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
-    <div className="arc flex flex-wrap items-center gap-2">
-      <Button variant="secondary" onClick={() => navigate(page)}>{t('common:back')}</Button>
-      <span className="flex-1" />
-      {checked && parts.length > 0 && <Button size="lg" loading={save.isPending} onClick={saveToday}>{t('coachTraining:saveTodaysPlan')}</Button>}
-    </div>
-  </div>
+    {checked && parts.length > 0 && <div className="arc flex justify-end">
+      <Button size="lg" loading={save.isPending} onClick={saveToday}>{t('coachTraining:saveTodaysPlan')}</Button>
+    </div>}
+  </>
 }
 
 /** One part: what was planned for the squad, and Trak's suggestion for those here. */

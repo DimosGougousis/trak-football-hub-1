@@ -2,16 +2,16 @@ import { i18n } from '@/lib/i18n'
 import type { Tables } from '@/integrations/supabase/types'
 import { libraryOf, sessionById } from '@/lib/library/library'
 import type { DrillDraft } from './sessions'
-import type { PartType } from './shelf'
 
 /* TRAK-295 (Training 2/5, spec TRAK-293): a training's plan, kept apart from the screens. A practice carries what a
    drill does, plus where it came from. The plan is saved whole by save_training_plan(); its limits are the
    database's (training_plan_practices), so change both together. */
 
-/** Plan session, for one training (TRAK-340; was Write my own). */
-export const planPath = (eventId: string) => `/coach/training/${eventId}/plan`
-/** Who's here: the register, then Trak's suggestions for the plan (TRAK-342). */
-export const herePath = (eventId: string) => `/coach/training/${eventId}/here`
+/** Plan session, for one training (TRAK-340; was Write my own): its page's Training plan tab (TRAK-456; was /plan). */
+export const planPath = (eventId: string) => `/coach/training/${eventId}?tab=plan`
+/** Who's here: the register, then Trak's suggestions for the plan (TRAK-342), on its page's After training tab (TRAK-456;
+ *  was /here). */
+export const herePath = (eventId: string) => `/coach/training/${eventId}?tab=after`
 /** View: the plan read at the pitch side (TRAK-309). */
 export const viewPath = (eventId: string) => `/coach/training/${eventId}/view`
 /** What the planner can open with: a Library drill sent from its page (TRAK-391; was a drill from My drills,
@@ -20,9 +20,6 @@ export type PlannerState = {
   /** The Library drill's id, and the players and level the coach set on its page. */
   addLibrary?: { drill: string; players: number; level: number }
   copy?: SavedPractice[]; copiedFrom?: string
-  /** TRAK-341: from a saved plan's Review page, change one part (by its place) or add one. */
-  editPart?: number
-  addPart?: { type: PartType; name: string }
 } | null
 
 export type PracticeSource = 'own' | 'drill' | 'library' | 'trak'

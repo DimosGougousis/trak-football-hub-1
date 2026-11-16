@@ -129,14 +129,29 @@ async function open(page: Page, context: BrowserContext, path: string, width: nu
   await page.goto(path)
   return { unexpected, errors }
 }
+/** TRAK-456: a training's page is a match's Page header over its tabs; the keyboard check reads the tab showing, as
+ *  games.spec's does (the header is the match page's, and its trail goes inert once the page scrolls under it). */
+const PANEL = '[role="tabpanel"]:not([hidden])'
 const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+/** A training page header's secondary action: a button, or in the "…" menu when the header has no room (TRAK-456). The
+ *  page's header has no menu of its own, so "…" shows only when the button folded into it. */
+async function headerAction(page: Page, name: string) {
+  await page.locator('section.arc[data-measured]').first().waitFor()
+  await page.waitForTimeout(300)
+  if (!await page.getByRole('button', { name: 'More actions' }).count()) return page.getByRole('button', { name, exact: true }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.getByRole('menuitem', { name }).click()
+}
 
 /** Tab from the top of the page; every control in `scope` must take focus at least once. */
 async function everyControlByKeyboard(page: Page, scope: string) {
-  const controls = await page.locator(`${scope} :is(a[href], button:not([disabled]), input, textarea, [tabindex="0"]):not([tabindex="-1"])`).evaluateAll(els =>
+  // TRAK-456: as games.spec's, a tab list hands its focus to the tab selected, so the tab is the stop, not the list.
+  const controls = await page.locator(`${scope} :is(a[href], button:not([disabled]), input, textarea, [tabindex="0"]):not([tabindex="-1"], [role="tablist"])`).evaluateAll(els =>
     els.filter(el => (el as HTMLElement).offsetParent !== null && el.getAttribute('aria-hidden') !== 'true'
       // Add details folded away: its fields take focus once it's opened.
       && !el.closest('details:not([open])')
+      // TRAK-456: what the page's header holds out of reach (inert): its trail once compact, an action folded into "…".
+      && !el.closest('[inert]')
       // A segmented control is one stop (roving focus): only its selected option takes Tab.
       && !(el.closest('[role="group"][aria-label="Training view"]') && el.getAttribute('aria-pressed') !== 'true'))
       .map((el, i) => { (el as HTMLElement).dataset.kb = String(i); return String(i) }))
@@ -326,10 +341,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.screenshot({ path: testInfo.outputPath(`training-add-picker-${width}.png`) })
     await coming.getByRole('button', { name: /^Add to Before AEK U16 on Saturday/ }).click()
 
-    await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
+    // TRAK-456: Plan session is the training page's Training plan tab; Review & share lists the Logistics, then the parts.
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu\?tab=plan$/)
     await expect(page.getByText('Pass between defenders is added at the end. Check the plan, then save it.')).toBeVisible()
     const plan = page.getByRole('list', { name: 'The plan' }).getByRole('listitem')
-    await expect(plan).toHaveCount(6)
+    await expect(plan).toHaveCount(7)
     await expect(plan.last()).toContainText('Pass between defenders')
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-add-review-${width}.png`), fullPage: true })
@@ -340,7 +356,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // Back on the drill page, the button says where it went and opens the plan.
     await page.goto('/coach/training/drills/d/lib-pass-between-defenders')
     const added = page.getByRole('link', { name: /^Added to / })
-    await expect(added).toHaveAttribute('href', '/coach/training/t-thu/plan')
+    await expect(added).toHaveAttribute('href', '/coach/training/t-thu?tab=plan')
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-add-added-${width}.png`), fullPage: true })
     const keys = await everyControlByKeyboard(page, '.trak-wide')
@@ -369,7 +385,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // → Add to training → Plan session at Review → saved.
     await page.getByRole('button', { name: 'Add to training' }).click()
     await page.getByRole('dialog', { name: 'Add Keep the ball to which training?' }).getByRole('button', { name: /^Add to Keep it tight/ }).click()
-    await expect(page).toHaveURL(/\/coach\/training\/t-now\/plan$/)
+    await expect(page).toHaveURL(/\/coach\/training\/t-now\?tab=plan$/)
     // Keep the ball is already Rondo's starter drill, so that part takes it rather than a second copy (TRAK-392).
     await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem').filter({ hasText: 'Keep the ball' })).toHaveCount(1)
     await page.getByRole('button', { name: 'Save the plan' }).click()
@@ -383,11 +399,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 
-  // TRAK-340: Plan session is parts, one step each, then Review.
+  // TRAK-340: Plan session is parts, one step each, then Review (TRAK-456: Review & share, on the page's Training plan tab).
   test(`Planning at ${width} px: Trak's five parts, a drill each, Review, saved`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
     await page.getByRole('region', { name: 'Before AEK U16 on Saturday' }).getByRole('button', { name: 'Plan session' }).click()
-    await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu\?tab=plan$/)
     const warmup = page.getByRole('region', { name: 'Dry warm-up' })
     // TRAK-392: the Library's starter drill is picked; the three choices are the Library's.
     await expect(warmup.getByRole('button', { name: /^Moving warm-up/, pressed: true })).toBeVisible()
@@ -399,18 +415,18 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-plan-part-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
+    const keyboard = await everyControlByKeyboard(page, PANEL)
     expect(keyboard.count).toBeGreaterThan(15)
     expect(keyboard.missed).toEqual([])
 
     for (let i = 0; i < 5; i++) await page.getByRole('button', { name: /^Next: / }).click()
-    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
-    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(5)
+    await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(6)
     await page.getByLabel(/A note for you/).fill('Remind the back four to talk.')
     await page.waitForTimeout(300)
     await page.screenshot({ path: testInfo.outputPath(`training-plan-review-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const reviewKeys = await everyControlByKeyboard(page, '.trak-wide')
+    const reviewKeys = await everyControlByKeyboard(page, PANEL)
     expect(reviewKeys.missed).toEqual([])
 
     await page.getByRole('button', { name: 'Save the plan' }).click()
@@ -476,7 +492,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     await copy.getByRole('button', { name: /^Use this plan: Receiving under pressure/ }).click()
 
-    await expect(page).toHaveURL(/\/coach\/training\/t-thu\/plan$/)
+    await expect(page).toHaveURL(/\/coach\/training\/t-thu\?tab=plan$/)
     await expect(page.getByText(/Copied from Receiving under pressure/)).toBeVisible()
     // A copy survives the page being laid out again (a phone turned, a window resized across the laptop width).
     await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
@@ -490,39 +506,43 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(errors).toEqual([])
   })
 
-  // TRAK-341: a saved plan's page is Review: Edit opens only that part, × removes one, Add a part.
+  // TRAK-341: a saved plan's page is Review. TRAK-456: it is Review & share, the planner's last step on the training
+  // page's Training plan tab: a pencil opens that part, Back to Review & share comes back.
   test(`Review a saved plan at ${width} px`, async ({ page, context }, testInfo) => {
-    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
-    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible()
-    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(2)
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue?tab=plan', width, height)
+    await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(3)
     await expect(page.getByRole('button', { name: 'Change the plan' })).toHaveCount(0)
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-review-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    const keyboard = await everyControlByKeyboard(page, PANEL)
     expect(keyboard.missed).toEqual([])
-    await page.getByRole('button', { name: 'Edit Pressing on the trigger' }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Edit: Pressing on the trigger' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Save and go back to Review' })).toBeVisible()
+    await page.getByRole('button', { name: 'Edit pressing on the trigger' }).click()
+    await expect(page.getByRole('region', { name: 'Pressing on the trigger' })).toBeVisible()
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-review-edit-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    await page.getByRole('button', { name: 'Cancel' }).click()
-    await expect(page).toHaveURL(/\/coach\/training\/t-tue$/)
+    await page.getByRole('button', { name: /^Back to Review/ }).click()
+    await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
+    await expect(page).toHaveURL(/\/coach\/training\/t-tue\?tab=plan$/)
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
 
   // TRAK-342: Who's here, with the register saved: one of the two U16 players came; Trak checks each part.
   // TRAK-367 (Kostas, 3 Nov): a part moves on Review as it does while planning: by its handle, with a finger or a mouse.
+  // TRAK-456: in Your session, beside a part of the saved plan; it saves with Save the plan.
   test(`Moving a part on Review at ${width} px`, async ({ page, context }, testInfo) => {
-    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
-    const rows = page.getByRole('list', { name: 'The plan' }).getByRole('listitem')
+    const { unexpected, errors } = await open(page, context, '/coach/training/t-tue?tab=plan', width, height)
+    await page.getByRole('button', { name: 'Edit warm-up: rondos 4v1' }).click()
+    const rows = page.getByRole('list', { name: 'Parts of the session' }).getByRole('listitem')
     await expect(rows.first()).toContainText('Warm-up: rondos 4v1')
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-review-move-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
 
+    await page.getByRole('button', { name: /^Move Pressing on the trigger/ }).scrollIntoViewIfNeeded()
     const from = await page.getByRole('button', { name: /^Move Pressing on the trigger/ }).boundingBox()
     const to = await rows.first().boundingBox()
     await page.mouse.move(from!.x + from!.width / 2, from!.y + from!.height / 2)
@@ -531,10 +551,12 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.mouse.move(from!.x + from!.width / 2, to!.y - 6, { steps: 6 })
     await page.mouse.up()
     await expect(rows.first()).toContainText('Pressing on the trigger')
-    // Saved once it lands: the page read again keeps the new order.
-    await page.waitForTimeout(500)
-    await page.reload()
-    await expect(rows.first()).toContainText('Pressing on the trigger')
+    // Saved with the plan: the page read again keeps the new order.
+    await page.getByRole('button', { name: /^Back to Review/ }).click()
+    await page.getByRole('button', { name: 'Save the plan' }).click()
+    await expect(page).toHaveURL(/\/coach\/training$/)
+    await page.goto('/coach/training/t-tue?tab=plan')
+    await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem').nth(1)).toContainText('Pressing on the trigger')
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
@@ -557,7 +579,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-here-plan-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
+    const keyboard = await everyControlByKeyboard(page, PANEL)
     expect(keyboard.missed).toEqual([])
     await page.getByRole('button', { name: 'Change', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Done: 1 here' })).toBeVisible()
@@ -570,14 +592,15 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
 
   test(`View and a closed training at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/t-tue', width, height)
-    await expect(page.getByRole('list', { name: 'Training loop' }).getByRole('listitem')).toHaveCount(4)
-    await page.getByRole('button', { name: 'View', exact: true }).click()
+    // TRAK-456: the page's tabs took the step strip's place; on a phone the header's View folds into its "…" menu.
+    await expect(page.getByRole('tablist', { name: 'This training' }).getByRole('tab')).toHaveCount(3)
+    await headerAction(page, 'View')
     await expect(page).toHaveURL(/\/coach\/training\/t-tue\/view$/)
     await expect(page.getByRole('list', { name: 'Practices to run' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-run-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.max-w-\\[1040px\\]')
+    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
     expect(keyboard.missed).toEqual([])
 
     // TRAK-339: past trainings have their own page, from the button at the bottom of Training.
@@ -594,8 +617,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(pastKeys.missed).toEqual([])
     await past.first().getByRole('button', { name: /^View Pressing zones/ }).click()
     await expect(page).toHaveURL(/\/coach\/training\/t-last$/)
-    await expect(page.getByRole('list', { name: 'Training loop' }).getByText('(done)')).toHaveCount(3)
-    await page.getByRole('button', { name: 'View log' }).click()
+    await expect(page.getByText('Closed').first()).toBeVisible()
+    await headerAction(page, 'View log')
     // TRAK-426: Training and Matches are on, so the old Edit session is gone; the log is read only here.
     await expect(page.getByRole('dialog', { name: 'The log' }).getByText(/Attended/)).toBeVisible()
     await expect(page.getByRole('dialog', { name: 'The log' }).getByRole('link', { name: 'Edit log' })).toHaveCount(0)

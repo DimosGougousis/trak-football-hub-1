@@ -4,22 +4,29 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/AuthContext'
+import { useWeekRoster } from '@/lib/coach-squad'
+import type { EventRow } from '@/lib/coach-events'
+import { hasStarted } from '@/lib/event-register'
+import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
+import { shareEventText } from '@/lib/share-event'
 import { trainingMinutes } from '@/lib/training/sessions'
 import { libraryDrill, squadPlayers, type LibraryDrill } from '@/lib/training/library'
 import type { PlannerState } from '@/lib/training/plans'
 import { partInfo, type PartType } from '@/lib/training/shelf'
 import {
   NOTE_MAX, PARTS_MAX, PART_NAME_MAX, candidates, fromLibrary, hasOwnDrills, isStandard, libraryOf, libraryPart, isSameDrill, lastShape, minuteOptions, moveTo, newKey,
-  partsFromSaved, partsFromShape, planProblem, partColour, shownFor, standardShape, tagFor, totalMinutes, usageOf,
+  partsFromSaved, partsFromShape, planProblem, partColour, shownFor, standardShape, tagFor, usageOf,
   usualFor, type Part, type PastPlan, type PlanDrill, type Usage,
 } from '@/lib/training/parts'
 import { gameWhen } from '@/components/coach/games/useGames'
 import {
   useBookmarks, useDrafts, usePastSessions, useSaveDraft, useSavePlan, useSquadSize, type Draft, type Plan, type Training,
 } from '@/components/coach/training/useTraining'
-import { ActionTile, DrillTile, PlanRows, SessionCard, TimeBar, TotalLine } from '@/components/coach/training/PlannerParts'
+import { ActionTile, DrillTile, SessionCard, TimeBar, TotalLine } from '@/components/coach/training/PlannerParts'
 import { AddPartSheet, MoreDrillsSheet, ViewDrillSheet } from '@/components/coach/training/PlannerSheets'
-import { MenuTrail } from '@/components/coach/MenuTrail'
+import { ShareIcon } from '@/components/coach/ShareEventButton'
+import type { useLogisticsEdit } from '@/pages/coach/CoachGame'
 import { useParked } from '@/components/trak/parked'
 import { LoadError } from '@/components/trak'
 import { Button } from '@/components/arc/button/button'
@@ -28,7 +35,7 @@ import { Stepper } from '@/components/arc/stepper/stepper'
 import { Textarea } from '@/components/arc/textarea/textarea'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { RemoveIcon } from '@/components/trak/IconAction'
-import { INNER_TITLE } from '@/components/coach/PageTop'
+import { PlanReview, type ReviewRow } from '@/components/arc/blocks/plan-review/plan-review'
 
 /* TRAK-340 (Training redo 2/5, spec TRAK-338, 2 Nov prototype): Plan session. A plan is a list of parts; the coach goes
    through them one step each, then Review, and saves the plan whole. A new plan starts from the parts the coach saved
@@ -40,36 +47,30 @@ import { INNER_TITLE } from '@/components/coach/PageTop'
    Write your own left with coach-made drills (Kostas, 8 Nov); plans saved before keep their drills as saved.
    TRAK-404 (Kostas, 10 Nov): less on the page. The three choices show names only (View drill has the rest); no
    logistics line, guide lines or "We picked a drill" line; the step bar jumps to any step; × alone removes a part; and
-   there's no Save as draft: every change saves the draft by itself, so leaving never asks. */
+   there's no Save as draft: every change saves the draft by itself, so leaving never asks. TRAK-456 (Imad, 16 Nov): the
+   planner is the Training plan tab of a training's page, built like a match's. Its last step is Review & share, the
+   match's Review card: the plan's parts at a glance, a pencil each, and Share, which sends the training's details to the
+   squad's WhatsApp group as Events does. The plan itself never leaves the coach. A saved plan is changed here too (it
+   was a page of its own, TRAK-341). */
 
 const TRAINING_PATH = '/coach/training'
 const REVIEW = 'review'
+type Logistics = Pick<ReturnType<typeof useLogisticsEdit>, 'open' | 'publish'>
 
 type Start = { parts: Part[]; note: string; at: string; fromShape: boolean; copiedFrom: string | null; dirty: boolean
   /** TRAK-391: what happened to the Library drill sent from its page. */
-  added?: { name: string; how: 'added' | 'there' | 'full'; part?: string }
-  /** TRAK-341: opened from a saved plan's Review page to change or add one part, then save and go back. */
-  only?: 'edit' | 'add' }
+  added?: { name: string; how: 'added' | 'there' | 'full'; part?: string } }
+/** TRAK-456: the page asks the planner to open a part (by its place), or Review & share (null). `n` counts the asks. */
+export type PlannerOpen = { part: number | null; n: number }
 
-/** Where the planner starts: a copied plan; a Library drill sent from its page; the draft; the saved plan (at Review);
- *  else the coach's last shape or Trak's five. */
+/** Where the planner starts: a copied plan; a Library drill sent from its page; the draft; the saved plan (at Review &
+ *  share); else the coach's last shape or Trak's five. */
 function startFrom({ state, saved, draft, past, players, usage }: {
   state: PlannerState; saved: Plan | null; draft: Draft | undefined; past: PastPlan[]; players: number; usage: Usage
 }): Start {
   const fresh = () => {
     const shape = lastShape(past)
     return { parts: partsFromShape(shape ?? standardShape(), players, usage), fromShape: !!shape }
-  }
-  if (saved?.practices.length && state?.editPart != null) {
-    const parts = partsFromSaved(saved.practices)
-    const part = parts[Math.min(Math.max(0, state.editPart), parts.length - 1)]
-    return { parts, note: saved.note, at: part.key, fromShape: false, copiedFrom: null, dirty: false, only: 'edit' }
-  }
-  if (saved?.practices.length && state?.addPart) {
-    const { type, name } = state.addPart
-    const part: Part = { key: newKey(), type, name, minutes: partInfo(type).mins, drill: usualFor(type, candidates(type, players), usage) }
-    return { parts: [...partsFromSaved(saved.practices), part].slice(0, PARTS_MAX), note: saved.note, at: part.key, fromShape: false,
-      copiedFrom: null, dirty: true, only: 'add' }
   }
   if (state?.copy?.length) {
     const parts = partsFromSaved(state.copy).slice(0, PARTS_MAX)
@@ -104,7 +105,11 @@ function startFrom({ state, saved, draft, past, players, usage }: {
 
 /** Reads what the planner needs before it starts: drafts, the coach's past plans, and how many players the training's
  *  squad has (TRAK-392: the drills are fitted to it; unknown, they're fitted to 15). */
-export function Planner({ training, saved }: { training: Training; saved: Plan | null }) {
+export function Planner({ training, saved, open, logistics }: {
+  training: Training & EventRow; saved: Plan | null; open: PlannerOpen | null
+  /** The page's Logistics edit (TRAK-331): Review & share's Logistics part opens it, and publishes a draft. */
+  logistics: Logistics
+}) {
   const { t } = useTranslation()
   const drafts = useDrafts()
   const past = usePastSessions()
@@ -114,11 +119,13 @@ export function Planner({ training, saved }: { training: Training; saved: Plan |
     onRetry={() => reads.forEach(r => void r.refetch())} retrying={reads.some(r => r.isFetching)} /></div>
   if (reads.some(r => r.isPending) || size.isPending) return <LoadingSkeleton label={t('coachTraining:loadingPlans')} rows={2} className="pt-6" />
   const pastPlans: PastPlan[] = (past.data ?? []).filter(s => s.id !== training.id).map(s => ({ day: gameWhen(s).day, practices: s.practices }))
-  return <PlannerBody training={training} saved={saved} draft={drafts.data!.get(training.id)} past={pastPlans} players={squadPlayers(size.data)} />
+  return <PlannerBody training={training} saved={saved} draft={drafts.data!.get(training.id)} past={pastPlans} players={squadPlayers(size.data)}
+    open={open} logistics={logistics} />
 }
 
-function PlannerBody({ training, saved, draft, past, players }: {
-  training: Training; saved: Plan | null; draft: Draft | undefined; past: PastPlan[]; players: number
+function PlannerBody({ training, saved, draft, past, players, open, logistics }: {
+  training: Training & EventRow; saved: Plan | null; draft: Draft | undefined; past: PastPlan[]; players: number; open: PlannerOpen | null
+  logistics: Logistics
 }) {
   const { parked, comingSoon } = useParked()
   const { t } = useTranslation()
@@ -130,7 +137,7 @@ function PlannerBody({ training, saved, draft, past, players }: {
   const [note, setNote] = useState(start.note)
   const [at, setAt] = useState(start.at)
   const [dirty, setDirty] = useState(start.dirty)
-  // Opened from Review to change one part: Back to Review, not Next.
+  // Opened from Review & share to change one part: Back to Review & share, not Next.
   const [fromReview, setFromReview] = useState(start.at === REVIEW && !!saved)
   const [sheet, setSheet] = useState<'add' | 'more' | null>(null)
   const [viewing, setViewing] = useState<LibraryDrill | null>(null)
@@ -140,9 +147,16 @@ function PlannerBody({ training, saved, draft, past, players }: {
   const savePlan = useSavePlan(training.id)
   const saveDraft = useSaveDraft(training.id)
   const length = trainingMinutes(training)
-  const { day } = gameWhen(training)
 
   const setParts = (next: Part[]) => { setPartsRaw(next); setDirty(true); setProblem(null) }
+  // TRAK-456: the page's Review & share, and Who's here's Change it myself, open a step from outside.
+  const [seen, setSeen] = useState<number>()
+  if (open && open.n !== seen) {
+    setSeen(open.n)
+    const key = open.part == null ? REVIEW : parts[open.part]?.key ?? REVIEW
+    setAt(key)
+    setFromReview(key !== REVIEW)
+  }
   const step = at === REVIEW ? parts.length : Math.max(0, parts.findIndex(p => p.key === at))
   const part = at === REVIEW ? null : parts[step] ?? null
   const all = useMemo(() => part ? candidates(part.type, players) : [], [part?.type, players]) // eslint-disable-line react-hooks/exhaustive-deps -- by the part's type
@@ -173,9 +187,9 @@ function PlannerBody({ training, saved, draft, past, players }: {
     setAt(next[0].key)
   }
 
-  // TRAK-404 (Kostas, 10 Nov): every change saves the draft by itself, a moment after the coach stops. Not when only one
-  // part of a saved plan is open (that saves straight to the plan), and not once the plan itself is being saved.
-  const autosave = !start.only && !parked
+  // TRAK-404 (Kostas, 10 Nov): every change saves the draft by itself, a moment after the coach stops; not once the plan
+  // itself is being saved.
+  const autosave = !parked
   const [drafted, setDrafted] = useState(false)
   const done = useRef(false)
   const latest = useRef({ step, parts, note })
@@ -204,39 +218,28 @@ function PlannerBody({ training, saved, draft, past, players }: {
     savePlan.mutate({ parts, note }, {
       onSuccess: () => {
         toast.success(t('coachTraining:planSaved'))
-        // From a saved plan's Review page, back to it; otherwise Training, which offers the next one to plan.
-        if (start.only) navigate(reviewPage, { replace: true })
-        else navigate(TRAINING_PATH, { replace: true, state: { savedPlan: training.id } })
+        // Training, which offers the next one to plan.
+        navigate(TRAINING_PATH, { replace: true, state: { savedPlan: training.id } })
       },
       onError: error => { done.current = false; setProblem('code' in error && error.code === 'P0001' ? `${error.message}.` : t('coachTraining:planSaveFailed')) },
     })
   }
   const leave = () => navigate(TRAINING_PATH)
-  const reviewPage = `${TRAINING_PATH}/${training.id}`
 
-  const steps = [...parts.map(p => ({ id: p.key, label: partName(p.name) })), { id: REVIEW, label: t('coachSchedule:stepReview') }]
+  const steps = [...parts.map(p => ({ id: p.key, label: partName(p.name) })), { id: REVIEW, label: t('coachMatches:reviewShare') }]
 
-  return <div className="grid gap-6 laptop:gap-8 pt-5">
-    <header className="arc grid gap-2">
-      {/* TRAK-367: the trail says which training; its name can be long, so by its day. */}
-      <MenuTrail current={t('coachTraining:planSessionDay', { day })} />
-      <h1 className={`${INNER_TITLE} break-words`}>{start.only && part
-        ? t(start.only === 'add' ? 'coachTraining:addNamed' : 'coachTraining:editNamed', { part: partName(part.name) }) : t('coachTraining:planSessionTitle', { title: training.title })}</h1>
-      {/* TRAK-404 (Kostas, 10 Nov): no logistics here. Opened for one part, the training's name says which plan. */}
-      {start.only && <p className="text-sm text-ink-2">{training.title}</p>}
-      {start.only && <p className="text-sm text-ink-3">{start.only === 'add' ? t('coachTraining:pickThenAdd')
-        : t('coachTraining:onlyThisPart')}</p>}
-    </header>
+  // The page's header holds the training's name, when and where (TRAK-456), so the tab starts at its steps.
+  return <div className="grid gap-6 laptop:gap-8 pt-4">
     {start.added && <p role="status" className={`rounded-xl px-4 py-3 text-sm ${start.added.how === 'full' ? 'bg-warning/15 text-ink' : 'bg-raised text-ink-2'}`}>
       {start.added.how === 'added' ? t('coachTraining:addedAtEnd', { name: start.added.name })
         : start.added.how === 'there' ? t('coachTraining:alreadyIn', { name: start.added.name, part: start.added.part ? partName(start.added.part) : '' })
         : t('coachTraining:notAddedFull', { name: start.added.name, max: PARTS_MAX })}</p>}
     {start.copiedFrom && <p role="status" className="rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
       {t('coachTraining:copiedFrom', { from: start.copiedFrom })}</p>}
-    {!start.only && <div className="arc"><Stepper label={t('coachTraining:planningSteps')} steps={steps} current={step} onStepSelect={go} jumpAhead /></div>}
+    <div className="arc"><Stepper label={t('coachTraining:planningSteps')} steps={steps} current={step} onStepSelect={go} jumpAhead /></div>
     {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
 
-    <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,1fr)_360px] laptop:items-start">
+    <div className={`grid gap-6 laptop:gap-8 ${part ? 'laptop:grid-cols-[minmax(0,1fr)_360px] laptop:items-start' : ''}`}>
       {part ? <section aria-label={partName(part.name)} className="arc grid min-w-0 gap-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 gap-1">
@@ -283,11 +286,7 @@ function PlannerBody({ training, saved, draft, past, players }: {
           </ul>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-          {start.only ? <>
-            <Button variant="secondary" onClick={() => navigate(reviewPage)}>{t('coachSchedule:cancel')}</Button>
-            <span className="flex-1" />
-            <Button loading={savePlan.isPending} onClick={save}>{start.only === 'add' ? t('coachTraining:addToPlan') : t('coachTraining:saveBackReview')}</Button>
-          </> : fromReview ? <>
+          {fromReview ? <>
             <DraftNote saving={saveDraft.isPending} saved={drafted} />
             <span className="flex-1" />
             <RemoveButton name={partName(part.name)} onRemove={() => remove(step)} />
@@ -297,20 +296,17 @@ function PlannerBody({ training, saved, draft, past, players }: {
             <DraftNote saving={saveDraft.isPending} saved={drafted} />
             <span className="flex-1" />
             <RemoveButton name={partName(part.name)} onRemove={() => remove(step)} />
-            <Button onClick={() => go(step + 1)}>{t('coachTraining:nextNamed', { name: step + 1 < parts.length ? partName(parts[step + 1].name) : t('coachSchedule:stepReview') })}<ArrowRight aria-hidden size={16} /></Button>
+            <Button onClick={() => go(step + 1)}>{t('coachTraining:nextNamed', { name: step + 1 < parts.length ? partName(parts[step + 1].name) : t('coachMatches:reviewShare') })}<ArrowRight aria-hidden size={16} /></Button>
           </>}
         </div>
-      </section> : <Review parts={parts} length={length} note={note} onNote={value => { setNote(value); setDirty(true) }}
-        onEdit={i => { setFromReview(true); go(i) }} onRemove={remove} onReorder={setParts} onMove={(i, by) => setParts(moveTo(parts, i, i + by))}
-        onAdd={() => setSheet('add')}
-        onBack={() => parts.length ? go(parts.length - 1) : leave()} onSave={save}
-        saving={savePlan.isPending} draftNote={autosave ? <DraftNote saving={saveDraft.isPending} saved={drafted} /> : null} />}
+      </section> : <ReviewShare training={training} parts={parts} length={length} note={note} onNote={value => { setNote(value); setDirty(true) }}
+        onEdit={i => { setFromReview(true); go(i) }} onAdd={() => setSheet('add')} onBack={() => parts.length ? go(parts.length - 1) : leave()} onSave={save}
+        saving={savePlan.isPending} draftNote={autosave ? <DraftNote saving={saveDraft.isPending} saved={drafted} /> : null} logistics={logistics} />}
 
-      {part && start.only ? <OnTheDay parts={parts} mode="rest" />
-        : part ? <SessionCard parts={parts} length={length} current={part.key} onOpen={key => setAt(key)} onReorder={setParts}
+      {/* TRAK-456: Review & share is one card, as a match's; Your session sits beside each part. */}
+      {part && <SessionCard parts={parts} length={length} current={part.key} onOpen={key => setAt(key)} onReorder={setParts}
         onMove={(i, by) => setParts(moveTo(parts, i, i + by))} onRemove={remove} onAdd={() => setSheet('add')} onStandard={toStandard}
-        fromShape={start.fromShape && !dirty} standard={isStandard(parts)} />
-        : <OnTheDay parts={parts} />}
+        fromShape={start.fromShape && !dirty} standard={isStandard(parts)} />}
     </div>
 
     <AddPartSheet open={sheet === 'add'} onClose={() => setSheet(null)} onAdd={add} />
@@ -320,51 +316,58 @@ function PlannerBody({ training, saved, draft, past, players }: {
   </div>
 }
 
-/** The last step, and a saved plan opened again: the whole plan, a part to change, remove or add, and a note. */
-function Review({ parts, length, note, onNote, onEdit, onRemove, onReorder, onMove, onAdd, onBack, onSave, saving, draftNote }: {
-  parts: Part[]; length: number | null; note: string; onNote: (note: string) => void; onEdit: (index: number) => void
-  onRemove: (index: number) => void; onReorder: (parts: Part[]) => void; onMove: (index: number, by: -1 | 1) => void
-  onAdd: () => void; onBack: () => void; onSave: () => void
-  saving: boolean; draftNote: ReactNode
+/** The last step, Review & share (TRAK-456), as a match's: Arc's Review card with the plan's parts at a glance, a pencil
+ *  each, the Logistics first (Share needs the training published). In the card, how long it runs, the coach's note,
+ *  Share and Save the plan. A saved plan opens here. */
+function ReviewShare({ training, parts, length, note, onNote, onEdit, onAdd, onBack, onSave, saving, draftNote, logistics }: {
+  training: Training & EventRow; parts: Part[]; length: number | null; note: string; onNote: (note: string) => void
+  onEdit: (index: number) => void; onAdd: () => void; onBack: () => void; onSave: () => void; saving: boolean; draftNote: ReactNode; logistics: Logistics
 }) {
   const { t } = useTranslation()
-  return <section aria-labelledby="review" className="arc grid min-w-0 gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="grid gap-1">
-        <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:lastStep')}</p>
-        <h2 id="review" className="text-[22px] font-medium text-ink">{t('coachSchedule:stepReview')}</h2>
+  const rows: ReviewRow[] = [
+    { id: 'logistics', label: t('coachMatches:actLogistics'), status: training.published ? 'good' : 'risk', onEdit: logistics.open ?? undefined },
+    // Its drill, unless the part is named after it (a plan from before parts), and its minutes.
+    ...parts.map((part, i): ReviewRow => ({ id: part.key, label: partName(part.name), status: part.drill ? 'good' : 'watch', onEdit: () => onEdit(i),
+      detail: [!part.drill ? t('coachTraining:noDrillYet') : part.drill.name !== part.name ? part.drill.name : null,
+        t('coachHome:minutes', { count: part.minutes })].filter(Boolean).join(' · ') })),
+  ]
+  const incomplete = rows.filter(row => row.status !== 'good').length
+  return <div className="arc min-w-0">
+    <PlanReview title={t('coachTraining:reviewTitle')} footerId="plan-share" rows={rows}
+      band={incomplete ? { status: training.published ? 'watch' : 'risk', label: t('coachMatches:incompleteCount', { count: incomplete }) }
+        : { status: 'good', label: t('coachTraining:readyBadge') }}
+      countdown={{ label: t('coachTraining:startsIn'), end: training.starts_at, completeLabel: t('coachTraining:started') }}>
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1"><TimeBar parts={parts} length={length} /></div>
+        <TotalLine parts={parts} length={length} />
       </div>
-      <TotalLine parts={parts} length={length} />
-    </div>
-    <TimeBar parts={parts} length={length} />
-    <PlanRows parts={parts} onEdit={onEdit} onRemove={onRemove} onReorder={onReorder} onMove={onMove} />
-    <div><Button size="sm" variant="secondary" onClick={onAdd}><Plus aria-hidden size={16} />{t('coachTraining:addAPart')}</Button></div>
-    {/* Kostas, 30 Oct: one optional note at the end, not one per drill. */}
-    <Textarea label={t('coachTraining:noteForYou')} rows={2} maxLength={NOTE_MAX}
-      value={note} onChange={e => onNote(e.target.value)} placeholder={t('coachTraining:noteForYouEx')} />
-    <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-      <Button variant="secondary" onClick={onBack}>{t('common:back')}</Button>
-      {draftNote}
-      <span className="flex-1" />
-      <Button size="lg" loading={saving} onClick={onSave}>{t('coachTraining:savePlan')}</Button>
-    </div>
-  </section>
+      <div><Button size="sm" variant="secondary" onClick={onAdd}><Plus aria-hidden size={16} />{t('coachTraining:addAPart')}</Button></div>
+      {/* Kostas, 30 Oct: one optional note at the end, not one per drill. */}
+      <Textarea label={t('coachTraining:noteForYou')} rows={2} maxLength={NOTE_MAX}
+        value={note} onChange={e => onNote(e.target.value)} placeholder={t('coachTraining:noteForYouEx')} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" onClick={onBack}>{t('common:back')}</Button>
+        {draftNote}
+        <span className="flex-1" />
+        <TrainingShare training={training} publish={logistics.publish} />
+        <Button loading={saving} onClick={onSave}>{t('coachTraining:savePlan')}</Button>
+      </div>
+    </PlanReview>
+  </div>
 }
 
-/** How Home's Today card will show the plan (TRAK-304): every drill and its minutes. */
-function OnTheDay({ parts, mode = 'day' }: { parts: Part[]; mode?: 'day' | 'rest' }) {
+/** Share: the training's details for the squad's WhatsApp group, as Events' Share (J8.16, TRAK-168): the squad's name,
+ *  no child's, and never the plan. A draft is published first; once it has started there is nothing to tell. */
+function TrainingShare({ training, publish }: { training: Training & EventRow; publish: Logistics['publish'] }) {
+  const { user } = useAuth()
   const { t } = useTranslation()
-  const title = mode === 'day' ? t('coachTraining:onTheDay') : t('coachTraining:yourSession')
-  return <aside aria-labelledby="on-the-day" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-    <h2 id="on-the-day" className="text-lg font-medium text-ink">{title}</h2>
-    {/* TRAK-457: no "Your Today card on Home shows the plan like this" line. */}
-    {mode !== 'day' && <p className="text-sm text-ink-3">{t('coachTraining:restOfPlan')}</p>}
-    <div className="grid gap-1.5 rounded-xl bg-raised p-4">
-      <p className="flex justify-between text-sm"><span className="font-medium text-ink">{t('coachHome:trainingPlan')}</span><span className="text-ink-3">{t('coachHome:minutes', { count: totalMinutes(parts) })}</span></p>
-      {parts.filter(p => p.drill).map(p => <p key={p.key} className="flex justify-between gap-3 text-sm text-ink-2">
-        <span className="truncate">{p.name === p.drill!.name ? p.name : `${partName(p.name)} · ${p.drill!.name}`}</span><span className="flex-none">{t('coachHome:minutes', { count: p.minutes })}</span></p>)}
-    </div>
-  </aside>
+  const roster = useWeekRoster(user?.id)
+  if (!training.published) return <Button variant="secondary" loading={publish.isPending} onClick={() => publish.mutate()}>{t('coachHome:publish')}</Button>
+  if (hasStarted(training) || !roster.data) return null
+  // As the event sheet's Share: an event for one squad names that squad; null is the whole roster.
+  const rows = roster.data.filter(p => training.squad == null || p.age_group?.trim() === training.squad)
+  const text = whatsAppShareText(shareableFromRow(training, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })
+  return <Button variant="secondary" onClick={() => shareEventText(text)}><ShareIcon size={16} tight />{t('coachSchedule:share')}</Button>
 }
 
 /** TRAK-404: says quietly that the draft saved itself. */

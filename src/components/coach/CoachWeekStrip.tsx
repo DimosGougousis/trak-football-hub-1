@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { useNotedTrainings } from '@/components/coach/training/useTraining'
 import { addDays, format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
-import { supabase } from '@/integrations/supabase/client'
 import { useFeature } from '@/components/trak/parked'
 import { weekDays, weekTitle, type StripEvent } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
@@ -16,7 +14,7 @@ import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
-import { useCoachSquad } from '@/lib/coach-squad'
+import { useCoachSquad, useWeekRoster } from '@/lib/coach-squad'
 import { MatchAction } from '@/components/coach/games/MatchAction'
 import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
 import { loadWeek } from '@/lib/coach-week-load'
@@ -50,7 +48,6 @@ export function CoachWeekStrip({ coachId, version = 0, everySquad = false }: {
     squadOf={squads.length >= 2 ? squadName : null} labelEach={everySquad} />
 }
 
-
 function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, labelEach }: {
   coachId: string
   version: number
@@ -73,15 +70,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const noted = useNotedTrainings()
-  // The share message names the squad and leaves out players' names (J8.16), as the event sheet's Share.
-  const roster = useQuery({
-    queryKey: ['coach', coachId, 'week-roster'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('squad_players').select('player_name, age_group, status').eq('coach_user_id', coachId)
-      if (error) throw error
-      return data ?? []
-    },
-  })
+  const roster = useWeekRoster(coachId)
 
   useEffect(() => {
     let cancelled = false
