@@ -283,8 +283,8 @@ function ProfileLook({ position, ageGroup, assessments }: { position?: string | 
               { label: t('common:calendar'), to: '/settings#calendar',
                 value: calendar.data ? <Badge tone="success" size="sm" icon={<Check />}>{t('common:inYourCalendar')}</Badge> : undefined },
               { label: t('settings:language'), to: '/settings#language', value: languageOf(language).name },
-              // A parent whose name RLS hides is still linked: no name then, never "Not connected".
-              ...(links.isSuccess ? [{ label: t('common:yourParent'), value: parents.length ? parents.filter(Boolean).join(', ') || undefined : t('common:notConnected') }] : []),
+              // A parent whose name RLS hides is still linked: "Linked" then (live, 16 Nov: the row was empty), never "Not connected".
+              ...(links.isSuccess ? [{ label: t('common:yourParent'), value: parents.length ? parents.filter(Boolean).join(', ') || t('common:linked') : t('common:notConnected') }] : []),
               { label: t('nav:howTrakWorks'), to: '/how-it-works' },
               { label: t('nav:settings'), to: '/settings' },
               { label: t('settings:signOut'), onClick: () => {
