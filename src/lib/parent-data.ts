@@ -128,12 +128,6 @@ export async function fetchParentDevelopment(childId: string, signal: AbortSigna
   return { details: detailsResult.data, assessments, awards, coachNames }
 }
 
-export function averageRecordedRating(matches: ParentMatch[]): number | null {
-  const ratings = matches.map(match => match.computed_rating)
-    .filter((rating): rating is number => rating != null && Number.isFinite(rating))
-  return ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : null
-}
-
 export function matchResult(match: ParentMatch): 'W' | 'D' | 'L' | null {
   if (match.team_score == null || match.opponent_score == null) return null
   return match.team_score > match.opponent_score ? 'W' : match.team_score < match.opponent_score ? 'L' : 'D'

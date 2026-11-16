@@ -569,11 +569,13 @@ describe('truthful parent ratings', () => {
     expect(screen.getAllByText('1 Sept · League')).toHaveLength(2)
   })
 
-  it('does not replace a missing rating in the average and preserves zero assessment categories', async () => {
+  // TRAK-435: Home has no rating average any more; the summary is the count and the results.
+  it('shows no match rating on Home and preserves zero assessment categories', async () => {
     server.use(http.get(endpoint('matches'), () => HttpResponse.json([match('Zero', 0), match('Unknown', null)])))
     renderFamily()
     const summary = await screen.findByRole('region', { name: 'Recorded matches summary' })
-    expect(within(summary).getByText('Difficult')).toBeInTheDocument()
+    expect(within(summary).queryByText('Difficult')).toBeNull()
+    expect(within(summary).queryByText('Not rated')).toBeNull()
     const development = screen.getByRole('region', { name: 'Latest coach assessment' })
     expect(within(development).getAllByText('Difficult')).toHaveLength(7)
     expect(screen.queryByText('Steady')).not.toBeInTheDocument()

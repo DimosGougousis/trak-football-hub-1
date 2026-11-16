@@ -5,12 +5,12 @@ import { LoadedWeekStrip } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
 import { CantMakeIt, CantMakeItButton } from '@/components/parent/CantMakeIt'
 import { supabase } from '@/integrations/supabase/client'
-import { ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
+import { ParentChildSwitcher, ParentFamilyContent, ParentLoadError, ParentLoading } from '@/components/parent/ParentFamily'
 import { ParentAlertsBell } from '@/components/parent/ParentAlertsBell'
 import { ApprovedAwaitingList } from '@/components/parent/ApprovedAwaitingSignup'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useChildrenAwaitingConsent, useParentDevelopment, useParentEvents, useParentMatches, useRosterChildrenAwaitingConsent, useChildLogins } from '@/hooks/useParentData'
-import { averageRecordedRating, formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
+import { formatParentAward, formatParentDate, matchResult } from '@/lib/parent-data'
 import { CalendarHomePrompt } from '@/components/trak/AddToCalendar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 import { useProgressLines } from '@/lib/evaluation-progress'
@@ -123,14 +123,9 @@ export default function ParentHome() {
                 {/* TRAK-399: the Season plan card for the chosen child; nothing when the coach has not shared. */}
                 {season}
                 {matches.length > 0 && (
+                  // TRAK-435: no rating average; a match from Matches has none, so it read "Not rated" for good.
                   <section className="rounded-xl p-5 mb-4 bg-card border border-border" aria-label="Recorded matches summary">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <MetadataLabel text="RECORDED MATCHES" />
-                        <div className="mt-3"><ParentRating rating={averageRecordedRating(matches)} /></div>
-                      </div>
-                      <div className="text-right"><MetadataLabel text="MATCHES" /><p className="text-3xl font-light mt-2 text-foreground">{matches.length}</p></div>
-                    </div>
+                    <MetadataLabel text="MATCHES" /><p className="text-3xl font-light mt-2 text-foreground">{matches.length}</p>
                     <div className="flex gap-5 pt-4 mt-4 border-t border-border">
                       {(['W', 'D', 'L'] as const).map(result => <div key={result} className="text-sm text-foreground">
                         {matches.filter(match => matchResult(match) === result).length} <span className="text-muted-foreground">{result}</span>
