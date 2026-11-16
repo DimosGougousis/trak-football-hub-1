@@ -94,6 +94,12 @@ browser test. Run the test for the behaviour you changed yourself: a green
 gate does not cover it. `archive/ci-full-gate-2026-11-15/` is a frozen copy of
 the earlier full gate and its Playwright files, kept for restoring; edit the
 live files, never the copy.
+
+Tests follow the PR (TRAK-471, [strategy](docs/release/testing-strategy.md)).
+A PR adds or updates tests only for its own acceptance criteria, written from
+the problem it solves, not from the history of the area. Never generate, keep,
+rewrite or delete an older test unless the human asks for that cleanup. Layout
+and dimension checks belong to one dedicated PR, not to each feature PR.
 Workflow actions must run on Node 24: `ci-action-runtimes.test.ts` lists each
 action's first such major, and Dependabot opens a weekly grouped PR for newer
 ones, reviewed like any other change.
