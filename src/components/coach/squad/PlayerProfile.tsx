@@ -28,6 +28,10 @@ import { bandConfig } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 
 const FOOT = { left: 'coachSquad:footLeft', right: 'coachSquad:footRight', both: 'coachSquad:footBoth' } as const
+/** TRAK-451 (walk-through of 11 Nov): every block on the page has the same bold title, and the page's two smaller cards
+ *  (position, roles and profile; the season) sit inside its own card (corners and room from TRAK-464). */
+const TITLE = 'text-base font-semibold text-ink'
+const INNER = 'rounded-xl border border-line p-4'
 /** The assessments shown at first, newest first. TRAK-368: "All N" shows the rest here too. */
 const SHOWN = 6
 
@@ -98,11 +102,12 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   return <>
     {header}
 
-    {/* A laptop's pane has room for two columns: facts beside the radar, the latest card beside the earlier ones. */}
-    <div className="grid gap-5 laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] laptop:items-start">
-      <div className="grid gap-6 laptop:gap-8">
+    {/* A laptop's pane has room for two columns: the profile card beside the season's. */}
+    <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] laptop:items-start">
+      <div data-inner-card className={`${INNER} grid gap-6`}>
         {placement && <PositionAndRoles coachId={coachId} id={player.id} name={player.name} position={placement.position} />}
-        <section aria-label={t('coachSquad:aboutName', { name: first })} className="grid gap-2">
+        <section aria-labelledby={`about-${player.id}`} className="grid gap-2">
+          <h4 id={`about-${player.id}`} className={TITLE}>{t('coachSquad:aboutName', { name: first })}</h4>
           {factsFailed ? <LoadError what={t('coachSquad:profileWhat', { name: first })} onRetry={onRetryFacts} />
             : !facts ? <LoadingSkeleton label={t('coachSquad:loadingProfile', { name: first })} />
             : <>
@@ -121,19 +126,20 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
         </section>
       </div>
 
-      <section aria-labelledby={`season-${player.id}`}>
+      <section data-inner-card aria-labelledby={`season-${player.id}`} className={INNER}>
         <div className="grid gap-2">
-          <h4 id={`season-${player.id}`} className="text-base font-medium text-ink">{t('coachSquad:seasonSoFar')}</h4>
+          <h4 id={`season-${player.id}`} className={TITLE}>{t('coachSquad:seasonSoFar')}</h4>
           {seasonFailed ? <LoadError what={t('coachSquad:seasonWhat', { name: first })} onRetry={onRetrySeason} /> : <p className="text-sm text-ink-3">{season
             ? t('coachSquad:seasonAverage', { count: season.count, since })
             : t('coachSquad:noSeasonAssessment')}</p>}
         </div>
-        {season && !seasonFailed && <RadarChart label={t('coachSquad:radarLabel', { name: player.name })} size={240} rings={5} max={10}
+        {/* TRAK-451: a light line above the chart. */}
+        {season && !seasonFailed && <div data-chart-rule className="mt-3 border-t border-line pt-3"><RadarChart label={t('coachSquad:radarLabel', { name: player.name })} size={240} rings={5} max={10}
           axes={ATTRIBUTES.map(([k]) => ({ key: k, label: t(ATTRIBUTE_WORD[k]) }))}
           series={[{ key: 'player', label: first, values: season.scores }, ...(squadSeason ? [{ key: 'squad', label: t('coachSquad:squadAverage'), values: squadSeason }] : [])]}
           formatValue={value => value.toFixed(1)}
           // TRAK-458: each of the player's points in its band's colour (the band's word is in the cards below).
-          pointColor={value => bandConfig(scoreToBand(value)).color} />}
+          pointColor={value => bandConfig(scoreToBand(value)).color} /></div>}
       </section>
     </div>
 
@@ -143,7 +149,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
       : !assessments.data ? <LoadingSkeleton label={t('coachSquad:loadingAssessments', { name: first })} lines={2} rows={2} />
       : <section aria-labelledby={`assessments-${player.id}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
         <div className="flex items-baseline justify-between gap-3">
-          <h4 id={`assessments-${player.id}`} className="text-base font-medium text-ink">{t('coachSquad:assessments')}</h4>
+          <h4 id={`assessments-${player.id}`} className={TITLE}>{t('coachSquad:assessments')}</h4>
           {list.length > SHOWN
             ? <button type="button" onClick={() => showAll(!all)} className="text-sm font-medium text-brand">{all ? t('coachSquad:showLatest', { count: SHOWN }) : t('coachSquad:allCount', { count: list.length })}</button>
             : list.length > 1 && <span className="text-sm text-ink-3 [@media(pointer:fine)]:hidden">{t('coachSquad:swipeEarlier')}</span>}
@@ -182,7 +188,7 @@ function PositionAndRoles({ coachId, id, name, position }: { coachId: string; id
   const { also, roles: held } = roles.of(id)
   return <section aria-labelledby={`position-${id}`} className="grid gap-2">
     <div className="flex items-baseline justify-between gap-3">
-      <h4 id={`position-${id}`} className="text-base font-medium text-ink">{t('coachSquad:positionAndRoles')}</h4>
+      <h4 id={`position-${id}`} className={TITLE}>{t('coachSquad:positionAndRoles')}</h4>
       <EditIcon label={t('coachSquad:editPositionRoles', { name: first })} haspopup onClick={() => setEditing(true)} />
     </div>
     {roles.isError ? <LoadError what={t('coachSquad:rolesWhat', { name: first })} onRetry={() => { void roles.refetch() }} />
