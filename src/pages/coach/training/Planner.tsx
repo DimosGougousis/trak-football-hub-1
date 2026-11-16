@@ -2,11 +2,10 @@ import { useTranslation } from '@/lib/i18n'
 import { partName, partNote } from '@/lib/training/words'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useWeekRoster } from '@/lib/coach-squad'
 import type { EventRow } from '@/lib/coach-events'
 import { hasStarted } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
@@ -362,15 +361,7 @@ function ReviewShare({ training, parts, length, note, onNote, onEdit, onAdd, onB
 function TrainingShare({ training, publish }: { training: Training & EventRow; publish: Logistics['publish'] }) {
   const { user } = useAuth()
   const { t } = useTranslation()
-  // The week's Share reads the same roster.
-  const roster = useQuery({
-    queryKey: ['coach', user?.id, 'week-roster'], enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('squad_players').select('player_name, age_group, status').eq('coach_user_id', user!.id)
-      if (error) throw error
-      return data ?? []
-    },
-  })
+  const roster = useWeekRoster(user?.id)
   if (!training.published) return <Button variant="secondary" loading={publish.isPending} onClick={() => publish.mutate()}>{t('coachHome:publish')}</Button>
   if (hasStarted(training) || !roster.data) return null
   // As the event sheet's Share: an event for one squad names that squad; null is the whole roster.
