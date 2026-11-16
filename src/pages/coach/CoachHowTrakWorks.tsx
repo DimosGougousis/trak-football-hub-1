@@ -16,7 +16,8 @@ import { PageTop } from '@/components/coach/PageTop'
    academy has switched off doesn't show, so the page never describes what the coach can't open. Players and parents
    keep their own page (/how-it-works).
    Kostas, 16 Nov: too text-heavy; make it appealing to the eye. Each job now has its own colour and the menu's icon,
-   one short line, and its steps drawn as a row of coloured tags with arrows, in place of paragraphs. The colours are
+   one short line, and its steps drawn as a row of tags with arrows, in place of paragraphs. Kostas, 16 Nov (later):
+   the steps are plain, not coloured, and no row of the four jobs under the intro: it was too colourful. The colours are
    the assessment bands' readable shades and tints (lib/types.ts), as the Library's tiles use. */
 
 type Word = keyof typeof words
@@ -72,14 +73,14 @@ const First = ({ icon, tone: colour, title, line }: { icon: Icon; tone: Tone; ti
   )
 }
 
-/** A job's steps, left to right: coloured tags joined by arrows. */
-const Steps = ({ steps, tone: { text, bg } }: { steps: Word[]; tone: Tone }) => {
+/** A job's steps, left to right: plain tags joined by arrows (Kostas, 16 Nov: the job's colour stays on its icon and edge). */
+const Steps = ({ steps }: { steps: Word[] }) => {
   const { t } = useTranslation()
   return (
     <ol aria-label={t('coachHowTrakWorks:steps')} className="flex flex-wrap items-center gap-x-1.5 gap-y-2">
       {steps.map((step, index) =>
         <li key={step} className="flex items-center gap-1.5">
-          <span className="rounded-full px-3 py-1 text-[13px] font-medium" style={{ background: bg, color: text }}>{t(`coachHowTrakWorks:${step}`)}</span>
+          <span className="rounded-full border border-line bg-raised px-3 py-1 text-[13px] font-medium text-ink">{t(`coachHowTrakWorks:${step}`)}</span>
           {/* The arrow ends its step, so a row that wraps on a phone starts with a step, never an arrow. */}
           {index < steps.length - 1 && <ArrowRight aria-hidden="true" size={14} className="text-ink-3" />}
         </li>)}
@@ -103,7 +104,7 @@ const Job = ({ id, icon, tone: colour, title, line, steps, notes }: {
           <p className="text-[14px] leading-snug text-ink-2">{t(`coachHowTrakWorks:${line}`)}</p>
         </div>
       </div>
-      <Steps steps={steps} tone={colour} />
+      <Steps steps={steps} />
       {shown.length > 0 && <ul className="grid gap-2">
         {shown.map(note =>
           <li key={note} className="flex items-start gap-2 text-[14px] leading-snug text-ink-2">
@@ -131,30 +132,12 @@ export default function CoachHowTrakWorks() {
   const on = {
     events: useFeature('events'), games: useFeature('games'), training: useFeature('training'), season: useFeature('season_plan'),
   }
-  type JobKey = 'scheduling' | 'assessing' | 'training' | 'matches'
-  const all: { key: JobKey; icon: Icon; shown: boolean }[] = [
-    { key: 'scheduling', icon: CalendarDays, shown: on.events },
-    { key: 'assessing', icon: ClipboardCheck, shown: true },
-    { key: 'training', icon: TrafficCone, shown: on.training },
-    { key: 'matches', icon: PitchIcon, shown: on.games },
-  ]
-  const jobs = all.filter(job => job.shown)
 
   return (
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
         <PageTop className="arc" menu={false} title={t('coachHowTrakWorks:title')} trail={<CoachTrail current={t('coachHowTrakWorks:title')} />}
-          below={<div className="grid gap-4">
-            <p className="max-w-[60ch] text-[15px] text-ink-2">{t('coachHowTrakWorks:intro')}</p>
-            {/* The four jobs at a glance, in their colours. */}
-            <ul aria-hidden="true" className="mb-4 flex flex-wrap gap-2 laptop:mb-6">
-              {jobs.map(({ key, icon: Icon }) =>
-                <li key={key} className="flex items-center gap-2 rounded-full py-1.5 pl-2 pr-3.5 text-[14px] font-medium"
-                  style={{ background: TONES[key].bg, color: TONES[key].text }}>
-                  <Icon size={16} strokeWidth={1.75} />{t(`coachHowTrakWorks:${key}Title`)}
-                </li>)}
-            </ul>
-          </div>} />
+          below={<p className="mb-4 max-w-[60ch] text-[15px] text-ink-2 laptop:mb-6">{t('coachHowTrakWorks:intro')}</p>} />
         <div className="grid gap-8 laptop:gap-10">
           <Stage id="how-before" step={1} title="beforeTitle">
             <ul className={`grid gap-4 ${on.season ? 'tablet:grid-cols-3' : 'tablet:grid-cols-2'}`}>
