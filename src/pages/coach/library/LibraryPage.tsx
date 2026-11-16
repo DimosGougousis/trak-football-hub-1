@@ -1,5 +1,6 @@
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { CoachTrail } from '@/components/coach/CoachTrail'
+import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { PitchArt } from '@/components/library/LibraryArt'
@@ -23,7 +24,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 export default function LibraryPage() {
   const { key } = useParams()
   const library = libraryByKey(key)
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const coachSquad = useCoachSquad(user?.id)
   const wide = useSideMenuScreen()
   const [params, setParams] = useSearchParams()
@@ -59,7 +60,7 @@ export default function LibraryPage() {
   return (
     <MobileShell width="wide">
       <div className="pb-36">
-        <Header library={library} sessions={all.length} topics={topics.length} />
+        <Header library={library} sessions={all.length} topics={topics.length} coach={profile?.full_name || 'Coach'} />
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {band
@@ -118,13 +119,17 @@ export default function LibraryPage() {
   )
 }
 
-function Header({ library, sessions, topics }: { library: Library; sessions: number; topics: number }) {
+function Header({ library, sessions, topics, coach }: { library: Library; sessions: number; topics: number; coach: string }) {
   return (
     <header className="relative -mx-5 overflow-hidden px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-xl tablet:px-7 tablet:pt-6"
       style={{ background: library.colour, color: ON_LIBRARY }}>
       <span aria-hidden className="absolute -right-10 -bottom-16 h-52 w-52 rounded-full border-2 tablet:-right-16 tablet:-bottom-24 tablet:h-[300px] tablet:w-[300px]" style={{ borderColor: ON_LIBRARY_RING }} />
-      {/* TRAK-334: the trail, in place of Back, white on the library's colour. */}
-      <CoachTrail current={library.label} style={ON_COLOUR_TRAIL} />
+      {/* TRAK-334: the trail, in place of Back, white on the library's colour. TRAK-379: on a phone the avatar beside
+          it opens the side menu, where the squad picker is. */}
+      <div className="relative flex min-w-0 items-center gap-3">
+        <CoachMenuButton name={coach} />
+        <CoachTrail current={library.label} style={ON_COLOUR_TRAIL} />
+      </div>
       <p className="mt-14 text-[12px] font-semibold tracking-[0.1em] tablet:mt-16">LIBRARY</p>
       <h1 className="mt-1 text-[40px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[54px]">{library.label}</h1>
       <p className="mt-2 text-[14px] font-medium tablet:text-[16px]">{plural(sessions, 'session')} · {plural(topics, 'topic')}</p>
