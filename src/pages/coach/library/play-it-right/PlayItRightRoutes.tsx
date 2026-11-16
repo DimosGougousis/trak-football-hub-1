@@ -1,5 +1,5 @@
 import { Link, Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
-import { CoachTrail } from '@/components/coach/CoachTrail'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { MobileShell } from '@/components/trak'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { ON_COLOUR_TRAIL, ON_LIBRARY, ON_LIBRARY_RING } from '@/lib/fixed-colours'
@@ -54,7 +54,7 @@ function PlayItRightHome() {
       <div className="pt-3.5 pb-36 tablet:pt-7 laptop:pt-8">
         {/* TRAK-334: the trail, in place of Back. */}
         <div className="grid gap-3">
-          <CoachTrail current="Play It Right" />
+          <MenuTrail current="Play It Right" />
           <h1 className={title}>Play It Right</h1>
         </div>
         <p className="mt-2 max-w-[60ch] text-[15px] leading-snug text-ink-2">
@@ -104,7 +104,7 @@ function PartHeader({ part, count }: { part: Part; count: string }) {
       style={{ background: part.colour, color: ON_LIBRARY }}>
       <span aria-hidden className="absolute -right-10 -bottom-16 h-52 w-52 rounded-full border-2 tablet:-right-16 tablet:-bottom-24 tablet:h-[300px] tablet:w-[300px]" style={{ borderColor: ON_LIBRARY_RING }} />
       {/* TRAK-334: the trail, in place of Back, white on the part's colour; opened from a link, under Play It Right. */}
-      <CoachTrail current={part.name} parents={[{ label: 'Play It Right', href: PIR_PATH }]} style={ON_COLOUR_TRAIL} />
+      <MenuTrail current={part.name} parents={[{ label: 'Play It Right', href: PIR_PATH }]} style={ON_COLOUR_TRAIL} />
       <p className="mt-10 text-[12px] font-semibold tracking-[0.1em] tablet:mt-12">PLAY IT RIGHT · PART {part.n}</p>
       <h1 className="mt-1 text-[36px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[50px]">{part.name}</h1>
       <p className="mt-2 max-w-[62ch] text-[15px] leading-snug">{part.line}</p>
@@ -167,7 +167,7 @@ function CoachNotes() {
     <MobileShell width="wide">
       <div className="grid max-w-[880px] gap-8 pt-3.5 pb-36 tablet:pt-7 laptop:pt-8">
         <div className="grid gap-3">
-          <CoachTrail current="Coach notes" parents={[{ label: 'Play It Right', href: PIR_PATH }]} />
+          <MenuTrail current="Coach notes" parents={[{ label: 'Play It Right', href: PIR_PATH }]} />
           <h1 className={title}>Coach notes</h1>
         </div>
         <section>

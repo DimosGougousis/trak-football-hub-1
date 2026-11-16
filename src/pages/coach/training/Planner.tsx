@@ -19,7 +19,7 @@ import {
 } from '@/components/coach/training/useTraining'
 import { ActionTile, DrillTile, PlanRows, SessionCard, TimeBar, TotalLine } from '@/components/coach/training/PlannerParts'
 import { AddPartSheet, MoreDrillsSheet, ViewDrillSheet } from '@/components/coach/training/PlannerSheets'
-import { CoachTrail } from '@/components/coach/CoachTrail'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { useParked } from '@/components/trak/parked'
 import { LoadError } from '@/components/trak'
 import { Button } from '@/components/arc/button/button'
@@ -219,7 +219,7 @@ function PlannerBody({ training, saved, draft, past, players }: {
   return <div className="grid gap-6 laptop:gap-8 pt-5">
     <header className="arc grid gap-2">
       {/* TRAK-367: the trail says which training; its name can be long, so by its day. */}
-      <CoachTrail current={t('coachTraining:planSessionDay', { day })} />
+      <MenuTrail current={t('coachTraining:planSessionDay', { day })} />
       <h1 className={`${INNER_TITLE} break-words`}>{start.only && part
         ? t(start.only === 'add' ? 'coachTraining:addNamed' : 'coachTraining:editNamed', { part: partName(part.name) }) : t('coachTraining:planSessionTitle', { title: training.title })}</h1>
       {/* TRAK-404 (Kostas, 10 Nov): no logistics here. Opened for one part, the training's name says which plan. */}

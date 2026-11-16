@@ -148,6 +148,31 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     }
   })
 
+  // TRAK-433 (Imad, 16 Nov): every coach page has the avatar on a phone, inner Training pages included.
+  const TRAINING_INNER = ['/coach/training/past', '/coach/training/drills/mine', '/coach/training/drills/all', '/coach/trainings/play-it-right']
+
+  it('TRAK-433: on a phone the inner Training pages have the avatar that opens the menu too', async () => {
+    screenIs(false)
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature === 'events' || p_feature === 'training'))
+    for (const path of TRAINING_INNER) {
+      renderApp(path)
+      await userEvent.click(await screen.findByRole('button', { name: 'Open menu' }, { timeout: 5000 }))
+      expect(await screen.findByRole('dialog', { name: 'Menu' })).toBeInTheDocument()
+      cleanup()
+    }
+  })
+
+  it('TRAK-433: on a laptop the inner Training pages have no avatar (the sidebar is there)', async () => {
+    screenIs(true)
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature === 'events' || p_feature === 'training'))
+    for (const path of TRAINING_INNER) {
+      renderApp(path)
+      await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeNull()
+      cleanup()
+    }
+  })
+
   it('on a laptop: the sidebar, and "+ Create" at the top right', async () => {
     screenIs(true)
     renderApp('/coach/home')

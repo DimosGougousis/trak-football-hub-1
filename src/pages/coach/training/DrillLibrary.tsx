@@ -59,7 +59,7 @@ function SubPage({ title, intro, children }: { title: string; intro: ReactNode; 
   return (
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
-        <PageTop className="arc" menu={false} title={title} trail={<CoachTrail current={title} />}
+        <PageTop className="arc" title={title} trail={<CoachTrail current={title} />}
           below={<p className="max-w-[60ch] text-[15px] text-ink-2">{intro}</p>} />
         {children}
       </div>

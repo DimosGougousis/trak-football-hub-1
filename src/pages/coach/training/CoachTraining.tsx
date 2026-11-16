@@ -371,7 +371,7 @@ function PastTrainings() {
   return (
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
-        <PageTop className="arc" menu={false} title={t('coachTraining:pastTrainings')} trail={<CoachTrail current={t('coachTraining:pastTrainings')} />} />
+        <PageTop className="arc" title={t('coachTraining:pastTrainings')} trail={<CoachTrail current={t('coachTraining:pastTrainings')} />} />
         {past.error ? <LoadError what={t('coachTraining:pastWhat')} onRetry={() => void past.refetch()} retrying={past.isFetching} />
           : past.isPending ? <LoadingSkeleton label={t('coachTraining:loadingPast')} lines={2} rows={4} className="pt-6" />
           : inView.length === 0 ? <div className="arc"><EmptyState icon={<History size={24} strokeWidth={1.5} />} title={t('coachTraining:noPastYet')}
