@@ -224,7 +224,7 @@ function FamilyWeekPicker({ dates, offset, onOffset, events, renderSheet, render
 }
 
 /** The events this child's family (or the child, for themselves) said they can't make: their own rows only. */
-async function fetchOwnAbsences(childId: string, eventIds: string[], signal: AbortSignal): Promise<Set<string>> {
+export async function fetchOwnAbsences(childId: string, eventIds: string[], signal: AbortSignal): Promise<Set<string>> {
   const squad = await supabase.from('squad_players').select('id').eq('linked_player_id', childId).abortSignal(signal)
   if (squad.error) throw squad.error
   const ids = (squad.data ?? []).map(row => row.id)

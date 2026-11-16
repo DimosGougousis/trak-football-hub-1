@@ -52,6 +52,27 @@ export async function fetchSharedPlans(childId: string, asPlayer: boolean, signa
   return plans
 }
 
+/** TRAK-441 slice 4: the child's place in each match whose plan is shared (starter, bench, not_selected), for the
+ *  family lists' badges. The same copies a guardian reads; no job, no note. */
+export async function fetchSharedRoles(childId: string, signal: AbortSignal): Promise<Map<string, string>> {
+  const ids = (await rosterRows(childId, signal)).map(row => row.id)
+  if (!ids.length) return new Map()
+  const { data, error } = await supabase.from('game_for_family').select('event_id, role').in('squad_player_id', ids).abortSignal(signal).retry(false)
+  if (error) throw error
+  // Not attending never reaches a family: the database's copy reads Not selected (20261107100000).
+  return new Map((data ?? []).map(row => [row.event_id, row.role === 'not_attending' ? 'not_selected' : row.role]))
+}
+
+export function useSharedRoles(childId: string | undefined) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['shared-roles', user?.id, childId],
+    queryFn: ({ signal }) => fetchSharedRoles(childId!, signal),
+    enabled: !!user && !!childId,
+    networkMode: 'always',
+  })
+}
+
 export function useSharedPlan(event: PlayerEvent, childId: string, asPlayer: boolean) {
   const { user } = useAuth()
   return useQuery({
