@@ -30,7 +30,7 @@ import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { SearchField } from '@/components/arc/search-field/search-field'
-import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
+import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { EditIcon } from '@/components/trak/IconAction'
 import { PageTop } from '@/components/coach/PageTop'
@@ -97,8 +97,9 @@ function Page({ view, children }: { view: 'sessions' | 'drills'; children: React
         {/* Kostas, 30 Oct: no visible title ("training" too repetitive). TRAK-422 (Kostas, 13 Nov): every coach page has
             the one title, Training too, with its Sessions / Drills switch beside it. */}
         <PageTop title={t('nav:training')}>
-          <div className="arc">
-            <SegmentedControl label={t('coachTraining:trainingView')} value={view}
+          {/* TRAK-431 (Kostas, 16 Nov): every page's tabs are Squad's big glass pill. */}
+          <div className="arc w-full tablet:w-[320px]">
+            <GlassSegmented label={t('coachTraining:trainingView')} value={view} fullWidth
               options={[{ value: 'sessions', label: t('coachTraining:tabSessions') }, { value: 'drills', label: t('nav:drills') }]}
               onValueChange={next => navigate(next === 'drills' ? `${TRAINING_PATH}/drills` : TRAINING_PATH)} />
           </div>
