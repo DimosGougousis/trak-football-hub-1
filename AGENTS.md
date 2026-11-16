@@ -66,6 +66,8 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   never "pick" ("Select a date", "None selected"), in English and Greek.
 - Follow the existing mobile shell and design tokens. Use `BANDS` for band
   wording and colors; keep player-visible messages separate from private notes.
+- Spacing and corners follow [docs/design-system/spacing-and-corners.md](docs/design-system/spacing-and-corners.md)
+  (TRAK-464): cards 16 px corners and `p-5 laptop:p-6`, boxes inside 12 px; no one-off `rounded-[Npx]`.
 - The roster owns the child's name. A child email is optional. Use the existing
   guardian-created login/recovery flow for a child without email (TRAK-84).
 - The consent screen must offer only choices the backend enforces. The
