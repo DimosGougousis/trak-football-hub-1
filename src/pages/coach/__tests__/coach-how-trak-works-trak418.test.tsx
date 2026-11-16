@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
@@ -38,7 +38,8 @@ describe("TRAK-418: a coach's own How Trak works", () => {
     for (const job of ['Scheduling', 'Assessing', 'Planning training', 'Preparing for matches'])
       expect(await screen.findByRole('heading', { level: 3, name: job })).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(['Scheduling', 'Assessing', 'Planning training', 'Preparing for matches'])
-    expect(screen.getByText(/^Season plan: set the squad's objectives/)).toBeInTheDocument()
+    expect(screen.getByText('Season plan')).toBeInTheDocument()
+    expect(screen.getByText(/^Objectives for the squad and each player/)).toBeInTheDocument()
     // The players' page talked about a rating engine and self-rating; none of that here.
     expect(screen.queryByText(/self-rat|Performance Band|6\.5/i)).toBeNull()
   }, 20_000)
@@ -50,7 +51,7 @@ describe("TRAK-418: a coach's own How Trak works", () => {
     // The switches answer after the page opens; give them the time to.
     await new Promise(resolve => setTimeout(resolve, 100))
     expect(screen.getAllByRole('heading', { level: 3 }).map(h => h.textContent)).toEqual(['Assessing'])
-    expect(screen.queryByText(/^Season plan:/)).toBeNull()
+    expect(screen.queryByText('Season plan')).toBeNull()
     expect(screen.queryByText(/evaluation is due/)).toBeNull()
   }, 20_000)
 
@@ -58,5 +59,20 @@ describe("TRAK-418: a coach's own How Trak works", () => {
     coach('coach-418-c', () => true)
     renderApp('/how-it-works')
     await waitFor(() => expect(window.location.pathname).toBe('/coach/how-trak-works'))
+  }, 20_000)
+
+  // Kostas, 16 Nov: less text, more to look at. Each job has one short line and its steps as a row of tags.
+  it('each job shows its steps in order, as a short row, not paragraphs', async () => {
+    coach('coach-418-d', () => true)
+    renderApp('/coach/how-trak-works')
+    const matches = await screen.findByRole('region', { name: 'Preparing for matches' })
+    const steps = within(matches).getByRole('list', { name: 'Steps' })
+    expect(within(steps).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Logistics', 'Game plan', 'Evaluation'])
+    const scheduling = screen.getByRole('region', { name: 'Scheduling' })
+    expect(within(within(scheduling).getByRole('list', { name: 'Steps' })).getAllByRole('listitem').map(li => li.textContent))
+      .toEqual(['Add', 'Publish', 'Families see it'])
+    // No paragraph-length lines left: the longest is a short sentence.
+    const lines = Array.from(document.querySelectorAll('main p, main li, section p, section li')).map(el => el.textContent ?? '')
+    expect(Math.max(...lines.map(line => line.length))).toBeLessThanOrEqual(90)
   }, 20_000)
 })
