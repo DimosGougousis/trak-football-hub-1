@@ -423,6 +423,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
     await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(6)
     await page.getByLabel(/A note for you/).fill('Remind the back four to talk.')
+    // TRAK-301: unsaved typing survives crossing the laptop width both ways (a tablet turned, a window resized).
+    await page.setViewportSize({ width: width === 390 ? 1440 : 390, height })
+    await expect(page.getByLabel(/A note for you/)).toHaveValue('Remind the back four to talk.')
+    await page.setViewportSize({ width, height })
+    await expect(page.getByLabel(/A note for you/)).toHaveValue('Remind the back four to talk.')
     await page.waitForTimeout(300)
     await page.screenshot({ path: testInfo.outputPath(`training-plan-review-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
