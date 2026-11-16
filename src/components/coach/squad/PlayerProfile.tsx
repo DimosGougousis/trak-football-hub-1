@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight } from 'lucide-react'
+import { Button } from '@/components/arc/button/button'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import { RadarChart } from '@/components/arc/radar-chart/radar-chart'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
@@ -165,10 +165,11 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
           </div>}
       </section>}
 
-    <button type="button" onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}
-      className="inline-flex min-h-11 items-center gap-1.5 self-start text-[15px] font-medium text-brand">
-      {t('coachSquad:assessName', { name: first })} <ArrowRight size={16} aria-hidden />
-    </button>
+    {/* TRAK-423: the same small button as Home's Needs you, named for the player. */}
+    <Button size="sm" className="self-start" aria-label={t('coachSquad:assessName', { name: first })}
+      onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}>
+      {t('coachHome:assess')}
+    </Button>
   </>
 }
 

@@ -88,7 +88,7 @@ describe('TRAK-371: the Game plan before kick-off', { timeout: 30_000 }, () => {
     setup([starter('zagorakis', 4, 'Stay tight to their winger.'), starter('basinas', 5, '')])
     renderApp('/coach/matches/g1?tab=plan&step=share')
     const jobs = await jobsRow()
-    expect(jobs).toHaveTextContent(/^Jobs1 of 2 starters have oneEdit$/)
+    expect(jobs).toHaveTextContent(/^Jobs1 of 2 starters have one$/)
     expect(within(jobs).getByRole('img')).toHaveAccessibleName('Ready')
   })
 
@@ -96,7 +96,7 @@ describe('TRAK-371: the Game plan before kick-off', { timeout: 30_000 }, () => {
     setup([starter('zagorakis', 4, ''), starter('basinas', 5, '')])
     renderApp('/coach/matches/g1?tab=plan&step=share')
     const jobs = await jobsRow()
-    expect(jobs).toHaveTextContent(/^Jobs0 of 2 starters have oneEdit$/)
+    expect(jobs).toHaveTextContent(/^Jobs0 of 2 starters have one$/)
     expect(within(jobs).getByRole('img')).toHaveAccessibleName('Incomplete')
   })
 
