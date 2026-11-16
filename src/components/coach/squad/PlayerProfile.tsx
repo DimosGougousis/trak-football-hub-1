@@ -14,7 +14,7 @@ import { loadPlayerAssessments } from '@/lib/coach-assessments'
 import type { Scores } from '@/lib/squad/season-profile'
 import { PlayerFactsEditor } from './PlayerFactsEditor'
 import type { PlayerFacts } from './usePlayerFacts'
-import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
 import { PlayerObjectivesSection } from '@/components/coach/season-plan/PlayerObjectivesSection'
 import { isPosition } from '@/lib/positions'
 import { PositionAndRolesSheet } from './PositionAndRolesSheet'
@@ -32,6 +32,13 @@ const FOOT = { left: 'coachSquad:footLeft', right: 'coachSquad:footRight', both:
  *  (position, roles and profile; the season) sit inside its own card (corners and room from TRAK-464). */
 const TITLE = 'text-base font-semibold text-ink'
 const INNER = 'rounded-xl border border-line p-4'
+
+/** TRAK-461: while a part of the page loads, a placeholder its size stands in its place and grows into it. */
+function Grows({ loading, label, height, children }: { loading: boolean; label: string; height: number; children: ReactNode }) {
+  return <SkeletonMorph loading={loading} stagger={0} loadingLabel={label}>
+    <MorphBlock height={height} radius={12} style={{ width: '100%' }}>{children}</MorphBlock>
+  </SkeletonMorph>
+}
 /** The assessments shown at first, newest first. TRAK-368: "All N" shows the rest here too. */
 const SHOWN = 6
 
@@ -109,8 +116,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
         <section aria-labelledby={`about-${player.id}`} className="grid gap-2">
           <h4 id={`about-${player.id}`} className={TITLE}>{t('coachSquad:aboutName', { name: first })}</h4>
           {factsFailed ? <LoadError what={t('coachSquad:profileWhat', { name: first })} onRetry={onRetryFacts} />
-            : !facts ? <LoadingSkeleton label={t('coachSquad:loadingProfile', { name: first })} />
-            : <>
+            : <Grows loading={!facts} label={t('coachSquad:loadingProfile', { name: first })} height={236}>{facts && <div className="grid gap-2">
               <dl className="m-0 border-t border-line">
                 <Fact label={t('coachSquad:preferredFoot')}>{facts.foot ? t(FOOT[facts.foot]) : notSet}</Fact>
                 <Fact label={t('coachSquad:nationality')}>{facts.nationality ?? notSet}</Fact>
@@ -122,7 +128,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
                   : <span className="text-ink-3">{t('coachSquad:nonePicked')}</span>}</Fact>
               </dl>
               <span className="justify-self-start"><PlayerFactsEditor playerId={player.id} name={player.name} coachId={coachId} facts={facts} /></span>
-            </>}
+            </div>}</Grows>}
         </section>
       </div>
 
@@ -146,8 +152,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
     {placement && <PlayerObjectivesSection coachId={coachId} id={player.id} name={player.name} position={placement.position} squad={squad} />}
 
     {assessments.isError ? <LoadError what={t('coachSquad:assessmentsWhat', { name: first })} onRetry={() => { void assessments.refetch() }} />
-      : !assessments.data ? <LoadingSkeleton label={t('coachSquad:loadingAssessments', { name: first })} lines={2} rows={2} />
-      : <section aria-labelledby={`assessments-${player.id}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
+      : <Grows loading={!assessments.data} label={t('coachSquad:loadingAssessments', { name: first })} height={280}>{assessments.data && <section aria-labelledby={`assessments-${player.id}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
         <div className="flex items-baseline justify-between gap-3">
           <h4 id={`assessments-${player.id}`} className={TITLE}>{t('coachSquad:assessments')}</h4>
           {list.length > SHOWN
@@ -169,7 +174,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
               </div>)}
             </ScrollArea>
           </div>}
-      </section>}
+      </section>}</Grows>}
 
     {/* TRAK-423: the same small button as Home's Needs you, named for the player. */}
     <Button size="sm" className="self-start" aria-label={t('coachSquad:assessName', { name: first })}
@@ -192,12 +197,11 @@ function PositionAndRoles({ coachId, id, name, position }: { coachId: string; id
       <EditIcon label={t('coachSquad:editPositionRoles', { name: first })} haspopup onClick={() => setEditing(true)} />
     </div>
     {roles.isError ? <LoadError what={t('coachSquad:rolesWhat', { name: first })} onRetry={() => { void roles.refetch() }} />
-      : !roles.data ? <LoadingSkeleton label={t('coachSquad:loadingRoles', { name: first })} lines={2} />
-      : <dl className="m-0 border-t border-line">
+      : <Grows loading={!roles.data} label={t('coachSquad:loadingRoles', { name: first })} height={138}>{roles.data && <dl className="m-0 border-t border-line">
         <Fact label={t('coachSquad:mainPosition')}>{isPosition(position) ? t(POSITION_WORD[position]) : <span className="text-ink-3">{t('coachSquad:noPositionYet')}</span>}</Fact>
         <Fact label={t('coachSquad:roles')}>{held.length ? held.map(role => shown(ROLE_WORD, role)).join(', ') : <span className="text-ink-3">{t('coachSquad:noRoleYet')}</span>}</Fact>
         <Fact label={t('coachSquad:canAlsoPlay')}>{also.length ? also.map(p => t(POSITION_WORD[p])).join(', ') : <span className="text-ink-3">{t('coachSquad:noneYet')}</span>}</Fact>
-      </dl>}
+      </dl>}</Grows>}
     <PositionAndRolesSheet coachId={coachId} player={{ id, name, position }} open={editing} onOpenChange={setEditing} saveNeedsChange
       onSaved={() => setEditing(false)} />
   </section>

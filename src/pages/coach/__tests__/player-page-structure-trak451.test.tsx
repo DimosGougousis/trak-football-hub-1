@@ -55,7 +55,7 @@ describe("TRAK-451: a player's page has structure", () => {
     const season = screen.getByRole('heading', { name: 'Season so far' })
     expect(innerCard(position)).not.toBeNull()
     expect(innerCard(about)).toBe(innerCard(position))
-    expect(within(innerCard(about) as HTMLElement).getByRole('button', { name: /profile/i })).toBeInTheDocument()
+    expect(await within(innerCard(about) as HTMLElement).findByRole('button', { name: /profile/i })).toBeInTheDocument()
     expect(innerCard(season)).not.toBeNull()
     expect(innerCard(season)).not.toBe(innerCard(position))
     const chart = await within(innerCard(season) as HTMLElement).findByRole('figure', { name: /Traianos Dellas/ })
@@ -65,6 +65,8 @@ describe("TRAK-451: a player's page has structure", () => {
   it('every block has a bold title, the same one each time', async () => {
     renderApp('/coach/squad/player/p1')
     await screen.findByRole('heading', { name: 'About Traianos' })
+    // TRAK-461: the assessments grow into place once read.
+    await screen.findByRole('heading', { name: 'Assessments', level: 4 })
     const titles = ['Position and roles', 'About Traianos', 'Season so far', 'Objective', 'Assessments']
       .map(name => screen.getByRole('heading', { name, level: 4 }))
     for (const title of titles) expect(title).toHaveClass('font-semibold')
