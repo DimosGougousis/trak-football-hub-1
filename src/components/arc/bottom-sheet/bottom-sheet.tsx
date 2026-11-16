@@ -6,6 +6,7 @@ import type { CSSProperties, FocusEvent, KeyboardEvent, PointerEvent as ReactPoi
 import { AnimatePresence, animate, motion, useMotionValue, usePresence, useReducedMotion, useTransform } from "motion/react";
 import { X } from "lucide-react";
 import { motionTokens } from "../lib/motion-tokens";
+import { useSideMenuScreen } from "@/lib/side-menu-screen";
 import styles from "./bottom-sheet.module.css";
 
 /**
@@ -30,7 +31,7 @@ export interface BottomSheetProps {
   onDetentChange?: (index: number) => void;
   closeLabel?: string;
   className?: string;
-  /** Trak (TRAK-404, Kostas 10 Nov): up to 64rem wide instead of 36rem, for a sheet with a picture beside its text. */
+  /** Trak (TRAK-404, Kostas 10 Nov): up to 64rem wide instead of 36rem (42rem as a laptop card), for a sheet with a picture beside its text. */
   wide?: boolean;
   children: ReactNode;
 }
@@ -77,11 +78,65 @@ export function BottomSheet({ trigger, open: openProp, defaultOpen = false, onOp
     onOpenChange?.(next);
   }, [openProp, onOpenChange]);
   const dismiss = useCallback(() => setOpen(false), [setOpen]);
+  // Trak (TRAK-450, 11 Nov walk-through): on a laptop a pop-up is a card in the middle of the screen, one width and
+  // one set of margins for all of them, that grows open in place instead of rising from the bottom edge. Phones keep the sheet.
+  const card = useSideMenuScreen();
   return <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
     {trigger ? <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger> : null}
     {/* The sheet stays mounted while it leaves, so a close can be caught and reversed mid-flight. */}
-    <AnimatePresence>{open && <DialogPrimitive.Portal key="sheet" forceMount><Sheet {...props} onDismiss={dismiss} /></DialogPrimitive.Portal>}</AnimatePresence>
+    <AnimatePresence>{open && <DialogPrimitive.Portal key="sheet" forceMount>
+      {card ? <Card {...props} /> : <Sheet {...props} onDismiss={dismiss} />}
+    </DialogPrimitive.Portal>}</AnimatePresence>
   </DialogPrimitive.Root>;
+}
+
+type CardProps = Omit<BottomSheetProps, "trigger" | "open" | "defaultOpen" | "onOpenChange" | "detents" | "initialDetent" | "onDetentChange">;
+
+/** Trak (TRAK-450): the laptop's pop-up. Escape and Close shut it; focus goes back to whatever opened it (Radix). */
+function Card({ title, description, aside, closeLabel = "Close", className, wide = false, children }: CardProps) {
+  const reduced = useReducedMotion() ?? false;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // As the sheet: a hairline under the header once the content scrolls under it.
+  useEffect(() => {
+    const body = bodyRef.current, card = cardRef.current;
+    if (!body || !card) return;
+    const update = () => card.toggleAttribute("data-scrolled", body.scrollTop > 1);
+    body.addEventListener("scroll", update, { passive: true });
+    return () => body.removeEventListener("scroll", update);
+  }, []);
+  const grow = reduced ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 };
+  const small = reduced ? { opacity: 0 } : { opacity: 0, scale: .96, y: 8 };
+  return <>
+    <DialogPrimitive.Overlay asChild forceMount>
+      <motion.div className={styles.overlay} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fade} />
+    </DialogPrimitive.Overlay>
+    <div className={styles.cardFrame}>
+      <DialogPrimitive.Content
+        asChild
+        forceMount
+        {...(description ? {} : { "aria-describedby": undefined })}
+        onOpenAutoFocus={event => { event.preventDefault(); cardRef.current?.focus({ preventScroll: true }); }}
+      >
+        <motion.div ref={cardRef} className={[styles.card, wide ? styles.wide : undefined, className].filter(Boolean).join(" ")}
+          initial={small} animate={grow} exit={small} transition={reduced ? fade : settle} data-card="">
+          <div className={styles.cardHeader}>
+            <div className={styles.headRow}>
+              <div className={styles.headText}>
+                <DialogPrimitive.Title className={styles.title}>{title}</DialogPrimitive.Title>
+                {description ? <DialogPrimitive.Description className={styles.description}>{description}</DialogPrimitive.Description> : null}
+              </div>
+              {aside ? <div className={styles.aside}>{aside}</div> : null}
+              <DialogPrimitive.Close className={styles.close} aria-label={closeLabel}>
+                <X size={16} strokeWidth={1.75} aria-hidden="true" />
+              </DialogPrimitive.Close>
+            </div>
+          </div>
+          <div ref={bodyRef} className={styles.cardBody}>{children}</div>
+        </motion.div>
+      </DialogPrimitive.Content>
+    </div>
+  </>;
 }
 
 function Sheet({ title, description, aside, detents = [.45, .92], initialDetent = 0, onDetentChange, closeLabel = "Close", className, wide = false, children, onDismiss }: Omit<BottomSheetProps, "trigger" | "open" | "defaultOpen" | "onOpenChange"> & { onDismiss: () => void }) {
