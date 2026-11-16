@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { SearchField } from '@/components/arc/search-field/search-field'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, Bookmark, ChevronRight, LayoutGrid, List, Minus, Plus, Repeat } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -67,15 +68,12 @@ function SubPage({ title, intro, children }: { title: string; intro: ReactNode; 
   )
 }
 
-const searchClass = 'min-h-12 w-full rounded-xl border border-line-strong bg-surface px-4 text-[17px] text-ink placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
-
-/** The search box: plain, with no magnifying glass (Kostas, 6 Nov: the icon is kept for a search across all of Trak). */
+/** The search box: Arc's search field with its magnifier, the same box as Past trainings and Squad (TRAK-431, Kostas
+ *  16 Nov, in place of 6 Nov's plain box). The page's heading says what it searches, so its label is for screen readers. */
 function FindBox({ value, onChange, big = false }: { value: string; onChange: (q: string) => void; big?: boolean }) {
-  return <>
-    <label htmlFor="find-a-drill" className="sr-only">Search drills</label>
-    <input id="find-a-drill" type="search" autoComplete="off" value={value} onChange={e => onChange(e.target.value)}
-      placeholder="Search, e.g. rondo or pressing" className={`${searchClass} ${big ? 'min-h-14 rounded-2xl text-lg' : ''}`} />
-  </>
+  return <div className={`arc [&_label]:sr-only ${big ? '[&_input]:text-[17px] [&>div>div]:min-h-14' : ''}`}>
+    <SearchField label="Search drills" autoComplete="off" value={value} onValueChange={onChange} placeholder="Search, e.g. rondo or pressing" />
+  </div>
 }
 
 /** The search in the address: typing replaces it, so Back skips each letter. */
