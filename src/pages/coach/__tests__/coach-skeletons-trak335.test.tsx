@@ -4,7 +4,7 @@
  * Matches pages. Test people are named after footballers.
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
@@ -77,14 +77,37 @@ async function skeleton(label: string) {
   return status
 }
 
+/** TRAK-461: Arc's Skeleton morph. Placeholders shaped like the page (`blocks` of them, hidden from screen readers) in a
+ *  busy region; "Loading …" is heard once, from one status, and no "Loading" line shows. */
+async function morph(label: string, blocks: number) {
+  // A live status says it in words (a status takes no name from its text, so it is found by them).
+  const status = await screen.findByText(label, {}, { timeout: 5000 })
+  expect(status).toHaveAttribute('role', 'status')
+  expect(screen.getAllByText(label)).toHaveLength(1)
+  const region = status.closest('[aria-busy="true"]') as HTMLElement
+  expect(region).not.toBeNull()
+  expect(region.querySelectorAll('[data-state="skeleton"]')).toHaveLength(blocks)
+  for (const placeholder of region.querySelectorAll('[data-state="skeleton"] > [aria-hidden="true"]')) expect(placeholder.textContent).toBe('')
+  expect(screen.getAllByText(/^Loading/)).toEqual([status])
+  return region
+}
+/** Once loaded, every placeholder has become the part it stood for, and nothing is heard as loading. */
+async function grown(region: HTMLElement, label: string) {
+  await waitFor(() => expect(region.querySelectorAll('[data-state="skeleton"]')).toHaveLength(0))
+  expect(region).not.toHaveAttribute('aria-busy')
+  expect(screen.queryByText(label)).toBeNull()
+}
+
 describe('TRAK-335: skeletons while the coach app loads', { timeout: 30_000 }, () => {
-  it('Matches shows a skeleton, then the next match', async () => {
+  // TRAK-461: four placeholders (Next match, Open drafts, the "Your matches" title and its row) grow into the page.
+  it('Matches shows placeholders shaped like the page, then they grow into the next match', async () => {
     server.use(hold('coach_calendar_events', [game('g1', 'Parkview Athletic', 3)]))
     renderApp('/coach/matches')
-    await skeleton('Loading your matches…')
+    const region = await morph('Loading your matches…', 4)
     release()
     expect(await screen.findByRole('region', { name: 'Next match' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading your matches…' })).toBeNull())
+    expect(screen.getByRole('region', { name: 'Open drafts' })).toBeInTheDocument()
+    await grown(region, 'Loading your matches…')
   })
 
   it('a match page shows a skeleton, then the match', async () => {
@@ -103,10 +126,14 @@ describe('TRAK-335: skeletons while the coach app loads', { timeout: 30_000 }, (
     expect(await screen.findByText('Angelos Charisteas')).toBeInTheDocument()
   })
 
-  it("Home's week shows a skeleton while it loads", async () => {
+  // TRAK-461: one placeholder the size of the week grows into it.
+  it("Home's week shows a placeholder the size of the week, then grows into it", async () => {
     server.use(hold('coach_calendar_events', []))
     renderApp('/coach/home')
-    await skeleton('Loading this week')
+    const region = await morph('Loading this week', 1)
+    release()
+    expect(await within(region).findByRole('heading', { name: 'This week' })).toBeInTheDocument()
+    await grown(region, 'Loading this week')
   })
 
   it('Training shows a skeleton while it loads', async () => {
@@ -115,12 +142,14 @@ describe('TRAK-335: skeletons while the coach app loads', { timeout: 30_000 }, (
     await skeleton('Loading your trainings…')
   })
 
-  it('Schedule shows a skeleton for the day, not "Nothing planned", until the events are read', async () => {
+  it('Events shows card-shaped placeholders for the day, not "Nothing planned", until the events are read', async () => {
     server.use(hold('coach_calendar_events', []))
     renderApp('/coach/schedule')
-    await skeleton('Loading your events…')
+    // TRAK-461: two placeholders the size of an event's card.
+    const region = await morph('Loading your events…', 2)
     expect(screen.queryByText(/Nothing planned/)).toBeNull()
     release()
     expect(await screen.findByText(/Nothing planned/)).toBeInTheDocument()
+    await grown(region, 'Loading your events…')
   })
 })
