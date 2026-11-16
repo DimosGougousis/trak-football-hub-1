@@ -102,6 +102,16 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
 
     // A second formation, from the pitch as it is, then two taps.
     await page.getByRole('button', { name: 'New formation' }).click()
+    const popup = page.getByRole('dialog', { name: 'New formation' })
+    await expect(popup).toBeVisible()
+    if (width >= 1024) {
+      // TRAK-450: on a laptop the pop-up is a 42rem card in the middle of the screen, not a sheet on the bottom edge.
+      await expect.poll(async () => Math.round((await popup.boundingBox())!.width)).toBe(672)
+      const box = (await popup.boundingBox())!
+      expect(box.y + box.height).toBeLessThanOrEqual(height - 32)
+      expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(2)
+    }
+    await page.screenshot({ path: testInfo.outputPath(`new-formation-${width}.png`) })
     await page.getByRole('textbox', { name: 'Formation name' }).fill('High press')
     await page.getByRole('button', { name: 'Create formation' }).click()
     await expect(cards.getByRole('button')).toHaveCount(4)
