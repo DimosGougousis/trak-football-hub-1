@@ -10,16 +10,17 @@ import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { splitTrainings, trainingMinutes } from '@/lib/training/sessions'
 import { herePath, planPath, sessionSummary } from '@/lib/training/plans'
 import { registerProblem } from '@/lib/event-register'
-import { AGAIN, NOTE_MAX, againLabel, loopSteps, nextTraining, searchPast, trainingBadge, type Again, type Phase } from '@/lib/training/next'
+import { againLabel, loopSteps, nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
 import { gameWhen } from '@/components/coach/games/useGames'
 import {
-  useDrafts, useHere, useNotes, usePastTrainings, usePlannedTrainings, useRegisters, useSaveNotes, useTrainings, type Draft, type Notes, type Training,
+  useDrafts, useHere, useNotes, usePastTrainings, usePlannedTrainings, useRegisters, useTrainings, type Draft, type Training,
 } from '@/components/coach/training/useTraining'
+import { NotesForm } from '@/components/coach/training/NotesForm'
 import { startedLocked } from '@/lib/coach-events'
 import { NOTE_STEP } from '@/lib/event-edit'
 import { CopyTargetSheet, PastPlanSheet, type PlanToCopy } from '@/components/coach/training/PastPlanSheet'
 import { CoachTrail } from '@/components/coach/CoachTrail'
-import { PitchViewRoute, PlanEditorRoute, PlanRoute, WhosHereRoute } from './CoachTrainingPlan'
+import { PitchViewRoute, ToTab, TrainingRoute } from './CoachTrainingPlan'
 import { AllDrills, ChangePractice, DrillPage, LibraryHome, MyDrills, PracticePage } from './DrillLibrary'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { Badge } from '@/components/arc/badge/badge'
@@ -28,7 +29,6 @@ import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { Stepper } from '@/components/arc/stepper/stepper'
-import { Textarea } from '@/components/arc/textarea/textarea'
 import { SearchField } from '@/components/arc/search-field/search-field'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
@@ -75,10 +75,12 @@ export default function CoachTraining() {
       <Route path="drills/kind/:kind" element={<PracticePage />} />
       <Route path="drills/d/:drillId" element={<DrillPage />} />
       <Route path="drills/*" element={<Navigate to={`${TRAINING_PATH}/drills`} replace />} />
-      <Route path=":eventId" element={<PlanRoute />} />
-      <Route path=":eventId/plan" element={<PlanEditorRoute />} />
+      {/* TRAK-456: a training's page, built like a match's: Logistics, Training plan and After training tabs (?tab=). */}
+      <Route path=":eventId" element={<TrainingRoute />} />
+      {/* Plan session and Who's here were pages of their own; an open tab or an older link lands on the tab. */}
+      <Route path=":eventId/plan" element={<ToTab tab="plan" />} />
+      <Route path=":eventId/here" element={<ToTab tab="after" />} />
       <Route path=":eventId/view" element={<PitchViewRoute />} />
-      <Route path=":eventId/here" element={<WhosHereRoute />} />
       {/* TRAK-309: View was Run it, at /run. An open tab or an older link (Home's Today card) still lands on it. */}
       <Route path=":eventId/run" element={<Navigate to="../view" relative="path" replace />} />
       <Route path="*" element={<Navigate to={TRAINING_PATH} replace />} />
@@ -225,7 +227,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   const minutes = trainingMinutes(training)
   const count = sessionId ? here.data?.get(sessionId) ?? null : null
   const badge = trainingBadge({ phase, planned, here: count, draft: !!draft })
-  const stoppedAt = draft ? draft.parts[draft.step]?.name ?? t('coachSchedule:stepReview') : null
+  const stoppedAt = draft ? draft.parts[draft.step]?.name ?? t('coachMatches:reviewShare') : null
   const current = phase === 'after' ? 3 : planned || phase === 'day' ? 2 : 1
   // A step the card has moved past is ticked only if it really happened; otherwise it says what's missing (live check,
   // 3 Nov: a training ended with no register showed Who's here ticked).
@@ -235,8 +237,9 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
   const locked = startedLocked(training)
   // Who's here opens as the register does everywhere else: published, not cancelled, started.
   const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date())
-  const review = () => navigate(`${TRAINING_PATH}/${training.id}`)
+  // TRAK-456: a plan, written or not, is the training page's Training plan tab.
   const plan = () => navigate(planPath(training.id))
+  const review = plan
 
   return (
     <section aria-labelledby="next-training" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
@@ -303,48 +306,12 @@ function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[]
         {drafts.map(({ training, draft }) => <li key={training.id} className="flex items-center justify-between gap-3 py-3">
           <span className="grid min-w-0">
             <span className="truncate text-[15px] font-medium text-ink">{training.title}</span>
-            <span className="truncate text-sm text-ink-3">{t('coachTraining:stoppedAtLine', { day: gameWhen(training).day, step: draft.parts[draft.step]?.name ?? t('coachSchedule:stepReview') })}</span>
+            <span className="truncate text-sm text-ink-3">{t('coachTraining:stoppedAtLine', { day: gameWhen(training).day, step: draft.parts[draft.step]?.name ?? t('coachMatches:reviewShare') })}</span>
           </span>
           <Button size="sm" variant="secondary" aria-label={t('coachTraining:continueNamed', { title: training.title })} onClick={() => navigate(planPath(training.id))}>{t('coachSchedule:continue')}</Button>
         </li>)}
       </ul>}
   </section>
-}
-
-/** Notes, after the training (Kostas, 2 Nov): one question for the whole session and a note for next time. Optional:
- *  Skip and close closes it all the same. */
-function NotesForm({ training, planned, onReview, onClosed }: { training: Training; planned: boolean; onReview: () => void; onClosed: () => void }) {
-  const save = useSaveNotes()
-  const { t } = useTranslation()
-  const [again, setAgain] = useState<Again | null>(null)
-  const [note, setNote] = useState('')
-  const [problem, setProblem] = useState<string | null>(null)
-  const close = (notes: Notes) => {
-    setProblem(null)
-    save.mutate({ eventId: training.id, ...notes }, {
-      onSuccess: onClosed,
-      onError: () => setProblem(t('coachTraining:couldntSaveNotes')),
-    })
-  }
-  return <div className="grid gap-4">
-    {/* As the mockup: the question and the note in one soft panel. */}
-    <div className="grid gap-3 rounded-2xl bg-ground p-4">
-    <div className="grid justify-items-start gap-2">
-      {/* The loop above already says Notes are optional. */}
-      <p aria-hidden="true" className="text-[15px] font-medium text-ink">{t('coachTraining:runAgain')}</p>
-      <SegmentedControl label={t('coachTraining:runAgain')} value={again ?? ''}
-        options={AGAIN.map(a => ({ value: a.value, label: shownWord(TRAINING_WORD, a.label) }))} onValueChange={value => setAgain(value as Again)} />
-    </div>
-    <Textarea label={t('coachTraining:noteNextTime')} rows={2} maxLength={NOTE_MAX} value={note} onChange={e => setNote(e.target.value)}
-      placeholder={t('coachTraining:noteExample')} />
-    </div>
-    {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
-    <div className="flex flex-wrap items-center gap-3">
-      <Button size="lg" loading={save.isPending} onClick={() => close({ again, note })}>{t('coachTraining:saveClose')}</Button>
-      {planned && <Button size="lg" variant="secondary" onClick={onReview}>{t('coachTraining:reviewToday')}</Button>}
-      <Button variant="ghost" disabled={save.isPending} onClick={() => close({ again: null, note: '' })}>{t('coachTraining:skipClose')}</Button>
-    </div>
-  </div>
 }
 
 /* ── Past trainings ─────────────────────────────────────────────────────── */
