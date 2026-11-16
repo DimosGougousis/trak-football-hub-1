@@ -102,5 +102,18 @@
   "matchDetails": "Λεπτομέρειες αγώνα",
   "notAssessedMatch": "{{name}}: δεν έχει αξιολογηθεί ακόμη για αυτόν τον αγώνα.",
   "notAssessedSession": "{{name}}: δεν έχει αξιολογηθεί ακόμη για αυτή την προπόνηση.",
-  "assessmentUnavailable": "Αυτή η αξιολόγηση δεν είναι διαθέσιμη: {{name}}."
+  "assessmentUnavailable": "Αυτή η αξιολόγηση δεν είναι διαθέσιμη: {{name}}.",
+  "myCard": "Η κάρτα μου",
+  "openEvaluation": "Άνοιγμα αξιολόγησης",
+  "earlier": "Προηγούμενες",
+  "coachNamed": "Προπονητής {{name}}",
+  "yourParent": "Ο γονέας σου",
+  "inYourCalendar": "Στο ημερολόγιό σου",
+  "emails": "Email",
+  "on": "Ενεργά",
+  "off": "Ανενεργά",
+  "consent": "Συγκατάθεση",
+  "consentGiven": "Δόθηκε συγκατάθεση",
+  "yourChildren": "Τα παιδιά σας",
+  "notConnected": "Δεν έχει συνδεθεί"
 }

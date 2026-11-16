@@ -102,5 +102,18 @@
   "matchDetails": "Match details",
   "notAssessedMatch": "{{name}} hasn’t been assessed for this match yet.",
   "notAssessedSession": "{{name}} hasn’t been assessed for this session yet.",
-  "assessmentUnavailable": "This assessment isn’t available for {{name}}."
+  "assessmentUnavailable": "This assessment isn’t available for {{name}}.",
+  "myCard": "My card",
+  "openEvaluation": "Open evaluation",
+  "earlier": "Earlier",
+  "coachNamed": "Coach {{name}}",
+  "yourParent": "Your parent",
+  "inYourCalendar": "In your calendar",
+  "emails": "Emails",
+  "on": "On",
+  "off": "Off",
+  "consent": "Consent",
+  "consentGiven": "Consent given",
+  "yourChildren": "Your children",
+  "notConnected": "Not connected"
 }

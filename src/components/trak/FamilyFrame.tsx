@@ -71,7 +71,7 @@ export function FamilyFrame() {
 }
 
 /** The child's academy, its name and logo (family_academy): the player's own, or the child the parent follows. */
-function useFamilyAcademy(who: 'player' | 'parent') {
+export function useFamilyAcademy(who: 'player' | 'parent') {
   const { user } = useAuth()
   const { selectedChild } = useParentChildren()
   const child = who === 'player' ? user?.id : selectedChild?.id

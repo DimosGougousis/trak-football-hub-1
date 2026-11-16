@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/arc/blocks/page-header/page-header'
 import { ArcProvider } from '@/components/arc/lib/arc-provider'
 import { Breadcrumb } from '@/components/arc/breadcrumb/breadcrumb'
+import { Avatar } from '@/components/arc/avatar/avatar'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
-import { useFrameTrail } from './FamilyFrame'
+import { FrameActions, useFrameTrail } from './FamilyFrame'
 
-/* TRAK-441 slice 5 (mockup, 12 Nov): the family pages' shared parts, the coach's. */
+/* TRAK-441 slices 5 and 6 (mockup, 12 Nov): the family pages' shared parts, the coach's. */
 
 export const familyCard = 'rounded-2xl border border-line bg-surface p-5 laptop:p-6'
 export const familyH2 = 'text-lg font-medium text-ink'
@@ -35,4 +37,32 @@ export function FamilyPage({ title, status, details, from, children }: {
       <div className="pt-4">{children}</div>
     </PageHeader>
   </ArcProvider>
+}
+
+/** A tab's page title on a phone, avatar and name (the mockup's); on a laptop the name is in the top bar only. */
+export function FamilyTabTitle({ title, name }: { title: string; name: string }) {
+  return <FrameActions fallback={<header className="arc flex items-center gap-3 pb-4 pt-1">
+    <Avatar name={name} size="md" /><h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{title}</h1>
+  </header>}>{null}</FrameActions>
+}
+
+export type FamilyRow = { label: string; value?: ReactNode; to?: string; onClick?: () => void; expanded?: boolean; controls?: string }
+
+/** Profile's lists: a row that opens a page, does something, or only says something. */
+export function FamilyRows({ rows }: { rows: FamilyRow[] }) {
+  const body = (row: FamilyRow, open: boolean) => <>
+    <span className="flex-1 text-ink">{row.label}</span>
+    {row.value != null && <span className="text-ink-3">{row.value}</span>}
+    {open && <ChevronRight size={16} aria-hidden="true" className={`flex-none text-ink-3 transition-transform ${row.expanded ? 'rotate-90' : ''}`} />}
+  </>
+  const line = 'flex min-h-[52px] w-full items-center gap-3 px-5 py-3 text-left text-[15px]'
+  const press = `${line} hover:bg-raised focus-visible:bg-raised`
+  return <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+    {rows.map(row => <li key={row.label}>
+      {row.to ? <Link to={row.to} className={press}>{body(row, true)}</Link>
+        : row.onClick ? <button type="button" onClick={row.onClick} aria-expanded={row.expanded} aria-controls={row.controls} className={press}>{body(row, true)}</button>
+        // No chevron: its value lines up with the others' (20 px side, 16 px chevron, 12 px gap).
+        : <div className={`${line} pr-12`}>{body(row, false)}</div>}
+    </li>)}
+  </ul>
 }

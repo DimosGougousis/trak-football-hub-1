@@ -1,5 +1,8 @@
+import { useId, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { Check, ChevronRight, Settings as SettingsIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { ParentFamilyContent } from '@/components/parent/ParentFamily'
@@ -10,12 +13,24 @@ import { ParentChildCredentials } from '@/components/parent/ParentChildCredentia
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconHowItWorks } from '@/components/icons/TrakIcons'
 import { Avatar } from '@/components/arc/avatar/avatar'
+import { Badge } from '@/components/arc/badge/badge'
+import { supabase } from '@/integrations/supabase/client'
+import { useCalendarLinkStatus } from '@/components/trak/AddToCalendar'
+import { useFamilyAcademy, useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyRows, FamilyTabTitle, familyCard, familyColumns, familyH2, familyStack } from '@/components/trak/FamilyPage'
+import { hasOwnConsent } from '@/lib/parent-consent-withdrawal'
+import { useMySeason } from '@/lib/my-season'
+import { languageOf, useLanguage, useTranslation } from '@/lib/i18n'
+import type { ParentChild } from '@/lib/parent-data'
 
 export default function ParentProfilePage() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const { children, loading } = useParentChildren()
+  // TRAK-441 slice 6, behind family_look: the coach's look, keeping every function (see ProfileLook).
+  const look = useFamilyLook()
+  if (look) return <ProfileLook />
 
   return (
     <MobileShell>
@@ -94,6 +109,103 @@ export default function ParentProfilePage() {
           </div>
           <ChevronRight size={18} className="text-ink-3" />
         </button>
+      </div>
+      <NavBar role="parent" activeTab={location.pathname} onNavigate={navigate} />
+    </MobileShell>
+  )
+}
+
+/** One child: the squad and the position the coach set (the season plan's read), and "Consent given" while this
+ *  guardian's own approval is active. */
+function ChildRow({ parentId, child }: { parentId: string; child: ParentChild }) {
+  const { t } = useTranslation()
+  const plan = useMySeason(child.id).data
+  const consent = useQuery({
+    queryKey: ['own-consent', parentId, child.id],
+    queryFn: ({ signal }) => hasOwnConsent(parentId, child.id, signal),
+  })
+  const line = [plan?.squad, plan?.position].filter(Boolean).join(' · ')
+  return <li className="flex items-center gap-3 px-5 py-3">
+    <Avatar name={child.name} size="md" />
+    <span className="grid min-w-0 flex-1 gap-0.5">
+      <span className="truncate text-[15px] font-medium text-ink">{child.name}</span>
+      {line && <span className="text-sm text-ink-3">{line}</span>}
+    </span>
+    {consent.data && <Badge tone="success" size="sm" icon={<Check />}>{t('common:consentGiven')}</Badge>}
+  </li>
+}
+
+/**
+ * TRAK-441 slice 6 (mockup, 12 Nov): who they are, Your children with consent, and Account. Consent opens this
+ * guardian's withdrawals (each child's, and an approved child's who hasn't signed up) under the list. The children's
+ * logins and Connections are in Settings (Family); Settings has the rest.
+ */
+function ProfileLook() {
+  const { t, language } = useLanguage()
+  const { user, profile, signOut } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { children, parentId } = useParentChildren()
+  const academy = useFamilyAcademy('parent')
+  const calendar = useCalendarLinkStatus()
+  const emails = useQuery({
+    queryKey: ['notification-settings', user?.id, 'event_reminders'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('notification_settings').select('event_reminders').eq('user_id', user!.id).maybeSingle()
+      if (error) throw error
+      return data?.event_reminders ?? true
+    },
+    enabled: !!user,
+  })
+  const [consentOpen, setConsentOpen] = useState(false)
+  const consentId = useId()
+  const name = profile?.full_name || t('nav:parent')
+  return (
+    <MobileShell width="wide">
+      <div className="pt-3 pb-28 laptop:pt-6">
+        <FamilyTabTitle title={t('nav:profile')} name={name} />
+        <div className={`arc ${familyColumns}`}>
+          <div className={familyStack}>
+            <section className={`${familyCard} flex items-center gap-4`}>
+              <Avatar name={name} size="xl" />
+              <div className="grid min-w-0 gap-0.5">
+                <p className="truncate text-[20px] font-medium tracking-[-0.01em] text-ink">{name}</p>
+                <p className="text-[15px] text-ink-2">{t('nav:parent')}</p>
+                {academy?.name && <p className="text-sm text-ink-3">{academy.name}</p>}
+              </div>
+            </section>
+            <section aria-label={t('common:yourChildren')} className="grid gap-2">
+              <h2 className={familyH2}>{t('common:yourChildren')}</h2>
+              <ParentFamilyContent>
+                {parentId && <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+                  {children.map(child => <ChildRow key={child.id} parentId={parentId} child={child} />)}
+                </ul>}
+              </ParentFamilyContent>
+            </section>
+          </div>
+          <div className={familyStack}>
+            <section aria-label={t('settings:account')} className="grid gap-2">
+              <h2 className={familyH2}>{t('settings:account')}</h2>
+              <FamilyRows rows={[
+                { label: t('common:calendar'), to: '/settings#calendar',
+                  value: calendar.data ? <Badge tone="success" size="sm" icon={<Check />}>{t('common:inYourCalendar')}</Badge> : undefined },
+                { label: t('common:emails'), to: '/settings#notifications', value: emails.isSuccess ? t(emails.data ? 'common:on' : 'common:off') : undefined },
+                { label: t('settings:language'), to: '/settings#language', value: languageOf(language).name },
+                { label: t('common:consent'), onClick: () => setConsentOpen(open => !open), expanded: consentOpen, controls: consentId },
+                { label: t('nav:howTrakWorks'), to: '/how-it-works' },
+                { label: t('nav:settings'), to: '/settings' },
+                { label: t('settings:signOut'), onClick: () => {
+                  if (user) void signOut(user.id).then(({ error }) => { if (error) toast.error(t('settings:signOutError')) })
+                } },
+              ]} />
+            </section>
+            {/* TRAK-181, TRAK-98: each child's withdrawal, and an approved child's who has no account yet. */}
+            {consentOpen && <div id={consentId} className="grid gap-4">
+              <ParentConsentWithdrawal look />
+              <RosterConsentWithdrawals look />
+            </div>}
+          </div>
+        </div>
       </div>
       <NavBar role="parent" activeTab={location.pathname} onNavigate={navigate} />
     </MobileShell>
