@@ -4,9 +4,8 @@ import { ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/arc/blocks/page-header/page-header'
 import { ArcProvider } from '@/components/arc/lib/arc-provider'
 import { Breadcrumb } from '@/components/arc/breadcrumb/breadcrumb'
-import { Avatar } from '@/components/arc/avatar/avatar'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
-import { FrameActions, useFrameTrail } from './FamilyFrame'
+import { useFrameTrail } from './FamilyFrame'
 
 /* TRAK-441 slices 5 and 6 (mockup, 12 Nov): the family pages' shared parts, the coach's. */
 
@@ -37,13 +36,6 @@ export function FamilyPage({ title, status, details, from, children }: {
       <div className="pt-4">{children}</div>
     </PageHeader>
   </ArcProvider>
-}
-
-/** A tab's page title on a phone, avatar and name (the mockup's); on a laptop the name is in the top bar only. */
-export function FamilyTabTitle({ title, name }: { title: string; name: string }) {
-  return <FrameActions fallback={<header className="arc flex items-center gap-3 pb-4 pt-1">
-    <Avatar name={name} size="md" /><h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{title}</h1>
-  </header>}>{null}</FrameActions>
 }
 
 export type FamilyRow = { label: string; value?: ReactNode; to?: string; onClick?: () => void; expanded?: boolean; controls?: string }

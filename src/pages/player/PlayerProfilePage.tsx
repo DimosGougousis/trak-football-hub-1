@@ -16,7 +16,8 @@ import { loadConnections } from '@/components/player/PlayerConnections'
 import { BandBars } from '@/components/player/LatestEvaluation'
 import { useCalendarLinkStatus } from '@/components/trak/AddToCalendar'
 import { useFamilyAcademy, useFamilyLook } from '@/components/trak/FamilyFrame'
-import { FamilyRows, FamilyTabTitle, familyCard, familyColumns, familyH2, familyStack } from '@/components/trak/FamilyPage'
+import { FamilyPageTitle } from '@/components/trak/FamilyPageTitle'
+import { FamilyRows, familyCard, familyColumns, familyH2, familyStack } from '@/components/trak/FamilyPage'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { Badge } from '@/components/arc/badge/badge'
 import { evalDay } from '@/lib/evaluation'
@@ -247,7 +248,7 @@ function ProfileLook({ position, ageGroup, assessments }: { position?: string | 
   return (
     <MobileShell width="wide">
       <div className="pt-3 pb-28 laptop:pt-6">
-        <FamilyTabTitle title={t('nav:profile')} name={name} />
+        <FamilyPageTitle title={t('nav:profile')} />
         <div className={`arc ${familyColumns}`}>
           <div className={familyStack}>
             <section className={`${familyCard} flex items-center gap-4`}>

@@ -17,7 +17,8 @@ import { Badge } from '@/components/arc/badge/badge'
 import { supabase } from '@/integrations/supabase/client'
 import { useCalendarLinkStatus } from '@/components/trak/AddToCalendar'
 import { useFamilyAcademy, useFamilyLook } from '@/components/trak/FamilyFrame'
-import { FamilyRows, FamilyTabTitle, familyCard, familyColumns, familyH2, familyStack } from '@/components/trak/FamilyPage'
+import { FamilyPageTitle } from '@/components/trak/FamilyPageTitle'
+import { FamilyRows, familyCard, familyColumns, familyH2, familyStack } from '@/components/trak/FamilyPage'
 import { hasOwnConsent } from '@/lib/parent-consent-withdrawal'
 import { useMySeason } from '@/lib/my-season'
 import { languageOf, useLanguage, useTranslation } from '@/lib/i18n'
@@ -163,7 +164,7 @@ function ProfileLook() {
   return (
     <MobileShell width="wide">
       <div className="pt-3 pb-28 laptop:pt-6">
-        <FamilyTabTitle title={t('nav:profile')} name={name} />
+        <FamilyPageTitle title={t('nav:profile')} />
         <div className={`arc ${familyColumns}`}>
           <div className={familyStack}>
             <section className={`${familyCard} flex items-center gap-4`}>
