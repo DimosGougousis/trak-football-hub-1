@@ -58,8 +58,8 @@ function EditScreen({ part, problem, saving, canSave, onSave, children }: {
         className="inline-flex min-h-11 items-center gap-1 justify-self-start rounded-md text-[15px] font-medium text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         <ChevronLeft size={16} aria-hidden="true" />Season plan
       </button>
+      {/* TRAK-423: no grey "Edit" over the title; the page already says what it is. */}
       <header className="grid gap-1">
-        <p className="text-sm text-ink-3">Edit</p>
         <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{PLAN_PARTS[part]}</h1>
         <p className="text-sm text-ink-3">{part === 'reminder' ? 'Only you see this.' : WAITS}</p>
       </header>

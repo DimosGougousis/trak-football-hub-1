@@ -86,7 +86,8 @@ export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = 
       waiting: roster.consentPending.has(p.id),
       trend: trends.get(p.id),
       flag: watchOf.has(p.id) ? <WatchBadge watch={watchOf.get(p.id)} />
-        : owed.get(p.id) === 'assess' ? <Badge tone="warning" size="sm">{t('coachHome:assess')}</Badge>
+        // TRAK-423: a state, like Draft; the Assess button is on the player's page.
+        : owed.get(p.id) === 'assess' ? <Badge tone="warning" size="sm">{t('coachHome:stateDue')}</Badge>
         : owed.get(p.id) === 'draft' ? <Badge tone="warning" size="sm">{t('coachHome:stateDraft')}</Badge> : undefined,
     }
   })

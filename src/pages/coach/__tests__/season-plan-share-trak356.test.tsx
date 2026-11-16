@@ -270,6 +270,21 @@ describe('TRAK-356 once shared', () => {
     expect(section).toHaveTextContent('Wins their headers · given 1 Nov, removed 5 Nov')
   }, 30_000)
 
+  // TRAK-423: Edit is the pencil, never the word, and an Edit screen has no grey "Edit" over its title.
+  it("a player's row ends in the pencil, and an Edit screen is titled by its part alone", async () => {
+    sharedPlan()
+    renderApp('/coach/season-plan')
+    await user().click(await screen.findByRole('button', { name: /^Player objectives/ }))
+    const pat = screen.getByRole('button', { name: /^Pat Synthetic/ })
+    expect(pat.querySelector('svg.lucide-pencil')).not.toBeNull()
+    expect(pat).toHaveAccessibleName(/Edit$/)
+    expect(within(pat).queryByText('Edit', { ignore: '.sr-only' })).toBeNull()
+
+    await user().click(screen.getByRole('button', { name: 'Edit the season’s dates' }))
+    const title = await screen.findByRole('heading', { level: 1, name: 'Season dates' })
+    expect(title.closest('header')).not.toHaveTextContent(/^Edit/)
+  }, 30_000)
+
   it('names who is watched first on the Share step, with the reminder', async () => {
     watches = [{ squad_player_id: 'quinn', since: new Date(Date.now() - 2 * 86400_000).toISOString() }]
     renderApp('/coach/season-plan/share')
