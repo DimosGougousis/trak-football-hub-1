@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutGroup } from 'motion/react'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar } from '@/components/trak'
 import { PlayerFace } from '@/components/trak/PlayerFace'
@@ -76,18 +77,19 @@ export default function CoachFeedbackPage() {
         .map(s => ({ id: s.id, session_date: s.session_date as string, event_id: s.event_id }))
       const sessionIds = trainings.map(t => t.id)
       const eventIds = trainings.map(t => t.event_id).filter((id): id is string => !!id)
-      const [attendance, absences, ...consent] = await Promise.all([
+      const [attendance, absences, consent] = await Promise.all([
         sessionIds.length ? supabase.from('session_attendance').select('session_id, squad_player_id').in('session_id', sessionIds).eq('status', 'present')
           : Promise.resolve({ data: [], error: null }),
         eventIds.length ? supabase.from('event_absences').select('event_id, squad_player_id, reason').in('event_id', eventIds)
           : Promise.resolve({ data: [], error: null }),
         // Same check as the J4 screens: a child waiting for a parent can't be
         // ticked or assessed, so nothing about them is flagged.
-        ...players.map(p => supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never) as unknown as Promise<{ data: boolean | null; error: unknown }>),
+        // TRAK-312: one check for the whole list.
+        consentRequired(players.map(p => p.id)),
       ])
       if (stale) return
       // Any unknown answer could make a flag wrong, so none are shown.
-      if (attendance.error || absences.error || consent.some(c => c.error || typeof c.data !== 'boolean')) return fail()
+      if (attendance.error || absences.error || consent.some(c => c === null)) return fail()
       const present = new Map<string, Set<string>>()
       for (const a of (attendance.data ?? []) as { session_id: string; squad_player_id: string }[]) {
         if (!present.has(a.session_id)) present.set(a.session_id, new Set())
@@ -104,7 +106,7 @@ export default function CoachFeedbackPage() {
         players: players.length,
         rows: playerAttention({
           roster: players,
-          waitingForParent: new Set(players.filter((_, i) => consent[i].data === true).map(p => p.id)),
+          waitingForParent: new Set(players.filter((_, i) => consent[i] === true).map(p => p.id)),
           assessments: (assessments.data ?? []).filter(a => playerIds.has(a.squad_player_id)),
           trainings,
           present,

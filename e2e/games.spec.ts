@@ -142,6 +142,8 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
     if (path === '/rest/v1/squad_players') return json(players)
     if (path === '/rest/v1/rpc/my_consent_status') return json({ required: false, granted: true, invited_parent: null })
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json([])
     if (path === '/rest/v1/event_confirmations') return json(CONFIRMED)
     if (path === '/rest/v1/event_absences') return json(ABSENT)
     if (path === '/rest/v1/game_plan_players' && req.method() === 'POST') {

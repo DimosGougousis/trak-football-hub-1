@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { publishEvent } from '@/lib/event-publish'
 import { FaceDrawing, PlayerFace } from '@/components/trak/PlayerFace'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
@@ -70,10 +71,8 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   const current = rows.filter(p => p.status !== 'coach_departed')
   // As the register (TakeRegister): only a child whose consent is active counts
   // (Kostas, #310). A failed check counts as not confirmed.
-  // ponytail: one check per player, as the register does; a batch RPC if squads grow past ~40.
-  const required = await Promise.all(current.map(p =>
-    supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
-      .abortSignal(signal).then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))))
+  // TRAK-312: one check for the whole list.
+  const required = await consentRequired(current.map(p => p.id), signal)
   const players = current.filter((_, i) => required[i] === false).map(p => ({ id: p.id, name: p.player_name || i18n.t('nav:player') }))
   const waiting = current.filter((_, i) => required[i] !== false).map(p => ({ id: p.id, name: p.player_name || i18n.t('nav:player') }))
   const present = attendance.data

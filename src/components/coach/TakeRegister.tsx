@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { refusalWithNames, registerStart, type RegisterPlayer } from '@/lib/event-register'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { i18n, useTranslation } from '@/lib/i18n'
@@ -63,9 +64,8 @@ export function TakeRegister({ eventId, coachId, sessionId, squad: eventSquad = 
       if (squad.error || absences.error || attendance.error) throw new Error('register read failed')
       const rows = (squad.data ?? []).filter(p => p.status !== 'coach_departed' && (eventSquad == null || p.age_group?.trim() === eventSquad))
       // Same check as the J4 screens; a failed check counts as not confirmed.
-      const required = await Promise.all(rows.map(p =>
-        supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
-          .then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))))
+      // TRAK-312: one check for the whole list.
+      const required = await consentRequired(rows.map(p => p.id))
       const all: RegisterPlayer[] = rows.map((p, i) => ({
         id: p.id, name: p.player_name ?? i18n.t('nav:player'), ready: required[i] === false,
         waitReason: required[i] === null ? "consent couldn't be checked" : 'waiting for a parent',

@@ -62,6 +62,8 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     if (path === '/rest/v1/organizations') return json([{ id: 'org-358', name: 'Rehearsal FC', logo_url: null }])
     if (path === '/rest/v1/squad_players') return json(PLAYERS)
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json([])
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     if (path === '/rest/v1/event_confirmations') return json(PLAYERS.filter(p => p.id !== 'sq-14').map(p => ({ squad_player_id: p.id })))
     if (path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-14' }])

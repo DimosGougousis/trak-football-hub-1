@@ -22,7 +22,7 @@ vi.mock('html2canvas', () => ({ default: canvas }))
 const COMING_SOON_DETAIL = 'This will be available in a future update.'
 // Reads that travel as POST, and the app's own page-view telemetry.
 const READ_RPCS = ['my_consent_status', 'my_session_is_live', 'get_children_awaiting_consent', 'get_roster_children_awaiting_consent', 'get_player_invites_for_current_user',
-  'coach_squad_player_consent_required', 'family_training_history', 'feature_on']
+  'coach_squad_player_consent_required', 'coach_squad_players_consent_pending', 'family_training_history', 'feature_on']
 // Buttons that only move around the app or the screen, never send anything.
 // Unlabelled buttons are the screens' icon-only Back (navigate(-1)); every
 // handler that writes, calls AI, shares or copies is guarded and listed in the

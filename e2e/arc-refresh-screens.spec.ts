@@ -56,6 +56,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
     if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'school' }])
     if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(req.postDataJSON()?.p_squad_player_id === 'sq-5')
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_players_consent_pending')) return json((req.postDataJSON()?.p_squad_player_ids ?? []).filter((id: string) => id === 'sq-5'))
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
     if (path === '/rest/v1/coach_team_kits') return json([])
@@ -65,6 +67,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-261: the coach's notification switches (the bell's "Can't make it"); no row means on.
     if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path.startsWith('/rest/v1/rpc/coach_squad_players_consent_pending')) return json([])
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
     if (path === '/rest/v1/season_plans') return json([])

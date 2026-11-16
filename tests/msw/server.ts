@@ -1,4 +1,5 @@
 import { setupServer } from 'msw/node'
-import { authHandlers } from './supabase'
+import { authHandlers, consentBatchFromSingle } from './supabase'
 
-export const server = setupServer(...authHandlers())
+// TRAK-312: the roster-wide consent check is answered from each test's single-child answers.
+export const server = setupServer(...authHandlers(), consentBatchFromSingle())

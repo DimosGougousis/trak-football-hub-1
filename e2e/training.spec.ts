@@ -99,6 +99,8 @@ async function backend(context: BrowserContext, unexpected: string[], trainings 
     }
     if (path === '/rest/v1/session_attendance') return json(attendance)
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json([])
     if (path === '/rest/v1/rpc/save_training_plan') {
       const { p_event_id, p_practices } = req.postDataJSON() as { p_event_id: string; p_practices: Record<string, unknown>[] }
       // As the database does: a practice ticked "Save to My drills" becomes the coach's drill.
