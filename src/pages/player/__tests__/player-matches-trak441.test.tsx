@@ -2,8 +2,8 @@
  * TRAK-441 slice 4 (spec "Matches (was Sessions)", Imad 12 Nov), behind the academy's family_look switch: the player's
  * Matches tab in the coach's look. Next match (who, when, his role, Open game plan and New while unopened), Coming up
  * (the other matches ahead), Previous matches (result, and "Review in" while the coach's review is unread). Matches
- * only: no filter chips, no training in the lists. Training history stays under them until the Trainings slice takes
- * it. With the switch off, today's Sessions page. Test people are named after footballers.
+ * only: no filter chips, no training in the lists or below them (team training is on Trainings, slice 7). With the
+ * switch off, today's Sessions page. Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
@@ -107,8 +107,8 @@ describe("TRAK-441 slice 4: the player's Matches in the coach's look", () => {
     await userEvent.click(within(played).getByRole('button', { name: 'All 5' }))
     expect(within(played).getAllByRole('link')).toHaveLength(5)
     expect(within(played).getByText('Drew 2–2')).toBeInTheDocument()
-    // Training history stays on this page until the Trainings slice takes it.
-    expect(await screen.findByText('Pressing')).toBeInTheDocument()
+    // Team training is on Trainings now (slice 7), not here.
+    expect(screen.queryByText('Pressing')).toBeNull()
   })
 
   it('an opened game plan is not New', async () => {

@@ -16,12 +16,11 @@ import { useSharedRoles } from '@/lib/games/shared-plans'
 import { useReviews } from '@/lib/games/reviews'
 import { wasOpened } from '@/lib/games/news'
 import { PreviousMatches } from './PreviousMatches'
-import { TrainingHistory } from './TrainingHistory'
 
 /* TRAK-441 slice 4 (spec "Matches (was Sessions)", Imad 12 Nov), behind family_look: the player's Matches tab in the
    coach's look. Next match (his place once the plan is shared, the plan a button away, New until he opens it), Coming
-   up, Previous matches. Matches only: no filter chips. Training history stays under them until the Trainings slice
-   takes it. Two columns on a laptop. */
+   up, Previous matches. Matches only: no filter chips, and team training is on Trainings (slice 7). Two columns on a
+   laptop. */
 
 const ROLES = new Set(['starter', 'bench', 'not_selected'])
 const EVER = new Date(0).toISOString()
@@ -86,11 +85,9 @@ export function FamilyMatches() {
                 </li>)}</ul>
               </section>}
             </div>
-            {/* TrainingHistory keeps its own top margin; in this column the gap spaces it. */}
-            <div className={`${column} [&>section]:mt-0`}>
+            <div className={column}>
               <PreviousMatches matches={matches.data} reviewed={reviews.data?.bySession} readerId={me} childId={me}
                 open={(match, eventId) => ({ to: eventId ? `/player/event/${eventId}` : `/player/match/${match.id}` })} />
-              <TrainingHistory playerUserId={me} reloadOn={user} />
             </div>
           </div>}
       </div>
