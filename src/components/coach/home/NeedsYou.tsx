@@ -45,7 +45,7 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
       : count === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{t('coachHome:needsYouNone')}</p>
       : <div className="arc -mx-1">
         <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label={t('coachHome:needsYouList')}>
-          <ul className="flex gap-3 px-1 pb-1">
+          <ul className="flex gap-3 px-1 pb-1 laptop:flex-wrap">
             {shown.flatMap(card => 'event' in card ? [card.event] : []).map(event => <li key={`event:${event.id}`} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
               {/* The week's "needs you" yellow (TRAK-270), so the card reads as the same thing. */}
               <div className="flex h-full w-full flex-col gap-3 rounded-2xl border-[1.5px] bg-surface p-4" style={{ borderColor: 'rgb(var(--t-attention))' }}>

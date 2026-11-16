@@ -1,5 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom'
-import { CoachTrail } from '@/components/coach/CoachTrail'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { MobileShell } from '@/components/trak'
 import { PitchArt, ProgrammeArt } from '@/components/library/LibraryArt'
 import { LIBRARY_PATH, agesLabel, libraryOf, libraryPath, sessionById, sessionPath, titleParts } from '@/lib/library/library'
@@ -23,7 +23,7 @@ export default function SessionPage() {
       <div className="pb-36">
         <header className={header} style={{ background: library.tint }}>
           {/* TRAK-334: the trail, in place of Back; opened from a link, it sits under its library. */}
-          <CoachTrail current={titleParts(session).title} parents={[{ label: library.label, href: libraryPath(library.key) }]} />
+          <MenuTrail current={titleParts(session).title} parents={[{ label: library.label, href: libraryPath(library.key) }]} />
           <div className={picture}>
             <PitchArt seed={session.id} colour={library.colour} className="w-[232px] flex-none shadow-[0_16px_32px_-14px_rgb(26_36_33/0.55)] tablet:w-[260px]" />
             <SessionHeading session={session} />
@@ -46,7 +46,7 @@ export function ProgrammePage() {
       <div className="pb-36">
         <header className={header} style={{ background: library.tint }}>
           {/* TRAK-334: the trail, in place of Back; opened from a link, it sits under Programmes. */}
-          <CoachTrail current={titleParts(programme).title} parents={[{ label: 'Programmes', href: `${LIBRARY_PATH}/programmes` }]} />
+          <MenuTrail current={titleParts(programme).title} parents={[{ label: 'Programmes', href: `${LIBRARY_PATH}/programmes` }]} />
           <div className={picture}>
             <ProgrammeArt colour={library.colour} size={210} label={library.label} />
             <div className="w-full min-w-0 flex-1">

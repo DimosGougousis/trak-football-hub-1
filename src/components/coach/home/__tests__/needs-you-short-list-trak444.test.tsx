@@ -44,6 +44,13 @@ describe('TRAK-444: Needs you with a lot owed', () => {
     expect(screen.queryByText(/for more/)).toBeNull()
   })
 
+  // TRAK-433 (Imad, 16 Nov): on a laptop the cards wrap into rows, so none sits off-screen; a phone keeps the swipe.
+  // jsdom applies no media query, so this checks the class that does it.
+  it('wraps into rows on a laptop and swipes on a phone', () => {
+    show([event(1), event(2)])
+    expect(screen.getByRole('list')).toHaveClass('flex', 'laptop:flex-wrap')
+  })
+
   it('puts the urgent cards first, then the newest', () => {
     show([event(1), event(9, { urgent: true }), event(2), event(3), event(4), event(5), event(20, { urgent: true })])
     expect(titles().map(text => text.match(/Event \d+/)![0])).toEqual(['Event 9', 'Event 20', 'Event 1', 'Event 2', 'Event 3'])

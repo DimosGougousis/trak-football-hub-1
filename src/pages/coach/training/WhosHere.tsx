@@ -13,7 +13,7 @@ import { adapt, setupFor, playersOf, applySuggestion, type Adaptation } from '@/
 import { gameWhen } from '@/components/coach/games/useGames'
 import { useHere, useRegisters, useSavePlan, useSquadSize, type Plan, type Training } from '@/components/coach/training/useTraining'
 import { TakeRegister } from '@/components/coach/TakeRegister'
-import { CoachTrail } from '@/components/coach/CoachTrail'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
@@ -72,7 +72,7 @@ export function WhosHere({ training, plan }: { training: Training; plan: Plan | 
 
   return <div className="grid gap-6 laptop:gap-8 pt-5">
     <header className="arc grid gap-2">
-      <CoachTrail current={t('coachTraining:loopHere')} parents={[{ label: day, href: page }]} />
+      <MenuTrail current={t('coachTraining:loopHere')} parents={[{ label: day, href: page }]} />
       <h1 className={INNER_TITLE}>{t('coachTraining:whosHereQ')}</h1>
       <p className="text-sm text-ink-2">{[training.title, day, time, training.venue].filter(Boolean).join(' · ')}</p>
     </header>

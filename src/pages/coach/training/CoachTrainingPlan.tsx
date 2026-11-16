@@ -13,7 +13,7 @@ import { gameWhen } from '@/components/coach/games/useGames'
 import { useNotes, usePlan, useRegisters, useSavePlan, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
 import { PlanRows, TimeBar, TotalLine } from '@/components/coach/training/PlannerParts'
 import { AddPartSheet } from '@/components/coach/training/PlannerSheets'
-import { CoachTrail } from '@/components/coach/CoachTrail'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { LoopStrip } from '@/components/coach/training/LoopStrip'
 import { RegisterSheet } from '@/components/coach/training/RegisterSheet'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
@@ -70,7 +70,7 @@ function Header({ training, children }: { training: Training; children: ReactNod
   return (
     <header className="arc grid gap-4 pt-5 pb-2">
       {/* TRAK-334: where the coach came from (Training, Home), as every coach page's trail. */}
-      <CoachTrail current={day} />
+      <MenuTrail current={day} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-1">
           <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:trainingCaps')}</p>
@@ -255,7 +255,7 @@ function PitchView({ training, plan }: { training: Training; plan: Plan | null }
   return <div className="mx-auto grid max-w-[720px] gap-5 pt-5">
     {/* TRAK-334: opened from Training home's View plan, the trail goes back there; from the training's page, to that,
         which is also where it sits when opened from a link. */}
-    <CoachTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
+    <MenuTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
     <header className="grid gap-1">
       <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:view')}</p>
       <h1 className={INNER_TITLE}>{[day, time].filter(Boolean).join(' · ')}</h1>
