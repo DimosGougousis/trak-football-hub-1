@@ -8,13 +8,20 @@ import { fetchReviews } from '@/lib/games/reviews'
 import { TrainingHistory } from '@/components/player/TrainingHistory'
 import { UpcomingEvents } from '@/components/player/UpcomingEvents'
 import { COMPETITION_LABELS, competitionLabel } from '@/lib/coach-events'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyMatches } from '@/components/player/FamilyMatches'
 
 // TRAK-112: the tab holds matches and training, so Training is a chip too. TRAK-438: the competitions are the coach's
 // own three words (League, Tournament, Friendly), from the one shared list.
 const FILTERS = ['All', ...COMPETITION_LABELS, 'Training']
 const PAGE_SIZE = 20
 
+/** TRAK-441 slice 4: with the academy's family_look switch on, Matches in the coach's look; off, Sessions as it was. */
 export default function PlayerMatches() {
+  return useFamilyLook() ? <FamilyMatches /> : <Sessions />
+}
+
+function Sessions() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()

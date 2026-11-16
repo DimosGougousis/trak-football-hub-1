@@ -11,8 +11,15 @@ import { fetchAssessedSessionIds } from '@/lib/parent-assessments'
 import { EVENT_COLOR } from '@/lib/coach-events'
 import { useReviews } from '@/lib/games/reviews'
 import { Badge } from '@/components/arc/badge/badge'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyEvents } from '@/components/parent/FamilyEvents'
 
+/** TRAK-441 slice 4: with the academy's family_look switch on, Events in the coach's look; off, the page as it was. */
 export default function ParentMatches() {
+  return useFamilyLook() ? <FamilyEvents /> : <Events />
+}
+
+function Events() {
   const navigate = useNavigate()
   const location = useLocation()
   const query = useParentMatches()
