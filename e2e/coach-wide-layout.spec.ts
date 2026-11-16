@@ -47,6 +47,8 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     // TRAK-441: a player's or parent's switch (family_look) is read through family_feature_on.
     if (path === '/rest/v1/rpc/family_feature_on') return json(features.includes(req.postDataJSON()?.p_feature))
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path.startsWith('/rest/v1/rpc/coach_squad_players_consent_pending')) return json([])
     // TRAK-250: the Squad tabs' reads. Two latest bands for three children, so Snapshot has columns to show.
     if (path === '/rest/v1/coach_assessments') return json(role === 'coach' ? [
       { squad_player_id: 'sq-1', coach_rating: 9, created_at: '2026-10-10T10:00:00Z', work_rate: 4, technical: 4, physical: 4, coachability: 4, attitude: 4, tactical: 4 },

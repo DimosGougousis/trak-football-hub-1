@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
@@ -241,9 +242,8 @@ export default function CoachAddSession() {
         // is not confirmed, and one refused row fails the whole attendance
         // insert. Offer confirmed players only; name the rest. Same check as
         // the assess screen; a failed check counts as not confirmed.
-        const required = await Promise.all(players.map(p =>
-          supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
-            .then(({ data: r, error }) => (error || typeof r !== 'boolean' ? null : r))))
+        // TRAK-312: one check for the whole list.
+        const required = await consentRequired(players.map(p => p.id))
         if (superseded) return
         const ready = players.filter((_, i) => required[i] === false)
         const readyIds = new Set(ready.map(p => p.id))
