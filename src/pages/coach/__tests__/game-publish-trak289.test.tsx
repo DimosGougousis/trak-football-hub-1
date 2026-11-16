@@ -113,10 +113,10 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
     const card = screen.getByRole('region', { name: 'Evaluation review' })
     const parts = within(within(card).getByRole('list', { name: 'The plan' })).getAllByRole('listitem')
     expect(parts.map(part => part.textContent)).toEqual([
-      'ResultWon 2–1 · 1 goal without a scorerEdit',
-      'Who played2 playedEdit',
-      'Did the plan work?1 of 2 answeredEdit',
-      'Player evaluation1 changed from Did the job · Met · 1 noteEdit',
+      'ResultWon 2–1 · 1 goal without a scorer',
+      'Who played2 played',
+      'Did the plan work?1 of 2 answered',
+      'Player evaluation1 changed from Did the job · Met · 1 note',
     ])
     expect(parts.map(part => within(part).getByRole('img').getAttribute('aria-label'))).toEqual(['Incomplete', 'Ready', 'Needed', 'Ready'])
     expect(within(card).getByRole('img', { name: '2 of 4 parts ready, 2 incomplete' })).toBeInTheDocument()

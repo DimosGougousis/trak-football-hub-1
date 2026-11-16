@@ -115,11 +115,11 @@ describe('TRAK-344: the match page says each thing once', { timeout: 30_000 }, (
     const card = await screen.findByRole('region', { name: 'Game plan review' })
     const parts = rows(card)
     expect(parts.map(part => part.textContent)).toEqual([
-      'LogisticsEdit',
-      'Tactics & analysisEdit',
-      'Instructions1 instructionEdit',
-      'Line-up1 of 11 placed · 1 on the benchEdit',
-      'Jobs1 of 1 starters have oneEdit',
+      'Logistics',
+      'Tactics & analysis',
+      'Instructions1 instruction',
+      'Line-up1 of 11 placed · 1 on the bench',
+      'Jobs1 of 1 starters have one',
     ])
     // Screen readers still hear each part's status, from its icon.
     expect(parts.map(part => within(part).getByRole('img').getAttribute('aria-label'))).toEqual(['Ready', 'Ready', 'Ready', 'Incomplete', 'Ready'])
@@ -132,7 +132,7 @@ describe('TRAK-344: the match page says each thing once', { timeout: 30_000 }, (
     expect(within(card).getByText('2 incomplete')).toBeInTheDocument()
     expect(within(card).queryByText('Logistics first')).toBeNull()
     expect(within(rows(card)[0]).getByRole('img', { name: 'Needed' })).toBeInTheDocument()
-    expect(rows(card)[0]).toHaveTextContent(/^LogisticsEdit$/)
+    expect(rows(card)[0]).toHaveTextContent(/^Logistics$/)
     expect(within(card).getByText('Publish the match in Logistics first')).toBeInTheDocument()
   })
 

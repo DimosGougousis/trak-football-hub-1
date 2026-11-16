@@ -265,9 +265,9 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     renderApp('/coach/squad')
     const panel = await view('Players')
     await within(panel).findByText('Leo M.')
-    await waitFor(() => expect(row(panel, 'Leo M.')).toHaveTextContent('Assess'))
+    await waitFor(() => expect(row(panel, 'Leo M.')).toHaveTextContent('Due'))
     expect(row(panel, 'Sami K.')).toHaveTextContent('Draft')
-    expect(row(panel, 'Newcomer R.')).not.toHaveTextContent(/Assess|Draft/)
+    expect(row(panel, 'Newcomer R.')).not.toHaveTextContent(/Due|Draft/)
   })
 
   it('filters by position and searches by name or shirt number', async () => {

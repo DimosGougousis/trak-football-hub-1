@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar } from '@/components/trak'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
+import { Button } from '@/components/arc/button/button'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { playerAttention, type AttentionLevel, type AttentionRow } from '@/lib/player-attention'
@@ -230,10 +231,10 @@ function FeedbackTable({ rows, show, onShow, onOpen, onAssess }: {
               </td>
               <td className="py-2.5 pr-3 text-[12px] text-ink-2">{row.reasons.join(' · ')}</td>
               <td className="py-2.5 text-right">
-                <button type="button" onClick={() => onAssess(row.playerId)}
-                  className="rounded-xl px-3 py-1.5 text-[12px] font-medium border border-line text-ink hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                {/* TRAK-423: the same small button as Home's Needs you. */}
+                <span className="arc"><Button size="sm" aria-label={t('coachSquad:assessName', { name: row.name })} onClick={() => onAssess(row.playerId)}>
                   {t('coachHome:assess')}
-                </button>
+                </Button></span>
               </td>
             </tr>
           ))}
