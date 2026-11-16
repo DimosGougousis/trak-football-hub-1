@@ -103,7 +103,8 @@ export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = 
       {open && <CoachTrail current={open.name} />}
       {/* TRAK-368: the page's title, as the older player page had it; the card's name is the visible one. */}
       {open && <h1 className="sr-only">{open.name}</h1>}
-      {open && user ? <article aria-label={`${open.name}, ${open.position || t('coachSquad:noPositionYetLower')}`} className="rounded-2xl border border-line bg-surface p-6">
+      {/* TRAK-451: the page's card puts the standard room between its parts (TRAK-464). */}
+      {open && user ? <article aria-label={`${open.name}, ${open.position || t('coachSquad:noPositionYetLower')}`} className="grid gap-6 rounded-2xl border border-line bg-surface p-5 laptop:gap-8 laptop:p-6">
         <PlayerProfile player={open} squad={squadOf.get(open.id) ?? squadLabel} coachId={user.id}
           facts={facts.data?.get(open.id)} factsFailed={facts.isError} onRetryFacts={() => { void facts.refetch() }}
           season={season.players.get(open.id)} squadSeason={season.squad} since={seasonStartLabel(seasonFrom)}

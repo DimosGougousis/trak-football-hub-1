@@ -37,9 +37,10 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
   const placed = isPosition(position)
   const action = !placed ? null : held.length > 1 ? `Edit ${first}'s objectives` : held.length ? `Edit ${first}'s objective` : `Give ${first} an objective`
 
-  return <section aria-labelledby={`objectives-${id}`} className="my-3 grid gap-2">
+  return <section aria-labelledby={`objectives-${id}`} className="grid gap-2">
     <div className="flex items-baseline justify-between gap-3">
-      <h4 id={`objectives-${id}`} className="text-base font-medium text-ink">{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
+      {/* TRAK-451: the player's page's bold title. */}
+      <h4 id={`objectives-${id}`} className="text-base font-semibold text-ink">{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
       {/* TRAK-455: once there are objectives, editing them is a pencil; giving the first one keeps its words. */}
       {action && (held.length ? <EditIcon label={action} haspopup onClick={() => setEditing(true)} />
         : <button type="button" onClick={() => setEditing(true)} aria-haspopup="dialog"
