@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Database } from '@/integrations/supabase/types'
 import type { Progress } from '@/lib/objective-progress'
+import { squadEvaluation } from '@/lib/evaluation'
 
 /* TRAK-397, TRAK-398 (Season plan 18/18 builds 2 and 3, spec TRAK-366): what a player reads of their season plan. One
    read, season_plan_for_player() (TRAK-396): the plan as the coach last SHARED it, or no row at all when the coach has
@@ -53,3 +54,20 @@ export function useMarkSeen(child?: string) {
 
 /** The word a player's objective shows: Met once closed, otherwise the latest evaluation's, nothing before the first. */
 export const objectiveWord = (o: Pick<MyObjective, 'status' | 'current'>): Progress | null => (o.status === 'met' ? 'met' : o.current)
+
+/** The next evaluation's day (YYYY-MM-DD); null once none is left or the next is waiting on the coach. */
+export function nextEvaluation(plan: MySeason): string | null {
+  if (!plan.shared_at) return null
+  const { due } = squadEvaluation({
+    plan: { starts_on: plan.starts_on, ends_on: plan.ends_on, shared_at: plan.shared_at, eval_every: plan.eval_every, eval_day: plan.eval_day },
+    lastDueOn: plan.last_evaluation_on, zone: plan.time_zone, now: new Date(),
+  })
+  return due.next && !due.dueOn ? due.next : null
+}
+
+/** "2026/27" for a season across two years, "2027" within one; null without dates. */
+export function seasonYears(plan: Pick<MySeason, 'starts_on' | 'ends_on'>): string | null {
+  const [from, to] = [plan.starts_on, plan.ends_on].map(day => day?.slice(0, 4))
+  if (!from) return null
+  return to && to !== from ? `${from}/${to.slice(2)}` : from
+}

@@ -17,8 +17,9 @@ import { ChildSwitcher } from '@/components/parent/ParentFamily'
 const UNDER: [RegExp, string][] = [
   [/^\/player\/(match|event)\//, '/player/matches'],
   [/^\/player\/(season|calendar|feedback)/, '/player/home'],
-  [/^\/parent\/(match|event|session|assessment)/, '/parent/matches'],
-  [/^\/parent\/season/, '/parent/home'],
+  [/^\/parent\/(match|event|session|assessments)/, '/parent/matches'],
+  // TRAK-441 slice 5: an evaluation opens from Home's Latest evaluation, so it sits under Home (a match's stays under Events).
+  [/^\/parent\/(season|assessment\/)/, '/parent/home'],
 ]
 
 /**
