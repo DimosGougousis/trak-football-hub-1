@@ -129,7 +129,9 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(load).toHaveBeenCalledTimes(2))
     expect(await screen.findByRole('dialog', { name: 'vs Rivals FC' })).toBeInTheDocument()
-    expect(await within(screen.getByRole('dialog')).findByRole('button', { name: 'Published' })).toBeDisabled()
+    // TRAK-427: a state (Arc's pill), not a disabled button.
+    expect(await within(screen.getByRole('dialog')).findByText('Published')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Published' })).toBeNull()
   })
 
   it('shows a published event\'s link, Edit and who is coming', async () => {
@@ -138,9 +140,10 @@ describe('TRAK-182: the event sheet', () => {
     renderStrip([event({})], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
-    // The Published button says it; no status line repeats it (Imad, 16 Oct).
+    // The Published pill says it; no status line repeats it (Imad, 16 Oct).
     expect(within(sheet).queryByText('Published.')).toBeNull()
-    expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
+    expect(await within(sheet).findByText('Published')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Published' })).toBeNull()
     // J8.16's pre-written message, with the event's own link, not a bare link to paste.
     const share = await within(sheet).findByRole('link', { name: 'Share' })
     const text = decodeURIComponent(share.getAttribute('href')!.replace('https://wa.me/?text=', ''))
@@ -191,7 +194,8 @@ describe('TRAK-182: the event sheet', () => {
     renderStrip([event({ startsAt: '2020-01-01T13:00:00Z' })], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
-    expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
+    expect(await within(sheet).findByText('Published')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Published' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit.
     expect(within(sheet).getByText('It has started, so its details are fixed.')).toBeInTheDocument()

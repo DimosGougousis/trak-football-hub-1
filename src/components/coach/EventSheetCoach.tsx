@@ -8,6 +8,7 @@ import { consentRequired } from '@/lib/consent-pending'
 import { publishEvent } from '@/lib/event-publish'
 import { FaceDrawing, PlayerFace } from '@/components/trak/PlayerFace'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
+import { Badge } from '@/components/arc/badge/badge'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { startedLocked, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
@@ -153,7 +154,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               {sessionId ? t('coachSchedule:register') : t('coachHome:takeRegister')}
             </button>
           ) : row?.published ? (
-            <button type="button" disabled className={`${button} bg-raised text-ink`}><Check size={16} aria-hidden="true" />{t('coachHome:notePublished')}</button>
+            // TRAK-427: a state, not an action: Arc's pill, as Schedule's cards show it, not a disabled button.
+            <span className="arc self-center"><Badge pill tone="success" icon={<Check size={14} aria-hidden="true" />}>{t('coachHome:notePublished')}</Badge></span>
           ) : (
             <button type="button" disabled={!row || publish.isPending} className={`${button} bg-brand text-on-brand`}
               onClick={() => row && (row.series_id ? navigate(`/coach/schedule?publish=${row.id}`) : publish.mutate(row))}>
