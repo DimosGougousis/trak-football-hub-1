@@ -4,6 +4,8 @@ import { ChevronLeft } from 'lucide-react'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { ParentFamilyContent } from '@/components/parent/ParentFamily'
 import { SeasonPlanSections, seasonSubtitle } from '@/components/player/SeasonPlanSections'
+import { SeasonPage } from '@/components/player/SeasonPage'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useMarkSeen, useMySeason } from '@/lib/my-season'
 import { firstName, type ParentChild } from '@/lib/parent-data'
@@ -15,13 +17,16 @@ import { firstName, type ParentChild } from '@/lib/parent-data'
 
 const font = { fontFamily: 'var(--t-font)' }
 
-function ChildSeason({ child }: { child: ParentChild }) {
+function ChildSeason({ child, look }: { child: ParentChild; look: boolean }) {
   const name = firstName(child)
-  const { data: plan, isPending, isError, refetch, isFetching } = useMySeason(child.id)
+  const query = useMySeason(child.id)
+  const { data: plan, isPending, isError, refetch, isFetching } = query
   const seen = useMarkSeen(child.id)
   // Opening the page is seeing it. It runs when New turns up, once; the re-read after it says New is gone.
   const unseen = plan?.is_new === true
   useEffect(() => { if (unseen) seen.mutate() }, [unseen]) // eslint-disable-line react-hooks/exhaustive-deps
+  // TRAK-441 slice 5, behind family_look: the same plan in the coach's page header and cards, without the helper line.
+  if (look) return <SeasonPage query={query} home="/parent/home" child={name} />
 
   if (isPending) return <div className="flex items-center justify-center h-[50vh]" role="status" aria-label={`Loading ${name}'s season`}>
     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -43,12 +48,13 @@ function ChildSeason({ child }: { child: ParentChild }) {
 export default function ParentSeason() {
   const navigate = useNavigate()
   const { selectedChild } = useParentChildren()
+  const look = useFamilyLook()
   return (
-    <MobileShell>
-      <div className="pt-12 pb-28 space-y-5">
-        <Link to="/parent/home" className="flex min-h-11 items-center gap-1 text-[13px] text-ink-2"><ChevronLeft size={16} /> Back</Link>
+    <MobileShell width={look ? 'wide' : 'page'}>
+      <div className={look ? 'pb-28' : 'pt-12 pb-28 space-y-5'}>
+        {!look && <Link to="/parent/home" className="flex min-h-11 items-center gap-1 text-[13px] text-ink-2"><ChevronLeft size={16} /> Back</Link>}
         <ParentFamilyContent>
-          {selectedChild && <ChildSeason key={selectedChild.id} child={selectedChild} />}
+          {selectedChild && <ChildSeason key={selectedChild.id} child={selectedChild} look={look} />}
         </ParentFamilyContent>
       </div>
       <NavBar role="parent" activeTab="/parent/home" onNavigate={navigate} />

@@ -2,7 +2,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { MobileShell, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useFamilyLook } from '@/components/trak/FamilyFrame'
-import { Avatar } from '@/components/arc/avatar/avatar'
+import { FamilyPageTitle } from '@/components/trak/FamilyPageTitle'
 import { TeamTraining } from '@/components/player/TeamTraining'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTranslation } from '@/lib/i18n'
@@ -93,7 +93,7 @@ const ALL_SESSIONS = TRAINING_THEMES.reduce((sum, theme) => sum + theme.sessions
  *  cards. "Set for you" waits until a coach can set one. A phone: the avatar and the tab's name; a laptop: the top bar's. */
 function FamilyTrainings() {
   const { t } = useTranslation()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const cards: [word: string, search: string, count: number][] = [
     [t('common:allSessions'), `?page=${PAGES[0].id}`, ALL_SESSIONS],
@@ -101,10 +101,7 @@ function FamilyTrainings() {
   ]
   return <MobileShell width="wide">
     <div className="arc pt-3 pb-28 laptop:pt-6">
-      <header className="flex items-center gap-3 pb-4 pt-1 laptop:hidden">
-        <Avatar name={profile?.full_name ?? ''} size="md" />
-        <h1 className="text-[22px] font-medium tracking-[-0.01em] text-ink">{t('nav:trainings')}</h1>
-      </header>
+      <FamilyPageTitle title={t('nav:trainings')} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 laptop:grid-cols-2 laptop:items-start laptop:gap-8">
         {user && <TeamTraining childId={user.id} />}
         <section aria-labelledby="catalogue">

@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { ArrowLeft, Bell, BookOpen, Building2, CalendarDays, KeyRound, Languages, LogOut, ShieldCheck, UserRound, Users } from 'lucide-react'
@@ -242,6 +242,12 @@ function AccountSettings({ userId }: { userId: string }) {
   }
 
   const titleId = useId()
+  // TRAK-441 slice 6: a family Profile row opens its own section here (/settings#calendar).
+  const { hash } = useLocation()
+  useEffect(() => {
+    const section = hash.slice(1)
+    if (section) [...document.querySelectorAll('[data-section]')].find(node => node.getAttribute('data-section') === section)?.scrollIntoView?.({ block: 'start' })
+  }, [hash])
   const consent = useQuery({
     queryKey: ['settings', userId, 'own-consent'],
     enabled: role === 'player',

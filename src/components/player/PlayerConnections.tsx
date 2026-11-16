@@ -7,6 +7,28 @@ import { MetadataLabel } from '@/components/trak'
    (TRAK-71, use-case test 25 Sep). Only active coaches count: a coach who left
    keeps read access to history, not a place here. A name hidden by RLS does
    not hide the link. A failed load says so and offers a retry. */
+/** The player's active coaches and linked parents, by name; undefined where RLS hides a name (TRAK-441 slice 6: Profile
+ *  reads it too). */
+export async function loadConnections(userId: string, signal: AbortSignal, current: () => boolean = () => true) {
+  const { client } = await getSettingsAccount(userId, current)
+  const [squad, links] = await Promise.all([
+    client.from('squad_players').select('coach_user_id').eq('linked_player_id', userId).eq('status', 'active').abortSignal(signal),
+    client.from('player_parent_links').select('parent_user_id').eq('player_user_id', userId).abortSignal(signal),
+  ])
+  if (squad.error) throw squad.error
+  if (links.error) throw links.error
+  const coachIds = [...new Set((squad.data ?? []).flatMap(row => row.coach_user_id ? [row.coach_user_id] : []))]
+  const parentIds = [...new Set((links.data ?? []).map(row => row.parent_user_id))]
+  const ids = [...new Set([...coachIds, ...parentIds])]
+  const names = new Map<string, string>()
+  if (ids.length) {
+    const { data, error } = await client.from('profiles').select('user_id, full_name').in('user_id', ids).abortSignal(signal)
+    if (error) throw error
+    for (const row of data ?? []) names.set(row.user_id, row.full_name)
+  }
+  return { coaches: coachIds.map(id => names.get(id) || undefined), parents: parentIds.map(id => names.get(id) || undefined) }
+}
+
 export function PlayerConnections() {
   const { user } = useAuth()
   const userId = user?.id
@@ -21,28 +43,12 @@ export function PlayerConnections() {
     const controller = new AbortController()
     const current = () => !cancelled
     setState('loading')
-    void (async () => {
-      const { client } = await getSettingsAccount(userId, current)
-      const [squad, links] = await Promise.all([
-        client.from('squad_players').select('coach_user_id').eq('linked_player_id', userId).eq('status', 'active').abortSignal(controller.signal),
-        client.from('player_parent_links').select('parent_user_id').eq('player_user_id', userId).abortSignal(controller.signal),
-      ])
-      if (squad.error) throw squad.error
-      if (links.error) throw links.error
-      const coachIds = [...new Set((squad.data ?? []).flatMap(row => row.coach_user_id ? [row.coach_user_id] : []))]
-      const parentIds = [...new Set((links.data ?? []).map(row => row.parent_user_id))]
-      const ids = [...new Set([...coachIds, ...parentIds])]
-      const names = new Map<string, string>()
-      if (ids.length) {
-        const { data, error } = await client.from('profiles').select('user_id, full_name').in('user_id', ids).abortSignal(controller.signal)
-        if (error) throw error
-        for (const row of data ?? []) names.set(row.user_id, row.full_name)
-      }
+    void loadConnections(userId, controller.signal, current).then(({ coaches, parents }) => {
       if (!current()) return
-      setCoaches(coachIds.map(id => names.get(id) || 'Linked coach'))
-      setParents(parentIds.map(id => names.get(id) || 'Linked parent'))
+      setCoaches(coaches.map(name => name ?? 'Linked coach'))
+      setParents(parents.map(name => name ?? 'Linked parent'))
       setState('ready')
-    })().catch(() => { if (current()) setState('error') })
+    }).catch(() => { if (current()) setState('error') })
     return () => { cancelled = true; controller.abort() }
   }, [userId, attempt])
 
