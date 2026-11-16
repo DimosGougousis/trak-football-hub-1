@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { useNotedTrainings } from '@/components/coach/training/useTraining'
 import { addDays, format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
-import { supabase } from '@/integrations/supabase/client'
 import { useFeature } from '@/components/trak/parked'
 import { weekDays, weekTitle, type StripEvent } from '@/components/trak/WeekStrip'
 import { EventSheet } from '@/components/trak/EventSheet'
@@ -16,7 +14,7 @@ import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
-import { useCoachSquad } from '@/lib/coach-squad'
+import { useCoachSquad, useWeekRoster } from '@/lib/coach-squad'
 import { MatchAction } from '@/components/coach/games/MatchAction'
 import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
 import { loadWeek } from '@/lib/coach-week-load'
@@ -24,7 +22,7 @@ import { publishEvent } from '@/lib/event-publish'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { eventHeading, toPlayerEvent } from '@/lib/player-events'
 import type { EventRow } from '@/lib/coach-events'
-import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
 import { dateLocale, i18n, useLanguage, useTranslation } from '@/lib/i18n'
 
 /**
@@ -50,7 +48,6 @@ export function CoachWeekStrip({ coachId, version = 0, everySquad = false }: {
     squadOf={squads.length >= 2 ? squadName : null} labelEach={everySquad} />
 }
 
-
 function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, labelEach }: {
   coachId: string
   version: number
@@ -73,15 +70,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const noted = useNotedTrainings()
-  // The share message names the squad and leaves out players' names (J8.16), as the event sheet's Share.
-  const roster = useQuery({
-    queryKey: ['coach', coachId, 'week-roster'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('squad_players').select('player_name, age_group, status').eq('coach_user_id', coachId)
-      if (error) throw error
-      return data ?? []
-    },
-  })
+  const roster = useWeekRoster(coachId)
 
   useEffect(() => {
     let cancelled = false
@@ -94,9 +83,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
   }, [coachId, dates, version, attempt, games])
 
   if (failed) return <div className="mb-4"><LoadError what={t('coachHome:weekWhat')} onRetry={() => setAttempt(n => n + 1)} /></div>
-  if (!week || week.monday !== dates[0]) {
-    return <LoadingSkeleton label={t('coachHome:weekLoading')} lines={4} rows={2} className="h-[320px] content-start rounded-2xl border border-line bg-surface p-5 laptop:p-6" />
-  }
+  if (!week || week.monday !== dates[0]) return <WeekMorph loading />
 
   const refresh = () => setAttempt(n => n + 1)
   const byDate = coachWeek({ dates, events: week.events, sessions: week.sessions, inView, evaluated: week.evaluated, published: week.published, noted })
@@ -118,7 +105,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
         note: squadOf && labelEach ? `${squadOf(source.squad)} · ${note}` : note })),
   }))
 
-  return <WeekPicker key={dates[0]} title={weekTitle(offset, dates[0])}
+  return <WeekMorph loading={false}><WeekPicker key={dates[0]} title={weekTitle(offset, dates[0])}
     subtitle={[`${format(parseISO(dates[0]), 'd')}–${format(parseISO(dates[6]), 'd MMMM', { locale })}`, squadLabel].filter(Boolean).join(' · ')}
     days={days} onPrevWeek={() => setOffset(n => n - 1)} onNextWeek={() => setOffset(n => n + 1)}
     renderDetails={(id, trigger) => {
@@ -138,7 +125,16 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
           : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}
       </EventSheet>
     }}
-    renderPrimary={id => <NextStep item={strips.get(id)!.item} coachId={coachId} roster={roster.data} onChanged={refresh} />} />
+    renderPrimary={id => <NextStep item={strips.get(id)!.item} coachId={coachId} roster={roster.data} onChanged={refresh} />} /></WeekMorph>
+}
+
+/** TRAK-461: while the week loads it is one placeholder the size of the week, which grows into it. Both of the strip's
+ *  returns render this, so the placeholder and the week are the same block. */
+function WeekMorph({ loading, children }: { loading: boolean; children?: ReactNode }) {
+  const { t } = useTranslation()
+  return <SkeletonMorph loading={loading} loadingLabel={t('coachHome:weekLoading')}>
+    <MorphBlock height={320} radius={16} style={{ width: '100%' }}>{children}</MorphBlock>
+  </SkeletonMorph>
 }
 
 /** The chosen event's one next step (TRAK-262). A weekly series' Publish uses Schedule's own sheet. */

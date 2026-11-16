@@ -105,6 +105,7 @@
   "nothingPlanned": "Τίποτα προγραμματισμένο",
   "noTimeSet": "χωρίς ώρα",
   "stateDraft": "Πρόχειρο",
+  "stateDue": "Εκκρεμεί",
   "stateClash": "Σύμπτωση",
   "timeDone": "Έγινε",
   "timeTbc": "Εκκρεμεί",

@@ -65,9 +65,10 @@ function ActionButton({ action, variant }: { action: PageHeaderAction; variant?:
   return <Button variant={variant} size="sm" loading={action.loading} disabled={action.disabled} onClick={action.onSelect}>{action.icon}{action.label}</Button>;
 }
 
-/** A tab's panel. The header's tabs switch it; it unmounts while another tab is shown, as Radix does. */
-export function PageHeaderPanel({ value, children }: { value: string; children: ReactNode }) {
-  return <TabsPrimitive.Content value={value} className={styles.panel}>{children}</TabsPrimitive.Content>;
+/** A tab's panel. The header's tabs switch it; it unmounts while another tab is shown, as Radix does. Trak (TRAK-456):
+ *  given `shown`, it stays mounted and is only hidden, so what's typed in it lives on while another tab is open. */
+export function PageHeaderPanel({ value, shown, children }: { value: string; shown?: boolean; children: ReactNode }) {
+  return <TabsPrimitive.Content value={value} className={styles.panel} {...(shown === undefined ? {} : { forceMount: true, hidden: !shown })}>{children}</TabsPrimitive.Content>;
 }
 
 export function PageHeader({ title, status, crumbs, details, primary, secondary = [], menu = [], onFold, tabs = [], tabsLabel, value, onValueChange, notice, top = "0px", className, children }: {

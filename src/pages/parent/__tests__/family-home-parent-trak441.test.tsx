@@ -70,11 +70,17 @@ describe("TRAK-441: the parent Home in the coach's look", () => {
     expect(screen.getByRole('button', { name: /^Alerts/ })).toBeInTheDocument()
   })
 
-  it("with the switch off: today's Home", async () => {
+  it("with the switch off: today's Home, with the match count and results but no rating (TRAK-435)", async () => {
     switchOn = false
     screenIs(false)
     renderApp('/parent/home')
-    expect(await screen.findByRole('region', { name: 'Recorded matches summary' }, { timeout: 5000 })).toBeInTheDocument()
+    const summary = await screen.findByRole('region', { name: 'Recorded matches summary' }, { timeout: 5000 })
+    expect(summary).toHaveTextContent(/^MATCHES1/)
+    expect(summary).toHaveTextContent('1 W')
+    // The 7.2 match would read "Good"; a match from Matches has no rating, so the average never fills in.
+    expect(within(summary).queryByText(/recorded matches/i)).toBeNull()
+    expect(within(summary).queryByText('Good')).toBeNull()
+    expect(within(summary).queryByText('Not rated')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Season so far' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Latest evaluation' })).toBeNull()
   })

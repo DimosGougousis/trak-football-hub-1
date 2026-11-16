@@ -24,7 +24,8 @@ const LINK_FAILED = "Couldn't make your calendar link. Check your connection and
 
 const statusKey = (userId: string | undefined) => ['calendar-link', userId]
 
-function useCalendarLinkStatus(wanted = true) {
+/** TRAK-441 slice 6: also Profile's Calendar row ("In your calendar"). */
+export function useCalendarLinkStatus(wanted = true) {
   const { user } = useAuth()
   return useQuery({
     queryKey: statusKey(user?.id),

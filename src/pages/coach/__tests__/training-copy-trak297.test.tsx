@@ -116,7 +116,7 @@ describe('TRAK-297: Copy a past session', { timeout: 30_000 }, () => {
     await user.clear(within(copy).getByRole('searchbox', { name: 'Search past plans' }))
     await user.click(within(copy).getByRole('button', { name: /^Use this plan: Pressing zones, / }))
 
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/next/plan'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/next?tab=plan'))
     // TRAK-340: a plan from before parts comes in as one part per practice, named after it; the planner starts at the first.
     const parts = await screen.findByRole('list', { name: 'Parts of the session' })
     expect(within(parts).getAllByRole('listitem').map(item => item.textContent)).toEqual([

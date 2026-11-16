@@ -54,7 +54,7 @@ import {
   KIND_LABEL, competitionProblem, failed, font, inSeries, inputClass, mono, pastProblem, type EditSheet, type Scope, NOTE_STEP,
 } from '@/lib/event-edit'
 import { useNotedTrainings } from '@/components/coach/training/useTraining'
-import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
 import { currentLanguage, i18n, useLanguage } from '@/lib/i18n'
 import { PageTitle } from '@/components/coach/PageTop'
 
@@ -93,6 +93,9 @@ type CalEvent = {
 const TYPE_COLOR: Record<ShownType, string> = EVENT_COLOR
 /** TRAK-255: the amber of "needs you" (a register to take, a match to log), as the calendar's corner. */
 const NEEDS_YOU_COLOR = 'rgb(var(--t-attention))' // TRAK-270: a clear yellow, never text
+/** TRAK-461: an event card's usual height, and its placeholder filling the column as the card does. */
+const EVENT_CARD = 140
+const FILL = { width: '100%' }
 
 const TYPE_LABEL: Record<ShownType, string> = { ...KIND_LABEL, tournament: 'Tournament' }
 /** TRAK-407: each type's word in the language showing. */
@@ -626,16 +629,18 @@ export default function CoachSchedule() {
 
           </div>
 
-          {!loaded && !loadFailed ? <LoadingSkeleton label={t('coachSchedule:scheduleLoading')} lines={2} rows={2} />
+          {/* TRAK-461: while the events load, two placeholders the size of an event's card grow into the day's cards. */}
+          <SkeletonMorph loading={!loaded && !loadFailed} stagger={0} loadingLabel={t('coachSchedule:scheduleLoading')}>
+          {!loaded && !loadFailed ? <div className="space-y-4">{[0, 1].map(index => <MorphBlock key={index} height={EVENT_CARD} radius={16} style={FILL} />)}</div>
           : selectedEvents.length === 0 ? (
             // TRAK-432: Arc's empty state; the frame's "+" is the button, named as this screen shows it.
-            <div className="arc">
+            <div className="space-y-4"><MorphBlock key={0} height={EVENT_CARD} radius={16} style={FILL}><div className="arc">
               <EmptyState icon={<CalendarDays size={24} strokeWidth={1.5} />} title={t('coachSchedule:nothingPlanned')}
                 description={t(wide ? 'coachSchedule:addWithCreate' : 'coachSchedule:addWithPlus')} />
-            </div>
+            </div></MorphBlock></div>
           ) : (
             <div className="space-y-4">
-              {selectedEvents.map(ev => {
+              {selectedEvents.map((ev, index) => {
                 const row = ev.row
                 const cancelled = !!row && isCancelled(row)
                 // TRAK-255: the state in words and colour; a draft is a dashed card only the coach sees.
@@ -695,7 +700,7 @@ export default function CoachSchedule() {
                   </p>
                 )
                 return (
-                  <div key={ev.id}
+                  <MorphBlock key={index} height={EVENT_CARD} radius={16} style={FILL}><div
                     onClick={event => {
                       // The card opens its sheet; its own buttons and links do what they say.
                       if ((event.target as HTMLElement).closest('button, a, [role="menuitem"], [role="group"]')) return
@@ -782,11 +787,12 @@ export default function CoachSchedule() {
                         <ButtonGroup label={t('coachSchedule:actionsFor', { title: ev.title })} items={groupItems} variant="outline" size="md" />
                       </div>
                     )}
-                  </div>
+                  </div></MorphBlock>
                 )
               })}
             </div>
           )}
+          </SkeletonMorph>
         </div>
         </div>
       </div>

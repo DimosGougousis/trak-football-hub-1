@@ -122,7 +122,8 @@ describe('TRAK-342: Who’s here', { timeout: 30_000 }, () => {
     const calls = register(null)
     database([training('soon', onTheMinute(Date.now() - 10 * MINUTE))], PLAN)
     renderApp('/coach/training/soon/here')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Who’s here?' })).toBeInTheDocument()
+    // TRAK-456: Who's here is the training page's After training tab.
+    expect(await screen.findByRole('tab', { name: 'After training', selected: true })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Your plan, for all 6' })).toBeInTheDocument()
     expect(screen.getByText('Trak checks it once you’re done with the register.')).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Today’s plan' })).queryByText(/Trak suggests/)).toBeNull()
@@ -179,7 +180,8 @@ describe('TRAK-342: Who’s here', { timeout: 30_000 }, () => {
     renderApp('/coach/training/soon/here')
     await screen.findByRole('heading', { name: 'Today’s plan for 5 players' })
     await user.click(within(column('Game')).getByRole('button', { name: 'Change it myself' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Edit: Game' })).toBeInTheDocument()
+    // TRAK-456: on the training page's Training plan tab, at that part's step.
+    expect(await screen.findByRole('region', { name: 'Game' })).toBeInTheDocument()
   })
 
   it('no plan: take the register anyway, and Plan session is there', async () => {

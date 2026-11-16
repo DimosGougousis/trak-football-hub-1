@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil } from 'lucide-react'
 import { Alert } from '@/components/arc/alert/alert'
 import { Button } from '@/components/arc/button/button'
 import { LoadError } from '@/components/trak/LoadError'
@@ -117,7 +117,8 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           <span className="text-xs text-ink-3">{held.length ? held.map(o => o.title).join(' · ') : 'No objective yet'}</span>
           {gone.length > 0 && <span className="text-xs text-ink-3">Removed: {gone.map(o => `${o.title} (${shortDate(o.removed)})`).join(' · ')}</span>}
         </span>
-        <span className="text-sm font-medium text-brand">Edit</span>
+        {/* TRAK-423: the pencil, as every Edit; the row is the button, so the word stays for a screen reader only. */}
+        <Pencil aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-brand" /><span className="sr-only">Edit</span>
       </button>
     </li>
   }

@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
-import { Button } from "../../button/button";
+import { EditIcon } from "@/components/trak/IconAction";
 import { Countdown } from "../../countdown/countdown";
 import { motionTokens } from "../../lib/motion-tokens";
 import styles from "./plan-review.module.css";
@@ -128,7 +128,8 @@ export function PlanReview({ title, rows, band, countdown, aside, readOnly = fal
             <span className={styles.rowLabel}>{row.label}</span>
             {row.detail ? <span className={styles.rowDetail}>{row.detail}</span> : null}
           </span>
-          {!readOnly && row.onEdit ? <Button variant="ghost" size="sm" aria-label={t("coachMatches:editPart", { part: row.label.toLocaleLowerCase() })} onClick={row.onEdit}>{t("coachSchedule:edit")}</Button> : null}
+          {/* Trak (TRAK-423): Edit is the pencil everywhere, never the word. */}
+          {!readOnly && row.onEdit ? <EditIcon label={t("coachMatches:editPart", { part: row.label.toLocaleLowerCase() })} onClick={row.onEdit} /> : null}
         </li>)}
       </ul>
 

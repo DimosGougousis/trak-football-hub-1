@@ -45,21 +45,21 @@ export default function ParentEvent() {
     markEventOpened(parentId, query.data)
   }, [parentId, childId, query.data])
 
-  // TRAK-441 slice 3.3, behind family_look: a match is the coach's match header with tabs. A training keeps this page.
-  const match = look && selectedChild && query.data?.kind === 'match' ? query.data : null
+  // TRAK-441 slices 3.3 and 7, behind family_look: the coach's page header; a match's has tabs, any other event's is Logistics.
+  const inLook = look && selectedChild && query.data ? query.data : null
   return (
-    <MobileShell width={match ? 'wide' : 'page'}>
-      <div className={match ? 'pb-4' : 'pt-3 pb-4 space-y-5'}>
-        {!match && <button type="button" onClick={backTo.go}
+    <MobileShell width={inLook ? 'wide' : 'page'}>
+      <div className={inLook ? 'pb-4' : 'pt-3 pb-4 space-y-5'}>
+        {!inLook && <button type="button" onClick={backTo.go}
           className="flex items-center gap-1 min-h-11 text-sm text-muted-foreground">
           <ChevronLeft size={16} /> {backTo.label}
         </button>}
         <ParentFamilyContent>
           {query.isError ? <ParentLoadError message="Couldn't load this event." onRetry={() => { void query.refetch() }} />
             : query.isPending ? <ParentLoading />
-              : match ? <FamilyMatch event={match} changes={changes?.key === `${childId}:${match.id}:${match.sequence}` ? changes.lines : []} as="parent" back={backTo}
+              : inLook ? <FamilyMatch event={inLook} changes={changes?.key === `${childId}:${inLook.id}:${inLook.sequence}` ? changes.lines : []} as="parent" back={backTo}
                 child={{ id: selectedChild!.id, name: selectedChild!.name.split(/\s+/)[0] || selectedChild!.name }}
-                cantMakeIt={<CantMakeIt key={selectedChild!.id} event={match} child={selectedChild!} />} />
+                cantMakeIt={<CantMakeIt key={selectedChild!.id} event={inLook} child={selectedChild!} />} />
               : query.data ? <>
                 <EventDetails event={query.data} changes={changes?.key === `${childId}:${query.data.id}:${query.data.sequence}` ? changes.lines : []} />
                 {/* TRAK-289: once the coach publishes, After the game; the note stays the child's. */}

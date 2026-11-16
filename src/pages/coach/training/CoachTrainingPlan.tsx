@@ -1,53 +1,62 @@
 import { useTranslation } from '@/lib/i18n'
-import { partName, whyWord } from '@/lib/training/words'
+import { partName, TRAINING_WORD } from '@/lib/training/words'
+import { shown } from '@/lib/squad/trait-words'
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ClipboardList, Plus } from 'lucide-react'
-import { toast } from 'sonner'
-import { registerProblem } from '@/lib/event-register'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { CalendarDays, Check, Clock, Eye, MapPin, Notebook, Share, Users } from 'lucide-react'
 import { DRILL_DETAILS, trainingEnd, trainingMinutes } from '@/lib/training/sessions'
-import { loopNote, loopState, practiceStarts } from '@/lib/training/loop'
-import { fromSaved, herePath, overTime, planPath, viewPath, type PlannerState, type Practice } from '@/lib/training/plans'
-import { keepKeys, moveTo, partsFromSaved, sameOrder, totalMinutes, type Part } from '@/lib/training/parts'
+import { loopState, practiceStarts } from '@/lib/training/loop'
+import { againLabel } from '@/lib/training/next'
+import { fromSaved, planPath, viewPath, type Practice } from '@/lib/training/plans'
+import { useAuth } from '@/contexts/AuthContext'
+import { useCoachSquad } from '@/lib/coach-squad'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import type { EventRow } from '@/lib/coach-events'
 import { gameWhen } from '@/components/coach/games/useGames'
-import { useNotes, usePlan, useRegisters, useSavePlan, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
-import { PlanRows, TimeBar, TotalLine } from '@/components/coach/training/PlannerParts'
-import { AddPartSheet } from '@/components/coach/training/PlannerSheets'
-import { CoachTrail } from '@/components/coach/CoachTrail'
-import { LoopStrip } from '@/components/coach/training/LoopStrip'
+import { useNotes, usePlan, useRegisters, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { RegisterSheet } from '@/components/coach/training/RegisterSheet'
+import { NotesForm } from '@/components/coach/training/NotesForm'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
-import { Planner } from './Planner'
+import { Logistics, useLogisticsEdit } from '@/pages/coach/CoachGame'
+import { Planner, type PlannerOpen } from './Planner'
 import { WhosHere } from './WhosHere'
 import { Badge } from '@/components/arc/badge/badge'
-import { Button } from '@/components/arc/button/button'
-import { EmptyState } from '@/components/arc/empty-state/empty-state'
+import { PageHeader, PageHeaderPanel, type PageHeaderAction } from '@/components/arc/blocks/page-header/page-header'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { INNER_TITLE } from '@/components/coach/PageTop'
 
-/* TRAK-295 (Training 2/5, spec TRAK-293, mockup boards 3A and 5): a training's plan. Write my own
-   (/coach/training/:eventId/plan) types practices one at a time and saves the plan whole; the plan
-   (/coach/training/:eventId) shows it with the loop. Only the coach sees either. TRAK-296 (Training 3/5): a practice
-   comes from My drills or the Library too, added or swapped in through AddSheet, and Training › Drills can send a
-   drill here ("Add to <training>"). TRAK-297 (Training 4/5): Copy a past session opens the planner filled in with its
-   practices; nothing saves until Save the plan. TRAK-298 (Training 5/5): the plan page runs the loop: Who's here opens
-   the existing register, and the training closes on its own once it has ended with its register taken (Kostas,
-   28 Oct). View (/coach/training/:eventId/view) is the plan read at the pitch side: TRAK-309 (Kostas, 29 Oct) took Run
-   it out of the loop and named the button and its page View. */
+/* TRAK-295 (Training 2/5, spec TRAK-293, mockup boards 3A and 5): a training's plan; only the coach sees it. TRAK-298
+   (Training 5/5): the page runs the loop: Who's here opens the existing register, and the training closes on its own
+   once it has ended with its register taken (Kostas, 28 Oct). View (/coach/training/:eventId/view) is the plan read at
+   the pitch side (TRAK-309). TRAK-456 (Imad, 16 Nov): a training's page is built like a match's, so a coach learns one
+   layout: Arc's Page header over three tabs, Logistics, Training plan (the planner, its last step Review & share) and
+   After training (Who's here, then Notes); the tab lives in the URL (?tab=). The tabs took the old step strip's place;
+   Plan session (/plan) and Who's here (/here) were pages of their own and now land on their tab. TRAK-429: the coach
+   pages' width. */
 
 const TRAINING_PATH = '/coach/training'
 const linkClass = 'rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+/* Each label is a word key, read in the language showing. */
+const TABS = [
+  { id: 'logistics', label: 'coachMatches:actLogistics' }, { id: 'plan', label: 'coachHome:trainingPlan' }, { id: 'after', label: 'coachTraining:afterTraining' },
+] as const
+type Tab = (typeof TABS)[number]['id']
+type Row = Training & EventRow
+/** The laptop's top bar is pinned above the page; the header pins under it, as a match's. */
+const TOP_BAR = '60px'
+const icon = { size: 16, strokeWidth: 1.75, 'aria-hidden': true } as const
+const metaIcon = { size: 14, strokeWidth: 1.75, 'aria-hidden': true } as const
 
 /** The training and its plan, read together, so the page never shows "Not planned" before the plan arrives. */
-function WithTraining({ children, wide = false }: { children: (training: Training, plan: Plan | null) => ReactNode; wide?: boolean }) {
+function WithTraining({ children }: { children: (training: Row, plan: Plan | null) => ReactNode }) {
   const { eventId } = useParams()
   const { t } = useTranslation()
   const training = useTraining(eventId)
   const plan = usePlan(eventId)
   return (
     <div className="min-h-screen bg-ground pb-28">
-      {/* TRAK-340: Plan session takes the coach pages' width (TRAK-307), for its two columns. */}
-      <div className={wide ? WIDE_COLUMN : 'mx-auto w-full max-w-[1040px] px-5 tablet:px-8'}>
+      <div className={WIDE_COLUMN}>
         {training.error || plan.error
           ? <div className="pt-10"><LoadError what={t('coachTraining:thisTrainingWhat')} onRetry={() => { void training.refetch(); void plan.refetch() }}
               retrying={training.isFetching || plan.isFetching} /></div>
@@ -63,182 +72,141 @@ function WithTraining({ children, wide = false }: { children: (training: Trainin
   )
 }
 
-function Header({ training, children }: { training: Training; children: ReactNode }) {
-  const { day, time, academy } = gameWhen(training)
+/** /plan and /here, the pages before TRAK-456: their tab, with what they were opened with (a plan to copy, a drill). */
+export function ToTab({ tab }: { tab: Tab }) {
+  const { eventId } = useParams()
+  const { state } = useLocation()
+  return <Navigate to={`${TRAINING_PATH}/${eventId}?tab=${tab}`} state={state} replace />
+}
+
+/* ── The training's page (TRAK-456) ───────────────────────────────────────── */
+
+export function TrainingRoute() {
+  return <WithTraining>{(training, plan) => <TrainingPage training={training} plan={plan} />}</WithTraining>
+}
+
+function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) {
+  const { user } = useAuth()
   const { t } = useTranslation()
-  const minutes = trainingMinutes(training)
-  return (
-    <header className="arc grid gap-4 pt-5 pb-2">
-      {/* TRAK-334: where the coach came from (Training, Home), as every coach page's trail. */}
-      <CoachTrail current={day} />
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="grid gap-1">
-          <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:trainingCaps')}</p>
-          <h1 className={INNER_TITLE}>{[day, time].filter(Boolean).join(' · ')}</h1>
-          <p className="text-sm text-ink-2 break-words">{[training.title, training.venue, minutes ? t('coachHome:minutes', { count: minutes }) : null].filter(Boolean).join(' · ')}</p>
-          {academy && <p className="text-sm text-ink-3">{academy}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">{children}</div>
-      </div>
-    </header>
-  )
-}
-
-/** The plan runs longer than the training was set for: said plainly, never a block (Kostas, 28 Oct). */
-function OverTime({ text }: { text: string }) {
-  return <p role="status" className="mt-2 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-ink">{text}</p>
-}
-
-/** The details a practice has, in the mockup's order: "20 × 30 m · 4v4 + 2". */
-const detailsLine = (practice: Practice) => DRILL_DETAILS.map(d => practice[d.key].trim()).filter(Boolean).join(' · ')
-
-
-/* ── Plan session (TRAK-340) ──────────────────────────────────────────────── */
-
-export function PlanEditorRoute() {
-  const { t } = useTranslation()
-  return <WithTraining wide>{(training, plan) => training.status === 'cancelled'
-    ? <><Header training={training}><Badge tone="danger">{t('coachHome:noteCancelled')}</Badge></Header>
-      <p className="pt-4 text-[15px] text-ink-2">{t('coachTraining:cancelledCantChange')}</p></>
-    : <Planner training={training} saved={plan} />}</WithTraining>
-}
-
-/* ── The plan ─────────────────────────────────────────────────────────────── */
-
-export function PlanRoute() {
-  return <WithTraining>{(training, plan) => <PlanView training={training} plan={plan} />}</WithTraining>
-}
-
-function PlanView({ training, plan }: { training: Training; plan: Plan | null }) {
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const coachSquad = useCoachSquad(user?.id)
+  const wide = useSideMenuScreen()
+  const [params, setParams] = useSearchParams()
+  const tab: Tab = TABS.find(entry => entry.id === params.get('tab'))?.id ?? 'logistics'
   const registers = useRegisters()
   const notes = useNotes()
-  const [sheet, setSheet] = useState<'register' | 'log' | null>(null)
+  const logistics = useLogisticsEdit(training)
+  const [log, setLog] = useState(false)
+  // What the page asks the planner to open (Review & share, or a part), kept as the planner stays mounted under its tab.
+  const [open, setOpen] = useState<PlannerOpen | null>(null)
+  // A plan saved from Who's here starts the planner again from what's saved.
+  const [fresh, setFresh] = useState(0)
   const [now] = useState(() => Date.now())
   const cancelled = training.status === 'cancelled'
   const sessionId = registers.data?.get(training.id) ?? null
   const started = Date.parse(training.starts_at) <= now
   const over = trainingEnd(training) <= now
   const loop = loopState({ planned: !!plan, registered: !!sessionId, noted: !!notes.data?.has(training.id), started, over })
-  // Who's here opens as the register does everywhere else: published, not cancelled, started.
-  const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date(now))
-  const canRegister = !!registers.data && !sessionId && !registerWhy
-  const view = () => navigate(viewPath(training.id))
-  // TRAK-339 (Kostas, 29 Oct): planning goes straight to the planner; no "How do you want to plan it?".
-  const planIt = () => navigate(planPath(training.id))
+  const { day, time, academy } = gameWhen(training)
+  const minutes = trainingMinutes(training)
+  const squad = coachSquad.squads.length >= 2 && training.squad ? training.squad : undefined
+
+  const show = (next: Tab) => setParams({ tab: next }, { replace: true })
+  /** The Training plan tab, at a part or at Review & share. */
+  const openPlan = (part: number | null = null) => {
+    setOpen(current => ({ part, n: (current?.n ?? 0) + 1 }))
+    show('plan')
+    window.scrollTo({ top: 0 })
+  }
+  // Before it starts, Review & share, as a match's header; from the start, Who's here.
+  const primary: PageHeaderAction | undefined = cancelled || loop.closed ? undefined
+    : !started ? { key: 'review', label: t('coachMatches:reviewShare'), icon: <Share {...icon} />, onSelect: () => {
+      openPlan()
+      requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('plan-share')?.scrollIntoView?.({ block: 'center' })))
+    } }
+    : tab !== 'after' ? { key: 'here', label: t('coachTraining:loopHere'), icon: <Users {...icon} />, onSelect: () => show('after') }
+    : undefined
+  // View, the plan at the pitch side; once closed, the log.
+  const secondary: PageHeaderAction[] = cancelled ? []
+    : loop.closed ? [{ key: 'log', label: t('coachTraining:viewLog'), icon: <Notebook {...icon} />, onSelect: () => setLog(true) }]
+    : plan ? [{ key: 'view', label: t('coachTraining:view'), icon: <Eye {...icon} />, onSelect: () => navigate(viewPath(training.id)) }]
+    : []
+  const status = cancelled ? <Badge tone="danger" dot>{t('coachHome:noteCancelled')}</Badge>
+    : loop.closed ? <Badge tone="success" dot>{t('coachTraining:closedBadge')}</Badge>
+    : <Badge tone={plan ? 'success' : 'warning'} dot>{plan ? t('coachTraining:readyBadge') : t('coachTraining:notPlanned')}</Badge>
 
   return <>
-    <Header training={training}>
-      {cancelled ? <Badge tone="danger">{t('coachHome:noteCancelled')}</Badge>
-        : loop.closed ? <>
-          <Badge tone="success">{t('coachTraining:closedBadge')}</Badge>
-          <Button variant="secondary" onClick={() => setSheet('log')}>{t('coachTraining:viewLog')}</Button>
-        </> : <>
-          <Badge tone={plan ? 'success' : 'warning'}>{plan ? t('coachTraining:readyBadge') : t('coachTraining:notPlanned')}</Badge>
-          {/* On the day, the main action is Who's here; otherwise View, the plan at the pitch side. */}
-          {/* TRAK-342: Who's here is a page of its own: the register, then Trak's suggestions for the plan. */}
-          {canRegister && <Button onClick={() => navigate(herePath(training.id))}>{t('coachTraining:loopHere')}</Button>}
-          {plan && <Button variant={canRegister ? 'secondary' : 'primary'} onClick={view}>{t('coachTraining:view')}</Button>}
-          {sessionId && <Button variant="ghost" onClick={() => navigate(herePath(training.id))}>{t('coachTraining:loopHere')}</Button>}
-          {/* TRAK-341: a saved plan is changed part by part below (Kostas, 30 Oct), so no Change the plan up here. */}
-          {!plan && <Button variant={canRegister ? 'secondary' : 'primary'} onClick={planIt}>{t('coachTraining:planSession')}</Button>}
-        </>}
-    </Header>
-    {!cancelled && <div className="grid gap-2 pt-2">
-      <LoopStrip state={loop} note={loopNote(loop, started)} />
-      {registers.error ? <p role="alert" className="text-sm text-danger">{t('coachTraining:couldntCheckRegister')} <button type="button"
-        className={`min-h-11 ${linkClass}`} onClick={() => void registers.refetch()}>{t('coachTraining:tryAgain')}</button></p>
-        : !sessionId && registerWhy && <p className="text-sm text-ink-3">{registerWhy === 'The register opens once the event has started'
-          ? t('coachTraining:hereOpens') : t('coachTraining:hereWhy', { why: whyWord(registerWhy) })}</p>}
-    </div>}
-
-    {plan && plan.practices.length ? <SavedReview training={training} plan={plan} cancelled={cancelled} />
-      : <section aria-labelledby="practices" className="mt-6 grid max-w-[720px] gap-2.5">
-        <h2 id="practices" className="sr-only">{t('coachTraining:practices')}</h2>
-        <div className="arc">
-          <EmptyState icon={<ClipboardList size={24} strokeWidth={1.5} />} title={cancelled ? t('coachTraining:wasCancelled') : t('coachTraining:notPlannedYet')}
-            description={cancelled ? t('coachTraining:hadNoPlan') : t('coachTraining:planYourWay')}
-            action={cancelled ? undefined : <Button onClick={planIt}>{t('coachTraining:planSession')}</Button>} />
-        </div>
-      </section>}
-    <Link to={`/coach/schedule?event=${training.id}`} className={`mt-4 inline-block ${linkClass}`}>{t('coachTraining:openInSchedule')}</Link>
-
-    <RegisterSheet training={training} sheet={sheet} sessionId={sessionId} onClose={() => setSheet(null)} />
+    <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem]" top={wide ? TOP_BAR : '0px'}
+      title={training.title} status={status}
+      // TRAK-367: the trail says which training by its day, as a training's name can be long.
+      crumbs={<MenuTrail current={day} />}
+      details={<>
+        <span><CalendarDays {...metaIcon} /><strong>{day}</strong></span>
+        {time && <span><Clock {...metaIcon} />{[time, minutes ? t('coachHome:minutes', { count: minutes }) : null, academy].filter(Boolean).join(' · ')}</span>}
+        {training.venue && <span><MapPin {...metaIcon} /><strong>{training.venue}</strong></span>}
+        {training.squad && <span><Users {...metaIcon} />{training.squad}</span>}
+      </>}
+      primary={primary} secondary={secondary}
+      tabsLabel={t('coachTraining:thisTraining')} value={tab} onValueChange={next => show(next as Tab)}
+      tabs={cancelled ? [] : TABS.map(entry => ({ value: entry.id, label: t(entry.label),
+        extra: entry.id === 'logistics' && training.published ? <><Check size={14} strokeWidth={2} aria-hidden="true" /><span className="sr-only">{t('coachMatches:srShared')}</span></> : undefined }))}>
+      {cancelled ? <Cancelled plan={plan} /> : <>
+        <PageHeaderPanel value="logistics">
+          <div className="grid gap-4">
+            <Logistics row={training} squad={squad} onEdit={logistics.open} publish={logistics.publish} />
+            <div><Link to={`/coach/schedule?event=${training.id}`} className={linkClass}>{t('coachTraining:openInSchedule')}</Link></div>
+          </div>
+        </PageHeaderPanel>
+        {/* Mounted under every tab, so what's typed in the plan lives on while Logistics is open. */}
+        <PageHeaderPanel value="plan" shown={tab === 'plan'}>
+          <Planner key={fresh} training={training} saved={plan} open={open} logistics={logistics} />
+        </PageHeaderPanel>
+        <PageHeaderPanel value="after">
+          <div className="grid gap-6 laptop:gap-8 pt-4">
+            {registers.error && <p role="alert" className="text-sm text-danger">{t('coachTraining:couldntCheckRegister')} <button type="button"
+              className={`min-h-11 ${linkClass}`} onClick={() => void registers.refetch()}>{t('coachTraining:tryAgain')}</button></p>}
+            <WhosHere training={training} plan={plan} onPlan={part => openPlan(part ?? null)} onSaved={() => setFresh(n => n + 1)} />
+            {over && <AfterNotes training={training} planned={!!plan} onReview={() => openPlan()} />}
+          </div>
+        </PageHeaderPanel>
+      </>}
+    </PageHeader>
+    {logistics.sheet}
+    <RegisterSheet training={training} sheet={log ? 'log' : null} sessionId={sessionId} onClose={() => setLog(false)} />
   </>
 }
 
-/* ── Who's here (TRAK-342) ─────────────────────────────────────────────────── */
-
-export function WhosHereRoute() {
-  return <WithTraining wide>{(training, plan) => <WhosHere training={training} plan={plan} />}</WithTraining>
+/** Notes, once the training is over: the question and the note, or what was answered. */
+function AfterNotes({ training, planned, onReview }: { training: Row; planned: boolean; onReview: () => void }) {
+  const { t } = useTranslation()
+  const notes = useNotes()
+  const saved = notes.data?.get(training.id)
+  const answer = againLabel(saved?.again)
+  if (notes.isPending || (saved && !answer && !saved.note)) return null
+  return <section aria-labelledby="notes" className="arc grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+    <h2 id="notes" className="text-lg font-medium text-ink">{t('coachTraining:loopNotes')}</h2>
+    {saved ? <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
+      {answer && <Badge size="sm" tone={saved.again === 'no' ? 'warning' : 'success'}>{t('coachTraining:runItAgain', { answer: shown(TRAINING_WORD, answer) })}</Badge>}
+      {saved.note && <span className="break-words">“{saved.note}”</span>}
+    </p>
+      : <NotesForm training={training} planned={planned} onReview={onReview} onClosed={() => {}} />}
+  </section>
 }
 
-/* ── Review (TRAK-341) ──────────────────────────────────────────────────────── */
-
-/** A saved plan, to review and change part by part (Kostas, 30 Oct): Edit opens only that part in the planner, ×
- *  removes one at once (with Undo), Add a part adds one. TRAK-367 (Kostas, 3 Nov): a part moves as it does while
- *  planning, saved once it lands. Each change saves the plan whole. */
-function SavedReview({ training, plan, cancelled }: { training: Training; plan: Plan; cancelled: boolean }) {
-  const navigate = useNavigate()
-  const save = useSavePlan(training.id)
+/** A cancelled training: no tabs, as a cancelled match; what was planned, read only. */
+function Cancelled({ plan }: { plan: Plan | null }) {
   const { t } = useTranslation()
-  const [adding, setAdding] = useState(false)
-  const [problem, setProblem] = useState<string | null>(null)
-  // Read once per saved plan, and each part keeps its key when the plan comes back saved: a part just moved stays the
-  // same row, with the keyboard's focus on it. Held here so a part can move before it's saved.
-  const [parts, setParts] = useState(() => partsFromSaved(plan.practices))
-  const [read, setRead] = useState(plan.practices)
-  if (read !== plan.practices) { setRead(plan.practices); setParts(keepKeys(parts, partsFromSaved(plan.practices))) }
-  const length = trainingMinutes(training)
-  const over = overTime(totalMinutes(parts), length)
-  const edit = (index: number) => navigate(planPath(training.id), { state: { editPart: index } satisfies PlannerState })
-  const remove = (index: number) => {
-    if (parts.length === 1) return setProblem(t('coachTraining:needsOnePart'))
-    setProblem(null)
-    const gone = parts[index]
-    save.mutate({ parts: parts.filter((_, i) => i !== index), note: plan.note }, {
-      onSuccess: () => toast(t('coachTraining:removed', { name: partName(gone.name) }), { action: { label: t('coachTraining:undo'), onClick: () => save.mutate({ parts, note: plan.note }) } }),
-      onError: () => setProblem(t('coachTraining:couldntRemove')),
-    })
-  }
-  const saveOrder = (next: Part[]) => {
-    setProblem(null)
-    save.mutate({ parts: next, note: plan.note }, {
-      onError: () => { setParts(keepKeys(next, partsFromSaved(plan.practices))); setProblem(t('coachTraining:couldntMove')) },
-    })
-  }
-  const move = (index: number, by: -1 | 1) => {
-    if (save.isPending) return
-    const next = moveTo(parts, index, index + by)
-    setParts(next)
-    saveOrder(next)
-  }
-  const drop = () => { if (!sameOrder(parts, partsFromSaved(plan.practices))) saveOrder(parts) }
-  return <div className="mt-6 grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,1fr)_320px] laptop:items-start">
-    <section aria-labelledby="review" className="arc grid min-w-0 gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h2 id="review" className="text-[22px] font-medium text-ink">{t('coachSchedule:stepReview')}</h2>
-        <TotalLine parts={parts} length={length} />
-      </div>
-      <TimeBar parts={parts} length={length} />
-      {over && !cancelled && <OverTime text={over} />}
-      {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
-      {cancelled
-        ? <ol aria-label={t('coachMatches:thePlan')} className="grid divide-y divide-line">{parts.map((part, i) => <li key={part.key} className="py-3 text-[15px] text-ink">
-            {t('coachHome:minutes', { count: part.minutes })} · {part.drill?.name}</li>)}</ol>
-        : <PlanRows parts={parts} onEdit={edit} onRemove={remove} onReorder={setParts} onMove={move} onDrop={drop} busy={save.isPending} />}
-      {!cancelled && <div><Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus aria-hidden size={16} />{t('coachTraining:addAPart')}</Button></div>}
-      {plan.note && <div className="rounded-xl bg-raised px-4 py-3 text-sm text-ink-2"><span className="font-medium text-ink">{t('coachTraining:yourNote')}</span> {plan.note}</div>}
-    </section>
-    <aside aria-labelledby="players" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-      <h2 id="players" className="text-lg font-medium text-ink">{t('coachTraining:players')}</h2>
-      <p className="text-sm text-ink-2">{t('coachTraining:plannedSquadHere')}</p>
-    </aside>
-    <AddPartSheet open={adding} onClose={() => setAdding(false)}
-      onAdd={(type, name) => { setAdding(false); navigate(planPath(training.id), { state: { addPart: { type, name } } satisfies PlannerState }) }} />
+  const practices = fromSaved(plan?.practices ?? [])
+  return <div className="grid gap-4 pt-4">
+    <p className="text-[15px] text-ink-2">{t('coachTraining:cancelledCantChange')}</p>
+    {practices.length > 0 && <ol aria-label={t('coachMatches:thePlan')} className="arc grid divide-y divide-line rounded-2xl border border-line bg-surface px-5 laptop:px-6">
+      {practices.map((practice, i) => <li key={i} className="py-3 text-[15px] text-ink">{t('coachHome:minutes', { count: practice.minutes })} · {practice.name}</li>)}
+    </ol>}
   </div>
 }
+
+/** The details a practice has, in the mockup's order: "20 × 30 m · 4v4 + 2". */
+const detailsLine = (practice: Practice) => DRILL_DETAILS.map(d => practice[d.key].trim()).filter(Boolean).join(' · ')
 
 /* ── View ─────────────────────────────────────────────────────────────────── */
 
@@ -252,10 +220,11 @@ function PitchView({ training, plan }: { training: Training; plan: Plan | null }
   const { t } = useTranslation()
   const { day, time } = gameWhen(training)
   const starts = practiceStarts(time || null, practices)
-  return <div className="mx-auto grid max-w-[720px] gap-5 pt-5">
+  // TRAK-429: the coach pages' width, its title where theirs is.
+  return <div className="grid gap-5 pt-5">
     {/* TRAK-334: opened from Training home's View plan, the trail goes back there; from the training's page, to that,
         which is also where it sits when opened from a link. */}
-    <CoachTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
+    <MenuTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
     <header className="grid gap-1">
       <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:view')}</p>
       <h1 className={INNER_TITLE}>{[day, time].filter(Boolean).join(' · ')}</h1>

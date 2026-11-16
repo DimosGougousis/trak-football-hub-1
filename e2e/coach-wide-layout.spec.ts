@@ -338,7 +338,7 @@ test('Feedback on a laptop: a table with a filter by level and Assess on each ro
   const table = page.getByRole('table')
   await expect(table.getByRole('columnheader')).toHaveText(['Player', 'Status', 'Why', 'Assess'])
   await expect(table.getByRole('row')).toHaveCount(1 + players.length)
-  await expect(table.getByRole('button', { name: 'Assess' })).toHaveCount(players.length)
+  await expect(table.getByRole('button', { name: /^Assess / })).toHaveCount(players.length)
   await expect(page.getByRole('radio', { name: `All ${players.length}` }).or(page.getByRole('tab', { name: `All ${players.length}` })).or(page.getByRole('button', { name: `All ${players.length}` }))).toBeVisible()
   expect(unexpected).toEqual([])
 })

@@ -1,6 +1,12 @@
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { NavBar } from '@/components/trak'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { MobileShell, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyPageTitle } from '@/components/trak/FamilyPageTitle'
+import { TeamTraining } from '@/components/player/TeamTraining'
+import { useAuth } from '@/contexts/AuthContext'
+import { useTranslation } from '@/lib/i18n'
+import { TRAINING_THEMES, type TrainingTheme } from '@/lib/training-theme'
 
 /* The two training pages are static HTML in public/trainings, kept exactly as
    designed (white, their own fonts and scripts). vercel.json lets only
@@ -14,10 +20,14 @@ const PAGES = [
 
 export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
   const navigate = useNavigate()
+  const look = useFamilyLook()
   const [params, setParams] = useSearchParams()
   const page = PAGES.find(p => p.id === params.get('page')) ?? PAGES[0]
   // New event's theme link: the catalogue opens on that library.
   const lib = page.id === 'sessions' ? params.get('lib') : null
+
+  // TRAK-441 slice 7, behind family_look: the tab opens on Team training and the libraries; a library opens the catalogue.
+  if (look && role === 'player' && !params.has('page') && !params.has('lib')) return <FamilyTrainings />
 
   return (
     <div className="min-h-screen bg-ground pb-24">
@@ -37,7 +47,8 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
                 role="tab"
                 type="button"
                 aria-selected={selected}
-                onClick={() => setParams(p.id === PAGES[0].id ? {} : { page: p.id }, { replace: true })}
+                // In the family look the bare address is the Trainings page, so the catalogue keeps its own.
+                onClick={() => setParams(p.id === PAGES[0].id && !look ? {} : { page: p.id }, { replace: true })}
                 className="min-h-11 rounded-xl border text-[13px] font-medium transition-colors"
                 style={{
                   fontFamily: 'var(--t-font)',
@@ -67,4 +78,43 @@ export default function TrainingsPage({ role }: { role: 'coach' | 'player' }) {
       <NavBar role={role} activeTab={`/${role}/trainings`} onNavigate={navigate} />
     </div>
   )
+}
+
+/** Each library's word: the coach's theme words, with the mockup's short ones where those run to two lines. */
+const LIBRARY_WORD = {
+  technical: 'coachSchedule:themeTechnical', defending: 'coachSchedule:themeDefending', attacking: 'coachSchedule:themeAttacking',
+  goalkeeping: 'coachSchedule:themeGoalkeeping', transition: 'coachSchedule:themeTransition',
+  physical: 'common:cataloguePhysical', psychological: 'common:cataloguePsychological',
+} as const satisfies Record<TrainingTheme, string>
+const LIBRARIES = [...TRAINING_THEMES].sort((a, b) => b.sessions - a.sessions)
+const ALL_SESSIONS = TRAINING_THEMES.reduce((sum, theme) => sum + theme.sessions, 0)
+
+/** TRAK-441 slice 7 (mockup, 12 Nov): Team training (moved from Sessions), then the catalogue's libraries as the coach's
+ *  cards. "Set for you" waits until a coach can set one. A phone: the avatar and the tab's name; a laptop: the top bar's. */
+function FamilyTrainings() {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const cards: [word: string, search: string, count: number][] = [
+    [t('common:allSessions'), `?page=${PAGES[0].id}`, ALL_SESSIONS],
+    ...LIBRARIES.map(theme => [t(LIBRARY_WORD[theme.key]), `?${new URLSearchParams({ lib: theme.library })}`, theme.sessions] as [string, string, number]),
+  ]
+  return <MobileShell width="wide">
+    <div className="arc pt-3 pb-28 laptop:pt-6">
+      <FamilyPageTitle title={t('nav:trainings')} />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 laptop:grid-cols-2 laptop:items-start laptop:gap-8">
+        {user && <TeamTraining childId={user.id} />}
+        <section aria-labelledby="catalogue">
+          <h2 id="catalogue" className="mb-2 text-lg font-medium text-ink">{t('common:catalogue')}</h2>
+          <ul className="grid grid-cols-2 gap-4">{cards.map(([word, search, count]) => <li key={search}>
+            <Link to={{ search }} className="flex h-full items-baseline justify-between gap-2 rounded-2xl border border-line bg-surface p-5 transition-colors hover:bg-raised focus-visible:ring-2 focus-visible:ring-brand laptop:p-6">
+              <span className="text-[15px] font-medium text-ink">{word}</span>
+              <span className="text-sm text-ink-3 tabular-nums">{count}</span>
+            </Link>
+          </li>)}</ul>
+        </section>
+      </div>
+    </div>
+    <NavBar role="player" activeTab="/player/trainings" onNavigate={navigate} />
+  </MobileShell>
 }

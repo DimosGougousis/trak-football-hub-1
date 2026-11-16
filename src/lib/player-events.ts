@@ -203,13 +203,25 @@ export function noteEventSnapshots(userId: string, events: PlayerEvent[]) {
   writeSnapshots(userId, snapshots)
 }
 
+/** This device's copy of a changed event, on this phone's clock; null when it hasn't changed since (or is cancelled). */
+function copyBeforeChange(userId: string, event: PlayerEvent): EventSnapshot | null {
+  const saved = readSnapshots(userId)[event.id]
+  if (!saved || event.sequence <= saved.sequence || event.status === 'cancelled') return null
+  // The old copy is read on this phone's clock now, so a phone that changed zone since never reads as a moved event.
+  return saved.startsAt && saved.time
+    ? { ...saved, ...phoneEventTime({ event_date: saved.date, start_time: saved.time, starts_at: saved.startsAt }) } : saved
+}
+
+/** TRAK-441: the day or the time moved since this device's copy (the family Events' "Time changed"). */
+export function timeChangedSinceSeen(userId: string, event: PlayerEvent): boolean {
+  const before = copyBeforeChange(userId, event)
+  return !!before && (before.date !== event.date || before.time !== event.time)
+}
+
 /** What moved since this device's copy, one line each. Nothing for a cancellation (it says so itself). */
 export function changesSinceSeen(userId: string, event: PlayerEvent): string[] {
-  const saved = readSnapshots(userId)[event.id]
-  if (!saved || event.sequence <= saved.sequence || event.status === 'cancelled') return []
-  // The old copy is read on this phone's clock now, so a phone that changed zone since never reads as a moved event.
-  const before = saved.startsAt && saved.time
-    ? { ...saved, ...phoneEventTime({ event_date: saved.date, start_time: saved.time, starts_at: saved.startsAt }) } : saved
+  const before = copyBeforeChange(userId, event)
+  if (!before) return []
   const lines: string[] = []
   if (before.date !== event.date) lines.push(`Moved: ${format(parseISO(before.date), 'EEE d MMM')} → ${eventDay(event)}`)
   if (before.time !== event.time) lines.push(`Time: ${before.time ?? 'to be confirmed'} → ${event.time ?? 'to be confirmed'}`)

@@ -231,7 +231,7 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
  *  Schedule saves an event that isn't part of a series. TRAK-332: the page holds it, so both the Logistics tab and
  *  Review & share's Logistics part open it. A draft publishes in place, as Home's event sheet publishes one
  *  (publishEvent: families are emailed the logistics, as today). */
-function useLogisticsEdit(row: EventRow) {
+export function useLogisticsEdit(row: EventRow) {
   const { user } = useAuth()
   const { t } = useTranslation()
   const client = useQueryClient()
@@ -277,8 +277,9 @@ function useLogisticsEdit(row: EventRow) {
   return { open, sheet, publish }
 }
 
-/** Schedule's Review rows, read only, with Publish for a draft and Edit (useLogisticsEdit). */
-function Logistics({ row, squad, onEdit, publish }: {
+/** Schedule's Review rows, read only, with Publish for a draft and Edit (useLogisticsEdit). TRAK-456: a training's page
+ *  shows its Logistics the same way. */
+export function Logistics({ row, squad, onEdit, publish }: {
   row: EventRow; squad?: string; onEdit: (() => void) | null; publish: ReturnType<typeof useLogisticsEdit>['publish']
 }) {
   const { t } = useTranslation()

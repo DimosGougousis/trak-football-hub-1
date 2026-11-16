@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { canShareSheet } from '@/lib/share-event'
+import { Button } from '@/components/arc/button/button'
 
 /** Imad's share icon (TRAK-168, 18 Oct): a box with an arrow out, drawn in the text colour. */
 /** `tight` crops the drawing's margin, so it is as big as a lucide icon beside it (TRAK-275's button group). */
@@ -20,12 +21,26 @@ export function ShareIcon({ size = 16, tight = false }: { size?: number; tight?:
  * before. Either way nothing is sent until the coach picks a chat. The message carries its
  * own event link, so only `text` is shared.
  */
-export function ShareEventButton({ text, className, children, 'aria-label': label }: {
+export function ShareEventButton({ text, className, children, arc, 'aria-label': label }: {
   text: string
   className?: string
   children?: ReactNode
+  /** TRAK-427: Arc's secondary button, as the pop-up's other actions. Without a share sheet it opens WhatsApp's link in
+   *  a new tab on click, so it is a button, not a link. */
+  arc?: boolean
   'aria-label'?: string
 }) {
+  if (arc) {
+    return (
+      <Button variant="secondary" aria-label={label}
+        onClick={() => {
+          if (canShareSheet()) navigator.share({ text }).catch(() => {})
+          else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+        }}>
+        {children}
+      </Button>
+    )
+  }
   if (canShareSheet()) {
     return (
       <button type="button" aria-label={label} className={className}

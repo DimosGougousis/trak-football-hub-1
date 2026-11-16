@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { CalendarCheck } from 'lucide-react'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { trainingEnd } from '@/lib/training/sessions'
-import { fromSaved, plannedMinutes, practiceLine } from '@/lib/training/plans'
+import { fromSaved, planPath, plannedMinutes, practiceLine } from '@/lib/training/plans'
 import { loopState } from '@/lib/training/loop'
 import { fullTime } from '@/lib/games/loop'
 import { useNotes, usePastSessions, useRegisters, useTrainings, type Training } from '@/components/coach/training/useTraining'
@@ -97,11 +97,11 @@ function TodayTraining({ training, squadOf }: { training: Training; squadOf: ((s
     planned: practices.length > 0, registered: !!registers.data?.has(training.id), noted: !!notes.data?.has(training.id),
     started: Date.parse(training.starts_at) <= now, over: trainingEnd(training) <= now,
   })
-  const page = `/coach/training/${training.id}`
   return <article aria-label={t('coachHome:trainingNamed', { title: training.title })} className="grid grid-cols-[minmax(0,1fr)] gap-2">
     <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <p className="text-sm font-medium text-brand">{[t('coachHome:trainingPlan'), squadOf?.(training.squad)].filter(Boolean).join(' · ')}</p>
-      {sessions.data && (!practices.length ? <Link to={page} className={linkClass}>{t('coachHome:planThisSession')}</Link>
+      {/* TRAK-456: Plan this session opens the training's Training plan tab. */}
+      {sessions.data && (!practices.length ? <Link to={planPath(training.id)} className={linkClass}>{t('coachHome:planThisSession')}</Link>
         : <span className="flex-none whitespace-nowrap text-sm font-medium tabular-nums text-brand">{loop.closed && t('coachHome:closedPrefix')}{t('coachHome:minutes', { count: plannedMinutes(practices) })}</span>)}
     </div>
     {sessions.isError ? <LoadError what={t('coachHome:planWhat')} onRetry={() => void sessions.refetch()} />
