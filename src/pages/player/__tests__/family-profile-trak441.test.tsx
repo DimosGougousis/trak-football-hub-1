@@ -74,6 +74,21 @@ afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMo
 const BAND_WORDS = /Exceptional|Standout|Good|Steady|Mixed|Developing/
 
 describe("TRAK-441 slice 6: the player's Profile in the coach's look", () => {
+  // Live, 16 Nov: a player can't read his parent's name (the database hides it), so the row read "Your parent" and nothing.
+  it("a linked parent whose name is hidden reads Linked, never an empty row", async () => {
+    screenIs(false)
+    server.use(http.get(`${SUPABASE_URL}/rest/v1/profiles`, ({ request }) => {
+      const asked = new URL(request.url).searchParams.get('user_id') ?? ''
+      if (asked.includes(PLAYER.id)) return HttpResponse.json({ id: 'p', user_id: PLAYER.id, role: 'player', full_name: 'Giourkas Seitaridis' })
+      if (asked === 'eq.coach-1') return HttpResponse.json({ user_id: 'coach-1', full_name: 'Otto Rehhagel' })
+      return HttpResponse.json([{ user_id: 'coach-1', full_name: 'Otto Rehhagel' }])
+    }))
+    renderApp('/player/profile')
+    const account = await screen.findByRole('region', { name: 'Account' }, { timeout: 5000 })
+    const row = (await within(account).findByText('Your parent')).closest('li') as HTMLElement
+    expect(await within(row).findByText('Linked')).toBeInTheDocument()
+  })
+
   it('who he is, My card with the latest bars and its date, earlier evaluations, and Account', async () => {
     screenIs(false)
     renderApp('/player/profile')
