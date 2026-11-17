@@ -118,7 +118,8 @@ useCase('UC-C03', () => {
   })
 
   // v3 (TRAK-364): a player due an assessment is marked Assess, except in a squad whose season plan is shared, where
-  // the squad's evaluation is due on Home instead.
+  // the squad's evaluation is due on Home instead. Since TRAK-423 (#665) the mark is the state tag "Due"; the Assess
+  // button is on the player's page (TRAK-476).
   for (const shared of [false, true]) {
     it(shared ? 'marks nobody Assess in a squad evaluated by its shared season plan' : 'marks a player due an assessment Assess without it', async () => {
       signedInCoach()
@@ -133,12 +134,12 @@ useCase('UC-C03', () => {
       renderApp('/coach/squad')
       expect(await screen.findByText('Nikos Papadopoulos')).toBeInTheDocument()
       if (shared) {
-        await waitFor(() => expect(screen.queryByText('Assess')).toBeNull())
+        await waitFor(() => expect(screen.queryByText('Due')).toBeNull())
         // Settled: the plan has answered, and still no mark.
         await new Promise(resolve => setTimeout(resolve, 200))
-        expect(screen.queryByText('Assess')).toBeNull()
+        expect(screen.queryByText('Due')).toBeNull()
       } else {
-        expect(await screen.findByText('Assess')).toBeInTheDocument()
+        expect(await screen.findByText('Due')).toBeInTheDocument()
       }
     })
   }
