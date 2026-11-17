@@ -179,6 +179,37 @@ test.describe('TRAK-182 coach screens', () => {
     expect(errors).toEqual([])
   })
 
+  // TRAK-427: on a laptop the event pop-up is the centred card (TRAK-450), the same from Home's Details and from Events.
+  test('coach event pop-up on a laptop: one centred card from Home and from Events', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await coachBackend(context, unexpected, true)
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+    await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
+    const boxes = []
+    for (const path of ['/coach/home', '/coach/schedule']) {
+      await page.goto(path)
+      // Home picks the event on the week, then Details opens it; on Events the card's title opens it.
+      if (path === '/coach/home') {
+        await page.getByRole('button', { name: /Rivals FC/ }).first().click()
+        await page.getByRole('button', { name: 'Details' }).click()
+      } else await page.getByRole('button', { name: 'League', exact: true }).click()
+      const card = page.getByRole('dialog', { name: 'vs Rivals FC' })
+      await expect(card.getByRole('heading', { name: 'Attending · 3' })).toBeVisible()
+      await expect(card.getByRole('button', { name: 'Expand sheet' })).toHaveCount(0)
+      await page.waitForTimeout(500)
+      await page.screenshot({ path: testInfo.outputPath(`coach-event-popup-laptop${path.replace(/\//g, '-')}.png`) })
+      const box = (await card.boundingBox())!
+      expect(Math.round(box.width)).toBe(672)
+      expect(Math.round(box.x + box.width / 2)).toBe(640)
+      boxes.push(box)
+    }
+    expect(boxes[1]).toEqual(boxes[0])
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
   // TRAK-182 part 8: the quick-add's faces: "+", menu, form, saved. TRAK-259: the "+" is Arc's glass menu in the
   // phone's glass tab bar; the form opens above it, and a toast says the draft is saved.
   test('coach quick add, its four states', async ({ page, context }, testInfo) => {

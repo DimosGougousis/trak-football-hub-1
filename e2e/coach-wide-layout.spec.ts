@@ -206,6 +206,35 @@ test("TRAK-459: Settings' section menu stays in view when a section opens on a l
   await expect(menu.getByRole('button', { name: 'Account' })).toBeInViewport({ ratio: 1 })
 })
 
+// TRAK-427: on a laptop New event is the centred pop-up every other pop-up is (TRAK-450), and it keeps one size,
+// so nothing moves when the coach goes from step to step. A phone keeps the bottom sheet.
+test('TRAK-427: New event on a laptop is a centred pop-up that stays put between steps', async ({ page, context }, testInfo) => {
+  const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 1280, 800)
+  await openNewEvent(page)
+  const dialog = page.getByRole('dialog', { name: 'New event' })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: testInfo.outputPath('new-event-laptop-step1.png') })
+  const first = (await dialog.boundingBox())!
+  await dialog.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(dialog.getByRole('button', { name: /^Back to / })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('new-event-laptop-step2.png') })
+  const second = (await dialog.boundingBox())!
+  expect(Math.round(first.width)).toBe(672)
+  expect(Math.round(first.x + first.width / 2)).toBe(640)
+  expect(Math.round(first.y + first.height / 2)).toBe(400)
+  expect(second).toEqual(first)
+  expect(unexpected).toEqual([])
+})
+
+test('TRAK-427: New event on a phone keeps the bottom sheet', async ({ page, context }) => {
+  const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 390, 844)
+  await openNewEvent(page)
+  const sheet = (await page.getByRole('dialog', { name: 'New event' }).boundingBox())!
+  expect(Math.round(sheet.width)).toBe(390)
+  expect(Math.round(sheet.y + sheet.height)).toBe(844 - 64)
+  expect(unexpected).toEqual([])
+})
+
 test("the Calendar's sheets stop at the Arc bottom sheet's width on a tablet", async ({ page, context }) => {
   const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 820, 1180)
   await openNewEvent(page)
