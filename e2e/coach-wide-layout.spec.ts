@@ -206,6 +206,31 @@ test("TRAK-459: Settings' section menu stays in view when a section opens on a l
   await expect(menu.getByRole('button', { name: 'Account' })).toBeInViewport({ ratio: 1 })
 })
 
+// TRAK-477: Settings' section menu looks like every other page's tabs (TRAK-431's glass pill): the section in view is the
+// tinted pill with the green word, and on a phone the sections sit in one pill.
+test("TRAK-477: Settings' section menu is the glass pill on a laptop and a phone", async ({ page, context }, testInfo) => {
+  const { unexpected } = await open(page, context, 'coach', '/settings', 1440, 900)
+  const menu = page.getByRole('navigation', { name: 'Settings sections' })
+  await expect(menu.getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-current', 'true')
+  const look = () => menu.evaluate(nav => {
+    const current = nav.querySelector('[aria-current]')!, mark = current.querySelector('span[aria-hidden="true"]')!, list = nav.querySelector('ul')!
+    // The page header's tab look (#679), read through the same tokens.
+    const probe = nav.appendChild(document.createElement('span'))
+    probe.style.cssText = 'background: color-mix(in oklab, var(--accent) 14%, var(--surface)); color: var(--accent-strong); border-radius: var(--radius-pill)'
+    const want = getComputedStyle(probe), got = getComputedStyle(mark), track = getComputedStyle(list)
+    const result = { tint: got.backgroundColor === want.backgroundColor, word: getComputedStyle(current).color === want.color,
+      pill: got.borderRadius === want.borderRadius, track: track.borderRadius === want.borderRadius && track.borderTopWidth === '1px' }
+    probe.remove()
+    return result
+  })
+  expect(await look()).toMatchObject({ tint: true, word: true, pill: true })
+  await page.screenshot({ path: testInfo.outputPath('settings-menu-pill-1440.png') })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(look).toEqual({ tint: true, word: true, pill: true, track: true })
+  await page.screenshot({ path: testInfo.outputPath('settings-menu-pill-390.png') })
+  expect(unexpected).toEqual([])
+})
+
 // TRAK-427: on a laptop New event is the centred pop-up every other pop-up is (TRAK-450), and it keeps one size,
 // so nothing moves when the coach goes from step to step. A phone keeps the bottom sheet.
 test('TRAK-427: New event on a laptop is a centred pop-up that stays put between steps', async ({ page, context }, testInfo) => {
