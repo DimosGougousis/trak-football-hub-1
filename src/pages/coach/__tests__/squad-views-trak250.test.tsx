@@ -344,7 +344,7 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(within(panel).queryByRole('button', { name: /^Edit .+'s profile$/ })).toBeNull()
   })
 
-  it("a failed profile read says so, never \"Not set\", and Back still finds the whole squad", async () => {
+  it("a failed profile read says so, never \"Not set\", and going back still finds the whole squad", async () => {
     const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     server.use(http.get(`${SUPABASE_URL}/rest/v1/squad_player_profiles`, () => HttpResponse.json({ message: 'unavailable' }, { status: 500 })))
@@ -353,8 +353,8 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     await user.click(await within(panel).findByRole('button', { name: /^Leo M\./ }))
     expect(await within(panel).findByRole('button', { name: 'Retry' }, { timeout: 5000 })).toBeInTheDocument()
     expect(within(panel).queryByText('Not set')).toBeNull()
-    // TRAK-351: the player's page has the screen to itself; Back brings the squad back, all three.
-    await user.click(screen.getByRole('button', { name: 'Back' }))
+    // TRAK-351: the player's page has the screen to itself; the trail (TRAK-428) brings the squad back, all three.
+    await user.click(within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getByRole('link', { name: 'Squad' }))
     await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3))
   })
 })
