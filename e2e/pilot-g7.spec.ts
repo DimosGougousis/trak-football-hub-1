@@ -38,6 +38,8 @@ for (const role of ['player', 'coach', 'club'] as const) {
       if (['/rest/v1/squad_players', '/rest/v1/player_parent_links', '/rest/v1/coach_sessions', '/rest/v1/coach_assessments'].includes(url.pathname)) return json([])
       // TRAK-124: events are switched off for this academy (a read, over POST).
       if (url.pathname === '/rest/v1/rpc/feature_on') return json(false)
+      // TRAK-479: a player's family_look switch (TRAK-441) is read through family_feature_on; on, as for every academy (#674).
+      if (url.pathname === '/rest/v1/rpc/family_feature_on') return json(true)
       // TRAK-133: Settings → Calendar asks whether a calendar link exists.
       if (url.pathname === '/rest/v1/rpc/my_calendar_link') return json([])
       // TRAK-85: the parked screens render for real, so their reads (GET only) are answered.
@@ -96,10 +98,11 @@ for (const role of ['player', 'coach', 'club'] as const) {
     if (role === 'player') {
       await page.goto('/player/feedback/synthetic-assessment')
       // The SDK retries 503 responses with backoff before surfacing the error.
-      await expect(page.getByRole('alert')).toContainText("Couldn't load feedback", { timeout: 15000 })
+      // TRAK-479: the family look's error (TRAK-441 slice 5): "Couldn’t load feedback." and Try again.
+      await expect(page.getByRole('alert')).toContainText(/Couldn.t load feedback/, { timeout: 15000 })
       expect(JSON.stringify(opened)).not.toContain('feedback_opened')
       failFeedback = false
-      await page.getByRole('button', { name: 'Retry' }).click()
+      await page.getByRole('button', { name: 'Try again' }).click()
       await expect(page.getByText('Look up before receiving. Your coach wrote this.')).toBeVisible()
       await expect.poll(() => JSON.stringify(opened)).toContain('feedback_opened')
       await page.screenshot({ path: testInfo.outputPath('manual-feedback-mobile.png'), fullPage: true })
