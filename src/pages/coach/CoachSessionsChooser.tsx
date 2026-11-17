@@ -30,7 +30,7 @@ export default function CoachSessionsChooser() {
           {/* TRAK-193: a button you can see (Kostas missed the old grey caps), 44 px tall. */}
           <button
             onClick={() => navigate('/coach/sessions/list')}
-            className="shrink-0 min-h-11 flex items-center gap-1.5 px-3 rounded-[10px] bg-raised border border-line text-[13px] font-medium text-ink active:scale-[0.97] transition-transform"
+            className="shrink-0 min-h-11 flex items-center gap-1.5 px-3 rounded-xl bg-raised border border-line text-[13px] font-medium text-ink active:scale-[0.97] transition-transform"
             style={{ fontFamily: 'var(--t-font)' }}
           >
             <History size={14} aria-hidden="true" className="text-ink-2" />
@@ -45,7 +45,7 @@ export default function CoachSessionsChooser() {
         {/* Quick Match Log */}
         {!games && <button
           onClick={() => navigate('/coach/sessions/quick')}
-          className="w-full bg-surface border border-brand/[0.18] rounded-[24px] p-7 text-left active:scale-[0.98] transition-transform"
+          className="w-full bg-surface border border-brand/[0.18] rounded-2xl p-7 text-left active:scale-[0.98] transition-transform"
         >
           <div className="mb-3"><IconMatch size={32} color="rgb(var(--t-brand))" /></div>
           <span
@@ -68,7 +68,7 @@ export default function CoachSessionsChooser() {
         {/* Full Session */}
         <button
           onClick={() => navigate('/coach/sessions/add')}
-          className="w-full bg-surface border border-line rounded-[24px] p-7 text-left active:scale-[0.98] transition-transform"
+          className="w-full bg-surface border border-line rounded-2xl p-7 text-left active:scale-[0.98] transition-transform"
         >
           <div className="mb-3"><IconSessions size={32} color="rgb(var(--t-ink-2))" /></div>
           <span

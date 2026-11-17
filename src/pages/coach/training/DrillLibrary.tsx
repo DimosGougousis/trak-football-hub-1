@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { SearchField } from '@/components/arc/search-field/search-field'
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, Bookmark, ChevronRight, LayoutGrid, List, Minus, Plus, Repeat } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -59,7 +60,7 @@ function SubPage({ title, intro, children }: { title: string; intro: ReactNode; 
   return (
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
-        <PageTop className="arc" menu={false} title={title} trail={<CoachTrail current={title} />}
+        <PageTop className="arc" title={title} trail={<CoachTrail current={title} />}
           below={<p className="max-w-[60ch] text-[15px] text-ink-2">{intro}</p>} />
         {children}
       </div>
@@ -67,15 +68,12 @@ function SubPage({ title, intro, children }: { title: string; intro: ReactNode; 
   )
 }
 
-const searchClass = 'min-h-12 w-full rounded-xl border border-line-strong bg-surface px-4 text-[17px] text-ink placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
-
-/** The search box: plain, with no magnifying glass (Kostas, 6 Nov: the icon is kept for a search across all of Trak). */
+/** The search box: Arc's search field with its magnifier, the same box as Past trainings and Squad (TRAK-431, Kostas
+ *  16 Nov, in place of 6 Nov's plain box). The page's heading says what it searches, so its label is for screen readers. */
 function FindBox({ value, onChange, big = false }: { value: string; onChange: (q: string) => void; big?: boolean }) {
-  return <>
-    <label htmlFor="find-a-drill" className="sr-only">Search drills</label>
-    <input id="find-a-drill" type="search" autoComplete="off" value={value} onChange={e => onChange(e.target.value)}
-      placeholder="Search, e.g. rondo or pressing" className={`${searchClass} ${big ? 'min-h-14 rounded-2xl text-lg' : ''}`} />
-  </>
+  return <div className={`arc [&_label]:sr-only ${big ? '[&_input]:text-[17px] [&>div>div]:min-h-14' : ''}`}>
+    <SearchField label="Search drills" autoComplete="off" value={value} onValueChange={onChange} placeholder="Search, e.g. rondo or pressing" />
+  </div>
 }
 
 /** The search in the address: typing replaces it, so Back skips each letter. */
@@ -93,7 +91,7 @@ function useQueryParam(key: string): [string, (value: string) => void] {
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
 const Empty = ({ children }: { children: ReactNode }) =>
-  <p className="rounded-2xl border border-line bg-surface p-4 text-[15px] text-ink-2">{children}</p>
+  <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-[15px] text-ink-2">{children}</p>
 
 const GroupLabel = ({ id, children }: { id: string; children: ReactNode }) =>
   <h2 id={id} className="mb-2.5 text-xs font-medium uppercase tracking-[0.08em] text-ink-3">{children}</h2>
@@ -141,7 +139,7 @@ export function LibraryHome() {
                 <Link to={kindPath(kind.key)} style={{ background: PRACTICE_KIND_COLOURS[kind.key], color: ON_LIBRARY }}
                   className="flex h-full flex-row items-center gap-3.5 rounded-2xl p-4 transition-[filter] hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 tablet:min-h-[150px] tablet:flex-col tablet:items-start tablet:justify-between tablet:p-[18px]">
                   <svg viewBox="0 0 48 48" aria-hidden className="h-[30px] w-[30px] flex-none fill-none stroke-current tablet:h-10 tablet:w-10" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">{GLYPHS[kind.key]}</svg>
-                  <span className="grid gap-0.5">
+                  <span className="grid gap-2">
                     <span className="text-[21px] font-medium leading-tight tablet:text-2xl">{kind.name}</span>
                     <span className="text-[15px] leading-snug">{kind.note}</span>
                   </span>
@@ -342,7 +340,7 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
   }
 
   return <div className="grid items-start gap-4 laptop:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
-    <div className="grid gap-3.5 rounded-2xl border border-line bg-surface p-4">
+    <div className="grid gap-3.5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-center justify-end gap-2.5" role="group" aria-label="Players today">
         <span className="text-sm text-ink-2">Players today</span>
         <button type="button" className={STEPPER_BUTTON} aria-label="One player fewer" disabled={players <= PLAYERS_TODAY.min} onClick={() => count(-1)}><Minus aria-hidden size={18} /></button>
@@ -359,7 +357,7 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
       <ChangeNote changed={changed} />
       <DetailList details={fitted.details} changed={changed} />
     </div>
-    <div className="grid gap-5 rounded-2xl border border-line bg-surface p-4">
+    <div className="grid gap-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <AboutDrill drill={drill} />
       <div className="grid gap-2.5">
         <AddToTraining drill={drill} players={players} level={level} />
@@ -396,7 +394,7 @@ export function ChangePractice() {
           options={CHARACTERISTICS.map(c => ({ value: c.key, label: c.name }))}
           onValueChange={next => { if (next[0]) go(next[0], 0) }} />
       </div>
-      <section aria-labelledby="practice-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-4">
+      <section aria-labelledby="practice-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="practice-question" className="max-w-[60ch] text-xl font-medium leading-snug text-ink">{shown.question}</h2>
         {shown.rules
           ? <ul className="grid gap-3 tablet:grid-cols-3" aria-label="Three rules">

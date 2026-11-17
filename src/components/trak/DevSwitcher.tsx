@@ -36,7 +36,7 @@ export function DevSwitcher() {
     // Portal-like fixed overlay — rendered directly in App, always on top
     <div className="fixed z-[9999]" style={{ bottom: '80px', right: '12px' }}>
       {open && (
-        <div className="mb-2 rounded-[12px] overflow-hidden shadow-2xl"
+        <div className="mb-2 rounded-xl overflow-hidden shadow-2xl"
           style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', minWidth: 220 }}>
           {DEV_ACCOUNTS.map(acc => (
             <button
@@ -59,7 +59,7 @@ export function DevSwitcher() {
       <div className="flex justify-end">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[10px] font-bold tracking-wider transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-[10px] font-bold tracking-wider transition-all"
           style={{
             background: open ? 'rgb(var(--t-brand) / 0.18)' : 'rgb(var(--t-ground) / 0.85)',
             border: `1px solid ${open ? 'rgb(var(--t-brand) / 0.45)' : 'rgb(var(--t-line-strong))'}`,

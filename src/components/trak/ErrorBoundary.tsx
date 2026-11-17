@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-xs text-ink-3 text-center max-w-[280px]">Reload to get the latest version.</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2.5 rounded-[10px] bg-brand text-on-brand text-sm font-bold active:scale-[0.97] transition-transform"
+            className="px-6 py-2.5 rounded-xl bg-brand text-on-brand text-sm font-bold active:scale-[0.97] transition-transform"
           >
             Reload
           </button>
@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </p>
           <button
             onClick={() => { this.setState({ hasError: false }); window.location.reload() }}
-            className="px-6 py-2.5 rounded-[10px] bg-brand text-on-brand text-sm font-bold active:scale-[0.97] transition-transform"
+            className="px-6 py-2.5 rounded-xl bg-brand text-on-brand text-sm font-bold active:scale-[0.97] transition-transform"
           >
             Reload
           </button>

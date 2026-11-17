@@ -249,7 +249,7 @@ export default function CoachAssistant() {
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3">
           {messages.length === 0 && (
-            <div className="rounded-[18px] border border-line p-5" style={{ background: 'rgb(var(--t-surface))' }}>
+            <div className="rounded-2xl border border-line p-5" style={{ background: 'rgb(var(--t-surface))' }}>
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles size={14} color="rgb(var(--t-brand))" />
                 <MetadataLabel text="TRY ASKING" />
@@ -259,7 +259,7 @@ export default function CoachAssistant() {
                   <button
                     key={i}
                     onClick={() => send(p)}
-                    className="w-full text-left rounded-[12px] p-3 transition"
+                    className="w-full text-left rounded-xl p-3 transition"
                     style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))' }}
                   >
                     <span className="text-[12px]" style={{ color: 'rgb(var(--t-ink))' }}>{p}</span>
@@ -291,7 +291,7 @@ export default function CoachAssistant() {
             return (
               <div
                 key={i}
-                className="rounded-[14px] p-3.5"
+                className="rounded-2xl p-3.5"
                 style={{
                   background: m.role === 'user' ? 'rgb(var(--t-brand) / 0.06)' : 'rgb(var(--t-surface))',
                   border: m.role === 'user' ? '1px solid rgb(var(--t-brand) / 0.18)' : '1px solid rgb(var(--t-line))',
@@ -324,7 +324,7 @@ export default function CoachAssistant() {
                       const plan = extractPlan(m.content)
                       navigate('/coach/sessions/add', { state: { fromAssistant: plan } })
                     }}
-                    className="flex items-center gap-2 mt-3 px-3 py-2 rounded-[10px] w-full transition-colors active:scale-[0.98]"
+                    className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl w-full transition-colors active:scale-[0.98]"
                     style={{ background: 'rgb(var(--t-brand) / 0.08)', border: '1px solid rgb(var(--t-brand) / 0.2)' }}>
                     <ClipboardList size={13} color="rgb(var(--t-brand))" />
                     <span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-brand))', fontFamily: 'var(--t-font)' }}>
@@ -336,7 +336,7 @@ export default function CoachAssistant() {
             )
           })}
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
-            <div className="rounded-[14px] border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
+            <div className="rounded-2xl border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
               <p className="text-[11px]" style={{ color: 'rgb(var(--t-ink-3))' }}>Thinking…</p>
             </div>
           )}
@@ -365,7 +365,7 @@ export default function CoachAssistant() {
             )}
           </button>
 
-          <div className="flex items-end gap-2 rounded-[14px] p-2" style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
+          <div className="flex items-end gap-2 rounded-2xl p-2" style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}

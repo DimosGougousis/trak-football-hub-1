@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { CalendarCheck } from 'lucide-react'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { trainingEnd } from '@/lib/training/sessions'
-import { fromSaved, plannedMinutes, practiceLine } from '@/lib/training/plans'
+import { fromSaved, planPath, plannedMinutes, practiceLine } from '@/lib/training/plans'
 import { loopState } from '@/lib/training/loop'
 import { fullTime } from '@/lib/games/loop'
 import { useNotes, usePastSessions, useRegisters, useTrainings, type Training } from '@/components/coach/training/useTraining'
@@ -49,8 +49,8 @@ export function TodayPlan({ trainingOn, gamesOn, inView, squadOf = null }: {
   const next = today.length ? null : items.find(ahead) ?? null
 
   // min-w-0 and minmax(0, 1fr) all the way down: a name cut with "…" must not widen the card, or the page, to its length.
-  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5" aria-labelledby="today-plan-title">
-    <div className="grid gap-0.5">
+  return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6" aria-labelledby="today-plan-title">
+    <div className="grid gap-2">
       <h2 id="today-plan-title" className="text-lg font-medium text-ink">{t('coachHome:today')}</h2>
       {!today.length && !pending && !failed && <p className="text-sm text-ink-3">{t('coachHome:nothingToday')}</p>}
     </div>
@@ -97,11 +97,11 @@ function TodayTraining({ training, squadOf }: { training: Training; squadOf: ((s
     planned: practices.length > 0, registered: !!registers.data?.has(training.id), noted: !!notes.data?.has(training.id),
     started: Date.parse(training.starts_at) <= now, over: trainingEnd(training) <= now,
   })
-  const page = `/coach/training/${training.id}`
   return <article aria-label={t('coachHome:trainingNamed', { title: training.title })} className="grid grid-cols-[minmax(0,1fr)] gap-2">
     <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <p className="text-sm font-medium text-brand">{[t('coachHome:trainingPlan'), squadOf?.(training.squad)].filter(Boolean).join(' · ')}</p>
-      {sessions.data && (!practices.length ? <Link to={page} className={linkClass}>{t('coachHome:planThisSession')}</Link>
+      {/* TRAK-456: Plan this session opens the training's Training plan tab. */}
+      {sessions.data && (!practices.length ? <Link to={planPath(training.id)} className={linkClass}>{t('coachHome:planThisSession')}</Link>
         : <span className="flex-none whitespace-nowrap text-sm font-medium tabular-nums text-brand">{loop.closed && t('coachHome:closedPrefix')}{t('coachHome:minutes', { count: plannedMinutes(practices) })}</span>)}
     </div>
     {sessions.isError ? <LoadError what={t('coachHome:planWhat')} onRetry={() => void sessions.refetch()} />
@@ -130,7 +130,7 @@ function TodayMatch({ game, squadOf }: { game: Game; squadOf: ((squad: unknown) 
     {plan.data && (plan.data.formation || goals.length > 0) ? <dl className="grid gap-1 text-[15px]">
       {plan.data.formation && <div className="flex gap-3"><dt className="w-20 flex-none text-sm text-ink-3">{t('coachHome:formation')}</dt><dd className="text-ink">{plan.data.formation}</dd></div>}
       {goals.length > 0 && <div className="flex gap-3"><dt className="w-20 flex-none text-sm text-ink-3">{t('coachHome:goals')}</dt>
-        <dd className="min-w-0 text-ink"><ul className="grid gap-0.5">{goals.map(goal => <li key={goal}>{goal}</li>)}</ul></dd></div>}
+        <dd className="min-w-0 text-ink"><ul className="grid gap-1">{goals.map(goal => <li key={goal}>{goal}</li>)}</ul></dd></div>}
     </dl>
       : plan.isSuccess && <p className="text-sm text-ink-2">{t('coachHome:noGamePlan')}</p>}
   </article>

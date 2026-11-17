@@ -105,6 +105,7 @@
   "nothingPlanned": "Nothing planned",
   "noTimeSet": "no time set",
   "stateDraft": "Draft",
+  "stateDue": "Due",
   "stateClash": "Clashes",
   "timeDone": "Done",
   "timeTbc": "TBC",

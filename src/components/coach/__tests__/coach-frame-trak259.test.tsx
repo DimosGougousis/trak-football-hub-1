@@ -125,6 +125,54 @@ describe('TRAK-259: the coach\'s frame', { timeout: 20_000 }, () => {
     }
   })
 
+  it('TRAK-379 (Imad, 5 Nov): on a phone Sessions and a Library page have the avatar that opens the menu too', async () => {
+    screenIs(false)
+    // Training and Matches off, so the old Sessions list is still a page (TRAK-426).
+    for (const path of ['/coach/sessions/list', '/coach/trainings/technical']) {
+      renderApp(path)
+      await userEvent.click(await screen.findByRole('button', { name: 'Open menu' }, { timeout: 5000 }))
+      const menu = await screen.findByRole('dialog', { name: 'Menu' })
+      // The squad picker is in it, so the coach can switch squads without leaving the page.
+      expect(await within(menu).findByRole('button', { name: /^Squad: / }, { timeout: 5000 })).toBeInTheDocument()
+      cleanup()
+    }
+  })
+
+  it('TRAK-379: on a laptop Sessions and a Library page have no avatar (the sidebar is there)', async () => {
+    screenIs(true)
+    for (const path of ['/coach/sessions/list', '/coach/trainings/technical']) {
+      renderApp(path)
+      await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeNull()
+      cleanup()
+    }
+  })
+
+  // TRAK-433 (Imad, 16 Nov): every coach page has the avatar on a phone, inner Training pages included.
+  const TRAINING_INNER = ['/coach/training/past', '/coach/training/drills/mine', '/coach/training/drills/all', '/coach/trainings/play-it-right']
+
+  it('TRAK-433: on a phone the inner Training pages have the avatar that opens the menu too', async () => {
+    screenIs(false)
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature === 'events' || p_feature === 'training'))
+    for (const path of TRAINING_INNER) {
+      renderApp(path)
+      await userEvent.click(await screen.findByRole('button', { name: 'Open menu' }, { timeout: 5000 }))
+      expect(await screen.findByRole('dialog', { name: 'Menu' })).toBeInTheDocument()
+      cleanup()
+    }
+  })
+
+  it('TRAK-433: on a laptop the inner Training pages have no avatar (the sidebar is there)', async () => {
+    screenIs(true)
+    server.use(rpc('feature_on', ({ p_feature }) => p_feature === 'events' || p_feature === 'training'))
+    for (const path of TRAINING_INNER) {
+      renderApp(path)
+      await screen.findByRole('navigation', { name: 'Rehearsal FC' })
+      expect(screen.queryByRole('button', { name: 'Open menu' })).toBeNull()
+      cleanup()
+    }
+  })
+
   it('on a laptop: the sidebar, and "+ Create" at the top right', async () => {
     screenIs(true)
     renderApp('/coach/home')

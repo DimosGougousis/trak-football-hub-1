@@ -13,7 +13,8 @@ import { table, insertInto, rpc, SUPABASE_URL } from '../../../../tests/msw/supa
  * J4 + G1: the database refuses attendance for a child whose consent is not
  * confirmed, and one refused row fails the whole attendance insert. So the
  * screen offers only confirmed players and names the rest. A failed check
- * counts as not confirmed.
+ * counts as not confirmed. TRAK-312: one check answers for the whole squad, so
+ * when it fails nobody is confirmed.
  */
 const COACH = { id: 'coach-1' }
 const row = (id: string, player_name: string) => ({
@@ -22,22 +23,19 @@ const row = (id: string, player_name: string) => ({
 })
 const READY = row('ready', 'Rea Ready')
 const WAITING = row('waiting', 'Wes Waiting')
-const UNCHECKED = row('unchecked', 'Uma Unchecked')
 
 function roster(inserted: unknown[]) {
   server.use(
     table('profiles', [{ id: 'p', user_id: COACH.id, role: 'coach', full_name: 'Coach', invite_code: 'ABCD' }]),
-    table('squad_players', [READY, WAITING, UNCHECKED]),
+    table('squad_players', [READY, WAITING]),
     table('coach_sessions', []),
     insertInto('coach_sessions', body => ({ id: 'session-1', ...body })),
     http.post(`${SUPABASE_URL}/rest/v1/session_attendance`, async ({ request }) => {
       inserted.push(...((await request.json()) as unknown[]))
       return new HttpResponse(null, { status: 201 })
     }),
-    rpc('coach_squad_player_consent_required', ({ p_squad_player_id }) =>
-      p_squad_player_id === 'ready' ? false
-      : p_squad_player_id === 'waiting' ? true
-      : { status: 500, body: { message: 'check failed' } }),
+    // TRAK-312: one answer for the whole squad: the ids still waiting.
+    rpc('coach_squad_players_consent_pending', () => ['waiting']),
   )
 }
 
@@ -57,15 +55,25 @@ describe('J4 attendance offers only consent-confirmed players', { timeout: 20_00
     await trainingAt('Attendance')
     await screen.findByRole('button', { name: /Rea Ready/ }, { timeout: 5000 })
     expect(screen.queryByRole('button', { name: /Wes Waiting/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: /Uma Unchecked/ })).toBeNull()
     expect(screen.getByText(/Wes Waiting \(waiting for a parent\)/)).toBeInTheDocument()
-    expect(screen.getByText(/Uma Unchecked \(consent couldn't be checked\)/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'ALL' }))
     await saveLog('Save session')
 
     await waitFor(() => expect(inserted).toHaveLength(1))
     expect(inserted[0]).toMatchObject({ squad_player_id: 'ready' })
+  })
+
+  it('training: when the consent check fails nobody is offered, and each player is named', async () => {
+    roster([])
+    server.use(rpc('coach_squad_players_consent_pending', () => ({ status: 500, body: { message: 'check failed' } })))
+    renderApp('/coach/sessions/add')
+    await screen.findByRole('button', { name: /^Technical/ }, { timeout: 5000 })
+    await trainingAt('Attendance')
+
+    expect(await screen.findByText(/Rea Ready \(consent couldn't be checked\)/, undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.getByText(/Wes Waiting \(consent couldn't be checked\)/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Rea Ready|Wes Waiting/ })).toBeNull()
   })
 
   it('a failed roster load says so and can be retried; it is never "No squad yet"', async () => {

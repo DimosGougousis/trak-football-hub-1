@@ -37,9 +37,10 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
   const placed = isPosition(position)
   const action = !placed ? null : held.length > 1 ? `Edit ${first}'s objectives` : held.length ? `Edit ${first}'s objective` : `Give ${first} an objective`
 
-  return <section aria-labelledby={`objectives-${id}`} className="my-3 grid gap-2">
+  return <section aria-labelledby={`objectives-${id}`} className="grid gap-2">
     <div className="flex items-baseline justify-between gap-3">
-      <h4 id={`objectives-${id}`} className="text-base font-medium text-ink">{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
+      {/* TRAK-451: the player's page's bold title. */}
+      <h4 id={`objectives-${id}`} className="text-base font-semibold text-ink">{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
       {/* TRAK-455: once there are objectives, editing them is a pencil; giving the first one keeps its words. */}
       {action && (held.length ? <EditIcon label={action} haspopup onClick={() => setEditing(true)} />
         : <button type="button" onClick={() => setEditing(true)} aria-haspopup="dialog"
@@ -57,7 +58,7 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
       : <>{held.length === 0 ? <p className="text-sm text-ink-2">No objective yet.</p> : <ul className="m-0 grid list-none gap-3 p-0">
         {held.map(o => {
           const supports = plan.find(s => s.id === o.seasonObjectiveId)?.title
-          return <li key={o.id} className="grid gap-0.5 border-t border-line pt-2.5">
+          return <li key={o.id} className="grid gap-1 border-t border-line pt-2.5">
             <span className="text-[17px] font-medium text-ink">{o.title}</span>
             <span className="text-sm text-ink-3">{supports ? `Supports: ${supports}` : o.source === 'own' ? 'Your own' : 'Their own'} · since {since(o.since)}</span>
           </li>

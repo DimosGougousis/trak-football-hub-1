@@ -29,7 +29,7 @@ export function MatchCard({ opponent, date, scoreUs, scoreThem, band, review = f
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between rounded-[12px] px-4 py-3 text-left active:scale-[0.99] transition-transform"
+      className="w-full flex items-center justify-between rounded-xl px-4 py-3 text-left active:scale-[0.99] transition-transform"
       style={{ background: 'rgb(var(--t-surface))', border: '1px solid rgb(var(--t-line))' }}
     >
       <div className="flex-1 min-w-0 mr-3">

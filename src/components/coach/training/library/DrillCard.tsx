@@ -15,7 +15,7 @@ export function DrillCard({ drill, players, level, note = '' }: { drill: Library
     <Link to={drillPath(drill.id)}
       className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
       <DrillPitch drill={drill} players={players} level={level} variant="card" />
-      <span className="grid gap-0.5 px-3 pt-2 pb-2.5 tablet:px-3.5 tablet:pb-3">
+      <span className="grid gap-2 px-3 pt-2 pb-2.5 tablet:px-3.5 tablet:pb-3">
         <span className="text-[15px] font-medium leading-snug text-ink tablet:text-[17px]">{drill.name}</span>
         {sub && <span className="text-[13px] leading-snug text-ink-3">{sub}</span>}
         <span className="mt-1 hidden text-[13px] leading-snug text-brand tablet:block">{details.numbers} · {details.area}</span>

@@ -22,7 +22,7 @@ export function PillSelector({ options, value, onChange, label }: PillSelectorPr
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={`px-4 py-2 rounded-[10px] text-sm transition-colors ${
+            className={`px-4 py-2 rounded-xl text-sm transition-colors ${
               value === opt.value
                 ? 'border-brand bg-brand/[0.08] text-ink'
                 : 'border-line bg-raised text-ink-3'

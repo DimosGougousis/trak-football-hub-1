@@ -60,14 +60,14 @@ const CoachPlayerProfile = () => {
   return (
     <div className="app-container px-[18px] py-6 pb-8">
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={() => navigate('/coach/squad')} className="w-[34px] h-[34px] bg-secondary border border-border rounded-[10px] flex items-center justify-center text-foreground text-sm">←</button>
+        <button onClick={() => navigate('/coach/squad')} className="w-[34px] h-[34px] bg-secondary border border-border rounded-xl flex items-center justify-center text-foreground text-sm">←</button>
         <span className="text-[26px] text-foreground">Player profile</span>
       </div>
 
       {/* Player Header */}
       <div className="rounded-2xl p-4 mb-4 border border-border bg-card">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-[52px] h-[52px] rounded-[14px] bg-primary/15 flex items-center justify-center flex-shrink-0">
+          <div className="w-[52px] h-[52px] rounded-2xl bg-primary/15 flex items-center justify-center flex-shrink-0">
             <UserIcon size={22} className="text-primary" />
           </div>
           <div>
@@ -94,11 +94,11 @@ const CoachPlayerProfile = () => {
       {/* Actions */}
       <div className="grid grid-cols-2 gap-2 mb-5">
         <button onClick={() => navigate('/coach/assess')}
-          className="rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium inline-flex items-center justify-center gap-1.5">
+          className="rounded-xl py-3 bg-primary text-primary-foreground text-sm font-medium inline-flex items-center justify-center gap-1.5">
           <Star size={14} /> New Assessment
         </button>
         <button onClick={() => setShowRequest(!showRequest)}
-          className="bg-card border border-border rounded-[10px] py-3 text-foreground text-sm font-medium inline-flex items-center justify-center gap-1.5">
+          className="bg-card border border-border rounded-xl py-3 text-foreground text-sm font-medium inline-flex items-center justify-center gap-1.5">
           <MessageCircle size={14} /> Request 1-on-1
         </button>
       </div>
@@ -108,7 +108,7 @@ const CoachPlayerProfile = () => {
         <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
           <Input placeholder="Reason (optional)" value={requestReason} onChange={e => setRequestReason(e.target.value)} className="bg-secondary border-border" />
           <button onClick={handleRequest}
-            className="w-full rounded-[10px] py-3 bg-primary text-primary-foreground text-sm font-medium">
+            className="w-full rounded-xl py-3 bg-primary text-primary-foreground text-sm font-medium">
             Send Request →
           </button>
         </div>

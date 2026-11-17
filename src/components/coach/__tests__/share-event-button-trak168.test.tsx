@@ -50,4 +50,22 @@ describe('TRAK-168: Share opens the phone share sheet', () => {
     render(<ShareEventButton text={TEXT} aria-label="Share Finishing" />)
     expect(screen.getByRole('link', { name: 'Share Finishing' })).toBeInTheDocument()
   })
+
+  // TRAK-427: the event pop-up's Share is Arc's button (`arc`), a button either way.
+  it('arc: hands the message to the share sheet when there is one', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true })
+    render(<ShareEventButton arc text={TEXT}>Share</ShareEventButton>)
+    await userEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(share).toHaveBeenCalledWith({ text: TEXT })
+  })
+
+  it("arc: without a share sheet, opens WhatsApp's link in a new tab", async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    render(<ShareEventButton arc text={TEXT}>Share</ShareEventButton>)
+    await userEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(open).toHaveBeenCalledWith(`https://wa.me/?text=${encodeURIComponent(TEXT)}`, '_blank', 'noopener,noreferrer')
+    expect(screen.queryByRole('link')).toBeNull()
+    open.mockRestore()
+  })
 })

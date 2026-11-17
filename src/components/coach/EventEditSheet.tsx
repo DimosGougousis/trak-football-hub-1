@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { squadName } from '@/lib/coach-week'
 import { useFeature } from '@/components/trak/parked'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import {
   COMPETITIONS, DURATIONS, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, WEEKDAYS, blankRepeat, dateAsDay, dayAsDate, formatEventDay,
   repeatProblem, seriesDates, type EventForm, type Repeat,
@@ -88,7 +89,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
         {TRAINING_THEMES.map(option => {
           const on = option.key === theme
           return (
-            <label key={option.key} className="flex items-start gap-2 rounded-[12px] px-3 py-2 cursor-pointer transition-colors"
+            <label key={option.key} className="flex items-start gap-2 rounded-xl px-3 py-2 cursor-pointer transition-colors"
               style={{
                 background: on ? withAlpha(EVENT_COLOR.training, 0.1) : 'rgb(var(--t-ground))',
                 border: `1px solid ${on ? withAlpha(EVENT_COLOR.training, 0.33) : 'rgb(var(--t-line))'}`,
@@ -98,7 +99,7 @@ function ThemeChoice({ theme, onChange }: { theme: TrainingTheme | ''; onChange:
                 className="mt-[2px] w-3.5 h-3.5 shrink-0" style={{ accentColor: EVENT_COLOR.training }} />
               <span className="min-w-0">
                 <span className={`block text-[13px] leading-tight text-ink ${on ? 'font-medium' : ''}`}>{t(THEME_WORD[option.key])}</span>
-                {!drills && <span className="block text-[11px] text-ink-3 mt-0.5 whitespace-nowrap">{t('coachSchedule:themeCount', { sessions: option.sessions, count: option.topics })}</span>}
+                {!drills && <span className="block text-[11px] text-ink-3 mt-1 whitespace-nowrap">{t('coachSchedule:themeCount', { sessions: option.sessions, count: option.topics })}</span>}
               </span>
             </label>
           )
@@ -157,6 +158,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
   const { t } = useLanguage()
   const pickerLocale = currentLanguage() === 'en' ? 'en-GB' : currentLanguage()
   const steps = EVENT_STEPS.map(step => ({ ...step, label: t(STEP_WORD[step.id as keyof typeof STEP_WORD]) }))
+  const laptop = useSideMenuScreen()
   const coachSquad = useCoachSquad(user?.id)
   const games = useFeature('games')
   // TRAK-161: tell the coach as they type when families won't see the note.
@@ -214,12 +216,14 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center"
+    // TRAK-427: on a laptop, the centred pop-up every other pop-up is (TRAK-450: 42rem wide, 32 px from the edges), at
+    // one height, so nothing moves between steps. A phone keeps the bottom sheet above the tab bar.
+    <div className={`fixed inset-0 z-[70] flex justify-center ${laptop ? 'items-center p-8' : 'items-end'}`}
       style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div role="dialog" aria-label={sheet.row ? t('coachSchedule:editEvent') : t('coachSchedule:newEvent')}
-        className="w-full max-w-sheet rounded-t-[24px] px-5 pt-5 space-y-3 overflow-y-auto"
-        style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', maxHeight: '85vh', marginBottom: 64 }}>
+        className={`w-full px-5 pt-5 space-y-3 overflow-y-auto ${laptop ? 'max-w-[42rem] rounded-2xl flex flex-col' : 'max-w-sheet rounded-t-2xl'}`}
+        style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', ...(laptop ? { height: '85vh' } : { maxHeight: '85vh', marginBottom: 64 }) }}>
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-medium text-ink" style={font}>
             {sheet.row ? t('coachSchedule:editEvent') : t('coachSchedule:newEvent')}
@@ -407,7 +411,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
         </>}
 
         {datePassed && (sheet.step === 1 || sheet.step === REVIEW) && (
-          <div role="alert" className="rounded-[12px] p-3 space-y-2 border border-danger/30 bg-danger/[0.06]">
+          <div role="alert" className="rounded-xl p-3 space-y-2 border border-danger/30 bg-danger/[0.06]">
             <p className="text-[12px] text-danger" style={font}>{datePassed}</p>
             <div className="flex gap-2">
               {/* TRAK-288: where Games is on, a played match is a New event Match, evaluated on its game page. */}
@@ -427,7 +431,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
         )}
 
         {/* The decision sits where the thumb is, as on the assessment. */}
-        <div className="arc sticky bottom-0 -mx-5 px-5 pt-3 pb-5 flex gap-2 bg-raised border-t border-line">
+        <div className={`arc sticky bottom-0 -mx-5 px-5 pt-3 pb-5 flex gap-2 bg-raised border-t border-line ${laptop ? '!mt-auto' : ''}`}>
           {sheet.step === REVIEW ? <>
             <Button size="lg" variant="secondary" aria-label={t('coachSchedule:backTo', { step: steps[REVIEW - 1].label })} onClick={() => toStep(REVIEW - 1)}>
               <ChevronLeft size={18} aria-hidden="true" />

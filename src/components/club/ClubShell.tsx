@@ -34,7 +34,7 @@ export function ClubCard({ children, className = '', style }: { children: ReactN
       style={{
         background: 'rgb(var(--t-surface))',
         border: '1px solid rgb(var(--t-line))',
-        borderRadius: 18,
+        borderRadius: 16,
         ...style,
       }}
     >

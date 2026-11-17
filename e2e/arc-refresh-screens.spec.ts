@@ -56,6 +56,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     if (withMatch && path === '/rest/v1/coach_calendar_events') return json([match])
     if (withMatch && path === '/rest/v1/event_absences') return json([{ squad_player_id: 'sq-3', reason: 'school' }])
     if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(req.postDataJSON()?.p_squad_player_id === 'sq-5')
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (withMatch && path.startsWith('/rest/v1/rpc/coach_squad_players_consent_pending')) return json((req.postDataJSON()?.p_squad_player_ids ?? []).filter((id: string) => id === 'sq-5'))
     if (path === '/rest/v1/coach_sessions') return json([{ id: 'session-1', coach_user_id: ids.coach, title: 'Finishing', session_type: 'training', session_date: day, venue: 'Synthetic pitch' }])
     if (path === '/rest/v1/coach_calendar_events') return json([])
     if (path === '/rest/v1/coach_team_kits') return json([])
@@ -65,6 +67,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-261: the coach's notification switches (the bell's "Can't make it"); no row means on.
     if (path === '/rest/v1/notification_settings') return json([])
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path.startsWith('/rest/v1/rpc/coach_squad_players_consent_pending')) return json([])
     if (path === '/rest/v1/rpc/my_session_is_live' || path === '/rest/v1/rpc/feature_on') return json(true)
     // TRAK-350: the season plan's switch is on here, so Home asks for the squad's plan; there is none.
     if (path === '/rest/v1/season_plans') return json([])
@@ -171,6 +175,37 @@ test.describe('TRAK-182 coach screens', () => {
     await sheet.getByRole('heading', { name: 'Attending · 3' }).scrollIntoViewIfNeeded()
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath('coach-event-sheet-2-names.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  // TRAK-427: on a laptop the event pop-up is the centred card (TRAK-450), the same from Home's Details and from Events.
+  test('coach event pop-up on a laptop: one centred card from Home and from Events', async ({ page, context }, testInfo) => {
+    const unexpected: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await coachBackend(context, unexpected, true)
+    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+    await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
+    const boxes = []
+    for (const path of ['/coach/home', '/coach/schedule']) {
+      await page.goto(path)
+      // Home picks the event on the week, then Details opens it; on Events the card's title opens it.
+      if (path === '/coach/home') {
+        await page.getByRole('button', { name: /Rivals FC/ }).first().click()
+        await page.getByRole('button', { name: 'Details' }).click()
+      } else await page.getByRole('button', { name: 'League', exact: true }).click()
+      const card = page.getByRole('dialog', { name: 'vs Rivals FC' })
+      await expect(card.getByRole('heading', { name: 'Attending · 3' })).toBeVisible()
+      await expect(card.getByRole('button', { name: 'Expand sheet' })).toHaveCount(0)
+      await page.waitForTimeout(500)
+      await page.screenshot({ path: testInfo.outputPath(`coach-event-popup-laptop${path.replace(/\//g, '-')}.png`) })
+      const box = (await card.boundingBox())!
+      expect(Math.round(box.width)).toBe(672)
+      expect(Math.round(box.x + box.width / 2)).toBe(640)
+      boxes.push(box)
+    }
+    expect(boxes[1]).toEqual(boxes[0])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })

@@ -61,7 +61,7 @@ const OnboardingPage = () => {
       <a href="/" className="text-sm text-muted-foreground hover:text-primary mb-6 inline-block">
         ← Back
       </a>
-      <h1 className="text-2xl text-foreground mb-1">Player</h1>
+      <h1 className="text-2xl text-foreground mb-2">Player</h1>
       <p className="text-muted-foreground text-sm mb-6">Your academy added you to Trak</p>
       {loading
         ? <div role="status" aria-label="Loading" className="h-40 rounded-xl bg-card/50 animate-pulse" />
@@ -103,7 +103,7 @@ const GuardianOnboarding = ({ loading, invited, accountId, linkFailed }: { loadi
     <a href="/" className="text-sm text-muted-foreground hover:text-primary mb-6 inline-block">
       ← Back
     </a>
-    <h1 className="text-2xl text-foreground mb-1">Parent or guardian</h1>
+    <h1 className="text-2xl text-foreground mb-2">Parent or guardian</h1>
     <p className="text-muted-foreground text-sm mb-6">Your academy added you to Trak</p>
     {loading
       ? <div role="status" aria-label="Loading" className="h-40 rounded-xl bg-card/50 animate-pulse" />

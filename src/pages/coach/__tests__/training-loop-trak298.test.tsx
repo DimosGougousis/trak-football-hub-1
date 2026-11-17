@@ -90,18 +90,17 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 
-const loop = () => screen.getByRole('list', { name: 'Training loop' })
+/* TRAK-456 (Imad, 16 Nov): the page's tabs (Logistics, Training plan, After training) took the step strip's place, and
+   Who's here is the After training tab. */
 
 describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () => {
   it('before the training: Who’s here waits for the start, and View is there', async () => {
     database([training('soon', onTheMinute(Date.now() + DAY))], { soon: [practice(1, 'Rondos 4v1')] })
-    renderApp('/coach/training/soon')
+    renderApp('/coach/training/soon?tab=after')
     expect(await screen.findByText('Ready')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('Who’s here opens when the training starts.')).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Who’s here' })).toBeNull()
     expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument()
-    expect(within(loop()).getAllByRole('listitem').map(step => step.textContent))
-      .toEqual(['1 · Logistics(done)', '→2 · Plan(done)', '→3 · Who’s here(next)', '→4 · Notes'])
   })
 
   it('on the day: Who’s here opens its page with the existing register; once taken, Notes are next, optional', async () => {
@@ -111,17 +110,12 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     renderApp('/coach/training/today')
     // TRAK-342: Who's here is its own page: the register, then Trak's suggestions.
     await user.click(await screen.findByRole('button', { name: 'Who’s here' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/today/here'))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/today?tab=after'))
     expect(await screen.findByRole('button', { name: 'Mohamed Salah: present' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Virgil van Dijk: present' }))
     await user.click(screen.getByRole('button', { name: 'Done: 1 here' }))
     await waitFor(() => expect(taken).toEqual([{ p_event_id: 'today', p_present: ['sp-1'] }]))
     expect(await screen.findByRole('button', { name: 'Change' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Back' }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/today'))
-    await waitFor(() => expect(loop()).toHaveTextContent(/3 · Who’s here\s*\(done\)/))
-    expect(loop()).toHaveTextContent(/4 · Notes\s*\(optional\)/)
     expect(screen.queryByText('Closed')).toBeNull()
   })
 
@@ -130,8 +124,6 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     database([training('done', onTheMinute(Date.now() - DAY))], { done: [practice(1, 'Rondos 4v1')] }, { done: 'session-done' })
     renderApp('/coach/training/done')
     expect(await screen.findByText('Closed')).toBeInTheDocument()
-    expect(within(loop()).getAllByText('(done)')).toHaveLength(3)
-    expect(screen.getByText('Closed. It’s in Past trainings.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'View' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'View log' }))
     const sheet = await screen.findByRole('dialog', { name: 'The log' })
@@ -146,12 +138,11 @@ describe('TRAK-298: the loop on a training’s page', { timeout: 30_000 }, () =>
     renderApp('/coach/training/missed')
     expect(await screen.findByRole('button', { name: 'Who’s here' })).toBeInTheDocument()
     expect(screen.queryByText('Closed')).toBeNull()
-    expect(loop()).toHaveTextContent(/3 · Who’s here\s*\(now\)/)
   })
 
   it('a training not published says Who’s here needs it published', async () => {
     database([training('draft', onTheMinute(Date.now() - 20 * MINUTE), { published: false })], { draft: [practice(1, 'Rondos 4v1')] })
-    renderApp('/coach/training/draft')
+    renderApp('/coach/training/draft?tab=after')
     expect(await screen.findByText('Who’s here: only a published event has a register.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Who’s here' })).toBeNull()
   })

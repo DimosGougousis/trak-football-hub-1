@@ -169,7 +169,7 @@ export default function CoachRecognition() {
             const active = activeAward === type
             return (
               <button key={type} onClick={() => { if (!locked) setActiveAward(type) }}
-                className="flex-1 py-2 rounded-[10px] text-[11px] font-medium transition-all"
+                className="flex-1 py-2 rounded-xl text-[11px] font-medium transition-all"
                 style={{
                   background: active ? `${cfg.color}18` : 'rgb(var(--t-surface))',
                   border: `1px solid ${active ? cfg.color + '50' : 'rgb(var(--t-line))'}`,
@@ -182,7 +182,7 @@ export default function CoachRecognition() {
                   opacity: locked ? 0.5 : 1,
                 }}>
                 {cfg.label.split(' ').slice(-1)[0]}
-                {locked && <span className="block text-[8px] mt-0.5">{unlockText(type)}</span>}
+                {locked && <span className="block text-[8px] mt-1">{unlockText(type)}</span>}
               </button>
             )
           })}
@@ -193,7 +193,7 @@ export default function CoachRecognition() {
           const cfg = AWARD_CONFIG[activeAward]
           const locked = isLocked(activeAward)
           return (
-            <section className="p-5 mb-4" style={{ background: `${cfg.color}0D`, border: `1px solid ${cfg.color}2E`, borderRadius: 18, opacity: locked ? 0.5 : 1 }}>
+            <section className="p-5 mb-4" style={{ background: `${cfg.color}0D`, border: `1px solid ${cfg.color}2E`, borderRadius: 16, opacity: locked ? 0.5 : 1 }}>
               <Label color={cfg.color}>{cfg.label}</Label>
               <p style={{ fontSize: 13, color: 'rgb(var(--t-ink-3))', marginTop: 8 }}>{cfg.desc}</p>
               {locked ? (
@@ -209,7 +209,7 @@ export default function CoachRecognition() {
                         return (
                           <button key={p.id} onClick={() => setSelectedId(sel ? null : p.id)}
                             className="w-full flex items-center gap-3 p-3 text-left transition"
-                            style={{ background: sel ? `${cfg.color}14` : 'rgb(var(--t-surface))', border: `1px solid ${sel ? cfg.color : 'rgb(var(--t-ink-3))'}`, borderRadius: 14 }}>
+                            style={{ background: sel ? `${cfg.color}14` : 'rgb(var(--t-surface))', border: `1px solid ${sel ? cfg.color : 'rgb(var(--t-ink-3))'}`, borderRadius: 16 }}>
                             <div className="flex items-center justify-center shrink-0"
                               style={{ width: 40, height: 40, borderRadius: 8, background: 'rgb(var(--t-ground))', border: '1px solid rgb(var(--t-line))', color: 'rgb(var(--t-ink))', fontSize: 13 }}>
                               {initials(p.player_name)}

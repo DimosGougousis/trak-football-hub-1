@@ -196,7 +196,7 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     renderApp('/coach/home')
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
     const card = await within(needs).findByRole('button', { name: /Ade Okafor/ })
-    expect(card).toHaveTextContent('Never assessed, 5 weeks in the squad')
+    expect(card.closest('li')).toHaveTextContent('Never assessed, 5 weeks in the squad')
     expect(within(needs).queryByRole('button', { name: /Bo Lind/ })).toBeNull()
     await userEvent.click(card)
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))

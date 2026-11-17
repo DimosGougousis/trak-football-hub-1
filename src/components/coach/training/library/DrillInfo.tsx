@@ -26,7 +26,7 @@ export function DetailList({ details, changed }: { details: Details; changed: Ch
   const hit = new Set(changed?.items.map(c => c.key))
   return <dl className="grid overflow-hidden rounded-xl border border-line tablet:grid-cols-5">
     {DETAILS.map(({ key, name }) => <div key={key} data-changed={hit.has(key) || undefined}
-      className={`flex justify-between gap-3 border-b border-line px-3 py-2.5 last:border-b-0 tablet:grid tablet:content-start tablet:gap-0.5 tablet:border-b-0 tablet:border-r tablet:last:border-r-0 ${hit.has(key) ? 'bg-warning/15' : ''}`}>
+      className={`flex justify-between gap-3 border-b border-line px-3 py-2.5 last:border-b-0 tablet:grid tablet:content-start tablet:gap-1 tablet:border-b-0 tablet:border-r tablet:last:border-r-0 ${hit.has(key) ? 'bg-warning/15' : ''}`}>
       <dt className="flex-none text-xs text-ink-3">{name}</dt>
       <dd className="text-right text-sm font-medium text-ink [overflow-wrap:anywhere] tablet:text-left">{details[key] || '—'}</dd>
     </div>)}

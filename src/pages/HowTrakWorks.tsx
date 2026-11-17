@@ -54,9 +54,9 @@ export default function HowTrakWorks() {
         </span>
       </div>
 
-      <div className="pt-2 pb-6 space-y-3">
+      <div className="pt-2 pb-6 space-y-4">
         {/* Intro */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="THE IDEA" />
           <p className="text-[13px] text-ink-2 mt-2.5 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
             TRAK turns every match into a story, not a number. Instead of a raw score,
@@ -66,7 +66,7 @@ export default function HowTrakWorks() {
         </div>
 
         {/* TRAK-229: the bands on a light card like the rest, each in its light tint. */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="PERFORMANCE BANDS" />
           <div className="mt-3 space-y-2.5">
             {BANDS.map(b => {
@@ -83,7 +83,7 @@ export default function HowTrakWorks() {
                     <p className="text-[12px] text-ink" style={{ fontFamily: 'var(--t-font)' }}>
                       {BAND_DESCRIPTIONS[key]}
                     </p>
-                    <p className="text-[9px] text-ink-3 mt-0.5 tracking-[0.08em]"
+                    <p className="text-[9px] text-ink-3 mt-1 tracking-[0.08em]"
                       style={{ fontFamily: 'var(--t-font-mono)' }}>
                       RATING {RANGES[key]}
                     </p>
@@ -95,7 +95,7 @@ export default function HowTrakWorks() {
         </div>
 
         {/* Rating Engine */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="THE RATING ENGINE" />
           <div className="mt-2.5 space-y-2.5 text-[12px] text-ink-2 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>
@@ -116,7 +116,7 @@ export default function HowTrakWorks() {
         </div>
 
         {/* Why bands not numbers: it names three bands in their readable shades (TRAK-229). */}
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="WHY WORDS, NOT NUMBERS" />
           <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed"
             style={{ fontFamily: 'var(--t-font)' }}>

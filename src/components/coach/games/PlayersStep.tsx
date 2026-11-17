@@ -29,7 +29,7 @@ export function PlayersStep({ eventId, form, onFormChange, played, plans }: {
     <section aria-labelledby="evaluation-players" className="grid min-w-0 content-start gap-4">
       <div>
         <h2 id="evaluation-players" className="text-lg font-medium text-ink">{t('coachMatches:againstExpected')}</h2>
-        {!played.length && <p className="mt-1 text-sm text-ink-3">{t('coachMatches:nobodyTicked')}</p>}
+        {!played.length && <p className="mt-2 text-sm text-ink-3">{t('coachMatches:nobodyTicked')}</p>}
       </div>
       <ul className="grid gap-3">
         {played.map(player => {

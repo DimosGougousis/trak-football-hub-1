@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, LoadError, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
@@ -102,9 +103,8 @@ export default function CoachSessionEdit() {
       if (squadRes.error || attRes.error || assessedRes.error) { setStatus('failed'); return }
       const players = squadRes.data ?? []
       // Same check as the add screen; a failed check counts as not confirmed.
-      const required = await Promise.all(players.map(p =>
-        supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
-          .then(({ data: r, error: e }) => (e || typeof r !== 'boolean' ? null : r))))
+      // TRAK-312: one check for the whole list.
+      const required = await consentRequired(players.map(p => p.id))
       if (superseded) return
 
       const stored = new Map<string, Row['saved']>()
@@ -266,10 +266,10 @@ export default function CoachSessionEdit() {
   return (
     <MobileShell width="read">
       {header}
-      <div className="pt-5 pb-32 space-y-5">
+      <div className="pt-5 pb-32 space-y-6 laptop:space-y-8">
         {isTraining ? (
           <>
-            <div className="rounded-[18px] p-4 border border-line bg-surface">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -277,20 +277,20 @@ export default function CoachSessionEdit() {
                   return (
                     <button key={key} type="button" aria-pressed={on}
                       onClick={() => setFocus(prev => { const n = new Set(prev); if (n.has(key)) { n.delete(key) } else { n.add(key) } return n })}
-                      className="text-left px-3 py-2.5 rounded-[12px] transition-colors"
+                      className="text-left px-3 py-2.5 rounded-xl transition-colors"
                       style={{
                         background: on ? 'rgb(var(--t-brand) / 0.10)' : 'rgb(var(--t-raised))',
                         border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
                       }}>
                       <p className="text-[13px] font-medium" style={{ color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink))' }}>{key}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font-mono)' }}>{sub}</p>
+                      <p className="text-[9px] mt-1" style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font-mono)' }}>{sub}</p>
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -309,7 +309,7 @@ export default function CoachSessionEdit() {
               </div>
             </div>
 
-            <div className="rounded-[18px] p-4 border border-line bg-surface">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Theme"
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
@@ -317,7 +317,7 @@ export default function CoachSessionEdit() {
             </div>
           </>
         ) : (
-          <div className="rounded-[18px] p-4 border border-line bg-surface">
+          <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
             <MetadataLabel text="TITLE" />
             <input value={title} onChange={e => setTitle(e.target.value)} aria-label="Title"
               className="w-full bg-transparent text-[16px] text-ink placeholder-ink-3 outline-none mt-2" />
@@ -331,7 +331,7 @@ export default function CoachSessionEdit() {
             format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
         </div>
 
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-3"
             style={{ fontFamily: 'var(--t-font-mono)' }}>
             ATTENDED · {present.size}
@@ -345,7 +345,7 @@ export default function CoachSessionEdit() {
                 const fixed = !r.ready || locked(r)
                 return (
                   <button key={r.id} type="button" aria-pressed={on} disabled={fixed} onClick={() => toggle(r)}
-                    className="text-left px-3 py-2.5 rounded-[10px] transition-colors disabled:cursor-default"
+                    className="text-left px-3 py-2.5 rounded-xl transition-colors disabled:cursor-default"
                     style={{
                       background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
                       border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
@@ -354,7 +354,7 @@ export default function CoachSessionEdit() {
                     }}>
                     {r.name}
                     {fixed && (
-                      <span className="block text-[10px] text-ink-3 mt-0.5">
+                      <span className="block text-[10px] text-ink-3 mt-1">
                         {locked(r) ? 'Assessed on this session' : `Kept as saved: ${r.waitReason}`}
                       </span>
                     )}
@@ -370,7 +370,7 @@ export default function CoachSessionEdit() {
           )}
         </div>
 
-        <div className="rounded-[18px] p-4 border border-line bg-surface">
+        <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text={isTraining ? 'SESSION NOTES' : 'NOTES'} />
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} aria-label="Notes"
             placeholder="What went well? What needs more work next session?"
@@ -386,7 +386,7 @@ export default function CoachSessionEdit() {
           </p>
         )}
         <button onClick={handleSave} disabled={!canSave}
-          className="w-full py-3.5 rounded-[12px] text-[14px] font-medium transition-opacity"
+          className="w-full py-3.5 rounded-xl text-[14px] font-medium transition-opacity"
           style={{
             background: canSave ? 'rgb(var(--t-brand))' : 'rgb(var(--t-raised))',
             color: canSave ? 'rgb(var(--t-on-brand))' : 'rgb(var(--t-ink-3))',

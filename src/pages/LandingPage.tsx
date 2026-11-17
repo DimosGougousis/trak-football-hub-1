@@ -207,7 +207,7 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-[15px] rounded-[14px] text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-1"
+        className="w-full py-[15px] rounded-2xl text-[14px] font-semibold tracking-[0.04em] transition-all active:scale-[0.98] disabled:opacity-50 mt-1"
         style={{
           background: loading ? 'rgb(var(--t-brand) / 0.5)' : 'rgb(var(--t-brand))',
           color: 'rgb(var(--t-ground))',
@@ -233,7 +233,7 @@ function SignInForm({ onCreateAccount }: { onCreateAccount: () => void }) {
       <button
         type="button"
         onClick={onCreateAccount}
-        className="w-full py-[14px] rounded-[14px] text-[14px] font-medium transition-all active:scale-[0.98] border"
+        className="w-full py-[14px] rounded-2xl text-[14px] font-medium transition-all active:scale-[0.98] border"
         style={{
           background: 'transparent',
           border: '1px solid rgb(var(--t-brand) / 0.2)',
@@ -293,7 +293,7 @@ function PremiumInput({
         style={{
           background: 'rgb(var(--t-raised))',
           border: `1px solid ${focused ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
-          borderRadius: 14,
+          borderRadius: 16,
           padding: value || focused ? '24px 16px 10px' : '16px',
           color: 'rgb(var(--t-ink))',
           fontFamily: 'var(--t-font)',
@@ -346,14 +346,14 @@ function RegisterView({
           <button
             key={r.role}
             onClick={() => onRoleSelect(r.role)}
-            className="group w-full flex items-center gap-4 text-left rounded-[16px] px-4 py-[14px] transition-all active:scale-[0.98]"
+            className="group w-full flex items-center gap-4 text-left rounded-2xl px-4 py-[14px] transition-all active:scale-[0.98]"
             style={{
               background: r.bg,
               border: `1px solid ${r.border}`,
             }}
           >
             <div
-              className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0"
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgb(var(--t-raised))', border: `1px solid ${r.border}` }}
             >
               {r.icon}
@@ -366,7 +366,7 @@ function RegisterView({
                 {r.name}
               </p>
               <p
-                className="text-ink-3 text-[11px] mt-0.5 leading-snug"
+                className="text-ink-3 text-[11px] mt-1 leading-snug"
                 style={{ fontFamily: 'var(--t-font)' }}
               >
                 {r.desc}
@@ -455,7 +455,7 @@ function DevLoginPanel() {
             onChange={e => handlePinChange(e.target.value)}
             placeholder="PIN"
             maxLength={3}
-            className={`w-20 text-center py-2 rounded-[10px] text-[18px] tracking-[0.3em] outline-none transition-all ${shake ? 'animate-shake' : ''}`}
+            className={`w-20 text-center py-2 rounded-xl text-[18px] tracking-[0.3em] outline-none transition-all ${shake ? 'animate-shake' : ''}`}
             style={{
               background: shake ? 'rgb(var(--t-danger) / 0.08)' : 'rgb(var(--t-raised))',
               border: `1.5px solid ${shake ? 'rgb(var(--t-danger) / 0.35)' : 'rgb(var(--t-line))'}`,
@@ -476,7 +476,7 @@ function DevLoginPanel() {
                 key={account.role}
                 onClick={() => loginAs(account)}
                 disabled={busyRole !== null}
-                className="rounded-[10px] py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
+                className="rounded-xl py-3 text-center text-[11px] font-semibold transition-opacity disabled:opacity-50"
                 style={{
                   background: 'rgb(var(--t-raised))',
                   border: '1.5px solid rgb(var(--t-line))',

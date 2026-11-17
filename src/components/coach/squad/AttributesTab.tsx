@@ -25,7 +25,7 @@ function shade(value: number) {
   }
 }
 
-const CELL = 'flex min-h-11 min-w-[52px] flex-col items-center justify-center rounded-[8px] px-1 text-[14px] font-medium'
+const CELL = 'flex min-h-11 min-w-[52px] flex-col items-center justify-center rounded-sm px-1 text-[14px] font-medium'
 
 function Cell({ children, style }: { children: ReactNode; style?: React.CSSProperties }) {
   return <td className="p-[3px]"><div className={CELL} style={style}>{children}</div></td>
@@ -80,19 +80,19 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
   return (
     <div className="pt-2">
       <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">{t('coachSquad:tabAttributes')}</h2>
-      <p className="mt-1 text-[12px] text-ink-3">{t('coachSquad:attrSub', { count: WEEKS })}</p>
+      <p className="mt-2 text-[12px] text-ink-3">{t('coachSquad:attrSub', { count: WEEKS })}</p>
 
       {!recorded || !focus ? (
-        <div className="mt-5 rounded-[14px] border border-line bg-surface p-5">
+        <div className="mt-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <p className="text-[15px] font-medium text-ink-2">{t('coachSquad:noAssessmentsWeeks', { count: WEEKS })}</p>
           <p className="mt-1 text-[12px] text-ink-3">{t('coachSquad:onceAssess')}</p>
         </div>
       ) : (
         <div className="mt-5 grid gap-4 laptop:grid-cols-[minmax(0,1fr)_300px]">
           {/* The table scrolls inside its card, never the page. Nothing focusable sits in it, so no ring is clipped. */}
-          <div className="min-w-0 rounded-[14px] border border-line bg-surface p-2.5">
+          <div className="min-w-0 rounded-2xl border border-line bg-surface p-3">
             <div tabIndex={0} role="region" aria-label={t('coachSquad:heatmapLabel')}
-              className="overflow-x-auto rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+              className="overflow-x-auto rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
               <table className="w-full min-w-[620px] border-collapse">
                 <caption className="sr-only">{t('coachSquad:heatmapCaption', { count: WEEKS })}</caption>
                 <thead>
@@ -113,13 +113,13 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
           </div>
 
           <aside className="flex min-w-0 flex-col gap-3.5">
-            <section aria-label={t('coachSquad:focusThisWeek')} className="rounded-[14px] border-2 border-ink bg-surface p-4">
+            <section aria-label={t('coachSquad:focusThisWeek')} className="rounded-2xl border-2 border-ink bg-surface p-4">
               <p className="text-[12px] font-medium text-ink-3">{t('coachSquad:focusThisWeek')}</p>
               <h3 className="mt-1 text-[24px] font-medium tracking-[-0.01em] text-ink">{t(ATTRIBUTE_WORD[focus.row.key])}</h3>
               <p className="mt-1.5 text-[13px] text-ink-2">{focus.sentence}</p>
               {/* TRAK-419: where Training is on, Drills is the one library. */}
               <Link to={drills ? DRILLS_PATH : '/coach/trainings'}
-                className="mt-3.5 inline-flex min-h-11 w-full items-center justify-center rounded-[10px] px-3 text-[14px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="mt-3.5 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-3 text-[14px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}>
                 {t(drills ? 'coachSquad:openDrills' : 'coachSquad:openTrainings')}
               </Link>
@@ -129,7 +129,7 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
                 {t('coachSquad:howToReadBody')}
               </p>
             </Card>
-            <p className="rounded-[10px] bg-raised p-3 text-[12px] text-ink-3">
+            <p className="rounded-xl bg-raised p-3 text-[12px] text-ink-3">
               {t('coachSquad:coachOnlyNote')}
             </p>
           </aside>

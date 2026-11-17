@@ -283,26 +283,29 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
   </Dialog.Root>;
 
   // TRAK-415: the page keeps the laptop shell's `.arc` scope (Arc's tokens); `contents` adds no box to the layout.
-  if (narrow) return <LayoutGroup id={baseId}><div className="arc contents">{children}</div>{sheetUi}</LayoutGroup>;
-
+  // TRAK-301: one tree for both widths. The page sits at the same place under the same elements on a phone and a
+  // laptop; only the laptop's parts come and go around it, and a phone's boxes are `contents`. Before, a phone had its
+  // own wrapper, so crossing the side-menu width (a tablet turned, a window resized) rebuilt the page and lost typing.
   return <LayoutGroup id={baseId}>
     <TooltipPrimitive.Provider delayDuration={250} skipDelayDuration={300}>
-      <section ref={setFrame} className={`arc ${styles.shell}`} aria-label={label} onKeyDown={event => { if (event.key === "Escape" && overlaid && !event.defaultPrevented) { event.preventDefault(); fold(); } }}>
+      {/* A div with the region role on a laptop (a section before): on a phone the page is under no section of ours. */}
+      <div ref={narrow ? undefined : setFrame} className={narrow ? "arc contents" : `arc ${styles.shell}`} role={narrow ? undefined : "region"} aria-label={narrow ? undefined : label}
+        onKeyDown={event => { if (!narrow && event.key === "Escape" && overlaid && !event.defaultPrevented) { event.preventDefault(); fold(); } }}>
         {/* The slot holds the sidebar's place in the row. On a floating shell it keeps the rail's width and the panel opens over the page. */}
-        <motion.div className={styles.slot} initial={false} animate={{ width: slotWidth }} transition={reduce ? instant : motionTokens.spring.smooth}>
+        {!narrow && <motion.div className={styles.slot} initial={false} animate={{ width: slotWidth }} transition={reduce ? instant : motionTokens.spring.smooth}>
           <motion.div id={sidebarId} className={styles.sidebar} initial={false} animate={{ width: collapsed ? RAIL : FULL }} transition={reduce ? instant : motionTokens.spring.smooth} data-collapsed={collapsed || undefined} data-floating={overlaid || undefined}>
             <Identity className={styles.brand} mark={brand.logo} name={brand.name} detail={brand.detail} collapsed={collapsed} reduce={reduce} />
             {afterBrand && !collapsed && <div className={styles.afterBrand}>{afterBrand}</div>}
             <Navigation variant="side" collapsed={collapsed} onSelect={id => select(id)} onGroup={id => toggleGroup(id)} {...navShared} />
             <Identity className={styles.profile} mark={profile.avatar} name={profile.name} detail={profile.detail} collapsed={collapsed} reduce={reduce} />
           </motion.div>
-        </motion.div>
+        </motion.div>}
         <AnimatePresence>
-          {overlaid && <motion.div key="float-scrim" className={`${styles.scrim} ${styles.floatScrim}`} aria-hidden="true" onClick={fold} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={reduce ? instant : { duration: motionTokens.duration.standard, ease: curve(motionTokens.ease.standard) }} />}
+          {!narrow && overlaid && <motion.div key="float-scrim" className={`${styles.scrim} ${styles.floatScrim}`} aria-hidden="true" onClick={fold} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={reduce ? instant : { duration: motionTokens.duration.standard, ease: curve(motionTokens.ease.standard) }} />}
         </AnimatePresence>
 
-        <div className={styles.main}>
-          <header className={styles.topbar}>
+        <div className={narrow ? "contents" : styles.main}>
+          {!narrow && <header className={styles.topbar}>
             <button type="button" className={styles.iconButton} aria-label={collapsed ? t("nav:expandSidebar") : t("nav:collapseSidebar")} title={`${collapsed ? t("nav:expandSidebar") : t("nav:collapseSidebar")}  [`} aria-expanded={!collapsed} aria-controls={sidebarId} aria-keyshortcuts="[" onClick={toggleRail}><PanelGlyph collapsed={collapsed} reduce={reduce} /></button>
             <nav className={styles.crumbs} aria-label={t("nav:breadcrumb")}>
               <ol>
@@ -312,11 +315,12 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
               </ol>
             </nav>
             {actions && <div className={styles.actions}>{actions}</div>}
-          </header>
-          <div className={styles.content}>{children}</div>
-          <p className={styles.srOnly} role="status" aria-live="polite">{status && t(`nav:${status}`)}</p>
+          </header>}
+          <div className={narrow ? "contents" : styles.content}>{children}</div>
+          {!narrow && <p className={styles.srOnly} role="status" aria-live="polite">{status && t(`nav:${status}`)}</p>}
         </div>
-      </section>
+      </div>
+      {narrow && sheetUi}
     </TooltipPrimitive.Provider>
   </LayoutGroup>;
 }

@@ -93,7 +93,7 @@ export function ReviewPreview({ eventId, form, listed, plans, coachName }: {
         <div className="max-w-[320px]">
           <Select label={t('nav:player')} value={shown.id} onValueChange={setPick} options={played.map(p => ({ value: p.id, label: p.name }))} />
         </div>
-        <div className="rounded-[24px] border border-line bg-ground p-4">
+        <div className="rounded-2xl border border-line bg-ground p-4">
           <GameReviewSection review={previewReview(form, shown.id, plans, coachName, as)} as={as} childName={first(shown.name)} />
         </div>
       </>}

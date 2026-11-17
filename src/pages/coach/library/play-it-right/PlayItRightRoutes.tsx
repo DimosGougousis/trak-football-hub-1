@@ -1,5 +1,5 @@
 import { Link, Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
-import { CoachTrail } from '@/components/coach/CoachTrail'
+import { MenuTrail } from '@/components/coach/MenuTrail'
 import { MobileShell } from '@/components/trak'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { ON_COLOUR_TRAIL, ON_LIBRARY, ON_LIBRARY_RING } from '@/lib/fixed-colours'
@@ -54,7 +54,7 @@ function PlayItRightHome() {
       <div className="pt-3.5 pb-36 tablet:pt-7 laptop:pt-8">
         {/* TRAK-334: the trail, in place of Back. */}
         <div className="grid gap-3">
-          <CoachTrail current="Play It Right" />
+          <MenuTrail current="Play It Right" />
           <h1 className={title}>Play It Right</h1>
         </div>
         <p className="mt-2 max-w-[60ch] text-[15px] leading-snug text-ink-2">
@@ -67,7 +67,7 @@ function PlayItRightHome() {
           {PARTS.map(part => (
             <li key={part.id}>
               <Link to={partPath(part, ages)}
-                className="relative flex h-24 flex-col justify-between overflow-hidden rounded-[8px] p-3 tablet:h-[132px] tablet:rounded-[10px] tablet:p-4 laptop:h-[150px] laptop:p-[18px]"
+                className="relative flex h-24 flex-col justify-between overflow-hidden rounded-sm p-3 tablet:h-[132px] tablet:rounded-xl tablet:p-4 laptop:h-[150px] laptop:p-[18px]"
                 style={{ background: part.colour, color: ON_LIBRARY }}>
                 <span>
                   <span className="block text-[12px] font-semibold tracking-[0.08em]">PART {part.n}</span>
@@ -82,7 +82,7 @@ function PlayItRightHome() {
         </ul>
 
         <h2 className={`mt-6 tablet:mt-8 ${section}`}>For coaches</h2>
-        <Link to={`${PIR_PATH}/notes`} className="flex h-16 items-center gap-3 overflow-hidden rounded-[8px] bg-raised pr-3.5 tablet:h-20 tablet:gap-4">
+        <Link to={`${PIR_PATH}/notes`} className="flex h-16 items-center gap-3 overflow-hidden rounded-sm bg-raised pr-3.5 tablet:h-20 tablet:gap-4">
           <span aria-hidden className="flex h-16 w-16 flex-none items-center justify-center text-on-brand tablet:h-20 tablet:w-20" style={{ background: 'rgb(var(--t-brand))' }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v15H5.5A1.5 1.5 0 0 0 4 19.5z" /><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H19v-3" /><path d="M8 7h7M8 10.5h5" /></svg>
           </span>
@@ -100,13 +100,13 @@ function PlayItRightHome() {
 
 function PartHeader({ part, count }: { part: Part; count: string }) {
   return (
-    <header className="relative -mx-5 overflow-hidden px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-[12px] tablet:px-7 tablet:pt-6"
+    <header className="relative -mx-5 overflow-hidden px-5 pt-3.5 pb-6 tablet:mx-0 tablet:mt-7 tablet:rounded-xl tablet:px-7 tablet:pt-6"
       style={{ background: part.colour, color: ON_LIBRARY }}>
       <span aria-hidden className="absolute -right-10 -bottom-16 h-52 w-52 rounded-full border-2 tablet:-right-16 tablet:-bottom-24 tablet:h-[300px] tablet:w-[300px]" style={{ borderColor: ON_LIBRARY_RING }} />
       {/* TRAK-334: the trail, in place of Back, white on the part's colour; opened from a link, under Play It Right. */}
-      <CoachTrail current={part.name} parents={[{ label: 'Play It Right', href: PIR_PATH }]} style={ON_COLOUR_TRAIL} />
+      <MenuTrail current={part.name} parents={[{ label: 'Play It Right', href: PIR_PATH }]} style={ON_COLOUR_TRAIL} />
       <p className="mt-10 text-[12px] font-semibold tracking-[0.1em] tablet:mt-12">PLAY IT RIGHT · PART {part.n}</p>
-      <h1 className="mt-0.5 text-[36px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[50px]">{part.name}</h1>
+      <h1 className="mt-1 text-[36px] font-bold leading-[1.05] tracking-[-0.01em] tablet:text-[50px]">{part.name}</h1>
       <p className="mt-2 max-w-[62ch] text-[15px] leading-snug">{part.line}</p>
       <p className="mt-2 text-[14px] font-medium">{count}</p>
     </header>
@@ -167,14 +167,14 @@ function CoachNotes() {
     <MobileShell width="wide">
       <div className="grid max-w-[880px] gap-8 pt-3.5 pb-36 tablet:pt-7 laptop:pt-8">
         <div className="grid gap-3">
-          <CoachTrail current="Coach notes" parents={[{ label: 'Play It Right', href: PIR_PATH }]} />
+          <MenuTrail current="Coach notes" parents={[{ label: 'Play It Right', href: PIR_PATH }]} />
           <h1 className={title}>Coach notes</h1>
         </div>
         <section>
           <h2 className={h2}>How to use it with your squad</h2>
           <ol className="grid gap-2">
             {HOW_IT_WORKS.map(([when, what]) => (
-              <li key={when} className="grid gap-1 rounded-[10px] bg-raised p-3.5 tablet:grid-cols-[110px_1fr] tablet:gap-4">
+              <li key={when} className="grid gap-1 rounded-xl bg-raised p-3.5 tablet:grid-cols-[110px_1fr] tablet:gap-4">
                 <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-brand">{when}</span>
                 <span className="text-[15px] leading-snug text-ink">{what}</span>
               </li>
@@ -186,7 +186,7 @@ function CoachNotes() {
           <h2 className={h2}>What the research says</h2>
           <ul className="grid gap-2.5">
             {RESEARCH.map(r => (
-              <li key={r.finding} className="rounded-[10px] border border-line bg-surface p-4">
+              <li key={r.finding} className="rounded-xl border border-line bg-surface p-4">
                 <p className="text-[16px] font-semibold leading-snug text-ink">{r.finding}</p>
                 <p className="mt-1 text-[15px] leading-snug text-ink-2">{r.detail}</p>
                 <p className="mt-1.5 text-[12px] text-ink-3">{r.source}</p>
@@ -198,7 +198,7 @@ function CoachNotes() {
           <h2 className={h2}>By age</h2>
           <div className="grid gap-2 tablet:grid-cols-2">
             {(['Ages 13–16', 'Ages 17–20'] as const).map((ages, col) => (
-              <div key={ages} className="rounded-[10px] bg-raised p-4">
+              <div key={ages} className="rounded-xl bg-raised p-4">
                 <h3 className="text-[16px] font-bold text-ink">{ages}</h3>
                 {BY_AGE.map(([what, young, older]) => (
                   <p key={what} className="mt-2 text-[15px] leading-snug text-ink">

@@ -50,7 +50,7 @@
 .headText { min-width: 0; flex: 1; }
 .aside { flex: none; padding-top: 3px; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); white-space: nowrap; }
 .title { margin: 0; font-family: var(--font-body); font-size: var(--text-lg); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); }
-.description { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+.description { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
 
 .close { display: grid; flex: none; width: 2rem; height: 2rem; place-items: center; margin-top: -2px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-muted); color: var(--text-secondary); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
 @media (hover: hover) and (pointer: fine) { .close:hover { color: var(--foreground); border-color: var(--border-strong); } }
@@ -60,6 +60,33 @@
 .body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--space-1) var(--space-5) var(--space-6); overscroll-behavior: contain; scrollbar-width: thin; touch-action: pan-y; font-size: var(--text-sm); line-height: var(--leading-body); }
 .sheet:not([data-expanded]) .body { overflow: hidden; touch-action: none; }
 
+/* Trak (TRAK-450): the laptop's pop-up. One width and one set of margins for every pop-up; it sits in the middle of
+   the screen, at least 32 px from each edge, and its content scrolls inside it. */
+.cardFrame { position: fixed; z-index: 51; inset: 0; display: grid; place-items: center; padding: var(--space-8); pointer-events: none; }
+.card {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 42rem);
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface-raised);
+  color: var(--foreground);
+  box-shadow: var(--shadow-floating);
+  font-family: var(--font-body);
+  letter-spacing: var(--tracking-body);
+  outline: none;
+  pointer-events: auto;
+  transform-origin: 50% 40%;
+}
+.card.wide { width: min(100%, 64rem); }
+.cardHeader { position: relative; flex: none; padding: var(--space-6) var(--space-6) var(--space-4); }
+.cardHeader::after { position: absolute; right: 0; bottom: 0; left: 0; height: 1px; background: var(--border); content: ""; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+.card[data-scrolled] .cardHeader::after { opacity: 1; }
+.cardBody { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--space-1) var(--space-6) var(--space-6); overscroll-behavior: contain; scrollbar-width: thin; font-size: var(--text-sm); line-height: var(--leading-body); }
+.card[data-state="closed"] { pointer-events: none !important; }
+
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 @media (max-width: 40rem) {
@@ -68,5 +95,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .header::after, .grabberBar, .close { transition: none; }
+  .header::after, .cardHeader::after, .grabberBar, .close { transition: none; }
 }

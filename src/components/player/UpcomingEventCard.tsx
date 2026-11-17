@@ -26,7 +26,7 @@ export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '
     <Link
       to={`${linkBase}/${event.id}`}
       aria-label={nextUp ? `Next up: ${heading}` : undefined}
-      className="flex items-stretch gap-3 rounded-[14px] p-3.5"
+      className="flex items-stretch gap-3 rounded-2xl p-3.5"
       style={{ background: 'rgb(var(--t-surface))', border: `1px solid ${cancelled ? `${withAlpha(CANCELLED_COLOR, 0.5)}` : 'rgb(var(--t-line))'}` }}
     >
       <div className="w-1 rounded-full flex-shrink-0" style={{ background: cancelled ? CANCELLED_COLOR : EVENT_COLOR[event.kind] }} />
@@ -38,7 +38,7 @@ export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '
             {plan === 'review' ? 'Coach’s review' : plan === 'updated' ? 'Updated' : 'Plan shared'}</Badge></span>}
         </div>
         <p className={`text-[13px] font-medium truncate ${cancelled ? 'line-through text-ink-2' : 'text-ink'}`}>{heading}</p>
-        <p className="text-[11px] mt-0.5 text-ink-2">{eventDay(event)} · {eventTime(event)}</p>
+        <p className="text-[11px] mt-1 text-ink-2">{eventDay(event)} · {eventTime(event)}</p>
         {where && <p className="text-[11px] text-ink-3 truncate">{where}</p>}
         {event.kind === 'match' && event.kit && <p className="text-[11px] text-ink-3">Kit: {event.kit}</p>}
         {cancelled && event.cancelReason && <p className="text-[11px] text-danger">{event.cancelReason}</p>}

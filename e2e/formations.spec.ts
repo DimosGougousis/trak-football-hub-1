@@ -45,6 +45,8 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     if (path === '/rest/v1/rpc/my_session_is_live') return json(true)
     if (path === '/rest/v1/rpc/feature_on') return json(['events', 'season_plan'].includes(req.postDataJSON()?.p_feature))
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json([])
     if (path === '/rest/v1/formations') return json(saved)
     if (path === '/rest/v1/rpc/start_formations') {
       if (started) return json(false)
@@ -100,6 +102,16 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
 
     // A second formation, from the pitch as it is, then two taps.
     await page.getByRole('button', { name: 'New formation' }).click()
+    const popup = page.getByRole('dialog', { name: 'New formation' })
+    await expect(popup).toBeVisible()
+    if (width >= 1024) {
+      // TRAK-450: on a laptop the pop-up is a 42rem card in the middle of the screen, not a sheet on the bottom edge.
+      await expect.poll(async () => Math.round((await popup.boundingBox())!.width)).toBe(672)
+      const box = (await popup.boundingBox())!
+      expect(box.y + box.height).toBeLessThanOrEqual(height - 32)
+      expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(2)
+    }
+    await page.screenshot({ path: testInfo.outputPath(`new-formation-${width}.png`) })
     await page.getByRole('textbox', { name: 'Formation name' }).fill('High press')
     await page.getByRole('button', { name: 'Create formation' }).click()
     await expect(cards.getByRole('button')).toHaveCount(4)

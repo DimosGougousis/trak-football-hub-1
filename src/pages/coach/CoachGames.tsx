@@ -17,6 +17,7 @@ import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { MatchAction } from '@/components/coach/games/MatchAction'
+import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { dateLocale, i18n, useTranslation } from '@/lib/i18n'
 import { COMPETITION_WORD, MATCH_WORD } from '@/lib/games/match-words'
@@ -31,6 +32,8 @@ import { PageTop } from '@/components/coach/PageTop'
 
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Match picked. */
 const ADD_MATCH = { quickEvent: { kind: 'match' } }
+/** A placeholder that fills its column, as the card it grows into does. */
+const FILL = { width: '100%' }
 const details = (game: Game, time: string | null) => [
   time ? i18n.t('coachSquad:kickOffAt', { time }) : '',
   game.home_away === 'home' ? i18n.t('coachSchedule:home') : game.home_away === 'away' ? i18n.t('coachSchedule:away') : '',
@@ -72,6 +75,7 @@ export default function CoachGames() {
   const published = (game: Game) => !!evaluations.data?.get(game.id)?.publishedAt
   const previous = ordered.filter(published)
   const scorers = useScorers(previous.filter(game => Date.parse(game.starts_at) >= seasonStart(now)).map(game => game.id))
+  const loading = games.isPending || plans.isPending || shares.isPending || evaluations.isPending
 
   return (
     <div className="min-h-screen bg-ground pb-24">
@@ -82,25 +86,26 @@ export default function CoachGames() {
         {games.error || plans.error || shares.error || evaluations.error
             ? <LoadError what={t('coachMatches:matchesWhat')} onRetry={() => { void games.refetch(); void plans.refetch(); void shares.refetch(); void evaluations.refetch() }}
                 retrying={games.isFetching || plans.isFetching || shares.isFetching || evaluations.isFetching} />
-          : games.isPending || plans.isPending || shares.isPending || evaluations.isPending ? <LoadingSkeleton label={t('coachSquad:fmMatchesLoading')} rows={3} className="pt-6" />
-          : ordered.length === 0 ? (
+          : !loading && ordered.length === 0 ? (
             <div className="arc pt-6">
               <EmptyState icon={<PitchIcon size={24} strokeWidth={1.5} />} title={t('coachMatches:noMatchesYet')}
                 description={t('coachMatches:noMatchesBody')}
                 action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_MATCH })}>{t('coachMatches:addMatch')}</Button>} />
             </div>
-          ) : <>
-            <div className="grid gap-4 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              {next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
-                <section aria-labelledby="next-game" className="rounded-2xl border border-line bg-surface p-5">
+          ) : <SkeletonMorph loading={loading} stagger={0} loadingLabel={t('coachSquad:fmMatchesLoading')}>
+            {/* TRAK-461: while the matches load, each part of the page is a placeholder of its shape that grows into it. */}
+            <div className="grid gap-6 laptop:gap-8 laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              <MorphBlock height={196} radius={16} className="grid min-w-0" style={FILL}>{!loading && (next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
+                <section aria-labelledby="next-game" className="h-full rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                   <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
                   <p className="mt-2 text-sm text-ink-2">{t('coachMatches:noMatchComing')}</p>
                   <Link to="/coach/schedule" state={ADD_MATCH}
                     className="mt-3 inline-block rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{t('coachMatches:addMatch')}</Link>
                 </section>
-              )}
+              ))}</MorphBlock>
               {/* TRAK-284: plan drafts. TRAK-288: evaluation drafts. */}
-              <section aria-labelledby="open-drafts" className="arc rounded-2xl border border-line bg-surface p-5">
+              <MorphBlock height={196} radius={16} className="grid min-w-0" style={FILL}>{!loading &&
+              <section aria-labelledby="open-drafts" className="arc h-full rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                 <h2 id="open-drafts" className="text-lg font-medium text-ink">{t('coachMatches:openDrafts')}</h2>
                 {drafts.length === 0 ? <p className="mt-4 text-sm text-ink-2">{t('coachMatches:noDrafts')}</p> : <ul className="mt-3 divide-y divide-line">
                   {drafts.map(({ game, what, saved, tab }) => <li key={`${tab}:${game.id}`} className="flex items-center justify-between gap-3 py-3">
@@ -112,13 +117,14 @@ export default function CoachGames() {
                       onClick={() => open(game, { tab })}>{t('coachMatches:open')}</Button>
                   </li>)}
                 </ul>}
-              </section>
+              </section>}</MorphBlock>
             </div>
 
             <div className={`mt-6 grid gap-6 ${previous.length ? 'laptop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] laptop:items-start' : ''}`}>
             <div className="grid min-w-0 gap-6">
             <div className="min-w-0">
-              <h2 className="mb-2 text-lg font-medium text-ink">{t('coachMatches:yourMatches')}</h2>
+              <MorphBlock lines={1} lineHeight={28} width={140} className="mb-2"><h2 className="text-lg font-medium text-ink">{t('coachMatches:yourMatches')}</h2></MorphBlock>
+              <MorphBlock height={112} radius={16} style={FILL}>{!loading &&
               <div className="arc -mx-1">
                 <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label={t('coachMatches:yourMatches')}>
                   <ul className="flex gap-3 px-1 pb-1">
@@ -138,13 +144,13 @@ export default function CoachGames() {
                     })}
                   </ul>
                 </ScrollArea>
-              </div>
+              </div>}</MorphBlock>
             </div>
             {previous.length > 0 && <PreviousMatches games={previous} results={evaluations.data!} squads={everySquad} />}
             </div>
             {previous.length > 0 && <TopScorers scorers={scorers} />}
             </div>
-          </>}
+          </SkeletonMorph>}
       </div>
     </div>
   )
@@ -158,12 +164,12 @@ function NextGame({ game, state, step, onKickOff }: {
   const { t } = useTranslation()
   const { day, time, academy } = gameWhen(game)
   return (
-    <section aria-labelledby="next-game" className="arc flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="next-game" className="arc flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="next-game" className="text-lg font-medium text-ink">{t('coachMatches:nextMatch')}</h2>
         <Badge tone={state.tone}>{shown(MATCH_WORD, state.label)}</Badge>
       </div>
-      <div className="grid min-w-0 gap-1">
+      <div className="grid min-w-0 gap-2">
         <p className="text-[22px] font-medium tracking-[-0.01em] text-ink break-words">{gameTitle(game)}</p>
         <p className="text-sm text-ink-2">{[day, details(game, time)].filter(Boolean).join(' · ')}</p>
         {academy && <p className="text-sm text-ink-3">{academy}</p>}
@@ -220,7 +226,7 @@ function TopScorers({ scorers }: { scorers: UseQueryResult<Scorer[]> }) {
   const rows = scorers.data ?? []
   const cell = 'py-1.5 pl-2 text-right tabular-nums'
   return (
-    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="top-scorers" className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <h2 id="top-scorers" className="text-lg font-medium text-ink">{t('coachMatches:topScorers')}</h2>
       {scorers.error ? <div className="mt-3"><LoadError what={t('coachMatches:scorersWhat')} onRetry={() => void scorers.refetch()} retrying={scorers.isFetching} /></div>
         : scorers.isPending ? <LoadingSkeleton label={t('coachMatches:loadingScorers')} lines={1} avatar rows={3} className="mt-3" />

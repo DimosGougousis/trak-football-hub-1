@@ -65,9 +65,10 @@ function ActionButton({ action, variant }: { action: PageHeaderAction; variant?:
   return <Button variant={variant} size="sm" loading={action.loading} disabled={action.disabled} onClick={action.onSelect}>{action.icon}{action.label}</Button>;
 }
 
-/** A tab's panel. The header's tabs switch it; it unmounts while another tab is shown, as Radix does. */
-export function PageHeaderPanel({ value, children }: { value: string; children: ReactNode }) {
-  return <TabsPrimitive.Content value={value} className={styles.panel}>{children}</TabsPrimitive.Content>;
+/** A tab's panel. The header's tabs switch it; it unmounts while another tab is shown, as Radix does. Trak (TRAK-456):
+ *  given `shown`, it stays mounted and is only hidden, so what's typed in it lives on while another tab is open. */
+export function PageHeaderPanel({ value, shown, children }: { value: string; shown?: boolean; children: ReactNode }) {
+  return <TabsPrimitive.Content value={value} className={styles.panel} {...(shown === undefined ? {} : { forceMount: true, hidden: !shown })}>{children}</TabsPrimitive.Content>;
 }
 
 export function PageHeader({ title, status, crumbs, details, primary, secondary = [], menu = [], onFold, tabs = [], tabsLabel, value, onValueChange, notice, top = "0px", className, children }: {
@@ -200,11 +201,15 @@ export function PageHeader({ title, status, crumbs, details, primary, secondary 
         {tabs.length > 0 && <LayoutGroup id={id}>
           <TabsPrimitive.List asChild aria-label={tabsLabel}>
             <motion.div layoutScroll className={styles.tabs}>
-              {tabs.map(item => <TabsPrimitive.Trigger key={item.value} value={item.value} className={styles.tab}>
-                <span className={styles.tabLabel}>{item.label}</span>
-                {item.extra && <span className={styles.extra}>{item.extra}</span>}
-                {value === item.value && <motion.span className={styles.indicator} layoutId="indicator" layoutDependency={value} transition={reduce ? still : motionTokens.spring.morph} aria-hidden="true" />}
-              </TabsPrimitive.Trigger>)}
+              {/* Trak (TRAK-431, Kostas 16 Nov): every page's tabs look like Squad's big glass pill: the tabs sit in one pill
+                  and the one shown is a tinted pill inside it, in place of the underline. */}
+              <div className={styles.track}>
+                {tabs.map(item => <TabsPrimitive.Trigger key={item.value} value={item.value} className={styles.tab}>
+                  {value === item.value && <motion.span className={styles.indicator} layoutId="indicator" layoutDependency={value} transition={reduce ? still : motionTokens.spring.morph} aria-hidden="true" />}
+                  <span className={styles.tabLabel}>{item.label}</span>
+                  {item.extra && <span className={styles.extra}>{item.extra}</span>}
+                </TabsPrimitive.Trigger>)}
+              </div>
             </motion.div>
           </TabsPrimitive.List>
         </LayoutGroup>}

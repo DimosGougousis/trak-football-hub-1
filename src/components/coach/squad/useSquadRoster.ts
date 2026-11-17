@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { consentPendingIds } from '@/lib/consent-pending'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import type { Tables } from '@/integrations/supabase/types'
@@ -21,15 +22,11 @@ async function loadPlayers(coachId: string): Promise<Tables<'squad_players'>[]> 
   return (data ?? []).filter(row => row.status !== 'coach_departed')
 }
 
-/** The same predicate the RLS policy evaluates: `true` means the child still waits for consent. A failed check fails the read. */
+/** The same predicate the RLS policy evaluates: the children still waiting for consent. One request for the whole
+ *  roster (TRAK-312); a failed check fails the read. */
 async function loadConsentPending(ids: string[]): Promise<string[]> {
-  const answers = await Promise.all(ids.map(async id => {
-    const { data, error } = await supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: id } as never)
-    if (error) throw error
-    if (typeof data !== 'boolean') throw new Error('The consent check gave no answer')
-    return data ? id : null
-  }))
-  return answers.filter((id): id is string => id !== null)
+  const pending = await consentPendingIds(ids)
+  return ids.filter(id => pending.has(id))
 }
 
 async function loadAssessments(ids: string[]): Promise<AssessmentRow[]> {

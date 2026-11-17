@@ -89,12 +89,12 @@ export default function PlayerEvent() {
     </>
   }
 
-  // TRAK-441 slice 3.3, behind family_look: a match is the coach's match header with tabs. A training keeps this page.
-  const match = look && user && current?.event?.kind === 'match' ? current.event : null
+  // TRAK-441 slices 3.3 and 7, behind family_look: the coach's page header; a match's has tabs, any other event's is Logistics.
+  const inLook = look && user && current?.event ? current.event : null
   return (
-    <MobileShell width={match ? 'wide' : 'page'}>
-      {match ? <div className="pb-28"><FamilyMatch event={match} changes={current!.changes} child={{ id: user!.id, name: '' }} as="player" back={backTo}
-        cantMakeIt={forThemselves && <CantMakeIt event={match} child={{ id: user!.id, name: 'you' }} self />} /></div>
+    <MobileShell width={inLook ? 'wide' : 'page'}>
+      {inLook ? <div className="pb-28"><FamilyMatch event={inLook} changes={current!.changes} child={{ id: user!.id, name: '' }} as="player" back={backTo}
+        cantMakeIt={forThemselves && <CantMakeIt event={inLook} child={{ id: user!.id, name: 'you' }} self />} /></div>
         : <div className="pt-12 pb-28 space-y-5">
           {back}
           {body}

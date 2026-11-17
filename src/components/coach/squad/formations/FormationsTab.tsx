@@ -112,7 +112,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   if (!list || roles.isPending || writes.start.isPending) return <LoadingSkeleton label={t('coachSquad:fmLoading')} lines={3} rows={2} />
 
   const header = <div className="flex flex-wrap items-end justify-between gap-3">
-    <div className="grid gap-0.5">
+    <div className="grid gap-2">
       <h2 className="text-lg font-medium text-ink">{t('coachSquad:fmPlaybook')}</h2>
     </div>
     <Button variant="secondary" onClick={() => { setNamingProblem(null); setNaming({ kind: 'new', format: 11, shape: DEFAULT_FORMATION[11] }) }}>
@@ -145,7 +145,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
     })
   }
 
-  if (!saved || !current) return <div className="arc grid gap-5">
+  if (!saved || !current) return <div className="arc grid gap-6 laptop:gap-8">
     {header}
     <div className="grid justify-items-center gap-2 rounded-2xl border border-line bg-surface p-8 text-center">
       <p className="text-[15px] font-medium text-ink">{t('coachSquad:fmNone')}</p>
@@ -200,7 +200,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   const starting = new Set(Object.values(current.starters))
   const bench = [...boardPlayers.values()].filter(p => p.canPlay && !starting.has(p.id))
 
-  return <div className="arc grid gap-5">
+  return <div className="arc grid gap-6 laptop:gap-8">
     {header}
     <div role="group" aria-label={t('coachSquad:fmSavedList')} className="grid gap-2 tablet:grid-cols-2 laptop:grid-cols-3">
       {list.map(f => {
@@ -216,9 +216,9 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
       })}
     </div>
 
-    <section aria-labelledby="formation-name" className="grid gap-4 rounded-2xl border border-line bg-surface p-5">
+    <section aria-labelledby="formation-name" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-0.5">
+        <div className="grid gap-1">
           <div className="flex items-center gap-1">
             <h2 id="formation-name" className="text-xl font-medium text-ink">{current.name}</h2>
             <button type="button" aria-label={t('coachSquad:fmRename')} onClick={() => { setNamingProblem(null); setNaming({ kind: 'rename', name: saved.name }) }}

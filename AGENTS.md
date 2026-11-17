@@ -66,6 +66,8 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   never "pick" ("Select a date", "None selected"), in English and Greek.
 - Follow the existing mobile shell and design tokens. Use `BANDS` for band
   wording and colors; keep player-visible messages separate from private notes.
+- Spacing and corners follow [docs/design-system/spacing-and-corners.md](docs/design-system/spacing-and-corners.md)
+  (TRAK-464): cards 16 px corners and `p-5 laptop:p-6`, boxes inside 12 px; no one-off `rounded-[Npx]`.
 - The roster owns the child's name. A child email is optional. Use the existing
   guardian-created login/recovery flow for a child without email (TRAK-84).
 - The consent screen must offer only choices the backend enforces. The
@@ -92,6 +94,12 @@ browser test. Run the test for the behaviour you changed yourself: a green
 gate does not cover it. `archive/ci-full-gate-2026-11-15/` is a frozen copy of
 the earlier full gate and its Playwright files, kept for restoring; edit the
 live files, never the copy.
+
+Tests follow the PR (TRAK-471, [strategy](docs/release/testing-strategy.md)).
+A PR adds or updates tests only for its own acceptance criteria, written from
+the problem it solves, not from the history of the area. Never generate, keep,
+rewrite or delete an older test unless the human asks for that cleanup. Layout
+and dimension checks belong to one dedicated PR, not to each feature PR.
 Workflow actions must run on Node 24: `ci-action-runtimes.test.ts` lists each
 action's first such major, and Dependabot opens a weekly grouped PR for newer
 ones, reviewed like any other change.

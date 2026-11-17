@@ -66,7 +66,7 @@ export function TrainingHistory({
         Training
       </div>
       {state.kind === 'loading' && (
-        <div role="status" aria-label="Loading training" className="h-12 rounded-[12px] bg-raised animate-pulse" />
+        <div role="status" aria-label="Loading training" className="h-12 rounded-xl bg-raised animate-pulse" />
       )}
       {state.kind === 'failed' && (
         <LoadError what="your training" retrying={retrying} onRetry={() => { setRetrying(true); void load() }} />
@@ -81,9 +81,9 @@ export function TrainingHistory({
         <ul className="space-y-2">
           {state.rows.map(row => (
             <li key={row.session_id}
-              className="rounded-[12px] border border-line"
+              className="rounded-xl border border-line"
               style={{ background: 'rgb(var(--t-surface))' }}>
-              {assessmentHref && (!assessedSessions || assessed.has(row.session_id)) ? <Link to={assessmentHref(row.session_id)} className="flex items-center justify-between gap-3 min-h-11 px-4 py-3 rounded-[12px] focus-visible:ring-2 focus-visible:ring-primary">
+              {assessmentHref && (!assessedSessions || assessed.has(row.session_id)) ? <Link to={assessmentHref(row.session_id)} className="flex items-center justify-between gap-3 min-h-11 px-4 py-3 rounded-xl focus-visible:ring-2 focus-visible:ring-primary">
                 <TrainingRow row={row} />
               </Link> : <div className="flex items-center justify-between px-4 py-3"><TrainingRow row={row} /></div>}
             </li>

@@ -46,6 +46,8 @@ async function backend(context: BrowserContext, unexpected: string[]) {
     if (path === '/rest/v1/rpc/my_session_is_live') return json(true)
     if (path === '/rest/v1/rpc/feature_on') return json(req.postDataJSON()?.p_feature === 'season_plan')
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(req.postDataJSON()?.p_squad_player_id === 'rae')
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json((req.postDataJSON()?.p_squad_player_ids ?? []).filter((id: string) => id === 'rae'))
     if (path === '/rest/v1/season_plans' && method === 'GET') return json([plan])
     if (path === '/rest/v1/season_evaluations') return json(evaluations)
     if (path === '/rest/v1/coach_assessments' && method === 'GET') return json([lastTime])

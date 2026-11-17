@@ -330,7 +330,7 @@ export default function CoachQuickAssess() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line"
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-xl bg-raised border border-line"
             >
               <ChevronLeft size={16} className="text-ink-2" />
             </button>
@@ -342,7 +342,7 @@ export default function CoachQuickAssess() {
             <p className="text-[15px] text-ink-2">No players in your squad yet.</p>
             <button
               onClick={() => navigate('/coach/squad/add')}
-              className="px-5 py-2.5 rounded-[10px] bg-brand text-on-brand text-sm font-bold"
+              className="px-5 py-2.5 rounded-xl bg-brand text-on-brand text-sm font-bold"
             >
               Add Players
             </button>
@@ -384,7 +384,7 @@ export default function CoachQuickAssess() {
 
           <button
             onClick={() => navigate('/coach/home')}
-            className="w-full max-w-[280px] py-4 rounded-[10px] bg-brand text-on-brand font-bold text-sm mt-4"
+            className="w-full max-w-[280px] py-4 rounded-xl bg-brand text-on-brand font-bold text-sm mt-4"
           >
             Back to Dashboard
           </button>
@@ -401,7 +401,7 @@ export default function CoachQuickAssess() {
         <div className="flex items-center gap-3 pt-6">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] bg-raised border border-line"
+            className="flex items-center justify-center w-[34px] h-[34px] rounded-xl bg-raised border border-line"
           >
             <ChevronLeft size={16} className="text-ink-2" />
           </button>
@@ -427,12 +427,12 @@ export default function CoachQuickAssess() {
         {/* ---- 3. Player card ---- */}
         {currentPlayer && (
           <div
-            className="flex items-center gap-3.5 p-4 rounded-[14px] border border-line"
+            className="flex items-center gap-3.5 p-4 rounded-2xl border border-line"
             style={{ background: 'rgb(var(--t-surface))' }}
           >
             {/* Initials avatar */}
             <div
-              className="flex items-center justify-center w-[48px] h-[48px] rounded-[14px] text-[15px] font-bold shrink-0"
+              className="flex items-center justify-center w-[48px] h-[48px] rounded-2xl text-[15px] font-bold shrink-0"
               style={{ background: 'rgb(var(--t-raised))', color: 'rgb(var(--t-brand))' }}
             >
               {initials(currentPlayer.player_name)}
@@ -445,7 +445,7 @@ export default function CoachQuickAssess() {
                 {currentPlayer.player_name}
               </p>
               <p
-                className="text-[11px] mt-0.5 truncate"
+                className="text-[11px] mt-1 truncate"
                 style={{ fontFamily: 'var(--t-font-mono)', color: 'rgb(var(--t-ink-3))' }}
               >
                 {currentPlayer.position?.toUpperCase() ?? 'Player'}
@@ -456,7 +456,7 @@ export default function CoachQuickAssess() {
         )}
 
         {/* ---- 4. Sliders ---- */}
-        <div className="trak-dark rounded-[14px] bg-raised p-[14px_16px] space-y-5">
+        <div className="trak-dark rounded-2xl bg-raised p-[14px_16px] space-y-5">
           <SliderInput label="Work Rate"    value={workRate}     onChange={onSlide(setWorkRate)} />
           <SliderInput label="Tactical"     value={tactical}     onChange={onSlide(setTactical)} />
           <SliderInput label="Attitude"     value={attitude}     onChange={onSlide(setAttitude)} />
@@ -467,7 +467,7 @@ export default function CoachQuickAssess() {
 
         {/* ---- 5. Overall band preview ---- */}
         <div
-          className="trak-dark flex items-center justify-between px-4 py-3.5 rounded-[12px]"
+          className="trak-dark flex items-center justify-between px-4 py-3.5 rounded-xl"
           style={needsInput ? {
             background: 'rgb(var(--t-raised))',
             border: '1px solid rgb(var(--t-line))',
@@ -511,7 +511,7 @@ export default function CoachQuickAssess() {
         {!noteOpen ? (
           <button
             onClick={() => setNoteOpen(true)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-line text-ink-3 text-[12px] font-medium w-full"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-line text-ink-3 text-[12px] font-medium w-full"
             style={{ background: 'transparent' }}
           >
             <MessageSquare size={14} className="text-ink-3" />
@@ -537,16 +537,16 @@ export default function CoachQuickAssess() {
               rows={2}
               autoFocus
               placeholder="Quick note about this player..."
-              className="w-full px-4 py-3 rounded-[10px] bg-surface border border-line text-sm text-ink outline-none resize-none placeholder:text-ink-3"
+              className="w-full px-4 py-3 rounded-xl bg-surface border border-line text-sm text-ink outline-none resize-none placeholder:text-ink-3"
             />
           </div>
         )}
 
         {/* ---- 7. Action buttons ---- */}
         {consentWait && currentPlayer ? (
-          <div role="status" className="p-3 rounded-[12px] border border-warning/[0.25] bg-warning/[0.06]">
+          <div role="status" className="p-3 rounded-xl border border-warning/[0.25] bg-warning/[0.06]">
             <p className="text-[13px] font-medium text-ink">{WAIT_TITLE[waitReason ?? 'unknown']}</p>
-            <p className="text-[12px] text-ink-2 leading-relaxed mt-0.5">
+            <p className="text-[12px] text-ink-2 leading-relaxed mt-1">
               {waitText(waitReason, currentPlayer.player_name)}{' '}
               {waitReason === 'parent' ? 'Skip for now. If no parent is linked yet, the player can send the invite from their profile.' : 'Skip for now.'}
             </p>
@@ -560,7 +560,7 @@ export default function CoachQuickAssess() {
         <div className="flex gap-3 pt-1">
           <button
             onClick={handleSkip}
-            className="flex-1 py-3.5 rounded-[10px] text-sm font-semibold transition-opacity active:scale-[0.97]"
+            className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-opacity active:scale-[0.97]"
             style={{
               background: 'transparent',
               border: '1.5px solid rgb(var(--t-line))',
@@ -572,7 +572,7 @@ export default function CoachQuickAssess() {
           <button
             onClick={handleNext}
             disabled={saving || needsInput || consentWait}
-            className="flex-[2] py-3.5 rounded-[10px] text-sm font-bold transition-opacity active:scale-[0.97] disabled:opacity-40"
+            className="flex-[2] py-3.5 rounded-xl text-sm font-bold transition-opacity active:scale-[0.97] disabled:opacity-40"
             style={{ background: 'rgb(var(--t-brand))', color: 'rgb(var(--t-on-brand))' }}
           >
             {saving ? 'Saving...' : 'Next \u2192'}

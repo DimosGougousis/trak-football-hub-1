@@ -72,7 +72,7 @@ export function WeekStrip({ events, renderSheet, refresh = () => {}, today = new
             value,
             label: format(date, 'EEEEE'),
             // TRAK-171 (Tarek, 16 Oct): today stays marked after another day is picked.
-            accessory: <><span className={value === todayValue ? 'sr-only trak-today' : 'sr-only'}>{format(date, 'EEEE d MMMM')}{value === todayValue && ', today'}</span>{dots.length > 0 && <span className="inline-flex gap-[3px]" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
+            accessory: <><span className={value === todayValue ? 'sr-only trak-today' : 'sr-only'}>{format(date, 'EEEE d MMMM')}{value === todayValue && ', today'}</span>{dots.length > 0 && <span className="inline-flex gap-1" aria-label={`${dots.length} ${dots.length === 1 ? 'event' : 'events'}`}>
               {dots.slice(0, 3).map(event => <span key={event.id} aria-hidden="true" className="w-[6px] h-[6px] rounded-full"
                 data-absent={event.absent || undefined} style={dotStyle(event)} />)}
             </span>}
@@ -163,7 +163,7 @@ export function LoadedWeekStrip({ load, loadKey, renderSheet, renderPrimary, abs
 
   if (failed) return <div className="mb-4"><LoadError what="this week" onRetry={() => setAttempt(n => n + 1)} /></div>
   if (!week || week.monday !== dates[0]) return picker
-    ? <LoadingSkeleton label={i18n.t('coachHome:weekLoading')} lines={4} rows={2} className="h-[320px] content-start rounded-2xl border border-line bg-surface p-5" />
+    ? <LoadingSkeleton label={i18n.t('coachHome:weekLoading')} lines={4} rows={2} className="h-[320px] content-start rounded-2xl border border-line bg-surface p-5 laptop:p-6" />
     : null
   const refresh = () => setAttempt(n => n + 1)
   const show = (events: StripEvent[]) => picker
@@ -224,7 +224,7 @@ function FamilyWeekPicker({ dates, offset, onOffset, events, renderSheet, render
 }
 
 /** The events this child's family (or the child, for themselves) said they can't make: their own rows only. */
-async function fetchOwnAbsences(childId: string, eventIds: string[], signal: AbortSignal): Promise<Set<string>> {
+export async function fetchOwnAbsences(childId: string, eventIds: string[], signal: AbortSignal): Promise<Set<string>> {
   const squad = await supabase.from('squad_players').select('id').eq('linked_player_id', childId).abortSignal(signal)
   if (squad.error) throw squad.error
   const ids = (squad.data ?? []).map(row => row.id)

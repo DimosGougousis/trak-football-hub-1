@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, MetadataLabel, NavBar } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
@@ -241,9 +242,8 @@ export default function CoachAddSession() {
         // is not confirmed, and one refused row fails the whole attendance
         // insert. Offer confirmed players only; name the rest. Same check as
         // the assess screen; a failed check counts as not confirmed.
-        const required = await Promise.all(players.map(p =>
-          supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
-            .then(({ data: r, error }) => (error || typeof r !== 'boolean' ? null : r))))
+        // TRAK-312: one check for the whole list.
+        const required = await consentRequired(players.map(p => p.id))
         if (superseded) return
         const ready = players.filter((_, i) => required[i] === false)
         const readyIds = new Set(ready.map(p => p.id))
@@ -687,14 +687,14 @@ export default function CoachAddSession() {
         <CoachTrail current="Full session" />
       </div>
 
-      <div className="pt-5 pb-32 space-y-5">
+      <div className="pt-5 pb-32 space-y-6 laptop:space-y-8">
 
         <div className="arc">
           <Stepper label="Log steps" steps={steps} current={step} onStepSelect={setStep} />
         </div>
 
         {/* Session type */}
-        {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+        {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
           <MetadataLabel text="TYPE" />
           <div className="flex gap-2 mt-3">
             {(games ? ['training', 'other'] as const : ['training', 'match', 'other'] as const).map(t => (
@@ -710,7 +710,7 @@ export default function CoachAddSession() {
           <>
             {step === 0 && <>
             {/* Match header */}
-            <div className="rounded-[18px] p-4 border border-line bg-surface">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="OPPONENT" />
               {/* TRAK-235: a log of a planned match is that match, so its opponent
                   comes from the event; changing it belongs on the event. */}
@@ -728,13 +728,13 @@ export default function CoachAddSession() {
                   <input inputMode="numeric" value={scoreUs}
                     onChange={e => setScoreUs(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="0"
-                    className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                    className="w-full bg-ground border border-line rounded-xl py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
                     style={{ fontFamily: 'var(--t-font)' }} />
                 </div>
                 <div className="text-center">
                   <span className="block text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3 mb-2"
                     style={{ fontFamily: 'var(--t-font-mono)' }}>RESULT</span>
-                  <div className="w-full py-3 rounded-[12px] text-center text-[28px]"
+                  <div className="w-full py-3 rounded-xl text-center text-[28px]"
                     style={{
                       fontFamily: 'var(--t-font)',
                       color: result === 'W' ? 'rgb(var(--t-brand))' : result === 'L' ? 'rgb(var(--t-ink-3))' : 'rgb(var(--t-ink-2))',
@@ -748,14 +748,14 @@ export default function CoachAddSession() {
                   <input inputMode="numeric" value={scoreThem}
                     onChange={e => setScoreThem(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="0"
-                    className="w-full bg-ground border border-line rounded-[12px] py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
+                    className="w-full bg-ground border border-line rounded-xl py-3 text-center text-[28px] text-ink placeholder-ink-3 outline-none"
                     style={{ fontFamily: 'var(--t-font)' }} />
                 </div>
               </div>
             </div>
 
             {/* Competition + venue */}
-            <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
+            <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="COMPETITION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -784,7 +784,7 @@ export default function CoachAddSession() {
             </>}
 
             {/* ── Per-player section ─────────────────────────────────────────── */}
-            {step === 1 && <div className="rounded-[18px] border border-line bg-surface overflow-hidden">
+            {step === 1 && <div className="rounded-2xl border border-line bg-surface overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-4 pt-4 pb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
@@ -1009,7 +1009,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Match notes */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="MATCH NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="How did the match go? Key moments, things to work on…"
@@ -1021,7 +1021,7 @@ export default function CoachAddSession() {
           /* ── TRAINING ──────────────────────────────────────────────────────── */
           <>
             {/* Session focus — required */}
-            {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="SESSION FOCUS" />
               <div className="grid grid-cols-2 gap-2 mt-3">
                 {TRAINING_FOCUS.map(({ key, sub }) => {
@@ -1033,7 +1033,7 @@ export default function CoachAddSession() {
                         if (n.has(key)) { n.delete(key) } else { n.add(key) }
                         return n
                       })}
-                      className="text-left px-3 py-2.5 rounded-[12px] transition-colors"
+                      className="text-left px-3 py-2.5 rounded-xl transition-colors"
                       style={{
                         background: on ? 'rgb(var(--t-brand) / 0.10)' : 'rgb(var(--t-raised))',
                         border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.35)' : 'rgb(var(--t-line))'}`,
@@ -1042,7 +1042,7 @@ export default function CoachAddSession() {
                         style={{ color: on ? 'rgb(var(--t-brand))' : 'rgb(var(--t-ink))', fontFamily: 'var(--t-font)' }}>
                         {key}
                       </p>
-                      <p className="text-[9px] mt-0.5"
+                      <p className="text-[9px] mt-1"
                         style={{ color: 'rgb(var(--t-ink-3))', fontFamily: 'var(--t-font-mono)', letterSpacing: '0.04em' }}>
                         {sub}
                       </p>
@@ -1053,7 +1053,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Duration + Intensity on one card, on the Notes step (TRAK-182, live run 3: four steps, as a match) */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface space-y-4">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface space-y-4">
               <div>
                 <MetadataLabel text="DURATION" />
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -1097,7 +1097,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Optional theme / title */}
-            {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="THEME (OPTIONAL)" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Pressing triggers, Crossing & finishing…"
@@ -1113,7 +1113,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Attendance */}
-            {step === 1 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 1 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
                   style={{ fontFamily: 'var(--t-font-mono)' }}>
@@ -1137,7 +1137,7 @@ export default function CoachAddSession() {
                     return (
                       <button key={p.id}
                         onClick={() => setAttended(prev => { const n = new Set(prev); if (n.has(p.id)) { n.delete(p.id) } else { n.add(p.id) } return n })}
-                        className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                        className="text-left px-3 py-2.5 rounded-xl transition-colors"
                         style={{
                           background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
                           border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
@@ -1154,7 +1154,7 @@ export default function CoachAddSession() {
             </div>}
 
             {/* Notes */}
-            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="SESSION NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="What went well? What needs more work next session?"
@@ -1165,7 +1165,7 @@ export default function CoachAddSession() {
         ) : (
           /* ── OTHER ─────────────────────────────────────────────────────────── */
           <>
-            {step === 0 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 0 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="TITLE" />
               <input value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Gym, Video Analysis, Team Talk…"
@@ -1180,7 +1180,7 @@ export default function CoachAddSession() {
                 format={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} locale="en-GB" />
             </div>}
 
-            {step === 1 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 1 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[9px] font-medium tracking-[0.14em] uppercase text-ink-3"
                   style={{ fontFamily: 'var(--t-font-mono)' }}>
@@ -1204,7 +1204,7 @@ export default function CoachAddSession() {
                     return (
                       <button key={p.id}
                         onClick={() => setAttended(prev => { const n = new Set(prev); if (n.has(p.id)) { n.delete(p.id) } else { n.add(p.id) } return n })}
-                        className="text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                        className="text-left px-3 py-2.5 rounded-xl transition-colors"
                         style={{
                           background: on ? 'rgb(var(--t-brand) / 0.08)' : 'rgb(var(--t-raised))',
                           border: `1px solid ${on ? 'rgb(var(--t-brand) / 0.3)' : 'rgb(var(--t-line))'}`,
@@ -1220,7 +1220,7 @@ export default function CoachAddSession() {
               {rosterNote}
             </div>}
 
-            {step === 2 && <div className="rounded-[18px] p-4 border border-line bg-surface">
+            {step === 2 && <div className="rounded-2xl p-5 laptop:p-6 border border-line bg-surface">
               <MetadataLabel text="NOTES" />
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                 placeholder="Optional…"
@@ -1232,7 +1232,7 @@ export default function CoachAddSession() {
 
         {/* Review: everything the save writes, before it is written. */}
         {step === review && (
-          <dl className="rounded-[18px] border border-line bg-surface divide-y divide-line text-[13px]"
+          <dl className="rounded-2xl border border-line bg-surface divide-y divide-line text-[13px]"
             style={{ fontFamily: 'var(--t-font)' }}>
             {summary.map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
@@ -1245,7 +1245,7 @@ export default function CoachAddSession() {
         {/* Why Save is off when the roster is the reason, with its Retry, here
             too: it used to show only on the step that lists the players (Tarek, #317). */}
         {step === review && (rosterFailed || rosterLoading) && (
-          <div className="rounded-[18px] border border-line bg-surface">
+          <div className="rounded-2xl border border-line bg-surface">
             {rosterFailed ? rosterNote : (
               <LoadingSkeleton label="Loading your squad…" lines={1} avatar rows={2} className="px-4 py-3" />
             )}

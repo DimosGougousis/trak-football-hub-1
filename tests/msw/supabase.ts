@@ -136,3 +136,26 @@ export function rpc(
     return HttpResponse.json(out ?? null)
   })
 }
+
+/**
+ * TRAK-312: coach pages ask about consent once for a whole roster (`coach_squad_players_consent_pending`). Tests
+ * describe consent one child at a time (`coach_squad_player_consent_required`), so by default the batch is answered
+ * by asking that single check for each id, through whatever the test set up. One failed or missing answer fails the
+ * whole batch, as a failed request does in the app. A test can still answer the batch itself with `rpc()`.
+ */
+export function consentBatchFromSingle(): HttpHandler {
+  return http.post(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_players_consent_pending`, async ({ request }) => {
+    const { p_squad_player_ids: ids = [] } = (await request.json().catch(() => ({}))) as { p_squad_player_ids?: string[] }
+    const headers = new Headers(request.headers)
+    headers.set('Content-Type', 'application/json')
+    const answers = await Promise.all(ids.map(async id => {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/coach_squad_player_consent_required`,
+        { method: 'POST', headers, body: JSON.stringify({ p_squad_player_id: id }) })
+      const body = await res.json().catch(() => null)
+      return { id, ok: res.ok && typeof body === 'boolean', status: res.status, body }
+    }))
+    const failed = answers.find(a => !a.ok)
+    if (failed) return HttpResponse.json(failed.body ?? { message: 'The consent check gave no answer' }, { status: failed.status >= 400 ? failed.status : 500 })
+    return HttpResponse.json(answers.filter(a => a.body === true).map(a => a.id))
+  })
+}

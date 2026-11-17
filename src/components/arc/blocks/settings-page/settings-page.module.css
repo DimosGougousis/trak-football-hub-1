@@ -32,7 +32,7 @@
 .pane + .pane { border-top: 1px solid var(--border-subtle); }
 .paneHead { margin-bottom: 16px; }
 .paneHead h2 { margin: 0; font-family: var(--font-body); font-size: var(--text-base); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); outline: none; }
-.paneHead p { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+.paneHead p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
 
 .rows > * + * { border-top: 1px solid var(--border-subtle); }
 .row { display: grid; min-height: 52px; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 16px; padding: 10px 0; }

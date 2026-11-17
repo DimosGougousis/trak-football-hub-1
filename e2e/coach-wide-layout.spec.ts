@@ -47,6 +47,8 @@ async function backend(context: BrowserContext, role: Role, unexpected: string[]
     // TRAK-441: a player's or parent's switch (family_look) is read through family_feature_on.
     if (path === '/rest/v1/rpc/family_feature_on') return json(features.includes(req.postDataJSON()?.p_feature))
     if (path.startsWith('/rest/v1/rpc/coach_squad_player_consent_required')) return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path.startsWith('/rest/v1/rpc/coach_squad_players_consent_pending')) return json([])
     // TRAK-250: the Squad tabs' reads. Two latest bands for three children, so Snapshot has columns to show.
     if (path === '/rest/v1/coach_assessments') return json(role === 'coach' ? [
       { squad_player_id: 'sq-1', coach_rating: 9, created_at: '2026-10-10T10:00:00Z', work_rate: 4, technical: 4, physical: 4, coachability: 4, attitude: 4, tactical: 4 },
@@ -204,6 +206,35 @@ test("TRAK-459: Settings' section menu stays in view when a section opens on a l
   await expect(menu.getByRole('button', { name: 'Account' })).toBeInViewport({ ratio: 1 })
 })
 
+// TRAK-427: on a laptop New event is the centred pop-up every other pop-up is (TRAK-450), and it keeps one size,
+// so nothing moves when the coach goes from step to step. A phone keeps the bottom sheet.
+test('TRAK-427: New event on a laptop is a centred pop-up that stays put between steps', async ({ page, context }, testInfo) => {
+  const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 1280, 800)
+  await openNewEvent(page)
+  const dialog = page.getByRole('dialog', { name: 'New event' })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: testInfo.outputPath('new-event-laptop-step1.png') })
+  const first = (await dialog.boundingBox())!
+  await dialog.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(dialog.getByRole('button', { name: /^Back to / })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('new-event-laptop-step2.png') })
+  const second = (await dialog.boundingBox())!
+  expect(Math.round(first.width)).toBe(672)
+  expect(Math.round(first.x + first.width / 2)).toBe(640)
+  expect(Math.round(first.y + first.height / 2)).toBe(400)
+  expect(second).toEqual(first)
+  expect(unexpected).toEqual([])
+})
+
+test('TRAK-427: New event on a phone keeps the bottom sheet', async ({ page, context }) => {
+  const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 390, 844)
+  await openNewEvent(page)
+  const sheet = (await page.getByRole('dialog', { name: 'New event' }).boundingBox())!
+  expect(Math.round(sheet.width)).toBe(390)
+  expect(Math.round(sheet.y + sheet.height)).toBe(844 - 64)
+  expect(unexpected).toEqual([])
+})
+
 test("the Calendar's sheets stop at the Arc bottom sheet's width on a tablet", async ({ page, context }) => {
   const { unexpected } = await open(page, context, 'coach', '/coach/schedule', 820, 1180)
   await openNewEvent(page)
@@ -336,7 +367,7 @@ test('Feedback on a laptop: a table with a filter by level and Assess on each ro
   const table = page.getByRole('table')
   await expect(table.getByRole('columnheader')).toHaveText(['Player', 'Status', 'Why', 'Assess'])
   await expect(table.getByRole('row')).toHaveCount(1 + players.length)
-  await expect(table.getByRole('button', { name: 'Assess' })).toHaveCount(players.length)
+  await expect(table.getByRole('button', { name: /^Assess / })).toHaveCount(players.length)
   await expect(page.getByRole('radio', { name: `All ${players.length}` }).or(page.getByRole('tab', { name: `All ${players.length}` })).or(page.getByRole('button', { name: `All ${players.length}` }))).toBeVisible()
   expect(unexpected).toEqual([])
 })

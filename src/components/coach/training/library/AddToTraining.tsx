@@ -78,7 +78,7 @@ export function AddToTraining({ drill, players, level }: { drill: LibraryDrill; 
             {coming.rows.map(({ training, status, holds }) => {
               const { day, time } = gameWhen(training)
               return <li key={training.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="grid min-w-0 flex-1 gap-1">
                   <span className="truncate text-[15px] font-medium text-ink">{training.title}</span>
                   <span className="text-sm text-ink-3">{[day, time, coming.everySquad ? training.squad : null,
                     holds ? 'Has this drill' : STATUS[status]].filter(Boolean).join(' · ')}</span>

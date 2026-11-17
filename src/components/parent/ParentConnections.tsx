@@ -10,7 +10,7 @@ import { PlayerFace } from '@/components/trak/PlayerFace'
 export function ParentConnections() {
   const { children } = useParentChildren()
   return (
-    <section className="rounded-[18px] px-4 pt-4 pb-1 border border-line bg-surface">
+    <section className="rounded-2xl px-4 pt-4 pb-1 border border-line bg-surface">
       <MetadataLabel text="CONNECTIONS" />
       <ul aria-label="Linked children">
         {children.map(child => <li key={child.id} className="py-3 flex items-center gap-3 border-b border-line last:border-b-0">

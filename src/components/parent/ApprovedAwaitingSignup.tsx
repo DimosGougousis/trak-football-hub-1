@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { useApprovedAwaitingSignup } from '@/hooks/useParentData'
-import { Button } from '@/components/ui/button'
 import { ParentLoadError } from '@/components/parent/ParentFamily'
+import { ConsentButton, consentSkin } from '@/components/parent/ParentConsentWithdrawal'
 import { consentRequest, withdrawRosterConsent } from '@/lib/parent-consent-withdrawal'
 
 /* TRAK-98 (G6): a guardian approves a rostered child before the child has an
@@ -31,10 +31,11 @@ export function ApprovedAwaitingList() {
 
 type State = 'active' | 'confirm' | 'writing' | 'done' | 'write-error'
 
-function RosterChildConsent({ parentId, rosterChildId, name, onWithdrawn }: {
-  parentId: string; rosterChildId: string; name: string; onWithdrawn: (id: string, name: string) => void
+function RosterChildConsent({ parentId, rosterChildId, name, onWithdrawn, look }: {
+  parentId: string; rosterChildId: string; name: string; onWithdrawn: (id: string, name: string) => void; look: boolean
 }) {
   const cache = useQueryClient()
+  const c = consentSkin(look)
   const [state, setState] = useState<State>('active')
   const current = useRef<AbortController | null>(null)
   const mounted = useRef(true)
@@ -59,31 +60,31 @@ function RosterChildConsent({ parentId, rosterChildId, name, onWithdrawn }: {
     }
   }
 
-  return <section aria-label={`Consent for ${name}`} className="rounded-xl border border-border bg-card p-4 space-y-3">
-    <h2 className="text-base font-medium text-foreground">Consent for {name}</h2>
+  return <section aria-label={`Consent for ${name}`} className={c.box}>
+    <h2 className={c.title}>Consent for {name}</h2>
     {state === 'active' && <>
-      <p className="text-sm text-muted-foreground">You approved {name}. They haven't set up their Trak account yet.</p>
-      <Button variant="outline" className="min-h-11 h-auto whitespace-normal" onClick={() => setState('confirm')}>Withdraw consent for {name}</Button>
+      <p className={c.quiet}>You approved {name}. They haven't set up their Trak account yet.</p>
+      {c.one(<ConsentButton look={look} className="min-h-11 h-auto whitespace-normal" onClick={() => setState('confirm')}>Withdraw consent for {name}</ConsentButton>)}
     </>}
     {(state === 'confirm' || state === 'writing') && <>
-      <p className="text-sm text-foreground">Withdraw your approval for {name}? They can still set up their account, but their coach can't record anything about them until a guardian approves again. It does not withdraw another guardian's approval.</p>
-      <div className="flex flex-col gap-2">
-        <Button variant="outline" className="min-h-11 h-auto whitespace-normal border-destructive hover:bg-destructive/10" disabled={state === 'writing'} onClick={() => { void withdraw() }}>
+      <p className={c.text}>Withdraw your approval for {name}? They can still set up their account, but their coach can't record anything about them until a guardian approves again. It does not withdraw another guardian's approval.</p>
+      <div className={c.actions}>
+        <ConsentButton look={look} danger className="min-h-11 h-auto whitespace-normal border-destructive hover:bg-destructive/10" disabled={state === 'writing'} onClick={() => { void withdraw() }}>
           {state === 'writing' ? 'Withdrawing…' : `Confirm withdrawal for ${name}`}
-        </Button>
-        <Button variant="outline" className="min-h-11" disabled={state === 'writing'} onClick={() => setState('active')}>Keep consent</Button>
+        </ConsentButton>
+        <ConsentButton look={look} className="min-h-11" disabled={state === 'writing'} onClick={() => setState('active')}>Keep consent</ConsentButton>
       </div>
     </>}
-    {state === 'done' && <p role="status" className="text-sm text-foreground">Your consent for {name} has been withdrawn.</p>}
+    {state === 'done' && <p role="status" className={c.text}>Your consent for {name} has been withdrawn.</p>}
     {state === 'write-error' && <>
-      <p role="alert" className="text-sm text-foreground">Couldn't confirm whether your consent was withdrawn. Check your connection, then check again before retrying.</p>
-      <Button variant="outline" className="min-h-11" onClick={() => setState('active')}>Check again</Button>
+      <p role="alert" className={c.text}>Couldn't confirm whether your consent was withdrawn. Check your connection, then check again before retrying.</p>
+      {c.one(<ConsentButton look={look} className="min-h-11" onClick={() => setState('active')}>Check again</ConsentButton>)}
     </>}
   </section>
 }
 
 /** Profile: one withdrawal per approved child who has no account yet. */
-export function RosterConsentWithdrawals() {
+export function RosterConsentWithdrawals({ look = false }: { look?: boolean }) {
   const { parentId } = useParentChildren()
   const query = useApprovedAwaitingSignup()
   // Keep a withdrawn child on screen with its confirmation after the list re-reads.
@@ -93,8 +94,8 @@ export function RosterConsentWithdrawals() {
   const rows = (query.data ?? []).map(child => ({ id: child.roster_child_id, name: child.first_name }))
   for (const [id, name] of Object.entries(withdrawn)) if (!rows.some(row => row.id === id)) rows.push({ id, name })
   if (!rows.length) return null
-  return <div className="space-y-2.5">
-    {rows.map(row => <RosterChildConsent key={`${parentId}:${row.id}`} parentId={parentId} rosterChildId={row.id} name={row.name}
+  return <div className={look ? 'grid gap-4' : 'space-y-2.5'}>
+    {rows.map(row => <RosterChildConsent key={`${parentId}:${row.id}`} parentId={parentId} rosterChildId={row.id} name={row.name} look={look}
       onWithdrawn={(id, name) => setWithdrawn(previous => ({ ...previous, [id]: name }))} />)}
   </div>
 }

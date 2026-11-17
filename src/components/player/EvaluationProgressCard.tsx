@@ -2,6 +2,7 @@ import { ObjectiveStatusChip } from '@/components/player/ObjectiveStatusChip'
 import { format, parseISO } from 'date-fns'
 import { progressLabel } from '@/lib/objective-progress'
 import type { EvaluationObjective } from '@/lib/evaluation-progress'
+import { useTranslation } from '@/lib/i18n'
 
 /* TRAK-401, TRAK-402 (Season plan 18/18 builds 6 and 7, spec TRAK-366): the Progress on one published evaluation, shared by
    the player's evaluation page and the family's assessment. Each objective with its word at this evaluation and, once
@@ -9,11 +10,13 @@ import type { EvaluationObjective } from '@/lib/evaluation-progress'
 
 const font = { fontFamily: 'var(--t-font)' }
 
-export function EvaluationProgressCard({ objectives }: { objectives: EvaluationObjective[] }) {
+/** `look`: TRAK-441 slice 5, the coach's card heading (the family_look switch). */
+export function EvaluationProgressCard({ objectives, look = false }: { objectives: EvaluationObjective[]; look?: boolean }) {
+  const { t } = useTranslation()
   if (objectives.length === 0) return null
   return (
-    <section aria-label="Progress" className="grid gap-3 rounded-2xl border border-line bg-surface p-4">
-      <h2 className="text-[15px] font-medium text-ink-2" style={font}>Progress</h2>
+    <section aria-label={t('common:progress')} className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+      <h2 className={look ? 'text-lg font-medium text-ink' : 'text-[15px] font-medium text-ink-2'} style={look ? undefined : font}>{t('common:progress')}</h2>
       <ul className="m-0 grid list-none gap-3.5 p-0">
         {objectives.map(o => (
           <li key={o.id} className="grid gap-1">

@@ -53,6 +53,8 @@ test('coach saves squad kits, publishes a kit event and reopens its announcement
     // TRAK-355: who the coach is watching; no one.
     if (path === '/rest/v1/player_watches') return json([])
     if (path === '/rest/v1/rpc/coach_squad_player_consent_required') return json(false)
+    // TRAK-312: the whole roster in one check; the ids still waiting.
+    if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json([])
     // TRAK-262: notification_settings is coach Home's Needs you switch (no row: on).
     if (['coach_sessions', 'coach_assessments', 'event_absences', 'session_attendance', 'coach_shared_feedback', 'matches', 'recognition_awards', 'notification_settings',
       // TRAK-286: no game plan, shared or not.

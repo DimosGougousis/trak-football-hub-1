@@ -42,7 +42,7 @@ export function EventKitField({ coachId, squad, value, onChange }: {
 
   return <section aria-label="Event kit" className="space-y-3 arc">
     <div><h3 className="text-sm font-medium">Team kits · {squad || 'Whole roster'}</h3>
-      <p className="text-xs text-muted-foreground mt-1">Choose what players should wear. Home, away and alternate are independent of the match venue.</p></div>
+      <p className="text-xs text-muted-foreground mt-2">Choose what players should wear. Home, away and alternate are independent of the match venue.</p></div>
     {value && <>
       <KitAnnouncement kit={value.design} slot={value.slot} animated={false} />
       <p className="text-xs text-muted-foreground">This is the kit saved with this event. Choose a kit below to replace it.</p>

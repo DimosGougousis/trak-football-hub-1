@@ -1,13 +1,32 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useParentChildren } from '@/contexts/ParentChildrenContext'
 import { Button } from '@/components/ui/button'
+import { Button as ArcButton } from '@/components/arc/button/button'
 import { consentRequest, guardianConsentApplies, hasOwnConsent, withdrawOwnConsent } from '@/lib/parent-consent-withdrawal'
 
 type State = 'hidden' | 'loading' | 'active' | 'confirm' | 'writing' | 'none' | 'done' | 'read-error' | 'write-error'
 
-function ChildConsent({ parentId, childId, childName }: { parentId: string; childId: string; childName: string }) {
+/** TRAK-441 slice 6: a consent card's classes, today's or, with the family_look switch, the coach's (Arc tokens). The
+ *  words stay as they are: consent wording waits on counsel (TRAK-22). */
+export const consentSkin = (look: boolean) => look
+  ? { box: 'grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6', title: 'text-lg font-medium text-ink', quiet: 'text-[15px] text-ink-2', text: 'text-[15px] text-ink', actions: 'flex flex-wrap gap-2',
+      /** A lone button keeps its own width in the card's grid. */
+      one: (button: ReactNode) => <div className="flex">{button}</div> }
+  : { box: 'rounded-xl border border-border bg-card p-4 space-y-3', title: 'text-base font-medium text-foreground', quiet: 'text-sm text-muted-foreground', text: 'text-sm text-foreground', actions: 'flex flex-col gap-2',
+      one: (button: ReactNode) => button }
+
+/** Today's outline button, or Arc's (danger: red words on a white button). */
+export function ConsentButton({ look, className, danger = false, disabled, onClick, children }: {
+  look: boolean; className: string; danger?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode
+}) {
+  return look ? <ArcButton variant={danger ? 'danger' : 'secondary'} disabled={disabled} onClick={onClick}>{children}</ArcButton>
+    : <Button variant="outline" className={className} disabled={disabled} onClick={onClick}>{children}</Button>
+}
+
+function ChildConsent({ parentId, childId, childName, look }: { parentId: string; childId: string; childName: string; look: boolean }) {
   const cache = useQueryClient()
+  const c = consentSkin(look)
   const [state, setState] = useState<State>('loading')
   const current = useRef<AbortController | null>(null)
   const mounted = useRef(false)
@@ -51,43 +70,45 @@ function ChildConsent({ parentId, childId, childName }: { parentId: string; chil
       await cache.cancelQueries({ queryKey: ['parent', parentId, childId] })
       cache.removeQueries({ queryKey: ['parent', parentId, childId] })
       void cache.invalidateQueries({ queryKey: ['parent', parentId, 'awaiting-consent'] })
+      // TRAK-441 slice 6: Profile's "Consent given" badge reads again.
+      void cache.invalidateQueries({ queryKey: ['own-consent', parentId, childId] })
       writing.current = false
     }
   }
 
   if (state === 'hidden') return null
-  return <section aria-label={`Consent for ${childName}`} className="rounded-xl border border-border bg-card p-4 space-y-3">
-    <h2 className="text-base font-medium text-foreground">Consent for {childName}</h2>
-    {state === 'loading' && <p role="status" className="text-sm text-muted-foreground">Checking consent…</p>}
+  return <section aria-label={`Consent for ${childName}`} className={c.box}>
+    <h2 className={c.title}>Consent for {childName}</h2>
+    {state === 'loading' && <p role="status" className={c.quiet}>Checking consent…</p>}
     {state === 'active' && <>
-      <p className="text-sm text-muted-foreground">You have an active approval for this child.</p>
-      <Button variant="outline" className="min-h-11 h-auto whitespace-normal" onClick={() => setState('confirm')}>Withdraw consent for {childName}</Button>
+      <p className={c.quiet}>You have an active approval for this child.</p>
+      {c.one(<ConsentButton look={look} className="min-h-11 h-auto whitespace-normal" onClick={() => setState('confirm')}>Withdraw consent for {childName}</ConsentButton>)}
     </>}
     {(state === 'confirm' || state === 'writing') && <>
-      <p className="text-sm text-foreground">Withdraw your approval for {childName}? This does not delete their account or past records. It does not withdraw another guardian’s approval.</p>
-      <div className="flex flex-col gap-2">
-        <Button variant="outline" className="min-h-11 h-auto whitespace-normal border-destructive hover:bg-destructive/10" disabled={state === 'writing'} onClick={() => { void withdraw() }}>
+      <p className={c.text}>Withdraw your approval for {childName}? This does not delete their account or past records. It does not withdraw another guardian’s approval.</p>
+      <div className={c.actions}>
+        <ConsentButton look={look} danger className="min-h-11 h-auto whitespace-normal border-destructive hover:bg-destructive/10" disabled={state === 'writing'} onClick={() => { void withdraw() }}>
           {state === 'writing' ? 'Withdrawing…' : `Confirm withdrawal for ${childName}`}
-        </Button>
-        <Button variant="outline" className="min-h-11" disabled={state === 'writing'} onClick={() => setState('active')}>Keep consent</Button>
+        </ConsentButton>
+        <ConsentButton look={look} className="min-h-11" disabled={state === 'writing'} onClick={() => setState('active')}>Keep consent</ConsentButton>
       </div>
     </>}
-    {state === 'none' && <p role="status" className="text-sm text-muted-foreground">You have no active consent recorded for {childName}.</p>}
-    {state === 'done' && <p role="status" className="text-sm text-foreground">Your consent for {childName} has been withdrawn.</p>}
+    {state === 'none' && <p role="status" className={c.quiet}>You have no active consent recorded for {childName}.</p>}
+    {state === 'done' && <p role="status" className={c.text}>Your consent for {childName} has been withdrawn.</p>}
     {(state === 'read-error' || state === 'write-error') && <>
-      <p role="alert" className="text-sm text-foreground">{state === 'write-error'
+      <p role="alert" className={c.text}>{state === 'write-error'
         ? "Couldn't confirm whether your consent was withdrawn. Check its status before trying again."
         : "Couldn't check your consent. Check your connection and try again."}</p>
-      <Button variant="outline" className="min-h-11" onClick={() => { void read() }}>Check consent status</Button>
+      {c.one(<ConsentButton look={look} className="min-h-11" onClick={() => { void read() }}>Check consent status</ConsentButton>)}
     </>}
   </section>
 }
 
 /** TRAK-181 (16 Oct): one line per child, each with its own Withdraw, so Profile
  *  needs no "Following" picker. Hiding a child who consents for themselves is TRAK-177. */
-export function ParentConsentWithdrawal() {
+export function ParentConsentWithdrawal({ look = false }: { look?: boolean }) {
   const { parentId, children } = useParentChildren()
   if (!parentId || !children.length) return null
   return <>{children.map(child =>
-    <ChildConsent key={`${parentId}:${child.id}`} parentId={parentId} childId={child.id} childName={child.name} />)}</>
+    <ChildConsent key={`${parentId}:${child.id}`} parentId={parentId} childId={child.id} childName={child.name} look={look} />)}</>
 }

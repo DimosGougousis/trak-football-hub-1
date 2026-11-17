@@ -4,9 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Ban, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { publishEvent } from '@/lib/event-publish'
 import { FaceDrawing, PlayerFace } from '@/components/trak/PlayerFace'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
+import { Badge } from '@/components/arc/badge/badge'
+import { Button } from '@/components/arc/button/button'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { startedLocked, type EventRow } from '@/lib/coach-events'
 import { hasStarted, registerProblem } from '@/lib/event-register'
@@ -70,10 +73,8 @@ async function fetchSquad(coachId: string, eventId: string, sessionId: string | 
   const current = rows.filter(p => p.status !== 'coach_departed')
   // As the register (TakeRegister): only a child whose consent is active counts
   // (Kostas, #310). A failed check counts as not confirmed.
-  // ponytail: one check per player, as the register does; a batch RPC if squads grow past ~40.
-  const required = await Promise.all(current.map(p =>
-    supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never)
-      .abortSignal(signal).then(({ data, error }) => (error || typeof data !== 'boolean' ? null : data))))
+  // TRAK-312: one check for the whole list.
+  const required = await consentRequired(current.map(p => p.id), signal)
   const players = current.filter((_, i) => required[i] === false).map(p => ({ id: p.id, name: p.player_name || i18n.t('nav:player') }))
   const waiting = current.filter((_, i) => required[i] !== false).map(p => ({ id: p.id, name: p.player_name || i18n.t('nav:player') }))
   const present = attendance.data
@@ -135,8 +136,6 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
   const row = details.data?.row
   const cancelled = event.status === 'cancelled'
   const canRegister = row && registerProblem(row) === null
-  const button = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-[14px] font-medium focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60'
-  const quiet = `${button} border border-line-strong text-ink`
   const heading = 'text-[15px] font-medium text-ink mb-2'
   const updated = updatedNote(event)
   // TRAK-182 (Imad, 16 Oct): once it has started, it's who attended, register or not.
@@ -147,25 +146,26 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
       {details.isError ? (
         <p role="alert" className="text-[13px] text-ink-2">{details.error.message}</p>
       ) : (
-        <div className="flex flex-wrap gap-2">
+        <div className="arc flex flex-wrap gap-2">
           {cancelled ? null : canRegister ? (
-            <button type="button" onClick={() => setRegistering(true)} className={`${button} bg-brand text-on-brand`}>
+            <Button onClick={() => setRegistering(true)}>
               {/* TRAK-455: no "Edit" word; a taken register opens again under its own name. */}
               {sessionId ? t('coachSchedule:register') : t('coachHome:takeRegister')}
-            </button>
+            </Button>
           ) : row?.published ? (
-            <button type="button" disabled className={`${button} bg-raised text-ink`}><Check size={16} aria-hidden="true" />{t('coachHome:notePublished')}</button>
+            // TRAK-427: a state, not an action: Arc's pill, as Schedule's cards show it, not a disabled button.
+            <span className="arc self-center"><Badge pill tone="success" icon={<Check size={14} aria-hidden="true" />}>{t('coachHome:notePublished')}</Badge></span>
           ) : (
-            <button type="button" disabled={!row || publish.isPending} className={`${button} bg-brand text-on-brand`}
+            <Button disabled={!row || publish.isPending}
               onClick={() => row && (row.series_id ? navigate(`/coach/schedule?publish=${row.id}`) : publish.mutate(row))}>
               {publish.isPending ? t('coachHome:publishing') : t('coachHome:publish')}
-            </button>
+            </Button>
           )}
           {/* A draft has nothing to share (J8.16); a cancellation is shared with its reason.
               Once it has started there's nothing to tell the group (TRAK-182, 16 Oct). */}
           {row?.published && !hasStarted(row) && squad.data && (
             // TRAK-168 (Imad, 18 Oct): the phone's share sheet, so the coach picks Viber or WhatsApp.
-            <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })} className={quiet}>
+            <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squad.data.label), { childNames: squad.data.childNames })} arc>
               <ShareIcon size={18} />{t('coachSchedule:share')}
             </ShareEventButton>
           )}
@@ -181,9 +181,9 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             <EditIcon label={t('coachSchedule:editEvent')} onClick={() => navigate(`/coach/schedule?edit=${event.id}`)} />
             {/* A published event is cancelled, never deleted; a draft is edited or deleted in Schedule. */}
             {row?.published && !hasStarted(row) && (
-              <button type="button" onClick={() => navigate(`/coach/schedule?cancel=${event.id}`)} className={quiet}>
+              <Button variant="secondary" onClick={() => navigate(`/coach/schedule?cancel=${event.id}`)}>
                 <Ban size={16} aria-hidden="true" />{t('coachSchedule:cancelEvent')}
-              </button>
+              </Button>
             )}
           </>}
         </div>

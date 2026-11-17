@@ -57,7 +57,7 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
           style={{
             background: 'rgb(var(--t-raised))',
             border: '1px solid rgb(var(--t-line))',
-            borderRadius: 14,
+            borderRadius: 16,
           }}
         >
           <div

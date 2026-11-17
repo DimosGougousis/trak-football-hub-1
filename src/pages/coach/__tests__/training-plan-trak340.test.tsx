@@ -114,7 +114,8 @@ describe('TRAK-340: a new plan', { timeout: 30_000 }, () => {
     const { saves } = database([training('soon', onTheMinute(Date.now() + DAY), { title: 'Pressing triggers' })])
     renderApp('/coach/training/soon/plan')
     const warmup = await part('Dry warm-up')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Plan session: Pressing triggers')
+    // TRAK-456: the planner is the training page's Training plan tab, under the page's header (the training's name).
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Pressing triggers')
     expect(session()).toEqual([
       '1Dry warm-upMoving warm-up10 min', '2Passing & movementPass and follow15 min', '3RondoKeep the ball15 min',
       '4Functional drillsAttack down the side25 min', '5GamePass then score25 min',
@@ -125,8 +126,8 @@ describe('TRAK-340: a new plan', { timeout: 30_000 }, () => {
     expect(picked).toHaveTextContent('Starter drill')
     expect(picked.textContent).not.toContain(lib('Moving warm-up').why)
     expect(within(warmup).getAllByRole('button', { name: /^View drill:/ }).length).toBeGreaterThan(0)
-    // TRAK-404: no logistics line, guide line or "We picked a drill" line.
-    expect(screen.queryByText(/Main Venue|Pitch 2|· 90 min/)).toBeNull()
+    // TRAK-404: no logistics line, guide line or "We picked a drill" line (TRAK-456: in the planner; the page's header has them).
+    expect(within(screen.getByRole('tabpanel')).queryByText(/Main Venue|Pitch 2|· 90 min/)).toBeNull()
     expect(screen.queryByText(/Get them moving before the ball comes out/)).toBeNull()
     expect(screen.queryByText(/We picked/)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save as draft' })).toBeNull()
@@ -146,8 +147,8 @@ describe('TRAK-340: a new plan', { timeout: 30_000 }, () => {
     await next('Rondo')
     await next('Functional drills')
     await next('Game')
-    await next('Review')
-    expect(await screen.findByRole('heading', { name: 'Review' })).toBeInTheDocument()
+    await next('Review & share')
+    expect(await screen.findByRole('region', { name: 'Training plan review' })).toBeInTheDocument()
     await user.type(screen.getByLabelText(/A note for you/), 'Remind the back four to talk.')
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
@@ -220,11 +221,11 @@ describe('TRAK-340: Your session', { timeout: 30_000 }, () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     // Through every part to Review.
     for (let i = 0; i < 6; i++) await user.click(screen.getByRole('button', { name: /^Next: / }))
-    await screen.findByRole('heading', { name: 'Review' })
+    await screen.findByRole('region', { name: 'Training plan review' })
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Select a drill for Pressing game, or remove the part.')
     expect(saves).toHaveLength(0)
-    await user.click(screen.getByRole('button', { name: 'Select a drill for Pressing game' }))
+    await user.click(screen.getByRole('button', { name: 'Edit pressing game' }))
     expect(await part('Pressing game')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Back to Review/ })).toBeInTheDocument()
   })
@@ -350,10 +351,10 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
       soon: [trak(1, 'w1', 'Dynamic warm-up', 'Dry warm-up', 'warmup', 10), trak(2, 'r1', 'Rondo 4 v 2', 'Rondo', 'rondo')],
     })
     renderApp('/coach/training/soon/plan')
-    expect(await screen.findByRole('heading', { name: 'Review' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Training plan review' })).toBeInTheDocument()
     const plan = within(screen.getByRole('list', { name: 'The plan' })).getAllByRole('listitem')
-    expect(plan.map(p => p.textContent)).toEqual([expect.stringContaining('Dynamic warm-up'), expect.stringContaining('Rondo 4 v 2')])
-    await user.click(screen.getByRole('button', { name: 'Edit Rondo' }))
+    expect(plan.map(p => p.textContent)).toEqual([expect.stringContaining('Logistics'), expect.stringContaining('Dynamic warm-up'), expect.stringContaining('Rondo 4 v 2')])
+    await user.click(screen.getByRole('button', { name: 'Edit rondo' }))
     const rondo = await part('Rondo')
     await user.click(within(rondo).getByRole('button', { name: '20 min' }))
     await user.click(screen.getByRole('button', { name: /Back to Review/ }))
@@ -369,7 +370,7 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     renderApp('/coach/training/soon/plan')
     await user.click(await screen.findByRole('button', { name: 'Save the plan' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn’t save.*Nothing you changed is lost/)
-    expect(window.location.pathname).toBe('/coach/training/soon/plan')
+    expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan')
     server.use(rpc('save_training_plan', () => ({ status: 400, body: { code: 'P0001', message: 'This training was cancelled' } })))
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('This training was cancelled.'))

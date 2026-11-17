@@ -27,7 +27,7 @@ export function CardBookmark({ drill }: { drill: LibraryDrill }) {
   if (!ready) return null
   return (
     <button type="button" aria-pressed={on} aria-label={`${on ? 'In My drills' : 'Add to My drills'}: ${drill.name}`} onClick={flip}
-      className="absolute right-1.5 top-1.5 inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-line bg-surface text-brand hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary tablet:right-2 tablet:top-2">
+      className="absolute right-1.5 top-1.5 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-brand hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary tablet:right-2 tablet:top-2">
       <Bookmark aria-hidden size={19} strokeWidth={2} fill={on ? 'currentColor' : 'none'} />
     </button>
   )

@@ -8,6 +8,7 @@ import { WEEK, trainingEnd } from '@/lib/training/sessions'
 import type { SavedPractice } from '@/lib/training/plans'
 import { toSave, type Part } from '@/lib/training/parts'
 import type { Again } from '@/lib/training/next'
+import type { EventRow } from '@/lib/coach-events'
 
 /* TRAK-294 (Training 1/5): the coach's own trainings for Training home, not cancelled (a published event is cancelled,
    never deleted), from a week ago on. (Coach-made drills left on 8 Nov; TRAK-390 bookmarks Library drills instead.)
@@ -40,14 +41,15 @@ export function useTrainings() {
   })
 }
 
-/** One of the coach's trainings, cancelled or not, or null when it isn't theirs or isn't a training. */
+/** One of the coach's trainings, cancelled or not, or null when it isn't theirs or isn't a training. TRAK-456: the whole
+ *  row, as a match's page reads its match, for its Logistics and Share. */
 export function useTraining(eventId: string | undefined) {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['coach', user?.id, 'training', eventId],
     enabled: !!user && !!eventId,
-    queryFn: async (): Promise<Training | null> => {
-      const { data, error } = await supabase.from('coach_calendar_events').select(TRAINING_COLUMNS)
+    queryFn: async (): Promise<(Training & EventRow) | null> => {
+      const { data, error } = await supabase.from('coach_calendar_events').select('*')
         .eq('id', eventId!).eq('coach_user_id', user!.id).eq('event_type', 'training').maybeSingle()
       if (error) throw error
       return data

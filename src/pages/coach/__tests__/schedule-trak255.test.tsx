@@ -64,7 +64,7 @@ function fixtures() {
   )
 }
 
-const card = (title: string) => screen.getByText(title, { selector: 'p' }).closest('div.rounded-\\[14px\\]') as HTMLElement
+const card = (title: string) => screen.getByText(title, { selector: 'p' }).closest('div.rounded-2xl') as HTMLElement
 const cell = (date: string) => document.querySelector(`[data-present] [data-date="${date}"]`) as HTMLElement
 
 async function open() {

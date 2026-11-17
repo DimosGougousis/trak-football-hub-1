@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { SearchField } from '@/components/arc/search-field/search-field'
 import { Link, useSearchParams } from 'react-router-dom'
 import { MobileShell } from '@/components/trak'
 import { PitchArt, ProgrammeArt } from '@/components/library/LibraryArt'
 import { LIBRARY_PATH, SESSIONS, libraryOf, libraryOrder, searchLibrary, sessionPath, titleParts, type LibrarySession } from '@/lib/library/library'
-import { Chip, ProgrammeRow, SearchIcon, SessionRow } from './parts'
+import { Chip, ProgrammeRow, SessionRow } from './parts'
 import { useBack } from './useBack'
 
 /* TRAK-264: searching the Library, as the catalogue did: every word must be in
@@ -41,13 +42,11 @@ export default function SearchPage() {
     <MobileShell width="wide">
       <div className="pt-3.5 pb-36 tablet:pt-7 laptop:pt-8">
         <div className="flex items-center gap-2.5">
-          <label className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-[8px] border-2 border-ink px-3.5 text-ink laptop:max-w-[560px]" style={{ background: 'rgb(var(--t-surface))' }}>
-            <SearchIcon />
-            <span className="sr-only">Search the Library</span>
-            {/* The coach tapped the search box to get here, so the keyboard opens. */}
-            <input type="search" autoFocus value={query} onChange={e => set({ q: e.target.value })}
-              placeholder="Sessions, skills or kit" className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-3" />
-          </label>
+          {/* TRAK-431 (Kostas, 16 Nov): one search box, Arc's search field with its magnifier.
+              The coach tapped the search box to get here, so the keyboard opens. */}
+          <div className="arc min-w-0 flex-1 laptop:max-w-[560px] [&_label]:sr-only">
+            <SearchField label="Search the Library" autoFocus value={query} onValueChange={q => set({ q })} placeholder="Sessions, skills or kit" />
+          </div>
           <button type="button" onClick={back} className="flex h-11 flex-none items-center px-1 text-[15px] font-medium text-ink">Cancel</button>
         </div>
         <div className="mt-3 flex gap-2">
@@ -93,7 +92,7 @@ export default function SearchPage() {
 function TopResult({ session }: { session: LibrarySession }) {
   const library = libraryOf(session)
   return (
-    <Link to={sessionPath(session)} className="flex flex-col gap-3.5 rounded-[8px] bg-raised p-4 tablet:max-w-[480px]">
+    <Link to={sessionPath(session)} className="flex flex-col gap-3.5 rounded-sm bg-raised p-4 tablet:max-w-[480px]">
       {session.is_programme ? <ProgrammeArt colour={library.colour} size={92} /> : <PitchArt seed={session.id} colour={library.colour} size={92} />}
       <span className="flex flex-col gap-1">
         <span className="text-[24px] font-bold leading-tight text-ink">{titleParts(session).title}</span>

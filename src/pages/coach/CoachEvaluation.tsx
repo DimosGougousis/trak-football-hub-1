@@ -55,7 +55,7 @@ export default function CoachEvaluation() {
     body = <div className="arc grid gap-4">
       {published !== null && <Alert tone="success" title={`Published to ${published} ${published === 1 ? 'player' : 'players'}.`}>
         Each sees their band and your note. Their families see the band, never the note.</Alert>}
-      <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-ink-2">{due?.next
+      <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{due?.next
         ? `The next evaluation opens ${evalDay(due.next, true)}. Everyone starts where they were last time; you change only who moved.`
         : 'No more evaluations this season.'} <span className="text-ink-3">You evaluate {rhythmText(every, day)}.</span></p>
       <div><Button variant="secondary" onClick={() => navigate('/coach/home')}>Back to Home</Button></div>
@@ -78,7 +78,7 @@ export default function CoachEvaluation() {
     <div className="min-h-screen bg-ground pb-24">
       <div className={WIDE_COLUMN}>
         <PageTop title="Evaluation" trail={<CoachTrail current="Evaluation" />}
-          below={squad && due?.dueOn && <p className="-mt-2 text-sm text-ink-3">{squad} · due {evalDay(due.dueOn)} · only you see it until you publish</p>} />
+          below={squad && due?.dueOn && <p className="-mt-1 text-sm text-ink-3">{squad} · due {evalDay(due.dueOn)} · only you see it until you publish</p>} />
         {body}
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />

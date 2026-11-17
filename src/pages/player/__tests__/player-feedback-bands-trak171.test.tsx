@@ -7,6 +7,8 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -24,11 +26,16 @@ const SCORES = { work_rate: 9, tactical: 7, attitude: 8, technical: 6, physical:
 
 let assessmentReply: { status: number; body: unknown }
 
+// TRAK-441 slice 5: the page reads the academy's family_look switch through React Query.
+const queries = new QueryClient()
+const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={queries}>{children}</QueryClientProvider>
+
 function renderAt() {
   return render(
     <MemoryRouter initialEntries={[`/player/feedback/${assessmentId}`]}>
       <Routes><Route path="/player/feedback/:assessmentId" element={<PlayerFeedback />} /></Routes>
     </MemoryRouter>,
+    { wrapper },
   )
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { ArrowLeft, Bell, BookOpen, Building2, CalendarDays, KeyRound, Languages, LogOut, ShieldCheck, UserRound, Users } from 'lucide-react'
@@ -242,6 +242,12 @@ function AccountSettings({ userId }: { userId: string }) {
   }
 
   const titleId = useId()
+  // TRAK-441 slice 6: a family Profile row opens its own section here (/settings#calendar).
+  const { hash } = useLocation()
+  useEffect(() => {
+    const section = hash.slice(1)
+    if (section) [...document.querySelectorAll('[data-section]')].find(node => node.getAttribute('data-section') === section)?.scrollIntoView?.({ block: 'start' })
+  }, [hash])
   const consent = useQuery({
     queryKey: ['settings', userId, 'own-consent'],
     enabled: role === 'player',
@@ -258,7 +264,7 @@ function AccountSettings({ userId }: { userId: string }) {
       content: <>
         <div className="mb-4 flex items-center gap-4">
           {role === 'player' ? <PlayerFace name={displayName || '?'} size="xl" /> : <Avatar name={displayName || '?'} src={photo ?? undefined} size="xl" />}
-          <div className="grid min-w-0 gap-0.5">
+          <div className="grid min-w-0 gap-1">
             <strong className="truncate text-sm font-medium text-ink">{displayName || '—'}</strong>
             <span className="truncate text-sm text-ink-3">{subtitle}</span>
             {role === 'coach'
@@ -516,7 +522,7 @@ function NotificationSwitch({ userId, column, words }: { userId: string; column:
   }
   return (
     <div className="flex items-start justify-between gap-4 py-3">
-      <div className="grid gap-0.5">
+      <div className="grid gap-1">
         <span className="text-sm text-ink">{label}</span>
         <span className="text-xs text-ink-3">{hint}</span>
       </div>

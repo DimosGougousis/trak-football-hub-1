@@ -33,7 +33,7 @@ export function SeasonSoFar({ childId }: { childId: string }) {
   if (data.training) stats.push(['Training', data.training])
   return <section aria-labelledby="season-so-far">
     <h2 id="season-so-far" className="mb-2 text-lg font-medium text-ink">Season so far</h2>
-    <dl className={`grid gap-3 ${stats.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>{stats.map(([label, value]) => <div key={label} className="rounded-2xl border border-line bg-surface p-4">
+    <dl className={`grid gap-3 ${stats.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>{stats.map(([label, value]) => <div key={label} className="rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <dt className="text-sm text-ink-3">{label}</dt>
       <dd className="mt-1 text-[22px] font-medium leading-tight tracking-[-0.01em] text-ink tabular-nums">{value}</dd>
     </div>)}</dl>

@@ -23,7 +23,7 @@ export function failed(error: unknown, data: unknown[] | null) {
 
 export const SAVE_FAILED = "Couldn't save the event. Check your connection and try again; your details are still here."
 
-export const inputClass = 'w-full bg-ground border border-line rounded-[12px] px-3 py-2.5 text-[14px] text-ink placeholder-ink-3 outline-none'
+export const inputClass = 'w-full bg-ground border border-line rounded-xl px-3 py-2.5 text-[14px] text-ink placeholder-ink-3 outline-none'
 export const font = { fontFamily: 'var(--t-font)' }
 export const mono = { fontFamily: 'var(--t-font-mono)' }
 

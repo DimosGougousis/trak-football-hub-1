@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { SeasonPlanSections, seasonSubtitle } from '@/components/player/SeasonPlanSections'
+import { SeasonPage } from '@/components/player/SeasonPage'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
 import { useMarkSeen, useMySeason } from '@/lib/my-season'
 
 /* TRAK-398 (Season plan 18/18 build 3/8, spec TRAK-366): the player's My season page, opened from the Home card. Read-
@@ -16,11 +18,18 @@ const font = { fontFamily: 'var(--t-font)' }
 
 export default function PlayerSeason() {
   const navigate = useNavigate()
-  const { data: plan, isPending, isError, refetch, isFetching } = useMySeason()
+  const look = useFamilyLook()
+  const query = useMySeason()
+  const { data: plan, isPending, isError, refetch, isFetching } = query
   const seen = useMarkSeen()
   // Opening the page is seeing it. It runs when New turns up, once; the re-read after it says New is gone.
   const unseen = plan?.is_new === true
   useEffect(() => { if (unseen) seen.mutate() }, [unseen]) // eslint-disable-line react-hooks/exhaustive-deps
+  // TRAK-441 slice 5, behind family_look: the same plan in the coach's page header and cards.
+  if (look) return <MobileShell width="wide">
+    <div className="pb-28"><SeasonPage query={query} home="/player/home" /></div>
+    <NavBar role="player" activeTab="/player/home" onNavigate={navigate} />
+  </MobileShell>
 
   let body: JSX.Element
   if (isPending) {
@@ -33,7 +42,7 @@ export default function PlayerSeason() {
     body = <p className="text-[13px] text-ink-2" style={font}>Your coach hasn't shared a season plan with you yet.</p>
   } else {
     body = <>
-      <div className="grid gap-1">
+      <div className="grid gap-2">
         <h1 className="m-0 text-[26px] font-medium text-ink" style={{ ...font, letterSpacing: '-0.01em' }}>My season</h1>
         <p className="m-0 text-[15px] text-ink-2" style={font}>{seasonSubtitle(plan)}</p>
       </div>

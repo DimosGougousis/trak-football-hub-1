@@ -60,7 +60,7 @@ function PitchSvg({ shapes, card, label, className, variant }: { shapes: Shape[]
   const arrowHead = `pitch-arrow-${useId().replace(/:/g, '')}`
   const view = card ? cardView(shapes) : { x: 0, y: 0, ...CANVAS }
   return (
-    <div className={`overflow-hidden leading-none ${card ? '' : 'rounded-[10px]'} ${className}`} style={{ background: PITCH.grass }}>
+    <div className={`overflow-hidden leading-none ${card ? '' : 'rounded-xl'} ${className}`} style={{ background: PITCH.grass }}>
       <svg
         viewBox={`${n1(view.x)} ${n1(view.y)} ${n1(view.w)} ${n1(view.h)}`}
         className="block h-auto w-full"

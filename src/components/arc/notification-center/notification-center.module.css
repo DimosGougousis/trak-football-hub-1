@@ -14,23 +14,23 @@
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 23px 24px 18px; }
 .heading { display: flex; align-items: center; gap: var(--space-2); }
 .heading h2 { margin: 0; font-size: var(--text-xl); font-weight: 500; letter-spacing: var(--tracking-body); line-height: 1.2; }
-.count { display: grid; min-width: 21px; height: 21px; padding: 0 5px; place-items: center; overflow: hidden; border-radius: 7px; background: var(--surface-muted); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1; font-variant-numeric: tabular-nums; }
+.count { display: grid; min-width: 21px; height: 21px; padding: 0 5px; place-items: center; overflow: hidden; border-radius: 8px; background: var(--surface-muted); color: var(--text-secondary); font-size: var(--text-xs); line-height: 1; font-variant-numeric: tabular-nums; }
 .header p { position: relative; margin: 4px 0 0; color: var(--text-secondary); font-size: var(--text-xs); line-height: var(--leading-body); }
 .close { display: grid; width: 30px; height: 30px; flex: none; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; transition: transform var(--duration-spring) var(--ease-spring), color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); }
 .close:active { transform: scale(.96); }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 17px 13px 20px; border-bottom: 1px solid var(--border-subtle); }
 .viewSwitch { display: inline-flex; align-items: center; gap: 3px; }
-.viewSwitch button { position: relative; isolation: isolate; min-width: 61px; height: 31px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-xs); cursor: pointer; transition: color var(--duration-fast) var(--ease-standard); }
+.viewSwitch button { position: relative; isolation: isolate; min-width: 61px; height: 31px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-xs); cursor: pointer; transition: color var(--duration-fast) var(--ease-standard); }
 .viewSwitch .viewActive { color: var(--foreground); }
 .viewSwitch button > span:last-child { position: relative; z-index: 1; }
-.viewHighlight { position: absolute; z-index: -1; inset: 0; border-radius: 9px; background: var(--surface-muted); }
+.viewHighlight { position: absolute; z-index: -1; inset: 0; border-radius: 8px; background: var(--surface-muted); }
 .markAll { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-xs); white-space: nowrap; cursor: pointer; transition: transform var(--duration-spring) var(--ease-spring), color var(--duration-fast) var(--ease-standard); }
 .markAll:active { transform: scale(.97); }
 .list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 9px 11px 10px; scrollbar-width: none; }
 .list::-webkit-scrollbar { display: none; }
 .row { overflow: hidden; }
 /* Rows settle in with a short cascade when the panel opens or a view adds them. */
-.item { position: relative; padding: 10px; border-radius: calc(var(--radius-panel) - 12px); transition: background var(--duration-fast) var(--ease-standard); animation: item-in var(--duration-standard) var(--ease-enter) calc(var(--index, 0) * 35ms) both; }
+.item { position: relative; padding: 10px; border-radius: var(--radius-control); transition: background var(--duration-fast) var(--ease-standard); animation: item-in var(--duration-standard) var(--ease-enter) calc(var(--index, 0) * 35ms) both; }
 .itemExpanded { background: var(--surface-muted); }
 .itemRead .itemTitle strong { color: var(--text-secondary); }
 .itemMain { display: flex; align-items: flex-start; gap: 11px; min-width: 0; }
@@ -50,7 +50,7 @@
 .details > .itemActions:first-child { padding-top: 10px; }
 .details p { margin: 12px 0; color: var(--text-secondary); font-size: var(--text-xs); line-height: var(--leading-body); }
 .itemActions { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 5px; }
-.itemActions button { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; overflow: clip; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--foreground); font: inherit; font-size: var(--text-xs); line-height: 1; white-space: nowrap; cursor: pointer; transition: transform var(--duration-spring) var(--ease-spring), border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); }
+.itemActions button { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; overflow: clip; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--foreground); font: inherit; font-size: var(--text-xs); line-height: 1; white-space: nowrap; cursor: pointer; transition: transform var(--duration-spring) var(--ease-spring), border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); }
 .itemActions button:active { transform: scale(.97); }
 /* Quick press, spring release: the resting transition above carries the spring back. */
 .close:active, .markAll:active, .itemActions button:active, .footer button:active { transition-duration: var(--duration-instant); transition-timing-function: var(--ease-standard); }

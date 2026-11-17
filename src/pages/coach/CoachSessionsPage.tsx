@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CoachTrail } from '@/components/coach/CoachTrail'
+import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -11,7 +12,7 @@ import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
 
 export default function CoachSessionsPage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [sessions, setSessions] = useState<any[]>([])
   /* Three states, not two. `[]` alone cannot distinguish "the coach has logged
@@ -56,12 +57,16 @@ export default function CoachSessionsPage() {
     <MobileShell>
       {/* Topbar */}
       <div className="flex items-center justify-between px-5 py-[10px] border-b border-line shrink-0">
-        {/* TRAK-334: the trail (Home › Log › Sessions); its last crumb is the page's name. */}
-        <CoachTrail current="Sessions" />
+        {/* TRAK-334: the trail (Home › Log › Sessions); its last crumb is the page's name. TRAK-379: on a phone the
+            avatar beside it opens the side menu, where the squad picker is. */}
+        <div className="flex min-w-0 items-center gap-3">
+          <CoachMenuButton name={profile?.full_name || 'Coach'} />
+          <CoachTrail current="Sessions" />
+        </div>
         <h1 className="sr-only">Sessions</h1>
         <button
           onClick={() => navigate('/coach/sessions')}
-          className="flex items-center justify-center w-8 h-8 rounded-[9px] bg-brand active:scale-95 transition-transform"
+          className="flex items-center justify-center w-8 h-8 rounded-sm bg-brand active:scale-95 transition-transform"
           aria-label="New session"
         >
           <Plus size={16} className="text-on-brand" strokeWidth={2.5} />
@@ -92,7 +97,7 @@ export default function CoachSessionsPage() {
                 className="w-full text-left flex items-center gap-3 py-3 border-b border-line active:bg-raised"
               >
                 {/* Icon */}
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-raised flex items-center justify-center shrink-0">
+                <div className="w-[34px] h-[34px] rounded-xl bg-raised flex items-center justify-center shrink-0">
                   <span
                     className={`text-[13px] font-semibold ${
                       isMatch(s) ? 'text-success' : 'text-ink-3'
@@ -110,7 +115,7 @@ export default function CoachSessionsPage() {
                       : s.title || 'Training'}
                   </p>
                   <p
-                    className="text-[9px] text-ink-3 mt-0.5 truncate"
+                    className="text-[9px] text-ink-3 mt-1 truncate"
                     style={{ fontFamily: 'var(--t-font-mono)' }}
                   >
                     {isMatch(s) ? 'Match' : 'Training'}
@@ -121,12 +126,12 @@ export default function CoachSessionsPage() {
 
                 {/* Badge */}
                 {isMatch(s) ? (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
+                  <span className="inline-flex items-center h-5 px-2 rounded text-[9px] font-medium uppercase tracking-[0.05em] bg-success/15 text-success">
                     {s.result || 'W'}
                     {s.score ? ` ${s.score}` : ''}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center h-5 px-2 rounded-[5px] text-[9px] font-medium uppercase tracking-[0.05em] bg-raised text-ink-3">
+                  <span className="inline-flex items-center h-5 px-2 rounded text-[9px] font-medium uppercase tracking-[0.05em] bg-raised text-ink-3">
                     {s.focus || 'Tactical'}
                   </span>
                 )}

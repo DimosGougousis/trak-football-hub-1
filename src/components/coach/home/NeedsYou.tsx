@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react'
-import { ArrowRight } from 'lucide-react'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { Button } from '@/components/arc/button/button'
@@ -42,11 +41,11 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
       <h2 id="needs-you-title" className="text-lg font-medium text-ink">{t('coachHome:needsYouTitle')} {count !== null && <span className="text-ink-3 font-normal">{count}</span>}</h2>
     </div>
     {failed ? <LoadError what={t('coachHome:needsYouWhat')} onRetry={onRetry} />
-      : !items ? <LoadingSkeleton label={t('coachHome:needsYouLoading')} lines={2} rows={2} className="h-[148px] content-start overflow-hidden rounded-2xl border border-line bg-surface p-5" />
-      : count === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-ink-2">{t('coachHome:needsYouNone')}</p>
+      : !items ? <LoadingSkeleton label={t('coachHome:needsYouLoading')} lines={2} rows={2} className="h-[148px] content-start overflow-hidden rounded-2xl border border-line bg-surface p-5 laptop:p-6" />
+      : count === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{t('coachHome:needsYouNone')}</p>
       : <div className="arc -mx-1">
         <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label={t('coachHome:needsYouList')}>
-          <ul className="flex gap-3 px-1 pb-1">
+          <ul className="flex gap-3 px-1 pb-1 laptop:flex-wrap">
             {shown.flatMap(card => 'event' in card ? [card.event] : []).map(event => <li key={`event:${event.id}`} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
               {/* The week's "needs you" yellow (TRAK-270), so the card reads as the same thing. */}
               <div className="flex h-full w-full flex-col gap-3 rounded-2xl border-[1.5px] bg-surface p-4" style={{ borderColor: 'rgb(var(--t-attention))' }}>
@@ -62,8 +61,8 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
               </div>
             </li>)}
             {shown.flatMap(card => 'item' in card ? [card.item] : []).map(item => <li key={`${item.kind}:${item.playerId}`} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
-              <button type="button" onClick={() => onOpen(item)}
-                className="flex h-full w-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 text-left transition-transform active:scale-[.98] motion-reduce:transition-none">
+              {/* TRAK-423: the action is the week's small button (as "Take register" beside it), named for the player. */}
+              <div className="flex h-full w-full flex-col gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                 <span className="flex items-center gap-3">
                   <PlayerFace name={item.name} size="md" />
                   <span className="grid min-w-0">
@@ -75,10 +74,13 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
                   <span className={`mt-1.5 size-2 flex-none rounded-full ${item.urgent ? 'bg-danger' : item.kind === 'draft' ? 'bg-info' : 'bg-warning'}`} aria-hidden />
                   <span>{item.urgent && <span className="sr-only">{t('coachHome:urgent')}</span>}{item.reason}</span>
                 </span>
-                <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-brand">
-                  {item.kind === 'draft' ? t('coachHome:finishDraft') : t('coachHome:assess')} <ArrowRight size={16} aria-hidden />
+                <span className="mt-auto">
+                  <Button size="sm" className="min-w-[128px]" onClick={() => onOpen(item)}
+                    aria-label={item.kind === 'draft' ? `${t('coachHome:finishDraft')}: ${item.name}` : t('coachSquad:assessName', { name: item.name })}>
+                    {item.kind === 'draft' ? t('coachHome:finishDraft') : t('coachHome:assess')}
+                  </Button>
                 </span>
-              </button>
+              </div>
             </li>)}
           </ul>
         </ScrollArea>

@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutGroup } from 'motion/react'
 import { supabase } from '@/integrations/supabase/client'
+import { consentRequired } from '@/lib/consent-pending'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar } from '@/components/trak'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import SegmentedControl from '@/components/arc/segmented-control/segmented-control'
+import { Button } from '@/components/arc/button/button'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { playerAttention, type AttentionLevel, type AttentionRow } from '@/lib/player-attention'
@@ -76,18 +78,19 @@ export default function CoachFeedbackPage() {
         .map(s => ({ id: s.id, session_date: s.session_date as string, event_id: s.event_id }))
       const sessionIds = trainings.map(t => t.id)
       const eventIds = trainings.map(t => t.event_id).filter((id): id is string => !!id)
-      const [attendance, absences, ...consent] = await Promise.all([
+      const [attendance, absences, consent] = await Promise.all([
         sessionIds.length ? supabase.from('session_attendance').select('session_id, squad_player_id').in('session_id', sessionIds).eq('status', 'present')
           : Promise.resolve({ data: [], error: null }),
         eventIds.length ? supabase.from('event_absences').select('event_id, squad_player_id, reason').in('event_id', eventIds)
           : Promise.resolve({ data: [], error: null }),
         // Same check as the J4 screens: a child waiting for a parent can't be
         // ticked or assessed, so nothing about them is flagged.
-        ...players.map(p => supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: p.id } as never) as unknown as Promise<{ data: boolean | null; error: unknown }>),
+        // TRAK-312: one check for the whole list.
+        consentRequired(players.map(p => p.id)),
       ])
       if (stale) return
       // Any unknown answer could make a flag wrong, so none are shown.
-      if (attendance.error || absences.error || consent.some(c => c.error || typeof c.data !== 'boolean')) return fail()
+      if (attendance.error || absences.error || consent.some(c => c === null)) return fail()
       const present = new Map<string, Set<string>>()
       for (const a of (attendance.data ?? []) as { session_id: string; squad_player_id: string }[]) {
         if (!present.has(a.session_id)) present.set(a.session_id, new Set())
@@ -104,7 +107,7 @@ export default function CoachFeedbackPage() {
         players: players.length,
         rows: playerAttention({
           roster: players,
-          waitingForParent: new Set(players.filter((_, i) => consent[i].data === true).map(p => p.id)),
+          waitingForParent: new Set(players.filter((_, i) => consent[i] === true).map(p => p.id)),
           assessments: (assessments.data ?? []).filter(a => playerIds.has(a.squad_player_id)),
           trainings,
           present,
@@ -130,7 +133,7 @@ export default function CoachFeedbackPage() {
             in the page's own column (MobileShell already gives it its sides). */}
         <PageTop title={t('coachAssess:fbTitle')} className="pb-3" />
 
-        <section aria-label={t('coachAssess:fbTitle')} className="rounded-[18px] border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
+        <section aria-label={t('coachAssess:fbTitle')} className="rounded-2xl border border-line p-4" style={{ background: 'rgb(var(--t-surface))' }}>
           {failed ? (
             <p role="alert" className="text-[12px] text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>
               {t('coachAssess:couldntLoadPlayers')}{' '}
@@ -141,7 +144,7 @@ export default function CoachFeedbackPage() {
           ) : overview.players === 0 ? (
             <div>
               <p className="text-[13px] font-medium text-ink-2" style={{ fontFamily: 'var(--t-font)' }}>{t('coachSquad:preparingTitle')}</p>
-              <p className="text-[10px] mt-0.5 text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{t('coachSquad:preparingBody')}</p>
+              <p className="text-[10px] mt-1 text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>{t('coachSquad:preparingBody')}</p>
             </div>
           ) : overview.rows.length === 0 ? (
             // Everyone left is waiting for a parent: nothing can be said about them yet.
@@ -154,7 +157,7 @@ export default function CoachFeedbackPage() {
             <ul className="flex flex-col gap-2 tablet:grid tablet:grid-cols-2">
               {overview.rows.map(row => (
                 <li key={row.playerId}
-                  className="flex items-center gap-3 rounded-[10px] py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
+                  className="flex items-center gap-3 rounded-xl py-2.5 px-3 cursor-pointer active:scale-[0.99] transition-transform"
                   style={{ background: 'rgb(var(--t-raised))', borderLeft: `3px solid ${LEVEL[row.level].color}` }}
                   // TRAK-179: the player's profile, as Squad → Open profile.
                   {...openable(t('coachAssess:openProfileLevel', { name: row.name, level: t(LEVEL[row.level].word) }), () => navigate(`/coach/squad/player/${row.playerId}`))}>
@@ -167,7 +170,7 @@ export default function CoachFeedbackPage() {
                         style={{ fontFamily: 'var(--t-font-mono)', color: LEVEL[row.level].color }}>{t(LEVEL[row.level].word)}</span>
                     </p>
                     {row.reasons.map(reason => (
-                      <p key={reason} className="text-[11px] text-ink-2 mt-[2px]" style={{ fontFamily: 'var(--t-font)' }}>{reason}</p>
+                      <p key={reason} className="text-[11px] text-ink-2 mt-1" style={{ fontFamily: 'var(--t-font)' }}>{reason}</p>
                     ))}
                   </div>
                 </li>
@@ -228,10 +231,10 @@ function FeedbackTable({ rows, show, onShow, onOpen, onAssess }: {
               </td>
               <td className="py-2.5 pr-3 text-[12px] text-ink-2">{row.reasons.join(' · ')}</td>
               <td className="py-2.5 text-right">
-                <button type="button" onClick={() => onAssess(row.playerId)}
-                  className="rounded-[10px] px-3 py-1.5 text-[12px] font-medium border border-line text-ink hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                {/* TRAK-423: the same small button as Home's Needs you. */}
+                <span className="arc"><Button size="sm" aria-label={t('coachSquad:assessName', { name: row.name })} onClick={() => onAssess(row.playerId)}>
                   {t('coachHome:assess')}
-                </button>
+                </Button></span>
               </td>
             </tr>
           ))}

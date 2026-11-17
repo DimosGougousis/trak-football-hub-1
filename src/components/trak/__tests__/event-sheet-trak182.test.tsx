@@ -102,7 +102,7 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
     expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
-    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
+    expect(within(sheet).queryByRole('button', { name: 'Share' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     // TRAK-230: an event still to come is edited from here.
     expect(within(sheet).getByRole('button', { name: 'Edit event' })).toBeInTheDocument()
@@ -129,7 +129,9 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(load).toHaveBeenCalledTimes(2))
     expect(await screen.findByRole('dialog', { name: 'vs Rivals FC' })).toBeInTheDocument()
-    expect(await within(screen.getByRole('dialog')).findByRole('button', { name: 'Published' })).toBeDisabled()
+    // TRAK-427: a state (Arc's pill), not a disabled button.
+    expect(await within(screen.getByRole('dialog')).findByText('Published')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Published' })).toBeNull()
   })
 
   it('shows a published event\'s link, Edit and who is coming', async () => {
@@ -138,12 +140,16 @@ describe('TRAK-182: the event sheet', () => {
     renderStrip([event({})], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
-    // The Published button says it; no status line repeats it (Imad, 16 Oct).
+    // The Published pill says it; no status line repeats it (Imad, 16 Oct).
     expect(within(sheet).queryByText('Published.')).toBeNull()
-    expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
+    expect(await within(sheet).findByText('Published')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Published' })).toBeNull()
     // J8.16's pre-written message, with the event's own link, not a bare link to paste.
-    const share = await within(sheet).findByRole('link', { name: 'Share' })
-    const text = decodeURIComponent(share.getAttribute('href')!.replace('https://wa.me/?text=', ''))
+    // TRAK-427: Share is Arc's button; without a share sheet it opens WhatsApp's link in a new tab.
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    await user.click(await within(sheet).findByRole('button', { name: 'Share' }))
+    const text = decodeURIComponent((open.mock.calls[0][0] as string).replace('https://wa.me/?text=', ''))
+    open.mockRestore()
     expect(text).toContain('U14 Match vs Rivals FC')
     expect(text).toContain('https://trakfootball.com/event/ev-1')
     expect(await within(sheet).findByRole('heading', { name: 'Attending · 2' })).toBeInTheDocument()
@@ -182,7 +188,7 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(within(sheet).getByRole('list', { name: 'Attended' })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Bukayo Saka'])
     expect(within(sheet).getByRole('button', { name: 'Register' })).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
-    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
+    expect(within(sheet).queryByRole('button', { name: 'Share' })).toBeNull()
   })
 
   it('offers no Cancel once a match has started (a match has no register)', async () => {
@@ -191,12 +197,13 @@ describe('TRAK-182: the event sheet', () => {
     renderStrip([event({ startsAt: '2020-01-01T13:00:00Z' })], 'coach')
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
-    expect(await within(sheet).findByRole('button', { name: 'Published' })).toBeDisabled()
+    expect(await within(sheet).findByText('Published')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: 'Published' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit.
     expect(within(sheet).getByText('It has started, so its details are fixed.')).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Edit event' })).toBeNull()
-    expect(within(sheet).queryByRole('link', { name: 'Share' })).toBeNull()
+    expect(within(sheet).queryByRole('button', { name: 'Share' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
     // Decided 16 Oct: a past event's sheet has no meet time and no family note; the kit stays.
     expect(within(sheet).queryByText('Meet')).toBeNull()
@@ -289,7 +296,7 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
     const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
     const updated = within(sheet).getByText('Updated 3h ago.')
-    const share = await within(sheet).findByRole('link', { name: 'Share' })
+    const share = await within(sheet).findByRole('button', { name: 'Share' })
     expect(share.querySelector('svg')).not.toBeNull()
     const attending = await within(sheet).findByRole('heading', { name: /^Attending/ })
     expect(share.compareDocumentPosition(updated) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

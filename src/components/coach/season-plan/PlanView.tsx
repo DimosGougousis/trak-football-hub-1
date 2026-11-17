@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil } from 'lucide-react'
 import { Alert } from '@/components/arc/alert/alert'
 import { Button } from '@/components/arc/button/button'
 import { LoadError } from '@/components/trak/LoadError'
@@ -117,7 +117,8 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           <span className="text-xs text-ink-3">{held.length ? held.map(o => o.title).join(' · ') : 'No objective yet'}</span>
           {gone.length > 0 && <span className="text-xs text-ink-3">Removed: {gone.map(o => `${o.title} (${shortDate(o.removed)})`).join(' · ')}</span>}
         </span>
-        <span className="text-sm font-medium text-brand">Edit</span>
+        {/* TRAK-423: the pencil, as every Edit; the row is the button, so the word stays for a screen reader only. */}
+        <Pencil aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-brand" /><span className="sr-only">Edit</span>
       </button>
     </li>
   }
@@ -137,18 +138,18 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           Edits wait here until you share them.
         </Alert>}
 
-      <div className="grid items-start gap-5 laptop:grid-cols-2">
+      <div className="grid items-start gap-4 laptop:grid-cols-2">
         <section aria-labelledby="plan-season" className={card}>
           <h2 id="plan-season" className="text-lg font-medium text-ink">Season</h2>
           <div className="flex items-center justify-between gap-3">
-            <dl className="m-0 grid gap-0.5">
+            <dl className="m-0 grid gap-1">
               <dt className="text-sm text-ink-3">Dates</dt>
               <dd className="m-0 text-sm text-ink">{plan.starts_on && plan.ends_on ? `${day(plan.starts_on)} – ${day(plan.ends_on)}` : 'No dates yet'}</dd>
             </dl>
             {edit('Edit the season’s dates', () => navigate('/coach/season-plan/edit/dates'))}
           </div>
           <div className="flex items-center justify-between gap-3">
-            <dl className="m-0 grid gap-0.5">
+            <dl className="m-0 grid gap-1">
               <dt className="text-sm text-ink-3">Evaluation</dt>
               <dd className="m-0 text-sm text-ink">{(() => {
                 const { every, day } = rhythmOf(plan)
@@ -168,7 +169,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           </div>
           {seasonObjectives.length === 0 ? <p className="text-sm text-ink-3">None. You can add up to three.</p>
             : <ol className="m-0 grid list-none gap-3 p-0">{seasonObjectives.map(o => (
-              <li key={o.id} className="grid gap-0.5">
+              <li key={o.id} className="grid gap-1">
                 <span className="text-[17px] font-medium text-ink">{o.title}</span>
                 {o.looks_like && <span className="text-sm text-ink-3">{o.looks_like}</span>}
               </li>))}
@@ -199,14 +200,14 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
         <section aria-labelledby="plan-players" className={card}>
           <button type="button" aria-expanded={playersOpen} onClick={() => setPlayersOpen(!playersOpen)}
             className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-            <span className="grid gap-0.5">
+            <span className="grid gap-2">
               <span id="plan-players" className="text-lg font-medium text-ink">Player objectives</span>
               <span className="text-sm text-ink-3">{withSome} of {players(placed.length)} {withSome === 1 ? 'has' : 'have'} one or two</span>
             </span>
             {playersOpen ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
           </button>
           {playersOpen && board.lines.filter(line => line.players.length > 0).map(line => (
-            <div key={line.value} className="grid gap-1">
+            <div key={line.value} className="grid gap-2">
               <h3 className="text-sm font-medium text-ink-2">{line.line} <span className="font-normal text-ink-3">· {line.players.length}</span></h3>
               <ul className="m-0 list-none divide-y divide-line p-0">{line.players.map(row)}</ul>
             </div>

@@ -87,32 +87,43 @@ const rows = () => within(screen.getByRole('list', { name: 'The plan' })).getAll
 const SAVED = { soon: [trak(1, 'w1', 'Dynamic warm-up', 'Dry warm-up', 'warmup', 10), trak(2, 'r1', 'Rondo 4 v 2', 'Rondo', 'rondo'), trak(3, 'g1', 'Game 7 v 7', 'Game', 'game', 25)] }
 const handle = (name: string) => screen.findByRole('button', { name: `Move ${name}. Use the up and down arrow keys.` })
 
+// TRAK-456 (Imad, 16 Nov): a saved plan is changed in the planner, the training page's Training plan tab; Review & share
+// is the match's Review card, so a part moves in Your session, beside each part, and the plan saves on Save the plan.
+const parts = () => within(screen.getByRole('list', { name: 'Parts of the session' })).getAllByRole('listitem').map(li => li.textContent)
+const toPart = async (name: string) => userEvent.click(await screen.findByRole('button', { name: `Edit ${name.toLowerCase()}` }))
+const backToReview = () => userEvent.click(screen.getByRole('button', { name: /^Back to Review/ }))
+
 describe('TRAK-367: moving a part on Review', { timeout: 30_000 }, () => {
   it('on a saved plan: the arrow keys move it, it saves the plan whole, and the keyboard stays on it', async () => {
     const user = userEvent.setup()
     const { saves } = database([training('soon', onTheMinute(Date.now() + DAY))], SAVED)
-    renderApp('/coach/training/soon')
+    renderApp('/coach/training/soon?tab=plan')
+    await toPart('Rondo')
     const rondo = await handle('Rondo')
     rondo.focus()
     await user.keyboard('{ArrowUp}')
+    await waitFor(() => expect(parts()[0]).toContain('Rondo'))
+    // The row is still the same row.
+    expect(await handle('Rondo')).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(parts()[0]).toContain('Rondo') // already first
+    await backToReview()
+    await user.click(screen.getByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     expect(sent(saves[0])).toEqual(['Rondo', 'Dry warm-up', 'Game'])
-    await waitFor(() => expect(rows()[0]).toContain('Rondo 4 v 2'))
-    // The plan comes back saved, and the row is still the same row.
-    await waitFor(async () => expect(await handle('Rondo')).toHaveFocus())
-    await user.keyboard('{ArrowUp}')
-    await new Promise(resolve => setTimeout(resolve, 50))
-    expect(saves).toHaveLength(1) // already first
   })
 
-  it('a move that can’t save goes back and says so', async () => {
+  it('a move that can’t save stays and says so', async () => {
     const user = userEvent.setup()
     database([training('soon', onTheMinute(Date.now() + DAY))], SAVED)
     server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/save_training_plan`, () => HttpResponse.json({ message: 'offline' }, { status: 503 })))
-    renderApp('/coach/training/soon')
+    renderApp('/coach/training/soon?tab=plan')
+    await toPart('Game')
     ;(await handle('Game')).focus()
     await user.keyboard('{ArrowUp}')
-    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent('Couldn’t move it.')
+    await backToReview()
+    await user.click(screen.getByRole('button', { name: 'Save the plan' }))
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(/Couldn’t save/)
     expect(rows()[2]).toContain('Game 7 v 7')
   })
 
@@ -120,10 +131,12 @@ describe('TRAK-367: moving a part on Review', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     const { saves } = database([training('soon', onTheMinute(Date.now() + DAY))], SAVED)
     renderApp('/coach/training/soon/plan')
-    await screen.findByRole('heading', { name: 'Review' })
+    await screen.findByRole('region', { name: 'Training plan review' })
+    await toPart('Game')
     ;(await handle('Game')).focus()
     await user.keyboard('{ArrowUp}')
     expect(saves).toHaveLength(0) // nothing saves until Save the plan
+    await backToReview()
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     expect(sent(saves[0])).toEqual(['Dry warm-up', 'Game', 'Rondo'])
@@ -191,7 +204,7 @@ describe('TRAK-367: the trail', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     database([])
     renderApp('/coach/training')
-    await user.click(await screen.findByRole('button', { name: 'Drills' }, { timeout: 5000 }))
+    await user.click(await screen.findByRole('radio', { name: 'Drills' }, { timeout: 5000 }))
     // TRAK-387: the Library's Technical tile (the old FA Library has a Technical tile too, below it).
     await user.click(within(await screen.findByRole('region', { name: 'What kind of practice?' }, { timeout: 5000 })).getByRole('link', { name: /^Technical/ }))
     const trail = await screen.findByRole('navigation', { name: 'Breadcrumb trail' }, { timeout: 5000 })
@@ -204,7 +217,8 @@ describe('TRAK-367: the trail', { timeout: 30_000 }, () => {
     database([training('soon', soon)])
     renderApp('/coach/training/soon/plan')
     const trail = await screen.findByRole('navigation', { name: 'Breadcrumb trail' }, { timeout: 5000 })
-    expect(within(trail).getByText(/^Plan session · /)).toBeInTheDocument()
+    // TRAK-456: Plan session is the training page's tab; the page's crumb is the training's day.
+    expect(within(trail).getByText(/^\w{3} \d{1,2} \w{3}$/)).toBeInTheDocument()
   })
 })
 

@@ -23,7 +23,8 @@ import { LineUpCard } from './LineUpCard'
 /* TRAK-441 slice 3.3 (Imad, 12 Nov): a match as a player and a parent read it, in the coach's look: his match header
    (the match said once: who, day, kick-off, venue, and a badge) over tabs. A player: Logistics, Game plan, Evaluation.
    A parent: Logistics, Evaluation, and nothing about the job, the note or the line-up (TRAK-319). "New" marks the tab
-   this device hasn't opened. Behind the academy's family_look switch; a training keeps the page it has. */
+   this device hasn't opened. Behind the academy's family_look switch. Slice 7: a training, or any event that isn't a
+   match, is the same header over its Logistics alone: no tabs, and nothing from the coach's training plan. */
 
 type Tab = 'logistics' | 'plan' | 'evaluation'
 type Who = { id: string; name: string }
@@ -52,6 +53,7 @@ export function FamilyMatch({ event, changes, child, as, back, cantMakeIt }: {
   const wide = useSideMenuScreen()
   const { hash } = useLocation()
   const asPlayer = as === 'player'
+  const isMatch = event.kind === 'match'
   const plan = useSharedPlan(event, child.id, asPlayer)
   const review = useReview(event, child.id, asPlayer)
   const title = event.opponent ? `vs ${event.opponent}` : eventHeading(event)
@@ -60,7 +62,8 @@ export function FamilyMatch({ event, changes, child, as, back, cantMakeIt }: {
   // The tab with news, as it was when the page opened: showing it marks it opened, and "New" stays for this visit.
   const news = useRef<Tab | null>()
 
-  if (plan.isPending || review.isPending) return <LoadingSkeleton className="pt-12" label={t('coachMatches:loadingMatch')} lines={4} />
+  // Only a match reads a plan or a review (the hooks wait for nothing otherwise).
+  if (isMatch && (plan.isPending || review.isPending)) return <LoadingSkeleton className="pt-12" label={t('coachMatches:loadingMatch')} lines={4} />
 
   if (news.current === undefined && user) {
     // ponytail: never opened on this device, whatever its age; a "since" per reader if old matches read New too long.
@@ -94,17 +97,17 @@ export function FamilyMatch({ event, changes, child, as, back, cantMakeIt }: {
         onClick: click => { click.preventDefault(); back.go() } }, { label: title }]} />}
       details={<>
         <span><CalendarDays {...meta} /><strong>{eventDay(event)}</strong></span>
-        {event.time && <span><Clock {...meta} />{t('coachSquad:kickOffAt', { time: event.time })}{academy && ` · ${academy}`}</span>}
+        {event.time && <span><Clock {...meta} />{t(isMatch ? 'coachSquad:kickOffAt' : 'coachSquad:startsAt', { time: event.time })}{academy && ` · ${academy}`}</span>}
         {(place || side) && <span><MapPin {...meta} />{place && <strong>{place}</strong>}{place && side && ' · '}{side}</span>}
         {!asPlayer && <span><UserRound {...meta} />{child.name}</span>}
       </>}
       tabsLabel={title} value={picked ?? first} onValueChange={next => setPicked(next as Tab)}
-      tabs={cancelled ? [] : [
+      tabs={cancelled || !isMatch ? [] : [
         { value: 'logistics', label: t('coachMatches:actLogistics') },
         ...(asPlayer ? [{ value: 'plan', label: t('coachHome:gamePlan'), extra: extra('plan') }] : []),
         { value: 'evaluation', label: t('nav:evaluation'), extra: extra('evaluation') },
       ]}>
-      {cancelled ? logistics : <>
+      {cancelled || !isMatch ? logistics : <>
         <PageHeaderPanel value="logistics">{logistics}</PageHeaderPanel>
         {asPlayer && <PageHeaderPanel value="plan"><Plan query={plan} eventId={event.id} childId={child.id} /></PageHeaderPanel>}
         <PageHeaderPanel value="evaluation"><Evaluation query={review} eventId={event.id} child={child} asPlayer={asPlayer} /></PageHeaderPanel>
