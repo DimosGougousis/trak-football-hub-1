@@ -97,7 +97,8 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   const header = <div className="flex items-center gap-4">
     <PlayerFace name={player.name} size="lg" />
     <div className="grid min-w-0 gap-2">
-      <h3 className="truncate text-xl font-medium text-ink">{player.name}</h3>
+      {/* TRAK-428: a long name wraps beside the band, never cut ("Giourkas Sei…" on a phone). */}
+      <h3 className="break-words text-xl font-medium text-ink">{player.name}</h3>
       <p className="text-sm text-ink-2">{[player.shirt != null && `#${player.shirt}`, player.position, squad].filter(Boolean).join(' · ')}</p>
     </div>
     <span className="ml-auto"><BandChip band={player.band} move={player.move} waiting={player.waiting} /></span>

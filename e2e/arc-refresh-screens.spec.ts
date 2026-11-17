@@ -458,11 +458,11 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
 
 // Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
 // On a phone the profile now takes the list's place, and "All players" returns to the same spot. TRAK-351: on every
-// screen a player opens as their own page, and its Back button returns to the same spot.
+// screen a player opens as their own page, and going back returns to the same spot (TRAK-428: by the trail).
 test.describe('Squad Players on a phone', () => {
   test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 500 } })
 
-  test("a picked player's page replaces the list, and Back returns to it", async ({ page, context }) => {
+  test("a picked player's page replaces the list, and the trail returns to it", async ({ page, context }) => {
     const unexpected: string[] = []
     await coachBackend(context, unexpected)
     await page.goto('/coach/squad')
@@ -474,7 +474,7 @@ test.describe('Squad Players on a phone', () => {
     const profile = page.locator('article[aria-label^="Thiago Silva"]')
     await expect(profile).toBeInViewport()
     await expect(list).toBeHidden()
-    await page.getByRole('button', { name: 'Back' }).click()
+    await page.getByRole('navigation', { name: 'Breadcrumb trail' }).getByRole('link', { name: 'Squad' }).click()
     await expect(list).toBeVisible()
     await expect.poll(() => page.evaluate(() => scrollY)).toBe(before)
     expect(unexpected).toEqual([])
@@ -750,3 +750,45 @@ for (const width of [390, 820]) {
     expect(unexpected).toEqual([])
   })
 }
+
+// TRAK-428 (11 Nov review): on a phone a player's page opened with two ways back (a Back button, then the trail), the
+// band badge cut the name ("Giourkas Sei…"), and the Published button cut the card's band ("Mix…").
+test("TRAK-428 at 390 px: a player's page has one way back, and neither the name nor a card's band is cut", async ({ page, context }, testInfo) => {
+  const unexpected: string[] = []
+  await page.setViewportSize({ width: 390, height: 844 })
+  await coachBackend(context, unexpected)
+  // Added after coachBackend, so they answer first: the reviewed name, and the longest band word ("Exceptional").
+  const roster = players.map(p => p.id === 'sq-2' ? { ...p, player_name: 'Giourkas Seitaridis' } : p)
+  await context.route('**/rest/v1/squad_players?*', route => {
+    const one = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(one ? roster.filter(p => p.id === one) : roster) })
+  })
+  await context.route('**/rest/v1/coach_assessments?*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+    id: 'as-9', squad_player_id: 'sq-2', coach_user_id: ids.coach, created_at: '2026-11-10T08:00:00Z', published_at: '2026-11-10T09:00:00Z',
+    coach_rating: 9, work_rate: 9, tactical: 9, attitude: 9, technical: 9, physical: 9, coachability: 9, squad_players: { player_name: 'Giourkas Seitaridis' } }]) }))
+  await page.goto('/coach/squad')
+  await page.getByRole('button', { name: /^Giourkas Seitaridis/ }).click()
+  const profile = page.locator('article[aria-label^="Giourkas Seitaridis,"]')
+  const card = profile.getByRole('article', { name: /assessment, Giourkas Seitaridis/ })
+  await expect(card.getByRole('button', { name: 'Published more actions' })).toBeVisible()
+  const cut = (locator: import('@playwright/test').Locator) => locator.evaluate(el => el.scrollWidth > el.clientWidth)
+
+  await expect(page.getByRole('button', { name: 'Back' })).toHaveCount(0)
+  const trail = page.getByRole('navigation', { name: 'Breadcrumb trail' })
+  await expect(trail).toBeInViewport()
+  expect(await cut(profile.getByRole('heading', { level: 3, name: 'Giourkas Seitaridis' }))).toBe(false)
+  // The card's overall band, in its footer beside Published (each bar above shows its own band too).
+  const band = card.locator('[class*="_meta_"]')
+  await expect(band).toHaveText('Exceptional')
+  expect(await cut(band)).toBe(false)
+  await page.waitForTimeout(1500) // let the assessments grow in for the screenshot
+  await page.screenshot({ path: testInfo.outputPath('player-page-390.png'), fullPage: true })
+  // Narrower than the band and the button side by side: the button takes a line of its own, and the band stays whole.
+  await page.setViewportSize({ width: 320, height: 844 })
+  await expect.poll(() => cut(band)).toBe(false)
+  await card.screenshot({ path: testInfo.outputPath('assessment-card-320.png') })
+
+  await trail.getByRole('link', { name: 'Squad' }).click()
+  await expect(page.getByRole('list', { name: 'Players' })).toBeVisible()
+  expect(unexpected).toEqual([])
+})

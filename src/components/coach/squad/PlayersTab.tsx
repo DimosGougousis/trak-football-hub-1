@@ -1,9 +1,7 @@
 import { useMemo } from 'react'
-import { ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { SquadDirectory, type PositionGroup, type SquadPlayer } from '@/components/arc/blocks/team-directory/squad-directory'
 import { Badge } from '@/components/arc/badge/badge'
-import { Button } from '@/components/arc/button/button'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { needsYou } from '@/lib/coach-needs-you'
 import { BANDS } from '@/lib/types'
@@ -30,14 +28,14 @@ const TREND = 6
  * TRAK-263 (Imad, 22 Oct): Squad's Players view, replacing Snapshot. Every roster player in Arc's team directory
  * (position filters, search by name or shirt number). Imad, 23 Oct: each row ends with a sparkline of the player's
  * ratings, and there's no band bar above. TRAK-351 (Tarek, 3 Nov): a player opens as their own full page, with no list
- * beside it and a Back button; the list stays mounted behind it, so Back finds its filter and search as left.
+ * beside it; the list stays mounted behind it, so going back finds its filter and search as left. TRAK-428: the trail is
+ * the page's one way back (it had a Back button above it too).
  */
-export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = () => {} }: {
+export function PlayersTab({ roster, openId = null, onOpen = () => {} }: {
   roster: SquadRoster
   /** The player whose page is open (their address, /coach/squad/player/:id), or null for the list. */
   openId?: string | null
   onOpen?: (id: string) => void
-  onBack?: () => void
 }) {
   const { user } = useAuth()
   const { t } = useTranslation()
@@ -99,8 +97,8 @@ export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = 
       <SquadDirectory title={squadLabel ? t('coachSquad:squadPlayers', { squad: squadLabel }) : t('coachSquad:tabPlayers')} players={players} onOpen={player => onOpen(player.id)} />
     </div>
     {openId != null && <div className="grid gap-4 pt-4">
-      <span className="arc"><Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft size={16} aria-hidden="true" />{t('common:back')}</Button></span>
-      {open && <CoachTrail current={open.name} />}
+      {/* TRAK-428: a player who isn't found still has the way back; the page is "Player", as in the laptop's top bar. */}
+      <CoachTrail current={open?.name ?? t('nav:player')} />
       {/* TRAK-368: the page's title, as the older player page had it; the card's name is the visible one. */}
       {open && <h1 className="sr-only">{open.name}</h1>}
       {/* TRAK-451: the page's card puts the standard room between its parts (TRAK-464). */}

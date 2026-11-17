@@ -22,7 +22,8 @@
 .primary:disabled, .trigger:disabled { cursor: not-allowed; opacity: .52; }
 .secondary { border-color: var(--border); border-radius: var(--radius-pill); background: var(--surface); }
 .secondary .primary, .secondary .trigger { min-height: var(--control-height-sm); background: var(--surface); color: var(--foreground); }
-.secondary .primary { min-width: 142px; border-radius: var(--radius-pill) 0 0 var(--radius-pill); padding-inline: var(--space-3); font-size: var(--text-xs); }
+/* Trak (TRAK-428): as wide as its word; a fixed 142 px left the assessment card's band 41 px on a phone ("Exce…"). */
+.secondary .primary { border-radius: var(--radius-pill) 0 0 var(--radius-pill); padding-inline: var(--space-3); font-size: var(--text-xs); }
 .secondary .trigger { width: 32px; border-left-color: var(--border-subtle); border-radius: 0 var(--radius-pill) var(--radius-pill) 0; }
 .secondary .primary:active:not(:disabled), .secondary .trigger:active:not(:disabled), .secondary .trigger[data-state="open"] { background: color-mix(in oklab, var(--surface-muted), var(--border) 55%); }
 .icon { display: inline-flex; }

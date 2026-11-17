@@ -338,7 +338,8 @@ for (const who of ['player', 'parent'] as const) for (const [label, width, heigh
 // TRAK-250: Squad is a coach workspace of views. TRAK-263 (Imad, 22 Oct): Players (Arc's team
 // directory) replaced Snapshot, and the views sit on Arc's glass segmented control. On a tablet
 // or a laptop it uses the room: a page wider than the phone column. TRAK-351 (Tarek, 3 Nov): a player opens as their
-// own full page, with no list beside it, and Back returns to the list.
+// own full page, with no list beside it, and its trail returns to the list (TRAK-428: the one way back; on a laptop
+// it's the top bar's).
 // [screen, width, height, rail]
 for (const [label, width, height, rail] of [
   ['an upright tablet', 820, 1180, 0],
@@ -369,7 +370,8 @@ for (const [label, width, height, rail] of [
     expect((await profile.boundingBox())!.width).toBeGreaterThan(panel.width * 0.95)
     await page.waitForTimeout(600) // let the radar draw in for the screenshot
     await page.screenshot({ path: testInfo.outputPath(`coach-squad-${width}.png`) })
-    await page.getByRole('button', { name: 'Back' }).click()
+    await expect(page.getByRole('button', { name: 'Back' })).toHaveCount(0)
+    await page.getByRole('navigation', { name: /^Breadcrumb/ }).getByRole('link', { name: 'Squad' }).click()
     await expect(list).toBeVisible()
 
     // Each view opens in place: no Arc sheet, and no read the backend does not answer.

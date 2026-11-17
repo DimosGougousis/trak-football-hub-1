@@ -1,7 +1,8 @@
 /**
  * TRAK-351 (Season plan 3/18, Tarek 3 Nov): a player in Squad › Players opens as their own full page, with no list
- * beside it and a Back button. The page has its own address, so a reload or a link opens it directly. Back returns to
- * the list as it was left: the same position filter and the same scroll. Synthetic people.
+ * beside it. The page has its own address, so a reload or a link opens it directly. Going back returns to the list as
+ * it was left: the same position filter and the same scroll. TRAK-428: the trail is the one way back (the page had a
+ * Back button above it too). Synthetic people.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
@@ -48,9 +49,10 @@ beforeEach(() => {
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear(); vi.restoreAllMocks() })
 
 const view = () => screen.findByRole('region', { name: 'Players' })
+const trailTo = (name: string) => within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getByRole('link', { name })
 
 describe('TRAK-351 a player\'s full page', () => {
-  it('opens at its own address, alone: no list beside it, no Squad tabs, a Back button', async () => {
+  it('opens at its own address, alone: no list beside it, no Squad tabs, the trail as the one way back', async () => {
     const user = userEvent.setup()
     renderApp('/coach/squad')
     const panel = await view()
@@ -59,10 +61,11 @@ describe('TRAK-351 a player\'s full page', () => {
     expect(await within(panel).findByRole('region', { name: 'About Bo' })).toBeInTheDocument()
     expect(within(panel).queryByRole('list', { name: 'Players' })).toBeNull()
     expect(screen.queryByRole('radiogroup', { name: 'Squad view' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    expect(trailTo('Squad')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
   })
 
-  it('goes Back to the list as it was: the same filter and the same scroll', async () => {
+  it('goes back to the list as it was: the same filter and the same scroll', async () => {
     const user = userEvent.setup()
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     renderApp('/coach/squad')
@@ -74,7 +77,7 @@ describe('TRAK-351 a player\'s full page', () => {
     await within(panel).findByRole('region', { name: 'About Bo' })
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
 
-    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(trailTo('Squad'))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
     const list = await within(panel).findByRole('list', { name: 'Players' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
@@ -82,12 +85,12 @@ describe('TRAK-351 a player\'s full page', () => {
     await waitFor(() => expect(scrollTo).toHaveBeenLastCalledWith({ top: 640 }))
   })
 
-  it('opens straight from its address, and Back then goes to the squad', async () => {
+  it('opens straight from its address, and the trail then goes to the squad', async () => {
     const user = userEvent.setup()
     renderApp('/coach/squad/player/sq-cy')
     const panel = await view()
     expect(await within(panel).findByRole('region', { name: 'About Cy' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(trailTo('Squad'))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
     expect(await within(panel).findByRole('list', { name: 'Players' })).toBeInTheDocument()
   })
@@ -98,7 +101,9 @@ describe('TRAK-351 a player\'s full page', () => {
     const panel = await view()
     expect(await within(panel).findByText("We couldn't find that player. They may have been removed from your squad.")).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    // TRAK-428: the trail stays the way back, ending at the page's name in the laptop's top bar.
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb trail' })
+    expect(within(trail).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Squad', 'Player'])
   })
 
   it('with one squad picked, a player from another squad points to All', async () => {
