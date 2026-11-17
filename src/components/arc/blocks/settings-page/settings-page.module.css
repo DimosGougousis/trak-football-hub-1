@@ -13,15 +13,17 @@
 .sidebarHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 12px; }
 .sidebarHead h1 { margin: 0; font-size: var(--text-base); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); outline: none; }
 .navList { display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
-.navItem { position: relative; isolation: isolate; display: flex; width: 100%; min-height: 36px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+.navItem { position: relative; isolation: isolate; display: flex; width: 100%; min-height: 36px; align-items: center; gap: 10px; border: 0; border-radius: var(--radius-pill); padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
 .navItem > svg { flex: none; color: var(--text-muted); transition: color var(--duration-fast) var(--ease-standard); }
-.navItem[aria-current], .navItem[aria-current] > svg { color: var(--foreground); }
+/* Trak (TRAK-477, Imad 17 Nov): the section in view looks like the tab shown on every other page (TRAK-431, the page
+   header's .indicator): a tinted pill with its word in the accent. */
+.navItem[aria-current], .navItem[aria-current] > svg { color: var(--accent-strong); }
 @media (hover: hover) and (pointer: fine) {
-  .navItem:hover, .navItem:hover > svg { color: var(--foreground); }
+  .navItem:not([aria-current]):hover, .navItem:not([aria-current]):hover > svg { color: var(--foreground); }
   .navItem:not([aria-current]):hover { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); }
 }
 .navItem:not([aria-current]):focus-visible { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); color: var(--foreground); }
-.highlight { position: absolute; z-index: -1; inset: 0; border: 1px solid var(--border); border-radius: inherit; background: var(--surface); box-shadow: var(--shadow-resting); }
+.highlight { position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: color-mix(in oklab, var(--accent) 14%, var(--surface)); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .9), var(--shadow-resting); }
 /* TRAK-406: a longer name in another language ("Πώς λειτουργεί το Trak") wraps to a second line instead of being cut. */
 .navLabel { flex: 1; min-width: 0; overflow-wrap: anywhere; text-wrap: balance; }
 .navDot { flex: none; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--accent); }
@@ -57,12 +59,13 @@
   .settings { grid-template-columns: minmax(0, 1fr); }
   /* Trak: on a phone the menu is a row of sections that stays at the top as the page scrolls. */
   .sidebar { position: sticky; top: 0; z-index: 6; gap: 8px; border-right: 0; border-bottom: 1px solid var(--border); padding: 10px 0 8px; background: color-mix(in oklab, var(--surface) 92%, transparent); backdrop-filter: blur(12px); }
-  .sidebar nav { position: static; }
+  /* TRAK-477: the sections sit in one pill, as the page header's tabs (.track); the row scrolls when the pill is wider. */
+  .sidebar nav { position: static; overflow-x: auto; padding-inline: 20px; scrollbar-width: none; }
+  .sidebar nav::-webkit-scrollbar { display: none; }
   .sidebarHead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .navList { flex-direction: row; gap: 2px; overflow-x: auto; padding: 2px 8px; scrollbar-width: none; }
-  .navList::-webkit-scrollbar { display: none; }
+  .navList { display: inline-flex; flex-direction: row; gap: 2px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface); box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), var(--shadow-resting); }
   .navList > li { flex: none; }
-  .navItem { min-height: 36px; gap: 6px; padding: 0 14px; }
+  .navItem { min-height: 32px; gap: 6px; padding: 0 16px; }
   .navItem > svg { display: none; }
   .main { padding: 0 20px 24px; }
   .pane { scroll-margin-top: 64px; }
