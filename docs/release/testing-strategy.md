@@ -15,7 +15,7 @@ A PR proves its own acceptance criteria, and nothing else is rerun on every merg
 
 1. Each PR defines test cases for its own acceptance criteria only. The agent drafts them from the problem the PR solves, not from the history of the area.
 2. Agents never generate, keep or delete old test cases on their own. Cleanup happens only when a person asks for it.
-3. Layout and dimension checks (the desktop spacing Imad found) get one dedicated PR that fixes them for every screen once, so they stop failing for unrelated changes.
+3. Layout and dimension checks are fixed once, not per PR. The desktop spacing Imad found was fixed for every screen by [TRAK-464](https://linear.app/trak-football/issue/TRAK-464) (#642, #658), so [TRAK-473](https://linear.app/trak-football/issue/TRAK-473) was canceled. A layout problem found later gets its own bug issue.
 
 ## Not built yet
 
