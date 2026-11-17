@@ -35,9 +35,9 @@ jobs:
       VITE_SENTRY_DSN: ''
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -90,7 +90,7 @@ jobs:
         run: node scripts/merge-gate-evidence.mjs record
 
       - name: Preserve merge-gate proof
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: merge-gate-proof-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/merge-gate-proof.json
@@ -106,8 +106,8 @@ jobs:
       actions: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Match the final PR test proof to main
@@ -170,7 +170,7 @@ jobs:
       PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Unlike the Vercel job, a missing credential here FAILS rather than
       # skips. A silent skip on main is precisely how a change quietly does not
@@ -193,7 +193,7 @@ jobs:
             exit 1
           fi
 
-      - uses: supabase/setup-cli@v2
+      - uses: supabase/setup-cli@v3
         with:
           version: 2.117.0
 
@@ -261,9 +261,9 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -393,7 +393,7 @@ jobs:
       # the preview URL is posted here instead.
       - name: Comment preview URL
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
