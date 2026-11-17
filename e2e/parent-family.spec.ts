@@ -264,7 +264,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await week.getByRole('button', { name: /Technical training/ }).click()
         await week.getByRole('button', { name: 'Details' }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
-        await expect(sheet.getByRole('button', { name: 'Published' })).toBeDisabled()
+        // TRAK-427 (#675): "Published" is Arc's pill, not a disabled button.
+        await expect(sheet.getByText('Published', { exact: true })).toBeVisible()
+        await expect(sheet.getByRole('button', { name: 'Published' })).toHaveCount(0)
         // TRAK-168: "Share" opens the phone's share sheet where there is one, else WhatsApp's link.
         const share = sheet.getByRole('link', { name: 'Share' }).or(sheet.getByRole('button', { name: 'Share' }))
         await expect(share).toBeVisible()
