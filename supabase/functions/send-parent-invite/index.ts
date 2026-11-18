@@ -56,6 +56,13 @@ serve(async (req) => {
           redirectTo, data: { invited_as: 'parent', invited_by: 'player', player_first_name: playerFirstName },
         });
       },
+      async labelAccount(email, metadata) {
+        // ponytail: one page of 1,000 accounts, as send-roster-invites; page through when prod passes that.
+        const { data: page } = await admin.auth.admin.listUsers({ perPage: 1000 });
+        const account = page?.users.find(user => user.email?.toLowerCase() === email.toLowerCase());
+        if (account) await admin.auth.admin.updateUserById(account.id, { user_metadata: metadata });
+        else console.warn('send-parent-invite: existing account not found for the sign-in email');
+      },
       async sendMagicLink(email, redirectTo) {
         return await publicAuth.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo, shouldCreateUser: false } });
       },
