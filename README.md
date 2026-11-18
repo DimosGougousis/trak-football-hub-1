@@ -110,17 +110,19 @@ the token needs only Edge Functions and Migrations. Required secrets:
 
 ### Email templates
 
-The four files in `email-templates/` equal the live Supabase templates as
-exported by Kostas on 8 October 2026 (after his 17:19 UTC dashboard fixes;
-TRAK-142). The dashboard is where they run: CI does not deploy them. Change a
-template in the dashboard and in its file together, in one PR.
+The four files in `email-templates/` are the live Supabase templates. Since
+TRAK-190 (design approved by Imad, words approved by Kostas, 17 Nov 2026) they
+use the same design as the event emails Trak sends itself
+(`supabase/functions/_shared/email-html.ts`). The dashboard is where they run:
+CI does not deploy them. Change a template in the dashboard and in its file
+together, in one PR.
 
 | File | Dashboard template | Subject |
 |---|---|---|
 | `invite-parent.html` | Invite user | `You're invited to Trak` |
-| `magic-link.html` | Magic link / OTP | `{{ if .Data.child_first_name }}{{ .Data.academy_name }} has added {{ .Data.child_first_name }} to Trak{{ else }}Your Trak sign-in code{{ end }}` |
-| `reset-password.html` | Reset password | `Reset your Password` |
-| `confirm-signup.html` | Confirm signup | `Confirm your Trak Account` |
+| `magic-link.html` | Magic link / OTP | `Sign in to Trak` |
+| `reset-password.html` | Reset password | `Reset your password` |
+| `confirm-signup.html` | Confirm signup | `Confirm your Trak account` |
 
 - **Invite, Magic Link and Reset Password** show `{{ .Token }}` and link only
   to `/auth/code`, where the person types the code. A one-click
@@ -131,6 +133,8 @@ template in the dashboard and in its file together, in one PR.
 - Go evaluates `{{ ... }}` actions even inside HTML comments, so never write
   one in a comment.
 
+`src/__tests__/email-design-trak190.test.ts` reads each template as a person
+would (filling in its `{{ }}` parts) and checks the approved words.
 `src/__tests__/email-templates.test.ts` fails if any file regains a
 `{{ .ConfirmationURL }}` or an `/auth/continue` link, if a code email links
 anywhere but `/auth/code`, or if a file contains non-ASCII characters (which

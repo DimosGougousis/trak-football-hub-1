@@ -7,8 +7,14 @@
 // replaced, because sendPlainEmail() refuses a whole email over one Google
 // Maps link, and is left out if it names a child in the squad (the calendar
 // feed's check, J8 check 6). The subject is never coach-typed (Imad, 10 Oct).
+//
+// TRAK-190 (design approved 17 Nov): each email also has a designed HTML part
+// with the same words, opening "Hello,". A change shows in the event box,
+// the old value crossed out and the new one marked (layout A); a
+// cancellation crosses out the date, time and place, keeping name and reason.
 import { namePatterns } from './ical-feed.ts';
 import { LINK, type PlainEmail } from './send-email.ts';
+import { emailDocument, esc, part } from './email-html.ts';
 
 /** The event fields an email talks about (trak_private.event_email_fields). */
 export interface EventFields {
@@ -51,6 +57,12 @@ export const whoToAsk = (several: boolean) =>
 export const cantMakeIt = (several: boolean) =>
   `If your child can't make it${several ? ' to any of these' : ''}, tap "Can't make it" in Trak so the coach knows.`;
 export const SEE_SCHEDULE = `See the full schedule: ${TRAK_URL}`;
+/** TRAK-190 (Kostas, 17 Nov): every email opens with "Hello,". */
+export const HELLO = 'Hello,';
+
+/** The words of one email, as HTML: a paragraph of lines, one per <br>. */
+export const linesHtml = (text: string) => text.split('\n').map(line =>
+  line === SEE_SCHEDULE ? `See the full schedule: ${part.link(TRAK_URL)}` : esc(line)).join('<br>');
 const SUBJECT_MAX = 150;
 
 /** Coach-typed text, safe to send: links replaced, one line, trimmed. */
@@ -208,6 +220,45 @@ function block({ notice, change }: Item, inList: boolean, sharedReason: boolean)
   return [...name, 'What changed:', ...change.lines, '', ...now].join('\n');
 }
 
+/** The same event as block(), as the designed box. */
+function blockHtml({ notice, change }: Item, inList: boolean, sharedReason: boolean): string {
+  const e = notice.event;
+  const b = notice.before;
+  const names = namePatterns(notice.child_names ?? []);
+  const day = (x: EventFields) => (inList ? shortDay(eventDate(x)) : longDay(eventDate(x)));
+  const kit = e.event_type === 'match' ? clean(e.kit, names) : '';
+  const reason = change.what === 'cancelled' && !sharedReason ? cancelReason(e, names) : null;
+  const name = inList || namedAlone(e, names) ? emailEventName(e, names) : null;
+  const rows: Parameters<typeof part.details>[0] = name ? [{ html: esc(name), strong: true }] : [];
+
+  if (change.what === 'changed') {
+    // Each value the family last saw that moved: old crossed out, new marked.
+    const swap = (was: string, now: string) => (was === now ? esc(now) : `${was ? part.was(esc(was)) : ''}${now ? part.now(esc(now)) : ''}`);
+    const venue = (x: EventFields) => clean(x.venue, names) || (withoutLinks(x.venue) ? 'see the Trak app' : '');
+    const venueMoved = withoutLinks(b.venue) !== withoutLinks(e.venue);
+    rows.push(`${swap(day(b), day(e))}, ${swap(spaced(timeRange(b)), spaced(timeRange(e)))}`);
+    const where = venueMoved ? swap(venue(b), venue(e)) : esc(clean(e.venue, names));
+    if (where) rows.push(where);
+    const meet = swap(hhmm(b.meet_time) ?? '', hhmm(e.meet_time) ?? '');
+    if (meet) rows.push(`Please arrive by ${meet}`);
+    if (kit) rows.push(`Kit: ${esc(kit)}`);
+    return part.details(rows);
+  }
+
+  const off = change.what === 'cancelled';
+  const venue = clean(e.venue, names);
+  const meet = hhmm(e.meet_time);
+  rows.push({ html: esc(`${day(e)}, ${spaced(timeRange(e))}`), off });
+  if (venue) rows.push({ html: esc(venue), off });
+  if (!off && meet) rows.push(`Please arrive by ${esc(meet)}`);
+  if (!off && kit) rows.push(`Kit: ${esc(kit)}`);
+  if (reason) rows.push({ html: esc(`Reason: ${reason}`), strong: true, gap: true });
+  return part.details(rows);
+}
+
+/** "Your coach has CANCELLED a match.", CANCELLED in red. */
+const openerHtml = (opener: string) => part.lead(esc(opener).replace('CANCELLED', part.danger('CANCELLED')));
+
 const MAX_LISTED = 5;
 
 const oneLine = (text: string) => {
@@ -251,6 +302,7 @@ export function composeEventEmail(to: string, notices: ClaimedNotice[]): PlainEm
   }
 
   let room = MAX_LISTED;
+  const htmlBody: string[] = [];
   const body = sections.flatMap(({ what, items: these }) => {
     const shown = these.slice(0, Math.max(room, 0));
     room -= shown.length;
@@ -263,18 +315,24 @@ export function composeEventEmail(to: string, notices: ClaimedNotice[]): PlainEm
     const reasons = what === 'cancelled' && these.length > 1
       ? these.map(item => cancelReason(item.notice.event, namePatterns(item.notice.child_names ?? []))) : [];
     const shared = reasons.length && reasons[0] && reasons.every(r => r === reasons[0]) ? reasons[0] : null;
+    htmlBody.push(
+      openerHtml(opener),
+      ...shown.map(item => blockHtml(item, !single, !!shared)),
+      ...(shared ? [part.p(`<strong>${esc(`Reason: ${shared}`)}</strong>`)] : []),
+    );
     return [opener, ...shown.map(item => block(item, !single, !!shared)), ...(shared ? [`Reason: ${shared}`] : [])];
   });
   const hidden = items.length - Math.min(items.length, MAX_LISTED);
+  const more = hidden ? [`...and ${hidden} more. See them all in Trak.`] : [];
 
   const attending = items.some(item => item.change.what !== 'cancelled');
   const canMakeIt = attending ? [cantMakeIt(!single)] : [];
-  const text = [
-    ...body,
-    ...(hidden ? [`...and ${hidden} more. See them all in Trak.`] : []),
-    [...canMakeIt, SEE_SCHEDULE].join('\n'),
-    IN_THIS_SQUAD,
-    whoToAsk(!single),
-  ].join('\n\n');
-  return { to, subject: oneLine(subject), text };
+  const closing = [...canMakeIt, SEE_SCHEDULE].join('\n');
+  const foot = [IN_THIS_SQUAD, whoToAsk(!single)];
+  const text = [HELLO, ...body, ...more, closing, ...foot].join('\n\n');
+  const html = emailDocument(
+    [part.p(HELLO), ...htmlBody, ...more.map(line => part.p(esc(line))), part.p(linesHtml(closing))].join('\n'),
+    foot.map(linesHtml),
+  );
+  return { to, subject: oneLine(subject), text, html };
 }
