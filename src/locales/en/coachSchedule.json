@@ -307,5 +307,15 @@
   "fxSideAway": "away",
   "nothingPlanned": "Nothing planned",
   "addWithPlus": "Use + to add an event.",
-  "addWithCreate": "Use Create to add an event."
+  "addWithCreate": "Use Create to add an event.",
+  "draftsWaiting_one": "{{count}} draft not published yet",
+  "draftsWaiting_other": "{{count}} drafts not published yet",
+  "reviewDrafts": "Review",
+  "reviewDraftsTitle": "Drafts not published yet",
+  "reviewDraftsHelp": "Families see none of these until you publish them. Untick any that aren’t ready.",
+  "noDraftsLeft": "Every event coming up is published.",
+  "publishCount": "Publish {{count}}",
+  "publishedSome": "Published {{done}} of {{count}}. The rest are still drafts: tap Publish to try them again.",
+  "couldntPublishDrafts": "Nothing was published. Check your connection and tap Publish again.",
+  "reviewAndPublish": "Review and publish"
 }

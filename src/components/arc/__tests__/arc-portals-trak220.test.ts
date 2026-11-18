@@ -44,7 +44,9 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
     // TRAK-340: the planner's Add a part, Find another drill (TRAK-404) and View drill. TRAK-298: a training's Who's here and log.
     // TRAK-391: a Library drill's Add to training.
     // TRAK-353: a player's position, roles and Can also play. TRAK-354: a player's objectives. TRAK-357: New formation and Rename. TRAK-360: Use for matches. TRAK-365: a stuck objective's choices.
-    expect(files.sort()).toEqual(['src/components/coach/CoachWeekStrip.tsx', 'src/components/coach/games/LineUpAndJobs.tsx',
+    expect(files.sort()).toEqual(['src/components/coach/CoachWeekStrip.tsx',
+      'src/components/coach/DraftsReview.tsx', // TRAK-154: Events' drafts to publish.
+      'src/components/coach/games/LineUpAndJobs.tsx',
       'src/components/coach/season-plan/PlayerObjectivesSheet.tsx', 'src/components/coach/season-plan/StuckSheet.tsx',
       'src/components/coach/squad/PlayerFactsEditor.tsx', 'src/components/coach/squad/PositionAndRolesSheet.tsx',
       'src/components/coach/squad/formations/NameSheet.tsx', 'src/components/coach/squad/formations/UseForMatchesSheet.tsx',

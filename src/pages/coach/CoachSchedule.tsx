@@ -30,6 +30,8 @@ import {
 } from '@/lib/coach-events'
 import { TRAINING_THEMES, catalogueLink, type TrainingTheme } from '@/lib/training-theme'
 import { FixtureImport } from '@/components/coach/FixtureImport'
+import { DraftsReviewSheet, DraftsStrip } from '@/components/coach/DraftsReview'
+import { publishDrafts, upcomingDrafts } from '@/lib/draft-review'
 import { useOldLogRetired } from '@/components/coach/old-log'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { Calendar } from '@/components/arc/calendar/calendar'
@@ -126,6 +128,8 @@ type Sheet =
   | { kind: 'notPublished'; count: number; weeks: ClashingWeek[]; refusal: string }
   | { kind: 'import' }
   | { kind: 'register'; row: EventRow }
+  // TRAK-154: every draft to come, ticked (or only an import's), published in one tap.
+  | { kind: 'drafts'; ticked: string[] | null; problem: string | null }
 
 /** TRAK-218: the weeks of a refused series that clash, earliest first. */
 type ClashingWeek = { date: string; clash: Clash }
@@ -151,6 +155,7 @@ export default function CoachSchedule() {
   const locked = (error: unknown) => lockedMessage(error) && t('coachSchedule:startedLocked')
   const games = useFeature('games')
   const trainingOn = useFeature('training')
+  const eventsOn = useFeature('events')
   const { retired: oldLogRetired } = useOldLogRetired()
   // TRAK-289: a published evaluation is final, so its match opens the review, never the match log's editor.
   const evaluations = useGameEvaluations(games)
@@ -273,6 +278,9 @@ export default function CoachSchedule() {
   const clashes = useMemo(() => draftClashes(coachEvents), [coachEvents])
   // TRAK-129 (J8.6): fixtures already on the schedule are skipped on import.
   const fixtureKeys = useMemo(() => scheduleFixtureKeys(calEvents), [calEvents])
+  // TRAK-154: the drafts still to come, in the squads in view.
+  const drafts = useMemo(() => upcomingDrafts(calEvents), [calEvents])
+  const [publishing, setPublishing] = useState(false)
 
   // Index events by date string for fast lookup
   const byDate = useMemo<Record<string, CalEvent[]>>(() => {
@@ -399,6 +407,26 @@ export default function CoachSchedule() {
     // its register (Who's here) on its own page.
     if (evaluate) return navigate(kind === 'training' ? `/coach/training/${ids[0]}/here` : `/coach/matches/${ids[0]}?tab=evaluation`)
     publishedToast(ids.length > 1 ? t('coachSchedule:publishedMany', { count: ids.length }) : t('coachHome:publishedToSquad'), ids.length === 1 && kind === 'match' ? ids[0] : undefined)
+  }
+
+  /** TRAK-154: Review's Publish. "Published 12" only when the database confirms 12; otherwise the rest stay ticked. */
+  const publishTicked = async (ids: string[]) => {
+    if (parked) return comingSoon()
+    setPublishing(true)
+    const { published, error } = await publishDrafts(ids)
+    const rows = await loadData()
+    setPublishing(false)
+    const refusal = clashMessage(error)
+    if (refusal) { setSheet({ kind: 'notPublished', count: ids.length, weeks: clashingWeeks(ids, rows ?? []), refusal }); return }
+    if (published.length > 0) askToEmailFamilies() // TRAK-135
+    if (published.length === ids.length) {
+      setSheet({ kind: 'closed' })
+      publishedToast(ids.length > 1 ? t('coachSchedule:publishedMany', { count: ids.length }) : t('coachHome:publishedToSquad'))
+      return
+    }
+    setSheet({ kind: 'drafts', ticked: ids.filter(id => !published.includes(id)), problem: published.length
+      ? t('coachSchedule:publishedSome', { done: published.length, count: ids.length })
+      : locked(error) || t('coachSchedule:couldntPublishDrafts') })
   }
 
   const publish = async (row: EventRow) => {
@@ -548,7 +576,10 @@ export default function CoachSchedule() {
     const rows = fixtureInsertRows(fixtures, user.id).map(row => ({ ...row, squad: coachSquad.squad }))
     const { data, error } = await supabase.from('coach_calendar_events').insert(rows).select('id')
     if (error || (data?.length ?? 0) !== rows.length) throw new Error(t('coachSchedule:couldntSaveFixtures'))
-    toast.success(t('coachSchedule:addedFixtures', { count: rows.length }))
+    // TRAK-154: imports stay drafts first; the message offers this import's fixtures, ticked, to publish.
+    const ids = data!.map(row => row.id as string)
+    toast.success(t('coachSchedule:addedFixtures', { count: rows.length }), { duration: 10_000,
+      action: { label: t('coachSchedule:reviewAndPublish'), onClick: () => setSheet({ kind: 'drafts', ticked: ids, problem: null }) } })
     await loadData()
   }
 
@@ -580,6 +611,9 @@ export default function CoachSchedule() {
         </div>
 
         {loadFailed && <LoadError what={t('coachSchedule:scheduleWhat')} onRetry={retry} retrying={retrying} />}
+
+        {eventsOn && <DraftsStrip count={drafts.length}
+          onReview={() => (parked ? comingSoon() : setSheet({ kind: 'drafts', ticked: null, problem: null }))} />}
 
         {/* TRAK-252: on a coach's laptop the month and the chosen day stand side by side. */}
         <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
@@ -883,6 +917,12 @@ export default function CoachSchedule() {
             <FixtureImport existingKeys={fixtureKeys} onConfirm={importFixtures} />
           </div>
         </div>
+      )}
+
+      {/* ── Drafts to publish (TRAK-154, J8.6) ────────────────────────────── */}
+      {sheet.kind === 'drafts' && (
+        <DraftsReviewSheet key={sheet.ticked?.join() ?? 'all'} drafts={drafts} ticked={sheet.ticked} problem={sheet.problem}
+          publishing={publishing} onClose={() => setSheet({ kind: 'closed' })} onPublish={ids => void publishTicked(ids)} />
       )}
 
       {/* ── Register sheet (TRAK-138, J8.15) ──────────────────────────────── */}
