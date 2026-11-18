@@ -117,10 +117,16 @@ const minutes = (hhmm: string) => {
   return h * 60 + m
 }
 
+/** The club's name as typed, without a leading "vs", "vs." or "v": coaches type
+ *  "vs Marbella FC", and the title adds its own "vs" (TRAK-299). */
+export function opponentName(typed: string): string {
+  return typed.trim().replace(/^vs?(?:\.|\s+|$)\s*/i, '')
+}
+
 /** What the event is: a match's opponent, an "other" event's name. The Schedule
  *  form's first step checks only this (TRAK-182); formProblem() checks it too. */
 export function whatProblem(form: EventForm): string | null {
-  if (form.kind === 'match' && !form.opponent.trim()) return i18n.t('coachSchedule:problemOpponent')
+  if (form.kind === 'match' && !opponentName(form.opponent)) return i18n.t('coachSchedule:problemOpponent')
   if (form.kind === 'other' && !form.title.trim()) return i18n.t('coachSchedule:problemWhat')
   return null
 }
@@ -162,7 +168,7 @@ export function pastDateProblem(date: string, today: string, originalDate?: stri
 export function eventTitle(form: EventForm): string {
   const typed = form.title.trim()
   if (typed) return typed
-  if (form.kind === 'match') return `vs ${form.opponent.trim()}`
+  if (form.kind === 'match') return `vs ${opponentName(form.opponent)}`
   return 'Training'
 }
 
@@ -192,7 +198,7 @@ export function formToRow(form: EventForm) {
     end_time,
     venue: form.venue.trim() || null,
     meet_time: form.meetTime ? `${form.meetTime}:00` : null,
-    opponent: isMatch ? form.opponent.trim() : null,
+    opponent: isMatch ? opponentName(form.opponent) : null,
     home_away: isMatch && form.homeAway ? form.homeAway : null,
     // TRAK-161: kit and the family note on every kind of event.
     kit: form.kitSnapshot ? describeEventKit(form.kitSnapshot) : form.kit.trim() || null,
