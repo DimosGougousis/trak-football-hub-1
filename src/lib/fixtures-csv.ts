@@ -1,4 +1,5 @@
 import { isRealCalendarDate } from './calendar'
+import { opponentName } from './coach-events'
 
 /**
  * League fixtures from a CSV file (J8.6, TRAK-129).
@@ -202,6 +203,8 @@ export function validateFixture(values: FixtureValues, line: number, monthFirstF
   problems: string[]
 } {
   const v = Object.fromEntries(FIELDS.map(f => [f, (values[f] ?? '').trim()])) as FixtureValues
+  // Read as the form saves it, so the preview and a re-import's key match the saved row (TRAK-299).
+  v.opponent = opponentName(v.opponent)
   const problems: string[] = []
 
   const date = readDate(v.date, monthFirstFile)

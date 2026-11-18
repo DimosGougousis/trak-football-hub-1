@@ -13,7 +13,7 @@ import { matchRating } from '@/lib/match-rating'
 import { trackEvent } from '@/lib/telemetry'
 import { validateMatchInput, teamGoalsViolation, teamAssistsViolation, MATCH_LIMITS } from '@/lib/match-input-rules'
 import { localTodayISO } from '@/lib/event-time'
-import { dateAsDay, dayAsDate } from '@/lib/coach-events'
+import { dateAsDay, dayAsDate, opponentName } from '@/lib/coach-events'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { TRAINING_FOCUS, trainingTypeFrom } from '@/lib/training-focus'
 import { trainingNotes, trainingTitle } from '@/lib/session-form'
@@ -370,7 +370,7 @@ export default function CoachAddSession() {
   // A failed roster is not an empty one: saving now would drop the players
   // the coach took (Tarek's #126 re-review).
   const canSave = !saving && !rosterLoading && !rosterFailed && !futureDate && incompleteRecords.length === 0 && impossibleRecords.length === 0 && !teamGoalsError && !teamAssistsError && (
-    isMatch    ? opponent.trim().length > 0 && scoreUs !== '' && scoreThem !== ''
+    isMatch    ? opponentName(opponent).length > 0 && scoreUs !== '' && scoreThem !== ''
     : type === 'training' ? trainingFocus.size > 0
     : title.trim().length > 0
   )
@@ -382,7 +382,7 @@ export default function CoachAddSession() {
   const stepName = labels[step]
   // What the first step still needs, said under Next rather than left to guess.
   const firstStepMissing = isMatch
-    ? (!opponent.trim() || scoreUs === '' || scoreThem === '' ? 'Add the opponent and the score.' : null)
+    ? (!opponentName(opponent) || scoreUs === '' || scoreThem === '' ? 'Add the opponent and the score.' : null)
     : type === 'training' ? (trainingFocus.size === 0 ? 'Select a session focus.' : null)
     : (!title.trim() ? 'Add a title.' : null)
   const rosterReady = !rosterLoading && !rosterFailed
@@ -395,7 +395,7 @@ export default function CoachAddSession() {
   const firstNames = (players: SquadPlayer[]) => players.map(p => p.player_name.split(' ')[0]).join(', ')
   const played = squad.filter(p => details[p.id]?.played)
   const summary: [string, string][] = isMatch ? [
-    ['Opponent', opponent.trim()],
+    ['Opponent', opponentName(opponent)],
     ['Score', result ? `${RESULT_WORD[result]} ${scoreUs}–${scoreThem}` : ''],
     ['Competition', competition],
     ['Venue', venue],
@@ -423,7 +423,7 @@ export default function CoachAddSession() {
     setSaving(true)
 
     const sessionTitle = isMatch
-      ? `vs ${opponent.trim()}`
+      ? `vs ${opponentName(opponent)}`
       : type === 'training'
         ? trainingTitle(trainingFocus, title)
         : title.trim()
@@ -452,7 +452,7 @@ export default function CoachAddSession() {
       const newAssists = toWrite.reduce((sum, p) => sum + details[p.id].assists, 0)
       const { data: clash, error: clashErr } = await supabase.rpc('coach_match_score_clash', {
         p_match_date: date,
-        p_opponent: opponent.trim(),
+        p_opponent: opponentName(opponent),
         p_team_score: Number(scoreUs) || 0,
         p_opponent_score: Number(scoreThem) || 0,
         p_goals: newGoals,
@@ -577,7 +577,7 @@ export default function CoachAddSession() {
         // silence got more dangerous, not less.
         const { error: rpcErr } = await supabase.rpc('log_match_for_player', {
           p_user_id:         p.linked_player_id!,
-          p_opponent:        opponent.trim(),
+          p_opponent:        opponentName(opponent),
           p_team_score:      Number(scoreUs)   || 0,
           p_opponent_score:  Number(scoreThem) || 0,
           p_competition:     competition,
