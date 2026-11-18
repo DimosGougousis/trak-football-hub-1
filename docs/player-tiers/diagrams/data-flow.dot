@@ -1,0 +1,64 @@
+// Player Tiers — data flow: inputs -> transformations -> stores -> outputs
+digraph dataflow {
+  rankdir=LR;
+  node [fontname="Helvetica"];
+
+  // inputs
+  node [shape=parallelogram];
+  in_test    [label="Coach-signed test result"];
+  in_drill   [label="Self-logged drill"];
+  in_msg     [label="Coach message"];
+  in_consent [label="Parent consent / opt-ins"];
+  in_pay     [label="Stripe payment event"];
+  in_wear    [label="Wearable sync (Premium)"];
+  in_clip    [label="Curated import: YouTube link + MCQ test (Premium)"];
+
+  // transformations
+  node [shape=box, style=rounded];
+  t_attr   [label="Attribute update\n(only path that writes attributes)"];
+  t_xp     [label="XP + Skill Tree progress\n(daily XP cap, auto streak freeze)"];
+  t_route  [label="Recipient rule\nadd parent(s), reject private 1:1"];
+  t_ent    [label="Tier resolution\nbasic | premium"];
+  t_trend  [label="Trend calc\n(display only, never attributes)"];
+  t_quiz   [label="Answer scoring\n(XP under cap, no attributes)"];
+  t_week   [label="Weekly feed aggregation\n+ weekly-active-players metric"];
+
+  // stores
+  node [shape=cylinder];
+  st_prog  [label="progression\n(attributes, XP, badges)"];
+  st_msg   [label="messages"];
+  st_cons  [label="roster + consent"];
+  st_ent   [label="entitlements"];
+  st_dev   [label="device data"];
+  st_clip  [label="video library\n(IDs, metadata, quizzes; no files)"];
+  st_audit [label="audit log"];
+  st_evt   [label="analytics events\n(drill_logged, test_signed, tier_changed)"];
+
+  // outputs
+  node [shape=note];
+  o_card  [label="Player Card (player app)"];
+  o_feed  [label="Parent weekly feed"];
+  o_up    [label="Upgrade prompt (parent only)"];
+  o_dash  [label="Coach roster view"];
+  o_metric[label="weekly-active-players\n(analytics/metrics.md)"];
+
+  in_test -> t_attr -> st_prog;
+  t_attr -> st_audit;
+  in_drill -> t_xp -> st_prog;
+  in_drill -> st_evt;
+  in_test -> st_evt;
+  in_msg -> t_route -> st_msg; t_route -> st_audit;
+  st_cons -> t_route;
+  in_consent -> st_cons; in_consent -> st_audit;
+  in_pay -> t_ent -> st_ent; t_ent -> st_evt;
+  in_wear -> st_cons [label="opt-in check", style=dashed];
+  in_wear -> st_dev -> t_trend;
+  in_clip -> st_clip -> t_quiz -> st_prog;
+
+  st_prog -> o_card; t_trend -> o_card;
+  st_prog -> t_week; st_msg -> t_week; st_evt -> t_week;
+  t_week -> o_feed; t_week -> o_metric;
+  st_prog -> o_up [label="first milestone"];
+  st_ent -> o_up [label="basic only"];
+  st_prog -> o_dash; st_dev -> o_dash;
+}

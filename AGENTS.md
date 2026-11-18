@@ -48,6 +48,8 @@ explicitly open; an issue being Done does not prove a newer requirement passed.
 | Backend permissions and RPCs | `supabase/migrations/` in filename order |
 | Pilot operations and recovery | `docs/pilot-runbook.md`, `docs/release/s5-restore-rehearsal.md` |
 | Use-case contracts | `docs/use-cases/registry.yaml`, `docs/use-cases/OPEN-QUESTIONS.md` |
+| Player Tiers plans, ADRs and research | `docs/player-tiers/README.md` |
+| Player Tiers backend (Java 21, Spring Boot; separate from the React/Supabase app, not built or deployed by CI) | `services/player-tiers-app/README.md` |
 
 Read the actual route and its callers before editing a component.
 `CoachQuickMatchLog` is not the routed J4 match entry. `/coach/quick-assess`

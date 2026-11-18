@@ -1,0 +1,16 @@
+# Player Tiers entitlements (Product Office ProposedSolution.md, Interface Contracts).
+# Prices are what parents see in their account; Stripe price ids decide what is charged.
+# No plan may write progression (ADR-002): the loader refuses any other value.
+plans:
+  basic:
+    price_eur: 9.00
+    features: [skill_tree, player_card, drills, coach_feedback, parent_feed]
+  premium:
+    price_eur: 29.99
+    features: [skill_tree, player_card, drills, coach_feedback, parent_feed,
+               video_library, wearable_sync, advanced_analytics]
+flags:
+  video_library: { enabled: true }
+  wearable_sync: { enabled: true }
+rules:
+  progression_write_by_entitlement: false

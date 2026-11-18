@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: player-tiers-app
+  flyway:
+    enabled: true
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: always
+
+tiers:
+  jwt:
+    # HS256 signing secret for API tokens (at least 32 bytes). No default on purpose:
+    # the app refuses to start without TIERS_JWT_SECRET, so no deployment can run on
+    # a secret committed to this repository.
+    secret: ${TIERS_JWT_SECRET}
+  consent:
+    # Age at which a player may be onboarded without the academy's consent reference.
+    # Left unset on purpose: onboarding fails closed (422 consent_required) until an
+    # environment sets it. Greece = 15 (Law 4624/2019 Art. 21), set in application-prod.yml.
+    min-age-without-verified-consent:
+  xp:
+    daily-cap: 300
+    per-drill: 30
+    # Drills older than this are refused, so XP, streaks and weekly-active-players
+    # cannot be backfilled. 72 hours lets a weekend's drills be logged on Monday.
+    max-backdate-hours: 72
+  # Premium feature flags. Switching one off (e.g. tiers.flags.wearable_sync=false)
+  # removes the feature from Premium with no code change; its data is kept.
+  flags: {}
+  billing:
+    stripe:
+      # Test mode only (ADR-005): the app refuses a live key unless allow-live-keys is true.
+      # Empty means billing is not configured; checkout then returns 503.
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      basic-price-id: ${STRIPE_BASIC_PRICE_ID:}
+      premium-price-id: ${STRIPE_PREMIUM_PRICE_ID:}
+      success-url: ${STRIPE_SUCCESS_URL:}
+      cancel-url: ${STRIPE_CANCEL_URL:}
+      allow-live-keys: false

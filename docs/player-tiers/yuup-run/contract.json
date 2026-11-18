@@ -1,0 +1,45 @@
+{
+  "run_id": "yuup-2026-11-18-player-tiers",
+  "goal": "Turn the Monetizing Athletic Progression deck into an implementable tier spec: the recommended features per tier (Basic, Standard, Premium) and the mandatory Coach-to-Player connections the platform must establish",
+  "inputs": [
+    "pipeline/active/yuup-2026-11-18-player-tiers/deck-extract.md",
+    "pipeline/active/yuup-2026-11-18-player-tiers/research.md",
+    "pipeline/active/yuup-2026-11-18-player-tiers/context-manifest.md"
+  ],
+  "output": "pipeline/active/yuup-2026-11-18-player-tiers/player-tiers-spec.md",
+  "constraints": [
+    "Write only player-tiers-spec.md (process-designer) and research.md (research); edit no other file",
+    "Feature matrix table header is exactly: | Feature | Deck ref | Basic | Standard | Premium |",
+    "Connections table header is exactly: | ID | Connection | Direction | Data | Trigger | Tiers | Safeguard |",
+    "No pay-to-win: no tier may let money buy XP, Coach Coins, attribute points or badges (deck S8)",
+    "Players are minors: every connection names its safeguard (consent, visibility, no private 1:1 adult-minor channel)",
+    "Recommendations beyond the deck are marked as such and cite research.md"
+  ],
+  "done_when": [
+    {
+      "id": "AC-1",
+      "criterion": "Every feature the deck names appears as a matrix row citing its slide",
+      "check": "python pipeline/active/yuup-2026-11-18-player-tiers/check_spec.py --trace"
+    },
+    {
+      "id": "AC-2",
+      "criterion": "The matrix has >= 15 rows with a value for all three tiers, and each tier has its own section",
+      "check": "python pipeline/active/yuup-2026-11-18-player-tiers/check_spec.py --tiers"
+    },
+    {
+      "id": "AC-3",
+      "criterion": ">= 6 mandatory Coach-Player connections, each with id, direction, data, trigger, tiers and safeguard",
+      "check": "python pipeline/active/yuup-2026-11-18-player-tiers/check_spec.py --connections"
+    },
+    {
+      "id": "AC-4",
+      "criterion": "Every link in the spec resolves",
+      "check": "python scripts/yuup-check-links.py pipeline/active/yuup-2026-11-18-player-tiers/player-tiers-spec.md"
+    },
+    {
+      "id": "AC-5",
+      "criterion": "The deck's guardrails become enforceable rules, the deck's inconsistencies (price, decoy vs discount, missing coach actor) are resolved with a recommendation, and the connections are justified by tier features that depend on them",
+      "check": "judgement"
+    }
+  ]
+}

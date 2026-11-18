@@ -1,0 +1,63 @@
+// Player Tiers — component diagram (Approach A: modular monolith)
+digraph component {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontname="Helvetica"];
+
+  subgraph cluster_clients {
+    label="Clients";
+    player_app  [label="Player app (mobile)\nno prices, no billing"];
+    coach_app   [label="Coach app (mobile/web)"];
+    parent_web  [label="Parent web account\nbilling, consent, feed"];
+    academy_adm [label="Academy admin (web)"];
+  }
+
+  subgraph cluster_backend {
+    label="Backend — modular monolith (Java/Spring)";
+    gateway      [label="API gateway\nJWT + role + entitlement check"];
+    identity     [label="Identity & Roles\nplayer / parent / coach / admin"];
+    verification [label="Coach Verification\nstatus + expiry (REQ-001)"];
+    roster       [label="Roster & Consent\ncoach onboarding, academy consent ref,\nparent notify + revoke"];
+    progression  [label="Progression\nPlayer Card, Skill Tree, XP, Coach Coins\n(only coach-signed tests write attributes)"];
+    messaging    [label="Messaging\nparent always copied (REQ-003)"];
+    feed         [label="Parent Feed\nweekly summary, milestone events"];
+    entitlements [label="Entitlements\nPricing4YAML: basic | premium"];
+    billing      [label="Billing\nStripe, parent-only (REQ-005)"];
+    premium_v    [label="Premium Video Library\ncurated YouTube IDs +\nmultiple-choice tests (import)", style="rounded,dashed"];
+    premium_w    [label="Premium Wearables\nopt-in ingest, trends only", style="rounded,dashed"];
+    audit        [label="Audit log\nattribute changes, messages, consent"];
+    events       [label="Event bus (in-process)"];
+  }
+
+  subgraph cluster_external {
+    label="External";
+    stripe    [label="Stripe", shape=component];
+    youtube   [label="YouTube Data API\n+ embedded player", shape=component];
+    wearable  [label="Whoop / Fitbit API\n(WearableVendor adapters)", shape=component];
+    email     [label="Email / push", shape=component];
+  }
+
+  db [label="PostgreSQL", shape=cylinder];
+
+  player_app -> gateway; coach_app -> gateway; parent_web -> gateway; academy_adm -> gateway;
+  gateway -> identity; gateway -> entitlements;
+  gateway -> roster; gateway -> progression; gateway -> messaging; gateway -> feed;
+  gateway -> billing; gateway -> premium_v; gateway -> premium_w; gateway -> verification;
+
+  roster -> verification [label="link needs active coach"];
+  progression -> roster [label="coach must be on roster"];
+  messaging -> roster [label="parent recipients"];
+  premium_v -> entitlements; premium_w -> entitlements;
+  premium_w -> roster [label="parent opt-in per data type"];
+  billing -> entitlements [label="sets tier"];
+  billing -> stripe;
+  premium_v -> youtube [label="lookup + nightly check"];
+  player_app -> youtube [label="IFrame embed", style=dashed];
+  premium_w -> wearable;
+
+  progression -> events; messaging -> events; billing -> events; roster -> events;
+  events -> feed; events -> audit;
+  feed -> email;
+
+  identity -> db; roster -> db; verification -> db; progression -> db;
+  messaging -> db; entitlements -> db; billing -> db; audit -> db; premium_w -> db; premium_v -> db;
+}

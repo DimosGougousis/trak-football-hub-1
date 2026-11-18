@@ -1,0 +1,4 @@
+# Production settings for the partner academy in Greece (OQ-1, OQ-7 answered 2026-11-18).
+tiers:
+  consent:
+    min-age-without-verified-consent: 15   # Greece, Law 4624/2019 Art. 21 (GDPR Art. 8)

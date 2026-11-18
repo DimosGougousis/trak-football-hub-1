@@ -1,0 +1,25 @@
+// Player Tiers — primary flow: onboarding to first coach-signed progress to parent upgrade prompt
+digraph sequence {
+  rankdir=TB;
+  node [shape=box, style=rounded, fontname="Helvetica"];
+  edge [fontname="Helvetica", fontsize=10];
+
+  s1  [label="1. Academy admin invites coach"];
+  s2  [label="2. Coach Verification records check + expiry\n(no active check -> stop)"];
+  s3  [label="3. Coach onboards player directly\n(parent email + academy consent ref) -> link active"];
+  s4  [label="4. Link attaches to the academy-onboarded parent;\nparent notified; player has Basic; parent can revoke"];
+  s5  [label="5. Player app activated (no prices shown)"];
+  s6  [label="6. Coach assigns Skill Tree drills"];
+  s7  [label="7. Player logs drill -> XP only (no attribute change)"];
+  s8  [label="8. Coach runs academy test and signs result"];
+  s9  [label="9. Progression updates Player Card attributes\n-> audit log"];
+  s10 [label="10. Coach sends feedback -> parent copied automatically"];
+  s11 [label="11. First Skill Tree milestone reached"];
+  s12 [label="12. Upgrade prompt sent to PARENT only (email/web)"];
+  s13 [label="13. Parent upgrades to Premium ($29.99) on web"];
+  s14 [label="14. Entitlements = premium; player gets YouTube library + quizzes;\nparent opts in to wearables"];
+  s15 [label="15. Weekly parent feed: drills, XP, tests, coach notes"];
+
+  s1 -> s2 -> s3 -> s4 -> s5 -> s6 -> s7 -> s8 -> s9 -> s10 -> s11 -> s12 -> s13 -> s14 -> s15;
+  s7 -> s15 [style=dashed, label="weekly"];
+}
