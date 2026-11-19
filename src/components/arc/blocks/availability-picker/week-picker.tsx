@@ -48,8 +48,8 @@ const fadeVariants = { enter: { opacity: 0 }, center: { opacity: 1 }, exit: { op
 
 /**
  * The coach's week (Trak, TRAK-262): seven days with a dot per event and an amber corner on a day that waits for the
- * coach, the chosen day's events in the colour key, and a footer naming the chosen event with its one next step
- * beside Details. The caller renders both buttons: `renderDetails` wraps its trigger in the event sheet.
+ * coach, the chosen day's events in the colour key, and a footer with the chosen event's one next step beside Details.
+ * The caller renders both buttons: `renderDetails` wraps its trigger in the event sheet.
  */
 export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, renderPrimary, renderDetails, family = false }: {
   /** A player or parent reads the week: nothing "needs you", and nothing to plan. */
@@ -151,16 +151,9 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
         </AnimatePresence>
       </div>
 
-      {/* Trak (TRAK-443): the chosen event's title and its buttons; its line is on its row. An empty day has no bar:
-          the list says "Nothing planned" once. */}
+      {/* Trak (TRAK-443): the chosen event's buttons; its line is on its row. An empty day has no bar: the list says
+          "Nothing planned" once. TRAK-445 (Imad, 17 Nov): nor its name and time, which the chosen row above shows. */}
       {event && <footer className={styles.footer}>
-        <div className={styles.selection}>
-          <span className={styles.swap}>
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.strong key={event.id} className={styles.selectionValue} {...swap} transition={swapTransition}>{event.title}{event.time ? ` · ${event.time}` : ""}</motion.strong>
-            </AnimatePresence>
-          </span>
-        </div>
         <div className={styles.footerActions}>
           {renderDetails?.(event.id, <Button variant="ghost" size="sm">{t("coachHome:details")}</Button>)}
           {renderPrimary?.(event.id)}
