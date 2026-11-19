@@ -3,7 +3,7 @@
 // sending API, the same provider and trakfootball.com domain as the Auth SMTP
 // (Strategy.md), so it shares that domain's SPF, DKIM and reputation.
 //
-// Plain text only, one recipient per email. No link may change anything,
+// Plain text, plus a designed HTML part when the caller gives one (TRAK-190), one recipient per email. No link may change anything,
 // because Microsoft's scanner opens links before the person does (TRAK-107):
 // the only links allowed are plain trakfootball.com pages, with no query
 // string or fragment to carry a token. Results and logs carry no addresses.
@@ -11,6 +11,8 @@ export const RESEND_API = 'https://api.resend.com/emails';
 
 export interface PlainEmail {
   to: string; subject: string; text: string;
+  /** TRAK-190: the designed version. The text stays, word for word the same, for inboxes that show only text. */
+  html?: string;
   /** Resend's Idempotency-Key (24 h): every try of one email counts as one send (TRAK-135). */
   idempotencyKey?: string;
 }
@@ -70,7 +72,11 @@ export function emailProblem(message: PlainEmail): string | null {
   if (message.subject.length > 200) return 'subject is too long';
   if (typeof message.text !== 'string' || !message.text.trim()) return 'text must not be empty';
   if (message.text.length > 20_000) return 'text is too long';
-  if (!onlySafeLinks(`${message.subject}\n${message.text}`)) return 'only plain https://trakfootball.com links are allowed';
+  if (message.html !== undefined) {
+    if (typeof message.html !== 'string' || !message.html.trim()) return 'html must not be empty';
+    if (message.html.length > 100_000) return 'html is too long';
+  }
+  if (!onlySafeLinks(`${message.subject}\n${message.text}\n${message.html ?? ''}`)) return 'only plain https://trakfootball.com links are allowed';
   return null;
 }
 
@@ -87,7 +93,10 @@ export async function sendPlainEmail(message: PlainEmail, sender: EmailSender): 
         Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json',
         ...(message.idempotencyKey ? { 'Idempotency-Key': message.idempotencyKey } : {}),
       },
-      body: JSON.stringify({ from, to: [message.to.trim()], subject: message.subject.trim(), text: message.text }),
+      body: JSON.stringify({
+        from, to: [message.to.trim()], subject: message.subject.trim(), text: message.text,
+        ...(message.html ? { html: message.html } : {}),
+      }),
     });
     if (!response.ok) return { sent: false, reason: 'delivery_failed', status: response.status };
     const body = await response.json().catch(() => null) as { id?: unknown } | null;

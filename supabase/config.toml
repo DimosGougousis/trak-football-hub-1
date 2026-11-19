@@ -23,6 +23,12 @@ verify_jwt = true
 [functions.send-parent-invite]
 verify_jwt = true
 
+# TRAK-482: the parent invitation page calls it before the parent has signed
+# in, so there is no session to check. The invitation's secret token is the
+# credential: the handler emails only the address that token was sent to.
+[functions.send-parent-invite-code]
+verify_jwt = false
+
 # TRAK-11 phase 3. The operator (the roster loader) calls it with the service
 # key and a guardian with their session JWT; the handler tells them apart and
 # reads the roster only through roster_invite_targets().

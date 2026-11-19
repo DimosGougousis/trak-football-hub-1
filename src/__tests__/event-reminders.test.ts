@@ -41,6 +41,7 @@ describe('the reminder a family reads (Kostas, 21 Oct)', () => {
     expect(email.to).toBe('guardian@example.org');
     expect(email.subject).toBe('Match reminder on Sat 7 Nov');
     expect(email.text).toBe([
+      'Hello,',
       'Coming up: match vs Panionios U14 (away).',
       'Saturday 7 November, 11:00 – 12:30\nNea Smyrni Stadium\nPlease arrive by 10:15\nKit: White',
       'If your child can\'t make it, tap "Can\'t make it" in Trak so the coach knows.\nSee the full schedule: https://trakfootball.com',
@@ -53,11 +54,11 @@ describe('the reminder a family reads (Kostas, 21 Oct)', () => {
   it('a plain training says "training"; a training the coach named, and any other event, says its name as typed', () => {
     const plain = only(reminder([event()]));
     expect(plain.subject).toBe('Training reminder on Wed 14 Oct');
-    expect(plain.text.startsWith('Coming up: training.\n\nWednesday 14 October, 17:00 – 18:30\nAcademy Pitch 2\n\n')).toBe(true);
-    expect(only(reminder([event({ title: 'Tactical' })])).text.startsWith('Coming up: Tactical.\n\n')).toBe(true);
+    expect(plain.text.startsWith('Hello,\n\nComing up: training.\n\nWednesday 14 October, 17:00 – 18:30\nAcademy Pitch 2\n\n')).toBe(true);
+    expect(only(reminder([event({ title: 'Tactical' })])).text.startsWith('Hello,\n\nComing up: Tactical.\n\n')).toBe(true);
     const other = only(reminder([event({ event_type: 'other', title: 'Team photo!' })]));
     expect(other.subject).toBe('Event reminder on Wed 14 Oct');
-    expect(other.text.startsWith('Coming up: Team photo!\n\n')).toBe(true);
+    expect(other.text.startsWith('Hello,\n\nComing up: Team photo!\n\n')).toBe(true);
   });
 
   it('no squad line, no kit for a training, and the name only once', () => {
@@ -81,7 +82,7 @@ describe('the reminder a family reads (Kostas, 21 Oct)', () => {
       title: 'Extra session for Lucas', venue: 'Pitch 2 maps.app.goo.gl/x', kit: 'Lucas brings bibs',
     })]));
     expect(`${email.subject}\n${email.text}`).not.toMatch(/Lucas/);
-    expect(email.text.startsWith('Coming up: training.')).toBe(true);
+    expect(email.text.startsWith('Hello,\n\nComing up: training.')).toBe(true);
     expect(email.text).toContain(`Pitch 2 ${LINK_PLACEHOLDER}`);
     expect(emailProblem(email)).toBeNull();
   });

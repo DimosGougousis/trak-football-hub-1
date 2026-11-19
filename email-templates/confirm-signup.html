@@ -1,19 +1,25 @@
 <!--
-  Supabase -> Authentication -> Emails -> "Confirm signup".
-  Kostas, 21 Oct: the same look as the invitation and sign-in emails, with a
-  gap after the heading. Light on purpose: Gmail on mobile inverted the old
-  dark version. Plain ASCII only: Gmail strips the charset, and raw Unicode
+  Supabase -> Authentication -> Emails -> "Confirm signup". Subject: Confirm your Trak account
+  TRAK-190 (design approved by Imad, 17 Nov; words Kostas's own, 17 Nov): the
+  same card as every Trak email. Light on purpose: Gmail on mobile inverted the
+  old dark version. Plain ASCII only: Gmail strips the charset, and raw Unicode
   arrived as mojibake ("Confirm email ,Uei").
 
   The link is token_hash, NOT .ConfirmationURL: that one carries a session and
   signs the person straight in, bypassing the password entirely. See
   src/pages/AuthConfirm.tsx.
 -->
-<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111111;">
-  <p style="font-size:18px;font-weight:700;letter-spacing:3px;margin:0 0 24px;">TRAK</p>
-  <p style="font-size:17px;font-weight:600;margin:0 0 20px;">Confirm your email</p>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">Tap the button to activate your Trak account. You'll then sign in with the password you chose.</p>
-  <p style="margin:16px 0 24px;"><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup" style="background:#C8F25A;color:#0A0A0B;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600;display:inline-block;">Confirm email</a></p>
-  <p style="font-size:12px;color:#666666;line-height:1.5;margin:24px 0 0;">If you didn't create a Trak account, ignore this email and nothing happens.</p>
-  <p style="font-size:12px;color:#666666;line-height:1.5;margin:8px 0 0;">To keep Trak emails out of spam, add <strong>noreply@trakfootball.com</strong> to your contacts.</p>
+<div style="margin:0;padding:24px 12px;background:#F6F5F1;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="max-width:480px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E0D8;border-radius:14px;">
+<tr><td style="padding:24px 22px 18px;font-family:Futura,'Century Gothic','Trebuchet MS',Arial,sans-serif;color:#1A2421;">
+  <p style="margin:0 0 18px;font-size:15px;font-weight:700;letter-spacing:4px;color:#0B6623;">TRAK</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">Hello,</p>
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.5;font-weight:600;color:#1A2421;">Tap the button to activate your Trak account.</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">You'll then sign in with the password you chose.</p>
+  <p style="margin:0 0 14px;"><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup" style="background:#0B6623;color:#FFFFFF;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">Confirm email</a></p>
+  <div style="margin-top:20px;padding-top:12px;border-top:1px solid #E2E0D8;">
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#6B736F;">If you didn't create a Trak account, ignore this email and nothing happens.</p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#6B736F;">To keep Trak emails out of spam, add <strong>noreply@trakfootball.com</strong> to your contacts.</p>
+  </div>
+</td></tr></table>
 </div>

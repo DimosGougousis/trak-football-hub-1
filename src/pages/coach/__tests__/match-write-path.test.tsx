@@ -84,7 +84,7 @@ function captureMatchRpc(): RpcBody[] {
  */
 async function logMatch(
   calls: RpcBody[],
-  { goals = 0, assists = 0 }: { goals?: number; assists?: number },
+  { goals = 0, assists = 0, opponent = 'Olympiakos U16' }: { goals?: number; assists?: number; opponent?: string },
 ): Promise<RpcBody> {
   const before = calls.length
   const user = userEvent.setup()
@@ -92,7 +92,7 @@ async function logMatch(
   // /sessions/quick opens on Match, so the type chip needs no tap.
   renderApp('/coach/sessions/quick')
 
-  await user.type(await screen.findByPlaceholderText('Opponent name'), 'Olympiakos U16')
+  await user.type(await screen.findByPlaceholderText('Opponent name'), opponent)
   const [scoreUs, scoreThem] = screen.getAllByPlaceholderText('0')
   await user.type(scoreUs, '4')
   await user.type(scoreThem, '1')
@@ -163,5 +163,17 @@ describe('what the coach records reaches the database and the rating', () => {
 
     expect(three.p_assists).toBe(3)
     expect(three.p_computed_rating as number).toBeGreaterThan(none.p_computed_rating as number)
+  }, 20_000)
+
+  // TRAK-299: coaches type "vs …"; the title adds its own "vs".
+  it('saves a typed "vs Olympiakos U16" as the club and one "vs" in the title', async () => {
+    const calls = captureMatchRpc()
+    const titles: unknown[] = []
+    server.use(insertInto('coach_sessions', body => { titles.push(body.title); return { id: 'session-1', ...body } }))
+
+    const saved = await logMatch(calls, { opponent: 'vs Olympiakos U16' })
+
+    expect(saved.p_opponent).toBe('Olympiakos U16')
+    expect(titles).toEqual(['vs Olympiakos U16'])
   }, 20_000)
 })

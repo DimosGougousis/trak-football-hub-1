@@ -65,6 +65,15 @@ export function keyValues(raw: string | undefined): string[] {
 // child's row is marked invited and no second email goes: the guardian's
 // consent screen lists every child. One hour is Supabase's default email link
 // lifetime. A deliberate resend after that, for an expired link, still goes.
+/**
+ * TRAK-475: what an existing account's user_metadata becomes before the
+ * academy's sign-in code: this child's details, and none of an earlier
+ * "invited by your child" (send-parent-invite), which the Magic link template
+ * would otherwise print first, naming a different child.
+ */
+export const forAcademySignIn = (data: Record<string, string | null>) =>
+  ({ ...data, invited_by: null, player_first_name: null });
+
 export const GUARDIAN_INVITE_WINDOW_MS = 60 * 60 * 1000;
 
 /** True when a roster row of another child, for this guardian address, was invited within windowMs of now. */
