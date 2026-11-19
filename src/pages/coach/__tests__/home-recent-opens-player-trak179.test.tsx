@@ -56,7 +56,7 @@ describe('TRAK-179: a player in the overview opens the player (TRAK-211: on Feed
     const trail = await screen.findByRole('navigation', { name: 'Breadcrumb trail' })
     // Feedback, opened from a link and outside the nav, sits under Home.
     expect(within(trail).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Feedback', 'Ade Okafor'])
-    // TRAK-428: the trail is the one way back (TRAK-351 had put a Back button above it too).
+    // TRAK-428: on a phone the trail is the one way back (a laptop keeps TRAK-351's Back beside the top bar's trail).
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
     await userEvent.click(within(trail).getByRole('link', { name: 'Feedback' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/feedback'))
