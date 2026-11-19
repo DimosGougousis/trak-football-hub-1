@@ -61,6 +61,9 @@ export default function CoachSquadPage() {
     listScroll.current = window.scrollY
     navigate(`/coach/squad/player/${id}`)
   }
+  // Back (a laptop's, TRAK-428) to wherever the coach came from (the list, Home, Feedback); a page opened from its address
+  // goes to the squad.
+  const back = () => (location.key !== 'default' ? navigate(-1) : navigate('/coach/squad', { replace: true }))
 
   return (
     <div className="min-h-screen bg-ground pb-24">
@@ -80,7 +83,7 @@ export default function CoachSquadPage() {
           {(openId != null && active === 'players' ? roster.rosterError : roster.error) ? <SquadLoadError onRetry={roster.retry} />
             : roster.isPending ? <LoadingSkeleton label={t('coachSchedule:loadingSquad')} lines={2} avatar rows={4} className="pt-6" />
             : roster.players.length === 0 ? <PreparingSquad />
-            : active === 'players' ? <PlayersTab roster={roster} openId={openId} onOpen={openPlayer} />
+            : active === 'players' ? <PlayersTab roster={roster} openId={openId} onOpen={openPlayer} onBack={back} />
             : active === 'formations' ? <FormationsTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
             : <AvailabilityTab roster={roster} />}

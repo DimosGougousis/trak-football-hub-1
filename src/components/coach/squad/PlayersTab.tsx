@@ -1,8 +1,11 @@
 import { useMemo } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { SquadDirectory, type PositionGroup, type SquadPlayer } from '@/components/arc/blocks/team-directory/squad-directory'
 import { Badge } from '@/components/arc/badge/badge'
+import { Button } from '@/components/arc/button/button'
 import { CoachTrail } from '@/components/coach/CoachTrail'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { needsYou } from '@/lib/coach-needs-you'
 import { BANDS } from '@/lib/types'
 import { bandMoves } from '@/lib/squad/snapshot'
@@ -28,17 +31,21 @@ const TREND = 6
  * TRAK-263 (Imad, 22 Oct): Squad's Players view, replacing Snapshot. Every roster player in Arc's team directory
  * (position filters, search by name or shirt number). Imad, 23 Oct: each row ends with a sparkline of the player's
  * ratings, and there's no band bar above. TRAK-351 (Tarek, 3 Nov): a player opens as their own full page, with no list
- * beside it; the list stays mounted behind it, so going back finds its filter and search as left. TRAK-428: the trail is
- * the page's one way back (it had a Back button above it too).
+ * beside it; the list stays mounted behind it, so going back finds its filter and search as left. TRAK-428: on a phone
+ * the trail is the page's one way back; on a laptop, where the trail is in the top bar, the page keeps its Back button
+ * (Imad, 19 Nov: "it does no harm").
  */
-export function PlayersTab({ roster, openId = null, onOpen = () => {} }: {
+export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = () => {} }: {
   roster: SquadRoster
   /** The player whose page is open (their address, /coach/squad/player/:id), or null for the list. */
   openId?: string | null
   onOpen?: (id: string) => void
+  onBack?: () => void
 }) {
   const { user } = useAuth()
   const { t } = useTranslation()
+  // A laptop's frame: the side menu, and the trail in the top bar (CoachFrame).
+  const laptop = useSideMenuScreen()
   const ids = useMemo(() => roster.players.map(p => p.id), [roster.players])
   const facts = usePlayerFacts(user?.id, ids)
   const moves = useMemo(() => bandMoves(roster.assessments), [roster.assessments])
@@ -97,6 +104,7 @@ export function PlayersTab({ roster, openId = null, onOpen = () => {} }: {
       <SquadDirectory title={squadLabel ? t('coachSquad:squadPlayers', { squad: squadLabel }) : t('coachSquad:tabPlayers')} players={players} onOpen={player => onOpen(player.id)} />
     </div>
     {openId != null && <div className="grid gap-4 pt-4">
+      {laptop && <span className="arc"><Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft size={16} aria-hidden="true" />{t('common:back')}</Button></span>}
       {/* TRAK-428: a player who isn't found still has the way back; the page is "Player", as in the laptop's top bar. */}
       <CoachTrail current={open?.name ?? t('nav:player')} />
       {/* TRAK-368: the page's title, as the older player page had it; the card's name is the visible one. */}
