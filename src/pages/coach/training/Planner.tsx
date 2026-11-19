@@ -2,7 +2,7 @@ import { useTranslation } from '@/lib/i18n'
 import { partName, partNote } from '@/lib/training/words'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Pencil, Plus } from 'lucide-react'
+import { ArrowRight, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWeekRoster } from '@/lib/coach-squad'
@@ -34,7 +34,7 @@ import { Input } from '@/components/arc/input/input'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Textarea } from '@/components/arc/textarea/textarea'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-import { RemoveIcon } from '@/components/trak/IconAction'
+import { EditIcon, RemoveIcon } from '@/components/trak/IconAction'
 import { PlanReview, type ReviewRow } from '@/components/arc/blocks/plan-review/plan-review'
 
 /* TRAK-340 (Training redo 2/5, spec TRAK-338, 2 Nov prototype): Plan session. A plan is a list of parts; the coach goes
@@ -255,7 +255,7 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
               <Button size="sm" variant="secondary" type="button" onClick={() => setRenaming(null)}>{t('coachSchedule:cancel')}</Button>
             </form> : <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[22px] font-medium text-ink break-words">{partName(part.name)}</h2>
-              <Button size="sm" variant="ghost" onClick={() => setRenaming(partName(part.name))}><Pencil aria-hidden size={14} />{t('coachTraining:rename')}</Button>
+              <EditIcon label={t('coachTraining:rename')} onClick={() => setRenaming(partName(part.name))} className="-my-2.5" />
             </div>}
           </div>
           {/* As the mockup: "How long?" on the same line as its minutes. */}
