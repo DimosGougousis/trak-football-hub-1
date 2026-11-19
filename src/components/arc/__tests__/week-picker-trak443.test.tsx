@@ -4,8 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { WeekPicker, type WeekDay } from '../blocks/availability-picker/week-picker'
 
 /**
- * TRAK-443 (walk-through of 11 Nov): the grey bar under the coach's week keeps the chosen event's title, Details and
- * the next step, without the event's line again. An empty day has no bar: the list already says "Nothing planned".
+ * TRAK-443 (walk-through of 11 Nov): the grey bar under the coach's week keeps Details and the next step, without the
+ * event's line again. An empty day has no bar: the list already says "Nothing planned". TRAK-445 (Imad, 17 Nov): nor the
+ * event's name and time; the chosen row above says which event it is.
  */
 afterEach(cleanup)
 
@@ -18,9 +19,11 @@ const show = () => render(<WeekPicker title="This week" subtitle="9–15 Novembe
   renderPrimary={() => <button>Take register</button>} renderDetails={(_, trigger) => trigger} />)
 
 describe("TRAK-443: the bar under the coach's week", () => {
-  it("a day with an event: the title, Details and the next step; the event's line shows once, on its row", () => {
+  it("a day with an event: Details and the next step; the event's name, time and line show once, on its row", () => {
     show()
-    expect(screen.getByText('U16 training · 18:00')).toBeInTheDocument()
+    expect(screen.getAllByText('U16 training')).toHaveLength(1)
+    expect(screen.getAllByText('18:00')).toHaveLength(1)
+    expect(screen.queryByText(/U16 training ·/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Details' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Take register' })).toBeInTheDocument()
     expect(screen.getAllByText('Take the register')).toHaveLength(1)
