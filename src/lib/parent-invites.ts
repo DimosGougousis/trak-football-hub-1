@@ -19,8 +19,22 @@ export type ParentInvitationState =
   | { kind: 'wrong-role'; email: string }
   | { kind: 'ready'; account: ParentAccount; invites: ParentInvitation[]; tokenUnavailable: boolean };
 
+/**
+ * TRAK-482: "Send sign-in link" from a child's invitation, before sign-in. True
+ * when send-parent-invite-code emailed the invited address (naming the child);
+ * false on no match or any failure, and the page sends a plain code instead.
+ */
+export async function sendInvitationCode(token: string, email: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-parent-invite-code', { body: { token, email } });
+    return !error && (data as { sent?: unknown } | null)?.sent === true;
+  } catch {
+    return false;
+  }
+}
+
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
-const rpc = async (account: OnboardingSession, name: string, args?: Record<string, unknown>) => {
+const rpc =async (account: OnboardingSession, name: string, args?: Record<string, unknown>) => {
   // Generated function types predate the secure invitation RPCs.
   const { data, error } = await account.client.rpc(name as never, args as never);
   if (error) throw error;
