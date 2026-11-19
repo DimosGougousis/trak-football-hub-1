@@ -3,7 +3,7 @@ import { partName } from '@/lib/training/words'
 import type { KeyboardEvent } from 'react'
 import { Reorder, useDragControls, type DragControls } from 'motion/react'
 import { Check, GripVertical, Plus, Search } from 'lucide-react'
-import { fitLine, partColour, partLine, playersLine, totalMinutes, type Part, type PlanDrill } from '@/lib/training/parts'
+import { partColour, partLine, playersLine, totalMinutes, type Part, type PlanDrill } from '@/lib/training/parts'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EditIcon, RemoveIcon } from '@/components/trak/IconAction'
@@ -64,7 +64,6 @@ export function SessionCard({ parts, length, current, onOpen, onReorder, onMove,
   fromShape: boolean; standard: boolean
 }) {
   const { t } = useTranslation()
-  const fit = fitLine(totalMinutes(parts), length)
   const at = parts.findIndex(p => p.key === current)
   return <aside aria-labelledby="your-session" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <div className="flex items-baseline justify-between gap-3">
@@ -72,7 +71,6 @@ export function SessionCard({ parts, length, current, onOpen, onReorder, onMove,
       <TotalLine parts={parts} length={length} />
     </div>
     <TimeBar parts={parts} length={length} current={current} />
-    {fit && <p className={`text-sm ${length && totalMinutes(parts) > length ? 'text-warning' : 'text-ink-3'}`}>{fit}</p>}
     {/* TRAK-457: the drag line is gone; a keyboard user still hears how to move a part. */}
     <p className="sr-only">{t('coachTraining:dragHint')}</p>
     <Reorder.Group as="ol" axis="y" values={parts} onReorder={onReorder} aria-label={t('coachTraining:partsOfSession')} className="grid gap-1.5">
