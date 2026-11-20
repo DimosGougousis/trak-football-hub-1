@@ -169,7 +169,7 @@ export function NextStep({ item, coachId, roster, onChanged }: {
     if (!rows) return go(t('coachHome:share'), () => {}, true)
     // TRAK-497: Arc's green button like every next step (it was a 36 px pill of its own).
     return <span className="arc"><ShareEventButton arc="next-step" text={whatsAppShareText(shareableFromRow(row, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })}>
-      <ShareIcon size={16} />{t('coachHome:share')}
+      <ShareIcon size={16} tight />{t('coachHome:share')}
     </ShareEventButton></span>
   }
   // Imad, 23 Oct: the register opens here. Schedule shows only the squad last picked, so an event of another squad
