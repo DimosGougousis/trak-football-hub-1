@@ -67,7 +67,9 @@ export function Chip({ on, color = 'rgb(var(--t-brand))', onClick, children }: {
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block space-y-1">
-      <span className="text-[9px] tracking-[0.1em] uppercase text-ink-3" style={mono}>{label}</span>
+      {/* TRAK-516 (Imad, 20 Nov): "Map link (optional)" sat on the Venue box above it. The label is a line of its own,
+          so it always takes its height above its box. */}
+      <span className="block text-[9px] leading-4 tracking-[0.1em] uppercase text-ink-3" style={mono}>{label}</span>
       {children}
     </label>
   )
@@ -280,7 +282,8 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
               {venues.map(v => <option key={v.name} value={v.name} />)}
             </datalist>
           </Field>
-          <div className="space-y-1">
+          {/* TRAK-516: room between the Venue box and the map link's label. */}
+          <div className="space-y-1 pt-1">
             <Field label={t('coachSchedule:mapLinkOptional')}>
               <input value={mapLinkText ?? splitVenue(sheet.form.venue).link} onChange={e => setVenueLink(e.target.value)}
                 inputMode="url" placeholder={t('coachSchedule:mapLinkPlaceholder')} className={inputClass} style={font} />
@@ -413,10 +416,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
           <p role="alert" className="text-[12px] text-danger" style={font}>{sheet.error}</p>
         )}
 
-        {sheet.step === REVIEW && sheet.row?.published && (
-          <p className="text-[11px] text-ink-3" style={font}>{t('coachSchedule:familiesSeeOnSave')}</p>
-        )}
-
+        {/* TRAK-516 (Imad, 20 Nov): no "Families see the change as soon as you save." line. */}
         {/* The decision sits where the thumb is, as on the assessment. */}
         <div className={`arc sticky bottom-0 -mx-5 px-5 pt-3 pb-5 flex gap-2 bg-raised border-t border-line ${laptop ? '!mt-auto' : ''}`}>
           {sheet.step === REVIEW ? <>

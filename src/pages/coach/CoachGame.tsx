@@ -180,8 +180,8 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
   const extras: Record<GameTab, PageHeaderTab['extra']> = {
     logistics: row.published && <><Check size={14} strokeWidth={2} aria-hidden="true" /><span className="sr-only">{t('coachMatches:srShared')}</span></>,
     plan: toDo > 0 && <Badge size="sm" tone="warning">{t('coachMatches:toDo', { count: toDo })}</Badge>,
-    // On a phone the three tabs fit without it, as in the prototype; a screen reader still hears it.
-    evaluation: now < whistle && <span className="sr-only tablet:not-sr-only">{t('coachMatches:afterMatch')}</span>,
+    // TRAK-516 (Imad, 20 Nov): no "After the match" beside Evaluation.
+    evaluation: null,
   }
   const homeAway = row.home_away === 'home' ? t('coachSchedule:home') : row.home_away === 'away' ? t('coachSchedule:away') : null
 

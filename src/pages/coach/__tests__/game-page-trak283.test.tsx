@@ -91,7 +91,8 @@ describe('TRAK-283: a game\'s page', { timeout: 20_000 }, () => {
     const [logistics, gamePlan, evaluation] = within(tabs).getAllByRole('tab')
     expect(logistics).toHaveAccessibleName('Logistics shared')
     expect(gamePlan).toHaveAccessibleName('Game plan 4 to do')
-    expect(evaluation).toHaveAccessibleName('Evaluation After the match')
+    // TRAK-516 (Imad, 20 Nov): no "After the match" beside Evaluation.
+    expect(evaluation).toHaveAccessibleName('Evaluation')
     expect(within(tabs).getByRole('tab', { name: /^Logistics/ })).toHaveAttribute('aria-selected', 'true')
 
     expect(screen.getByText('Shared')).toBeInTheDocument()

@@ -127,8 +127,8 @@ export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, 
   const { t } = useTranslation()
   const { change, published } = draft
   if (opensAt !== null) {
-    return <div className="pt-4"><EmptyState icon={<ClipboardCheck size={24} strokeWidth={1.5} />} title={t('coachMatches:opensAtFullTime', { when: opensAt })}
-      description={t('coachMatches:opensBody')} /></div>
+    // TRAK-516 (Imad, 20 Nov): the title says when it opens; the line explaining the evaluation under it went.
+    return <div className="pt-4"><EmptyState icon={<ClipboardCheck size={24} strokeWidth={1.5} />} title={t('coachMatches:opensAtFullTime', { when: opensAt })} /></div>
   }
   if (who.error) return <div className="pt-4"><LoadError what={t('coachMatches:whoPlayedWhat')} onRetry={who.retry} /></div>
   if (who.isPending) return <LoadingSkeleton label={t('coachMatches:loadingWhoPlayed')} lines={1} avatar rows={4} className="pt-6" />

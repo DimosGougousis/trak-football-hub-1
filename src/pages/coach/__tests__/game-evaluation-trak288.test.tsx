@@ -114,6 +114,8 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     backend(89 * MINUTE) // full time in a minute
     renderApp('/coach/matches/g1?tab=evaluation')
     expect(await screen.findByRole('heading', { name: /^Opens at full time, \d\d:\d\d$/ })).toBeInTheDocument()
+    // TRAK-516 (Imad, 20 Nov): no line under it explaining the evaluation.
+    expect(screen.queryByText(/whether the plan worked, and each player/)).toBeNull()
     expect(screen.queryByRole('spinbutton', { name: 'Our score' })).toBeNull()
     expect(screen.queryByRole('button', { name: /Save draft/ })).toBeNull()
 

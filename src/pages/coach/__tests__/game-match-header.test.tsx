@@ -115,7 +115,8 @@ describe('Match header', { timeout: 30_000 }, () => {
     expect(Array.from(details().children, item => item.textContent)).toEqual([expect.stringMatching(/^\w{3} \d{1,2} \w{3}$/),
       expect.stringMatching(/^Kick-off \d\d:\d\d$/), 'Rehearsal Park · Home', 'U16'])
     expect(tab(/^Logistics/)).toHaveAccessibleName('Logistics shared')
-    expect(tab(/^Evaluation/)).toHaveAccessibleName('Evaluation After the match')
+    // TRAK-516 (Imad, 20 Nov): no "After the match" beside Evaluation.
+    expect(tab(/^Evaluation/)).toHaveAccessibleName('Evaluation')
     expect(await within(top).findByRole('tab', { name: 'Game plan 4 to do' }, { timeout: 5000 })).toBeInTheDocument()
     expect(details()).toHaveTextContent(/U16$/)
 
