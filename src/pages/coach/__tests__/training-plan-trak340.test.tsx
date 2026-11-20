@@ -134,13 +134,16 @@ describe('TRAK-340: a new plan', { timeout: 30_000 }, () => {
     expect(within(warmup).getByRole('button', { name: 'Remove Dry warm-up' })).toHaveTextContent('')
     // No coach-made drills (Kostas, 8 Nov).
     expect(screen.queryByRole('button', { name: 'Write your own' })).toBeNull()
-    expect(screen.getByText('Fits your 90 minutes.')).toBeInTheDocument()
+    // TRAK-484 (Kostas, 19 Nov): the total beside Your session is the only time line; nothing under the bar.
+    expect(screen.getByText('90 of 90 min')).toBeInTheDocument()
+    expect(screen.queryByText(/Fits your|min over|min spare/)).toBeNull()
 
     // Pick another warm-up and give it 15 minutes.
     await user.click(within(warmup).getByRole('button', { name: /^Tag games/ }))
     expect(within(warmup).getByRole('button', { name: /^Tag games/, pressed: true })).toBeInTheDocument()
     await user.click(within(warmup).getByRole('button', { name: '15 min' }))
-    expect(screen.getByText('5 min over. That’s fine, it’s only a guide.')).toBeInTheDocument()
+    expect(screen.getByText('95 of 90 min')).toBeInTheDocument()
+    expect(screen.queryByText(/min over/)).toBeNull()
 
     await next('Passing & movement')
     await part('Passing & movement')
