@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CalendarCheck } from 'lucide-react'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { trainingEnd } from '@/lib/training/sessions'
@@ -10,6 +10,8 @@ import { gameTitle, gameWhen, useGamePlan, useGames, type Game } from '@/compone
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { useTranslation } from '@/lib/i18n'
+import { Button } from '@/components/arc/button/button'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 
 /* TRAK-304 (Kostas, 28 Oct): when the coach opens Trak on a training or match day, Home shows that day's plan, as a
    reminder of what the coach planned and how to run it. It takes Squad shape's place; the week stays. Today's trainings
@@ -18,7 +20,11 @@ import { useTranslation } from '@/lib/i18n'
 
 type Item = { kind: 'training'; event: Training } | { kind: 'match'; event: Game }
 
-const linkClass = 'rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+/* TRAK-507 (Imad, 20 Nov): every line was the same size and colour. "Today" is the card's title, set apart by a rule
+   under it; each event's heading is dark and medium, its details quieter; Open, Write the game plan and Plan this
+   session are Home's next-step button (TRAK-497), not links. */
+const heading = 'min-w-0 text-[15px] font-medium text-ink'
+const rowClass = 'flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2'
 const isToday = (event: { event_date: string | null; start_time: string | null; starts_at: string }) =>
   phoneEventTime(event).date === localTodayISO()
 
@@ -50,14 +56,14 @@ export function TodayPlan({ trainingOn, gamesOn, inView, squadOf = null }: {
 
   // min-w-0 and minmax(0, 1fr) all the way down: a name cut with "…" must not widen the card, or the page, to its length.
   return <section className="arc min-w-0 rounded-2xl border border-line bg-surface p-5 laptop:p-6" aria-labelledby="today-plan-title">
-    <div className="grid gap-2">
+    <div className="grid gap-2 border-b border-line pb-3">
       <h2 id="today-plan-title" className="text-lg font-medium text-ink">{t('coachHome:today')}</h2>
       {!today.length && !pending && !failed && <p className="text-sm text-ink-3">{t('coachHome:nothingToday')}</p>}
     </div>
     {failed ? <div className="mt-4"><LoadError what={t('coachHome:todayWhat')} onRetry={() => { void trainings.refetch(); void games.refetch() }} /></div>
       : pending ? <LoadingSkeleton label={t('coachHome:todayLoading')} lines={4} rows={2} className="mt-4 h-[180px] content-start overflow-hidden" />
-      : today.length ? <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 divide-y divide-line">
-        {today.map(item => <li key={item.event.id} className="pt-3 first:pt-0">
+      : today.length ? <ul className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 divide-y divide-line">
+        {today.map(item => <li key={item.event.id} className="pt-4 first:pt-0">
           {item.kind === 'training' ? <TodayTraining training={item.event} squadOf={squadOf} /> : <TodayMatch game={item.event} squadOf={squadOf} />}
         </li>)}
       </ul>
@@ -87,6 +93,7 @@ const when = (event: { event_date: string | null; start_time: string | null; sta
     right, over the practices' minutes. With more than one age group on Home, "Training plan · U16". */
 function TodayTraining({ training, squadOf }: { training: Training; squadOf: ((squad: unknown) => string) | null }) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const sessions = usePastSessions()
   const registers = useRegisters()
   const notes = useNotes()
@@ -98,11 +105,12 @@ function TodayTraining({ training, squadOf }: { training: Training; squadOf: ((s
     started: Date.parse(training.starts_at) <= now, over: trainingEnd(training) <= now,
   })
   return <article aria-label={t('coachHome:trainingNamed', { title: training.title })} className="grid grid-cols-[minmax(0,1fr)] gap-2">
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <p className="text-sm font-medium text-brand">{[t('coachHome:trainingPlan'), squadOf?.(training.squad)].filter(Boolean).join(' · ')}</p>
+    <div className={rowClass}>
+      <h3 className={heading}>{[t('coachHome:trainingPlan'), squadOf?.(training.squad)].filter(Boolean).join(' · ')}</h3>
       {/* TRAK-456: Plan this session opens the training's Training plan tab. */}
-      {sessions.data && (!practices.length ? <Link to={planPath(training.id)} className={linkClass}>{t('coachHome:planThisSession')}</Link>
-        : <span className="flex-none whitespace-nowrap text-sm font-medium tabular-nums text-brand">{loop.closed && t('coachHome:closedPrefix')}{t('coachHome:minutes', { count: plannedMinutes(practices) })}</span>)}
+      {sessions.data && (!practices.length
+        ? <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => navigate(planPath(training.id))}>{t('coachHome:planThisSession')}</Button>
+        : <span className="flex-none whitespace-nowrap text-sm tabular-nums text-ink-2">{loop.closed && t('coachHome:closedPrefix')}{t('coachHome:minutes', { count: plannedMinutes(practices) })}</span>)}
     </div>
     {sessions.isError ? <LoadError what={t('coachHome:planWhat')} onRetry={() => void sessions.refetch()} />
       : !sessions.data ? null
@@ -120,12 +128,16 @@ function TodayTraining({ training, squadOf }: { training: Training; squadOf: ((s
     name is; its age group shows as a training's does. */
 function TodayMatch({ game, squadOf }: { game: Game; squadOf: ((squad: unknown) => string) | null }) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const plan = useGamePlan(game.id)
   const goals = Array.isArray(plan.data?.goals) ? (plan.data!.goals as { title?: string }[]).map(g => g.title?.trim()).filter(Boolean) : []
   return <article aria-label={t('coachHome:matchNamed', { title: gameTitle(game) })} className="grid grid-cols-[minmax(0,1fr)] gap-2">
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-      <p className="text-sm font-medium text-brand">{[t('coachHome:gamePlan'), squadOf?.(game.squad)].filter(Boolean).join(' · ')}</p>
-      <Link to={`/coach/matches/${game.id}?tab=plan`} className={linkClass}>{plan.data ? t('coachHome:openGamePlan') : t('coachHome:writeGamePlan')}</Link>
+    <div className={rowClass}>
+      <h3 className={heading}>{[t('coachHome:gamePlan'), squadOf?.(game.squad)].filter(Boolean).join(' · ')}</h3>
+      {/* TRAK-507: "Open" on the button; its full name ("Open the game plan") is what a screen reader hears. */}
+      {/* Once the plan has loaded, so "Write the game plan" never flashes before "Open". */}
+      {!plan.isPending && <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} aria-label={plan.data ? t('coachHome:openGamePlan') : undefined}
+        onClick={() => navigate(`/coach/matches/${game.id}?tab=plan`)}>{plan.data ? t('coachHome:open') : t('coachHome:writeGamePlan')}</Button>}
     </div>
     {plan.data && (plan.data.formation || goals.length > 0) ? <dl className="grid gap-1 text-[15px]">
       {plan.data.formation && <div className="flex gap-3"><dt className="w-20 flex-none text-sm text-ink-3">{t('coachHome:formation')}</dt><dd className="text-ink">{plan.data.formation}</dd></div>}
