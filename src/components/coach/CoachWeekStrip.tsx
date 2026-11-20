@@ -162,10 +162,10 @@ export function NextStep({ item, coachId, roster, onChanged }: {
   if (item.step === 'share' && row) {
     // As the sheet's Share: an event for one squad names that squad; null is the whole roster.
     const rows = roster?.filter(p => row.squad == null || p.age_group?.trim() === row.squad)
-    if (!rows) return go(t('coachHome:shareWithFamilies'), () => {}, true)
+    if (!rows) return go(t('coachHome:share'), () => {}, true)
     return <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })}
       className="arc inline-flex h-9 min-w-[128px] items-center justify-center gap-2 rounded-full bg-brand px-4 text-[14px] font-medium text-on-brand focus-visible:ring-2 focus-visible:ring-primary">
-      <ShareIcon size={16} />{t('coachHome:shareWithFamilies')}
+      <ShareIcon size={16} />{t('coachHome:share')}
     </ShareEventButton>
   }
   // Imad, 23 Oct: the register opens here. Schedule shows only the squad last picked, so an event of another squad

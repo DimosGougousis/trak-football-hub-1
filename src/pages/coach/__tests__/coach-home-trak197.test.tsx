@@ -221,7 +221,7 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
     expect(await within(needs).findByText('Started, no register yet', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(within(needs).getByRole('button', { name: 'Take register' })).toBeInTheDocument()
-    expect(within(needs).getByText('Played, not logged yet')).toBeInTheDocument()
+    expect(within(needs).getByText('Played')).toBeInTheDocument()
     expect(within(needs).getByRole('button', { name: 'Log it' })).toBeInTheDocument()
     expect(within(needs).getByText('Match vs Rovers')).toBeInTheDocument()
   })
