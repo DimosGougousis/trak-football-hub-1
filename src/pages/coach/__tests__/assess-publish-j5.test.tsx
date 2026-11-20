@@ -35,7 +35,7 @@ vi.mock('@/lib/telemetry', () => ({ trackEvent: vi.fn(), startTimer: () => () =>
 
 const endpoint = (table: string) => `${SUPABASE_URL}/rest/v1/${table}`
 const RLS_REFUSAL = { code: '42501', details: null, hint: null, message: 'new row violates row-level security policy' }
-const existing = { id: 'assessment-a', work_rate: 8, tactical: 8, attitude: 8,
+const existing = { id: 'assessment-a', squad_player_id: 'player-a', created_at: '2026-09-20T18:00:00Z', work_rate: 8, tactical: 8, attitude: 8,
   technical: 8, physical: 8, coachability: 8, appearance: 'sub', session_id: 'session-1' }
 
 interface Write { table: string; method: 'post' | 'patch'; body: Record<string, unknown> }
@@ -45,22 +45,22 @@ let writes: Write[]
 let faults: { refuseNote: boolean; sharedGone: boolean; sharedFails?: boolean }
 let consent: { required: boolean; afterRefusal: boolean; refuseInsert: boolean; refused: boolean }
 
-function showForm() {
-  render(<MemoryRouter initialEntries={['/coach/assess']}><Routes>
+function showForm(path = '/coach/assess') {
+  render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/coach/assess" element={<CoachAssessPage />} />
     <Route path="/coach/home" element={<p>Coach home</p>} />
   </Routes></MemoryRouter>, queries())
 }
 
-async function choose(player: 'player-a' | 'player-b') {
-  await pickOption('Player', player === 'player-a' ? 'Alex Synthetic' : 'Bella Synthetic')
-  await chooseSessionIfNone()
+// TRAK-500: selecting a player starts a new assessment, with no session.
+async function choose(_player: 'player-b') {
+  await pickOption('Player', 'Bella Synthetic')
 }
 
-// TRAK-68: an assessment needs a past session. It stays chosen across players.
-async function chooseSessionIfNone() {
-  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
-  if (!/vs Synthetic FC/.test(screen.getByRole('combobox', { name: 'Session' }).textContent ?? '')) await pickOption('Session', /vs Synthetic FC/)
+// Alex's saved assessment is edited by opening it (TRAK-69), not by selecting Alex again (TRAK-500).
+async function openSaved() {
+  showForm(`/coach/assess?assessment=${existing.id}`)
+  await screen.findByText('Alex Synthetic')
 }
 
 const messageBox = () => screen.getByLabelText(/^Message to/i)
@@ -79,12 +79,10 @@ beforeEach(() => {
       { id: 'player-a', player_name: 'Alex Synthetic' },
       { id: 'player-b', player_name: 'Bella Synthetic' },
     ])),
-    http.get(endpoint('coach_sessions'), () => HttpResponse.json([{ id: 'session-1', title: 'vs Synthetic FC', session_date: '2026-09-20' }])),
-    // TRAK-100: the session picker lists only sessions the player was marked present at.
-    http.get(endpoint('session_attendance'), () => HttpResponse.json(['session-1'].map(session_id => ({ session_id })))),
+    // Read only by id: opening the saved one, then loading it.
     http.get(endpoint('coach_assessments'), ({ request }) => {
-      const player = new URL(request.url).searchParams.get('squad_player_id')?.replace('eq.', '')
-      return HttpResponse.json(player === 'player-a' ? [existing] : [])
+      const id = new URL(request.url).searchParams.get('id')?.replace('eq.', '')
+      return HttpResponse.json(id === existing.id ? [existing] : [])
     }),
     http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([
       { body: 'Published feedback for Alex', published_at: '2026-09-19T12:00:00Z' },
@@ -186,8 +184,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
     expect(saves()[0][1]).toMatchObject({ assessment_id: 'assessment-b', updated: false })
 
     cleanup()
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     await saveAssessment()
@@ -197,8 +194,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
   })
 
   it('an edited published message is sent again on Publish', async () => {
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     expect(screen.getByText(/Published\. Alex can read it now/)).toBeInTheDocument()
@@ -212,8 +208,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
   })
 
   it('an unchanged published message is not sent again', async () => {
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     await userEvent.type(await toNote(), 'Private follow-up')
@@ -276,8 +271,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
       http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: null }])),
       http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([{ body: 'Draft for Alex', published_at: null }])),
     )
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Draft for Alex')
     await assessStep('Review')
@@ -294,8 +288,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
       http.get(endpoint('coach_assessments'), () => HttpResponse.json([{ ...existing, published_at: '2026-09-20T19:00:00Z' }])),
       http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([])),
     )
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await userEvent.type(await toMessage(), 'Good pressing today')
     await assessStep('Review')
     await userEvent.click(screen.getByRole('button', { name: 'Save draft' }))
@@ -309,8 +302,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
   // un-send it. A published message gets one Save, which leaves it published;
   // taking it back stays Unpublish's job.
   it('a published message survives the save: one Save, no Save draft', async () => {
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     await assessStep('Review')
@@ -322,8 +314,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
   })
 
   it('an edited published message gets one Publish, no Save draft', async () => {
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await userEvent.type(await toMessage(), ' and more')
     await assessStep('Review')
     expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
@@ -333,8 +324,7 @@ describe('J5: message to the player, private note, publish', { timeout: 20_000 }
   })
 
   it('Unpublish retracts a published message at once, and writes nothing else', async () => {
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unpublish message' })).toBeEnabled())
@@ -357,7 +347,6 @@ describe('J5: consent', { timeout: 20_000 }, () => {
     await waitFor(() => expect(nextButton()).toBeDisabled())
     expect(screen.queryAllByRole('slider')).toEqual([])
     expect(screen.queryByLabelText(/^Message to/i)).toBeNull()
-    expect(screen.getByRole('combobox', { name: 'Appearance' })).toBeDisabled()
   })
 
   // Control for the test above: the lock is caused by consent, not by the form.
@@ -400,8 +389,7 @@ describe('J5: consent', { timeout: 20_000 }, () => {
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
 describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, () => {
   it('does not save edited scores or a private draft', async () => {
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await assessStep('Ratings')
     setSlider(screen.getAllByRole('slider')[0], 3)
     await userEvent.type(await toNote(), 'Private draft')
@@ -419,8 +407,7 @@ describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, 
 
   it('still retracts when the private note would have been refused', async () => {
     faults.refuseNote = true
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await userEvent.type(await toNote(), 'Private draft')
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
@@ -431,8 +418,7 @@ describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, 
 
   it('stays available after consent is withdrawn, while everything else is locked', async () => {
     consent.required = true
-    showForm()
-    await choose('player-a')
+    await openSaved()
     expect(await screen.findByText(/waiting for a parent/i)).toBeInTheDocument()
     // TRAK-182: the later steps are shut, so the retraction is offered on the first one.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unpublish message' })).toBeEnabled())
@@ -444,8 +430,7 @@ describe('J5: Unpublish is a retraction and nothing else', { timeout: 20_000 }, 
 
   it('says so when the retraction matched no row, and keeps offering it', async () => {
     faults.sharedGone = true
-    showForm()
-    await choose('player-a')
+    await openSaved()
     await toMessage()
     await screen.findByDisplayValue('Published feedback for Alex')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Unpublish message' })).toBeEnabled())
