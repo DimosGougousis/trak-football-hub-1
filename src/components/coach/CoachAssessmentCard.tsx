@@ -77,7 +77,8 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
       meta={bandName}
       action={<SplitButton
         label={published ? t('coachHome:notePublished') : t('coachHome:publish')}
-        variant={published ? 'secondary' : 'primary'}
+        // TRAK-497 (Imad, 20 Nov): green like Evaluate once published too (it turned grey).
+        variant="primary"
         disabled={busy}
         onClick={published ? undefined : () => void setPublishedTo(true)}
         actions={published ? [edit, { label: t('coachAssess:unpublish'), onSelect: () => void setPublishedTo(false) }] : [edit]}

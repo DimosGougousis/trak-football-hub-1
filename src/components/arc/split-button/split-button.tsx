@@ -10,7 +10,7 @@ import { motionTokens } from "../lib/motion-tokens";
 import styles from "./split-button.module.css";
 
 export interface SplitButtonAction { label: string; onSelect?: () => void; disabled?: boolean; destructive?: boolean; icon?: ReactNode; }
-export interface SplitButtonProps { label: string; actions: SplitButtonAction[]; onClick?: () => void; disabled?: boolean; icon?: ReactNode; variant?: "primary" | "secondary"; }
+export interface SplitButtonProps { label: string; actions: SplitButtonAction[]; onClick?: () => void; disabled?: boolean; icon?: ReactNode; variant?: "primary" | "secondary"; /** Trak (TRAK-497): on the group, such as a minimum width. */ className?: string; }
 
 const rest: TargetAndTransition = { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" };
 const fadeIn: TargetAndTransition = { ...rest, opacity: 0 };
@@ -84,13 +84,13 @@ function MorphText({ text, reduced }: { text: string; reduced: boolean }) {
 }
 
 /** The main action morphs its icon and label in place while its width follows on a spring; the menu half never scales, so the menu opens from a still anchor. */
-export function SplitButton({ label, actions, onClick, disabled, icon, variant = "primary" }: SplitButtonProps) {
+export function SplitButton({ label, actions, onClick, disabled, icon, variant = "primary", className }: SplitButtonProps) {
   const reduced = useReducedMotion() ?? false;
   const contentRef = useRef<HTMLSpanElement>(null);
   const glyph = iconKey(icon);
   const width = useMorphWidth(contentRef, `${glyph}|${label}`, reduced);
   return <DropdownPrimitive.Root>
-    <div className={[styles.group, variant === "secondary" ? styles.secondary : ""].filter(Boolean).join(" ")}>
+    <div className={[styles.group, variant === "secondary" ? styles.secondary : "", className].filter(Boolean).join(" ")}>
       <button className={styles.primary} type="button" onClick={onClick} disabled={disabled}>
         <motion.span className={styles.primarySlot} style={{ width }} aria-hidden="true">
           <span ref={contentRef} className={styles.primaryContent}>
