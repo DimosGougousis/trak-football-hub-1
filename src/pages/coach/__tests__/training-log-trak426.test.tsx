@@ -86,17 +86,6 @@ afterEach(() => { vi.useRealTimers(); server.events.removeAllListeners() })
 const path = () => window.location.pathname + window.location.search
 
 describe('TRAK-426: Log training follows Training\'s way', { timeout: 30_000 }, () => {
-  it('the "+" Log training opens New event with Training picked, not the old Full session', async () => {
-    fixtures()
-    renderApp('/coach/schedule')
-    await userEvent.click(await screen.findByRole('button', { name: 'Quick add' }))
-    const menu = await screen.findByRole('menu', { name: 'Quick add' })
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log training' }))
-    const sheet = await screen.findByRole('dialog', { name: 'New event' })
-    expect(within(sheet).getByRole('button', { name: 'Training' })).toHaveAttribute('aria-pressed', 'true')
-    expect(path()).toBe('/coach/schedule')
-  })
-
   it('a training already held is saved, published and opened on its register, never "log it instead"', async () => {
     fixtures()
     renderApp('/coach/schedule')

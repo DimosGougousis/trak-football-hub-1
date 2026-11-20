@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { renderApp } from '../../../../tests/support/render-app'
+import { renderApp, renderAppWithState } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
@@ -126,8 +126,9 @@ describe('TRAK-176: the squad picked is saved on every way an event is made', { 
   it("a whole-roster match logged from its event lists every squad and saves no squad, though U16 is picked", async () => {
     fixtures([ROSTER_MATCH])
     const user = userEvent.setup()
-    renderApp('/coach/schedule')
-    await user.click(await screen.findByRole('button', { name: 'Log match for vs Synthetic Rovers' }))
+    // TRAK-499: Events no longer offers "Log match"; the old log opens from its address with what that button passed.
+    renderAppWithState('/coach/sessions/quick', { fromEvent: { eventId: ROSTER_MATCH.id, date: ROSTER_MATCH.event_date,
+      opponent: ROSTER_MATCH.opponent, homeAway: ROSTER_MATCH.home_away, squad: null } })
     await waitFor(() => expect(screen.getByPlaceholderText('Opponent name')).toHaveValue('Synthetic Rovers'))
     const [us, them] = screen.getAllByPlaceholderText('0')
     await user.type(us, '1')

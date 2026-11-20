@@ -30,7 +30,7 @@ describe('TRAK-407: the coach\'s Schedule in Greek', () => {
     expect(pastDateProblem('2026-11-01', '2026-11-11')).toBe(PAST_DATE_PROBLEM)
     await showLanguage('el')
     expect(formProblem(form)).toBe('Διαλέξτε ώρα έναρξης')
-    expect(pastDateProblem('2026-11-01', '2026-11-11')).toBe('Η ημερομηνία πέρασε: κάντε καταγραφή')
+    expect(pastDateProblem('2026-11-01', '2026-11-11')).toBe('Η ημερομηνία πέρασε')
   })
 
   it('counts who is here and who cannot come, in Greek', async () => {

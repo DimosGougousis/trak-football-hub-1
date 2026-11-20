@@ -224,7 +224,8 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     expect(within(needs).queryByText(/Started|no register yet/)).toBeNull()
     expect(within(needs).getByRole('button', { name: 'Take register' })).toBeInTheDocument()
     expect(within(needs).getByText('Played')).toBeInTheDocument()
-    expect(within(needs).getByRole('button', { name: 'Log it' })).toBeInTheDocument()
+    // TRAK-499 (Imad, 20 Nov): no "Log it" into the old match log, even with Matches off.
+    expect(within(needs).queryByRole('button', { name: 'Log it' })).toBeNull()
     expect(within(needs).getByText('Match vs Rovers')).toBeInTheDocument()
   })
 
