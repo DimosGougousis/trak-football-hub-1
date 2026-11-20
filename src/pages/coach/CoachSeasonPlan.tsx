@@ -186,7 +186,9 @@ function SetUp({ squad, plan, saved, onNext }: { squad: string; plan: SeasonPlan
       <div className="grid items-start gap-5 laptop:grid-cols-2">
         <section aria-labelledby="season-dates" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <h2 id="season-dates" className="text-lg font-medium text-ink">Your season</h2>
-          <div className="grid gap-4 tablet:grid-cols-2">
+          {/* TRAK-503: side by side only while each gets 13rem, the room a whole date and its arrow need. The card is
+              half the step on a laptop, so the card's width decides, not the screen's. */}
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(13rem,1fr))]">
             <DatePicker label="Starts" value={isoToDate(form.startsOn)} onChange={date => change({ ...form, startsOn: dateToIso(date) })} />
             <DatePicker label="Ends" value={isoToDate(form.endsOn)} onChange={date => change({ ...form, endsOn: dateToIso(date) })}
               minDate={isoToDate(form.startsOn)} />
