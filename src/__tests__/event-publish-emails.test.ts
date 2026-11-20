@@ -35,7 +35,10 @@ describe('TRAK-135: the email a family reads when an event is published', () => 
   it('one event: what the coach did, then when, where and when to arrive', () => {
     const email = composeEventEmail('guardian@example.org', [published('n-1')])!;
     expect(email.subject).toBe('New training on Wed 14 Oct');
+    // TRAK-190 (#691): every email opens with "Hello," and a blank line.
     expect(email.text).toBe([
+      'Hello,',
+      '',
       'Your coach has added a training session.',
       '',
       'U15 training',
