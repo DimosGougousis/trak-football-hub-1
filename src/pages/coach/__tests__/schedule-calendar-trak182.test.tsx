@@ -63,8 +63,9 @@ describe('TRAK-182: Schedule month on Arc\'s calendar', () => {
     const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })
     expect(busy).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` })).toBeInTheDocument()
-    const firstRow = within(screen.getAllByRole('row')[0]).getAllByRole('gridcell')
-    expect(firstRow[0].getAttribute('aria-label')).toMatch(/^Monday/)
+    // TRAK-504: the first week opens with blank cells before the 1st, so the second week is the one that is all days.
+    const fullWeek = within(screen.getAllByRole('row')[1]).getAllByRole('gridcell')
+    expect(fullWeek[0].getAttribute('aria-label')).toMatch(/^Monday/)
     // Tarek's #311 review: the day names over the columns start on Monday too,
     // or "Su" would sit over the Monday column with every other test green.
     const header = [...document.querySelectorAll('[aria-hidden="true"]')]

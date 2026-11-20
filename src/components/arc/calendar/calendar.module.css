@@ -25,6 +25,7 @@
 .monthBody { position: relative; grid-area: 1 / 1; min-width: 0; will-change: transform; }
 .monthBody[inert] { pointer-events: none; }
 .grid { display: grid; row-gap: 4px; }
+/* Also the blank cells before a month's 1st and after its last day (TRAK-504). */
 .placeholderDay { aspect-ratio: 1; }
 .day { position: relative; display: grid; width: 100%; aspect-ratio: 1; min-width: 0; place-items: center; border: 0; border-radius: 50%; padding: 0; background: transparent; color: var(--foreground); font: inherit; font-size: var(--text-sm); font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard) var(--number-delay, 0ms); }
 /* The inner circle carries hover and press; the grid cell itself never moves, so the hit area stays put. */
@@ -35,23 +36,12 @@
 .highlightFill { position: absolute; inset: 0; border-radius: 50%; background: var(--accent); transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-spring) var(--ease-spring); }
 @media (hover: hover) and (pointer: fine) { .day:hover:not(:disabled):not(.selected)::before { background: var(--surface-muted); } .monthBody:has(.day.selected:hover) .highlightFill { background: var(--accent-strong); } }
 .day:active:not(:disabled)::before, .day:active:not(:disabled) .dayNumber, .monthBody:has(.day.selected:active:not(:disabled)) .highlightFill { scale: .94; transition-duration: var(--duration-fast), 100ms; transition-timing-function: var(--ease-standard); }
-/* Outside days dim their number, not the button, so a disc gliding onto one keeps its full strength. */
-.day.outside { color: var(--text-muted); }
-/* Trak (TRAK-189): the muted colour already reads as another month; no extra fade, so it keeps 4.5:1. */
-/* Trak (TRAK-256): another month's days also sit on a shaded square, and the first of them names its month,
-   so 1 November never reads as 1 October. The shade darkens whatever is behind it, so it shows on the white
-   Schedule card and on a date picker's grey panel alike (the muted number keeps 4.5:1 on both). A selected
-   one shows the disc instead. */
-.day.outside:not(.selected) { border-radius: 12px; background: var(--surface-muted); background: color-mix(in srgb, var(--foreground) 5%, transparent); }
-.monthLabel { position: absolute; top: 3px; left: 0; right: 0; color: var(--text-secondary); font-size: 9px; font-weight: 600; letter-spacing: .06em; line-height: 1; text-align: center; text-transform: uppercase; pointer-events: none; }
-.day.outside:disabled .monthLabel { opacity: .5; }
 /* Today is a small dot under the number. It takes the number's color, so it flips with it when the disc arrives. */
 .day.today .dayNumber::after { content: ""; position: absolute; top: calc(100% + 4px); left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
 .day.selected, .day.today { font-weight: 500; }
 .day.selected { color: var(--accent-foreground); }
 .day:disabled { cursor: default; color: var(--text-muted); }
 .day:disabled .dayNumber { opacity: .42; }
-.day.outside:disabled .dayNumber { opacity: .3; }
 @media (prefers-reduced-motion: reduce) {
   .navButton, .todayButton, .day, .day::before, .dayNumber, .highlightFill { transition: none; }
   .navButton:active, .todayButton:active, .day:active::before, .monthBody:has(.day.selected:active) .highlightFill, .day:active .dayNumber { scale: none; }
