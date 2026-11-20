@@ -277,23 +277,23 @@ export function Calendar({
   const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(" ");
   // Six fixed weeks per month, so a day's cell is its distance from the first day on the grid.
   const cellOf = (paneMonth: Date) => {
-    if (!value) return -1;
+    // TRAK-504: another month's day is a blank cell here, so no disc sits on it.
+    if (!value || !sameMonth(value, paneMonth)) return -1;
     const first = addDays(paneMonth, -weekday(paneMonth));
     const index = Math.round((startOfDay(value).getTime() - first.getTime()) / 864e5);
     return index >= 0 && index < 42 ? index : -1;
   };
 
   const renderMonth = (paneMonth: Date, present: boolean) => {
-    const firstShown = addDays(paneMonth, -weekday(paneMonth));
     return <>
     <SelectionDisc cell={cellOf(paneMonth)} reduced={reducedMotion} />
     <div className={styles.grid} role="grid" aria-label={formatter.format(paneMonth)}>
     {makeWeeks(paneMonth).map((week) => <div key={dateKey(week[0]!)} className={styles.week} role="row">
       {week.map((date) => {
         const key = dateKey(date);
-        // Trak (TRAK-256): another month's days are marked, and its first shown day names the month.
-        const outside = !sameMonth(date, paneMonth);
-        const monthLabel = outside && (date.getDate() === 1 || sameDay(date, firstShown)) ? shortMonth.format(date) : null;
+        // Trak (TRAK-504, Imad 19 Nov): a month shows only its own days; the cells before the 1st and after the last
+        // stay blank, so the days still sit under their weekdays. It replaces TRAK-256's shaded, named other-month days.
+        if (!sameMonth(date, paneMonth)) return <span key={key} role="gridcell" className={styles.placeholderDay} />;
         const selected = sameDay(date, value);
         const isToday = sameDay(date, today);
         const dots = marks?.(date) ?? [];
@@ -304,7 +304,6 @@ export function Calendar({
           type="button"
           role="gridcell"
           data-date={key}
-          data-outside={outside || undefined}
           aria-label={(dots.length ? `${label}, ${dots.length} ${dots.length === 1 ? "event" : "events"}` : label) + (needsYou ? ", needs you" : "")}
           data-attention={needsYou || undefined}
           aria-selected={selected}
@@ -312,12 +311,11 @@ export function Calendar({
           tabIndex={present && key === tabbableKey ? 0 : -1}
           disabled={isDisabled(date)}
           style={present ? numberDelay(key) : undefined}
-          className={cx(styles.day, outside && styles.outside, selected && styles.selected, isToday && styles.today)}
+          className={cx(styles.day, selected && styles.selected, isToday && styles.today)}
           onFocus={() => setFocusedDate(date)}
           onKeyDown={(event) => onDayKeyDown(event, date)}
           onClick={() => onChange?.(date)}
-        >{monthLabel && <span className={styles.monthLabel} data-month-label aria-hidden="true">{monthLabel}</span>}
-          {needsYou && <span className={styles.attention} aria-hidden="true" />}
+        >{needsYou && <span className={styles.attention} aria-hidden="true" />}
           <span className={styles.dayNumber}>{date.getDate()}</span>
           {dots.length > 0 && <span className={styles.marks} aria-hidden="true">{dots.slice(0, 3).map((mark, i) => {
             const { color, hollow } = typeof mark === "string" ? { color: mark, hollow: false } : mark;
