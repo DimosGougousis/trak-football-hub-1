@@ -671,7 +671,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const card = page.getByRole('region', { name: 'Today' })
     const planned = card.getByRole('article', { name: 'Training, Receiving under pressure' })
     const long = card.getByRole('article', { name: /^Training, How To Win Games/ })
-    await expect(long.getByRole('link', { name: 'Plan this session' })).toBeVisible()
+    await expect(long.getByRole('button', { name: 'Plan this session' })).toBeVisible()
     // Each header is one line: as tall as its words on their own. This coach has U14 and U16, and Home starts on All, so
     // each says its age group (Kostas, 29 Oct).
     for (const [article, text] of [[planned, 'Training plan · U16'], [long, 'Training plan · U14']] as const) {

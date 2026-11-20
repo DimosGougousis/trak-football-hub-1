@@ -7,6 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
@@ -174,7 +175,9 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     home({ events: [event('t2', 'training', '2026-11-04T18:00', { title: 'Finishing' })] })
     renderApp('/coach/home')
     const training = await within(await today()).findByRole('article', { name: 'Training, Finishing' })
-    expect(await within(training).findByRole('link', { name: 'Plan this session' })).toHaveAttribute('href', '/coach/training/t2?tab=plan')
+    // TRAK-507 (Imad, 20 Nov): Home's next-step button, no longer a link.
+    await userEvent.click(await within(training).findByRole('button', { name: 'Plan this session' }))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/t2?tab=plan'))
     // TRAK-443 (Imad, 15 Nov): the link says it; no "Not planned yet." line under it.
     expect(within(training).queryByText('Not planned yet.')).toBeNull()
   })
@@ -189,7 +192,11 @@ describe('TRAK-304: today’s plan on coach Home', { timeout: 20_000 }, () => {
     const match = await within(await today()).findByRole('article', { name: 'Match, vs Everton' })
     await waitFor(() => expect(within(match).getByText('4-3-3')).toBeInTheDocument())
     expect(within(match).getByText('Win it back in 5 seconds')).toBeInTheDocument()
-    expect(within(match).getByRole('link', { name: 'Open the game plan' })).toHaveAttribute('href', '/coach/matches/m1?tab=plan')
+    // TRAK-507 (Imad, 20 Nov): a button that says "Open", named in full for a screen reader.
+    const open = within(match).getByRole('button', { name: 'Open the game plan' })
+    expect(open).toHaveTextContent(/^Open$/)
+    await userEvent.click(open)
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/m1?tab=plan'))
   })
 
   it('a training earlier today stays on the card, closed, as a reminder of what was done', async () => {
