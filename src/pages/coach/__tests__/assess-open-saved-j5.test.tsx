@@ -181,7 +181,10 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     setSlider(screen.getAllByRole('slider')[0], 9)
     await saveAssessment()
     await waitFor(() => expect(assessmentWrites()).toEqual([['patch', 'assess-old']]))
-    expect(writes.find(w => w.table === 'coach_assessments')!.body).toMatchObject({ work_rate: 9, session_id: 'session-a' })
+    // TRAK-500: the edit doesn't resend the session, so the row keeps session-a.
+    const body = writes.find(w => w.table === 'coach_assessments')!.body
+    expect(body).toMatchObject({ work_rate: 9 })
+    expect(body).not.toHaveProperty('session_id')
   })
 
   it("opens the player's latest assessment from its card", async () => {
@@ -242,7 +245,8 @@ describe('TRAK-69: a coach opens a saved assessment and edits that row', { timeo
     expect(await screen.findByText(/Editing your assessment from 10 Sep/)).toBeInTheDocument()
     await saveAssessment()
     await waitFor(() => expect(assessmentWrites()).toEqual([['patch', 'assess-legacy']]))
-    expect(writes.find(w => w.table === 'coach_assessments')!.body.session_id).toBeNull()
+    // TRAK-500: nor a session for a row that had none.
+    expect(writes.find(w => w.table === 'coach_assessments')!.body).not.toHaveProperty('session_id')
   })
 
   it("opens an assessment whose session is older than the picker's list", async () => {

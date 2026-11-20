@@ -213,19 +213,22 @@ use_cases:
   # assessment stays as v2 everywhere. Where the season plan is on and the
   # squad's plan is shared, the squad's evaluation also writes assessments,
   # each with the six scores and no session (the fourth line).
+  # SPEC v4 2026-11-20 (TRAK-500): Imad decided on 19 Nov, with the team on
+  # the call, that Assess player asks for no session. v2's required session
+  # (TRAK-68) is dropped: the row has no session, and the player is enough.
   - id: UC-C04
     actor: coach
     title: Assess a player on six sliders producing a band
     requirement: REQ-002
     status: enforced
     tier: [1, 2]
-    spec_version: 3
-    given: A signed-in coach with at least one squad player and at least one past session
-    when: They select a player and a past session, set the six sliders and submit
+    spec_version: 4
+    given: A signed-in coach with at least one squad player
+    when: They select a player, set the six sliders and submit
     then:
-      - A coach_assessments row is persisted with all six category scores and the chosen session
+      - A coach_assessments row is persisted with all six category scores and no session
       - A band derived from the six scores is shown before submitting
-      - Submitting is refused until a player and a session are selected
+      - Submitting is refused until a player is selected
       - Where the academy's season plan is on and the squad's plan is shared, its due evaluation publishes all six scores for each consented player, starting from their latest scores, with no session
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 

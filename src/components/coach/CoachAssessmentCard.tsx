@@ -83,7 +83,8 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
         actions={published ? [edit, { label: t('coachAssess:unpublish'), onSelect: () => void setPublishedTo(false) }] : [edit]}
       />}
       details={<div className="space-y-3 text-sm">
-        <p className="text-foreground">{assessment.coach_sessions?.title ?? t('coachAssess:noSessionRecorded')}</p>
+        {/* TRAK-500: an assessment has no session now; only an older one saved with a session names it. */}
+        {assessment.coach_sessions?.title ? <p className="text-foreground">{assessment.coach_sessions.title}</p> : null}
         <p className="text-muted-foreground">{date}</p>
         <div>
           <MetadataLabel text={t('coachAssess:messageToPlayerCaps')} />
