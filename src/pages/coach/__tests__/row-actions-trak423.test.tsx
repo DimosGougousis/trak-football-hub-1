@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { Button } from '@/components/arc/button/button'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { NeedsYou } from '@/components/coach/home/NeedsYou'
 import { PlanReview } from '@/components/arc/blocks/plan-review/plan-review'
 import type { NeedsYouItem } from '@/lib/coach-needs-you'
@@ -17,8 +18,8 @@ import { rpc, rpcRows, table } from '../../../../tests/msw/supabase'
 afterEach(cleanup)
 
 /** The classes Arc's Button gives a size and an extra class: what the week's card actions are made of. */
-function lookOf(extra?: string) {
-  const { unmount } = render(<Button size="sm" className={extra}>x</Button>)
+function lookOf(extra?: string, size: 'sm' | 'md' = 'sm') {
+  const { unmount } = render(<Button size={size} className={extra}>x</Button>)
   const classes = screen.getByRole('button', { name: 'x' }).className
   unmount()
   return classes
@@ -28,11 +29,12 @@ const player = (name: string, kind: NeedsYouItem['kind']): NeedsYouItem =>
   ({ playerId: name, name, detail: '', kind, reason: kind === 'draft' ? 'Draft from Mon 9 Nov' : 'Never assessed', urgent: false, at: 0 })
 
 describe('TRAK-423: Needs you', () => {
-  it("a player's Assess and Finish draft are the week's small button, one per card, named for the player", () => {
-    const week = lookOf('min-w-[128px]')
+  // TRAK-497 (Imad, 20 Nov): the week's next step is now the medium (44 px) button; Assess still matches it.
+  it("a player's Assess and Finish draft are the week's next-step button, one per card, named for the player", () => {
+    const week = lookOf(NEXT_STEP_WIDTH, NEXT_STEP_SIZE)
     render(<NeedsYou items={[player('Angelos Basinas', 'assess'), player('Giourkas Seitaridis', 'draft')]}
       events={[{ id: 'e1', title: 'Training', when: 'Mon', squad: null, reason: 'Register to take',
-        action: <Button size="sm" className="min-w-[128px]">Take register</Button> }]}
+        action: <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH}>Take register</Button> }]}
       failed={false} onRetry={() => {}} onOpen={() => {}} />)
     const assess = screen.getByRole('button', { name: 'Assess Angelos Basinas' })
     const draft = screen.getByRole('button', { name: 'Finish draft: Giourkas Seitaridis' })

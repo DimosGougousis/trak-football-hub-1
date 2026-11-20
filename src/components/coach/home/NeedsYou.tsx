@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { Button } from '@/components/arc/button/button'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { LoadError } from '@/components/trak/LoadError'
 import type { NeedsYouItem } from '@/lib/coach-needs-you'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
@@ -75,7 +76,8 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
                   <span>{item.urgent && <span className="sr-only">{t('coachHome:urgent')}</span>}{item.reason}</span>
                 </span>
                 <span className="mt-auto">
-                  <Button size="sm" className="min-w-[128px]" onClick={() => onOpen(item)}
+                  {/* TRAK-497: Assess and Finish draft are next steps too: the same size as Evaluate and Take register. */}
+                  <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => onOpen(item)}
                     aria-label={item.kind === 'draft' ? `${t('coachHome:finishDraft')}: ${item.name}` : t('coachSquad:assessName', { name: item.name })}>
                     {item.kind === 'draft' ? t('coachHome:finishDraft') : t('coachHome:assess')}
                   </Button>

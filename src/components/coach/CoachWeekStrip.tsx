@@ -16,6 +16,7 @@ import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
 import { useCoachSquad, useWeekRoster } from '@/lib/coach-squad'
 import { MatchAction } from '@/components/coach/games/MatchAction'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
 import { loadWeek } from '@/lib/coach-week-load'
 import { publishEvent } from '@/lib/event-publish'
@@ -152,7 +153,7 @@ export function NextStep({ item, coachId, roster, onChanged }: {
   const [publishing, setPublishing] = useState(false)
   const row = item.row
   const go = (label: string, onClick: () => void, disabled = false) =>
-    <Button size="sm" className="min-w-[128px]" disabled={disabled} onClick={onClick}>{label}</Button>
+    <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} disabled={disabled} onClick={onClick}>{label}</Button>
 
   if (item.step === 'publish' && row) return go(publishing ? t('coachHome:publishing') : t('coachHome:publish'), () => {
     if (row.series_id) return navigate(`/coach/schedule?publish=${row.id}`)
@@ -166,10 +167,10 @@ export function NextStep({ item, coachId, roster, onChanged }: {
     // As the sheet's Share: an event for one squad names that squad; null is the whole roster.
     const rows = roster?.filter(p => row.squad == null || p.age_group?.trim() === row.squad)
     if (!rows) return go(t('coachHome:share'), () => {}, true)
-    return <ShareEventButton text={whatsAppShareText(shareableFromRow(row, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })}
-      className="arc inline-flex h-9 min-w-[128px] items-center justify-center gap-2 rounded-full bg-brand px-4 text-[14px] font-medium text-on-brand focus-visible:ring-2 focus-visible:ring-primary">
+    // TRAK-497: Arc's green button like every next step (it was a 36 px pill of its own).
+    return <span className="arc"><ShareEventButton arc="next-step" text={whatsAppShareText(shareableFromRow(row, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })}>
       <ShareIcon size={16} />{t('coachHome:share')}
-    </ShareEventButton>
+    </ShareEventButton></span>
   }
   // Imad, 23 Oct: the register opens here. Schedule shows only the squad last picked, so an event of another squad
   // (Home on All) was never found there, and Schedule stayed on today.
@@ -201,7 +202,7 @@ function StepSheet({ label, title, description, children }: {
 }) {
   const [open, setOpen] = useState(false)
   return <BottomSheet open={open} onOpenChange={setOpen} title={title} description={description} detents={[0.62, 0.92]} className="arc"
-    trigger={<Button size="sm" className="min-w-[128px]">{label}</Button>}>
+    trigger={<Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH}>{label}</Button>}>
     <div className="pb-4">{open && children(() => setOpen(false))}</div>
   </BottomSheet>
 }

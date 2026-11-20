@@ -2,7 +2,8 @@
 .group { display: inline-flex; align-items: stretch; border: 1px solid var(--accent); border-radius: var(--radius-control); background: var(--accent); transition: transform var(--duration-spring) var(--ease-spring); }
 .group:has(> .primary:active:not(:disabled)) { transform: scale(.97); transition-duration: var(--duration-instant); transition-timing-function: var(--ease-standard); }
 .primary, .trigger { border: 0; background: var(--accent); color: var(--accent-foreground); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
-.primary { position: relative; display: inline-grid; min-height: var(--control-height-md); place-items: center; padding: 0 var(--space-4); border-radius: calc(var(--radius-control) - 1px) 0 0 calc(var(--radius-control) - 1px); font-size: var(--text-sm); font-weight: 500; }
+/* Trak (TRAK-497): given a minimum width, the main part takes the extra room, so its word stays centred. */
+.primary { position: relative; display: inline-grid; flex: 1 1 auto; min-height: calc(var(--control-height-md) - 2px); place-items: center; padding: 0 var(--space-4); border-radius: calc(var(--radius-control) - 1px) 0 0 calc(var(--radius-control) - 1px); font-size: var(--text-sm); font-weight: 500; }
 /* The slot springs to the width of the next label; the content leads from the start edge and is clipped only while it morphs. */
 .primarySlot { display: inline-flex; min-width: 0; align-items: center; }
 .primarySlot[data-morphing] { clip-path: inset(-50% calc(var(--space-2) * -1)); }
@@ -11,7 +12,8 @@
 .iconPhase { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; }
 .glyphs { position: relative; display: inline-flex; flex: none; white-space: pre; }
 .glyph { display: inline-block; }
-.trigger { display: grid; width: 38px; min-height: var(--control-height-md); place-items: center; border-left: 1px solid color-mix(in oklab, var(--accent-foreground) 18%, var(--accent)); border-radius: 0 calc(var(--radius-control) - 1px) calc(var(--radius-control) - 1px) 0; }
+/* Trak (TRAK-497): the group's 1 px border is inside the 44 px, so the split button is exactly a Button's height. */
+.trigger { display: grid; width: 38px; min-height: calc(var(--control-height-md) - 2px); place-items: center; border-left: 1px solid color-mix(in oklab, var(--accent-foreground) 18%, var(--accent)); border-radius: 0 calc(var(--radius-control) - 1px) calc(var(--radius-control) - 1px) 0; }
 .chevron { transition: transform var(--duration-spring) var(--ease-spring); }
 .trigger[data-state="open"] .chevron { transform: rotate(180deg); }
 @media (hover: hover) and (pointer: fine) {

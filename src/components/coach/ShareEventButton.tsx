@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { canShareSheet } from '@/lib/share-event'
 import { Button } from '@/components/arc/button/button'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 
 /** Imad's share icon (TRAK-168, 18 Oct): a box with an arrow out, drawn in the text colour. */
 /** `tight` crops the drawing's margin, so it is as big as a lucide icon beside it (TRAK-275's button group). */
@@ -27,12 +28,14 @@ export function ShareEventButton({ text, className, children, arc, 'aria-label':
   children?: ReactNode
   /** TRAK-427: Arc's secondary button, as the pop-up's other actions. Without a share sheet it opens WhatsApp's link in
    *  a new tab on click, so it is a button, not a link. */
-  arc?: boolean
+  arc?: boolean | 'next-step'
   'aria-label'?: string
 }) {
   if (arc) {
+    // TRAK-497: as a next step (Home's week), the green primary every next step is; elsewhere the secondary.
+    const step = arc === 'next-step'
     return (
-      <Button variant="secondary" aria-label={label}
+      <Button variant={step ? 'primary' : 'secondary'} size={step ? NEXT_STEP_SIZE : undefined} className={step ? NEXT_STEP_WIDTH : undefined} aria-label={label}
         onClick={() => {
           if (canShareSheet()) navigator.share({ text }).catch(() => {})
           else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
