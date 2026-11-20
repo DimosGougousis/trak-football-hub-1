@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
 import { EditIcon } from "@/components/trak/IconAction";
-import { Countdown } from "../../countdown/countdown";
+import { Countdown, toEpoch } from "../../countdown/countdown";
 import { motionTokens } from "../../lib/motion-tokens";
 import styles from "./plan-review.module.css";
 import { useTranslation } from "@/lib/i18n";
@@ -67,6 +67,17 @@ export function PlanReview({ title, rows, band, countdown, aside, readOnly = fal
   const rootRef = useRef<HTMLElement>(null);
   const titleId = useId();
   const ready = rows.filter(row => row.status === "good").length;
+  // Trak (TRAK-521, Imad 20 Nov): once the countdown has run out, "Starts in" goes; "● Started" (or "● Finished") says it alone.
+  const countdownEnd = countdown ? toEpoch(countdown.end) : NaN;
+  const [countdownOver, setCountdownOver] = useState(() => countdownEnd <= Date.now());
+  useEffect(() => {
+    const left = countdownEnd - Date.now();
+    setCountdownOver(left <= 0);
+    // Its own timer, so it turns even while the card is scrolled away (the countdown only ticks on screen).
+    if (!(left > 0) || left > 2_147_483_647) return;
+    const timer = setTimeout(() => setCountdownOver(true), left + 8);
+    return () => clearTimeout(timer);
+  }, [countdownEnd]);
 
   // The entrance starts when the card first scrolls into view, so a capture always opens on it.
   const [started, setStarted] = useState(false);
@@ -114,7 +125,7 @@ export function PlanReview({ title, rows, band, countdown, aside, readOnly = fal
           {aside ? <div className={`${styles.cell} ${styles.countdownCell}`}>{aside}</div>
             : countdown ? <div className={`${styles.cell} ${styles.countdownCell}`}>
             {/* The timer is named by the same words, so they're said once. */}
-            <p className={styles.countdownLabel} aria-hidden="true">{countdown.label}</p>
+            {!countdownOver && <p className={styles.countdownLabel} aria-hidden="true">{countdown.label}</p>}
             <Countdown className={styles.countdown} target={countdown.end} units={["days", "hours", "minutes"]}
               label={countdown.label} completeLabel={countdown.completeLabel} />
           </div> : null}
