@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ExternalLink, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
@@ -152,7 +151,6 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
   /** The coach's children, so a family note naming one says families won't see it (TRAK-161); null until known. */
   childNames: string[] | null
 }) {
-  const navigate = useNavigate()
   const { user } = useAuth()
   // TRAK-407: the form's words and its pickers' day names, in the language showing.
   const { t } = useLanguage()
@@ -169,12 +167,6 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
   const datePassed = pastProblem(sheet.form, sheet.row, games, training)
   const played = playedMatch(sheet.form, sheet.row, games)
   const heldTraining = playedTraining(sheet.form, sheet.row, training)
-  const logInstead = (to: 'match' | 'training') => {
-    const { date, opponent, homeAway } = sheet.form
-    onClose()
-    if (to === 'match') navigate('/coach/sessions/quick', { state: { fromEvent: { date, opponent: opponent.trim() || null, homeAway: homeAway || null } } })
-    else navigate('/coach/sessions/add', { state: { logDate: date } })
-  }
 
   const setForm = (patch: Partial<EventForm>) =>
     onChange(s => {
@@ -412,13 +404,8 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
 
         {datePassed && (sheet.step === 1 || sheet.step === REVIEW) && (
           <div role="alert" className="rounded-xl p-3 space-y-2 border border-danger/30 bg-danger/[0.06]">
+            {/* TRAK-499: no way into the old logs from here (Imad, 20 Nov). */}
             <p className="text-[12px] text-danger" style={font}>{datePassed}</p>
-            <div className="flex gap-2">
-              {/* TRAK-288: where Games is on, a played match is a New event Match, evaluated on its game page. */}
-              {!games && <Button size="md" variant="secondary" className="flex-1" onClick={() => logInstead('match')}>{t('coachSchedule:logMatch')}</Button>}
-              {/* TRAK-426: where Training is on, a held training is a New event Training, registered on its own page. */}
-              {!training && <Button size="md" variant="secondary" className="flex-1" onClick={() => logInstead('training')}>{t('coachSchedule:logTraining')}</Button>}
-            </div>
           </div>
         )}
 

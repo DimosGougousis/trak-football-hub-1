@@ -202,7 +202,7 @@
   "problemRealDate": "Select a real date and time",
   "problemMeetBefore": "Meet time must be before the start",
   "problemNoteLength": "Keep the note to {{max}} characters",
-  "problemPastDate": "This date has passed: log it instead",
+  "problemPastDate": "This date has passed",
   "problemPickDay": "Select at least one day of the week",
   "problemSeriesEnd": "Select the date the series ends",
   "problemSeriesOrder": "The series has to end on or after its first date",
