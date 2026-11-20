@@ -248,7 +248,8 @@ describe('TRAK-340: drills', { timeout: 30_000 }, () => {
     const sheet = await screen.findByRole('dialog', { name: 'Find another drill for Passing & movement' })
     expect(within(sheet).getAllByRole('heading', { level: 3 }).map(h => h.textContent))
       .toEqual(['Passing', 'Pressing movement', 'Follow and copy', 'Repetition', 'Individual', 'Goalkeeping', 'Get ready', 'Skill practices', 'Game related practices'])
-    expect(within(sheet).getByText('The rest of the Drill Library')).toBeInTheDocument()
+    // TRAK-520 (Imad, 20 Nov): a plain rule where the rest of the Library starts, no words.
+    expect(within(sheet).queryByText('The rest of the Drill Library')).toBeNull()
     expect(within(sheet).getAllByRole('button', { name: /^Select / })).toHaveLength(LIBRARY.length - 1)
     expect(within(sheet).queryByRole('button', { name: 'My drills' })).toBeNull()
     await user.type(within(sheet).getByRole('searchbox', { name: 'Search drills' }), 'gate')

@@ -38,7 +38,7 @@ const GROUP_NAME: Record<Kind, string> = { warmup: 'Get ready', technical: 'Tech
 
 /** The squad every picture is fitted to: the squad picked at the top (or the whole roster on All), kept to what a
  *  drill can be drawn for, at the standard level. */
-function useLibrarySquad(): { squad: Squad | null; line: string; name: string | null } {
+function useLibrarySquad(): { squad: Squad | null; name: string | null } {
   const { user } = useAuth()
   const coachSquad = useCoachSquad(user?.id)
   // Wait for the squads, so the squad (and the drill page's Easier, Harder and Players today) doesn't start over when
@@ -46,22 +46,23 @@ function useLibrarySquad(): { squad: Squad | null; line: string; name: string | 
   const known = coachSquad.ready || coachSquad.failed
   const name = known && !coachSquad.everySquad ? coachSquad.squad : null
   const size = useSquadSize(name)
-  if (!known || size.isPending) return { squad: null, line: '', name }
+  if (!known || size.isPending) return { squad: null, name }
   const roster = size.data ?? 0
   const players = squadPlayers(roster)
   return {
     squad: { players, level: START_LEVEL },
-    line: `Each picture is set for ${players} players${name ? `, your ${name}s` : ''}.`,
     name,
   }
 }
 
-function SubPage({ title, intro, children }: { title: string; intro: ReactNode; children: ReactNode }) {
+/** TRAK-520 (Imad, 20 Nov): the Library's pages have no intro line; only a drill's page has something under its title
+ *  (its kind and type). */
+function SubPage({ title, intro, children }: { title: string; intro?: ReactNode; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-ground pb-28">
       <div className={WIDE_COLUMN}>
         <PageTop className="arc" title={title} trail={<CoachTrail current={title} />}
-          below={<p className="max-w-[60ch] text-[15px] text-ink-2">{intro}</p>} />
+          below={intro ? <p className="max-w-[60ch] text-[15px] text-ink-2">{intro}</p> : undefined} />
         {children}
       </div>
     </div>
@@ -72,7 +73,8 @@ function SubPage({ title, intro, children }: { title: string; intro: ReactNode; 
  *  16 Nov, in place of 6 Nov's plain box). The page's heading says what it searches, so its label is for screen readers. */
 function FindBox({ value, onChange, big = false }: { value: string; onChange: (q: string) => void; big?: boolean }) {
   return <div className={`arc [&_label]:sr-only ${big ? '[&_input]:text-[17px] [&>div>div]:min-h-14' : ''}`}>
-    <SearchField label="Search drills" autoComplete="off" value={value} onValueChange={onChange} placeholder="Search, e.g. rondo or pressing" />
+    {/* TRAK-520 (Imad, 20 Nov): the example in the box, in place of "Search". */}
+    <SearchField label="Search drills" autoComplete="off" value={value} onValueChange={onChange} placeholder="e.g. rondo, pressing" />
   </div>
 }
 
@@ -106,7 +108,7 @@ const GLYPHS: Record<PracticeKind, ReactNode> = {
 
 /** The Drills tab: Find a drill, My drills and All drills, then the three kinds of practice. */
 export function LibraryHome() {
-  const { squad, line } = useLibrarySquad()
+  const { squad } = useLibrarySquad()
   const bookmarks = useBookmarks()
   const [query, setQuery] = useQueryParam('q')
   const searching = !!query.trim()
@@ -122,7 +124,7 @@ export function LibraryHome() {
 
       {!squad ? <LoadingSkeleton label="Loading the drills…" rows={3} />
         : searching ? <section aria-label="Search results" className="grid gap-3">
-          <p role="status" className="text-sm text-ink-3">{found.length ? `${plural(found.length, 'drill')} found. ${line}` : ''}</p>
+          <p role="status" className="text-sm text-ink-3">{found.length ? `${plural(found.length, 'drill')} found.` : ''}</p>
           {found.length ? <DrillCards drills={found} players={squad.players} level={squad.level} notes={d => foundAs(d, query, squad)} label="Drills found" />
             : <Empty>No drills match. Try another word, like rondo or shooting.</Empty>}
         </section>
@@ -179,11 +181,11 @@ function HomeLink({ to, icon, title, note }: { to: string; icon: ReactNode; titl
  *  related. A drill no longer in the Library is left out. */
 export function MyDrills() {
   const navigate = useNavigate()
-  const { squad, line } = useLibrarySquad()
+  const { squad } = useLibrarySquad()
   const bookmarks = useBookmarks()
   const mine = (bookmarks.data ?? []).flatMap(id => libraryDrill(id) ?? [])
   return (
-    <SubPage title="My drills" intro={<>Drills you added from the Library. {mine.length ? line : ''}</>}>
+    <SubPage title="My drills">
       {bookmarks.error ? <LoadError what="your drills" onRetry={() => void bookmarks.refetch()} retrying={bookmarks.isFetching} />
         : !squad || bookmarks.isPending ? <LoadingSkeleton label="Loading your drills…" rows={2} />
         : !mine.length ? <div className="arc"><EmptyState icon={<Bookmark size={24} strokeWidth={1.5} />} title="Nothing in My drills yet"
@@ -208,7 +210,7 @@ export function MyDrills() {
 export function PracticePage() {
   const { kind } = useParams()
   const info = KINDS.find(k => k.key === kind)
-  const { squad, line } = useLibrarySquad()
+  const { squad } = useLibrarySquad()
   const [type, setType] = useQueryParam('type')
   if (!info) return <Navigate to="/coach/training/drills" replace />
   const types = typesOf(info.key)
@@ -216,7 +218,7 @@ export function PracticePage() {
   const empty = (t: string) => t === '11 v 11' ? 'Needs 22 players and a full pitch. None yet.' : 'None yet.'
 
   return (
-    <SubPage title={info.long} intro={<>{info.note} Listed simple to complex. {line}</>}>
+    <SubPage title={info.long}>
       <div className="arc mb-5">
         <ChipGroup label="Show drills" multiple={false} value={[shown.length === 1 ? shown[0] : '']}
           options={[{ value: '', label: 'All' }, ...types.map(t => ({ value: t, label: t }))]}
@@ -247,7 +249,7 @@ const keepFor = (show: string) => (d: LibraryDrill) =>
 /** Every drill as cards, grouped by kind; searching shows the best match first. Filters: the three kinds, Individual,
  *  Goalkeeping. */
 export function AllDrills() {
-  const { squad, line } = useLibrarySquad()
+  const { squad } = useLibrarySquad()
   const [rawShow, setShow] = useQueryParam('show')
   const show = (SHOW as readonly string[]).includes(rawShow) ? rawShow : ''
   const [query, setQuery] = useQueryParam('q')
@@ -256,7 +258,7 @@ export function AllDrills() {
   const title = show || 'All drills'
 
   return (
-    <SubPage title={title} intro={squad ? `${plural(found.length, 'drill')}. ${line}` : ''}>
+    <SubPage title={title}>
       <div className="arc mb-4">
         <ChipGroup label="Show" multiple={false} value={[show]}
           options={[{ value: '', label: 'All' }, ...SHOW.map(s => ({ value: s, label: s }))]}
@@ -369,8 +371,6 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
 
 /* ── Change any practice ────────────────────────────────────────────────── */
 
-const PRACTICE_INTRO = 'Five things shape every practice. Change one and you change what players learn, so you can fit any drill to the players in front of you.'
-
 /** TRAK-394 (from the 8 Nov mockup): Steve's five things, each with his example. Pick a set-up and the picture and
  *  what changes follow it; Conditions shows his three rules. The thing and the set-up live in the address, so Back
  *  returns to them. The answers are Trak's own; Steve checks them after the pilot (Kostas, 9 Nov). */
@@ -388,7 +388,7 @@ export function ChangePractice() {
   }, { replace: true })
 
   return (
-    <SubPage title="Change any practice" intro={PRACTICE_INTRO}>
+    <SubPage title="Change any practice">
       <div className="arc mb-4">
         <ChipGroup label="Five things that shape a practice" multiple={false} value={[shown.key]}
           options={CHARACTERISTICS.map(c => ({ value: c.key, label: c.name }))}

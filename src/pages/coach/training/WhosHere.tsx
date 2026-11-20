@@ -84,7 +84,7 @@ export function WhosHere({ training, plan, onPlan, onSaved }: {
               void client.invalidateQueries({ queryKey: ['coach', user.id, 'training-registers'] })
               void client.invalidateQueries({ queryKey: ['coach', user.id, 'training-here'] })
             }} />}
-        <p className="text-sm text-ink-3">{t('coachTraining:everyoneTicked')}</p>
+        {/* TRAK-520 (Imad, 20 Nov): no "Everyone starts ticked, as planned…" line. */}
       </section>}
 
     {!parts.length ? <section aria-labelledby="today" className="arc grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">

@@ -76,7 +76,8 @@ describe('TRAK-387: the Library home', { timeout: 20_000 }, () => {
     const found = await screen.findByRole('list', { name: 'Drills found' })
     expect(cardNames(found)).toEqual(LIBRARY.filter(d => d.type === 'Rondos').map(d => d.name))
     expect(within(found).getAllByText('Also called piggy in the middle').length).toBeGreaterThan(0)
-    expect(screen.getByText('6 drills found. Each picture is set for 12 players.')).toBeInTheDocument()
+    // TRAK-520 (Imad, 20 Nov): the count stays; "Each picture is set for N players." goes.
+    expect(screen.getByText('6 drills found.')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'What kind of practice?' })).toBeNull()
     expect(window.location.search).toBe('?q=piggy+in+the+middle')
 
@@ -88,14 +89,16 @@ describe('TRAK-387: the Library home', { timeout: 20_000 }, () => {
   it('every picture is fitted to the squad picked, kept to 8–20 players', async () => {
     roster(15)
     renderApp('/coach/training/drills/kind/skill')
-    expect(await screen.findByText(/Each picture is set for 15 players\./)).toBeInTheDocument()
-    expect(screen.getAllByText('15 players, 6v2 and 5v2 · 11x11 m each').length).toBeGreaterThan(0)
+    // TRAK-520: the pictures say it; no "Each picture is set for 15 players." line.
+    expect((await screen.findAllByText('15 players, 6v2 and 5v2 · 11x11 m each')).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Each picture is set for/)).toBeNull()
   })
 
   it('a big squad is drawn for 20, the most a picture holds', async () => {
     roster(30)
     renderApp('/coach/training/drills/kind/skill')
-    expect(await screen.findByText(/Each picture is set for 20 players\./)).toBeInTheDocument()
+    expect((await screen.findAllByText(/^20 players/)).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/^2[1-9] players|^30 players/)).toBeNull()
   })
 
   it('Sessions and Drills switch the view', async () => {
@@ -140,7 +143,9 @@ describe('TRAK-387: the Library’s pages', { timeout: 20_000 }, () => {
       .toEqual(['Get ready', 'Technical practices', 'Skill practices', 'Game related practices']))
     await user.click(screen.getByRole('button', { name: 'Goalkeeping' }))
     expect(await screen.findByRole('heading', { name: 'Goalkeeping', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText(new RegExp(`^${LIBRARY.filter(d => d.focus === 'goalkeeping').length} drills\\.`))).toBeInTheDocument()
+    // TRAK-520 (Imad, 20 Nov): no "N drills. Each picture…" line; the goalkeeping drills are the cards.
+    expect(screen.queryByText(/^\d+ drills?\./)).toBeNull()
+    for (const d of LIBRARY.filter(d => d.focus === 'goalkeeping')) expect(screen.getAllByRole('link', { name: new RegExp(`^${d.name}`) }).length).toBeGreaterThan(0)
     await user.click(screen.getByRole('button', { name: 'All' }))
     await user.type(screen.getByRole('searchbox', { name: 'Search drills' }), 'posession')
     const found = await screen.findByRole('list', { name: 'Drills found' })
