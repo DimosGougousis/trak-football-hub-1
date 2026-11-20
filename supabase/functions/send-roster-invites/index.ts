@@ -4,7 +4,9 @@
 // roster_invite_targets(), after the handler has identified the caller.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { corsHeaders, GUARDIAN_INVITE_WINDOW_MS, handleRosterInviteRequest, invitedElsewhereWithin, json, keyValues } from './handler.ts';
+import {
+  corsHeaders, forAcademySignIn, GUARDIAN_INVITE_WINDOW_MS, handleRosterInviteRequest, invitedElsewhereWithin, json, keyValues,
+} from './handler.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -60,7 +62,7 @@ serve(async (req) => {
         // ponytail: one page of 1,000 accounts; page through when prod passes that.
         const { data: page } = await admin.auth.admin.listUsers({ perPage: 1000 });
         const account = page?.users.find(user => user.email?.toLowerCase() === email.toLowerCase());
-        if (account) await admin.auth.admin.updateUserById(account.id, { user_metadata: data });
+        if (account) await admin.auth.admin.updateUserById(account.id, { user_metadata: forAcademySignIn(data) });
         else console.warn('send-roster-invites: existing account not found for the sign-in email');
         return await publicAuth.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo, shouldCreateUser: false } });
       },

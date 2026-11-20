@@ -1,8 +1,8 @@
 /**
  * TRAK-351 (Season plan 3/18, Tarek 3 Nov): a player in Squad › Players opens as their own full page, with no list
  * beside it. The page has its own address, so a reload or a link opens it directly. Going back returns to the list as
- * it was left: the same position filter and the same scroll. TRAK-428: the trail is the one way back (the page had a
- * Back button above it too). Synthetic people.
+ * it was left: the same position filter and the same scroll. TRAK-428: on a phone the trail is the one way back; a laptop
+ * keeps Back beside the top bar's trail. These run at a phone's width. Synthetic people.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'

@@ -23,7 +23,7 @@ vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }))
 vi.mock('@/lib/telemetry', () => ({ trackEvent: vi.fn(), startTimer: () => () => 100 }))
 
 const endpoint = (table: string) => `${SUPABASE_URL}/rest/v1/${table}`
-const assessmentA = { id: 'assessment-a', work_rate: 8, tactical: 8, attitude: 8,
+const assessmentA = { id: 'assessment-a', squad_player_id: 'player-a', created_at: '2026-09-20T18:00:00Z', work_rate: 8, tactical: 8, attitude: 8,
   technical: 8, physical: 8, coachability: 8, appearance: 'sub', session_id: 'session-1' }
 interface Write { table: string; method: string; id: string | null; body: Record<string, unknown> }
 let writes: Write[]
@@ -37,8 +37,8 @@ function gate() {
   return { promise, release }
 }
 
-function showForm() {
-  return render(<MemoryRouter initialEntries={['/coach/assess']}><Routes>
+function showForm(path = '/coach/assess') {
+  return render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/coach/assess" element={<CoachAssessPage />} />
     <Route path="/coach/home" element={<p>Coach home</p>} />
   </Routes></MemoryRouter>, queries())
@@ -48,10 +48,12 @@ const selector = () => screen.getAllByRole('combobox')[0]
 const noteBox = () => screen.getByPlaceholderText(/First touch under pressure/)
 const feedbackBox = () => screen.getByPlaceholderText(/Great week/)
 
-// TRAK-68: an assessment needs a past session. It stays chosen across players.
-async function chooseSessionIfNone() {
-  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
-  if (!/vs Synthetic FC/.test(screen.getByRole('combobox', { name: 'Session' }).textContent ?? '')) await pickOption('Session', /vs Synthetic FC/)
+// TRAK-500: Alex's saved assessment is edited by opening it (TRAK-69); selecting a player starts a new one.
+async function openAlex() {
+  const view = showForm(`/coach/assess?assessment=${assessmentA.id}`)
+  await screen.findByText('Alex Synthetic')
+  await waitFor(() => expect(reads).toContain('player-a'))
+  return view
 }
 
 // TRAK-182: the player is chosen on the first step; the message and note have their own.
@@ -62,8 +64,7 @@ async function selectPlayer(player: string) {
   const change = screen.queryByRole('button', { name: 'Change' })
   if (change) await userEvent.click(change)
   await pickOption('Player', PLAYER_NAME[player])
-  await chooseSessionIfNone()
-  await waitFor(() => expect(reads).toContain(player))
+  await waitFor(() => expect(nextButton()).toBeEnabled())
 }
 
 beforeEach(() => {
@@ -74,13 +75,12 @@ beforeEach(() => {
       { id: 'player-a', player_name: 'Alex Synthetic' },
       { id: 'player-b', player_name: 'Bella Synthetic' },
     ])),
-    http.get(endpoint('coach_sessions'), () => HttpResponse.json([{ id: 'session-1', title: 'vs Synthetic FC', session_date: '2026-09-20' }])),
-    // TRAK-100: the session picker lists only sessions the player was marked present at.
-    http.get(endpoint('session_attendance'), () => HttpResponse.json(['session-1'].map(session_id => ({ session_id })))),
+    // Read only by id (TRAK-500), and only coach A's row, as the owner-scoped query asks.
     http.get(endpoint('coach_assessments'), ({ request }) => {
-      const player = new URL(request.url).searchParams.get('squad_player_id')?.replace('eq.', '') ?? ''
-      reads.push(player)
-      return HttpResponse.json(player === 'player-a' ? [assessmentA] : [])
+      const params = new URL(request.url).searchParams
+      reads.push(params.get('squad_player_id')?.replace('eq.', '') ?? '')
+      const mine = params.get('coach_user_id') === 'eq.coach-a' && params.get('id') === `eq.${assessmentA.id}`
+      return HttpResponse.json(mine ? [assessmentA] : [])
     }),
     http.get(endpoint('coach_shared_feedback'), () => HttpResponse.json([
       { body: 'Published feedback for Alex', published_at: '2026-09-19T12:00:00Z' },
@@ -103,23 +103,15 @@ afterEach(() => {
 
 // TRAK-182: walking the steps adds real interaction; CI under load needs more than 5 s.
 describe('full assessment player boundaries', { timeout: 20_000 }, () => {
-  it('does not reassign Alex’s existing assessment while Bella’s load is pending', async () => {
-    const pending = gate()
-    server.use(http.get(endpoint('coach_assessments'), async ({ request }) => {
-      const player = new URL(request.url).searchParams.get('squad_player_id')!.replace('eq.', '')
-      reads.push(player)
-      if (player === 'player-b') await pending.promise
-      return HttpResponse.json(player === 'player-a' ? [assessmentA] : [])
-    }))
-    showForm()
-    await selectPlayer('player-a')
+  it('never saves into Alex’s opened assessment after switching to Bella', async () => {
+    await openAlex()
     await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     await selectPlayer('player-b')
-    // Bella's assessment is still loading: the way to the save stays shut.
-    expect(nextButton()).toBeDisabled()
-    await userEvent.click(nextButton())
-    expect(writes).toEqual([])
+    await saveAssessment()
+    await screen.findByText('Coach home')
+    // A new row for Bella; Alex's row is not touched.
+    expect(writes.map(write => [write.table, write.method, write.body.squad_player_id])).toEqual([['coach_assessments', 'post', 'player-b']])
   })
 
   it('ignores Alex’s late shared-feedback response after selecting Bella', async () => {
@@ -130,8 +122,7 @@ describe('full assessment player boundaries', { timeout: 20_000 }, () => {
       await pending.promise
       return HttpResponse.json([{ body: 'Late private-to-Alex feedback', published_at: '2026-09-19T12:00:00Z' }])
     }))
-    showForm()
-    await selectPlayer('player-a')
+    await openAlex()
     await waitFor(() => expect(started).toBe(true))
     await selectPlayer('player-b')
     await act(async () => { pending.release(); await new Promise(resolve => setTimeout(resolve, 30)) })
@@ -147,8 +138,7 @@ describe('full assessment player boundaries', { timeout: 20_000 }, () => {
   })
 
   it('clears the previous player’s scores and private draft before saving a new assessment', async () => {
-    showForm()
-    await selectPlayer('player-a')
+    await openAlex()
     await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     await assessStep('Note')
@@ -172,8 +162,7 @@ describe('full assessment player boundaries', { timeout: 20_000 }, () => {
     server.use(http.get(endpoint('coach_shared_feedback'), () => fail
       ? HttpResponse.json({ message: 'Synthetic feedback access denied' }, { status: 403 })
       : HttpResponse.json([{ body: 'Published feedback for Alex', published_at: '2026-09-19T12:00:00Z' }])))
-    showForm()
-    await selectPlayer('player-a')
+    await openAlex()
     expect(await screen.findByRole('alert')).toHaveTextContent(/load/i)
     expect(nextButton()).toBeDisabled()
     fail = false
@@ -184,8 +173,7 @@ describe('full assessment player boundaries', { timeout: 20_000 }, () => {
   })
 
   it('preserves an unsaved draft when the same account receives a refreshed user object', async () => {
-    const view = showForm()
-    await selectPlayer('player-a')
+    const view = await openAlex()
     await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     await userEvent.clear(feedbackBox())
@@ -230,8 +218,7 @@ describe('full assessment player boundaries', { timeout: 20_000 }, () => {
 
   it('loads and clears a private note independently of published feedback', async () => {
     server.use(http.get(endpoint('coach_assessment_notes'), () => HttpResponse.json([{ note: 'Existing private note' }])))
-    showForm()
-    await selectPlayer('player-a')
+    await openAlex()
     await assessStep('Message')
     expect(await screen.findByDisplayValue('Published feedback for Alex')).toBe(feedbackBox())
     await assessStep('Note')
@@ -255,8 +242,7 @@ describe('full assessment player boundaries', { timeout: 20_000 }, () => {
       }
       return HttpResponse.json([{ id: 'player-a', player_name: 'Alex Synthetic' }])
     }))
-    const view = showForm()
-    await selectPlayer('player-a')
+    const view = await openAlex()
     await assessStep('Message')
     await screen.findByDisplayValue('Published feedback for Alex')
     auth.user = { id: 'coach-b' }

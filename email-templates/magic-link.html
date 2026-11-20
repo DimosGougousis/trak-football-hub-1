@@ -1,21 +1,38 @@
-<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111111;">
-  <p style="font-size:18px;font-weight:700;letter-spacing:3px;margin:0 0 24px;">TRAK</p>
-{{ if .Data.child_first_name }}{{ if .Data.invited_as }}{{ if eq .Data.invited_as "player" }}
-  <p style="font-size:17px;font-weight:600;margin:0 0 12px;">{{ .Data.academy_name }} has invited you to Trak</p>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">Sign in with the code below to see your training, matches and coach feedback.</p>
+<!--
+  Supabase -> Authentication -> Emails -> "Magic link". Subject: Sign in to Trak
+  TRAK-190 (design approved by Imad, 17 Nov; words Kostas's own, 17 Nov): the
+  same card as every Trak email. Plain ASCII only: Gmail strips the charset.
+  TRAK-475: a parent invited by their child is told who invited them, first.
+  send-parent-invite sets invited_by and clears the academy's child details;
+  send-roster-invites does the opposite, so each email names only its own child.
+-->
+<div style="margin:0;padding:24px 12px;background:#F6F5F1;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="max-width:480px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E0D8;border-radius:14px;">
+<tr><td style="padding:24px 22px 18px;font-family:Futura,'Century Gothic','Trebuchet MS',Arial,sans-serif;color:#1A2421;">
+  <p style="margin:0 0 18px;font-size:15px;font-weight:700;letter-spacing:4px;color:#0B6623;">TRAK</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">Hello,</p>
+{{ if eq (printf "%v" .Data.invited_by) "player" }}
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.5;font-weight:600;color:#1A2421;">{{ if .Data.player_first_name }}{{ .Data.player_first_name }}{{ else }}Your child{{ end }} has invited you to Trak as their parent or guardian.</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">On Trak, {{ if .Data.player_first_name }}{{ .Data.player_first_name }}'s{{ else }}your child's{{ end }} coach records assessments and matches. The coach can't record anything until you approve it, and you can withdraw at any time.</p>
+{{ else if .Data.child_first_name }}{{ if .Data.invited_as }}{{ if eq .Data.invited_as "player" }}
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.5;font-weight:600;color:#1A2421;">{{ .Data.academy_name }} has invited you to Trak.</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">Sign in with the code below to see your training, matches and coach feedback.</p>
 {{ else }}
-  <p style="font-size:17px;font-weight:600;margin:0 0 12px;">{{ .Data.academy_name }} has added {{ .Data.child_first_name }} to Trak</p>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">Sign in with the code below to approve {{ .Data.child_first_name }}. Nothing about {{ .Data.child_first_name }} is shared until you approve, and you can withdraw at any time.</p>
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.5;font-weight:600;color:#1A2421;">{{ .Data.academy_name }} has added {{ .Data.child_first_name }} to Trak.</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">Sign in with the code below to approve {{ .Data.child_first_name }}. Nothing about {{ .Data.child_first_name }} is shared until you approve, and you can withdraw at any time.</p>
 {{ end }}{{ else }}
-  <p style="font-size:17px;font-weight:600;margin:0 0 12px;">{{ .Data.academy_name }} has added {{ .Data.child_first_name }} to Trak</p>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 12px;">Sign in with the code below to approve {{ .Data.child_first_name }}.</p>
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.5;font-weight:600;color:#1A2421;">{{ .Data.academy_name }} has added {{ .Data.child_first_name }} to Trak.</p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1A2421;">Sign in with the code below to approve {{ .Data.child_first_name }}.</p>
 {{ end }}{{ else }}
-  <p style="font-size:17px;font-weight:600;margin:0 0 12px;">Sign in to Trak</p>
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.5;font-weight:600;color:#1A2421;">Sign in to Trak</p>
 {{ end }}
-  <p style="font-size:15px;line-height:1.5;margin:24px 0 8px;">Your code to sign in:</p>
-  <p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:0 0 16px;">{{ .Token }}</p>
-  <p style="margin:0 0 24px;"><a href="{{ .SiteURL }}/auth/code?type=magiclink&email={{ .Email }}&redirect_to={{ .RedirectTo }}" style="background:#C8F25A;color:#0A0A0B;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600;display:inline-block;">Sign in</a></p>
-  <p style="font-size:13px;color:#444444;line-height:1.5;margin:0 0 12px;">Tap the button, then type the code. It works once and expires after an hour.</p>
-  <p style="font-size:12px;color:#666666;line-height:1.5;margin:24px 0 0;">If you didn't ask to sign in, ignore this email and nothing happens.</p>
-  <p style="font-size:12px;color:#666666;line-height:1.5;margin:8px 0 0;">To keep Trak emails out of spam, add <strong>noreply@trakfootball.com</strong> to your contacts.</p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#57615C;">Your code to sign in:</p>
+  <p style="margin:0 0 14px;padding:12px;background:#EEEDE7;border-radius:10px;text-align:center;font-size:26px;font-weight:600;letter-spacing:8px;color:#1A2421;">{{ .Token }}</p>
+  <p style="margin:0 0 14px;"><a href="{{ .SiteURL }}/auth/code?type=magiclink&email={{ .Email }}&redirect_to={{ .RedirectTo }}" style="background:#0B6623;color:#FFFFFF;padding:11px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">Sign in</a></p>
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#57615C;">Tap the button, then type the code. It works once and expires after an hour.</p>
+  <div style="margin-top:20px;padding-top:12px;border-top:1px solid #E2E0D8;">
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#6B736F;">If you didn't ask to sign in, ignore this email and nothing happens.</p>
+    <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#6B736F;">To keep Trak emails out of spam, add <strong>noreply@trakfootball.com</strong> to your contacts.</p>
+  </div>
+</td></tr></table>
 </div>

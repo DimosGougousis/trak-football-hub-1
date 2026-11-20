@@ -2,7 +2,7 @@ import { currentLanguage, useTranslation } from '@/lib/i18n'
 import { appearanceWord, bandWord } from '@/lib/band-words'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { PlayerFace } from '@/components/trak/PlayerFace'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { fetchWaitReason, waitText, type WaitReason } from '@/lib/wait-reason'
 import { useAuth } from '@/contexts/AuthContext'
@@ -15,7 +15,6 @@ import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { BandType } from '@/lib/types'
 import { deriveCardStats } from '@/lib/cardStats'
-import { localTodayISO } from '@/lib/event-time'
 import { trackEvent, startTimer } from '@/lib/telemetry'
 import { ChevronLeft } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
@@ -25,13 +24,6 @@ import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { Select } from '@/components/arc/select/select'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-
-/* TRAK-219 (20 Oct live run, S7): a match is offered only to a player its log
-   marks present, i.e. played (TRAK-100), so "Didn't play" would contradict the
-   log. A player who didn't play isn't assessed (Imad, 19 Oct, option A); the
-   match log carries that (TRAK-185). */
-const MATCH_APPEARANCES = ['started', 'sub'] as const
-type MatchAppearance = typeof MATCH_APPEARANCES[number]
 
 /** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
     and the private note get their own steps, so player-visible words never sit
@@ -75,21 +67,19 @@ function CoachAssessmentForm() {
 
   /* --- data --- */
   const [players, setPlayers] = useState<any[]>([])
-  const [sessions, setSessions] = useState<any[]>([])
   const [choicesLoading, setChoicesLoading] = useState(true)
   const [choicesError, setChoicesError] = useState(false)
   const rosterAccount = useRef(userId)
   const [playerId, setPlayerId] = useState((location.state as any)?.preselectedPlayerId || '')
-  const [sessionId, setSessionId] = useState('')
-  /* TRAK-69: /coach/assess?assessment=<id> opens that exact saved row. It is
-     resolved to its player and session, and loaded by id while that pair stays
-     selected, so a row from before sessions were required, or one whose session
-     is older than the picker's list, still opens and saves in place. */
+  /* TRAK-500 (Imad, 19 Nov): Assess player asks for no session; each one is a
+     new assessment with none. TRAK-69: /coach/assess?assessment=<id> opens that
+     exact saved row, loaded by id while its player stays selected, and saving
+     edits it in place, keeping any session or Started/Sub it was saved with. */
   const openId = new URLSearchParams(location.search).get('assessment')
-  const [opened, setOpened] = useState<{ id: string; playerId: string; sessionId: string; createdAt: string; session: any | null } | null>(null)
+  const [opened, setOpened] = useState<{ id: string; playerId: string; createdAt: string; session: any | null } | null>(null)
   const [openState, setOpenState] = useState<'idle' | 'loading' | 'missing' | 'error'>(openId ? 'loading' : 'idle')
-  // Imad, 19 Oct (J4, no invented defaults): nothing pre-picked; a match waits for the coach's choice.
-  const [appearance, setAppearance] = useState<MatchAppearance | null>(null)
+  // Shown on Review for an opened row saved with one; never asked any more (TRAK-500).
+  const [appearance, setAppearance] = useState<string | null>(null)
   const [workRate, setWorkRate]         = useState(5)
   const [tactical, setTactical]         = useState(5)
   const [attitude, setAttitude]         = useState(5)
@@ -115,27 +105,14 @@ function CoachAssessmentForm() {
   const [saving, setSaving] = useState(false)
   const [noteExists, setNoteExists] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
-  const byId = opened !== null && opened.playerId === playerId && opened.sessionId === sessionId
-  /* TRAK-100: only sessions this player was marked present at. In the TRAK-24
-     rerun the coach picked a same-name session from earlier that day with no
-     attendance, and the child's history showed the assessment against it.
-     Keyed by player, so a late read for the previous player is never used. */
-  const [attendance, setAttendance] = useState<{ playerId: string; sessionIds: Set<string> } | null>(null)
-  const [attendanceError, setAttendanceError] = useState(false)
-  const attendanceReady = attendance !== null && attendance.playerId === playerId
-  const sessionOptions = useMemo(() => {
-    const attended = attendanceReady ? sessions.filter(s => attendance.sessionIds.has(s.id)) : []
-    // An opened saved assessment keeps its own session, attended or not, so it still opens and saves in place.
-    return opened?.session && opened.playerId === playerId && !attended.some(s => s.id === opened.session.id)
-      ? [...attended, opened.session] : attended
-  }, [sessions, opened, playerId, attendance, attendanceReady])
-  const scope = JSON.stringify([userId, playerId, sessionId, byId ? opened?.id : null])
+  const byId = opened !== null && opened.playerId === playerId
+  const scope = JSON.stringify([userId, playerId, byId ? opened?.id : null])
   const currentScope = useRef(scope)
   currentScope.current = scope
   const [loadState, setLoadState] = useState<{ scope: string; status: 'loading' | 'ready' | 'error' }>({ scope: '', status: 'loading' })
+  // Not while ?assessment=<id> resolves: a preselected player must not start a new row in its place.
   const formReady = loadState.scope === scope && loadState.status === 'ready'
-    && !choicesLoading && !choicesError && players.some(player => player.id === playerId)
-    && (sessionOptions.some(session => session.id === sessionId) || (byId && sessionId === ''))
+    && !choicesLoading && !choicesError && openState !== 'loading' && players.some(player => player.id === playerId)
   const saveRequest = useRef<AbortController | null>(null)
   useEffect(() => () => { saveRequest.current?.abort() }, [scope])
 
@@ -147,10 +124,8 @@ function CoachAssessmentForm() {
     timerRef.current = playerId ? startTimer() : null
   }, [playerId])
 
-  /* The existing assessment for this player in this session, if any (TRAK-68).
-     One assessment per player per session: coming back to add a note edits it,
-     and a second session the same day gets its own assessment. Keying on the
-     day instead silently moved the first one to the second match. */
+  /* The saved row being edited: only one opened by id (TRAK-69). Without one,
+     saving inserts a new assessment (TRAK-500). */
   const [existingId, setExistingId] = useState<string | null>(null)
   const openedRowId = byId ? opened?.id ?? null : null
 
@@ -163,16 +138,14 @@ function CoachAssessmentForm() {
     setOpenState('loading')
     void (async () => {
       const { data, error } = await supabase.from('coach_assessments')
-        .select('id, squad_player_id, session_id, created_at, coach_sessions(id, title, session_date, session_type)')
+        .select('id, squad_player_id, created_at, coach_sessions(id, title, session_date, session_type)')
         .eq('id', openId).eq('coach_user_id', userId).abortSignal(controller.signal).maybeSingle()
       if (cancelled) return
       if (error) { console.error('Opening the assessment failed:', error); setOpenState('error'); return }
       if (!data) { setOpenState('missing'); return }
       const row = data as any
-      setOpened({ id: row.id, playerId: row.squad_player_id, sessionId: row.session_id ?? '',
-        createdAt: row.created_at, session: row.coach_sessions ?? null })
+      setOpened({ id: row.id, playerId: row.squad_player_id, createdAt: row.created_at, session: row.coach_sessions ?? null })
       setPlayerId(row.squad_player_id)
-      setSessionId(row.session_id ?? '')
       setOpenState('idle')
     })()
     return () => { cancelled = true; controller.abort() }
@@ -191,14 +164,15 @@ function CoachAssessmentForm() {
     setShared(''); setSharedPublished(false); setSharedExists(false); setPublishedBody(null); setAssessmentPublished(false)
     setSaving(false)
     setLoadState({ scope, status: 'loading' })
-    if (userId && playerId && (sessionId || openedRowId)) {
+    // A new assessment starts blank: nothing to read (TRAK-500).
+    if (userId && playerId && !openedRowId) setLoadState({ scope, status: 'ready' })
+    if (userId && playerId && openedRowId) {
       void (async () => {
         try {
-          const query = supabase.from('coach_assessments')
-            .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, session_id, published_at')
-            .eq('coach_user_id', userId).eq('squad_player_id', playerId)
-          const { data, error } = await (openedRowId ? query.eq('id', openedRowId) : query.eq('session_id', sessionId))
-            .order('created_at', { ascending: false }).limit(1).abortSignal(controller.signal).maybeSingle()
+          const { data, error } = await supabase.from('coach_assessments')
+            .select('id, work_rate, tactical, attitude, technical, physical, coachability, appearance, published_at')
+            .eq('coach_user_id', userId).eq('squad_player_id', playerId).eq('id', openedRowId)
+            .abortSignal(controller.signal).maybeSingle()
           if (cancelled) return
           if (error) throw error
           if (data) {
@@ -220,7 +194,7 @@ function CoachAssessmentForm() {
             setWorkRate(data.work_rate); setTactical(data.tactical)
             setAttitude(data.attitude); setTechnical(data.technical)
             setPhysical(data.physical); setCoachability(data.coachability)
-            setAppearance(MATCH_APPEARANCES.includes(data.appearance as MatchAppearance) ? data.appearance as MatchAppearance : null)
+            setAppearance(data.appearance ?? null)
             setNote(privateResult.data?.note ?? '')
             setNoteExists(privateResult.data != null)
             setShared(sf?.body ?? '')
@@ -237,13 +211,13 @@ function CoachAssessmentForm() {
       })()
     }
     return () => { cancelled = true; controller.abort() }
-  }, [userId, playerId, sessionId, openedRowId, scope, loadAttempt])
+  }, [userId, playerId, openedRowId, scope, loadAttempt])
 
   /* Account-bound choices: a late response from another coach cannot repopulate them. */
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
-    setPlayers([]); setSessions([])
+    setPlayers([])
     setChoicesError(false); setChoicesLoading(true)
     if (rosterAccount.current !== userId) {
       rosterAccount.current = userId
@@ -253,18 +227,11 @@ function CoachAssessmentForm() {
     if (userId) {
       void (async () => {
         try {
-          const [roster, events] = await Promise.all([
-            supabase.from('squad_players').select('*').eq('coach_user_id', userId)
-              .order('player_name').abortSignal(controller.signal),
-            // Only sessions that already happened can be assessed (TRAK-68).
-            supabase.from('coach_sessions').select('*').eq('coach_user_id', userId)
-              .lte('session_date', localTodayISO())
-              .order('session_date', { ascending: false }).limit(20).abortSignal(controller.signal),
-          ])
+          const roster = await supabase.from('squad_players').select('*').eq('coach_user_id', userId)
+            .order('player_name').abortSignal(controller.signal)
           if (cancelled) return
           if (roster.error) throw roster.error
-          if (events.error) throw events.error
-          setPlayers(roster.data ?? []); setSessions(events.data ?? [])
+          setPlayers(roster.data ?? [])
         } catch (error) {
           if (cancelled) return
           console.error('Assessment choices failed:', error)
@@ -277,29 +244,6 @@ function CoachAssessmentForm() {
     return () => { cancelled = true; controller.abort() }
   }, [userId, loadAttempt])
 
-  /* TRAK-100: the chosen player's attendance. A failed read offers no
-     sessions (and a Retry), never every session as a fallback. */
-  useEffect(() => {
-    setAttendanceError(false)
-    if (!userId || !playerId) return
-    let cancelled = false
-    const controller = new AbortController()
-    void (async () => {
-      const { data, error } = await supabase.from('session_attendance').select('session_id')
-        .eq('squad_player_id', playerId).eq('status', 'present').abortSignal(controller.signal)
-      if (cancelled) return
-      if (error) { console.error('Attendance read failed:', error); setAttendanceError(true); return }
-      setAttendance({ playerId, sessionIds: new Set((data ?? []).map(row => row.session_id as string)) })
-    })()
-    return () => { cancelled = true; controller.abort() }
-  }, [userId, playerId, loadAttempt])
-
-  // A session chosen for the previous player stays only if this player attended it too.
-  // Not while the sessions reload (Retry empties them first): that is not a "no".
-  useEffect(() => {
-    if (attendanceReady && !choicesLoading && !choicesError && sessionId && !sessionOptions.some(s => s.id === sessionId)) setSessionId('')
-  }, [attendanceReady, choicesLoading, choicesError, sessionId, sessionOptions])
-
   /* --- computed --- */
   const avg = (workRate + tactical + attitude + technical + physical + coachability) / 6
   const band = scoreToBand(avg)
@@ -310,10 +254,8 @@ function CoachAssessmentForm() {
     [players, playerId],
   )
   const firstName: string = selectedPlayer?.player_name?.trim().split(/\s+/)[0] || t('coachAssess:thePlayer')
-  const selectedSession = sessionOptions.find(s => s.id === sessionId)
-  // TRAK-182 (live run 3, 16 Oct): a training is a training, so Started or Sub isn't asked.
-  const isTraining = selectedSession?.session_type === 'training'
-  const savedAppearance = isTraining ? 'training' : appearance
+  // The session an opened row was saved against, if any (TRAK-500: a new one has none).
+  const openedSession = byId ? opened?.session ?? null : null
   // TRAK-100: the time it was logged tells two same-day, same-title sessions apart.
   const loggedAt = (s: any) => s.created_at
     ? t('coachAssess:logged', { time: new Date(s.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }) : ''
@@ -330,8 +272,8 @@ function CoachAssessmentForm() {
      from a raw row-level-security error after. The database stays the gate:
      if this check fails we do not block on a guess. */
   const [consentWait, setConsentWait] = useState(false)
-  // TRAK-425: step 1 is done once a player and session can be assessed; only then may the steps be jumped (ahead as well as back).
-  const playerReady = !!playerId && formReady && !consentWait && (isTraining || !!appearance)
+  // TRAK-425: step 1 is done once the player can be assessed; only then may the steps be jumped (ahead as well as back).
+  const playerReady = !!playerId && formReady && !consentWait
   // TRAK-182 (Imad, 15 Oct): one step per screen; the review step saves.
   const [step, setStep] = useState(0)
   useEffect(() => {
@@ -361,8 +303,6 @@ function CoachAssessmentForm() {
      Unpublish is not a save: see handleUnpublish below. */
   const handleSave = async (draft = false) => {
     if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
-    // Option A (Imad, 19 Oct): a player who didn't play isn't assessed, even if Review is reached another way.
-    if (!isTraining && !appearance) return
     // Rewriting an unchanged, still-published message would re-stamp it and
     // mark it "new" for the player again. Leave it alone, unless it's being
     // taken back to a draft.
@@ -377,9 +317,7 @@ function CoachAssessmentForm() {
         coach_user_id: user.id,
         coach_name_snapshot: profile?.full_name || null,
         squad_player_id: playerId,
-        // Null only for a row opened by id that predates required sessions.
-        session_id: sessionId || null,
-        appearance: savedAppearance,
+        // No session_id or appearance (TRAK-500): a new row has neither, and an edit keeps what it was saved with.
         // raw coach inputs
         work_rate: workRate,
         tactical,
@@ -627,9 +565,7 @@ function CoachAssessmentForm() {
             options={players.filter(p => inSquad(p.age_group) || p.id === playerId).map(p => ({ value: p.id, label: p.player_name }))} />
         </div>}
 
-        {/* ---- 3. session selector (required, TRAK-68) ----
-            Outside the locked fieldset: the form stays locked until a session
-            is chosen, so the coach must be able to choose one. */}
+        {/* ---- 3. no session to select (TRAK-500); an opened row says which one it is ---- */}
         <div className="space-y-1.5">
           {openState === 'missing' || openState === 'error' ? (
             <p role="alert" className="text-[12px] text-warning">
@@ -638,40 +574,18 @@ function CoachAssessmentForm() {
                 : t('coachAssess:cantOpenError')}
             </p>
           ) : null}
-          {!choicesLoading && !choicesError && sessions.length === 0 && !(opened?.session && opened.playerId === playerId) ? (
-            <p role="status" className="text-[12px] text-ink-2">
-              {t('coachAssess:noPastSessions')}{' '}
-              <Link to="/coach/sessions" className="underline text-brand">{t('coachAssess:logASession')}</Link>
-            </p>
-          ) : playerId && attendanceError ? (
-            <div role="alert" className="text-[12px] text-warning">
-              {t('coachAssess:couldntLoadSessions', { name: firstName })}
-              <button type="button" onClick={() => setLoadAttempt(value => value + 1)} className="ml-2 underline">{t('common:retry')}</button>
-            </div>
-          ) : !choicesLoading && !choicesError && attendanceReady && sessionOptions.length === 0 ? (
-            <p role="status" className="text-[12px] text-ink-2">
-              {t('coachAssess:notPresentAny', { name: firstName })}{' '}
-              <Link to="/coach/sessions" className="underline text-brand">{t('coachAssess:logASession')}</Link>
-            </p>
-          ) : (
-            <div className="arc">
-              <Select label={t('coachAssess:sessionFallback')} placeholder={playerId ? t('coachAssess:selectSession') : t('coachAssess:choosePlayerFirst')}
-                disabled={saving || choicesLoading || !playerId} value={sessionId} onValueChange={setSessionId}
-                options={sessionOptions.map(s => ({ value: s.id, label: sessionLabel(s) }))} />
-            </div>
-          )}
-          {existingId && formReady && selectedSession ? (
+          {existingId && formReady && openedSession ? (
             <p role="status" className="text-[11px] text-ink-2">
-              {t('coachAssess:editingFor', { session: sessionLabel(selectedSession) })}
+              {t('coachAssess:editingFor', { session: sessionLabel(openedSession) })}
             </p>
-          ) : existingId && formReady && openedRowId && opened ? (
+          ) : existingId && formReady && opened ? (
             <p role="status" className="text-[11px] text-ink-2">
               {t('coachAssess:editingFrom', { day: new Date(opened.createdAt).toLocaleDateString(currentLanguage() === 'en' ? 'en-GB' : currentLanguage(), { day: 'numeric', month: 'short' }) })}
             </p>
           ) : null}
         </div>
 
-        {((playerId && (sessionId || openedRowId) && !formReady) || choicesError) && (
+        {((playerId && !formReady) || choicesError) && (
           (choicesError || (loadState.scope === scope && loadState.status === 'error')) ? (
             <div role="alert" className="text-sm text-warning">
               {t('coachAssess:couldNotLoad')}
@@ -684,16 +598,6 @@ function CoachAssessmentForm() {
             withdrawn mid-edit, the refused save sets consentWait: the form
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
-        {step === 0 && <>
-        {/* ---- 4. appearance (pilot coach's item 13; Imad, 19 Oct): Started or Sub, for a
-            match the log has them playing (TRAK-219). A training isn't asked (TRAK-182). ---- */}
-        {!isTraining && <div className="arc">
-          <Select label={t('coachAssess:appearance')} placeholder={t('coachHome:choose')} value={appearance ?? ''} onValueChange={value => setAppearance(value as MatchAppearance)}
-            options={MATCH_APPEARANCES.map(value => ({ value, label: appearanceWord(value) }))} />
-          {selectedSession && <p className="mt-2 text-sm text-muted-foreground">{t('coachAssess:logHasPlayed', { name: firstName })}</p>}
-        </div>}
-
-        </>}
         {step === 1 && <>
         {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
         <div className="rounded-2xl bg-surface border border-line p-[14px_16px] space-y-5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-10 tablet:gap-y-5">
@@ -813,13 +717,14 @@ function CoachAssessmentForm() {
           <dl className="rounded-2xl border border-line divide-y divide-line text-[13px]">
             {([
               [t('nav:player'), selectedPlayer?.player_name ?? ''],
-              [t('coachAssess:sessionFallback'), selectedSession ? sessionLabel(selectedSession) : opened ? t('coachAssess:noSessionRecorded') : ''],
-              [t('coachAssess:appearance'), savedAppearance ? appearanceWord(savedAppearance) : ''],
+              // TRAK-500: only an opened row saved with a session or Started/Sub shows them.
+              [t('coachAssess:sessionFallback'), openedSession ? sessionLabel(openedSession) : null],
+              [t('coachAssess:appearance'), appearance ? appearanceWord(appearance) : null],
               [t('coachAssess:overall'), `${bandWord(overallCfg.word)} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               [t('coachAssess:stepRatings'), t('coachAssess:ratingsLine', { workRate, tactical, attitude, technical, physical, coachability })],
               [t('coachAssess:messageTo', { name: firstName }), message || t('coachSchedule:none')],
               [t('coachAssess:privateNote'), <>{note.trim() || t('coachSchedule:none')}<span className="block mt-1 text-[11px] text-ink-3">{t('coachSquad:onlyYou')}</span></>],
-            ] as const).map(([term, value]) => (
+            ] as const).filter(([, value]) => value !== null).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
                 <dt className="w-28 shrink-0 text-ink-3">{term}</dt>
                 <dd className="text-ink break-words min-w-0">{value}</dd>

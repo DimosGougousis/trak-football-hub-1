@@ -7,11 +7,16 @@
 // unsubscribe link: Microsoft's scanner would click it (TRAK-107); reminders
 // are turned off in Settings.
 import { namePatterns } from './ical-feed.ts';
+// TRAK-190: also a designed HTML part with the same words, opening "Hello,";
+// the "turn these off" line moves into the grey footer.
 import {
-  IN_THIS_SQUAD, SEE_SCHEDULE, cantMakeIt, clean, emailEventName, kindLabel, longDay, namedAlone, shortDay,
+  HELLO, IN_THIS_SQUAD, SEE_SCHEDULE, cantMakeIt, clean, emailEventName, kindLabel, linesHtml, longDay, namedAlone, shortDay,
   spaced, timeRange, whoToAsk, type EventFields,
 } from './event-email.ts';
+import { emailDocument, esc, part } from './email-html.ts';
 import type { PlainEmail } from './send-email.ts';
+
+export const TURN_OFF = 'Turn these reminders off in Trak: Settings → Notifications.';
 
 /** One event in a claimed reminder (claim_event_reminders()). */
 export interface ReminderEvent extends EventFields {
@@ -55,15 +60,15 @@ function composeOne(reminder: ClaimedReminder, e: ReminderEvent): PlainEmail {
     ...(meet ? [`Please arrive by ${meet}`] : []),
     ...(kit ? [`Kit: ${kit}`] : []),
   ];
-  const text = [
-    `Coming up: ${comingUp(e, names)}`,
-    details.join('\n'),
-    [cantMakeIt(false), SEE_SCHEDULE].join('\n'),
-    'Turn these reminders off in Trak: Settings → Notifications.',
-    IN_THIS_SQUAD,
-    whoToAsk(false),
-  ].join('\n\n');
-  return { to: reminder.email, subject: `${kindLabel(e)} reminder on ${shortDay(reminder.day)}`, text };
+  const lead = `Coming up: ${comingUp(e, names)}`;
+  const closing = [cantMakeIt(false), SEE_SCHEDULE].join('\n');
+  const foot = [TURN_OFF, IN_THIS_SQUAD, whoToAsk(false)];
+  const text = [HELLO, lead, details.join('\n'), closing, ...foot].join('\n\n');
+  const html = emailDocument(
+    [part.p(HELLO), part.lead(esc(lead)), part.details(details.map(esc)), part.p(linesHtml(closing))].join('\n'),
+    foot.map(linesHtml),
+  );
+  return { to: reminder.email, subject: `${kindLabel(e)} reminder on ${shortDay(reminder.day)}`, text, html };
 }
 
 /** The scheduled events, earliest first: a cancellation since the claim drops out. */

@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PASSWORD_HINT } from '@/lib/password';
 import { isTechnicalChildAddress } from '@/lib/child-login';
-import { completeParentInvitation, loadParentInvitations, type ParentInvitation, type ParentInvitationState } from '@/lib/parent-invites';
+import { completeParentInvitation, loadParentInvitations, sendInvitationCode, type ParentInvitation, type ParentInvitationState } from '@/lib/parent-invites';
 
 const messageOf = (error: unknown) => error instanceof Error ? error.message
   : (error as { message?: string })?.message || 'Please try again.';
@@ -74,6 +74,12 @@ export default function ParentOnboarding() {
         const { error } = await signIn(email.trim(), signInPassword);
         if (error) throw error;
         return; // The authenticated account is resolved on this same route.
+      }
+      // TRAK-482: from a child's invitation, the server sends the email that
+      // names the child. No match or any failure: a plain code, as before.
+      if (token && await sendInvitationCode(token, email.trim())) {
+        if (isCurrent()) setEmailSent(true);
+        return;
       }
       const redirect = new URL('/parent-invite', window.location.origin);
       if (token) redirect.searchParams.set('token', token);

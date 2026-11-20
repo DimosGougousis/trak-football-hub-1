@@ -26,8 +26,28 @@ export interface InviteDeliveryDependencies {
   getFirstName?(jwt: string, userId: string): Promise<string | null>;
   sendInvite(email: string, redirectTo: string, playerFirstName: string): Promise<{ error: DeliveryError | null }>;
   sendMagicLink(email: string, redirectTo: string): Promise<{ error: DeliveryError | null }>;
+  /**
+   * TRAK-475: save on an existing account who invited them, before the sign-in
+   * code goes, because the Magic link template prints only user_metadata.
+   * Display only: nothing authorizes on user_metadata.
+   */
+  labelAccount?(email: string, metadata: InvitedByChild): Promise<void>;
   now?: () => number;
 }
+
+export interface InvitedByChild {
+  invited_as: 'parent'; invited_by: 'player'; player_first_name: string | null;
+  child_first_name: null; academy_name: null;
+}
+/**
+ * What the sign-in code email needs to say "<child> has invited you to Trak as
+ * their parent or guardian": the inviting child, and none of an earlier
+ * academy invitation's details, which would name a different child.
+ */
+export const invitedByChild = (playerFirstName: string): InvitedByChild => ({
+  invited_as: 'parent', invited_by: 'player', player_first_name: playerFirstName || null,
+  child_first_name: null, academy_name: null,
+});
 
 export const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -150,6 +170,8 @@ export async function handleInviteRequest(req: Request, deps: InviteDeliveryDepe
       return json({ sent: false, reason: 'invite_changed', detail: 'The invitation changed while sending. Refresh its status before retrying.' }, 409);
     }
 
+    // A failed write still sends the code, with the template's plain wording.
+    await deps.labelAccount?.(current.parent_email, invitedByChild(firstName)).catch(() => {});
     const { error: magicError } = await deps.sendMagicLink(current.parent_email, redirectTo);
     if (magicError) return json({ sent: false, reason: 'magic_link_rejected', detail: magicError.message, redirectTo }, 502);
     return json({ sent: true, via: 'magic_link', reason: 'already_registered', redirectTo });

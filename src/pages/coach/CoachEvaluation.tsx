@@ -19,7 +19,7 @@ import { PageTop } from '@/components/coach/PageTop'
 /* TRAK-364 (Season plan 16/18, spec TRAK-348): the squad's evaluation, behind the season plan's switch (App.tsx). It
    opens on its due date, once the plan is shared, and stays open until it's published (a missed date stays due). Home's
    Evaluation due card leads here. Before it's due it says when; after the season's last one, that there are no more.
-   The session assessment (/coach/assess) stays as it is. */
+   Assess player (/coach/assess) rates one player, with no session since TRAK-500. */
 
 export default function CoachEvaluation() {
   const navigate = useNavigate()

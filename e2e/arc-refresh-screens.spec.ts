@@ -309,8 +309,6 @@ test.describe('TRAK-182 coach screens', () => {
     await page.goto('/coach/assess')
     await page.getByRole('combobox', { name: 'Player' }).click()
     await page.getByRole('option', { name: 'Bukayo Saka' }).click()
-    await page.getByRole('combobox', { name: 'Session' }).click()
-    await page.getByRole('option').first().click()
     await page.getByRole('button', { name: 'Next' }).click()
     const slider = page.getByRole('slider', { name: 'Work Rate' })
     await slider.focus()
@@ -359,8 +357,6 @@ test.describe('TRAK-425 Assess player on a laptop', () => {
     // A picked player shows once: the card (with Change) replaces the list.
     await expect(page.getByRole('combobox', { name: 'Player' })).toHaveCount(0)
     await expect(page.getByText('Bukayo Saka')).toHaveCount(1)
-    await page.getByRole('combobox', { name: 'Session' }).click()
-    await page.getByRole('option').first().click()
     await steps.getByRole('button', { name: /Review/ }).click()
     await expect(page.getByRole('button', { name: 'Publish' }).or(page.getByRole('button', { name: 'Save' })).first()).toBeVisible()
     await steps.getByRole('button', { name: /Ratings/ }).click()
@@ -375,7 +371,7 @@ test.describe('TRAK-425 Assess player on a laptop', () => {
 test.describe('TRAK-425 Assess player on a phone', () => {
   test.use({ timezoneId: 'Asia/Dubai', viewport: { width: 390, height: 844 } })
 
-  test('has one bar at the bottom, and its sessions read like the rest of the app', async ({ page, context }, testInfo) => {
+  test('has one bar at the bottom, and asks no session (TRAK-500)', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
     await coachBackend(context, unexpected)
@@ -384,11 +380,8 @@ test.describe('TRAK-425 Assess player on a phone', () => {
     await expect(page.getByRole('navigation', { name: 'Coach' })).toHaveCount(0)
     await page.getByRole('combobox', { name: 'Player' }).click()
     await page.getByRole('option', { name: 'Bukayo Saka' }).click()
-    await page.getByRole('combobox', { name: 'Session' }).click()
-    const labels = await page.getByRole('option').allTextContents()
-    await page.keyboard.press('Escape')
-    expect(labels.length).toBeGreaterThan(0)
-    expect(labels.every(label => / · (Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} [A-Z][a-z]{2}/.test(label))).toBe(true)
+    await expect(page.getByRole('button', { name: 'Next' })).toBeEnabled()
+    await expect(page.getByRole('combobox', { name: 'Session' })).toHaveCount(0)
     await page.screenshot({ path: testInfo.outputPath('coach-assess-phone.png') })
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
@@ -494,8 +487,6 @@ test.describe('TRAK-221 assessment sliders under a finger', () => {
     await page.goto('/coach/assess')
     await page.getByRole('combobox', { name: 'Player' }).click()
     await page.getByRole('option', { name: 'Bukayo Saka' }).click()
-    await page.getByRole('combobox', { name: 'Session' }).click()
-    await page.getByRole('option').first().click()
     await page.getByRole('button', { name: 'Next' }).click()
     const cdp = await context.newCDPSession(page)
     const finger = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
