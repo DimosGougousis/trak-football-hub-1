@@ -42,6 +42,8 @@ import { FIXTURE_IMPORT_ENABLED, fixtureInsertRows, scheduleFixtureKeys } from '
 import type { Fixture } from '@/lib/fixtures-csv'
 import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
+import { MatchAction } from '@/components/coach/games/MatchAction'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { shareEventText } from '@/lib/share-event'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
@@ -720,7 +722,15 @@ export default function CoachSchedule() {
                 }
                 // TRAK-275: icons alone on a phone (content would show the word, so it goes too).
                 // TRAK-455: Edit is a pencil everywhere, on a laptop too (no "Edit" word).
-                const groupItems = items.map(item => (wide && item.icon && !(item.content === t('coachSchedule:edit') || item.content === t('coachSchedule:editMatch')) ? item : { ...item, iconOnly: true, content: undefined }))
+                // TRAK-508 (Imad, 20 Nov): the next steps (Publish, Take register, Evaluate, Share) are the green next-step
+                // buttons at the card's bottom right (TRAK-497); Edit, Delete and Cancel stay a quiet group of icons beside them.
+                const STEPS = ['publish', 'register', 'match', 'share']
+                const steps = items.filter(item => STEPS.includes(item.id) && !(item.id === 'match' && item.content === t('coachSchedule:editMatch')))
+                const tools = items.filter(item => !steps.includes(item))
+                const groupItems = tools.map(item => (wide && item.icon && !(item.content === t('coachSchedule:edit') || item.content === t('coachSchedule:editMatch')) ? item : { ...item, iconOnly: true, content: undefined }))
+                // Evaluate is Matches' split button, as on Home: the evaluation, with the match's other pages behind its arrow.
+                const evaluateState = row && steps.some(item => item.id === 'match' && item.content === t('coachHome:evaluate'))
+                  ? (evaluations.data?.get(row.id) ? 'evaluationDraft' as const : 'fullTime' as const) : null
                 // TRAK-272: the card opens the same event sheet as coach Home's week (CoachWeekStrip).
                 const sheetSource = row ?? { id: `session:${ev.id}`, published: true, title: ev.title, event_date: ev.date, event_type: ev.type, ...(ev.venue && { venue: ev.venue }) }
                 const base = toPlayerEvent(sheetSource as unknown as Record<string, unknown>)
@@ -743,6 +753,8 @@ export default function CoachSchedule() {
                     <div className="w-1 self-stretch rounded-full flex-shrink-0"
                       style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
                     <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
                       {sheetEvent ? (
                         <EventSheet event={sheetEvent} role="coach" trigger={
                           <button type="button" ref={node => { if (node) cardTriggers.current.set(ev.id, node); else cardTriggers.current.delete(ev.id) }}
@@ -764,15 +776,29 @@ export default function CoachSchedule() {
                             : user && <EventSheetCoach event={sheetEvent} coachId={user.id} onChanged={() => void loadData()} />}
                         </EventSheet>
                       ) : titleText}
+                      </div>
+                      {/* TRAK-508 (Imad, 20 Nov): Needs you at the card's top right. TRAK-270: the yellow of needs you; its
+                          word stays dark for contrast. */}
+                      {waiting && (
+                        <span className="block w-fit flex-none rounded-full px-2 py-[1px] text-[11px] font-medium"
+                          style={{ ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-attention) / 0.22)', border: `1.5px solid ${NEEDS_YOU_COLOR}` }}>{t('coachHome:needsYouTitle')}</span>
+                      )}
+                      </div>
                       <p className="text-[9px] mt-1" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
                         {/* TRAK-159: a scheduled event says its time, or that it has none. */}
                         {ev.time
-                          ? <><span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>{' · '}</>
-                          : row && <><span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>{t('coachSchedule:noTimeSet')}</span>{' · '}</>}
-                        {/* TRAK-271: the type's colour is a dot; the word stays dark. */}<span className="inline-flex items-center gap-1 font-medium text-ink-2"><span aria-hidden="true" className="inline-block w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[ev.type] }} />{t(TYPE_WORD[ev.type])}</span>{everySquad ? ` · ${squadName(ev.squad)}` : ''}{row?.series_id ? t('coachSchedule:weeklySuffix') : ''}
-                        {row?.meet_time ? t('coachSchedule:meetSuffix', { time: phoneClock(row, row.meet_time) }) : ''}
-                        {row?.home_away ? ` · ${row.home_away === 'home' ? t('coachSchedule:home') : t('coachSchedule:away')}` : ''}
-                        {place?.text ? ` · ${place.text}` : ''}
+                          ? <span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>
+                          : row && <span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>{t('coachSchedule:noTimeSet')}</span>}
+                        {/* TRAK-508 (Imad, 20 Nov): no kind word or dot; the line on the card's edge says it. A screen reader still
+                            hears it. */}
+                        <span className="sr-only">{`${ev.time || row ? ' · ' : ''}${t(TYPE_WORD[ev.type])}`}</span>
+                        {(() => {
+                          const rest = `${everySquad ? ` · ${squadName(ev.squad)}` : ''}${row?.series_id ? t('coachSchedule:weeklySuffix') : ''}`
+                            + `${row?.meet_time ? t('coachSchedule:meetSuffix', { time: phoneClock(row, row.meet_time) }) : ''}`
+                            + `${row?.home_away ? ` · ${row.home_away === 'home' ? t('coachSchedule:home') : t('coachSchedule:away')}` : ''}`
+                            + `${place?.text ? ` · ${place.text}` : ''}`
+                          return ev.time || row ? rest : rest.replace(/^ · /, '')
+                        })()}
                       </p>
                       {row?.kit && (
                         <p className="text-[9px] mt-1" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>{t('coachSchedule:kitLine', { kit: row.kit })}</p>
@@ -796,11 +822,6 @@ export default function CoachSchedule() {
                         {row && row.event_type === 'match' && sessionId && (
                           <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium text-ink-2 bg-raised" style={font}>{t('coachSchedule:matchLogged')}</span>
                         )}
-                        {/* TRAK-270: the yellow of needs you; its word stays dark for contrast. */}
-                        {waiting && (
-                          <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium"
-                            style={{ ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-attention) / 0.22)', border: `1.5px solid ${NEEDS_YOU_COLOR}` }}>{t('coachHome:needsYouTitle')}</span>
-                        )}
                       </div>
                       {row && !cancelled && clashes.has(row.id) && (() => {
                         const c = clashes.get(row.id)!
@@ -812,13 +833,19 @@ export default function CoachSchedule() {
                       {cancelled && row?.cancel_reason && (
                         <p className="text-[11px] mt-1 text-ink-3" style={font}>{row.cancel_reason}</p>
                       )}
+                      {/* TRAK-508 (Imad, 20 Nov): the card's actions at its bottom right; the next steps green (TRAK-497),
+                          Edit, Delete and Cancel a quiet outline group of icons (TRAK-275). */}
+                      {items.length > 0 && (
+                        <div className="arc mt-3 flex flex-wrap items-center justify-end gap-2">
+                          {groupItems.length > 0 && <ButtonGroup label={t('coachSchedule:actionsFor', { title: ev.title })} items={groupItems} variant="outline" size="md" />}
+                          {steps.map(item => item.id === 'match' && evaluateState && row
+                            ? <MatchAction key={item.id} state={evaluateState} eventId={row.id} />
+                            : <Button key={item.id} size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} aria-label={item.label} title={item.label} onClick={item.onSelect}>
+                                {item.id === 'share' && <ShareIcon size={16} tight />}{item.content}
+                              </Button>)}
+                        </div>
+                      )}
                     </div>
-                    {/* TRAK-275: outline always; a draft or a waiting register is never a black block. */}
-                    {items.length > 0 && (
-                      <div className="arc flex-shrink-0">
-                        <ButtonGroup label={t('coachSchedule:actionsFor', { title: ev.title })} items={groupItems} variant="outline" size="md" />
-                      </div>
-                    )}
                   </div></MorphBlock>
                 )
               })}

@@ -19,6 +19,10 @@ import { SIDE_MENU_QUERY } from '@/lib/side-menu-screen'
  * TRAK-275 (Tarek, 23 Oct, later): the group goes back to the card's top right, keeps the icons, and
  * on a phone shows only them; a laptop adds the words. No group is solid black (a draft or a waiting
  * register read as black), and Cancel or Delete is an icon of the group again, not behind a menu.
+ *
+ * TRAK-508 (Imad, 20 Nov; Kostas asked for these tests to follow): Needs you at the card's top right; the actions
+ * at its bottom right, the next steps (Publish, Take register, Evaluate, Share) as the green next-step buttons
+ * (TRAK-497) and Edit, Delete and Cancel as the outline group of icons beside them; no kind word on the card.
  */
 
 const COACH = { id: 'coach-1' }
@@ -54,6 +58,11 @@ const onLaptop = () => {
 }
 const group = (title: string) => screen.getByRole('group', { name: `Actions for ${title}` })
 const names = (el: HTMLElement) => within(el).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent?.trim())
+/** TRAK-508: an event's card, found by its title. */
+const card = (title: string) => screen.getAllByText(title, { selector: 'p' })[0].closest('div.rounded-2xl') as HTMLElement
+/** TRAK-508: the card's next steps, the green buttons at its bottom right (outside the group of icons). */
+const steps = (title: string) => within(card(title)).getAllByRole('button')
+  .filter(b => /_primary_/.test(b.className) && !b.closest('[role="group"]'))
 
 async function open() {
   renderApp('/coach/schedule')
@@ -69,10 +78,12 @@ describe('TRAK-272: each Schedule card has a button group of its actions', { tim
   })
   afterEach(() => { vi.useRealTimers(); window.matchMedia = realMatchMedia })
 
-  it('a draft: Publish, Edit and Delete, as icons only on a phone', async () => {
+  it('a draft: Publish in green; Edit and Delete as icons only on a phone', async () => {
     await open()
+    expect(steps('Shooting').map(b => b.getAttribute('aria-label'))).toEqual(['Publish Shooting'])
+    expect(steps('Shooting')[0]).toHaveTextContent('Publish')
     const g = group('Shooting')
-    expect(names(g)).toEqual(['Publish Shooting', 'Edit Shooting', 'Delete Shooting'])
+    expect(names(g)).toEqual(['Edit Shooting', 'Delete Shooting'])
     for (const button of within(g).getAllByRole('button')) {
       expect(button.textContent?.trim()).toBe('')
       expect(button.querySelector('svg')).not.toBeNull()
@@ -81,31 +92,44 @@ describe('TRAK-272: each Schedule card has a button group of its actions', { tim
     expect(screen.queryByRole('button', { name: 'More actions for Shooting' })).toBeNull()
   })
 
-  it('a published event to come: Share, Edit and Cancel', async () => {
+  it('a published event to come: Share in green; Edit and Cancel as icons', async () => {
     await open()
-    expect(names(group('vs AEK Athens U16'))).toEqual(['Share vs AEK Athens U16', 'Edit vs AEK Athens U16', 'Cancel vs AEK Athens U16'])
+    expect(steps('vs AEK Athens U16').map(b => b.getAttribute('aria-label'))).toEqual(['Share vs AEK Athens U16'])
+    expect(names(group('vs AEK Athens U16'))).toEqual(['Edit vs AEK Athens U16', 'Cancel vs AEK Athens U16'])
   })
 
   it('a started training with no register: Take register leads, and it says Needs you', async () => {
     await open()
     await userEvent.click(document.querySelector('[data-present] [data-date="2026-10-21"]') as HTMLElement)
-    const g = group('Recovery')
-    expect(names(g)[0]).toBe('Take register for Recovery')
-    expect(within(g.closest('div.rounded-2xl') as HTMLElement).getByText('Needs you')).toBeInTheDocument()
+    expect(steps('Recovery')[0]).toHaveAttribute('aria-label', 'Take register for Recovery')
+    // TRAK-508: Needs you at the top right, on the title's row; the actions come after everything else.
+    const needs = within(card('Recovery')).getByText('Needs you')
+    expect(needs.parentElement).toContainElement(screen.getAllByText('Recovery', { selector: 'p' })[0])
+    const all = [...card('Recovery').querySelectorAll('*')]
+    expect(all.indexOf(needs)).toBeLessThan(all.indexOf(steps('Recovery')[0]))
   })
 
-  it('no card\'s group is solid black: not a draft, not a register that waits', async () => {
+  it('no card\'s group is solid black; its next steps are the green buttons', async () => {
     await open()
     expect(group('Shooting').className).not.toMatch(/solid/)
+    expect(steps('Shooting')).toHaveLength(1)
     await userEvent.click(document.querySelector('[data-present] [data-date="2026-10-21"]') as HTMLElement)
-    expect(group('Recovery').className).not.toMatch(/solid/)
+    expect(steps('Recovery').length).toBeGreaterThan(0)
   })
 
   it('on a laptop the icons carry their words', async () => {
     onLaptop()
     await open()
-    expect(within(group('Shooting')).getByRole('button', { name: 'Publish Shooting' })).toHaveTextContent('Publish')
+    expect(steps('Shooting')[0]).toHaveTextContent('Publish')
     expect(within(group('Shooting')).getByRole('button', { name: 'Delete Shooting' })).toHaveTextContent('Delete')
+  })
+
+  // TRAK-508 (Imad, 20 Nov): the line on the card's edge says the kind; a screen reader still hears it.
+  it('no kind word on the card, but a screen reader still hears it', async () => {
+    await open()
+    const kind = within(card('vs AEK Athens U16')).getByText((_, el) => el?.className === 'sr-only' && /Match/.test(el.textContent ?? ''))
+    expect(kind).toHaveClass('sr-only')
+    expect(within(card('Shooting')).getByText((_, el) => el?.className === 'sr-only' && /Training/.test(el.textContent ?? ''))).toBeInTheDocument()
   })
 
   it('tapping the card opens its event sheet, as on coach Home', async () => {

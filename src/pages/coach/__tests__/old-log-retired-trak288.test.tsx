@@ -90,7 +90,10 @@ describe('TRAK-288: with Games on, the evaluation replaces the match log', { tim
   it('Schedule: a played match offers Evaluate, which opens its evaluation, and no Log match', async () => {
     fixtures()
     renderApp('/coach/schedule')
-    await userEvent.click(await screen.findByRole('button', { name: 'Evaluate vs Synthetic Rovers' }))
+    // TRAK-508: Evaluate is Matches' split button on the card, as on Home (Kostas asked for this test to follow).
+    const evaluate = await screen.findByRole('button', { name: 'Evaluate' })
+    expect(screen.getByRole('button', { name: 'Evaluate more actions' })).toBeInTheDocument()
+    await userEvent.click(evaluate)
     expect(screen.queryByRole('button', { name: 'Log match for vs Synthetic Rovers' })).toBeNull()
     await waitFor(() => expect(path()).toBe('/coach/matches/match-1?tab=evaluation'))
   })
