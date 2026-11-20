@@ -183,9 +183,7 @@ export function NextStep({ item, coachId, roster, onChanged }: {
   }
   // TRAK-289: a published evaluation is final; it's read on the game page, never in the old log's editor.
   if (item.step === 'review' && row) return go(t('coachHome:viewReview'), () => navigate(`/coach/matches/${row.id}?tab=evaluation`))
-  if (item.step === 'log' && row) return go(t('coachHome:logIt'), () => navigate('/coach/sessions/quick', {
-    state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
-  }))
+  // TRAK-499 (Imad, 20 Nov): "Log it" into the old log is gone; a match is evaluated in Matches.
   // Imad, 23 Oct: View log shows the log; editing is one tap further, inside it.
   if (item.step === 'view' && item.sessionId) {
     const sessionId = item.sessionId

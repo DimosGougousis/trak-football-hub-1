@@ -702,15 +702,13 @@ export default function CoachSchedule() {
                   if (!row.published && !cancelled) items.push({ id: 'publish', label: t('coachSchedule:publishNamed', { title: row.title }), content: t('coachHome:publish'), icon: <Send />, onSelect: () => publish(row) })
                   if (!registerProblem(row)) items.push({ id: 'register', label: t('coachSchedule:registerFor', { action: sessionId ? t('coachSchedule:editRegister') : t('coachHome:takeRegister'), title: row.title }),
                     content: sessionId ? t('coachSchedule:register') : t('coachHome:takeRegister'), icon: <ClipboardCheck />, onSelect: guarded(() => setSheet({ kind: 'register', row })) })
-                  if (row.event_type === 'match' && row.published && !cancelled && started) items.push(games && evaluations.data?.get(row.id)?.publishedAt
+                  // TRAK-499: where Games is off, no Log match into the old log either (Imad, 20 Nov).
+                  if (row.event_type === 'match' && row.published && !cancelled && started && (games || (sessionId && !oldLogRetired))) items.push(games && evaluations.data?.get(row.id)?.publishedAt
                     ? { id: 'match', label: t('coachSchedule:viewReviewOf', { title: row.title }), content: t('coachHome:viewReview'), icon: <ClipboardList />, onSelect: () => navigate(`/coach/matches/${row.id}?tab=evaluation`) }
                     : sessionId && !oldLogRetired
                     ? { id: 'match', label: t('coachSchedule:editMatchFor', { title: row.title }), content: t('coachSchedule:editMatch'), icon: <Pencil />, onSelect: () => navigate(`/coach/sessions/${sessionId}`) }
                     // TRAK-288: where Games is on, the match's evaluation replaces the match log.
-                    : games ? { id: 'match', label: t('coachSchedule:evaluateNamed', { title: row.title }), content: t('coachHome:evaluate'), icon: <ClipboardList />, onSelect: () => navigate(`/coach/matches/${row.id}?tab=evaluation`) }
-                    : { id: 'match', label: t('coachSchedule:logMatchFor', { title: row.title }), content: t('coachSchedule:logMatch'), icon: <ClipboardList />, onSelect: guarded(() => navigate('/coach/sessions/quick', {
-                        state: { fromEvent: { eventId: row.id, date: row.event_date, opponent: row.opponent, homeAway: row.home_away, squad: row.squad ?? null } },
-                      })) })
+                    : { id: 'match', label: t('coachSchedule:evaluateNamed', { title: row.title }), content: t('coachHome:evaluate'), icon: <ClipboardList />, onSelect: () => navigate(`/coach/matches/${row.id}?tab=evaluation`) })
                   // TRAK-139, TRAK-168: the phone's share sheet (Viber or WhatsApp; WhatsApp's link without one). Trak sends nothing.
                   if (shareText) items.push({ id: 'share', label: t('coachSchedule:shareNamed', { title: row.title }), content: t('coachSchedule:share'), icon: <ShareIcon size={16} tight />, onSelect: guarded(() => shareEventText(shareText)) })
                   // TRAK-230: once started, what families were told is fixed.

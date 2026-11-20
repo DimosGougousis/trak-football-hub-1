@@ -62,13 +62,16 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
   it('opens a menu that arrow keys move through, and Escape returns to the "+"', async () => {
     const menu = await openMenu()
     const items = within(menu).getAllByRole('menuitem').map(i => i.textContent)
-    expect(items).toEqual(['Log training', 'Log match', 'Assess player', 'New event'])
+    // TRAK-499 (Imad, 19 Nov): Log training and Log match are gone; Training and Matches replaced them.
+    expect(items).toEqual(['Assess player', 'New event'])
     expect(screen.getByRole('button', { name: 'Close quick add' })).toBeInTheDocument()
     // Opening focuses the first action; the arrows wrap.
-    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log training' })).toHaveFocus())
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Assess player' })).toHaveFocus())
     await userEvent.keyboard('{ArrowDown}')
-    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Log match' })).toHaveFocus())
-    await userEvent.keyboard('{ArrowUp}{ArrowUp}')
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'New event' })).toHaveFocus())
+    await userEvent.keyboard('{ArrowDown}')
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Assess player' })).toHaveFocus())
+    await userEvent.keyboard('{ArrowUp}')
     await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'New event' })).toHaveFocus())
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Quick add' })).toHaveFocus())
@@ -90,8 +93,8 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Quick add' }))
     const menu = await screen.findByRole('menu', { name: 'Quick add' })
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log match' }))
-    const form = await screen.findByRole('dialog', { name: 'Log a match' })
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'New event' }))
+    const form = await screen.findByRole('dialog', { name: 'New event' })
     await userEvent.click(within(form).getByRole('button', { name: 'Back to quick add' }))
     await userEvent.click(within(await screen.findByRole('menu', { name: 'Quick add' })).getByRole('menuitem', { name: 'New event' }))
     const event = await screen.findByRole('dialog', { name: 'New event' })
@@ -152,30 +155,6 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     expect(inserted).toEqual([])
   })
 
-  it('Log match takes the opponent and score, then continues on the log\'s Squad step', async () => {
-    const menu = await openMenu()
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log match' }))
-    const form = await screen.findByRole('dialog', { name: 'Log a match' })
-    await userEvent.click(within(form).getByRole('button', { name: 'Continue' }))
-    expect(within(form).getByRole('alert')).toHaveTextContent('Add the opponent and the score.')
-    await userEvent.type(within(form).getByLabelText('Opponent'), 'Synthetic United')
-    await userEvent.type(within(form).getByLabelText('Our score'), '2')
-    await userEvent.type(within(form).getByLabelText('Their score'), '1')
-    await userEvent.click(within(form).getByRole('button', { name: 'Continue' }))
-    expect(within(form).getByRole('alert')).toHaveTextContent('Say whether it was home or away.')
-    await userEvent.click(within(form).getByRole('button', { name: 'Away' }))
-    expect(within(form).getByRole('button', { name: 'Away' })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(within(form).getByRole('button', { name: 'Continue' }))
-    await waitFor(() => expect(document.querySelector('[aria-current="step"]')?.textContent).toContain('Squad'))
-    await userEvent.click(screen.getByRole('button', { name: 'Back to Match' }))
-    expect(screen.getByPlaceholderText('Opponent name')).toHaveValue('Synthetic United')
-    const [us, them] = screen.getAllByPlaceholderText('0')
-    expect(us).toHaveValue('2')
-    expect(them).toHaveValue('1')
-    // Read once, then cleared: a reload or Back can't reopen it prefilled.
-    expect(window.history.state?.usr ?? null).toBeNull()
-  })
-
   // Tarek's #319 review: Home/Away starts unanswered, as on Schedule.
   it('a match draft nobody marked home or away is not saved as Home', async () => {
     const menu = await openMenu()
@@ -208,7 +187,8 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
     expect(inserted).toEqual([])
   })
 
-  it("offers today's started training's register, which opens on Schedule", async () => {
+  // TRAK-499: "+" is Assess player and New event, nothing else; a training's register is taken in Training.
+  it("doesn't offer today's started training's register", async () => {
     const today = localTodayISO()
     rows = [{
       id: 'today-1', coach_user_id: COACH.id, title: 'Finishing', event_type: 'training', published: true, status: 'scheduled',
@@ -216,10 +196,7 @@ describe('TRAK-182: the quick-add button', { timeout: 20_000 }, () => {
       notes: null, source: 'manual', meet_time: null, kit: null, home_away: null, cancel_reason: null,
     }]
     const menu = await openMenu()
-    const register = await within(menu).findByRole('menuitem', { name: 'Take register · Finishing' })
-    await userEvent.click(register)
-    expect(await screen.findByRole('dialog', { name: 'Take register' }, { timeout: 3000 })).toBeInTheDocument()
-    // Nothing of the quick-add stays open under the register.
-    await closed()
+    await new Promise(resolve => setTimeout(resolve, 100))
+    expect(within(menu).getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Assess player', 'New event'])
   })
 })

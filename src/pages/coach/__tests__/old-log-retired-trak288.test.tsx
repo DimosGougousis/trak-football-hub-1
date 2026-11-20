@@ -137,7 +137,8 @@ describe('TRAK-288: with Games on, the evaluation replaces the match log', { tim
     expect(patches.map(p => p.body)).toEqual([{ published: true }])
   })
 
-  it('a past training still offers only its own log', async () => {
+  // TRAK-499 (Imad, 20 Nov): no way into the old logs; the past date is said alone.
+  it('a past training offers no log', async () => {
     fixtures()
     renderApp('/coach/schedule')
     await openNewEvent()
@@ -145,20 +146,8 @@ describe('TRAK-288: with Games on, the evaluation replaces the match log', { tim
     await eventStep(sheet, 'When')
     await pickDate(userEvent, 'Date', YESTERDAY)
     await pickTime(userEvent, 'Start', '17:00')
-    expect(await within(sheet).findByText('This date has passed: log it instead')).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: 'Log training' })).toBeInTheDocument()
-    expect(within(sheet).queryByRole('button', { name: 'Log match' })).toBeNull()
-  })
-
-  it('the "+" Log match opens New event with Match picked', async () => {
-    fixtures()
-    renderApp('/coach/schedule')
-    await userEvent.click(await screen.findByRole('button', { name: 'Quick add' }))
-    const menu = await screen.findByRole('menu', { name: 'Quick add' })
-    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Log match' }))
-    const sheet = await screen.findByRole('dialog', { name: 'New event' })
-    expect(within(sheet).getByRole('button', { name: 'Match' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.queryByRole('dialog', { name: 'Log a match' })).toBeNull()
+    expect(await within(sheet).findByText('This date has passed')).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: /^Log / })).toBeNull()
   })
 
   it('the Sessions chooser has no quick match log, and its old address goes to Games', async () => {

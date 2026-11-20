@@ -146,7 +146,7 @@ export function formProblem(form: EventForm): string | null {
 
 /** TRAK-127: New event is for what's coming (Imad, 16 Oct); what already
  *  happened is logged, with its score or register (TRAK-138). */
-export const PAST_DATE_PROBLEM = 'This date has passed: log it instead'
+export const PAST_DATE_PROBLEM = 'This date has passed'
 
 /** `2026-10-31` -> `Saturday 31 October`, as Schedule's Review and sheets write a day. */
 export function formatEventDay(date: string) {

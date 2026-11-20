@@ -7,7 +7,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toInstant } from '@/lib/event-time'
-import { dateHeld, pickDate, pickTime } from '../../../../tests/support/arc-pickers'
+import { pickDate, pickTime } from '../../../../tests/support/arc-pickers'
 import { eventStep } from '../../../../tests/support/event-steps'
 import { openNewEvent } from '../../../../tests/support/schedule-actions'
 
@@ -29,7 +29,8 @@ const shift = (iso: string, days: number) => {
   return t.toISOString().slice(0, 10)
 }
 const yesterday = shift(today, -1)
-const PASSED = 'This date has passed: log it instead'
+// TRAK-499 (Imad, 20 Nov): no way into the old logs, so the message no longer says "log it instead".
+const PASSED = 'This date has passed'
 
 const OLD = {
   id: 'old-1', coach_user_id: COACH.id, title: 'Finishing', event_type: 'training', starts_at: toInstant(yesterday, '17:00'),
@@ -59,15 +60,6 @@ beforeEach(() => {
 })
 afterEach(() => { server.events.removeAllListeners() })
 
-/** The training log's date: a date box today, Arc's picker once #336 (TRAK-157) lands. */
-async function expectTrainingDate(day: string) {
-  const field = await screen.findByLabelText('Session date', { selector: 'input, button' })
-  if (field instanceof HTMLInputElement) return waitFor(() => expect(field).toHaveValue(day))
-  await userEvent.click(field)
-  const dialog = await screen.findByRole('dialog', { name: 'Session date calendar' })
-  expect(dialog.querySelector('[data-present] [aria-selected="true"]')?.getAttribute('data-date')).toBe(day)
-}
-
 async function newEventOn(day: string) {
   renderApp('/coach/schedule')
   await openNewEvent()
@@ -79,31 +71,16 @@ async function newEventOn(day: string) {
 }
 
 describe('TRAK-127: New event is for what is coming', { timeout: 30_000 }, () => {
-  it('a past date says so, offers both logs, and stops Next, Save draft and Publish', async () => {
+  it('a past date says so, offers no log, and stops Next, Save draft and Publish', async () => {
     const sheet = await newEventOn(yesterday)
     expect(await within(sheet).findByText(PASSED)).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: 'Log match' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: 'Log training' })).toBeInTheDocument()
+    expect(within(sheet).queryByRole('button', { name: /^Log / })).toBeNull()
     await userEvent.click(within(sheet).getByRole('button', { name: 'Next' }))
     // Still on When: nothing past this step, so no Save draft or Publish to press.
     expect(sheet.querySelector('[aria-current="step"]')?.textContent).toContain('When')
     expect(within(sheet).queryByRole('button', { name: 'Save draft' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Publish' })).toBeNull()
     expect(posts).toHaveLength(0)
-  })
-
-  it('Log training from there opens the training log on that date', async () => {
-    const sheet = await newEventOn(yesterday)
-    await userEvent.click(await within(sheet).findByRole('button', { name: 'Log training' }))
-    await expectTrainingDate(yesterday)
-    expect(screen.getByRole('button', { name: /^Technical/ })).toBeInTheDocument()
-  })
-
-  it('Log match from there opens the match log on that date', async () => {
-    const sheet = await newEventOn(yesterday)
-    await userEvent.click(await within(sheet).findByRole('button', { name: 'Log match' }))
-    expect(await screen.findByPlaceholderText('Opponent name')).toBeInTheDocument()
-    expect(await dateHeld(userEvent, 'Session date')).toBe(yesterday)
   })
 
   it('today still works', async () => {
@@ -125,7 +102,7 @@ describe('TRAK-127: New event is for what is coming', { timeout: 30_000 }, () =>
 })
 
 describe('TRAK-127: Quick add New event is for what is coming', { timeout: 30_000 }, () => {
-  it('a past date says so, offers both logs, and Save draft stays shut', async () => {
+  it('a past date says so, offers no log, and Save draft stays shut', async () => {
     renderApp('/coach/schedule')
     await userEvent.click(await screen.findByRole('button', { name: 'Quick add' }))
     const menu = await screen.findByRole('menu', { name: 'Quick add' })
@@ -135,9 +112,7 @@ describe('TRAK-127: Quick add New event is for what is coming', { timeout: 30_00
     await pickTime(userEvent, 'Start', '17:00')
     expect(await within(form).findByText(PASSED)).toBeInTheDocument()
     expect(within(form).getByRole('button', { name: 'Save draft' })).toBeDisabled()
-    // Log match stays inside "+", with the date kept.
-    await userEvent.click(within(form).getByRole('button', { name: 'Log match' }))
-    expect(await screen.findByRole('dialog', { name: 'Log a match' })).toBeInTheDocument()
+    expect(within(form).queryByRole('button', { name: /^Log / })).toBeNull()
     expect(posts).toHaveLength(0)
   })
 })

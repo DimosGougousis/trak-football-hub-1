@@ -7,7 +7,6 @@ import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
-import { dateHeld } from '../../../../tests/support/arc-pickers'
 
 /**
  * TRAK-138 (J8.15), part 2: after the event, the coach takes the register
@@ -183,15 +182,11 @@ describe('J8.15: the coach takes the register from the schedule', () => {
     await waitFor(() => expect(mark('Bea Lin')).toHaveAttribute('aria-pressed', 'true'))
   }, 20_000)
 
-  it('a match that has kicked off opens the match log with its date, opponent and away', async () => {
+  // TRAK-499 (Imad, 20 Nov): no way into the old match log, Matches off or on.
+  it('a match that has kicked off offers no Log match', async () => {
     fixtures()
-    const user = userEvent.setup()
     renderApp('/coach/schedule')
-    await user.click(await screen.findByRole('button', { name: 'Log match for vs Synthetic Rovers' }))
-    const opponent = await screen.findByPlaceholderText('Opponent name')
-    // The screen fills it in just after it first draws.
-    await waitFor(() => expect(opponent).toHaveValue('Synthetic Rovers'))
-    expect(await dateHeld(user, 'Session date')).toBe(DAY)
-    expect(screen.getByRole('button', { name: 'Away' })).toHaveAttribute('aria-pressed', 'true')
+    expect((await screen.findAllByText(/Synthetic Rovers/, {}, { timeout: 10_000 })).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: /^Log match/ })).toBeNull()
   }, 20_000)
 })

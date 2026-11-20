@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { renderApp } from '../../../../tests/support/render-app'
+import { renderApp, renderAppWithState } from '../../../../tests/support/render-app'
 import { logStep, saveLog } from '../../../../tests/support/log-steps'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
@@ -68,10 +68,14 @@ function fixtures() {
 
 const toastText = () => [...document.querySelectorAll('[data-sonner-toast]')].map(t => t.textContent ?? '').join(' | ')
 
-/** Schedule → Log match on the event → the match's score → its Squad step. */
+/** TRAK-499: Events no longer offers "Log match"; the old log still opens from its address with what that button
+ *  passed, the event. */
+const openEventLog = () => renderAppWithState('/coach/sessions/quick',
+  { fromEvent: { eventId: MATCH.id, date: MATCH.event_date, opponent: MATCH.opponent, homeAway: MATCH.home_away, squad: null } })
+
+/** The match's log from its event → the match's score → its Squad step. */
 async function logFromEvent(user: ReturnType<typeof userEvent.setup>) {
-  renderApp('/coach/schedule')
-  await user.click(await screen.findByRole('button', { name: 'Log match for vs Synthetic Rovers' }))
+  openEventLog()
   await waitFor(() => expect(screen.getByPlaceholderText('Opponent name')).toHaveValue('Synthetic Rovers'))
   const [us, them] = screen.getAllByPlaceholderText('0')
   await user.type(us, '1')
@@ -183,8 +187,7 @@ describe('TRAK-235: a match logged from its event keeps the event\'s opponent', 
   it('shows the opponent read-only and saves the event\'s name', async () => {
     fixtures()
     const user = userEvent.setup()
-    renderApp('/coach/schedule')
-    await user.click(await screen.findByRole('button', { name: 'Log match for vs Synthetic Rovers' }))
+    openEventLog()
     const opponent = await screen.findByRole('textbox', { name: 'Opponent' })
     await waitFor(() => expect(opponent).toHaveValue('Synthetic Rovers'))
     expect(opponent).toHaveAttribute('readonly')
