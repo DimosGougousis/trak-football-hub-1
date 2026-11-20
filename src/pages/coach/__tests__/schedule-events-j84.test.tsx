@@ -313,7 +313,8 @@ describe('J8.4: the coach creates, edits and cancels events', { timeout: 20_000 
     expect(timeShown('Kickoff')).toBe('6:30 PM')
     // A published event has no Publish or draft.
     await eventStep(sheet, 'Review')
-    expect(within(sheet).getByText('Families see the change as soon as you save.')).toBeInTheDocument()
+    // TRAK-516 (Imad, 20 Nov): no "Families see the change as soon as you save." line.
+    expect(within(sheet).queryByText('Families see the change as soon as you save.')).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Save draft' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Publish' })).toBeNull()
     await eventStep(sheet, 'What')

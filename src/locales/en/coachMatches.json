@@ -231,7 +231,6 @@
   "evSaveFailed": "Couldn't save the evaluation. Check your connection and try again; everything you entered is still here.",
   "evPublishFailed": "Couldn't publish the evaluation. Check your connection and try again; everything you entered is still here.",
   "opensAtFullTime": "Opens at full time, {{when}}",
-  "opensBody": "The result, whether the plan worked, and each player against what you expected. Only you see it until you publish it.",
   "whoPlayedWhat": "who played",
   "loadingWhoPlayed": "Loading who played…",
   "publishedTo_one": "Published to {{count}} player and their families. The loop is closed.",

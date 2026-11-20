@@ -879,7 +879,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const details = header.getByRole('heading', { level: 1 }).locator('xpath=../following-sibling::div[1]').locator(':scope > *')
     await expect(details).toHaveText([/^\w{3} \d{1,2} \w{3}$/, /^Kick-off 11:00/, 'Rehearsal Park · Home', 'U16'])
     const tabs = page.getByRole('tablist', { name: 'This match' })
-    await expect(tabs.getByRole('tab', { name: 'Evaluation After the match' })).toBeVisible()
+    await expect(tabs.getByRole('tab', { name: 'Evaluation', exact: true })).toBeVisible()
     await expect(tabs.getByRole('tab', { name: /^Game plan \d to do$/ })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Review game plan' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'More actions', exact: true })).toBeVisible()
