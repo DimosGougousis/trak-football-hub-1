@@ -35,8 +35,8 @@ export function AddPartSheet({ open, onClose, onAdd }: { open: boolean; onClose:
     if (!picked) return setProblem(t('coachTraining:pickPartOrName'))
     onAdd(picked, PART_TYPES.find(p => p.key === picked)!.name)
   }
-  return <BottomSheet className="arc" open={open} onOpenChange={next => { if (!next) onClose() }} detents={[0.92]} title={t('coachTraining:addAPart')}
-    description={t('coachTraining:addPartDesc')}>
+  // TRAK-520 (Imad, 20 Nov): no "It goes at the end of the session. Drag it to move it." under the title.
+  return <BottomSheet className="arc" open={open} onOpenChange={next => { if (!next) onClose() }} detents={[0.92]} title={t('coachTraining:addAPart')}>
     <div className="grid gap-5 pb-4">
       <fieldset className="grid gap-2">
         <legend className="mb-2 text-sm font-medium text-ink">{t('coachTraining:pickAPart')}</legend>
@@ -49,7 +49,8 @@ export function AddPartSheet({ open, onClose, onAdd }: { open: boolean; onClose:
           </button>)}
         </div>
       </fieldset>
-      <Input label={t('coachTraining:orNameOwn')} description={t('coachTraining:orNameOwnEx')} value={name}
+      {/* TRAK-520: the example sits in the box, not under it. */}
+      <Input label={t('coachTraining:orNameOwn')} placeholder={t('coachTraining:orNameOwnEx')} value={name}
         maxLength={PART_NAME_MAX} autoComplete="off" onChange={e => { setName(e.target.value); if (e.target.value.trim()) setPicked(null); setProblem(null) }} />
       {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
       <div className="flex flex-wrap justify-end gap-2">
@@ -104,7 +105,8 @@ export function MoreDrillsSheet({ part, players, usage, bookmarks, onClose, onPi
         ? <EmptyState icon={<ClipboardList size={24} strokeWidth={1.5} />} title={t('coachTraining:noneUsed')} />
         : <p className="text-[15px] text-ink-2">{t('coachTraining:noDrillsMatch')}</p>
         : groups.map((group, i) => <section key={group.name} aria-label={group.name} className="grid gap-2">
-          {i === firstRest && i > 0 && <p className="border-t border-line pt-3 text-sm font-medium text-ink-2">{t('coachTraining:restOfLibrary')}</p>}
+          {/* TRAK-520 (Imad, 20 Nov): a rule where the rest of the Library starts, without "The rest of the Drill Library". */}
+          {i === firstRest && i > 0 && <hr aria-hidden className="border-line" />}
           <h3 className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">{group.name}</h3>
           <ul aria-label={group.name} className="divide-y divide-line rounded-2xl border border-line bg-surface px-4">
             {group.drills.map(lib => {
