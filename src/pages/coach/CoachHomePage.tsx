@@ -10,6 +10,7 @@ import { HomeHeader } from '@/components/trak/HomeHeader'
 import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachWeekStrip, NextStep } from '@/components/coach/CoachWeekStrip'
 import { squadName } from '@/lib/coach-week'
+import { trainingEnded } from '@/lib/training/ended'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { SquadShape } from '@/components/coach/home/SquadShape'
 import { TodayPlan } from '@/components/coach/home/TodayPlan'
@@ -125,7 +126,9 @@ export default function CoachHomePage() {
       when: `${format(parseISO(item.date), 'EEE d MMM', { locale: dateLocale() })}${item.time ? ` · ${item.time}` : ''}`,
       squad: coachSquad.squads.length >= 2 ? squadName(item.source.squad) : null,
       reason: item.step === 'evaluate' ? t('coachHome:owedEvaluate') : item.step === 'publish-evaluation' ? t('coachHome:owedEvaluationDraft')
-        : item.kind === 'match' ? t('coachHome:owedLog') : t('coachHome:owedRegister'),
+        : item.kind === 'match' ? t('coachHome:owedLog')
+        // TRAK-493: "Started" while it runs, "Finished" once it's over; the missing register is the button beside it.
+        : t(item.row && trainingEnded({ ...item.row, ends_at: item.row.ends_at ?? null, start_time: item.row.start_time ?? null }) ? 'coachHome:owedRegisterFinished' : 'coachHome:owedRegister'),
       action: <NextStep item={item} coachId={user.id} roster={undefined} onChanged={owedChanged} />,
       // TRAK-444: when it is about, so the newest come first.
       at: Date.parse(`${item.date}T${/^\d{2}:\d{2}/.test(item.time ?? '') ? item.time!.slice(0, 5) : '00:00'}`),

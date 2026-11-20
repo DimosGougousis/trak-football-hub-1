@@ -219,7 +219,9 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     server.use(table('coach_calendar_events', [event('ev-tr', 'training', 'Tactical', '2026-11-29'), event('ev-m', 'match', 'League', '2026-11-28', 'Rovers')]))
     renderApp('/coach/home')
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByText('Started, no register yet', {}, { timeout: 5000 })).toBeInTheDocument()
+    // TRAK-493: the training ended on 29 Nov, so it says "Finished" alone, never "Started, no register yet".
+    expect(await within(needs).findByText('Finished', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(needs).queryByText(/Started|no register yet/)).toBeNull()
     expect(within(needs).getByRole('button', { name: 'Take register' })).toBeInTheDocument()
     expect(within(needs).getByText('Played')).toBeInTheDocument()
     expect(within(needs).getByRole('button', { name: 'Log it' })).toBeInTheDocument()
