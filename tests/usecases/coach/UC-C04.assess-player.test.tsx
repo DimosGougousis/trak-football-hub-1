@@ -26,31 +26,14 @@ function signedInCoachWithSquad() {
       { id: 'p-coach', user_id: COACH.id, role: 'coach', full_name: 'Coach Vasilis', nationality: 'GR', invite_code: 'ABCD' },
     ]),
     table('squad_players', SQUAD),
-    // CoachAssessPage fetches the coach's past sessions for the required
-    // session dropdown (TRAK-68), and coach_details on the destination home
-    // screen; mock both up front so every test here can reach the form.
-    table('coach_sessions', [{ id: 'session-1', coach_user_id: COACH.id, title: 'vs Synthetic FC', session_date: '2026-09-20' }]),
-    // TRAK-100: the dropdown lists only sessions the player was marked present at.
-    table('session_attendance', [{ session_id: 'session-1', squad_player_id: 'squad-1', status: 'present' }]),
+    // v4 (TRAK-500): no session to select, so no sessions or attendance are read. coach_details is the
+    // destination home screen's.
     table('coach_details', []),
   )
 }
 
-/*
- * The player <select> has no accessible name (its label is a plain <span>,
- * not a <label for>), and the redesigned screen added a second <select> for
- * the optional session — so `getByRole('combobox')` is now ambiguous between
- * the two. The player option we already wait for is unique to the player
- * select, so anchor off it with `.closest('select')` instead of guessing at
- * an index or an accessible name that doesn't exist.
- */
 async function pickPlayer() {
   await pickOption('Player', 'Nikos Papadopoulos')
-}
-
-// UC-C04 v2 (TRAK-68): the assessment belongs to a past session.
-async function chooseSession() {
-  await pickOption('Session', /vs Synthetic FC/)
 }
 
 useCase('UC-C04', () => {
@@ -77,7 +60,6 @@ useCase('UC-C04', () => {
     // before selecting it, otherwise this selects against a placeholder-only
     // combobox and fails with "Value not found in options".
     await pickPlayer()
-    await chooseSession()
 
     // All six sliders default to 5 — an implementation that hardcoded 5 into
     // every column, or wired all six sliders to one shared value, would pass
@@ -112,7 +94,6 @@ useCase('UC-C04', () => {
     expect(inserted[0]).toMatchObject({
       coach_user_id: COACH.id,
       squad_player_id: 'squad-1',
-      session_id: 'session-1',
       work_rate: 10,
       tactical: 9,
       attitude: 8,
@@ -120,6 +101,8 @@ useCase('UC-C04', () => {
       physical: 6,
       coachability: 5,
     })
+    // v4 (TRAK-500): no session; the database leaves it null.
+    expect(inserted[0].session_id ?? null).toBeNull()
   }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   it('shows a band derived from the six scores before submitting', async () => {
@@ -128,7 +111,6 @@ useCase('UC-C04', () => {
     renderApp('/coach/assess')
     const user = userEvent.setup()
     await pickPlayer()
-    await chooseSession()
     await assessStep('Ratings')
 
     // All six sliders default to 5, so avg = 5. scoreToBand(5) in
@@ -151,7 +133,7 @@ useCase('UC-C04', () => {
     expect(within(overallBandCard).getByText('Mixed')).toBeInTheDocument()
   }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
-  it('refuses to submit until a player and a session are selected', async () => {
+  it('refuses to submit until a player is selected', async () => {
     signedInCoachWithSquad()
     const inserted: unknown[] = []
     server.use(
@@ -179,13 +161,11 @@ useCase('UC-C04', () => {
     await user.click(submit)
     expect(inserted).toHaveLength(0)
 
-    // A player alone is not enough: the session is required too (v2).
+    // v4 (TRAK-500): the player is enough; no session is asked.
     await pickPlayer()
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Session' })).toBeEnabled())
-    expect(nextButton()).toBeDisabled()
-    await user.click(nextButton())
+    expect(screen.queryByRole('combobox', { name: 'Session' })).toBeNull()
+    await waitFor(() => expect(nextButton()).toBeEnabled())
     expect(inserted).toHaveLength(0)
-    expect(screen.queryByRole('button', { name: /^(Save|Publish)$/ })).toBeNull()
   }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   // v3 (TRAK-364): where the season plan is on and the squad's plan is shared, the due evaluation publishes all six
