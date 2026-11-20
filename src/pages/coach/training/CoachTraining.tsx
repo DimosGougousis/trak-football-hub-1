@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { splitTrainings, trainingMinutes } from '@/lib/training/sessions'
+import { useTrainingEnded } from '@/lib/training/ended'
 import { herePath, planPath, sessionSummary } from '@/lib/training/plans'
 import { registerProblem } from '@/lib/event-register'
 import { againLabel, loopSteps, nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
@@ -236,6 +237,8 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
     ...('error' in step && step.error ? { error: shownWord(TRAINING_WORD, step.error) } : {}) }))
   const message = training.family_note?.trim()
   const locked = startedLocked(training)
+  // TRAK-493: once the training is over its countdown says "Finished", never "Started".
+  const ended = useTrainingEnded(training)
   // Who's here opens as the register does everywhere else: published, not cancelled, started.
   const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date())
   // TRAK-456: a plan, written or not, is the training page's Training plan tab.
@@ -283,7 +286,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
               <Button size="lg" variant="secondary" onClick={() => setCopying(true)}><Copy aria-hidden size={16} />{t('coachTraining:usePastPlan')}</Button>
             </>}
             <Countdown variant="compact" units={['days', 'hours', 'minutes']} target={training.starts_at}
-              label={t('coachTraining:startsIn')} completeLabel={t('coachTraining:started')} onComplete={onStart} className="ml-auto" />
+              label={t('coachTraining:startsIn')} completeLabel={t(ended ? 'coachTraining:finished' : 'coachTraining:started')} onComplete={onStart} className="ml-auto" />
           </div>
           {/* Kostas, 3 Nov: the mockup is clean; a line only when a button is waiting for the training to start. */}
           {phase === 'day' && registerWhy && !sessionId && <p className="text-sm text-ink-3">{t('coachTraining:hereOpens')}</p>}

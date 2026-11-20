@@ -11,6 +11,7 @@ import { hasStarted } from '@/lib/event-register'
 import { shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { shareEventText } from '@/lib/share-event'
 import { trainingMinutes } from '@/lib/training/sessions'
+import { useTrainingEnded } from '@/lib/training/ended'
 import { libraryDrill, squadPlayers, type LibraryDrill } from '@/lib/training/library'
 import type { PlannerState } from '@/lib/training/plans'
 import { partInfo, type PartType } from '@/lib/training/shelf'
@@ -332,11 +333,13 @@ function ReviewShare({ training, parts, length, note, onNote, onEdit, onAdd, onB
         t('coachHome:minutes', { count: part.minutes })].filter(Boolean).join(' · ') })),
   ]
   const incomplete = rows.filter(row => row.status !== 'good').length
+  // TRAK-493: once the training is over the countdown says "Finished", never "Started".
+  const ended = useTrainingEnded(training)
   return <div className="arc min-w-0">
     <PlanReview title={t('coachTraining:reviewTitle')} footerId="plan-share" rows={rows}
       band={incomplete ? { status: training.published ? 'watch' : 'risk', label: t('coachMatches:incompleteCount', { count: incomplete }) }
         : { status: 'good', label: t('coachTraining:readyBadge') }}
-      countdown={{ label: t('coachTraining:startsIn'), end: training.starts_at, completeLabel: t('coachTraining:started') }}>
+      countdown={{ label: t('coachTraining:startsIn'), end: training.starts_at, completeLabel: t(ended ? 'coachTraining:finished' : 'coachTraining:started') }}>
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1"><TimeBar parts={parts} length={length} /></div>
         <TotalLine parts={parts} length={length} />
