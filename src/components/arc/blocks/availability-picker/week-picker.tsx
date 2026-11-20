@@ -141,7 +141,7 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
                     <span className={styles.slotMeta}>{entry.note}</span>
                   </span>
                   {/* Trak (TRAK-266): a badge in the colour key only where the coach is needed. */}
-                  {entry.state === "needs-you" && <Badge tone="warning" size="sm">{t("coachHome:needsYouTitle")}</Badge>}
+                  {entry.state === "needs-you" && <Badge tone="warning" size="sm" className={styles.needsBadge}>{t("coachHome:needsYouTitle")}</Badge>}
                   {entry.state === "clash" && <Badge tone="danger" size="sm">{t("coachHome:stateClash")}</Badge>}
                   <span className={styles.slotCheck} aria-hidden="true"><Check size={14} strokeWidth={2} /></span>
                 </button>
@@ -155,7 +155,7 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
           "Nothing planned" once. TRAK-445 (Imad, 17 Nov): nor its name and time, which the chosen row above shows. */}
       {event && <footer className={styles.footer}>
         <div className={styles.footerActions}>
-          {renderDetails?.(event.id, <Button variant="ghost" size="sm">{t("coachHome:details")}</Button>)}
+          {renderDetails?.(event.id, <Button variant="secondary" size="sm">{t("coachHome:details")}</Button>)}
           {renderPrimary?.(event.id)}
         </div>
       </footer>}

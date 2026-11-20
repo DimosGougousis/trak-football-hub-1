@@ -175,7 +175,7 @@ describe('TRAK-288: with Games on, the evaluation replaces the match log', { tim
     fixtures()
     renderApp('/coach/home')
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByText('Played, not evaluated yet')).toBeInTheDocument()
+    expect(await within(needs).findByText('Played')).toBeInTheDocument()
     await userEvent.click(within(needs).getByRole('button', { name: 'Evaluate' }))
     await waitFor(() => expect(path()).toBe('/coach/matches/match-1?tab=evaluation'))
   })

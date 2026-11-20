@@ -618,6 +618,33 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
   })
 })
 
+// TRAK-495 (Imad, 19 Nov): on Home, the Needs you badge is the corner's yellow, the item says only "Played", and Details
+// looks like a button before any hover. Tonight's match is over and not evaluated, so it needs the coach.
+test.describe('TRAK-495 coach Home', () => {
+  test.use({ timezoneId: 'Asia/Dubai', deviceScaleFactor: 2 })
+  for (const width of [390, 1280]) {
+    test(`at ${width} px: one yellow, "Played", and a Details button`, async ({ page, context }, testInfo) => {
+      const unexpected: string[] = []
+      await page.setViewportSize({ width, height: 900 })
+      await coachBackend(context, unexpected, true, false, 36)
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+      await page.clock.setFixedTime(new Date(`${day}T19:30:00Z`)) // 23:30 in Dubai: the 20:00 match is over
+      await page.goto('/coach/home')
+      const badge = page.getByRole('button', { name: /Rivals FC/ }).getByText('Needs you', { exact: true })
+      // The label sits in a span inside the badge; the yellow is the badge's own background.
+      await expect.poll(() => badge.evaluate(el => getComputedStyle(el.closest('[class*="badge"]')!).backgroundColor)).toBe('rgb(234, 179, 8)')
+      await expect(page.getByText('Played', { exact: true }).first()).toBeVisible()
+      await expect(page.getByText(/not (evaluated|logged) yet/)).toHaveCount(0)
+      const details = page.getByRole('button', { name: 'Details', exact: true })
+      await expect(details).toBeVisible()
+      expect(await details.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+      await page.waitForTimeout(400) // let springs settle for the screenshot
+      await page.screenshot({ path: testInfo.outputPath(`home-trak495-${width}.png`) })
+      expect(unexpected).toEqual([])
+    })
+  }
+})
+
 // Imad, 23 Oct: event times follow the phone's own clock. Tonight's away match is 20:00 at a Dubai academy.
 test.describe("Event times on the phone's clock", () => {
   const kickOff = (timeZone: string, day: string) =>
