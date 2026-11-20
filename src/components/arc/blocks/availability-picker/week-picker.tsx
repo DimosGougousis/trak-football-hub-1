@@ -7,6 +7,7 @@ import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "../../badge/badge";
 import { Button } from "../../button/button";
 import { motionTokens } from "../../lib/motion-tokens";
+import { MorphBlock, SkeletonMorph } from "../../skeleton-morph/skeleton-morph";
 import { CANCELLED_COLOR, EVENT_COLOR } from "@/lib/coach-events";
 import type { WeekState } from "@/lib/coach-week";
 import { useTranslation } from "@/lib/i18n";
@@ -51,7 +52,7 @@ const fadeVariants = { enter: { opacity: 0 }, center: { opacity: 1 }, exit: { op
  * coach, the chosen day's events in the colour key, and a footer with the chosen event's one next step beside Details.
  * The caller renders both buttons: `renderDetails` wraps its trigger in the event sheet.
  */
-export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, renderPrimary, renderDetails, family = false }: {
+export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, renderPrimary, renderDetails, family = false, loading = false }: {
   /** A player or parent reads the week: nothing "needs you", and nothing to plan. */
   family?: boolean;
   title: string;
@@ -61,6 +62,8 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
   onNextWeek?: () => void;
   renderPrimary?: (eventId: string) => ReactNode;
   renderDetails?: (eventId: string, trigger: ReactElement) => ReactNode;
+  /** Trak (TRAK-496): the week's events are still loading. The header and days show; the events grow in from a skeleton. */
+  loading?: boolean;
 }) {
   const reduce = !!useReducedMotion();
   const { t } = useTranslation();
@@ -70,6 +73,11 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
   const day = days.find(entry => entry.id === dayId) ?? days[0];
   const [eventId, setEventId] = useState(firstEvent(day)?.id ?? null);
   const event = day.events.find(entry => entry.id === eventId) ?? null;
+  // A picker that opens loading keeps its skeleton wrapper for life, so the same block grows into the events; one that
+  // opens loaded never has it. Once the events arrive, the chosen day's first event is selected, as on a loaded open.
+  const [morph] = useState(loading);
+  const [pending, setPending] = useState(loading);
+  if (pending && !loading) { setPending(false); setEventId(firstEvent(day)?.id ?? null); }
 
   function selectDay(index: number) {
     const next = days[index];
@@ -103,7 +111,7 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
           const waiting = entry.events.some(item => item.state === "needs-you");
           return <button key={entry.id} type="button" className={styles.day} data-selected={selected || undefined} data-today={entry.today || undefined}
             data-needs-you={waiting || undefined} aria-pressed={selected}
-            aria-label={`${entry.full}${entry.today ? t("coachHome:dayToday") : ""}, ${entry.events.length ? t("coachHome:dayEvents", { count: entry.events.length }) : t("coachHome:dayNothing")}${waiting ? t("coachHome:dayNeedsYou") : ""}`}
+            aria-label={loading ? `${entry.full}${entry.today ? t("coachHome:dayToday") : ""}` : `${entry.full}${entry.today ? t("coachHome:dayToday") : ""}, ${entry.events.length ? t("coachHome:dayEvents", { count: entry.events.length }) : t("coachHome:dayNothing")}${waiting ? t("coachHome:dayNeedsYou") : ""}`}
             onClick={() => selectDay(index)}>
             {selected && <motion.span layoutId={`${id}-day`} className={styles.dayHighlight} transition={reduce ? { duration: 0 } : motionTokens.spring.snappy} />}
             <span className={styles.dayName}>{entry.short}</span>
@@ -125,6 +133,7 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
       </div>
 
       <div className={styles.slotsStage}>
+        <Grow morph={morph} loading={loading}>
         <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.ul key={day.id} className={styles.slots} aria-label={t("coachHome:eventsOn", { day: day.full })} custom={direction} variants={reduce ? fadeVariants : slideVariants}
             initial="enter" animate="center" exit="exit" transition={reduce ? { duration: motionTokens.duration.instant } : { x: motionTokens.spring.smooth, opacity: { duration: motionTokens.duration.fast } }}>
@@ -149,6 +158,7 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
             })}
           </motion.ul>
         </AnimatePresence>
+        </Grow>
       </div>
 
       {/* Trak (TRAK-443): the chosen event's buttons; its line is on its row. An empty day has no bar: the list says
@@ -161,6 +171,13 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
       </footer>}
     </div>
   </section>;
+}
+
+/** Trak (TRAK-496): a picker that opened loading shows its events as a skeleton that grows into them. */
+function Grow({ morph, loading, children }: { morph: boolean; loading: boolean; children: ReactNode }) {
+  const { t } = useTranslation();
+  if (!morph) return <>{children}</>;
+  return <SkeletonMorph loading={loading} loadingLabel={t("coachHome:weekLoading")}><MorphBlock height={64} radius={12}>{children}</MorphBlock></SkeletonMorph>;
 }
 
 export default WeekPicker;

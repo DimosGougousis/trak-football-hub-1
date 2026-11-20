@@ -83,10 +83,13 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
   }, [coachId, dates, version, attempt, games])
 
   if (failed) return <div className="mb-4"><LoadError what={t('coachHome:weekWhat')} onRetry={() => setAttempt(n => n + 1)} /></div>
-  if (!week || week.monday !== dates[0]) return <WeekMorph loading />
+  if (!week) return <WeekMorph loading />
 
   const refresh = () => setAttempt(n => n + 1)
-  const byDate = coachWeek({ dates, events: week.events, sessions: week.sessions, inView, evaluated: week.evaluated, published: week.published, noted })
+  // TRAK-496 (Imad, 19 Nov): another week keeps the strip's header and days while its events load behind a skeleton.
+  const loadingWeek = week.monday !== dates[0]
+  const byDate = loadingWeek ? new Map<string, WeekItem[]>()
+    : coachWeek({ dates, events: week.events, sessions: week.sessions, inView, evaluated: week.evaluated, published: week.published, noted })
   const strips = new Map<string, { item: WeekItem; event: StripEvent }>()
   for (const item of [...byDate.values()].flat()) {
     const event = toPlayerEvent(item.source)
@@ -105,7 +108,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
         note: squadOf && labelEach ? `${squadOf(source.squad)} · ${note}` : note })),
   }))
 
-  return <WeekMorph loading={false}><WeekPicker key={dates[0]} title={weekTitle(offset, dates[0])}
+  return <WeekMorph loading={false}><WeekPicker key={dates[0]} loading={loadingWeek} title={weekTitle(offset, dates[0])}
     subtitle={[`${format(parseISO(dates[0]), 'd')}–${format(parseISO(dates[6]), 'd MMMM', { locale })}`, squadLabel].filter(Boolean).join(' · ')}
     days={days} onPrevWeek={() => setOffset(n => n - 1)} onNextWeek={() => setOffset(n => n + 1)}
     renderDetails={(id, trigger) => {

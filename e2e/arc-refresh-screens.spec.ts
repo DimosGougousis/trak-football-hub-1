@@ -149,6 +149,37 @@ test.describe('TRAK-182 coach screens', () => {
     })
   }
 
+  // TRAK-496 (Imad, 19 Nov, on his phone): switching weeks shows the week's skeleton until the days load, not a blank strip.
+  for (const width of [390, 1280]) test(`at ${width} px, the next week loads behind a skeleton`, async ({ page, context }, testInfo) => {
+    const unexpected: string[] = []
+    await page.setViewportSize({ width, height: 900 })
+    await coachBackend(context, unexpected)
+    let release = () => {}
+    const held = new Promise<void>(resolve => { release = resolve })
+    let hold = false
+    // Registered last, so it runs first: the next week's events wait until the test lets them through.
+    await context.route('**/rest/v1/coach_calendar_events*', async route => { if (hold) await held; await route.fallback() })
+    await page.goto('/coach/home')
+    await expect(page.getByRole('button', { name: 'Next week' })).toBeVisible()
+    await page.waitForTimeout(800) // the first week has grown in
+    hold = true
+    await page.getByRole('button', { name: 'Next week' }).click()
+    await page.waitForTimeout(500) // well past any fade
+    // The header, the arrows and the next week's seven days stay; only the events wait, behind a skeleton.
+    await expect(page.getByRole('heading', { name: 'Next week', level: 2 })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Previous week' })).toBeVisible()
+    await expect(page.getByRole('group', { name: /^\d+–\d+ / }).getByRole('button')).toHaveCount(7)
+    const skeleton = page.locator('[aria-busy="true"] [data-state="skeleton"] > [aria-hidden="true"]')
+    await expect(skeleton).toHaveCount(1)
+    expect((await skeleton.boundingBox())!.height).toBeGreaterThan(40)
+    expect(Number(await skeleton.evaluate(el => getComputedStyle(el).opacity))).toBeGreaterThan(.5)
+    await page.screenshot({ path: testInfo.outputPath(`home-week-loading-${width}.png`) })
+    release()
+    await expect(page.getByRole('listitem').getByText('Nothing planned')).toBeVisible()
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
+    expect(unexpected).toEqual([])
+  })
+
   // Imad, 16 Oct: the event sheet's layout, with the names folded behind the avatars and opened.
   test('coach event sheet, a published away match', async ({ page, context }, testInfo) => {
     const unexpected: string[] = [], errors: string[] = []
