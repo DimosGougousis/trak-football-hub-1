@@ -36,8 +36,12 @@
 .highlightFill { position: absolute; inset: 0; border-radius: 50%; background: var(--accent); transition: background-color var(--duration-fast) var(--ease-standard), scale var(--duration-spring) var(--ease-spring); }
 @media (hover: hover) and (pointer: fine) { .day:hover:not(:disabled):not(.selected)::before { background: var(--surface-muted); } .monthBody:has(.day.selected:hover) .highlightFill { background: var(--accent-strong); } }
 .day:active:not(:disabled)::before, .day:active:not(:disabled) .dayNumber, .monthBody:has(.day.selected:active:not(:disabled)) .highlightFill { scale: .94; transition-duration: var(--duration-fast), 100ms; transition-timing-function: var(--ease-standard); }
-/* Today is a small dot under the number. It takes the number's color, so it flips with it when the disc arrives. */
-.day.today .dayNumber::after { content: ""; position: absolute; top: calc(100% + 4px); left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
+/* TRAK-509 (Imad, 20 Nov): today is a thin empty circle round its number, not a dot. Selected, the filled disc shows instead. */
+.day.today:not(.selected)::after { content: ""; position: absolute; inset: 0; border: 1px solid currentColor; border-radius: 50%; pointer-events: none; }
+/* TRAK-509: a thin line between weeks, drawn in the 4px row gap so rows keep the height the disc's position counts on.
+   A trailing week with none of this month's days (TRAK-504's blanks) gets no line. */
+.week { position: relative; }
+.week + .week:has(.day)::before { content: ""; position: absolute; top: -2.5px; right: 0; left: 0; height: 1px; background: var(--border); pointer-events: none; }
 .day.selected, .day.today { font-weight: 500; }
 .day.selected { color: var(--accent-foreground); }
 .day:disabled { cursor: default; color: var(--text-muted); }
