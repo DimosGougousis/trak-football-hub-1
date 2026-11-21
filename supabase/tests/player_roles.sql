@@ -89,6 +89,8 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,age_group,linked_p
  (pg_temp.pr353id(44),pg_temp.pr353id(10),'Synthetic Player Ola','U16',pg_temp.pr353id(23),'Defender'),
  (pg_temp.pr353id(45),pg_temp.pr353id(10),'Synthetic Player Dev','U16',pg_temp.pr353id(24),'Midfielder');
 UPDATE public.squad_players SET status = 'coach_departed' WHERE id = pg_temp.pr353id(45);
+-- Academies start with Season plan on (20261121120000). This suite switches it by hand, as an operator still can.
+DELETE FROM public.academy_features WHERE feature = 'season_plan';
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.pr353id(100),'season_plan');
 
 -- Consent through the guardian's own function, the way the app records it.

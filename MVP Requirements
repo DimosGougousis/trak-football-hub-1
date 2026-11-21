@@ -123,8 +123,8 @@ any session or appearance it was saved with. `/coach/assess` is the pilot
 assessment screen; Quick Assess remains hidden. Parents never see the coach's
 message. These decisions are recorded in TRAK-63, TRAK-64 and TRAK-500.
 
-**With the season plan (TRAK-364; draft awaiting Kostas's review).** Academies
-without the `season_plan` switch keep J5 exactly as written above. Where the
+**With the season plan (TRAK-364; draft awaiting Kostas's review).** Every
+academy has the `season_plan` switch (TRAK-524); without it, J5 stays as above. Where the
 switch is on and a squad's season plan is shared, the squad is evaluated on the
 plan's rhythm: every 2 weeks, every month or every 6 weeks, on a chosen day
 (for every month, the last such day of the month). Dates count in the academy's
