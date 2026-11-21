@@ -96,5 +96,9 @@
   "couldntLoadMessage": "Το μήνυμα δεν φορτώθηκε. Η Δημοσίευση το στέλνει κανονικά.",
   "noMessage": "Χωρίς μήνυμα",
   "privateNoteCaps": "ΠΡΟΣΩΠΙΚΗ ΣΗΜΕΙΩΣΗ · ΜΟΝΟ ΕΣΕΙΣ",
-  "changePlayerButton": "Αλλαγή"
+  "changePlayerButton": "Αλλαγή",
+  "stepObjectives": "Objectives",
+  "objectivesCaps": "OBJECTIVES",
+  "objectiveAdded": "Added",
+  "couldntLoadObjectives": "Couldn't load the objectives."
 }

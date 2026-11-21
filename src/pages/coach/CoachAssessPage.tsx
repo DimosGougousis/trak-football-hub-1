@@ -24,6 +24,13 @@ import { Button } from '@/components/arc/button/button'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { Select } from '@/components/arc/select/select'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useFeatureState } from '@/components/trak/parked'
+import { LoadError } from '@/components/trak/LoadError'
+import { loadSeasonPlan, seasonPlanKey } from '@/lib/season-plan'
+import { usePlayerObjectives } from '@/components/coach/season-plan/usePlayerObjectives'
+import { ObjectivesSection } from '@/components/coach/season-plan/Evaluation'
+import { allRated, emptyObjectives, isProgress, progressLabel, type ObjectivesEntry, type Progress } from '@/lib/objective-progress'
 
 /** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
     and the private note get their own steps, so player-visible words never sit
@@ -31,6 +38,8 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 const STEPS = [
   { id: 'who', label: 'nav:player' },
   { id: 'ratings', label: 'coachAssess:stepRatings' },
+  // TRAK-526 (Imad, 21 Nov): only where the player's squad has a shared season plan.
+  { id: 'objectives', label: 'coachAssess:stepObjectives' },
   // Imad, 16 Oct: one step for both, still two boxes: the message (white)
   // reaches the player, the note (yellow) only the coach, and stands out.
   { id: 'message', label: 'coachAssess:stepMessage' },
@@ -56,8 +65,6 @@ export default function CoachAssessPage() {
 
 function CoachAssessmentForm() {
   const { t } = useTranslation()
-  // TRAK-407: the steps' names in the language showing.
-  const steps = STEPS.map(entry => ({ id: entry.id, label: t(entry.label) }))
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -276,6 +283,44 @@ function CoachAssessmentForm() {
   const playerReady = !!playerId && formReady && !consentWait
   // TRAK-182 (Imad, 15 Oct): one step per screen; the review step saves.
   const [step, setStep] = useState(0)
+
+  /* TRAK-526 (Imad, 21 Nov): after Ratings, how each open objective is going, as the squad evaluation asks, where the
+     season plan is on and the player's squad has a shared plan. A draft keeps the answers; Met closes an objective and
+     an added one starts once the assessment is published (Tarek, 21 Nov), and then they're final. */
+  const queryClient = useQueryClient()
+  const seasonPlanOn = useFeatureState('season_plan').on
+  const squad = (selectedPlayer?.age_group as string | undefined)?.trim() || null
+  const plan = useQuery({ queryKey: seasonPlanKey(userId, squad), queryFn: () => loadSeasonPlan(userId!, squad!), enabled: seasonPlanOn && !!userId && !!squad })
+  const asksObjectives = seasonPlanOn && !!plan.data?.shared_at
+  const playerObjectives = usePlayerObjectives(userId, asksObjectives)
+  const openObjectives = asksObjectives ? playerObjectives.of(playerId).map(o => ({ id: o.id, title: o.title })) : []
+  const [checkIn, setCheckIn] = useState<ObjectivesEntry>(emptyObjectives)
+  type SavedAnswer = { player_objective_id: string | null; status: string | null; added_title: string | null; applied_at: string | null; player_objectives: { title: string } | null }
+  const savedCheckIn = useQuery({
+    queryKey: ['coach', userId, 'assessment-objectives', openedRowId],
+    enabled: asksObjectives && !!openedRowId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('assessment_objectives' as never)
+        .select('player_objective_id, status, added_title, applied_at, player_objectives(title)').eq('assessment_id', openedRowId!)
+      if (error) throw error
+      return (data ?? []) as unknown as SavedAnswer[]
+    },
+  })
+  const finalCheckIn = savedCheckIn.data?.some(row => row.applied_at) ? savedCheckIn.data : null
+  useEffect(() => { setCheckIn(emptyObjectives()) }, [scope])
+  // A draft's answers come back to be changed.
+  useEffect(() => {
+    const rows = savedCheckIn.data
+    if (!rows || rows.some(row => row.applied_at)) return
+    setCheckIn({
+      progress: Object.fromEntries(rows.filter(row => row.player_objective_id && isProgress(row.status)).map(row => [row.player_objective_id!, row.status as Progress])),
+      add: rows.flatMap(row => row.added_title ? [row.added_title] : []),
+    })
+  }, [savedCheckIn.data])
+  const objectivesReady = !asksObjectives || !!finalCheckIn || (playerObjectives.isSuccess && (!openedRowId || savedCheckIn.isSuccess) && allRated(openObjectives, checkIn))
+  // TRAK-407: the steps' names in the language showing.
+  const steps = STEPS.filter(entry => entry.id !== 'objectives' || asksObjectives).map(entry => ({ id: entry.id, label: t(entry.label) }))
+  const stepId = steps[step]?.id
   useEffect(() => {
     setConsentWait(false)
     if (!playerId) return
@@ -333,7 +378,15 @@ function CoachAssessmentForm() {
         ...(draft ? (assessmentPublished ? {} : { published_at: null }) : existingId && !assessmentPublished ? { published_at: new Date().toISOString() } : {}),
       }
 
-      const { data: saved, error: saveError } = existingId
+      // TRAK-526: with a check-in, the assessment and its answers are one save (as the coach, under the same policies).
+      // A published assessment's answers are final, so an edit of one sends none.
+      const { data: saved, error: saveError } = asksObjectives
+        ? await supabase.rpc('save_assessment_with_objectives' as never, {
+            p_assessment_id: existingId, p_row: payload,
+            p_progress: finalCheckIn ? null : openObjectives.map(o => ({ player_objective_id: o.id, status: checkIn.progress[o.id] })),
+            p_add: finalCheckIn ? null : checkIn.add,
+          } as never).abortSignal(controller.signal).then(({ data, error }) => ({ data: data ? { id: data as unknown as string } : null, error }))
+        : existingId
         ? await supabase.from('coach_assessments')
             .update(payload).eq('id', existingId)
             .eq('coach_user_id', user.id).eq('squad_player_id', playerId)
@@ -379,6 +432,8 @@ function CoachAssessmentForm() {
       }
 
       setExistingId(saved.id)
+      // Met and an added objective change the player's list; the card reads the answers.
+      if (asksObjectives) void queryClient.invalidateQueries({ queryKey: ['coach', user.id] })
       if (saved?.id && (note.trim() || noteExists)) {
         // upsert, so re-saving replaces the note rather than stacking another
         const { error: noteError } = await supabase.from('coach_assessment_notes').upsert({
@@ -535,7 +590,7 @@ function CoachAssessmentForm() {
             </p>
           </div>
         ) : null}
-        {step === 0 && <>
+        {stepId === 'who' && <>
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
           <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-line">
@@ -598,7 +653,7 @@ function CoachAssessmentForm() {
             withdrawn mid-edit, the refused save sets consentWait: the form
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
-        {step === 1 && <>
+        {stepId === 'ratings' && <>
         {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
         <div className="rounded-2xl bg-surface border border-line p-[14px_16px] space-y-5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-10 tablet:gap-y-5">
           <SliderInput label={t('coachAssess:sliderWorkRate')} value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
@@ -638,7 +693,20 @@ function CoachAssessmentForm() {
         </div>
 
         </>}
-        {step === 2 && <>
+        {stepId === 'objectives' && <div className="arc">
+          {finalCheckIn ? <section aria-labelledby="assess-objectives" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+              <h3 id="assess-objectives" className="text-lg font-medium text-ink">{t('coachAssess:stepObjectives')}</h3>
+              <ul className="m-0 grid list-none gap-2 p-0">{finalCheckIn.map(row => <li key={row.player_objective_id ?? row.added_title} className="flex justify-between gap-3 text-sm text-ink">
+                <span className="min-w-0">{row.added_title ?? row.player_objectives?.title}</span>
+                <span className="shrink-0 text-ink-3">{row.added_title ? t('coachAssess:objectiveAdded') : isProgress(row.status) ? progressLabel(row.status) : ''}</span>
+              </li>)}</ul>
+            </section>
+            : playerObjectives.isError || savedCheckIn.isError ? <LoadError what={t('coachAssess:stepObjectives')} onRetry={() => { void playerObjectives.refetch(); void savedCheckIn.refetch() }} />
+            : playerObjectives.isPending || (!!openedRowId && savedCheckIn.isPending) ? <LoadingSkeleton label={t('coachAssess:stepObjectives')} lines={2} />
+            : <ObjectivesSection name={firstName} open={openObjectives} entry={checkIn} onChange={setCheckIn} />}
+        </div>}
+
+        {stepId === 'message' && <>
         {/* ---- 7. message to the player (K9, J5) ----
             Two boxes rather than one, because the schema has two tables and the
             coach needs to see which words the player will read. Nothing copies
@@ -713,7 +781,7 @@ function CoachAssessmentForm() {
 
         </>}
         {/* ---- 9. review and save (TRAK-182) ---- */}
-        {step === 3 && <>
+        {stepId === 'review' && <>
           <dl className="rounded-2xl border border-line divide-y divide-line text-[13px]">
             {([
               [t('nav:player'), selectedPlayer?.player_name ?? ''],
@@ -737,7 +805,7 @@ function CoachAssessmentForm() {
             already read is always allowed, even while the form is locked. It
             sits with the message, and on the first step when consent locks the
             rest of the steps away (TRAK-182). */}
-        {(step === 2 || (step === 0 && consentWait)) && sharedPublished && existingId ? (
+        {(stepId === 'message' || (stepId === 'who' && consentWait)) && sharedPublished && existingId ? (
           <button
             type="button"
             onClick={() => void handleUnpublish()}
@@ -752,19 +820,19 @@ function CoachAssessmentForm() {
       {/* TRAK-425: on a phone this page has its own Back and Next bar and the glass tab bar steps aside (BARLESS), as on Add
           session: one bar at the bottom, not two stacked. It clears the home indicator's inset. */}
       <div className="arc flex gap-2 px-5 pb-3 pt-2 mb-[env(safe-area-inset-bottom)] shrink-0 border-t border-line">
-        {step === STEPS.length - 1 ? <>
+        {step === steps.length - 1 ? <>
           {/* Review: the decision sits where the thumb is; Back shrinks to an icon. */}
           <Button size="lg" variant="secondary" aria-label={t('coachSchedule:backTo', { step: steps[step - 1].label })} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
           {/* Save draft only for a message the player hasn't got: on a published
               one it would take it back (Kostas, #313). That stays Unpublish's job. */}
           {message && !sharedPublished ? <>
             <Button size="lg" variant="secondary" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave(true)}>{t('coachSchedule:saveDraft')}</Button>
+              disabled={!playerId || !formReady || consentWait || !objectivesReady} onClick={() => void handleSave(true)}>{t('coachSchedule:saveDraft')}</Button>
             <Button size="lg" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>{t('coachHome:publish')}</Button>
+              disabled={!playerId || !formReady || consentWait || !objectivesReady} onClick={() => void handleSave()}>{t('coachHome:publish')}</Button>
           </> : (
             <Button size="lg" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait} onClick={() => void handleSave()}>
+              disabled={!playerId || !formReady || consentWait || !objectivesReady} onClick={() => void handleSave()}>
               {message && !liveUnchanged ? t('coachHome:publish') : t('common:save')}
             </Button>
           )}
@@ -773,7 +841,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={t('coachSchedule:backTo', { step: steps[step - 1].label })}
             onClick={() => setStep(step - 1)}>{t('common:back')}</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={step === 0 && !playerReady}
+          <Button size="lg" className="flex-1" disabled={(stepId === 'who' && !playerReady) || (stepId === 'objectives' && !objectivesReady)}
             onClick={() => setStep(step + 1)}>{t('coachSchedule:next')}</Button>
         </>}
       </div>

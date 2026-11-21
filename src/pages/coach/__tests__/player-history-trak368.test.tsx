@@ -43,6 +43,7 @@ beforeEach(() => {
     table('squad_players', [{ id: 'sq-bo', coach_user_id: COACH.id, player_name: 'Bo Synthetic', position: 'Attacker', shirt_number: 9, age_group: 'U16', status: 'active', created_at: '2026-09-01T08:00:00Z' }]),
     table('coach_assessments', history()),
     table('coach_assessment_notes', []),
+    table('assessment_objectives', []), // TRAK-526: each card's objective check-in
     table('coach_shared_feedback', []),
     table('coach_sessions', []),
     rpc('coach_squad_player_consent_required', () => false),

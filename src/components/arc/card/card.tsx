@@ -11,6 +11,8 @@ import styles from "./card.module.css";
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   title: string;
+  /** Trak (TRAK-526): a short line top right, across from the title, such as a date. */
+  corner?: ReactNode;
   description?: string;
   media?: ReactNode;
   action?: ReactNode;
@@ -74,7 +76,7 @@ function px(node: Element, value: string) {
   return value.trim().endsWith("rem") ? amount * parseFloat(getComputedStyle(node.ownerDocument.documentElement).fontSize) : amount;
 }
 
-export function Card({ title, description, media, action, avatar, meta, status, details, open: openProp, defaultOpen = false, onOpenChange, children, className, style, ...props }: CardProps) {
+export function Card({ title, corner, description, media, action, avatar, meta, status, details, open: openProp, defaultOpen = false, onOpenChange, children, className, style, ...props }: CardProps) {
   const reduced = useReducedMotion() ?? false;
   const group = useId();
   const cardRef = useRef<HTMLElement>(null);
@@ -149,7 +151,10 @@ export function Card({ title, description, media, action, avatar, meta, status, 
   >
     {media ? <motion.div className={styles.media} {...shared("media", "card")}><motion.div className={styles.zoom} initial={false} animate={{ scale: hovered && !reduced ? ZOOM : 1 }} transition={hovered ? zoomIn : zoomOut}>{media}</motion.div></motion.div> : null}
     <div className={styles.content}>
-      <motion.h3 className={styles.title} {...shared("title", "card")}>{details ? <Dialog.Trigger asChild><button type="button" className={styles.trigger}>{title}</button></Dialog.Trigger> : title}</motion.h3>
+      {(() => {
+        const heading = <motion.h3 className={styles.title} {...shared("title", "card")}>{details ? <Dialog.Trigger asChild><button type="button" className={styles.trigger}>{title}</button></Dialog.Trigger> : title}</motion.h3>;
+        return corner ? <div className={styles.titleRow}>{heading}<span className={styles.corner}>{corner}</span></div> : heading;
+      })()}
       {description ? <motion.p ref={descriptionRef} className={styles.description} {...shared("description", "card", "position")}>{description}</motion.p> : null}
       {children}
       {footer("card")}
@@ -186,7 +191,10 @@ export function Card({ title, description, media, action, avatar, meta, status, 
               {media ? <motion.div className={styles.media} {...shared("media", "panel")}><motion.div className={styles.zoom} initial={{ scale: hovered && !reduced ? ZOOM : 1 }} animate={{ scale: 1 }} transition={grow}>{media}</motion.div></motion.div> : null}
               <motion.span className={styles.closeSlot} initial={reduced ? { opacity: 0 } : { opacity: 0, scale: .9 }} animate={returning ? { opacity: 0, scale: .9 } : { opacity: 1, scale: 1 }} transition={returning ? fade : reduced ? fade : closeIn}><Dialog.Close asChild><motion.button type="button" className={styles.close} aria-label="Close quick look" whileTap={reduced ? undefined : { scale: .94 }} transition={spring.snappy}><X width={16} height={16} strokeWidth={1.75} aria-hidden="true" /></motion.button></Dialog.Close></motion.span>
               <div className={styles.content}>
-                <Dialog.Title asChild><motion.h2 className={styles.title} {...shared("title", "panel")}>{title}</motion.h2></Dialog.Title>
+                {(() => {
+                  const heading = <Dialog.Title asChild><motion.h2 className={styles.title} {...shared("title", "panel")}>{title}</motion.h2></Dialog.Title>;
+                  return corner ? <div className={styles.titleRow}>{heading}<span className={styles.corner}>{corner}</span></div> : heading;
+                })()}
                 {description ? <Dialog.Description asChild><motion.p className={styles.description} {...shared("description", "panel", "position")}>{description}</motion.p></Dialog.Description> : null}
                 {children}
                 {footer("panel")}

@@ -70,6 +70,8 @@ function seed() {
       { assessment_id: 'assess-old', coach_user_id: COACH.id, body: 'Great pressing, keep it up.', published_at: '2026-09-20T19:00:00Z' },
     ],
     squad_player_profiles: [],
+    // TRAK-526: the player page reads each assessment's objective check-in.
+    assessment_objectives: [],
   }
   writes = []
 }
@@ -107,7 +109,7 @@ beforeEach(() => {
   signInAs(COACH)
   server.use(
     ...Object.keys({ profiles: 1, coach_details: 1, squad_players: 1, coach_sessions: 1, coach_assessments: 1,
-      coach_assessment_notes: 1, coach_shared_feedback: 1, squad_player_profiles: 1 }).map(table =>
+      coach_assessment_notes: 1, coach_shared_feedback: 1, squad_player_profiles: 1, assessment_objectives: 1 }).map(table =>
       http.get(`${SUPABASE_URL}/rest/v1/${table}`, ({ request }) => HttpResponse.json(read(table, new URL(request.url))))),
     http.patch(`${SUPABASE_URL}/rest/v1/coach_assessments`, async ({ request }) => {
       const id = new URL(request.url).searchParams.get('id')?.replace(/^eq\./, '') ?? null

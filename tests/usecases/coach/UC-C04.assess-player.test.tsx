@@ -212,4 +212,47 @@ useCase('UC-C04', () => {
       work_rate: 8, tactical: 7, attitude: 6, technical: 5, physical: 4, coachability: 9, note: '' }] })
     expect(published[0]).not.toHaveProperty('p_players.0.session_id')
   }, 20_000)
+
+  // v5 (TRAK-526): where the squad's plan is shared, Assess asks how each open objective is going after Ratings, and
+  // saves the six scores and the answers in one call once each has an answer (supabase/tests/assessment_objectives_trak526.sql
+  // proves the rows, Met on publish and the refusals).
+  it('asks how each open objective is going and saves the six scores with the answers', async () => {
+    const coach = { id: 'coach-uc-c04-objectives' }
+    signInAs(coach)
+    const saved: Record<string, unknown>[] = []
+    server.use(
+      table('profiles', [{ id: 'p-obj', user_id: coach.id, role: 'coach', full_name: 'Coach Vasilis', invite_code: 'ABCD' }]),
+      table('squad_players', [{ ...SQUAD[0], coach_user_id: coach.id, age_group: 'U16', status: 'active', linked_player_id: 'child-1', created_at: '2026-08-01T08:00:00Z' }]),
+      table('coach_details', [{ user_id: coach.id, organization_id: 'org-1' }]),
+      table('organizations', [{ id: 'org-1', time_zone: 'Asia/Dubai' }]),
+      rpc('feature_on', ({ p_feature }) => p_feature === 'season_plan'),
+      rpc('coach_squad_player_consent_required', () => false),
+      table('season_plans', [{ id: 'plan-1', squad: 'U16', starts_on: '2026-08-03', ends_on: '2027-05-30', shared_at: '2026-09-01T09:00:00Z',
+        unshared_parts: [], unshared_players: [], eval_every: 'month', eval_day: 0 }]),
+      table('player_objectives', [{ id: 'obj-1', squad_player_id: 'squad-1', title: 'Scan before receiving', source: 'own', season_objective_id: null,
+        created_at: '2026-09-01T09:00:00Z', status: 'open', retired_at: null }]),
+      table('season_evaluations', []), rpc('stuck_player_objectives', () => []), table('coach_assessments', []),
+      http.post(`${SUPABASE_URL}/rest/v1/rpc/save_assessment_with_objectives`, async ({ request }) => {
+        saved.push(await request.json() as Record<string, unknown>)
+        return HttpResponse.json('assess-1')
+      }),
+    )
+    renderApp('/coach/assess')
+    const user = userEvent.setup()
+    await pickPlayer()
+    await waitFor(() => expect(nextButton()).toBeEnabled())
+    await user.click(nextButton())
+    setSlider(screen.getAllByRole('slider')[0], 8)
+    await user.click(nextButton())
+    const answers = await screen.findByRole('group', { name: 'Progress on Scan before receiving' })
+    expect(nextButton()).toBeDisabled()
+    await user.click(within(answers).getByRole('button', { name: 'Some progress' }))
+    await user.click(nextButton())
+    await user.click(nextButton())
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0]).toMatchObject({ p_assessment_id: null, p_row: { squad_player_id: 'squad-1', work_rate: 8 },
+      p_progress: [{ player_objective_id: 'obj-1', status: 'some_progress' }], p_add: [] })
+    expect(saved[0]).not.toHaveProperty('p_row.session_id')
+  }, 20_000)
 })

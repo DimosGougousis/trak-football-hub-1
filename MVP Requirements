@@ -108,7 +108,16 @@ is what needs consent. Assessment and development writes remain consent-gated. I
 withdrawn while a form is open, saving is refused and the entered values remain.
 
 The assessment screen runs in four steps (Player, Ratings, Message & note,
-Review; Imad, 15–16 Oct, TRAK-182). It has six sliders, the resulting band, a
+Review; Imad, 15–16 Oct, TRAK-182). Where the player's squad has a shared season
+plan, an Objectives step follows Ratings (Imad, 21 Nov, TRAK-526): it asks what
+the squad evaluation asks, Not yet, Some progress, On track or Met for every open
+objective, and the coach can add one. The six scores and the answers save
+together. A draft keeps its answers; Met closes the objective and an added one
+starts only when the assessment is published, and then the answers are final
+(Tarek, 21 Nov). The card shows the date it was saved top right and, opened,
+each objective with its answer. Families see what they saw before: their
+Progress line and "stuck" (three Not yets in a row) come from squad evaluations
+only. It has six sliders, the resulting band, a
 message visible only to the child, and an optional private note visible only to
 its coach, in separate labelled boxes on the same step. On Review, Publish saves and sends the message; Save draft saves it
 unpublished, so nothing reaches the player. A message the player already has
