@@ -119,7 +119,6 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
         {/* TRAK-289: a published evaluation is final; its review is on the game page, never in the log's editor. */}
         {item.step === 'review' && item.row
           ? <div className="grid gap-3">
-              <p className="text-[14px] text-ink-2">{t('coachHome:resultFinal')}</p>
               <Link to={`/coach/matches/${item.row.id}?tab=evaluation`}
                 className="flex min-h-11 w-full items-center justify-center rounded-xl bg-raised text-[14px] font-medium text-ink focus-visible:ring-2 focus-visible:ring-primary">
                 {t('coachHome:openReview')}</Link>

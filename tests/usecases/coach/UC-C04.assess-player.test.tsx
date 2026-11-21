@@ -201,7 +201,7 @@ useCase('UC-C04', () => {
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /^Nikos Papadopoulos/ }))
     // The band follows the six scores here too: 8+7+6+5+4+3 is 5.5, Mixed; Coachability up to 9 makes 6.5, Steady.
-    expect(screen.getByText('From last time: Mixed, 5.5. Move only what changed.')).toBeInTheDocument()
+    expect(screen.getByText('From last time: Mixed, 5.5.')).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[5], 9)
     await user.click(screen.getByRole('button', { name: 'Done' }))
     await user.click(screen.getByRole('button', { name: 'Next: Publish' }))

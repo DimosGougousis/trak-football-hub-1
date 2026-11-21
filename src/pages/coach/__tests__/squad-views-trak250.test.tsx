@@ -402,8 +402,9 @@ describe('TRAK-250: Attributes tab', { timeout: 20_000 }, () => {
     expect(focus).toHaveTextContent('Lowest average (5.5)')
     // TRAK-419: Training is on here, so the button opens Training › Drills (the one library), not the old Library.
     expect(within(focus).getByRole('link', { name: 'Open Drills →' })).toHaveAttribute('href', '/coach/training/drills')
-    expect(within(panel).getByText('How to read the range')).toBeInTheDocument()
-    expect(within(panel).getByText(/Coach-only/)).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): no "How to read the range" box.
+    expect(within(panel).queryByText('How to read the range')).toBeNull()
+    expect(within(panel).getByText('Only you see this.')).toBeInTheDocument()
   })
 
   it('empty squad', async () => {
@@ -516,7 +517,7 @@ describe('TRAK-250: Availability tab', { timeout: 20_000 }, () => {
 
     expect(panel).toHaveTextContent('1 confirmed · 3 not confirmed')
     expect(panel).toHaveTextContent('Goalkeepers: Zayd B.')
-    expect(panel).toHaveTextContent("Confirmations come from your WhatsApp group; families don't see them in Trak.")
+    expect(panel).toHaveTextContent("Families don't see this.")
     expect(within(panel).queryByRole('button', { name: /Remind/ })).toBeNull()
   })
 

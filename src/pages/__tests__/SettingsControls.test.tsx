@@ -201,7 +201,8 @@ describe('settings controls reflect supported behavior', () => {
     mount()
     expect((await screen.findAllByText('Settings User')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('textbox', { name: 'Full name' })).toBeNull()
-    expect(screen.getAllByText('Your academy sets your name.').length).toBeGreaterThan(0)
+    // TRAK-494 (Kostas, 20 Nov): no "Your academy sets your name." line; the name shows with no edit control.
+    expect(screen.queryByText('Your academy sets your name.')).toBeNull()
     expect(renames).toEqual([])
   })
 

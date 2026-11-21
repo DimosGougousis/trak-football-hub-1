@@ -31,10 +31,11 @@ import { useWatchList, useWatchPlayers } from './useWatching'
 
 type Player = Tables<'squad_players'>
 
-const ANSWERS: { value: PositionsKnown; label: string; description: string }[] = [
-  { value: 'yes', label: 'Yes', description: 'Place everyone now.' },
-  { value: 'some', label: 'Some of them', description: 'Place who you know. The rest wait until you do.' },
-  { value: 'not_yet', label: 'Not yet', description: 'Nobody is placed. Come back to it any time.' },
+// TRAK-494 (Kostas, 20 Nov): the answers alone, no line under each.
+const ANSWERS: { value: PositionsKnown; label: string }[] = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'some', label: 'Some of them' },
+  { value: 'not_yet', label: 'Not yet' },
 ]
 const PLACE_FAILED = (name: string) => `Couldn't save ${name}'s position. Check your connection and tap again.`
 const ANSWER_FAILED = "Couldn't save your answer. Check your connection and try again."
@@ -147,7 +148,7 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
       <div className="arc grid gap-6 laptop:gap-8">
         <section aria-labelledby="positions-later" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <h2 id="positions-later" className="text-lg font-medium text-ink">You'll place them later</h2>
-          <p className="text-sm text-ink-2">Nobody is placed. A player needs a position before they get objectives.</p>
+          <p className="text-sm text-ink-2">Nobody is placed.</p>
           {watching.list.length > 0 && <p className="text-sm text-ink-2">Watching {plural(watching.list.length, 'player')} first. Nothing goes out until you share the plan.</p>}
           <WatchRulePicker coachId={coachId} squad={squad} plan={plan} label="Remind me to set them up" />
           <span className="flex flex-wrap gap-3">
@@ -227,7 +228,6 @@ export function PositionsStep({ coachId, squad, plan, onBack, onNext }: {
         {board.unplaced.length === 0
           ? <p className="text-sm text-ink-2">Everyone is placed.</p>
           : <>
-            <p className="text-sm text-ink-3">A player needs a position before they get objectives.</p>
             <ul className="divide-y divide-line">{board.unplaced.map(row)}</ul>
           </>}
       </section>

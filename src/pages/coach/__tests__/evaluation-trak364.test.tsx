@@ -113,7 +113,7 @@ describe('TRAK-364 Home', () => {
     renderApp('/coach/home')
     const section = (await screen.findByText('Evaluation due')).closest('section')!
     expect(within(section).getByText(evalDay(due.since!))).toBeInTheDocument()
-    expect(within(section).getByText(`Due since ${evalDay(due.since!)}. Everyone starts where they were last time.`)).toBeInTheDocument()
+    expect(within(section).getByText(`Due since ${evalDay(due.since!)}.`)).toBeInTheDocument()
     // Quinn was never assessed: elsewhere an Assess card; here the evaluation covers him.
     expect(within(section).queryByText('Quinn Synthetic')).toBeNull()
     expect(within(section).queryByText(/Never assessed/)).toBeNull()
@@ -170,11 +170,11 @@ describe('TRAK-364 the evaluation', () => {
     expect(await screen.findByText(/^No ratings yet: each starts at 5\./)).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[3], 8)
     await user().type(screen.getByLabelText('Note to Quinn'), 'Great first month.')
-    expect(screen.getByText('Optional. Only Quinn sees it, never their family.')).toBeInTheDocument()
+    expect(screen.getByText('Optional. Only Quinn sees it.')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Done' }))
     // Pat: last time's ratings, Work Rate up to 9.
     await user().click(await screen.findByRole('button', { name: /^Pat Synthetic/ }))
-    expect(screen.getByText('From last time: Steady, 6.2. Move only what changed.')).toBeInTheDocument()
+    expect(screen.getByText('From last time: Steady, 6.2.')).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[0], 9)
     await user().click(screen.getByRole('button', { name: 'Done' }))
     expect(await screen.findByText('1 player changed')).toBeInTheDocument()
@@ -182,7 +182,7 @@ describe('TRAK-364 the evaluation', () => {
     await user().click(screen.getByRole('button', { name: 'Next: Publish' }))
     const changed = screen.getByRole('region', { name: 'What changed' })
     expect(within(changed).getByText('Same band · 6.2 → 6.5')).toBeInTheDocument()
-    expect(screen.getByText('Each player sees their band and your note to them. Their family sees the band, never the note. Nobody sees another player’s.')).toBeInTheDocument()
+    expect(screen.getByText('Only the player sees your note.')).toBeInTheDocument()
 
     // A failed publish keeps everything entered; the next one sends exactly the same.
     failNext = 1

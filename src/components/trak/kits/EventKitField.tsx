@@ -42,10 +42,9 @@ export function EventKitField({ coachId, squad, value, onChange }: {
 
   return <section aria-label="Event kit" className="space-y-3 arc">
     <div><h3 className="text-sm font-medium">Team kits · {squad || 'Whole roster'}</h3>
-      <p className="text-xs text-muted-foreground mt-2">Choose what players should wear. Home, away and alternate are independent of the match venue.</p></div>
+      </div>
     {value && <>
       <KitAnnouncement kit={value.design} slot={value.slot} animated={false} />
-      <p className="text-xs text-muted-foreground">This is the kit saved with this event. Choose a kit below to replace it.</p>
       <Button type="button" variant="secondary" size="sm" onClick={() => onChange(null)}>Use text instructions instead</Button>
     </>}
     {loading ? <p role="status" className="text-sm">Loading team kits…</p> : loadError ? <div role="alert" className="space-y-2 text-sm">
@@ -53,7 +52,6 @@ export function EventKitField({ coachId, squad, value, onChange }: {
       <Button type="button" variant="secondary" size="sm" onClick={() => setAttempt(n => n + 1)}>Retry team kits</Button>
     </div> : draft ? <div className="space-y-3">
       <TeamKitEditor value={draft} onChange={setDraft} disabled={saving} />
-      <p className="text-xs text-muted-foreground">Save your team colors here, then choose a kit for this event. Existing events keep their selected kit.</p>
       {saveError && <p role="alert" className="text-sm text-destructive">Couldn't save team kits. Your colors are still here. Try again.</p>}
       <div className="flex gap-2">
         <Button type="button" size="md" onClick={save} disabled={saving}>{saving ? 'Saving kits…' : 'Save team kits'}</Button>
@@ -61,7 +59,7 @@ export function EventKitField({ coachId, squad, value, onChange }: {
       </div>
     </div> : <>
       {kits ? <KitPicker kits={kits} value={value && JSON.stringify(value.design) === JSON.stringify(kits[value.slot]) ? value.slot : null}
-        onChange={slot => onChange(snapshotKit(kits, slot))} /> : <p className="text-sm text-muted-foreground">Set up home, away and alternate kits for this squad.</p>}
+        onChange={slot => onChange(snapshotKit(kits, slot))} /> : <p className="text-sm text-muted-foreground">Set up kits for this squad</p>}
       {/* TRAK-455: editing the kits is a pencil; setting them up the first time keeps its words. */}
       {kits ? <EditIcon label="Edit team kits" onClick={() => { setSaved(false); setDraft(copyKitSet(kits)) }} />
         : <Button type="button" variant="secondary" size="md" onClick={() => {

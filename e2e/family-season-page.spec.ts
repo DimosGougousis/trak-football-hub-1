@@ -70,7 +70,8 @@ for (const [width, height] of [[1280, 800], [834, 1112], [390, 844]] as const) {
     await expect(page.getByRole('region', { name: "Alex's position" }).getByText('Can also play Attacker')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Squad objectives' }).getByText('No more than 35 m.')).toBeVisible()
     await expect(page.getByRole('list', { name: 'History of Scans before receiving' }).getByRole('listitem')).toHaveText(['Sun 4 OctNot yet', 'Sun 1 NovNot yet'])
-    await expect(page.getByText('Your coach updates this at each evaluation. You can read it here; nothing needs a reply.')).toBeVisible()
+    // TRAK-494 (Kostas, 20 Nov): no "Your coach updates this…" line.
+    await expect(page.getByText(/updates this at each evaluation/)).toHaveCount(0)
     await expect.poll(() => state.seen).toEqual([alex])
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     const objectives = await page.getByRole('region', { name: "Alex's objectives" }).boundingBox()

@@ -871,9 +871,6 @@ export default function CoachSchedule() {
             className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
             style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:cancelTitle', { title: sheet.row.title })}</span>
-            <p className="text-[12px] text-ink-2" style={font}>
-              {t('coachSchedule:staysCancelled')}
-            </p>
             {inSeries(sheet.row) && (
               <ScopeChoice scope={sheet.scope}
                 onChange={scope => setSheet(s => s.kind === 'cancel' ? { ...s, scope, error: null } : s)} />
@@ -936,9 +933,6 @@ export default function CoachSchedule() {
                 <X size={18} className="text-ink-2" />
               </button>
             </div>
-            <p className="text-[12px] text-ink-2" style={font}>
-              {t('coachSchedule:fixturesArrive')}
-            </p>
             <FixtureImport existingKeys={fixtureKeys} onConfirm={importFixtures} />
           </div>
         </div>
@@ -966,9 +960,6 @@ export default function CoachSchedule() {
                 <X size={18} className="text-ink-2" />
               </button>
             </div>
-            <p className="text-[12px] text-ink-2" style={font}>
-              {t('coachSchedule:registerHelp')}
-            </p>
             <TakeRegister eventId={sheet.row.id} coachId={user.id} sessionId={registerSession.get(sheet.row.id) ?? null} squad={sheet.row.squad ?? null}
               onSaved={() => { setSheet({ kind: 'closed' }); loadData() }} />
           </div>
@@ -986,11 +977,8 @@ export default function CoachSchedule() {
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {t(sheet.action === 'publish' ? 'coachSchedule:publishTitle' : 'coachSchedule:deleteTitle', { title: sheet.row.title, day: formatEventDay(sheet.row.event_date!) })}
             </span>
-            <p className="text-[12px] text-ink-2" style={font}>
-              {sheet.action === 'publish'
-                ? t('coachSchedule:seriesPublishHelp')
-                : t('coachSchedule:seriesDeleteHelp')}
-            </p>
+            {/* TRAK-494 (Kostas, 20 Nov): publishing says nothing more; deleting says what goes. */}
+            {sheet.action !== 'publish' && <p className="text-[12px] text-ink-2" style={font}>{t('coachSchedule:seriesDeleteHelp')}</p>}
             {sheet.error && <p role="alert" className="text-[12px] text-danger" style={font}>{sheet.error}</p>}
             <button onClick={() => seriesAction('one')}
               className="w-full py-3 rounded-xl text-[14px] font-medium"

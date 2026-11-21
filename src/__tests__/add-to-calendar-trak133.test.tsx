@@ -115,7 +115,8 @@ describe('J8.10 the Home card after setup', () => {
     for (const app of ['Apple Calendar', 'Google Calendar', 'Outlook']) {
       expect(within(card).getByRole('button', { name: `Add to ${app}` })).toBeInTheDocument()
     }
-    expect(within(card).getByText(/same-day changes we also email you/i)).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): one short line for everyone.
+    expect(within(card).getByText('Same-day changes can take a few hours to show.')).toBeInTheDocument()
   })
 
   it('stays away when there are no events yet, or a calendar is already added', async () => {
@@ -143,15 +144,15 @@ describe('J8.10 the Home card after setup', () => {
 })
 
 describe('J8.10 a child login is never promised an email (Kostas, #286)', () => {
-  it('Settings and the Home card say to check Trak for same-day changes', async () => {
+  it('Settings and the Home card say same-day changes can take a few hours, and promise no email', async () => {
     auth.user = CHILD_LOGIN
     const settings = mount(<CalendarSettings />)
-    expect(await screen.findByText(/check Trak for same-day changes/i)).toBeInTheDocument()
+    expect(await screen.findByText('Same-day changes can take a few hours to show.')).toBeInTheDocument()
     expect(screen.queryByText(/email you/i)).toBeNull()
     settings.unmount()
     mount(<CalendarHomePrompt hasEvents />)
     const card = await screen.findByRole('region', { name: 'Add Trak to your calendar' })
-    expect(within(card).getByText(/check Trak for same-day changes/i)).toBeInTheDocument()
+    expect(within(card).getByText('Same-day changes can take a few hours to show.')).toBeInTheDocument()
     expect(within(card).queryByText(/email you/i)).toBeNull()
   })
 })

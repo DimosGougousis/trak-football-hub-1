@@ -133,10 +133,9 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           open onOpenChange={open => { if (!open) setOpenId(null) }} saveNeedsChange onSaved={() => setOpenId(null)} watch={watchAction(opened.id)} />)}
 
       {changes.length
-        ? <Alert tone="warning" title={`Not shared yet: ${changesText(changes)}.`}>They wait here until you share the changes.</Alert>
-        : <Alert tone="success" title={`Shared ${shared ? shortDate(shared) : ''}.`}>
-          Edits wait here until you share them.
-        </Alert>}
+        ? <Alert tone="warning" title={`Not shared yet: ${changesText(changes)}.`} />
+        // TRAK-494 (Kostas, 20 Nov): the title alone; no "Edits wait here until you share them."
+        : <Alert tone="success" title={`Shared ${shared ? shortDate(shared) : ''}.`} />}
 
       <div className="grid items-start gap-4 laptop:grid-cols-2">
         <section aria-labelledby="plan-season" className={card}>
@@ -167,7 +166,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
             <h2 id="plan-objectives" className="text-lg font-medium text-ink">Season objectives</h2>
             {edit('Edit season objectives', () => navigate('/coach/season-plan/edit/objectives'))}
           </div>
-          {seasonObjectives.length === 0 ? <p className="text-sm text-ink-3">None. You can add up to three.</p>
+          {seasonObjectives.length === 0 ? <p className="text-sm text-ink-3">None.</p>
             : <ol className="m-0 grid list-none gap-3 p-0">{seasonObjectives.map(o => (
               <li key={o.id} className="grid gap-1">
                 <span className="text-[17px] font-medium text-ink">{o.title}</span>

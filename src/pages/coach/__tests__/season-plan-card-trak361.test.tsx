@@ -143,7 +143,8 @@ describe('TRAK-361 the Season plan card', () => {
     const card = await cardOf('U16')
     expect(await within(card).findByText('Not shared yet')).toBeInTheDocument()
     await user().click(fold(card))
-    expect(within(card).getByText('Once you share the plan, how the season is going shows here.')).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): no "Once you share the plan…" line.
+    expect(within(card).queryByText(/Once you share the plan/)).toBeNull()
     await user().click(within(card).getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan'))
   }, 30_000)

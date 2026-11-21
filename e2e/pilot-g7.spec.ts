@@ -64,7 +64,7 @@ for (const role of ['player', 'coach', 'club'] as const) {
     await page.goto('/settings')
     // TRAK-103: a player's name is the academy's, shown with no field to edit (TRAK-261: others have a name field).
     if (role === 'player') {
-      await expect(page.getByText('Your academy sets your name.')).toBeVisible()
+      await expect(page.getByText('Your academy sets your name.')).toHaveCount(0)
       await expect(page.getByRole('textbox', { name: 'Full name' })).toHaveCount(0)
     } else await expect(page.getByRole('textbox', { name: 'Full name' })).toHaveValue('Synthetic Pilot')
     await expect(page.getByRole('button', { name: 'Delete my account' })).toBeVisible()

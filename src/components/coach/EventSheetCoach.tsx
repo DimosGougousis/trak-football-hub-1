@@ -175,9 +175,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
             <EditIcon label={t('coachSchedule:editMatch')} onClick={() => navigate(`/coach/sessions/${sessionId}`)} />
           )}
           {/* TRAK-230 (Kostas, 21 Oct): once it has started, what families were told is fixed. */}
-          {!cancelled && row && startedLocked(row) ? (
-            <p className="basis-full text-[13px] text-ink-2">{t('coachSchedule:startedDetailsFixed')}</p>
-          ) : !cancelled && <>
+          {/* TRAK-494: once started there's simply no Edit; no "It has started, so its details are fixed." */}
+          {!cancelled && row && startedLocked(row) ? null : !cancelled && <>
             <EditIcon label={t('coachSchedule:editEvent')} onClick={() => navigate(`/coach/schedule?edit=${event.id}`)} />
             {/* A published event is cancelled, never deleted; a draft is edited or deleted in Schedule. */}
             {row?.published && !hasStarted(row) && (
@@ -202,9 +201,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
           <h3 id={`attending-${event.id}`} className={heading}>
             {past ? t('coachSchedule:attended') : t('coachSchedule:attending')}{row.published && squad.data ? ` · ${(squad.data.came ?? squad.data.coming).length}` : ''}
           </h3>
-          {!row.published ? (
-            <p className="text-[13px] text-ink-2">{t('coachSchedule:familiesSeeOncePublished')}</p>
-          ) : squad.isError ? (
+          {!row.published ? null : squad.isError ? (
             <p role="alert" className="text-[13px] text-ink-2">{t('coachSchedule:couldntLoadComing')}{' '}
               <button type="button" className="underline" onClick={() => { void squad.refetch() }}>{t('common:retry')}</button></p>
           ) : !squad.data ? <LoadingSkeleton label={t('common:loading')} lines={1} avatar rows={3} />

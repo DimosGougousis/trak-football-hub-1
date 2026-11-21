@@ -329,9 +329,7 @@ export default function PlayerHome() {
               Is anything missing?
             </p>
             <p className="text-[12px] text-ink-2 mt-1 leading-relaxed" style={{ fontFamily: 'var(--t-font)' }}>
-              Your coach may already have you on their list under a slightly different
-              spelling. If you've been assessed before and nothing is showing here, ask
-              them to check the name on your record.
+              Ask your coach to check your name is spelled right.
             </p>
           </div>
         )}

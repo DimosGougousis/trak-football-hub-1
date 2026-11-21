@@ -40,7 +40,7 @@ export function DraftsReviewSheet({ drafts, ticked, problem, publishing, onClose
   const ids = drafts.filter(row => picked.has(row.id)).map(row => row.id)
 
   return <BottomSheet className="arc" detents={[0.92]} open onOpenChange={open => { if (!open) onClose() }}
-    title={t('coachSchedule:reviewDraftsTitle')} description={t('coachSchedule:reviewDraftsHelp')}>
+    title={t('coachSchedule:reviewDraftsTitle')}>
     <div className="grid gap-4 pb-4">
       {drafts.length === 0 ? <p className="text-sm text-ink-2">{t('coachSchedule:noDraftsLeft')}</p>
         : draftsByMonth(drafts).map(([month, rows]) =>

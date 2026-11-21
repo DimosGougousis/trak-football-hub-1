@@ -65,8 +65,6 @@ export function ShareStep({ coachId, squad, plan, seasonObjectives, onBack, onSe
 
   return (
     <div className="arc grid gap-5">
-      <p className="text-sm text-ink-2">Check what goes out, then share it.</p>
-
       <section aria-labelledby="share-what" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="share-what" className="text-lg font-medium text-ink">What goes out</h2>
         <dl className="m-0 grid gap-3">
@@ -103,12 +101,11 @@ export function ShareStep({ coachId, squad, plan, seasonObjectives, onBack, onSe
       {watched.length > 0 && <section aria-labelledby="share-watching" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="share-watching" className="text-lg font-medium text-ink">Watching first <span className="font-normal text-ink-3">· {watched.length}</span></h2>
         <p className="text-sm text-ink-2">{watched.map(p => p.player_name).join(', ')}</p>
-        <p className="text-sm text-ink-3">They get objectives once you set them up. Nothing goes out about them until then.</p>
         <WatchRulePicker coachId={coachId} squad={squad} plan={plan} />
       </section>}
 
       {toTell && <section aria-label="Before you share" className="rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-        <Checkbox label="I’ve talked objectives through with the players, face to face" description="Before this goes out. Players should hear it from you first."
+        <Checkbox label="I’ve talked objectives through with the players, face to face"
           checked={talked} onCheckedChange={value => setTalked(value === true)} />
       </section>}
 
