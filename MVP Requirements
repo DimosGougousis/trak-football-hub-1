@@ -153,6 +153,21 @@ publish keeps everything entered. Families see the bands as they do now. The
 session assessment stays available. Changing the rhythm after sharing waits
 under Not shared yet as the evaluation dates.
 
+**Reports (TRAK-523; 4/10, TRAK-527).** The evaluation dates are report days, and
+they cut the season into periods: a report covers the day after the last report
+day (or the season's first day) to its own report day, every date the academy's.
+Where the squad's plan is shared, a player's page has View report under Assess.
+It opens, for the coach alone, the report the plan is working towards as it
+fills up: its month, period and "In progress · send on" date; Overall (the band
+now and at the last report), match jobs done of the matches he played, objectives
+on track (or met), and trainings attended (counted as the family's Training tile
+counts them); the six bands at the last report and now; each assessment of the
+season on the band ladder, this period shaded; each published match evaluation
+of the period with his job, Yes / Partly / No and Below / Met / Above, or Didn't
+play; and each objective's answer at the last report and now. Bands show as
+words. A player with no assessment in the period shows his latest from before;
+one never assessed shows empty bands.
+
 ### J6 — Player and parent see the records
 
 Player home shows the latest band, six bars and coach message, marked new until

@@ -48,7 +48,9 @@ export default function CoachSquadPage() {
   // TRAK-305: All or one squad, as picked at the top of the frame.
   const roster = useSquadRoster()
   const choose = (id: string) => setParams({ tab: id }, { replace: true })
-  const openId = useMatch('/coach/squad/player/:id')?.params.id ?? null
+  // TRAK-527: a player's report is a page of its own under theirs.
+  const reportOf = useMatch('/coach/squad/player/:id/report')?.params.id ?? null
+  const openId = useMatch('/coach/squad/player/:id')?.params.id ?? reportOf
   // Where the list was scrolled when a player opened. Their page starts at its top; Back puts the list back there.
   const listScroll = useRef(0)
   const wasOpen = useRef(openId)
@@ -56,7 +58,7 @@ export default function CoachSquadPage() {
     if (openId) window.scrollTo({ top: 0 })
     else if (wasOpen.current) window.scrollTo({ top: listScroll.current })
     wasOpen.current = openId
-  }, [openId])
+  }, [openId, reportOf])
   const openPlayer = (id: string) => {
     listScroll.current = window.scrollY
     navigate(`/coach/squad/player/${id}`)
@@ -83,7 +85,8 @@ export default function CoachSquadPage() {
           {(openId != null && active === 'players' ? roster.rosterError : roster.error) ? <SquadLoadError onRetry={roster.retry} />
             : roster.isPending ? <LoadingSkeleton label={t('coachSchedule:loadingSquad')} lines={2} avatar rows={4} className="pt-6" />
             : roster.players.length === 0 ? <PreparingSquad />
-            : active === 'players' ? <PlayersTab roster={roster} openId={openId} onOpen={openPlayer} onBack={back} />
+            : active === 'players' ? <PlayersTab roster={roster} openId={openId} report={reportOf != null} onOpen={openPlayer}
+                onReport={id => navigate(`/coach/squad/player/${id}/report`)} onBack={back} />
             : active === 'formations' ? <FormationsTab roster={roster} />
             : active === 'attributes' ? <AttributesTab roster={roster} />
             : <AvailabilityTab roster={roster} />}

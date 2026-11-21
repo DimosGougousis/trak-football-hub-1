@@ -2178,6 +2178,10 @@ export type Database = {
           date_of_birth: string
         }[]
       }
+      coach_player_report: {
+        Args: { p_squad_player_id: string; p_report_day: string; p_last_report_day?: string }
+        Returns: Json
+      }
       create_parent_invite: {
         Args: { p_email: string }
         Returns: {
