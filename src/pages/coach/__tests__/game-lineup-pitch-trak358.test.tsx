@@ -288,8 +288,8 @@ describe('TRAK-358: the match line-up on Formations\' pitch', { timeout: 30_000 
     // Slot 5 is the back line in 4-4-2, and midfield in 3-3-2.
     await pick(user, 5, /^Synthetic Midfielder 03/)
     expect(slot(5)).toHaveAccessibleName('Synthetic Midfielder 03, slot 5, context: out of position')
-    await user.click(screen.getByRole('combobox', { name: 'Formation' }))
-    const list = await screen.findByRole('listbox', { name: 'Formation' })
+    await user.click(screen.getByRole('combobox', { name: 'Format and shape' }))
+    const list = await screen.findByRole('listbox', { name: 'Format and shape' })
     await user.click(within(within(list).getByRole('group', { name: '9 a side' })).getByRole('option', { name: '3-3-2' }))
     await screen.findByRole('group', { name: '3-3-2, starting players. Attacking upwards.' })
     expect(slot(5)).toHaveAccessibleName('Synthetic Midfielder 03, slot 5')
@@ -317,8 +317,8 @@ describe('TRAK-358: the match line-up on Formations\' pitch', { timeout: 30_000 
     ] })
     await openLineUp(user)
     expect(screen.getByRole('heading', { name: '4-4-2' })).toBeVisible()
-    expect(screen.queryByRole('combobox', { name: 'Formation' })).toBeNull()
-    expect(screen.getByText('Tap a player to see their job.')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Format and shape' })).toBeNull()
+    expect(screen.queryByText('Tap a player to see their job.')).toBeNull() // TRAK-513: no helper line
     expect(screen.queryByText(/^Drag a player/)).toBeNull()
     expect(document.querySelectorAll('[data-spot]')).toHaveLength(0)
     expect(slot(1)).toHaveAccessibleName('Synthetic Goalkeeper 01, slot 1, lead, has a job')
@@ -339,5 +339,48 @@ describe('TRAK-358: the match line-up on Formations\' pitch', { timeout: 30_000 
     await user.click(within(screen.getByRole('tabpanel', { name: /^Not selected/ }))
       .getByRole('button', { name: 'Synthetic Attacker 04, not selected, has a note' }))
     expect(within(screen.getByRole('complementary', { name: 'Synthetic Attacker 04' })).getByText('Your chance comes Tuesday.')).toBeInTheDocument()
+  })
+})
+
+/* TRAK-513 (Imad, 20 Nov): Line-up and jobs looks and works like Squad › Formations, plus each player's job, context and
+   expectation: Formations' "Format and shape" picker, the key under the pitch (one word each), the count and Undo
+   under it, no helper lines, and the selected player's sheet over the lists, which stay to drop on. */
+describe('TRAK-513: Line-up and jobs as Squad › Formations', { timeout: 30_000 }, () => {
+  it('has Formations\' picker, a one-word key, the count and no helper lines', async () => {
+    const user = userEvent.setup()
+    store()
+    await openLineUp(user)
+    expect(screen.getByRole('combobox', { name: 'Format and shape' })).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Key' })).getAllByRole('listitem').map(item => [...item.childNodes].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent).join('').trim())).toEqual(['Job', 'Stretch', 'Lead', 'Context'])
+    expect(screen.getByText(/ on the bench$/)).toBeInTheDocument()
+    for (const line of [/^Drag a player onto/, /^Select a slot or a player/, /^Tap a player to see/, /formation itself stays/, /^Attacking/]) {
+      expect(screen.queryByText(line)).toBeNull()
+    }
+  })
+
+  it('Undo puts a move back', async () => {
+    const user = userEvent.setup()
+    store()
+    await openLineUp(user)
+    const undo = screen.getByRole('button', { name: 'Undo last change' })
+    expect(undo).toBeDisabled()
+    drag(benchFace('Synthetic Midfielder 05'), slot(2))
+    expect(slot(2)).toHaveAccessibleName(/^Synthetic Midfielder 05, slot 2/)
+    await user.click(undo)
+    expect(slot(2)).toHaveAccessibleName('Slot 2, empty')
+    expect(benchFace('Synthetic Midfielder 05')).toBeInTheDocument()
+    expect(undo).toBeDisabled()
+  })
+
+  it('a selected player\'s sheet sits over the lists, which stay to drop on, and closes', async () => {
+    const user = userEvent.setup()
+    store()
+    await openLineUp(user)
+    await user.click(benchFace('Synthetic Midfielder 05'))
+    expect(sheet()).toHaveAccessibleName('Synthetic Midfielder 05')
+    expect(tab('Not selected')).toBeInTheDocument()
+    expect(bench()).toBeInTheDocument()
+    await user.click(within(sheet()).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('complementary')).toBeNull()
   })
 })

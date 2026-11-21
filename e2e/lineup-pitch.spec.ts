@@ -135,8 +135,8 @@ for (const [width, height] of [[1440, 900], [1280, 800], [834, 1112], [390, 844]
     // TRAK-359: all three tabs sit inside the card, so none is clipped behind the tab list's scroll arrows.
     const clipped = await page.getByRole('tablist', { name: 'Off the pitch' }).evaluate(list => list.parentElement!.scrollWidth - list.parentElement!.clientWidth)
     expect(clipped, 'the three tabs fit without scrolling').toBeLessThanOrEqual(1)
-    // Beside the pitch on a laptop; under it on a tablet and a phone.
-    if (width >= 1024) expect(tabsBox.x).toBeGreaterThanOrEqual(pitchBox.x + pitchBox.width)
+    // Beside the pitch on a laptop and, since TRAK-513's Formations card, a tablet; under it on a phone.
+    if (width >= 768) expect(tabsBox.x).toBeGreaterThanOrEqual(pitchBox.x + pitchBox.width)
     else expect(tabsBox.y).toBeGreaterThanOrEqual(pitchBox.y + pitchBox.height)
     await page.screenshot({ path: testInfo.outputPath(`lineup-${width}.png`) })
 

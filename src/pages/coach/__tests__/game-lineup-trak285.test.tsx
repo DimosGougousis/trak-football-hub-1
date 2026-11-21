@@ -266,7 +266,7 @@ describe('TRAK-285: plan step 2, line-up and jobs', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('radio', { name: /^Stretch/ }))
     expect(slot(6)).toHaveAccessibleName('Theodoros Zagorakis, slot 6, stretch')
     expect(slot(6)).toHaveAttribute('data-ring', 'stretch')
-    expect(within(screen.getByRole('list', { name: 'Key' })).getByText('Yellow ring: Stretch')).toBeVisible()
+    expect(within(screen.getByRole('list', { name: 'Key' })).getByText('Stretch')).toBeVisible()
   })
 
   it('TRAK-329: one formation dropdown on the pitch, a header per format; a shape in a smaller format benches the starters it has no slot for', async () => {
@@ -277,16 +277,16 @@ describe('TRAK-285: plan step 2, line-up and jobs', { timeout: 30_000 }, () => {
     await pick(user, 10, /^Theodoros Zagorakis/)
     await pick(user, 11, /^Angelos Basinas/)
 
-    const formation = screen.getByRole('combobox', { name: 'Formation' })
+    const formation = screen.getByRole('combobox', { name: 'Format and shape' })
     expect(formation).toHaveTextContent('4-4-2')
     await user.click(formation)
-    const list = await screen.findByRole('listbox', { name: 'Formation' })
+    const list = await screen.findByRole('listbox', { name: 'Format and shape' })
     expect(within(list).getAllByRole('group').map(group => within(group).getAllByRole('option')[0].textContent)).toEqual(['4-4-2', '3-3-2', '2-3-1', '2-2'])
     for (const name of ['11 a side', '9 a side', '7 a side', '5 a side']) expect(within(list).getByRole('group', { name })).toBeInTheDocument()
     await user.click(within(within(list).getByRole('group', { name: '9 a side' })).getByRole('option', { name: '3-3-2' }))
 
     expect(await screen.findByRole('heading', { name: '3-3-2' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Formation' })).toHaveTextContent('3-3-2')
+    expect(screen.getByRole('combobox', { name: 'Format and shape' })).toHaveTextContent('3-3-2')
     // Nine a side has no slots 10 and 11, so those two starters are on the bench.
     expect(screen.queryByRole('button', { name: /slot 10(,|$)/i })).toBeNull()
     expect(within(bench()).getByRole('button', { name: 'Theodoros Zagorakis, bench' })).toBeInTheDocument()
