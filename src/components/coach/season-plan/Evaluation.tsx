@@ -223,7 +223,7 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
 
 /** TRAK-365: a player's open objectives, each Not yet, Some progress, On track or Met (which closes it), and room to add
  *  another while they keep fewer than two open. */
-function ObjectivesSection({ name, open, entry, onChange }: {
+export function ObjectivesSection({ name, open, entry, onChange }: {
   name: string; open: { id: string; title: string }[]; entry: ObjectivesEntry; onChange: (next: ObjectivesEntry) => void
 }) {
   const [text, setText] = useState('')

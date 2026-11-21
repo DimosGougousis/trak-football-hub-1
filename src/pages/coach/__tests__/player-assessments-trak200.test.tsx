@@ -50,6 +50,8 @@ function serve(given: Record<string, unknown>[] = [DRAFT, PUBLISHED]) {
     }),
     table('coach_shared_feedback', [{ assessment_id: 'as-draft', body: 'Great pressing, keep your shape', published_at: null }]),
     table('coach_assessment_notes', [{ assessment_id: 'as-draft', note: 'Needs to work on composure' }]),
+    // TRAK-526: the card reads each assessment's objective check-in.
+    table('assessment_objectives', []),
     table('coach_sessions', []),
     table('session_attendance', []),
     table('coach_calendar_events', []),

@@ -96,5 +96,9 @@
   "couldntLoadMessage": "Couldn't load the message. Publish still sends it.",
   "noMessage": "No message",
   "privateNoteCaps": "PRIVATE NOTE · ONLY YOU",
-  "changePlayerButton": "Change"
+  "changePlayerButton": "Change",
+  "stepObjectives": "Objectives",
+  "objectivesCaps": "OBJECTIVES",
+  "objectiveAdded": "Added",
+  "couldntLoadObjectives": "Couldn't load the objectives."
 }

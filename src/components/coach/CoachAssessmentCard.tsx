@@ -9,6 +9,8 @@ import { SplitButton } from '@/components/arc/split-button/split-button'
 import { CategoryBar, MetadataLabel } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
+import { progressLabel } from '@/lib/objective-progress'
+import type { AssessmentObjective } from '@/lib/coach-assessments'
 
 export interface CoachAssessment {
   id: string
@@ -29,13 +31,16 @@ const average = (a: CoachAssessment) =>
  * A draft is the coach's alone, bands included (published_at NULL); Publish
  * shows the bands and the message to the family, Unpublish hides both.
  */
-export function CoachAssessmentCard({ assessment, playerName, message, messageFailed = false, note, onChanged }: {
+export function CoachAssessmentCard({ assessment, playerName, message, messageFailed = false, note, objectives = [], objectivesFailed = false, onChanged }: {
   assessment: CoachAssessment
   playerName?: string
   message?: string | null
   /** The message couldn't be read: say so, never "No message". Publishing doesn't depend on it. */
   messageFailed?: boolean
   note?: string | null
+  /** TRAK-526: the objectives this assessment asked about, with the answers (and any objective added). */
+  objectives?: AssessmentObjective[]
+  objectivesFailed?: boolean
   onChanged?: (published: boolean) => void
 }) {
   const navigate = useNavigate()
@@ -72,7 +77,9 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
     <Card
       className="arc"
       aria-label={playerName ? t('coachAssess:cardAriaNamed', { label, name: playerName, date }) : t('coachAssess:cardAria', { label, date })}
+      // TRAK-526 (Imad, 21 Nov): the date the coach saved it, top right; Published or Draft stays top left.
       title={label}
+      corner={date}
       description={playerName}
       meta={bandName}
       action={<SplitButton
@@ -86,7 +93,14 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
       details={<div className="space-y-3 text-sm">
         {/* TRAK-500: an assessment has no session now; only an older one saved with a session names it. */}
         {assessment.coach_sessions?.title ? <p className="text-foreground">{assessment.coach_sessions.title}</p> : null}
-        <p className="text-muted-foreground">{date}</p>
+        {objectivesFailed ? <p className="text-muted-foreground">{t('coachAssess:couldntLoadObjectives')}</p>
+          : objectives.length > 0 && <div>
+            <MetadataLabel text={t('coachAssess:objectivesCaps')} />
+            <ul className="mt-1 grid list-none gap-1 p-0">{objectives.map(o => <li key={`${o.status}:${o.title}`} className="flex justify-between gap-3 text-foreground">
+              <span className="min-w-0">{o.title}</span>
+              <span className="shrink-0 text-muted-foreground">{o.status === 'added' ? t('coachAssess:objectiveAdded') : progressLabel(o.status)}</span>
+            </li>)}</ul>
+          </div>}
         <div>
           <MetadataLabel text={t('coachAssess:messageToPlayerCaps')} />
           <p className="mt-1 text-foreground">{messageFailed ? t('coachAssess:couldntLoadMessage') : message || t('coachAssess:noMessage')}</p>

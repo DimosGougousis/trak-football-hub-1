@@ -96,6 +96,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   }, { replace: true })
   const card = (assessment: (typeof list)[number]) => <CoachAssessmentCard assessment={assessment} playerName={player.name}
     message={assessments.data?.messages[assessment.id]} messageFailed={assessments.data?.sent === undefined} note={assessments.data?.notes[assessment.id]}
+    objectives={assessments.data?.objectives?.[assessment.id]} objectivesFailed={!!assessments.data && assessments.data.objectives === undefined}
     onChanged={() => { void client.invalidateQueries({ queryKey: key }) }} />
 
   const header = <div className="flex items-center gap-4">

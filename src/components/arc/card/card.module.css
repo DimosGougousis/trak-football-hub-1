@@ -48,3 +48,6 @@
 @media (prefers-reduced-motion: reduce) {
   .card, .close { transition-duration: var(--duration-instant); }
 }
+/* Trak (TRAK-526): the title with a short corner line across from it, top right. */
+.titleRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.corner { flex: none; color: var(--text-muted); font-size: var(--text-sm); }

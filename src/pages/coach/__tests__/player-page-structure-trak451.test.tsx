@@ -40,6 +40,7 @@ beforeEach(() => {
     table('coach_assessments', [{ id: 'a1', squad_player_id: 'p1', coach_user_id: COACH.id, created_at: recently, published_at: recently, coach_rating: 7,
       work_rate: 7, technical: 6, physical: 8, coachability: 7, attitude: 8, tactical: 6, session_id: null }]),
     table('coach_assessment_notes', []), table('coach_shared_feedback', []), table('coach_sessions', []),
+    table('assessment_objectives', []), // TRAK-526: each card's objective check-in
   )
 })
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })

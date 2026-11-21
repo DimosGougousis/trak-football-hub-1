@@ -25,6 +25,7 @@ function coach(assessments: Record<string, unknown>[]) {
     table('squad_players', [{ id: 'sp-1', coach_user_id: COACH.id, player_name: 'Vasilis Torosidis', linked_player_id: 'child-1', position: 'Defender', shirt_number: 15, age_group: 'U16', status: 'active' }]),
     table('coach_assessments', assessments.map(a => ({ ...a, coach_user_id: COACH.id }))),
     table('coach_shared_feedback', []), table('coach_assessment_notes', []), table('coach_sessions', []), table('squad_player_profiles', []),
+    table('assessment_objectives', []), // TRAK-526: each card's objective check-in
     rpc('coach_squad_player_consent_required', () => false),
     rpc('feature_on', () => false),
     rpc('coach_squad_season', () => []),
