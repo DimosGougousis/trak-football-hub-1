@@ -235,6 +235,30 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     expect(screen.getByRole('textbox', { name: 'Note to Theodoros' })).toHaveValue('Brave all game.')
   })
 
+  // TRAK-519 (Imad, 21 Nov): "Came on" stays for who came off the bench; a starter who didn't show is swapped for who
+  // started in their place.
+  it('puts who started in place of a no-show under Started, and saves who started for whom', async () => {
+    const user = userEvent.setup()
+    backend(120 * MINUTE)
+    renderApp('/coach/matches/g1?tab=evaluation')
+    const played = await screen.findByRole('region', { name: 'Who played' })
+    expect(within(played).queryByRole('combobox', { name: /^Started instead of/ })).toBeNull()
+    await user.click(within(played).getByRole('checkbox', { name: 'Traianos Dellas' }))
+    await user.click(within(played).getByRole('combobox', { name: 'Started instead of Traianos' }))
+    await user.click(await screen.findByRole('option', { name: 'Angelos Charisteas' }))
+    expect(within(played).getByRole('combobox', { name: 'Started instead of Traianos' })).toHaveTextContent('Angelos Charisteas')
+    // He started, so he isn't under Came on, which has nobody else here.
+    expect(within(played).queryByRole('group', { name: 'Came on' })).toBeNull()
+    await next('Next: Player evaluation')
+    // He started, so his card comes first, in Dellas's place.
+    expect(screen.getAllByRole('button', { name: /^(Traianos Dellas|Theodoros Zagorakis|Angelos Charisteas)/ })
+      .map(button => button.textContent?.match(/^(Traianos Dellas|Theodoros Zagorakis|Angelos Charisteas)/)?.[0]))
+      .toEqual(['Angelos Charisteas', 'Theodoros Zagorakis'])
+    await user.click(screen.getByRole('button', { name: 'Save draft' }))
+    expect(await screen.findByRole('button', { name: 'Saved' })).toBeInTheDocument()
+    expect((sent[0].p_players as { id: string }[]).find(p => p.id === 'charisteas')).toMatchObject({ played: true, started_for: 'dellas' })
+  })
+
   it('TRAK-374: three steps, any of them from the stepper, ahead too', async () => {
     const user = userEvent.setup()
     backend(120 * MINUTE)

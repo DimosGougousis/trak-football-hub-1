@@ -22,6 +22,8 @@ export type EvaluationForm = {
   /** By squad row, once the coach ticks or unticks them; until then a starter played and the bench didn't. */
   played: Record<string, boolean>
   answers: Record<string, Answer>
+  /** TRAK-519: who started in place of a starter who didn't play: the starter's squad row → the player's. */
+  instead: Record<string, string>
 }
 
 /** TRAK-374 (Imad, 5 Nov): "Did the job?" reads No, Partly, Yes. The saved values stay; players still read "Not this
@@ -61,7 +63,8 @@ export function lineUpAtKickOff<P extends { id: string }>(plans: PlayerPlans, el
 
 type Saved = {
   evaluation: Pick<Tables<'game_evaluations'>, 'our_score' | 'their_score' | 'goals' | 'how_they_scored' | 'plan_worked'> | null
-  players: Pick<Tables<'game_evaluation_players'>, 'squad_player_id' | 'played' | 'did_job' | 'against_expectation'>[]
+  players: (Pick<Tables<'game_evaluation_players'>, 'squad_player_id' | 'played' | 'did_job' | 'against_expectation'>
+    & Partial<Pick<Tables<'game_evaluation_players'>, 'started_for'>>)[]
   notes: Pick<Tables<'game_evaluation_notes'>, 'squad_player_id' | 'note'>[]
 }
 
@@ -77,6 +80,7 @@ export function evaluationToForm({ evaluation, players, notes }: Saved): Evaluat
     played: Object.fromEntries(players.map(p => [p.squad_player_id, p.played])),
     answers: Object.fromEntries(players.filter(p => p.played).map(p => [p.squad_player_id,
       { didJob: p.did_job as DidJob, against: p.against_expectation as Against, note: note.get(p.squad_player_id) ?? '' }])),
+    instead: Object.fromEntries(players.filter(p => p.started_for).map(p => [p.started_for!, p.squad_player_id])),
   }
 }
 
@@ -88,7 +92,25 @@ export const withScore = (form: EvaluationForm, ourScore: number): EvaluationFor
 export function setPlayed(form: EvaluationForm, id: string, played: boolean): EvaluationForm {
   const goals = played ? form.goals
     : form.goals.map(goal => ({ scorer: goal.scorer === id ? null : goal.scorer, assist: goal.assist === id ? null : goal.assist }))
-  return { ...form, played: { ...form.played, [id]: played }, goals }
+  const next = { ...form, played: { ...form.played, [id]: played }, goals }
+  // TRAK-519: a starter ticked again needs nobody in their place.
+  return played && form.instead[id] ? startInstead(next, id, null) : next
+}
+
+/** TRAK-519 (Imad, 21 Nov): who started in place of a starter who didn't play; null for nobody. "Came on" stays for
+ *  who came off the bench. */
+export function startInstead(form: EvaluationForm, starter: string, player: string | null): EvaluationForm {
+  const before = form.instead[starter]
+  const rest = { ...form, instead: Object.fromEntries(Object.entries(form.instead).filter(([id]) => id !== starter)) }
+  const cleared = before ? setPlayed(rest, before, false) : rest
+  return player ? { ...setPlayed(cleared, player, true), instead: { ...cleared.instead, [starter]: player } } : cleared
+}
+
+/** Who played in line-up order: each starter, or who started in their place (TRAK-519), then who came on. */
+export function whoPlayed<P extends { id: string }>(form: EvaluationForm, starters: P[], bench: P[]): P[] {
+  const instead = new Set(Object.values(form.instead))
+  return [...starters.flatMap(s => hasPlayed(form, s.id, true) ? [s] : bench.filter(b => b.id === form.instead[s.id])),
+    ...bench.filter(b => !instead.has(b.id) && hasPlayed(form, b.id, false))]
 }
 
 /** What save_game_evaluation takes: every player listed; answers and a note only for those who played; how they scored
@@ -96,6 +118,7 @@ export function setPlayed(form: EvaluationForm, id: string, played: boolean): Ev
 export function formToSave(eventId: string, form: EvaluationForm, listed: { id: string; starter: boolean }[]) {
   const played = new Set(listed.filter(p => hasPlayed(form, p.id, p.starter)).map(p => p.id))
   const who = (id: string | null) => (id && played.has(id) ? id : null)
+  const startedFor = new Map(Object.entries(form.instead).filter(([starter]) => !played.has(starter)).map(([starter, id]) => [id, starter]))
   return {
     p_event_id: eventId, p_our_score: form.ourScore, p_their_score: form.theirScore,
     p_goals: form.goals.map(goal => goal.own ? { scorer: null, assist: null, own: true } : { scorer: who(goal.scorer), assist: who(goal.assist) }),
@@ -103,7 +126,8 @@ export function formToSave(eventId: string, form: EvaluationForm, listed: { id: 
     p_players: listed.map(({ id }) => {
       if (!played.has(id)) return { id, played: false }
       const answer = answerOf(form, id)
-      return { id, played: true, did_job: answer.didJob, against_expectation: answer.against, note: answer.note.trim() }
+      return { id, played: true, did_job: answer.didJob, against_expectation: answer.against, note: answer.note.trim(),
+        ...(startedFor.has(id) && { started_for: startedFor.get(id) }) }
     }),
   }
 }
