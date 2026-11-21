@@ -45,7 +45,8 @@ export function ResultStep({ eventId, form, onFormChange, starters, bench, goals
             <NumberField label={t('coachSchedule:theirScore')} value={form.theirScore} min={0} max={EVALUATION_LIMITS.score}
               onValueChange={value => onFormChange({ ...form, theirScore: value })} />
           </div>
-          {form.goals.length > 0 && <ol className="grid gap-4">
+          {/* TRAK-517 (Imad, 20 Nov): room between the score and "Goal 1", with a light line as the page's other parts. */}
+          {form.goals.length > 0 && <ol className="grid gap-4 border-t border-line pt-4">
             {form.goals.map((goal, index) => <li key={index}>
               {/* One above the other: side by side, half a laptop's width cut the names short. */}
               <fieldset className="grid gap-3">
