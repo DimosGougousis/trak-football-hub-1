@@ -6,7 +6,7 @@ import { Button } from '@/components/arc/button/button'
 import type { WatchAction } from '@/components/coach/season-plan/WatchFirst'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-import { isPosition, type Position } from '@/lib/positions'
+import { isPosition } from '@/lib/positions'
 import {
   MAX_PLAYER_OBJECTIVES, PLAYER_OBJECTIVE_MAX, addOwnObjective, libraryFor, togglePlayerObjective, type ObjectivePick,
 } from '@/lib/player-objectives'
@@ -15,9 +15,9 @@ import { usePlayerObjectives, useSavePlayerObjectives } from './usePlayerObjecti
 /* TRAK-354 (Season plan 6/18, spec TRAK-348): a player's objectives, picked in one bottom sheet (as TRAK-353's
    panel, Tarek 5 Nov), opened from a name in step 3 and from the player's page. Up to two: the six for their position,
    those supporting the squad's season objectives first, or the coach's own. A third is refused with the reason. One
-   Save writes the list; Players see them once the plan is shared (TRAK-356, TRAK-366). */
+   Save writes the list; Players see them once the plan is shared (TRAK-356, TRAK-366). TRAK-512 (Imad, 20 Nov): no
+   helper lines; a card's second line only when it backs a season objective; Create your own shows an "e.g.". */
 
-const AS: Record<Position, string> = { Goalkeeper: 'a goalkeeper', Defender: 'a defender', Midfielder: 'a midfielder', Attacker: 'an attacker' }
 const same = (a: ObjectivePick[], b: ObjectivePick[]) =>
   JSON.stringify(a.map(o => [o.title, o.seasonObjectiveId]).sort()) === JSON.stringify(b.map(o => [o.title, o.seasonObjectiveId]).sort())
 const card = (on: boolean) =>
@@ -43,7 +43,7 @@ export function PlayerObjectivesSheet({ coachId, player, seasonObjectives, open,
 }) {
   const objectives = usePlayerObjectives(coachId, open)
   const first = player.name.split(' ')[0]
-  return <BottomSheet className="arc" open={open} onOpenChange={onOpenChange} title={`${first}'s objectives`} description="Only you see this until the plan is shared." initialDetent={1}>
+  return <BottomSheet className="arc" open={open} onOpenChange={onOpenChange} title={`${first}'s objectives`} initialDetent={1}>
     {objectives.isError ? <LoadError what={`${first}'s objectives`} onRetry={() => { void objectives.refetch() }} />
       : !objectives.data ? <LoadingSkeleton label={`Loading ${first}'s objectives…`} lines={3} />
       // Keyed by player, so Save · next starts the next one fresh.
@@ -89,7 +89,7 @@ function Picker({ coachId, player, first, seasonObjectives, saved, saveLabel, sa
   return <form onSubmit={submit} className="grid gap-5 pb-4">
     <div className="grid gap-2">
       <h3 className="text-base font-medium text-ink">Select one or two objectives for {first}</h3>
-      <p className="text-sm text-ink-3">Six for {AS[player.position]}. {picked.length} of {MAX_PLAYER_OBJECTIVES} selected.</p>
+      <p className="text-sm text-ink-3">{picked.length} of {MAX_PLAYER_OBJECTIVES} selected.</p>
     </div>
     <div role="group" aria-label={`Objectives for ${first}`} className="grid gap-2 laptop:grid-cols-2">
       {library.map(o => {
@@ -97,12 +97,11 @@ function Picker({ coachId, player, first, seasonObjectives, saved, saveLabel, sa
         return <button key={o.title} type="button" aria-pressed={on} className={card(on)}
           onClick={() => toggle({ title: o.title, source: 'library', seasonObjectiveId: o.seasonObjectiveId })}>
           <span className="text-sm font-medium text-ink">{o.title}</span>
-          <span className="text-xs text-ink-3">{o.supports ? `Supports: ${o.supports}` : 'Their own'}</span>
+          {o.supports && <span className="text-xs text-ink-3">Supports: {o.supports}</span>}
         </button>
       })}
       {yours.map(o => <button key={o.title} type="button" aria-pressed="true" className={card(true)} onClick={() => toggle(o)}>
         <span className="text-sm font-medium text-ink">{o.title}</span>
-        <span className="text-xs text-ink-3">Your own</span>
       </button>)}
     </div>
     <p role="status" className="min-h-5 text-sm text-ink-2">{refused ? 'Up to two at once. Untick one first.' : ''}</p>
@@ -111,7 +110,7 @@ function Picker({ coachId, player, first, seasonObjectives, saved, saveLabel, sa
       <label htmlFor={`own-objective-${player.id}`} className="text-sm font-medium text-ink">Create your own</label>
       <div className="flex flex-wrap gap-2">
         <input id={`own-objective-${player.id}`} value={own} maxLength={PLAYER_OBJECTIVE_MAX} onChange={e => setOwn(e.target.value)} onKeyDown={onOwnKey}
-          placeholder="One sentence the player can picture"
+          placeholder="e.g. Scans before the ball arrives"
           className="min-h-11 min-w-0 flex-1 basis-60 rounded-xl border border-line bg-surface px-3 text-[15px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" />
         <Button type="button" variant="secondary" onClick={addOwn} disabled={!own.trim()}>Create</Button>
       </div>

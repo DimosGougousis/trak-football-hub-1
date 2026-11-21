@@ -90,6 +90,10 @@ describe('TRAK-354 player objectives', () => {
     const choices = within(within(pat).getByRole('group', { name: /^Objectives for/ })).getAllByRole('button')
     expect(choices[0]).toHaveTextContent('Steps in to win it the moment we lose itSupports: Win it back within 5 seconds')
     expect(choices).toHaveLength(6)
+    // TRAK-512 (Imad, 20 Nov): no helper lines; a second line only when it backs a season objective; "e.g." in Create your own.
+    expect(within(pat).queryByText(/Only you see this|Six for/)).toBeNull()
+    expect(option(pat, 'Wins their headers')).toHaveTextContent(/^Wins their headers$/)
+    expect(within(pat).getByRole('textbox', { name: 'Create your own' }).getAttribute('placeholder')).toMatch(/^e\.g\. /)
 
     await user().click(option(pat, 'Steps in to win it'))
     await user().click(option(pat, 'Wins their headers'))
@@ -110,7 +114,7 @@ describe('TRAK-354 player objectives', () => {
     const cy = await sheet()
     await user().type(within(cy).getByRole('textbox', { name: 'Create your own' }), '  Shoots   early from the edge{Enter}')
     expect(within(cy).getByRole('button', { name: /^Shoots early from the edge/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(cy).getByRole('button', { name: /^Shoots early from the edge/ })).toHaveTextContent('Your own')
+    expect(within(cy).getByRole('button', { name: /^Shoots early from the edge/ })).toHaveTextContent(/^Shoots early from the edge$/)
     await user().click(option(cy, 'Runs in behind'))
     // Save · next goes round to the first player still without one, as the mockup's does.
     await user().click(within(cy).getByRole('button', { name: 'Save · next: Synthetic Pat Defender' }))
@@ -122,7 +126,7 @@ describe('TRAK-354 player objectives', () => {
     renderApp('/coach/squad/player/p3')
     const section = await screen.findByRole('region', { name: 'Objectives' })
     await waitFor(() => expect(within(section).getByText('Shoots early from the edge')).toBeInTheDocument())
-    expect(within(section).getByText('Your own · since 5 Nov')).toBeInTheDocument()
+    expect(within(section).getByText('Shoots early from the edge').closest('li')).toHaveTextContent(/Shoots early from the edgeSince 5 Nov$/)
     await user().click(within(section).getByRole('button', { name: /^Edit .+'s objectives$/ }))
     const again = await sheet()
     expect(within(again).getByRole('button', { name: 'Save' })).toBeDisabled()
