@@ -60,7 +60,8 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
           const supports = plan.find(s => s.id === o.seasonObjectiveId)?.title
           return <li key={o.id} className="grid gap-1 border-t border-line pt-2.5">
             <span className="text-[17px] font-medium text-ink">{o.title}</span>
-            <span className="text-sm text-ink-3">{supports ? `Supports: ${supports}` : o.source === 'own' ? 'Your own' : 'Their own'} · since {since(o.since)}</span>
+            {/* TRAK-512 (Imad, 20 Nov): "Supports" only when it backs a season objective; no "Your own" or "Their own". */}
+            <span className="text-sm text-ink-3">{supports ? `Supports: ${supports} · since ${since(o.since)}` : `Since ${since(o.since)}`}</span>
           </li>
         })}
       </ul>}
