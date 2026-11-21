@@ -3,29 +3,28 @@ import { scoreToBand } from '@/lib/rating-engine'
 
 interface CategoryBarProps {
   label: string
-  score: number
+  /** TRAK-501: none yet draws the empty bar, with no band word. */
+  score?: number
 }
 
 export function CategoryBar({ label, score }: CategoryBarProps) {
-  const band = scoreToBand(score)
-  const config = BANDS.find(b => b.word.toLowerCase() === band)!
-  const widthPercent = (score / 10) * 100
+  const config = score == null ? null : BANDS.find(b => b.word.toLowerCase() === scoreToBand(score))!
 
   return (
     <div className="space-y-1">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center min-h-4">
         <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
           {label}
         </span>
-        <span className="text-xs" style={{ color: config.text }}>
+        {config && <span className="text-xs" style={{ color: config.text }}>
           {config.word}
-        </span>
+        </span>}
       </div>
       <div className="h-1.5 rounded-full bg-raised overflow-hidden">
-        <div
+        {config && score != null && <div
           className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${widthPercent}%`, backgroundColor: config.color }}
-        />
+          style={{ width: `${(score / 10) * 100}%`, backgroundColor: config.color }}
+        />}
       </div>
     </div>
   )

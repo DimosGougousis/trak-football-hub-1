@@ -24,6 +24,8 @@ import { POSITION_WORD } from '@/lib/position-words'
 import { ATTRIBUTE_WORD } from '@/lib/squad/attribute-words'
 import { ROLE_WORD, TRAIT_WORD, shown } from '@/lib/squad/trait-words'
 import { EditIcon } from '@/components/trak/IconAction'
+import { CategoryBar } from '@/components/trak/CategoryBar'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { bandConfig } from '@/lib/types'
 import { scoreToBand } from '@/lib/rating-engine'
 
@@ -161,7 +163,10 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
             ? <button type="button" onClick={() => showAll(!all)} className="text-sm font-medium text-brand">{all ? t('coachSquad:showLatest', { count: SHOWN }) : t('coachSquad:allCount', { count: list.length })}</button>
             : list.length > 1 && <span className="text-sm text-ink-3 [@media(pointer:fine)]:hidden">{t('coachSquad:swipeEarlier')}</span>}
         </div>
-        {list.length === 0 ? <p className="text-sm text-ink-2">{t('coachSquad:noAssessmentYet')}</p>
+        {/* TRAK-501 (Imad, 19 Nov): before the first assessment, the six bands empty, where the first card will be. */}
+        {list.length === 0 ? <div role="group" aria-label={t('coachSquad:noAssessmentYet')} className={`${INNER} grid gap-2.5 laptop:w-[calc(50%-6px)]`}>
+            {ATTRIBUTES.map(([k]) => <CategoryBar key={k} label={t(ATTRIBUTE_WORD[k])} />)}
+          </div>
           : all && list.length > SHOWN ? <ol className="m-0 grid list-none gap-3 p-0 laptop:grid-cols-2" aria-label={t('coachSquad:allAssessmentsOf', { name: first })}>
             {list.map(assessment => <li key={assessment.id} className="min-w-0">{card(assessment)}</li>)}
           </ol>
@@ -178,8 +183,9 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
           </div>}
       </section>}</Grows>}
 
-    {/* TRAK-423: the same small button as Home's Needs you, named for the player. */}
-    <Button size="sm" className="self-start" aria-label={t('coachSquad:assessName', { name: first })}
+    {/* TRAK-423: the same small button as Home's Needs you, named for the player. TRAK-501: in the page's grid,
+        justify-self keeps its own width (self-start only set its height, so it spanned the page). */}
+    <Button size={NEXT_STEP_SIZE} className={`justify-self-start ${NEXT_STEP_WIDTH}`} aria-label={t('coachSquad:assessName', { name: first })}
       onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}>
       {t('coachHome:assess')}
     </Button>
