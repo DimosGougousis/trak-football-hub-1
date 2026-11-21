@@ -139,7 +139,7 @@ export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, 
   const coachName = profile?.full_name?.trim() || null
 
   if (publishedAt) {
-    const reached = published?.reviews ?? publishSummary(form, listed).players
+    const reached = published?.reviews ?? publishSummary(form, listed, plans).players
     return (
       <div className="grid gap-5 pt-4">
         <Alert tone="success" title={t('coachMatches:publishedTo', { count: reached })}>
@@ -162,7 +162,7 @@ export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, 
       <Stepper steps={steps()} current={step} onStepSelect={onStep} label={t('nav:evaluation')} jumpAhead />
       {step === 0 ? <ResultStep eventId={game.id} form={form} onFormChange={change} starters={named(starters)} bench={named(bench)} goals={planGoals} />
         : step === 1 ? <PlayersStep eventId={game.id} form={form} onFormChange={change} played={named(played)} plans={plans} />
-        : <PublishStep eventId={game.id} form={form} listed={listed} goals={planGoals.length} onStep={onStep}
+        : <PublishStep eventId={game.id} form={form} listed={listed} plans={plans} goals={planGoals.length} onStep={onStep}
             askCompetition={!game.competition} askHomeAway={game.home_away !== 'home' && game.home_away !== 'away'}
             onPublish={draft.publish} publishing={draft.publishing} problem={draft.publishProblem} />}
       <div className="flex flex-wrap items-center gap-3">

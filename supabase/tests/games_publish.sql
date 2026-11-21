@@ -96,7 +96,8 @@ SELECT public.save_game_evaluation(pg_temp.g289id(500), 2, 1,
     jsonb_build_object('id',pg_temp.g289id(40),'played',true,'did_job','partly','against_expectation','above','note','Brave all game.'),
     jsonb_build_object('id',pg_temp.g289id(41),'played',true)));
 SELECT public.save_game_evaluation(pg_temp.g289id(600), 0, 0, '[]', '', '{}',
-  jsonb_build_array(jsonb_build_object('id',pg_temp.g289id(40),'played',true),jsonb_build_object('id',pg_temp.g289id(41),'played',true)));
+  jsonb_build_array(jsonb_build_object('id',pg_temp.g289id(40),'played',true,'against_expectation','met'),
+    jsonb_build_object('id',pg_temp.g289id(41),'played',true,'against_expectation','met')));
 RESET ROLE;
 
 -- ── 1. Before publishing, players and families read none of it ────────────
@@ -117,6 +118,20 @@ SELECT public.save_game_evaluation(pg_temp.g289id(500), 2, 1,
   ARRAY['worked','partly'], jsonb_build_array(
     jsonb_build_object('id',pg_temp.g289id(40),'played',true,'did_job','partly','against_expectation','above','note','Brave all game.'),
     jsonb_build_object('id',pg_temp.g289id(41),'played',true)));
+-- TRAK-518 (Imad, 20 Nov): every answer starts empty, and Publish waits for each player who played.
+SELECT pg_temp.g289check(pg_temp.g289refused(pg_temp.g289publish(500),'P0001'), '2 not while a player who played has no "Against expectation"');
+SELECT public.save_game_evaluation(pg_temp.g289id(500), 2, 1,
+  jsonb_build_array(jsonb_build_object('scorer',pg_temp.g289id(40),'assist',pg_temp.g289id(41))), 'A corner at the back post.',
+  ARRAY['worked','partly'], jsonb_build_array(
+    jsonb_build_object('id',pg_temp.g289id(40),'played',true,'against_expectation','above','note','Brave all game.'),
+    jsonb_build_object('id',pg_temp.g289id(41),'played',true,'against_expectation','met')));
+SELECT pg_temp.g289check(pg_temp.g289refused(pg_temp.g289publish(500),'P0001'), '2 nor while a player the plan gave a job has no "Did the job?"');
+-- Charisteas had no job, so "Against expectation" is all he needs.
+SELECT public.save_game_evaluation(pg_temp.g289id(500), 2, 1,
+  jsonb_build_array(jsonb_build_object('scorer',pg_temp.g289id(40),'assist',pg_temp.g289id(41))), 'A corner at the back post.',
+  ARRAY['worked','partly'], jsonb_build_array(
+    jsonb_build_object('id',pg_temp.g289id(40),'played',true,'did_job','partly','against_expectation','above','note','Brave all game.'),
+    jsonb_build_object('id',pg_temp.g289id(41),'played',true,'against_expectation','met')));
 SELECT pg_temp.g289check(pg_temp.g289refused(pg_temp.g289publish(600),'P0001'), '2 not a match with no competition, unless the coach picks one');
 SELECT pg_temp.g289check(pg_temp.g289refused(pg_temp.g289publish(600,'cup'),'P0001'), '2 and only league, tournament or friendly');
 RESET ROLE;
@@ -192,9 +207,9 @@ SELECT pg_temp.g289check(pg_temp.g289reads(500) = 'family 1 · notes 1 · evalua
 SELECT pg_temp.g289actor(21);
 SELECT pg_temp.g289check((SELECT did_job IS NULL AND against_expectation='met' AND expectation='usual' AND NOT has_note
   FROM public.game_review_for_family WHERE event_id=pg_temp.g289id(500))
-  AND (SELECT did_job='yes' AND note='' FROM public.game_review_for_player WHERE event_id=pg_temp.g289id(500))
+  AND (SELECT did_job IS NULL AND note='' FROM public.game_review_for_player WHERE event_id=pg_temp.g289id(500))
   AND pg_temp.g289reads(500) = 'family 1 · notes 1 · evaluation 0 · plan players 0',
-  '5 player B reads their own (Yes · Met, no note), never player A''s');
+  '5 player B reads their own (Met; no job, so no "did the job"; no note), never player A''s');
 SELECT pg_temp.g289actor(30);
 SELECT pg_temp.g289check((SELECT job='' AND did_job IS NULL AND NOT has_note AND against_expectation='above'
   FROM public.game_review_for_family WHERE event_id=pg_temp.g289id(500))
@@ -235,7 +250,7 @@ RESET ROLE;
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.g289_results;
- IF total <> 30 THEN RAISE EXCEPTION 'Games publish: % checks ran; expected 30', total; END IF;
+ IF total <> 32 THEN RAISE EXCEPTION 'Games publish: % checks ran; expected 32', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.g289_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Games publish checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Games publish: % of % passed', total, total;

@@ -1,6 +1,6 @@
 /**
  * TRAK-288 (Games 6/8): the evaluation as a draft. It opens at full time and not before, on the event's instant, with no
- * reload. Its steps read against the plan as it locked at kick-off; everyone starts at Yes · Met. Save draft saves every
+ * reload. Its steps read against the plan as it locked at kick-off; every answer starts empty (TRAK-518). Save draft saves every
  * step in one go, never publishes, and the draft reloads on every step. TRAK-374 (Imad, 5 Nov): Result · Player
  * evaluation · Publish, "Did the plan work?" in Result, any step from the stepper, "How they scored" only when they
  * scored, each player's job, "Did the job?" No · Partly · Yes, and a Draft badge in place of the alert, the moon and
@@ -70,7 +70,8 @@ function backend(ago: number, refuse?: string) {
       store = {
         evaluation: { our_score: args.p_our_score, their_score: args.p_their_score, goals: args.p_goals, how_they_scored: args.p_how_they_scored,
           plan_worked: args.p_plan_worked, saved_at: SAVED_AT, published_at: null },
-        players: players.map(p => ({ squad_player_id: p.id, played: p.played, did_job: p.did_job ?? 'yes', against_expectation: p.against_expectation ?? 'met' })),
+        // TRAK-518: as save_game_evaluation keeps it, an answer not given stays empty.
+        players: players.map(p => ({ squad_player_id: p.id, played: p.played, did_job: p.did_job ?? null, against_expectation: p.against_expectation ?? null })),
         notes: players.filter(p => p.note).map(p => ({ squad_player_id: p.id, note: p.note })),
       }
       return SAVED_AT
@@ -138,7 +139,8 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     expect(within(played).queryByRole('checkbox', { name: 'Giorgos Karagounis' })).toBeNull()
   })
 
-  it('everyone who played starts at Yes · Met, beside the context and expectation from the plan', async () => {
+  // TRAK-518 (Imad, 20 Nov): nothing is selected until the coach selects it.
+  it('every answer starts empty, beside the context and expectation from the plan', async () => {
     const user = userEvent.setup()
     backend(120 * MINUTE)
     renderApp('/coach/matches/g1?tab=evaluation')
@@ -146,7 +148,7 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     await next('Next: Player evaluation')
     expect(screen.queryByText(/Everyone starts at/)).toBeNull()
     const card = screen.getByRole('button', { name: /^Theodoros Zagorakis/ })
-    expect(card).toHaveTextContent('Did the job · Met')
+    expect(card).toHaveTextContent('Not answered')
     expect(card).toHaveTextContent('Out of position')
     expect(card).toHaveTextContent('Expected: Stretch')
     expect(screen.getByRole('button', { name: /^Traianos Dellas/ })).toHaveTextContent('Expected: Usual')
@@ -158,8 +160,8 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     expect(within(open).getByText('Stay tight.')).toBeInTheDocument()
     const didJob = within(open).getByRole('group', { name: 'Did the job?' })
     expect(within(didJob).getAllByRole('radio').map(radio => radio.getAttribute('aria-label') ?? radio.closest('label')?.textContent)).toEqual(['No', 'Partly', 'Yes'])
-    expect(within(didJob).getByRole('radio', { name: 'Yes' })).toBeChecked()
-    expect(within(within(open).getByRole('group', { name: 'Against expectation' })).getByRole('radio', { name: 'Met' })).toBeChecked()
+    for (const radio of within(didJob).getAllByRole('radio')) expect(radio).not.toBeChecked()
+    for (const radio of within(within(open).getByRole('group', { name: 'Against expectation' })).getAllByRole('radio')) expect(radio).not.toBeChecked()
     expect(within(open).getByRole('textbox', { name: 'Note to Theodoros' }).getAttribute('placeholder')).toMatch(/^e\.g\. /)
   })
 
@@ -210,7 +212,8 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
       p_players: [
         { id: 'dellas', played: false },
         { id: 'zagorakis', played: true, did_job: 'partly', against_expectation: 'above', note: 'Brave all game.' },
-        { id: 'charisteas', played: true, did_job: 'yes', against_expectation: 'met', note: '' },
+        // TRAK-518: not answered yet, so nothing is sent as answered.
+        { id: 'charisteas', played: true, did_job: null, against_expectation: null, note: '' },
       ],
     }])
 
@@ -226,9 +229,8 @@ describe('TRAK-288: the evaluation draft', { timeout: 30_000 }, () => {
     expect(within(screen.getByRole('group', { name: 'Win the second ball' })).getByRole('radio', { name: 'Worked' })).toBeChecked()
     await next('Next: Player evaluation')
     expect(screen.getByRole('button', { name: /^Theodoros Zagorakis/ })).toHaveTextContent('Did part of the job · Above')
-    // TRAK-447: no job in his plan, so the card says only how he did against what was asked.
-    expect(screen.getByRole('button', { name: /^Angelos Charisteas/ })).toHaveTextContent('Met')
-    expect(screen.getByRole('button', { name: /^Angelos Charisteas/ })).not.toHaveTextContent('Did the job')
+    // TRAK-518: the draft keeps exactly what was answered: nothing yet for Charisteas.
+    expect(screen.getByRole('button', { name: /^Angelos Charisteas/ })).toHaveTextContent('Not answered')
     await user.click(screen.getByRole('button', { name: /^Theodoros Zagorakis/ }))
     expect(screen.getByRole('textbox', { name: 'Note to Theodoros' })).toHaveValue('Brave all game.')
   })

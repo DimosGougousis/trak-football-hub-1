@@ -10,7 +10,8 @@ import type { Review } from './reviews'
 export type DidJob = 'yes' | 'partly' | 'not_yet'
 export type Against = 'below' | 'met' | 'above'
 export type PlanWorked = 'didnt' | 'partly' | 'worked'
-export type Answer = { didJob: DidJob; against: Against; note: string }
+/** TRAK-518 (Imad, 20 Nov): null until the coach answers; nothing is answered for them. */
+export type Answer = { didJob: DidJob | null; against: Against | null; note: string }
 /** One of our goals: who scored and who assisted, by squad row; null when not recorded (a guest). TRAK-447: `own` marks an
  *  own goal, which credits nobody (no scorer, no assist). */
 export type ScoredGoal = { scorer: string | null; assist: string | null; own?: boolean }
@@ -39,11 +40,14 @@ export const PLAN_WORKED: { value: PlanWorked; label: string }[] = [
 /** The database's limits. */
 export const EVALUATION_LIMITS = { score: 99, howTheyScored: 2000, note: 500 }
 
-const MET: Answer = { didJob: 'yes', against: 'met', note: '' }
-export const answerOf = (form: EvaluationForm, id: string): Answer => form.answers[id] ?? MET
+const EMPTY: Answer = { didJob: null, against: null, note: '' }
+export const answerOf = (form: EvaluationForm, id: string): Answer => form.answers[id] ?? EMPTY
 export const hasPlayed = (form: EvaluationForm, id: string, starter: boolean) => form.played[id] ?? starter
+/** TRAK-518: "Against expectation" is in, and "Did the job?" too when the plan gave a job (TRAK-447: no job, not asked). */
+export const isAnswered = (answer: Answer, hasJob: boolean) => answer.against != null && (!hasJob || answer.didJob != null)
 /** TRAK-447: a player the plan gave no job has no "Did the job" to say, so the line is how they did against what was asked. */
 export const summary = (answer: Answer, hasJob = true) => {
+  if (!isAnswered(answer, hasJob)) return i18n.t('coachMatches:notAnswered')
   const against = i18n.t(`coachMatches:against_${answer.against}` as 'coachMatches:saved')
   return hasJob ? `${i18n.t(`coachMatches:didJob_${answer.didJob}_sum` as 'coachMatches:saved')} · ${against}` : against
 }
@@ -104,13 +108,13 @@ export function formToSave(eventId: string, form: EvaluationForm, listed: { id: 
   }
 }
 
-/** TRAK-289: the Publish step's line: who played, how many changed from Yes · Met, and how many notes. */
-export function publishSummary(form: EvaluationForm, listed: { id: string; starter: boolean }[]) {
-  const played = listed.filter(p => hasPlayed(form, p.id, p.starter)).map(p => answerOf(form, p.id))
+/** TRAK-289: the Publish step's line: who played, how many still wait for an answer (TRAK-518), and how many notes. */
+export function publishSummary(form: EvaluationForm, listed: { id: string; starter: boolean }[], plans: PlayerPlans) {
+  const played = listed.filter(p => hasPlayed(form, p.id, p.starter))
   return {
     players: played.length,
-    changed: played.filter(a => a.didJob !== 'yes' || a.against !== 'met').length,
-    notes: played.filter(a => a.note.trim()).length,
+    left: played.filter(p => !isAnswered(answerOf(form, p.id), !!playerPlan(plans, p.id).job.trim())).length,
+    notes: played.filter(p => answerOf(form, p.id).note.trim()).length,
   }
 }
 
@@ -128,7 +132,8 @@ export function previewReview(form: EvaluationForm, id: string, plans: PlayerPla
   return {
     eventId: '', sessionId: null, ourScore: form.ourScore, theirScore: form.theirScore, job: player ? plan.job : '',
     // TRAK-447: no job in the plan, no "did the job" to read.
-    didJob: player && plan.job.trim() ? answer.didJob : null, expectation: plan.expectation, context: plan.context, against: answer.against,
+    // A published evaluation has every answer (TRAK-518); the published page is the only place this preview shows.
+    didJob: player && plan.job.trim() ? answer.didJob : null, expectation: plan.expectation, context: plan.context, against: answer.against ?? 'met',
     coachName, note: player && note ? note : null,
   }
 }
