@@ -247,3 +247,45 @@ describe('TRAK-360 Squad › Formations into matches', () => {
     expect(screen.queryByText(/Not copied to a match yet/)).toBeNull()
   })
 })
+
+/* TRAK-515 (Imad, 20 Nov): with unsaved changes, Use for a match and Make default save the formation first, then carry
+   on; a failed save says so and nothing else happens. The Use sheet has no "Each match gets its own copy" line. */
+describe('TRAK-515 save first, then carry on', () => {
+  async function unsaved() {
+    seeded()
+    await openFormations()
+    await waitFor(() => expect(place(1)).toHaveAccessibleName(/^Synthetic Goalkeeper 01/))
+    await user().click(within(benchList()).getByRole('button', { name: /^Synthetic Goalkeeper 02, bench/ }))
+    await user().click(place(1))
+    expect(screen.getByText('Unsaved changes', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.queryByText(/Save your changes first/)).toBeNull()
+  }
+
+  it('Use for a match saves the change, then opens the sheet, with no copy line', async () => {
+    await unsaved()
+    await user().click(screen.getByRole('button', { name: 'Use for a match' }))
+    expect(await screen.findByRole('dialog', { name: 'Use Balanced for a match' })).toBeInTheDocument()
+    expect(saves).toHaveLength(1)
+    expect(saves[0].p_starters).toContainEqual({ slot: 1, squad_player_id: 'p2' })
+    expect(screen.getByText('All changes saved')).toBeInTheDocument()
+    expect(screen.queryByText(/Each match gets its own copy/)).toBeNull()
+  }, 30_000)
+
+  it('Make default saves the change, then sets the default', async () => {
+    await unsaved()
+    await user().click(screen.getByRole('button', { name: 'Make default for 11 a side' }))
+    await waitFor(() => expect(calls).toEqual([{ rpc: 'set_default_formation', body: { p_id: 'f1', p_default: true } }]))
+    expect(saves).toHaveLength(1)
+  }, 30_000)
+
+  it('a failed save says so, and neither opens the sheet nor sets the default', async () => {
+    await unsaved()
+    server.use(http.post(`${SUPABASE_URL}/rest/v1/rpc/save_formation`, () => HttpResponse.json({ message: 'down' }, { status: 500 })))
+    await user().click(screen.getByRole('button', { name: 'Use for a match' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    await user().click(screen.getByRole('button', { name: 'Make default for 11 a side' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(calls).toEqual([])
+    expect(screen.getByText('Unsaved changes', { selector: 'p' })).toBeInTheDocument()
+  }, 30_000)
+})

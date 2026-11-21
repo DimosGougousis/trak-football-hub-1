@@ -10,5 +10,5 @@ export type WatchAction = { label: 'Watch first' | 'Keep watching'; onWatch: () 
 export function WatchBadge({ watch }: { watch: { ready: boolean } | undefined }) {
   const { t } = useTranslation()
   if (!watch) return null
-  return watch.ready ? <Badge tone="warning" size="sm">{t('coachSquad:watchReady')}</Badge> : <Badge tone="neutral" size="sm">{t('coachSquad:watchWatching')}</Badge>
+  return watch.ready ? <Badge tone="attention" size="sm">{t('coachSquad:watchReady')}</Badge> : <Badge tone="neutral" size="sm">{t('coachSquad:watchWatching')}</Badge>
 }

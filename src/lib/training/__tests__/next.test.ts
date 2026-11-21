@@ -33,7 +33,7 @@ describe('the Next training card', () => {
   })
 
   it('says where each training is', () => {
-    expect(trainingBadge({ phase: 'before', planned: false })).toEqual({ label: 'Plan not written', tone: 'warning' })
+    expect(trainingBadge({ phase: 'before', planned: false })).toEqual({ label: 'Plan not written', tone: 'attention' })
     expect(trainingBadge({ phase: 'before', planned: true })).toEqual({ label: 'Plan ready', tone: 'success' })
     expect(trainingBadge({ phase: 'day', planned: false })).toEqual({ label: 'Today', tone: 'success' })
     expect(trainingBadge({ phase: 'after', planned: true, here: 15 })).toEqual({ label: '15 here', tone: 'success' })

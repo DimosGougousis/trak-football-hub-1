@@ -89,6 +89,8 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,age_group,linked_p
  (pg_temp.ob365id(41),pg_temp.ob365id(10),'Synthetic Player Pia','U16',pg_temp.ob365id(21),'Midfielder'),
  (pg_temp.ob365id(42),pg_temp.ob365id(10),'Synthetic Player Nia','U16',pg_temp.ob365id(23),NULL),
  (pg_temp.ob365id(43),pg_temp.ob365id(11),'Synthetic Player Rae','U16',pg_temp.ob365id(22),'Attacker');
+-- Academies start with Season plan on (20261121120000). This suite switches it by hand, as an operator still can.
+DELETE FROM public.academy_features WHERE feature = 'season_plan';
 INSERT INTO public.academy_features(organization_id,feature) VALUES(pg_temp.ob365id(100),'season_plan');
 INSERT INTO public.season_plans(id,coach_user_id,squad,starts_on,ends_on) VALUES
  (pg_temp.ob365id(50),pg_temp.ob365id(10),'U16',pg_temp.ob365today() - 60,pg_temp.ob365today() + 200),

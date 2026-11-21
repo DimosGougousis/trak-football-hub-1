@@ -133,7 +133,7 @@ function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) 
     : []
   const status = cancelled ? <Badge tone="danger" dot>{t('coachHome:noteCancelled')}</Badge>
     : loop.closed ? <Badge tone="success" dot>{t('coachTraining:closedBadge')}</Badge>
-    : <Badge tone={plan ? 'success' : 'warning'} dot>{plan ? t('coachTraining:readyBadge') : t('coachTraining:notPlanned')}</Badge>
+    : <Badge tone={plan ? 'success' : 'attention'} dot>{plan ? t('coachTraining:readyBadge') : t('coachTraining:notPlanned')}</Badge>
 
   return <>
     <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem]" top={wide ? TOP_BAR : '0px'}

@@ -45,14 +45,14 @@ export function loopSteps({ current, planned, registered }: { current: number; p
     : step)
 }
 
-export type Tone = 'success' | 'warning' | 'neutral'
+export type Tone = 'success' | 'attention' | 'neutral'
 
 /** The badge a training carries, on the card and in Upcoming trainings. */
 export function trainingBadge({ phase, planned, here, draft = false }: { phase: Phase; planned: boolean; here?: number | null; draft?: boolean }): { label: string; tone: Tone } {
   if (phase === 'after') return here != null ? { label: i18n.t('coachTraining:hereCount', { count: here }), tone: 'success' } : { label: 'Finished', tone: 'neutral' }
   if (phase === 'day') return { label: 'Today', tone: 'success' }
   // TRAK-340: a plan started and kept as a draft.
-  return planned ? { label: 'Plan ready', tone: 'success' } : draft ? { label: 'Draft', tone: 'neutral' } : { label: 'Plan not written', tone: 'warning' }
+  return planned ? { label: 'Plan ready', tone: 'success' } : draft ? { label: 'Draft', tone: 'neutral' } : { label: 'Plan not written', tone: 'attention' }
 }
 
 /* Notes: "Would you run this session again?" (Kostas, 2 Nov). */
