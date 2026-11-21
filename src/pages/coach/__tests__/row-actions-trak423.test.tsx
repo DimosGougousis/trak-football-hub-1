@@ -66,12 +66,16 @@ describe("TRAK-423: a player's page and Squad", () => {
 
   it("a player's page: Assess is the same small button, named for the player", async () => {
     coach()
-    const small = lookOf()
+    // TRAK-501: the same button as Needs you's Assess, which TRAK-497 made the week's next step.
+    const small = lookOf(undefined, NEXT_STEP_SIZE)
     renderApp('/coach/squad/player/sp-1')
     const assess = await screen.findByRole('button', { name: 'Assess Kostas' })
     expect(assess).toHaveTextContent(/^Assess$/)
     // Arc's own classes first; anything after them is where it sits on the page, not how it looks.
     expect(assess.className.startsWith(small)).toBe(true)
+    expect(assess.className).toContain(NEXT_STEP_WIDTH)
+    // TRAK-501: in the page's grid, self-start only set the height, so it spanned the page; it keeps its own width.
+    expect(assess.className).toContain('justify-self-start')
   })
   // Squad's row tag ("Due", not "Assess") is checked in squad-views-trak250, which has a player owed an assessment.
 })
