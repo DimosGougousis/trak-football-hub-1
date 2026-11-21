@@ -854,22 +854,22 @@ export type Database = {
       }
       game_evaluation_players: {
         Row: {
-          against_expectation: string
-          did_job: string
+          against_expectation: string | null
+          did_job: string | null
           event_id: string
           played: boolean
           squad_player_id: string
         }
         Insert: {
-          against_expectation?: string
-          did_job?: string
+          against_expectation?: string | null
+          did_job?: string | null
           event_id: string
           played: boolean
           squad_player_id: string
         }
         Update: {
-          against_expectation?: string
-          did_job?: string
+          against_expectation?: string | null
+          did_job?: string | null
           event_id?: string
           played?: boolean
           squad_player_id?: string

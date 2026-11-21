@@ -22,8 +22,8 @@ const first = (name: string) => name.split(/\s+/)[0] || name
 type Listed = { id: string; name: string; starter: boolean }
 export type PublishChoices = { competition: Competition | ''; homeAway: 'home' | 'away' | '' }
 
-export function PublishStep({ eventId, form, listed, goals, askCompetition, askHomeAway, onPublish, publishing, problem, onStep }: {
-  eventId: string; form: EvaluationForm; listed: Listed[]
+export function PublishStep({ eventId, form, listed, plans, goals, askCompetition, askHomeAway, onPublish, publishing, problem, onStep }: {
+  eventId: string; form: EvaluationForm; listed: Listed[]; plans: PlayerPlans
   /** How many goals the plan had: each needs a "Did the plan work?" answer. */
   goals: number
   /** The match has no competition, or no home or away, yet: ask it here. */
@@ -36,7 +36,7 @@ export function PublishStep({ eventId, form, listed, goals, askCompetition, askH
 }) {
   const [choices, setChoices] = useState<PublishChoices>({ competition: '', homeAway: '' })
   const { t } = useTranslation()
-  const summary = publishSummary(form, listed)
+  const summary = publishSummary(form, listed, plans)
   const answered = form.planWorked.slice(0, goals).filter(answer => answer != null).length
   const unscored = form.goals.filter(goal => !goal.scorer && !goal.own).length
   const outcome = t(form.ourScore > form.theirScore ? 'coachMatches:resultWon' : form.ourScore === form.theirScore ? 'coachMatches:resultDrew' : 'coachMatches:resultLost', { our: form.ourScore, their: form.theirScore })
@@ -46,8 +46,10 @@ export function PublishStep({ eventId, form, listed, goals, askCompetition, askH
     { id: 'played', label: t('coachMatches:whoPlayed'), status: summary.players ? 'good' : 'risk', onEdit: () => onStep(0), detail: t('coachMatches:playedCount', { count: summary.players }) },
     { id: 'plan', label: t('coachMatches:didPlanWork'), status: planAnswered(form, goals) ? 'good' : 'risk', onEdit: () => onStep(0),
       detail: goals ? t('coachMatches:answeredOf', { answered, goals }) : t('coachMatches:noInstructionsInPlan') },
-    { id: 'players', label: t('coachMatches:evStepPlayers'), status: 'good', onEdit: () => onStep(1),
-      detail: t('coachMatches:changedNotes', { changed: summary.changed, count: summary.notes }) },
+    // TRAK-518 (Imad, 20 Nov): every answer starts empty, so there is no Yes · Met to count changes from.
+    { id: 'players', label: t('coachMatches:evStepPlayers'), status: summary.left ? 'risk' : 'good', onEdit: () => onStep(1),
+      detail: summary.left ? t('coachMatches:answeredOf', { answered: summary.players - summary.left, goals: summary.players })
+        : t('coachMatches:notesCount', { count: summary.notes }) },
   ]
   const incomplete = rows.filter(row => row.status !== 'good').length
   const band = incomplete === 0 ? { status: 'good' as const, label: t('coachMatches:readyToPublish') }
@@ -55,7 +57,8 @@ export function PublishStep({ eventId, form, listed, goals, askCompetition, askH
   const blocked = !planAnswered(form, goals) ? t('coachMatches:blockedPlan')
     : askCompetition && !choices.competition ? t('coachMatches:blockedCompetition')
     : askHomeAway && !choices.homeAway ? t('coachMatches:blockedHomeAway')
-    : summary.players === 0 ? t('coachMatches:blockedPlayed') : null
+    : summary.players === 0 ? t('coachMatches:blockedPlayed')
+    : summary.left ? t('coachMatches:blockedAnswers', { count: summary.left }) : null
   return (
     <div className="arc">
       <PlanReview title={t('coachMatches:evReviewTitle')} footerId="evaluation-publish" rows={rows} band={band}>

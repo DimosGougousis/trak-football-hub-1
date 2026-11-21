@@ -20,13 +20,17 @@ describe('lineUpAtKickOff', () => {
 })
 
 describe('a new evaluation', () => {
-  it('starts at 0–0, with the starters ticked, nobody from the bench, and everyone at Yes · Met', () => {
+  // TRAK-518 (Imad, 20 Nov): no answer until the coach gives one.
+  it('starts at 0–0, with the starters ticked, nobody from the bench, and nobody answered', () => {
     const form = evaluationToForm(empty)
     expect(form).toMatchObject({ ourScore: 0, theirScore: 0, goals: [], howTheyScored: '', planWorked: [] })
     expect(hasPlayed(form, 'zagorakis', true)).toBe(true)
     expect(hasPlayed(form, 'charisteas', false)).toBe(false)
-    expect(answerOf(form, 'zagorakis')).toEqual({ didJob: 'yes', against: 'met', note: '' })
-    expect(summary(answerOf(form, 'zagorakis'))).toBe('Did the job · Met')
+    expect(answerOf(form, 'zagorakis')).toEqual({ didJob: null, against: null, note: '' })
+    expect(summary(answerOf(form, 'zagorakis'))).toBe('Not answered')
+    // Half an answer is still not answered; a player with no job is asked only "Against expectation".
+    expect(summary({ didJob: null, against: 'met', note: '' })).toBe('Not answered')
+    expect(summary({ didJob: null, against: 'met', note: '' }, false)).toBe('Met')
   })
 })
 
@@ -91,9 +95,11 @@ describe('publishing (TRAK-289)', () => {
     answers: { zagorakis: { didJob: 'partly' as const, against: 'above' as const, note: 'Brave all game.' }, dellas: { didJob: 'yes' as const, against: 'met' as const, note: 'Good.' } },
   }
 
-  it('sums it up: who played, how many changed from Yes · Met, and how many notes', () => {
-    expect(publishSummary(form, listed)).toEqual({ players: 3, changed: 1, notes: 2 })
-    expect(publishSummary(setPlayed(form, 'zagorakis', false), listed)).toEqual({ players: 2, changed: 0, notes: 1 })
+  it('sums it up: who played, how many still wait for an answer (TRAK-518), and how many notes', () => {
+    // Charisteas came on and has no answer yet; Dellas had no job, so "Met" is all he needs.
+    expect(publishSummary(form, listed, plans)).toEqual({ players: 3, left: 1, notes: 2 })
+    expect(publishSummary(setPlayed(form, 'zagorakis', false), listed, plans)).toEqual({ players: 2, left: 1, notes: 1 })
+    expect(publishSummary(setPlayed(form, 'charisteas', false), listed, plans)).toEqual({ players: 2, left: 0, notes: 2 })
   })
 
   it('waits for an answer to "Did the plan work?" for every goal', () => {

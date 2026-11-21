@@ -10,8 +10,8 @@ import { LockedValue } from './LockedValue'
 
 /* TRAK-288 (Games 6/8): the evaluation's Players step (TRAK-282). A card for each player who played: closed, how they
    did ("Did the job · Met") with the context and the expectation from the plan as it locked at kick-off; open, the
-   two answers and a note only that player will read. Everyone starts at Yes · Met. TRAK-374 (Imad, 5 Nov): the step is
-   Player evaluation; an open card shows the player's job from the plan first, to judge against; "Did the job?"; the
+   two answers and a note only that player will read. TRAK-518 (Imad, 20 Nov): every answer starts empty.
+   TRAK-374 (Imad, 5 Nov): the step is Player evaluation; an open card shows the player's job from the plan first, to judge against; "Did the job?"; the
    note shows an example. */
 
 const first = (name: string) => name.split(/\s+/)[0] || name
@@ -46,10 +46,10 @@ export function PlayersStep({ eventId, form, onFormChange, played, plans }: {
                 <div className="tablet:col-span-2"><LockedValue label={t('coachMatches:job')} value={plan.job.trim() || t('coachMatches:noJob')} /></div>
                 {/* TRAK-447: the plan gave this player no job, so there is nothing to have done: N/A, and nothing for them to read. */}
                 {plan.job.trim()
-                  ? <RadioGroup label={t('coachMatches:didTheJob')} name={`did-job-${eventId}-${player.id}`} options={optionWords('didJob', DID_JOB)} value={answer.didJob}
+                  ? <RadioGroup label={t('coachMatches:didTheJob')} name={`did-job-${eventId}-${player.id}`} options={optionWords('didJob', DID_JOB)} value={answer.didJob ?? ''}
                     onValueChange={value => set(player.id, { didJob: value as DidJob })} />
                   : <LockedValue label={t('coachMatches:didTheJob')} value={t('coachMatches:notApplicable')} />}
-                <RadioGroup label={t('coachMatches:againstExpectation')} name={`against-${eventId}-${player.id}`} options={optionWords('against', AGAINST)} value={answer.against}
+                <RadioGroup label={t('coachMatches:againstExpectation')} name={`against-${eventId}-${player.id}`} options={optionWords('against', AGAINST)} value={answer.against ?? ''}
                   onValueChange={value => set(player.id, { against: value as Against })} />
                 <div className="tablet:col-span-2">
                   <Input label={t('coachMatches:noteToName', { name })} placeholder={t('coachMatches:noteExample')} value={answer.note}
