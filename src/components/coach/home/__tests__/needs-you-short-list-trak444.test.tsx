@@ -32,7 +32,8 @@ describe('TRAK-444: Needs you with a lot owed', () => {
     show(Array.from({ length: 12 }, (_, i) => event(i + 1)))
     expect(titles()).toHaveLength(FIRST_CARDS)
     expect(screen.getByRole('heading', { name: /Needs you 12/ })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Show all 12' }))
+    // TRAK-506: the control reads "See all" (Imad, 20 Nov).
+    await userEvent.click(screen.getByRole('button', { name: 'See all 12' }))
     expect(titles()).toHaveLength(12)
     await userEvent.click(screen.getByRole('button', { name: 'Show fewer' }))
     expect(titles()).toHaveLength(FIRST_CARDS)
@@ -44,11 +45,12 @@ describe('TRAK-444: Needs you with a lot owed', () => {
     expect(screen.queryByText(/for more/)).toBeNull()
   })
 
-  // TRAK-433 (Imad, 16 Nov): on a laptop the cards wrap into rows, so none sits off-screen; a phone keeps the swipe.
-  // jsdom applies no media query, so this checks the class that does it.
-  it('wraps into rows on a laptop and swipes on a phone', () => {
+  // TRAK-506 (Imad, 20 Nov) replaces TRAK-433's laptop wrap: one row that scrolls on every screen.
+  // jsdom applies no media query, so this checks the classes that do it.
+  it('is one row on a laptop and on a phone', () => {
     show([event(1), event(2)])
-    expect(screen.getByRole('list')).toHaveClass('flex', 'laptop:flex-wrap')
+    expect(screen.getByRole('list')).toHaveClass('flex')
+    expect(screen.getByRole('list')).not.toHaveClass('laptop:flex-wrap')
   })
 
   it('puts the urgent cards first, then the newest', () => {

@@ -120,7 +120,7 @@
   "assessedAgo_other": "Assessed {{count}} days ago",
   "draftFrom": "Draft from {{day}}: families can't see it yet",
   "draftsFrom": "{{count}} drafts, the latest from {{day}}: families can't see them yet",
-  "showAll": "Show all {{count}}",
+  "showAll": "See all {{count}}",
   "showFewer": "Show fewer",
   "watchSetUp": "Set {{name}} up"
 }
