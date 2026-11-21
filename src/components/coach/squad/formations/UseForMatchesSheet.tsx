@@ -36,8 +36,8 @@ export function UseForMatchesSheet({ formation, squad, using, problem, onClose, 
   const submit = () => (replacing.length > 0 && !confirming ? setConfirming(true) : onUse(matches.filter(game => picked.has(game.id)).map(game => game.id)))
   const failed = games.isError || saved.isError
 
-  return <BottomSheet className="arc" detents={[0.92]} open onOpenChange={open => { if (!open) onClose() }} title={t('coachSquad:fmUseTitle', { name: formation.name })}
-    description={t('coachSquad:fmUseDescription')}>
+  // TRAK-515 (Imad, 20 Nov): no "Each match gets its own copy" line under the title.
+  return <BottomSheet className="arc" detents={[0.92]} open onOpenChange={open => { if (!open) onClose() }} title={t('coachSquad:fmUseTitle', { name: formation.name })}>
     <div className="grid gap-4 pb-4">
       {failed ? <Alert tone="danger" title={t('coachSquad:fmMatchesFailed')} />
         : games.isPending || (matches.length > 0 && saved.isPending) ? <p role="status" className="text-sm text-ink-2">{t('coachSquad:fmMatchesLoading')}</p>
