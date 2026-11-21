@@ -31,7 +31,9 @@ export function PlayersStep({ eventId, form, onFormChange, played, plans }: {
         <h2 id="evaluation-players" className="text-lg font-medium text-ink">{t('coachMatches:againstExpected')}</h2>
         {!played.length && <p className="mt-2 text-sm text-ink-3">{t('coachMatches:nobodyTicked')}</p>}
       </div>
-      <ul className="grid gap-3">
+      {/* TRAK-517 (Imad, 20 Nov): on a laptop two cards a row, more on a wider screen; one on a phone. Top-aligned, so an
+          open card doesn't stretch the one beside it. */}
+      <ul className="grid gap-3 laptop:grid-cols-[repeat(auto-fill,minmax(400px,1fr))] laptop:items-start">
         {played.map(player => {
           const answer = answerOf(form, player.id)
           const plan = playerPlan(plans, player.id)
