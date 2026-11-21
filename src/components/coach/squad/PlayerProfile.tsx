@@ -59,7 +59,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
  * coach's assessment card exactly as it is elsewhere. Imad, 23 Oct: one row of cards, the latest first, swiping to
  * earlier ones, with no date line above them (the card's quick look has the date and session).
  */
-export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, season, squadSeason, since = '1 July', seasonFailed = false, onRetrySeason, placement }: {
+export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, season, squadSeason, since = '1 July', seasonFailed = false, onRetrySeason, placement, onViewReport }: {
   player: SquadPlayer
   squad: string | null
   coachId: string
@@ -75,6 +75,8 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   onRetrySeason?: () => void
   /** TRAK-353, TRAK-354: where the season plan is on, the roster's position; the player's position and roles, and their objectives, show here. */
   placement?: { position: string | null }
+  /** TRAK-527 (Reports 4/10): where the squad's plan is shared, the player's report, under Assess. */
+  onViewReport?: () => void
 }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -191,6 +193,10 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
       onClick={() => navigate('/coach/assess', { state: { preselectedPlayerId: player.id } })}>
       {t('coachHome:assess')}
     </Button>
+    {onViewReport && <Button variant="secondary" size={NEXT_STEP_SIZE} className={`-mt-3 justify-self-start ${NEXT_STEP_WIDTH} laptop:-mt-5`}
+      aria-label={t('coachSquad:viewReportName', { name: first })} onClick={onViewReport}>
+      {t('coachSquad:viewReport')}
+    </Button>}
   </>
 }
 

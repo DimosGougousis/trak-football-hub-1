@@ -189,13 +189,15 @@ use_cases:
   # SPEC v3 2026-11-07 (TRAK-364), DRAFT for Kostas's review: with the season
   # plan on and the squad's plan shared, the squad's evaluation replaces the
   # per-player Assess marks. Without the switch, nothing changes.
+  # SPEC v4 2026-11-21 (TRAK-527, Reports 4/10): Imad decided a player's page
+  # has View report where the squad's plan is shared (the fifth line).
   - id: UC-C03
     actor: coach
     title: View the squad
     requirement: REQ-002
     status: enforced
     tier: [1]
-    spec_version: 3
+    spec_version: 4
     given: A signed-in coach
     when: They open the squad screen
     then:
@@ -203,6 +205,7 @@ use_cases:
       - A coach with an empty squad sees an explicit empty message
       - A failed load is distinguishable from an empty squad
       - Where the academy's season plan is on and the squad's plan is shared, no player is marked to assess one by one; without it, a player due an assessment is still marked Assess
+      - Where the squad's plan is shared, a player's page offers View report, which opens that player's report for the coming report day to the coach alone; without it, the page has no report
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 
   # SPEC v2 2026-09-25 (TRAK-68): Imad decided an assessment belongs to a

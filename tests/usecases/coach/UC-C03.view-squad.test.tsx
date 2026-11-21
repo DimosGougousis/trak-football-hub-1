@@ -143,4 +143,27 @@ useCase('UC-C03', () => {
       }
     })
   }
+  // v4 (TRAK-527, Reports 4/10): a player's page offers View report only where the squad's plan is shared.
+  for (const shared of [false, true]) {
+    it(shared ? 'offers View report on a player\'s page where the squad\'s plan is shared' : 'offers no report on a player\'s page without a shared plan', async () => {
+      signedInCoach()
+      server.use(
+        table('squad_players', [{ id: 's1', coach_user_id: COACH.id, player_name: 'Nikos Papadopoulos', position: 'Midfielder', shirt_number: 8,
+          age_group: 'U16', status: 'active', created_at: '2026-08-01T08:00:00Z' }]),
+        rpc('feature_on', ({ p_feature }) => shared && p_feature === 'season_plan'),
+        table('season_plans', [{ id: 'plan-1', squad: 'U16', starts_on: '2026-09-01', ends_on: '2027-06-30', shared_at: shared ? '2026-10-01T08:00:00Z' : null,
+          unshared_parts: [], unshared_players: [] }]),
+        table('player_watches', []), table('squad_player_profiles', []), rpc('coach_player_birth_dates', () => []),
+        table('season_evaluations', []), table('coach_details', []), table('player_objectives', []), table('season_objectives', []),
+        table('squad_player_roles', []), table('squad_player_also_plays', []),
+      )
+      renderApp('/coach/squad/player/s1')
+      expect(await screen.findByRole('button', { name: 'Assess Nikos' })).toBeInTheDocument()
+      if (shared) expect(await screen.findByRole('button', { name: 'View Nikos’s report' })).toBeInTheDocument()
+      else {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        expect(screen.queryByRole('button', { name: 'View Nikos’s report' })).toBeNull()
+      }
+    })
+  }
 })
