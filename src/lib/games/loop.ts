@@ -17,24 +17,24 @@ export type GameAction = { label: string; tab: GameTab; step?: 'share' }
 /** Each state's badge and the one next action, if any. TRAK-333 (Imad, 2 Nov): shorter labels, and no loop stepper
  *  on Matches, so a state no longer carries a place on it. */
 export const STATE: Record<GameState, {
-  label: string; tone: 'neutral' | 'info' | 'warning' | 'success'; action?: GameAction
+  label: string; tone: 'neutral' | 'info' | 'attention' | 'success'; action?: GameAction
 }> = {
   // Publishing the match in Schedule is "share the logistics" (TRAK-282, step 1).
   logistics: { label: 'Logistics not shared', tone: 'neutral', action: { label: 'Share logistics', tab: 'logistics' } },
-  plan: { label: 'Plan not written', tone: 'warning', action: { label: 'Write plan', tab: 'plan' } },
+  plan: { label: 'Plan not written', tone: 'attention', action: { label: 'Write plan', tab: 'plan' } },
   // TRAK-284: a draft only the coach sees. Sharing it (TRAK-286) closes it. TRAK-344 (Imad, 3 Nov): "Draft", not
   // "Plan not shared"; Home's Needs you line still says why the match needs the coach.
-  planDraft: { label: 'Draft', tone: 'warning', action: { label: 'Share plan', tab: 'plan', step: 'share' } },
+  planDraft: { label: 'Draft', tone: 'attention', action: { label: 'Share plan', tab: 'plan', step: 'share' } },
   // TRAK-290: shared at a time still to come. Nothing to do: what's saved by then goes out.
   scheduled: { label: 'Plan scheduled', tone: 'info' },
   shared: { label: 'Plan shared', tone: 'success' },
   // TRAK-286: edits after sharing wait until the coach shares them.
-  changes: { label: 'Changes not shared', tone: 'warning', action: { label: 'Share changes', tab: 'plan', step: 'share' } },
+  changes: { label: 'Changes not shared', tone: 'attention', action: { label: 'Share changes', tab: 'plan', step: 'share' } },
   locked: { label: 'Locked at kick-off', tone: 'info' },
   // TRAK-288: the evaluation opens at full time. Which past matches still owe one is the week's rule (coachWeek).
   fullTime: { label: 'Full time', tone: 'neutral', action: { label: 'Evaluate', tab: 'evaluation' } },
   // TRAK-288: a draft only the coach sees, until it's published (TRAK-289).
-  evaluationDraft: { label: 'Evaluation draft', tone: 'warning', action: { label: 'Publish', tab: 'evaluation' } },
+  evaluationDraft: { label: 'Evaluation draft', tone: 'attention', action: { label: 'Publish', tab: 'evaluation' } },
   // TRAK-289: the loop closes.
   published: { label: 'Published', tone: 'success' },
 }

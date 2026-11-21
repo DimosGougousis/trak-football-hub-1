@@ -179,7 +179,7 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
   const toDo = !locked && !planUnread && whoKnown ? planParts(planForm, who.players, row.published).incomplete : 0
   const extras: Record<GameTab, PageHeaderTab['extra']> = {
     logistics: row.published && <><Check size={14} strokeWidth={2} aria-hidden="true" /><span className="sr-only">{t('coachMatches:srShared')}</span></>,
-    plan: toDo > 0 && <Badge size="sm" tone="warning">{t('coachMatches:toDo', { count: toDo })}</Badge>,
+    plan: toDo > 0 && <Badge size="sm" tone="attention">{t('coachMatches:toDo', { count: toDo })}</Badge>,
     // TRAK-516 (Imad, 20 Nov): no "After the match" beside Evaluation.
     evaluation: null,
   }

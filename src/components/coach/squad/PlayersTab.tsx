@@ -92,8 +92,8 @@ export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = 
       trend: trends.get(p.id),
       flag: watchOf.has(p.id) ? <WatchBadge watch={watchOf.get(p.id)} />
         // TRAK-423: a state, like Draft; the Assess button is on the player's page.
-        : owed.get(p.id) === 'assess' ? <Badge tone="warning" size="sm">{t('coachHome:stateDue')}</Badge>
-        : owed.get(p.id) === 'draft' ? <Badge tone="warning" size="sm">{t('coachHome:stateDraft')}</Badge> : undefined,
+        : owed.get(p.id) === 'assess' ? <Badge tone="attention" size="sm">{t('coachHome:stateDue')}</Badge>
+        : owed.get(p.id) === 'draft' ? <Badge tone="attention" size="sm">{t('coachHome:stateDraft')}</Badge> : undefined,
     }
   })
   const squadOf = new Map(roster.players.map(p => [p.id, p.age_group?.trim() || null]))

@@ -44,7 +44,7 @@ describe('gameState (TRAK-283)', () => {
 describe('an evaluation draft (TRAK-288)', () => {
   it('after full time a saved evaluation is a draft only the coach sees, and publishing it is next', () => {
     expect(gameState(game(), Date.parse('2026-10-31T10:30:00Z'), { evaluated: true })).toBe('evaluationDraft')
-    expect(STATE.evaluationDraft).toMatchObject({ label: 'Evaluation draft', tone: 'warning', action: { label: 'Publish', tab: 'evaluation' } })
+    expect(STATE.evaluationDraft).toMatchObject({ label: 'Evaluation draft', tone: 'attention', action: { label: 'Publish', tab: 'evaluation' } })
   })
 
   it('it can\'t be one before full time', () => {
@@ -81,7 +81,7 @@ describe('a shared plan (TRAK-286)', () => {
 
   it('edits after sharing wait for "Share changes"', () => {
     expect(gameState(game(), KICK_OFF - 1000, { drafted: true, shared: true, changes: 2 })).toBe('changes')
-    expect(STATE.changes).toMatchObject({ label: 'Changes not shared', tone: 'warning', action: { label: 'Share changes', tab: 'plan', step: 'share' } })
+    expect(STATE.changes).toMatchObject({ label: 'Changes not shared', tone: 'attention', action: { label: 'Share changes', tab: 'plan', step: 'share' } })
   })
 
   it('at kick-off a shared plan locks, changes or not', () => {
