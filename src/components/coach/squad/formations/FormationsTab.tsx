@@ -165,10 +165,17 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
     onSuccess: () => { toast(t('coachSquad:fmUndoneCopy', { name: copied.name, count: copied.eventIds.length })); setCopied(null) },
     onError: error => setProblem((error as { code?: string }).code === 'P0001' ? t('coachSquad:fmUndoCopyLocked') : t('coachSquad:fmUndoCopyFailed')),
   }) }
+  // The draft's format: a save just before (saveThen) may have changed it.
   const makeDefault = (on: boolean) => writes.setDefault.mutate({ id: saved.id, on }, {
-    onSuccess: () => toast(on ? t('coachSquad:fmDefaultOn', { name: saved.name, count: saved.format }) : t('coachSquad:fmDefaultOff', { name: saved.name })),
+    onSuccess: () => toast(on ? t('coachSquad:fmDefaultOn', { name: current.name, count: current.format }) : t('coachSquad:fmDefaultOff', { name: current.name })),
     onError: () => setProblem(t('coachSquad:fmDefaultFailed')),
   })
+  // TRAK-515 (Imad, 20 Nov): Use for a match and Make default save unsaved changes first, then carry on. A failed save
+  // says so and does nothing else.
+  const saveThen = (next: () => void) => dirty ? writes.save.mutate({ id: saved.id, draft: current }, {
+    onSuccess: () => { setEdits(({ [saved.id]: _gone, ...rest }) => rest); setProblem(null); next() },
+    onError: error => setProblem(refusal(error) ?? saveFailed()),
+  }) : next()
   const change = (next: (draft: FormationDraft) => FormationDraft) => {
     setProblem(null)
     setEdits(all => {
@@ -238,11 +245,10 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
       {problem && <Alert tone="danger" title={problem} />}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="sm" disabled={dirty} onClick={() => { setUseProblem(null); setUsing(true) }}>{t('coachSquad:fmUse')}</Button>
-        <Button variant="secondary" size="sm" disabled={dirty} loading={writes.setDefault.isPending} onClick={() => makeDefault(!saved.isDefault)}>
-          {saved.isDefault ? t('coachSquad:fmRemoveDefault') : t('coachSquad:fmMakeDefault', { count: saved.format })}</Button>
+        <Button variant="secondary" size="sm" disabled={writes.save.isPending} onClick={() => saveThen(() => { setUseProblem(null); setUsing(true) })}>{t('coachSquad:fmUse')}</Button>
+        <Button variant="secondary" size="sm" disabled={writes.save.isPending} loading={writes.setDefault.isPending} onClick={() => saveThen(() => makeDefault(!saved.isDefault))}>
+          {saved.isDefault ? t('coachSquad:fmRemoveDefault') : t('coachSquad:fmMakeDefault', { count: current.format })}</Button>
         {saved.isDefault && <Badge size="sm" tone="info">{t('coachSquad:fmDefaultBadge', { count: saved.format })}</Badge>}
-        {dirty && <span className="text-sm text-ink-3">{t('coachSquad:fmSaveFirst')}</span>}
       </div>
 
       {/* TRAK-453: one control for format and shape, the one a match's line-up has; a shape in another format switches the format. */}
