@@ -46,7 +46,9 @@ const SHOWN = 6
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return <div className="grid grid-cols-[112px_minmax(0,1fr)] items-baseline gap-3 border-b border-line py-2.5 last:border-b-0">
-    <dt className="text-sm text-ink-3">{label}</dt>
+    {/* TRAK-511 (Imad, 21 Nov): the label reads apart from its value, also when the value is a grey "No position yet". Bold, not
+        medium: on Apple devices Trak's font is Futura, whose lightest face is Medium, so medium looks like regular. */}
+    <dt className="text-sm font-semibold text-ink-3">{label}</dt>
     <dd className="m-0 min-w-0 text-[15px] text-ink">{children}</dd>
   </div>
 }
