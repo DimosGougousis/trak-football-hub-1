@@ -332,5 +332,11 @@
   "fmUndoneCopy_one": "Αναιρέθηκε. Το «{{name}}» δεν είναι πια αντιγραμμένο στον αγώνα.",
   "fmUndoneCopy_other": "Αναιρέθηκε. Το «{{name}}» δεν είναι πια αντιγραμμένο στους αγώνες.",
   "fmUndoCopyFailed": "Η αναίρεση δεν έγινε. Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.",
-  "fmUndoCopyLocked": "Δεν μπορεί να αναιρεθεί: ένας αγώνας έχει ξεκινήσει ή το πλάνο του έχει κοινοποιηθεί."
+  "fmUndoCopyLocked": "Δεν μπορεί να αναιρεθεί: ένας αγώνας έχει ξεκινήσει ή το πλάνο του έχει κοινοποιηθεί.",
+  "rhythmMonth": "Every month",
+  "rhythm3Months": "Every 3 months",
+  "rhythm6Months": "Every 6 months",
+  "rhythmCustom": "Custom",
+  "rhythmWeeks": "Repeat every",
+  "rhythmWeeksUnit": "weeks"
 }
