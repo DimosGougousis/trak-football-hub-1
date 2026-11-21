@@ -89,6 +89,9 @@
 .success { --badge-tone: var(--success); }
 .warning { --badge-tone: var(--warning); }
 .danger { --badge-tone: var(--danger); }
+/* Trak (TRAK-510, Imad 20 Nov): the Needs you yellow for everything waiting on the coach, solid with dark text as
+   Home's Needs you badge (TRAK-495). Bronze (warning) stays for real warnings. */
+.attention { --badge-tone: rgb(var(--t-attention)); --badge-background: rgb(var(--t-attention)); --badge-foreground: rgb(var(--t-on-bright)); --badge-color: rgb(var(--t-on-bright)); }
 /* Categorical colours (method tags, labels) override the tone. */
 .teal { --badge-tone: var(--tone-teal); }
 .sky { --badge-tone: var(--tone-sky); }

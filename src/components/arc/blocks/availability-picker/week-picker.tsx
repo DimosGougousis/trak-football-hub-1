@@ -150,7 +150,7 @@ export function WeekPicker({ title, subtitle, days, onPrevWeek, onNextWeek, rend
                     <span className={styles.slotMeta}>{entry.note}</span>
                   </span>
                   {/* Trak (TRAK-266): a badge in the colour key only where the coach is needed. */}
-                  {entry.state === "needs-you" && <Badge tone="warning" size="sm" className={styles.needsBadge}>{t("coachHome:needsYouTitle")}</Badge>}
+                  {entry.state === "needs-you" && <Badge tone="attention" size="sm">{t("coachHome:needsYouTitle")}</Badge>}
                   {entry.state === "clash" && <Badge tone="danger" size="sm">{t("coachHome:stateClash")}</Badge>}
                   <span className={styles.slotCheck} aria-hidden="true"><Check size={14} strokeWidth={2} /></span>
                 </button>

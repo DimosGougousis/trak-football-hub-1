@@ -6,7 +6,7 @@ import { AnimatePresence, animate, motion, useIsPresent, useMotionValue, useRedu
 import { motionTokens } from "../lib/motion-tokens";
 import styles from "./badge.module.css";
 
-export type BadgeTone = "neutral" | "success" | "info" | "warning" | "danger";
+export type BadgeTone = "neutral" | "success" | "info" | "warning" | "danger" | "attention";
 export type BadgeSize = "sm" | "md" | "lg";
 export type BadgeColor = "teal" | "sky" | "orchid" | "violet" | "rose" | "amber";
 

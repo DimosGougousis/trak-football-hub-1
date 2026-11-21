@@ -45,7 +45,7 @@ function fitWords(player: BoardPlayer, fit: Fit) {
 }
 function ringClass(player: BoardPlayer, fit: Fit) {
   if (!player.canPlay) return 'shadow-[0_0_0_3px_rgb(var(--t-danger))]'
-  if (fit === 'out') return 'shadow-[0_0_0_3px_rgb(var(--t-orange))]'
+  if (fit === 'out') return 'shadow-[0_0_0_3px_rgb(var(--t-attention))]'
   if (fit === 'unknown') return 'outline-dashed outline-2 outline-offset-1 outline-line-strong'
   return ''
 }
@@ -195,7 +195,7 @@ export function FormationBoard({ title, shape, format, starters, players, bench,
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-2">
         <span>{filled === slots.length ? t('coachSquad:fmStartersBench', { starters: filled, bench: bench.length })
           : t('coachSquad:fmStartersPartial', { filled, total: slots.length, count: slots.length - filled, bench: bench.length })}</span>
-        {count('out') > 0 && <span className="flex items-center gap-2"><span aria-hidden="true" className="size-3.5 rounded-full shadow-[0_0_0_3px_rgb(var(--t-orange))]" />
+        {count('out') > 0 && <span className="flex items-center gap-2"><span aria-hidden="true" className="size-3.5 rounded-full shadow-[0_0_0_3px_rgb(var(--t-attention))]" />
           {t('coachSquad:fmOutCount', { count: count('out') })}</span>}
         {count('unknown') > 0 && <span className="flex items-center gap-2"><span aria-hidden="true" className="size-3.5 rounded-full outline-dashed outline-2 outline-line-strong" />
           {t('coachSquad:fmUnknownCount', { count: count('unknown') })}</span>}
