@@ -147,7 +147,8 @@ describe('TRAK-350 the season plan, step 1', () => {
       await user().click(await screen.findByRole('button', { name: title }))
     }
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
-    expect(screen.getByText('Up to three. Delete one to add another.')).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): no "Up to three…" line; the count says it.
+    expect(screen.queryByText(/Up to three/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Write your own' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Win it back within 5 seconds' })).toBeDisabled()
   })
@@ -173,7 +174,7 @@ describe('TRAK-350 the season plan, step 1', () => {
     await user().click(saveDraft())
     await waitFor(() => expect(saveDraft()).toHaveTextContent('Saved'))
     expect(objectives).toEqual([])
-    expect(screen.getByText('None yet. Select from the list or write your own.')).toBeInTheDocument()
+    expect(screen.getByText('None yet.')).toBeInTheDocument()
   })
 
   it('refuses a season that ends before it starts, saying why', async () => {

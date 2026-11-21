@@ -179,7 +179,6 @@ function ObjectivesEdit({ coachId, squad, plan, saved }: { coachId: string; squa
   return (
     <EditScreen part="objectives" problem={problem} saving={save.isPending} canSave={changed} onSave={submit}>
       <SeasonObjectivesEditor objectives={list} focusKey={focusKey} removeWord="Remove" onChange={change} onAdd={add} />
-      <p className="text-sm text-ink-3">A removed objective stays in the plan’s history, with its dates.</p>
     </EditScreen>
   )
 }

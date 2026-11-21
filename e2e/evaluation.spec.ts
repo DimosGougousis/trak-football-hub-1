@@ -79,7 +79,7 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     // Home: one Evaluation due card, missed a while ago, and no Assess card for Quinn, who was never assessed.
     const card = page.getByRole('listitem').filter({ hasText: 'Evaluation due' })
     await expect(card).toBeVisible()
-    await expect(card.getByText(/Due since \w{3} \d+ \w{3}\. Everyone starts where they were last time\.$/)).toBeVisible()
+    await expect(card.getByText(/^Due since \w{3} \d+ \w{3}\.$/)).toBeVisible()
     await expect(page.getByText(/Never assessed/)).toHaveCount(0)
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.screenshot({ path: testInfo.outputPath(`home-${width}.png`) })
@@ -97,7 +97,7 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     // Quinn alone: Technical from 5 to 8, a note only Quinn sees, Done.
     await list.getByRole('button', { name: /^Quinn Synthetic/ }).click()
     // Arc's text morph renders the words twice (one for screen readers), so the first is enough.
-    await expect(page.getByText('Optional. Only Quinn sees it, never their family.').first()).toBeAttached()
+    await expect(page.getByText('Optional. Only Quinn sees it.').first()).toBeAttached()
     const technical = page.getByRole('slider').nth(3)
     await technical.focus()
     for (let i = 0; i < 3; i++) await technical.press('ArrowRight')

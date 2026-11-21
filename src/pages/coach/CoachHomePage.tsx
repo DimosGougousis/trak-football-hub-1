@@ -35,6 +35,7 @@ import { usePlayerObjectives } from '@/components/coach/season-plan/usePlayerObj
 import { StuckSheet, type StuckTarget } from '@/components/coach/season-plan/StuckSheet'
 import { evalDay } from '@/lib/evaluation'
 import { Button } from '@/components/arc/button/button'
+import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { squadShape } from '@/lib/squad/shape'
 import { localParts, localTodayISO } from '@/lib/event-time'
 import { dateLocale, useLanguage } from '@/lib/i18n'
@@ -163,7 +164,7 @@ export default function CoachHomePage() {
       : t('coachHome:evaluationDueNow'),
     urgent: due.since! < evaluations.today,
     at: Date.parse(`${due.since}T00:00`),
-    action: <span className="arc"><Button size="sm" onClick={() => { if (everySquad) coachSquad.pick(squad); navigate('/coach/evaluation') }}>{t('coachHome:evaluate')}</Button></span>,
+    action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => { if (everySquad) coachSquad.pick(squad); navigate('/coach/evaluation') }}>{t('coachHome:evaluate')}</Button></span>,
   }))
   // TRAK-352: where the season plan is on, one card per squad with consented players still to place. A newly
   // consented child has no position, so they join it.
@@ -175,7 +176,7 @@ export default function CoachHomePage() {
     when: '',
     squad: coachSquad.squads.length >= 2 ? squad : null,
     reason: t('coachHome:needPositionWhy'),
-    action: <span className="arc"><Button size="sm" onClick={() => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/season-plan/positions') }}>{t('coachHome:placeThem')}</Button></span>,
+    action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/season-plan/positions') }}>{t('coachHome:placeThem')}</Button></span>,
   }))
   // TRAK-355: a watched player whose reminder is due comes back, one card each, opening the step where they were left.
   const watching = useWatchList(user?.id, roster, seasonPlanOn)
@@ -194,16 +195,17 @@ export default function CoachHomePage() {
       when: '',
       squad: coachSquad.squads.length >= 2 ? squad : null,
       reason: t('coachHome:stuckWhy', { objective: objective.title }),
-      action: <span className="arc"><Button size="sm" onClick={() => setStuckTarget({ objectiveId: objective.id, objective: objective.title, playerId: player.id, playerName: player.player_name })}>{t('coachHome:choose')}</Button></span>,
+      action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => setStuckTarget({ objectiveId: objective.id, objective: objective.title, playerId: player.id, playerName: player.player_name })}>{t('coachHome:choose')}</Button></span>,
     }]
   })
   const watchEvents: OwedEvent[] = !seasonPlanOn ? [] : watching.list.filter(w => w.ready).map(w => ({
     id: `watch:${w.playerId}`,
-    title: t('coachHome:watchTitle', { why: w.why === '4 weeks, the latest' ? t('coachHome:watchedFourWeeks') : w.why, name: w.name.split(' ')[0] }),
+    // TRAK-494 (Kostas, 20 Nov): the title says why they're back; the line under it, who to set up.
+    title: w.why === '4 weeks, the latest' ? t('coachHome:watchedFourWeeks') : w.why ?? '',
     when: '',
     squad: coachSquad.squads.length >= 2 ? w.squad : null,
-    reason: w.step === 'positions' ? t('coachHome:watchPositions') : t('coachHome:watchObjectives'),
-    action: <span className="arc"><Button size="sm" onClick={() => { if (everySquad && w.squad) coachSquad.pick(w.squad); navigate(`/coach/season-plan/${w.step}?player=${w.playerId}`) }}>{t('coachHome:setUp')}</Button></span>,
+    reason: t('coachHome:watchSetUp', { name: w.name.split(' ')[0] }),
+    action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => { if (everySquad && w.squad) coachSquad.pick(w.squad); navigate(`/coach/season-plan/${w.step}?player=${w.playerId}`) }}>{t('coachHome:setUp')}</Button></span>,
   }))
 
 

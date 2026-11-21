@@ -198,7 +198,9 @@ describe('Settings with real AuthProvider, route guard and Supabase SDK', () => 
   // player's connections moved to the Profile tab (PlayerConnections).
   it('gives a player no position or shirt-number editor and no connections in Settings', async () => {
     profiles.a.role = 'player'
-    mount(); await screen.findByText('Your academy sets your name.')
+    // TRAK-494 (Kostas, 20 Nov): no "Your academy sets your name." to wait for; the name row shows the name (and the
+    // test's context output shows it too).
+    mount(); await waitFor(() => expect(screen.getAllByText(profiles.a.full_name).length).toBeGreaterThan(1))
     expect(screen.queryByText('Position')).toBeNull()
     expect(screen.queryByText('Shirt number')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()

@@ -39,9 +39,6 @@ function ChildSeason({ child, look }: { child: ParentChild; look: boolean }) {
       <p className="m-0 text-[15px] text-ink-2" style={font}>{seasonSubtitle(plan)}</p>
     </div>
     <SeasonPlanSections plan={plan} child={name} />
-    <p className="m-0 rounded-2xl bg-raised px-3.5 py-3 text-[14px] text-ink-2" style={font}>
-      Your coach updates this at each evaluation. You can read it here; nothing needs a reply.
-    </p>
   </>
 }
 

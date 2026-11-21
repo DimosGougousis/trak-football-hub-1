@@ -124,11 +124,6 @@ export function AttributesTab({ roster }: { roster: SquadRoster }) {
                 {t(drills ? 'coachSquad:openDrills' : 'coachSquad:openTrainings')}
               </Link>
             </section>
-            <Card title={t('coachSquad:howToReadRange')} muted>
-              <p className="text-[13px] text-ink-2">
-                {t('coachSquad:howToReadBody')}
-              </p>
-            </Card>
             <p className="rounded-xl bg-raised p-3 text-[12px] text-ink-3">
               {t('coachSquad:coachOnlyNote')}
             </p>

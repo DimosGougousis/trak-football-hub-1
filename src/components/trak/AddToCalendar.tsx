@@ -17,9 +17,8 @@ import {
 const font = { fontFamily: 'var(--t-font)' }
 // A guardian-created child login has no mailbox, and change emails skip it
 // (TRAK-135), so it's never promised one (Kostas, #286).
-const howItWorks = (childLogin: boolean) => childLogin
-  ? 'Changes reach your calendar automatically. Some calendars take a few hours, so check Trak for same-day changes.'
-  : 'Changes reach your calendar automatically. Some calendars take a few hours, so for same-day changes we also email you.'
+// TRAK-494 (Kostas, 20 Nov): one short line for everyone.
+const howItWorks = (_childLogin: boolean) => 'Same-day changes can take a few hours to show.'
 const LINK_FAILED = "Couldn't make your calendar link. Check your connection and try again."
 
 const statusKey = (userId: string | undefined) => ['calendar-link', userId]

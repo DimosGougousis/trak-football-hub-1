@@ -139,7 +139,8 @@ describe('TRAK-356 Share', () => {
     await user().click(screen.getByRole('button', { name: 'Share now' }))
     await waitFor(() => expect(shares).toEqual([{ p_plan_id: 'plan-1', p_talked: false }]))
     expect(await screen.findByText('Shared 6 Nov.')).toBeInTheDocument()
-    expect(screen.getByText('Edits wait here until you share them.')).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): the Shared box is its title alone.
+    expect(screen.queryByText('Edits wait here until you share them.')).toBeNull()
     expect(screen.queryByText(/don.t see the season plan/)).toBeNull()
     expect(window.location.pathname).toBe('/coach/season-plan')
     expect(screen.queryByRole('navigation', { name: 'Season plan steps' })).toBeNull()
@@ -323,7 +324,8 @@ describe('TRAK-356 once shared', () => {
     sharedPlan()
     watches = [{ squad_player_id: 'pat', since: new Date(Date.now() - 30 * 86400_000).toISOString() }]
     renderApp('/coach/home')
-    expect(await screen.findByText('Watched 2 weeks · Set Pat up')).toBeInTheDocument()
+    expect(await screen.findByText('Watched 2 weeks')).toBeInTheDocument()
+    expect(screen.getByText('Set Pat up')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Set up' }))
     const sheet = await screen.findByRole('dialog', { name: "Pat's objectives" })
     expect(window.location.pathname).toBe('/coach/season-plan')

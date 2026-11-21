@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { planSquad, useSeasonPlan } from '@/lib/season-plan'
-import { evalDay, latestRatings, rhythmOf, rhythmText } from '@/lib/evaluation'
+import { evalDay, latestRatings } from '@/lib/evaluation'
 import { NavBar, WIDE_COLUMN } from '@/components/trak'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
@@ -51,13 +51,11 @@ export default function CoachEvaluation() {
     body = <LoadError what="your evaluation" onRetry={() => { evaluations.retry(); roster.retry(); void held.refetch() }} />
   } else if (!evaluations.ready || !mine || roster.isPending || held.isPending) body = <LoadingSkeleton label="Loading your evaluation…" lines={1} avatar rows={4} className="pt-2" />
   else if (!due?.dueOn) {
-    const { every, day } = rhythmOf(plan)
     body = <div className="arc grid gap-4">
-      {published !== null && <Alert tone="success" title={`Published to ${published} ${published === 1 ? 'player' : 'players'}.`}>
-        Each sees their band and your note. Their families see the band, never the note.</Alert>}
+      {published !== null && <Alert tone="success" title={`Published to ${published} ${published === 1 ? 'player' : 'players'}.`} />}
       <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{due?.next
-        ? `The next evaluation opens ${evalDay(due.next, true)}. Everyone starts where they were last time; you change only who moved.`
-        : 'No more evaluations this season.'} <span className="text-ink-3">You evaluate {rhythmText(every, day)}.</span></p>
+        ? `The next evaluation opens ${evalDay(due.next, true)}.`
+        : 'No more evaluations this season.'}</p>
       <div><Button variant="secondary" onClick={() => navigate('/coach/home')}>Back to Home</Button></div>
     </div>
   } else {
@@ -66,8 +64,7 @@ export default function CoachEvaluation() {
       .map(p => ({ id: p.id, name: p.player_name, detail: [p.position, p.shirt_number != null ? `#${p.shirt_number}` : null].filter(Boolean).join(' · ') }))
     const waiting = inSquad.filter(p => roster.consentPending.has(p.id)).map(p => p.player_name)
     body = <div className="grid gap-4">
-      {due.since && due.since < evaluations.today && <Alert tone="warning" title={`Due since ${evalDay(due.since)}.`}>
-        It stays here until you publish it. One evaluation covers every date since.</Alert>}
+      {due.since && due.since < evaluations.today && <Alert tone="warning" title={`Due since ${evalDay(due.since)}.`} />}
       <EvaluationSteps key={`${plan.id}:${due.dueOn}`} coachId={user!.id} planId={plan.id} squad={squad} dueOn={due.dueOn}
         players={players} waiting={waiting} latest={latestRatings(roster.assessments)} objectivesOf={held.of}
         onPublished={setPublished} onRefused={roster.retry} />

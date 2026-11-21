@@ -182,7 +182,6 @@ function SetUp({ squad, plan, saved, onNext }: { squad: string; plan: SeasonPlan
 
   return (
     <div className="arc grid gap-5">
-      <p className="text-sm text-ink-2">Your dates, how often you evaluate each player, and up to three season objectives. You can save with none and add them later.</p>
       <div className="grid items-start gap-5 laptop:grid-cols-2">
         <section aria-labelledby="season-dates" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
           <h2 id="season-dates" className="text-lg font-medium text-ink">Your season</h2>

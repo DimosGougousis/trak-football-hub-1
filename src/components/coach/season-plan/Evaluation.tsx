@@ -155,7 +155,7 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
             <span className="flex items-center gap-2 text-sm text-ink-2"><BandChip ratings={entry.ratings} move={bandMove(entry.ratings, before)} />{average(entry.ratings)}</span>
           </div>
           <p className="text-sm text-ink-3">{before
-            ? `From last time: ${bandOf(before).word}, ${average(before)}. Move only what changed.`
+            ? `From last time: ${bandOf(before).word}, ${average(before)}.`
             : `No ratings yet: each starts at 5. Set ${name}'s, then press Done.`}</p>
           <div className="grid gap-5">
             {RATINGS.map(({ key, label }) => <SliderInput key={key} label={label} value={entry.ratings[key]}
@@ -163,7 +163,7 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
           </div>
         </section>
         <ObjectivesSection name={name} open={objectivesOf(open.id)} entry={objectivesEntry(open.id)} onChange={next => changeObjectives(open.id, next)} />
-        <Textarea label={`Note to ${name}`} description={`Optional. Only ${name} sees it, never their family.`} rows={3}
+        <Textarea label={`Note to ${name}`} description={`Optional. Only ${name} sees it.`} rows={3}
           maxLength={NOTE_MAX} value={entry.note} placeholder="e.g. Your first touch has come on. Next: look up before it arrives."
           onChange={event => change(open.id, { note: event.target.value.slice(0, NOTE_MAX) })} />
         <div className="flex justify-end">
@@ -181,8 +181,6 @@ export function EvaluationSteps({ coachId, planId, squad, dueOn, players, waitin
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="grid gap-2">
               <h2 id="evaluation-players" className="text-lg font-medium text-ink">How is each player doing?</h2>
-              <p className="text-sm text-ink-2">{latest.size ? 'Everyone starts where they were last time. Change only who moved.'
-                : 'Nobody has ratings yet: open each player and rate them once. Next time they start from there.'}</p>
             </div>
             <span className="text-sm text-ink-3">{changed.length ? `${count(changed.length, 'player')} changed` : 'Nobody changed yet'}</span>
           </div>
@@ -236,7 +234,7 @@ function ObjectivesSection({ name, open, entry, onChange }: {
     <section aria-labelledby="evaluation-objectives" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
       <div className="grid gap-2">
         <h3 id="evaluation-objectives" className="text-lg font-medium text-ink">Objectives</h3>
-        <p className="text-sm text-ink-3">{open.length ? `How is ${name} doing on each? Met closes it.` : `${name} has no objectives yet. You can add one.`}</p>
+        {!open.length && <p className="text-sm text-ink-3">{`${name} has no objectives yet. You can add one.`}</p>}
       </div>
       {open.map(o => (
         <div key={o.id} className="grid gap-2">
@@ -319,7 +317,8 @@ function PublishStep({ players, entries, latest, waiting, unrated, objectivesUns
         </section>
       </div>
       <section aria-label="Who sees what" className="grid gap-1 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-        <p className="text-sm text-ink">Each player sees their band and your note to them. Their family sees the band, never the note. Nobody sees another player’s.</p>
+        {/* TRAK-494 (Kostas, 20 Nov): short. The family sees the band, so it's "your note", not "this". */}
+        <p className="text-sm text-ink">Only the player sees your note.</p>
         <p className="text-sm text-ink-3">{count(players.length, 'player')} · {count(changed.length, 'change')} · {count(notes, 'note')}
           {waiting.length ? ` · not in it: ${waiting.join(', ')}, waiting for a parent` : ''}</p>
       </section>

@@ -196,7 +196,8 @@ describe('J8.5: a weekly training series', { timeout: 20_000 }, () => {
     await pickTime(userEvent, 'Start', '18:30')
     // The choice is made on the first step now (an edit opens there); Review repeats it.
     await eventStep(sheet, 'Review')
-    expect(within(sheet).getByText('Saves this week and the following weeks.')).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): no "Saves this week and the following weeks." line.
+    expect(within(sheet).queryByText('Saves this week and the following weeks.')).toBeNull()
     await saveEventWith(sheet, 'Save changes')
 
     await waitFor(() => expect(writes).toHaveLength(2))

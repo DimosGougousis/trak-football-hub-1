@@ -109,8 +109,8 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
         {open ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
       </button>
       {open && <div id={`season-plan-body-${squad}`} className="grid gap-4">
-        {plan.shared_at ? <SharedBody coachId={coachId} squad={squad} plan={plan} />
-          : <p className="text-sm text-ink-2">Once you share the plan, how the season is going shows here.</p>}
+        {/* TRAK-494: no "Once you share the plan, how the season is going shows here." before it's shared. */}
+        {plan.shared_at && <SharedBody coachId={coachId} squad={squad} plan={plan} />}
         <div className="flex justify-end">
           <Button variant="secondary" size="sm" onClick={toPlan}>{plan.shared_at ? 'View plan' : 'Continue'}</Button>
         </div>

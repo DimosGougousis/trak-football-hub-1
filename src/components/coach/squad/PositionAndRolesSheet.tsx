@@ -111,10 +111,9 @@ function Panel({ coachId, player, first, saved, own, saveLabel, saveNeedsChange,
       </div>
     </fieldset>
 
-    {!main ? <p className="text-sm text-ink-2">{t('coachSquad:pickMainFirst', { name: first })}</p> : <>
+    {!main ? null : <>
       <fieldset className="grid gap-4">
         <legend className="mb-1 text-sm font-medium text-ink">{t('coachSquad:playerRoles')} <span className="font-normal text-ink-3">{t('coachSquad:pickedCount', { count: chosen.length })}</span></legend>
-        <p className="-mt-2 text-sm text-ink-3">{t('coachSquad:howTheyPlay')}</p>
         {groups.map((group, index) => <div key={group.heading} role="group" aria-label={shown(ROLE_HEADING_WORD, group.heading)} className="grid gap-2">
           <p className="text-sm text-ink-3">{shown(ROLE_HEADING_WORD, group.heading)}</p>
           <div className="flex flex-wrap gap-2">
@@ -128,7 +127,6 @@ function Panel({ coachId, player, first, saved, own, saveLabel, saveNeedsChange,
 
       <fieldset className="grid gap-2">
         <legend className="mb-2 text-sm font-medium text-ink">{t('coachSquad:canAlsoPlay')} <span className="font-normal text-ink-3">{t('coachSquad:upTo2')}</span></legend>
-        <p className="-mt-1 text-sm text-ink-3">{t('coachSquad:coverNote')}</p>
         <div className="flex flex-wrap gap-2">
           {POSITIONS.filter(p => p.value !== main).map(p => {
             const on = also.includes(p.value), full = !on && also.length >= 2

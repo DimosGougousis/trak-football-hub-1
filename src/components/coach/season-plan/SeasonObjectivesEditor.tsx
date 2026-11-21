@@ -28,7 +28,7 @@ export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onCha
         <h2 id="season-objectives" className="text-lg font-medium text-ink">Season objectives</h2>
         <span className="text-sm text-ink-3">{objectives.length} of {MAX_SEASON_OBJECTIVES}</span>
       </div>
-      {objectives.length === 0 && <p className="text-sm text-ink-3">None yet. Select from the list or write your own.</p>}
+      {objectives.length === 0 && <p className="text-sm text-ink-3">None yet.</p>}
       <ol className="grid gap-4">
         {objectives.map((o, index) => (
           <li key={o.key} className="grid gap-2 rounded-xl border border-line p-3">
@@ -47,7 +47,6 @@ export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onCha
       </ol>
       <div className="grid gap-2">
         <h3 className="text-sm font-medium text-ink-2">Add one</h3>
-        {full && <p className="text-sm text-ink-3">Up to three. {removeWord} one to add another.</p>}
         <div className="flex flex-wrap gap-2">
           {SEASON_OBJECTIVE_PRESETS.filter(preset => !chosen.has(preset.title)).map(preset => (
             <Button key={preset.title} variant="secondary" size="sm" disabled={full} title={preset.looksLike}

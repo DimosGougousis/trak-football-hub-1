@@ -147,7 +147,9 @@ describe('TRAK-355 watch first', () => {
   it('when the reminder is due, Home brings the player back; the card opens their sheet, and setting them up ends it', async () => {
     watches = [{ squad_player_id: 'p2', since: daysAgo(15) }]
     renderApp('/coach/home')
-    const card = await screen.findByText('Watched 2 weeks · Set Bea up')
+    // TRAK-494 (Kostas, 20 Nov): the title says why; the line under it, who.
+    const card = await screen.findByText('Watched 2 weeks')
+    expect(screen.getByText('Set Bea up')).toBeInTheDocument()
     expect(card).toBeInTheDocument()
     await user().click(within(card.closest('li, article, section, div[role="listitem"]') ?? document.body).getAllByRole('button', { name: 'Set up' })[0])
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan/objectives'))
@@ -160,7 +162,7 @@ describe('TRAK-355 watch first', () => {
     cleanup()
     renderApp('/coach/home')
     await screen.findByRole('heading', { name: /^Needs you/ })
-    expect(screen.queryByText(/Set Bea up$/)).toBeNull()
+    expect(screen.queryByText('Set Bea up')).toBeNull()
   }, 30_000)
 
   it('a due player with no position goes back to Positions, their sheet open; the 4-week net brings them', async () => {
@@ -169,7 +171,8 @@ describe('TRAK-355 watch first', () => {
     trainings = [{ squad: 'U16', status: 'scheduled' }]
     watches = [{ squad_player_id: 'p1', since: daysAgo(29) }]
     renderApp('/coach/home')
-    const card = await screen.findByText('Watched 4 weeks · Set Omar up')
+    const card = await screen.findByText('Watched 4 weeks')
+    expect(screen.getByText('Set Omar up')).toBeInTheDocument()
     await user().click(within(card.closest('li, article, section, div[role="listitem"]') ?? document.body).getAllByRole('button', { name: 'Set up' })[0])
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan/positions'))
     expect(await screen.findByRole('dialog', { name: "Omar's position and roles" })).toBeInTheDocument()

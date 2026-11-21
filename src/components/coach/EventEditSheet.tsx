@@ -309,10 +309,6 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
               minuteStep={5} format="12h" placeholder={t('coachSchedule:pickStartTime')} emptyAt="17:00" />
           </ArcField>
 
-          {sheet.scope === 'following' && (
-            <p className="text-[11px] text-ink-3" style={font}>{t('coachSchedule:eachWeekKeepsDate')}</p>
-          )}
-
           {/* Optional: empty means meet at the start time. */}
           <ArcField>
             <TimePicker label={t('coachSchedule:meetTimeEarlier')} className="arc-trak-field"
@@ -396,11 +392,6 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
         </>}
 
         {sheet.step === REVIEW && <>
-          {inSeries(sheet.row) && (
-            <p className="text-[12px] text-ink-2" style={font}>
-              {sheet.scope === 'following' ? t('coachSchedule:savesFollowing') : t('coachSchedule:savesOnlyThis')}
-            </p>
-          )}
           <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem}
             squad={coachSquad.squads.length >= 2 ? squadName(sheet.row ? sheet.row.squad : sheet.form.squad === undefined ? coachSquad.squad : sheet.form.squad) : undefined} />
         </>}

@@ -10,7 +10,6 @@ import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { positionsBoard } from '@/lib/positions'
 import type { Tables } from '@/integrations/supabase/types'
 import type { SeasonPlan } from '@/lib/season-plan'
-import { ruleText } from '@/lib/watch-first'
 import { WatchBadge } from './WatchFirst'
 import { WatchRulePicker } from './WatchRulePicker'
 import { useWatchList, useWatchPlayers } from './useWatching'
@@ -105,7 +104,6 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
         <p id="objectives-count" className="text-sm text-ink-2">{withSome} of {plural(placed.length, 'player')} {withSome === 1 ? 'has' : 'have'} one or two</p>
         <Progress value={withSome} max={Math.max(placed.length, 1)} aria-labelledby="objectives-count" />
         {board.waiting > 0 && <p className="text-sm text-ink-3">{board.waiting === 1 ? '1 player is' : `${board.waiting} players are`} waiting for consent. They join this list once it's given.</p>}
-        <p className="text-sm text-ink-3">Up to two each, from the six for their position or your own. You can skip anyone.</p>
       </section>
 
       {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
@@ -117,7 +115,6 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
 
       {board.unplaced.length > 0 && <section aria-labelledby="objectives-unplaced" className="grid gap-2 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h3 id="objectives-unplaced" className="text-base font-medium text-ink">No position yet <span className="font-normal text-ink-3">· {board.unplaced.length}</span></h3>
-        <p className="text-sm text-ink-3">Objectives come from the player's position. Give them one first.</p>
         <p className="text-sm text-ink-2">{board.unplaced.map(p => p.player_name).join(', ')}</p>
         <span className="justify-self-start"><Button variant="secondary" size="sm" onClick={onPositions}>Go to Positions</Button></span>
       </section>}
@@ -134,7 +131,7 @@ export function ObjectivesStep({ coachId, squad, plan, seasonObjectives, onBack,
       {(parked.length > 0 || ready.length > 0) && <section aria-labelledby="objectives-watching" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="grid gap-2">
           <h3 id="objectives-watching" className="text-base font-medium text-ink">Watching <span className="font-normal text-ink-3">· {parked.length}</span></h3>
-          <p className="text-sm text-ink-3">{parked.length ? `Trak reminds you ${ruleText(watchOf.get(parked[0].id)!.rule)}, or after 4 weeks at the latest. Nothing goes out while you watch.` : 'Nobody is waiting on a reminder.'}</p>
+          {!parked.length && <p className="text-sm text-ink-3">Nobody is waiting on a reminder.</p>}
         </div>
         {parked.length > 0 && <ul className="m-0 list-none divide-y divide-line p-0">{parked.map(row)}</ul>}
         <WatchRulePicker coachId={coachId} squad={squad} plan={plan} />

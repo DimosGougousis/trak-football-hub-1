@@ -82,7 +82,8 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     const watched = await backend(context, unexpected)
     await page.setViewportSize({ width, height })
     await page.goto('/coach/home')
-    const card = page.getByText('Watched 2 trainings · Set Bea up')
+    // TRAK-494: the title says why; "Set Bea up" is the line under it.
+    const card = page.getByText('Watched 2 trainings', { exact: true })
     await expect(card).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`watch-home-${width}.png`) })
     await page.getByRole('button', { name: 'Set up' }).first().click()

@@ -287,7 +287,7 @@ function AccountSettings({ userId }: { userId: string }) {
               </div>
             // TRAK-103: a player's name is the academy's roster name; the database refuses a rename.
             : <SettingsRow label={t('settings:name')}>
-                <span className="grid"><span className="text-ink">{displayName || '—'}</span><span className="text-xs text-ink-3">{t('settings:academySetsName')}</span></span>
+                <span className="grid"><span className="text-ink">{displayName || '—'}</span></span>
               </SettingsRow>}
           <SettingsRow label={childLogin ? t('settings:username') : t('settings:email')}>{childLogin ? childUsername(user?.email) : user?.email || '—'}</SettingsRow>
         </SettingsRows>
