@@ -2,7 +2,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, type CSSProperti
 import { Link, useLocation, useNavigate, useNavigationType, type Location } from 'react-router-dom'
 import { Breadcrumb } from '@/components/arc/breadcrumb/breadcrumb'
 import { ArcProvider, type ArcLinkProps } from '@/components/arc/lib/arc-provider'
+import { ChevronLeft } from 'lucide-react'
 import { placeOf, tabOf } from '@/lib/coach-places'
+import { useTranslation } from '@/lib/i18n'
 
 /* TRAK-334 (Imad, 2 Nov, Matches round 2 item 1): "anything I click … is easy to go back to where I was before
    clicking". A coach page reached by clicking into something shows a trail at its top, where its back link was, on a
@@ -100,6 +102,7 @@ export function TrailLink({ crumb }: { crumb: Crumb }) {
  *  it sits under, after its nav row, for when nothing came before it (a link, a refresh). `style` can set Arc's text
  *  tokens, for a trail on a coloured header. On a laptop it shows in the frame's top bar instead (TRAK-347). */
 export function CoachTrail({ current, parents = [], className, style }: { current: string; parents?: Crumb[]; className?: string; style?: CSSProperties }) {
+  const { t } = useTranslation()
   const location = useLocation()
   const trails = useContext(TrailContext)
   const back = useTrailBack()
@@ -114,8 +117,17 @@ export function CoachTrail({ current, parents = [], className, style }: { curren
     return () => topBar(null)
   }, [topBar, shown, current])
   if (topBar) return null
+  // TRAK-498 (Imad, 20 Nov): on a phone the trail wasn't read as a way back, so an arrow leads it. It is the last crumb:
+  // back where the coach came from, or, opened from a link, the page above this one (its tab's first page). Settings'
+  // back button's size; it overhangs the trail's row (-my-1), so every title stays where TRAK-422 put it.
+  const up = behind.at(-1)
   return (
-    <div className={['arc', className].filter(Boolean).join(' ')} style={style}>
+    <div data-trail="" className={['arc flex items-center gap-2', className].filter(Boolean).join(' ')} style={style}>
+      {up && <Link to={up.href} onClick={back(up)} aria-label={t('common:back')}
+        className="-my-1 flex h-9 w-9 flex-none items-center justify-center rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        style={{ color: 'var(--accent-strong)', borderColor: 'var(--border-strong)' }}>
+        <ChevronLeft size={18} strokeWidth={1.75} aria-hidden="true" />
+      </Link>}
       <ArcProvider link={RouterLink}>
         <Breadcrumb ariaLabel="Breadcrumb trail" items={[...behind.map(crumb => ({ label: crumb.label, href: crumb.href, onClick: back(crumb) })), { label: current }]} />
       </ArcProvider>
