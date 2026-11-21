@@ -200,7 +200,8 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   const starting = new Set(Object.values(current.starters))
   const bench = [...boardPlayers.values()].filter(p => p.canPlay && !starting.has(p.id))
 
-  return <div className="arc grid gap-6 laptop:gap-8">
+  // TRAK-514: the formation editor keeps the content width it had under the page's old 1,280 px cap (see GamePlan).
+  return <div className="arc grid max-w-[1216px] gap-6 laptop:gap-8">
     {header}
     <div role="group" aria-label={t('coachSquad:fmSavedList')} className="grid gap-2 tablet:grid-cols-2 laptop:grid-cols-3">
       {list.map(f => {
