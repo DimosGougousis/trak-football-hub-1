@@ -149,7 +149,9 @@ export function GamePlan({ game, form, draft, who, step, onStep, sharedAt, chang
   useDefaultFormation({ eventId: game.id, form, onForm: change, enabled: step === 1 && !locked })
   const copy = useFormationCopy(game.id).data ?? null
   return (
-    <div className="grid gap-5 pt-4">
+    // TRAK-514 (Imad, 20 Nov): on a wide screen the line-up stretched once TRAK-463 lifted the page's 1,280 px cap, so
+    // the game plan keeps that cap's content width (1,280 less 32 px a side) for now; TRAK-513 rebuilds this screen.
+    <div className="grid max-w-[1216px] gap-5 pt-4">
       {/* TRAK-346 (Imad, 3 Nov): any step opens from here, ahead as well as back, so an Edit never means walking back. */}
       <Stepper steps={steps()} current={step} onStepSelect={onStep} label={t('coachHome:gamePlan')} jumpAhead />
       {step === 0 ? <TacticsAndAnalysis eventId={game.id} opponent={game.opponent ?? null} squad={game.squad ?? null} form={form} onFormChange={change} locked={locked} />
