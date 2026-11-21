@@ -126,8 +126,12 @@ message. These decisions are recorded in TRAK-63, TRAK-64 and TRAK-500.
 **With the season plan (TRAK-364; draft awaiting Kostas's review).** Academies
 without the `season_plan` switch keep J5 exactly as written above. Where the
 switch is on and a squad's season plan is shared, the squad is evaluated on the
-plan's rhythm: every 2 weeks, every month or every 6 weeks, on a chosen day
-(for every month, the last such day of the month). Dates count in the academy's
+plan's rhythm: every month, every 3 months, every 6 months, or Custom (every 2
+to 26 weeks), on a chosen day (for the month choices, the last such day of the
+month; every 3 or 6 months counts the season's months from its first). When the
+rhythm leaves the season's last four weeks without a date, a last one is added
+on the chosen day on or before the season's end (TRAK-525; a plan saved as every
+2 or 6 weeks keeps its dates, as Custom). Dates count in the academy's
 time zone, from the day the plan was first shared. Home shows one Evaluation
 due card for the squad in place of its per-player Assess reminders. A missed
 date stays due, and one evaluation covers every date that has passed. The

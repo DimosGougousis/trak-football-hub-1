@@ -334,5 +334,11 @@
   "fmUndoneCopy_one": "Undone. {{name}} is no longer copied into the match.",
   "fmUndoneCopy_other": "Undone. {{name}} is no longer copied into those matches.",
   "fmUndoCopyFailed": "Couldn't undo. Check your connection and try again.",
-  "fmUndoCopyLocked": "This can't be undone: a match has kicked off or its plan has been shared."
+  "fmUndoCopyLocked": "This can't be undone: a match has kicked off or its plan has been shared.",
+  "rhythmMonth": "Every month",
+  "rhythm3Months": "Every 3 months",
+  "rhythm6Months": "Every 6 months",
+  "rhythmCustom": "Custom",
+  "rhythmWeeks": "Repeat every",
+  "rhythmWeeksUnit": "weeks"
 }

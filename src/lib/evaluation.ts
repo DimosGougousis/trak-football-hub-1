@@ -3,24 +3,34 @@ import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS, type BandConfig } from '@/lib/types'
 
 /* TRAK-364 (Season plan 16/18, spec TRAK-348): the evaluation. Where the season plan is on, the coach evaluates every
-   consented player of a squad on the plan's rhythm (every 2 weeks, every month or every 6 weeks, on a day) instead of
+   consented player of a squad on the plan's rhythm (since TRAK-525: every month, 3 months, 6 months or Custom weeks, on a day) instead of
    being reminded one player at a time. The dates come from the season's dates, as the mockup's evalDates(): every 2 or
    6 weeks, the first one on the day after a full gap from the start; every month, the last such day of each month at
    least 20 days into the season. They count from the day the plan was first shared, after the last evaluation, in the
    academy's time zone. A missed date stays due; when several have passed, one evaluation closes them all. Each player
    starts from their latest six ratings, however they were given, which give the band (BANDS, scoreToBand). */
 
-export type EvalEvery = '2w' | 'month' | '6w'
-export const EVAL_EVERY: { value: EvalEvery; label: string }[] = [
-  { value: '2w', label: 'Every 2 weeks' }, { value: 'month', label: 'Every month' }, { value: '6w', label: 'Every 6 weeks' },
-]
+/* TRAK-525 (Reports 2/10, Imad 21 Nov): the rhythm is every month, every 3 months, every 6 months, or Custom: a number
+   of weeks, 2 to 26, stored in the same column as '2w' to '26w'. So a plan saved as every 2 or 6 weeks ('2w', '6w')
+   is Custom with its dates unchanged, and the shared copy carries the weeks with no column of its own. */
+export type EvalEvery = 'month' | '3m' | '6m' | `${number}w`
+/** The month choices, in their order; Custom follows them. */
+export const EVAL_MONTHS = ['month', '3m', '6m'] as const satisfies readonly EvalEvery[]
+export const CUSTOM_WEEKS = { min: 2, max: 26, start: 6 } as const
+/** Custom's number of weeks, or null for a month choice. */
+export function weeksOf(every: string): number | null {
+  const weeks = /^\d+w$/.test(every) ? Number(every.slice(0, -1)) : NaN
+  return weeks >= CUSTOM_WEEKS.min && weeks <= CUSTOM_WEEKS.max ? weeks : null
+}
+const monthsOf = (every: EvalEvery) => every === 'month' ? 1 : every === '3m' ? 3 : every === '6m' ? 6 : null
 /** Days of the week as JavaScript counts them, 0 Sunday. */
 export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
 /** The mockup's default, and the database's: every month, on the last Sunday. */
 export const DEFAULT_EVAL_EVERY: EvalEvery = 'month'
 export const DEFAULT_EVAL_DAY = 0
 
-export const isEvalEvery = (value: unknown): value is EvalEvery => EVAL_EVERY.some(e => e.value === value)
+export const isEvalEvery = (value: unknown): value is EvalEvery =>
+  typeof value === 'string' && ((EVAL_MONTHS as readonly string[]).includes(value) || weeksOf(value) !== null)
 /** A plan's rhythm, with the defaults where a row (or an older reply) has none. */
 export function rhythmOf(plan: { eval_every?: string | null; eval_day?: number | null }): { every: EvalEvery; day: number } {
   const day = plan.eval_day
@@ -30,10 +40,11 @@ export function rhythmOf(plan: { eval_every?: string | null; eval_day?: number |
   }
 }
 
-/** "every month, on the last Sunday", "every 2 weeks, on Saturday" */
+/** "every month, on the last Sunday", "every 3 months, on the last Sunday", "every 2 weeks, on Saturday" */
 export function rhythmText(every: EvalEvery, day: number): string {
   const name = WEEKDAYS[day] ?? WEEKDAYS[DEFAULT_EVAL_DAY]
-  return every === 'month' ? `every month, on the last ${name}` : `${every === '2w' ? 'every 2 weeks' : 'every 6 weeks'}, on ${name}`
+  const months = monthsOf(every)
+  return months ? `every ${months === 1 ? 'month' : `${months} months`}, on the last ${name}` : `every ${weeksOf(every)} weeks, on ${name}`
 }
 
 const DAY = 86_400_000
@@ -47,21 +58,30 @@ export function evaluationDates({ startsOn, endsOn, every, day }: {
 }): string[] {
   if (!startsOn || !endsOn || endsOn <= startsOn) return []
   const start = dayNumber(startsOn), end = dayNumber(endsOn), out: string[] = []
-  if (every === 'month') {
+  const months = monthsOf(every)
+  if (months) {
+    // TRAK-525: every 3 or 6 months is every third or sixth month of the season, the season's first month counted as 1.
     const year = Number(startsOn.slice(0, 4)), month = Number(startsOn.slice(5, 7)) - 1
-    for (let m = month; out.length < 24 && m < month + 36; m++) {
+    for (let m = month + months - 1; out.length < 24 && m < month + 36; m += months) {
       // The month's last day (Date.UTC rolls the month over), then back to the day of the week.
       let d = Date.UTC(year, m + 1, 0) / DAY
       while (weekdayOf(d) !== day) d -= 1
       if (d > end) break
       if (d - start >= 20) out.push(isoOf(d))
     }
-    return out
+  } else {
+    // Custom, as every 2 and 6 weeks were: the first on the day after a full gap from the start.
+    const gap = (weeksOf(every) ?? CUSTOM_WEEKS.start) * 7
+    let d = start + gap - 1
+    while (weekdayOf(d) !== day) d += 1
+    for (; d <= end && out.length < 40; d += gap) out.push(isoOf(d))
   }
-  const gap = every === '2w' ? 14 : 42
-  let d = start + gap - 1
-  while (weekdayOf(d) !== day) d += 1
-  for (; d <= end && out.length < 40; d += gap) out.push(isoOf(d))
+  // TRAK-525: the season ends with a report. When the rhythm leaves its last four weeks without one, the last chosen
+  // day of the week on or before the season's end is added.
+  let last = end
+  while (weekdayOf(last) !== day) last -= 1
+  const latest = out.length ? dayNumber(out[out.length - 1]) : null
+  if (last > start && (latest === null || latest < end - 28)) out.push(isoOf(last))
   return out
 }
 

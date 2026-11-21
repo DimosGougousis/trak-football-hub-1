@@ -230,10 +230,11 @@ describe('TRAK-364 the rhythm', () => {
     expect(within(every).getByRole('button', { name: 'Every month' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(screen.getByRole('group', { name: 'On the last' })).getByRole('button', { name: 'Sunday' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText(/^First evaluation \w{3} \d+ \w{3} \d{4}: each player’s six ratings/)).toBeInTheDocument()
-    await user().click(within(every).getByRole('button', { name: 'Every 2 weeks' }))
-    await user().click(within(screen.getByRole('group', { name: 'On a' })).getByRole('button', { name: 'Saturday' }))
+    // TRAK-525: the choices are every month, every 3 months, every 6 months and Custom.
+    await user().click(within(every).getByRole('button', { name: 'Every 3 months' }))
+    await user().click(within(screen.getByRole('group', { name: 'On the last' })).getByRole('button', { name: 'Saturday' }))
     await user().click(screen.getByRole('button', { name: 'Save draft' }))
-    await waitFor(() => expect(patches.at(-1)).toMatchObject({ eval_every: '2w', eval_day: 6 }))
+    await waitFor(() => expect(patches.at(-1)).toMatchObject({ eval_every: '3m', eval_day: 6 }))
   }, 30_000)
 
   it('after sharing, View plan says it with an Edit; a new rhythm waits under Not shared yet as the evaluation dates', async () => {
@@ -244,10 +245,11 @@ describe('TRAK-364 the rhythm', () => {
     await user().click(within(season).getByRole('button', { name: 'Edit how often you evaluate' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Evaluation' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
-    await user().click(screen.getByRole('button', { name: 'Every 6 weeks' }))
+    // TRAK-525: every 2 weeks is now Custom; every 6 months is one of the new choices.
+    await user().click(screen.getByRole('button', { name: 'Every 6 months' }))
     await user().click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByText('Not shared yet: evaluation dates.')).toBeInTheDocument()
-    expect(patches).toEqual([{ eval_every: '6w', eval_day: 0 }])
+    expect(patches).toEqual([{ eval_every: '6m', eval_day: 0 }])
   }, 30_000)
 })
 
