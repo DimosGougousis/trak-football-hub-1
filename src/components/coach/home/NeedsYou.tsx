@@ -15,8 +15,14 @@ export type OwedEvent = { id: string; title: string; when: string; squad: string
   at?: number }
 
 /** TRAK-444: a full season of owed items was 100 cards; this many show first, and Show all opens the rest. There are no
- *  filters (Tarek, 13 Nov: not what he imagined, and not needed): the most urgent and the newest come first. */
+ *  filters (Tarek, 13 Nov: not what he imagined, and not needed): the most urgent and the newest come first.
+ *  TRAK-506 (Imad, 20 Nov): the row holds this many, four whole on a laptop and the fifth cut at about 30%, so five or
+ *  more get "See all" at the end of the row. */
 export const FIRST_CARDS = 5
+
+/** TRAK-506: one row on every screen. On a laptop a card is sized from the section's width (cqw; less its 8 px of padding
+ *  and four 12 px gaps) so 4.3 fit; the floor keeps the next-step button whole on a narrow laptop, where fewer show. */
+const ROW_CARD = 'w-[248px] flex-none laptop:w-[max(184px,calc((100cqw_-_56px)/4.3))]'
 
 /** TRAK-262 (Imad, 22 Oct): Home's Needs you, one swipeable card per player (`needsYou()` says who). Imad, 24 Oct:
  *  events the week marks "Needs you" come first, with their Take register or Log it. */
@@ -31,7 +37,7 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
   const { t } = useTranslation()
   const [all, setAll] = useState(false)
   const count = items ? items.length + events.length : null
-  const long = count !== null && count > FIRST_CARDS
+  const long = count !== null && count >= FIRST_CARDS
   const when = (card: { at?: number }) => card.at ?? Date.now()
   // The week's cards: urgent first, then the newest. Player cards already come most urgent first (needsYou()).
   const sortedEvents = [...events].sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent) || when(b) - when(a))
@@ -44,10 +50,12 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
     {failed ? <LoadError what={t('coachHome:needsYouWhat')} onRetry={onRetry} />
       : !items ? <LoadingSkeleton label={t('coachHome:needsYouLoading')} lines={2} rows={2} className="h-[148px] content-start overflow-hidden rounded-2xl border border-line bg-surface p-5 laptop:p-6" />
       : count === 0 ? <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{t('coachHome:needsYouNone')}</p>
-      : <div className="arc -mx-1">
+      : <div className="arc -mx-1" style={{ containerType: 'inline-size' }}>
         <ScrollArea orientation="horizontal" snap="x mandatory" fade={24} label={t('coachHome:needsYouList')}>
-          <ul className="flex gap-3 px-1 pb-1 laptop:flex-wrap">
-            {shown.flatMap(card => 'event' in card ? [card.event] : []).map(event => <li key={`event:${event.id}`} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
+          <div className="flex gap-3 px-1 pb-1">
+          {/* TRAK-506: See all opens the full view here, every card wrapped into a grid. */}
+          <ul className={all ? 'grid flex-1 grid-cols-[repeat(auto-fill,minmax(248px,1fr))] gap-3' : 'flex gap-3'}>
+            {shown.flatMap(card => 'event' in card ? [card.event] : []).map(event => <li key={`event:${event.id}`} className={all ? 'min-w-0' : ROW_CARD} style={{ scrollSnapAlign: 'start' }}>
               {/* The week's "needs you" yellow (TRAK-270), so the card reads as the same thing. */}
               <div className="flex h-full w-full flex-col gap-3 rounded-2xl border-[1.5px] bg-surface p-4" style={{ borderColor: 'rgb(var(--t-attention))' }}>
                 <span className="grid min-w-0">
@@ -61,7 +69,7 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
                 <span className="mt-auto">{event.action}</span>
               </div>
             </li>)}
-            {shown.flatMap(card => 'item' in card ? [card.item] : []).map(item => <li key={`${item.kind}:${item.playerId}`} className="w-[248px] flex-none" style={{ scrollSnapAlign: 'start' }}>
+            {shown.flatMap(card => 'item' in card ? [card.item] : []).map(item => <li key={`${item.kind}:${item.playerId}`} className={all ? 'min-w-0' : ROW_CARD} style={{ scrollSnapAlign: 'start' }}>
               {/* TRAK-423: the action is the week's small button (as "Take register" beside it), named for the player. */}
               <div className="flex h-full w-full flex-col gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
                 <span className="flex items-center gap-3">
@@ -85,11 +93,13 @@ export function NeedsYou({ items, events = [], failed, onRetry, onOpen }: {
               </div>
             </li>)}
           </ul>
+          {long && !all && <span className="flex flex-none items-center pr-3" style={{ scrollSnapAlign: 'end' }}>
+            <Button variant="ghost" size="sm" onClick={() => setAll(true)} aria-expanded={false}>{t('coachHome:showAll', { count: cards.length })}</Button>
+          </span>}
+          </div>
         </ScrollArea>
-        {long && <div className="mt-2 px-1">
-          <Button variant="ghost" size="sm" onClick={() => setAll(v => !v)} aria-expanded={all}>
-            {all ? t('coachHome:showFewer') : t('coachHome:showAll', { count: cards.length })}
-          </Button>
+        {long && all && <div className="mt-2 px-1">
+          <Button variant="ghost" size="sm" onClick={() => setAll(false)} aria-expanded>{t('coachHome:showFewer')}</Button>
         </div>}
       </div>}
   </section>
