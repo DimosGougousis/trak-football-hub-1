@@ -1,6 +1,6 @@
 import { useTranslation } from '@/lib/i18n'
 import { optionWords } from '@/lib/games/match-words'
-import { EVALUATION_LIMITS, PLAN_WORKED, hasPlayed, setPlayed, withScore, type EvaluationForm, type PlanWorked, type ScoredGoal } from '@/lib/games/evaluation'
+import { EVALUATION_LIMITS, PLAN_WORKED, hasPlayed, setPlayed, startInstead, whoPlayed, withScore, type EvaluationForm, type PlanWorked, type ScoredGoal } from '@/lib/games/evaluation'
 import { Checkbox } from '@/components/arc/checkbox/checkbox'
 import { NumberField } from '@/components/arc/number-field/number-field'
 import { RadioGroup } from '@/components/arc/radio-group/radio-group'
@@ -25,7 +25,9 @@ export function ResultStep({ eventId, form, onFormChange, starters, bench, goals
   goals: string[]
 }) {
   const { t } = useTranslation()
-  const played = [...starters.filter(p => hasPlayed(form, p.id, true)), ...bench.filter(p => hasPlayed(form, p.id, false))]
+  const played = whoPlayed(form, starters, bench)
+  const instead = new Set(Object.values(form.instead))
+  const cameOn = bench.filter(player => !instead.has(player.id))
   const setGoal = (index: number, next: Partial<ScoredGoal>) =>
     onFormChange({ ...form, goals: form.goals.map((goal, i) => i === index ? { ...goal, ...next } : goal) })
   const pick = (value: string) => value === NONE ? null : value
@@ -84,11 +86,20 @@ export function ResultStep({ eventId, form, onFormChange, starters, bench, goals
         {starters.length + bench.length === 0 ? <p className="text-sm text-ink-2">{t('coachMatches:nobodyRecordable')}</p> : <>
           {starters.length > 0 && <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-medium text-ink">{t('coachMatches:started')}</legend>
-            {starters.map(player => tick(player, true))}
+            {starters.map(player => <div key={player.id} className="grid gap-2">
+              {tick(player, true)}
+              {/* TRAK-519 (Imad, 21 Nov): a starter who didn't show, and who started in their place. */}
+              {!hasPlayed(form, player.id, true) && <div className="pl-8">
+                <Select label={t('coachMatches:startedInsteadOf', { name: player.name.split(/\s+/)[0] })} value={form.instead[player.id] ?? NONE}
+                  onValueChange={value => onFormChange(startInstead(form, player.id, pick(value)))}
+                  options={[{ value: NONE, label: t('coachMatches:nobodyInstead') },
+                    ...bench.filter(b => !instead.has(b.id) || form.instead[player.id] === b.id).map(b => ({ value: b.id, label: b.name }))]} />
+              </div>}
+            </div>)}
           </fieldset>}
-          {bench.length > 0 && <fieldset className="grid gap-2">
+          {cameOn.length > 0 && <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-medium text-ink">{starters.length ? t('coachMatches:cameOn') : t('coachMatches:played')}</legend>
-            {bench.map(player => tick(player, false))}
+            {cameOn.map(player => tick(player, false))}
           </fieldset>}
         </>}
       </section>

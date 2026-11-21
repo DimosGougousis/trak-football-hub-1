@@ -245,6 +245,8 @@
   "nobodyRecordable": "Κανείς σε αυτή την ομάδα δεν μπορεί να καταγραφεί ακόμα.",
   "started": "Βασικοί",
   "cameOn": "Μπήκαν αλλαγή",
+  "startedInsteadOf": "Ξεκίνησε στη θέση: {{name}}",
+  "nobodyInstead": "Κανείς",
   "played": "Έπαιξαν",
   "planWorked_didnt": "Όχι",
   "planWorked_partly": "Εν μέρει",

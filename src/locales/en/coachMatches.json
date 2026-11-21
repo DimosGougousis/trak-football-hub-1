@@ -245,6 +245,8 @@
   "nobodyRecordable": "Nobody in this squad can be recorded yet.",
   "started": "Started",
   "cameOn": "Came on",
+  "startedInsteadOf": "Started instead of {{name}}",
+  "nobodyInstead": "Nobody",
   "played": "Played",
   "planWorked_didnt": "Didn’t",
   "planWorked_partly": "Partly",

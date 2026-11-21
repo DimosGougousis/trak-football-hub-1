@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PlayerPlans } from '../lineup'
-import { answerOf, evaluationToForm, formToSave, hasPlayed, lineUpAtKickOff, planAnswered, previewReview, publishSummary, setPlayed, summary, withScore } from '../evaluation'
+import { answerOf, evaluationToForm, formToSave, hasPlayed, lineUpAtKickOff, planAnswered, previewReview, publishSummary, setPlayed, startInstead, summary, whoPlayed, withScore } from '../evaluation'
 
 // TRAK-288: the evaluation as the coach fills it, read against the plan as it locked at kick-off.
 const plans: PlayerPlans = {
@@ -118,5 +118,41 @@ describe('publishing (TRAK-289)', () => {
     expect(previewReview(form, 'zagorakis', plans, null, 'parent')).toMatchObject({ job: '', didJob: null, note: null, coachName: null, against: 'above' })
     // TRAK-447: Charisteas had no job in the plan, so there is no "did the job" for him to read.
     expect(previewReview(form, 'charisteas', plans, null, 'player')).toMatchObject({ job: '', expectation: 'usual', context: [], didJob: null, against: 'met', note: null })
+  })
+})
+
+// TRAK-519 (Imad, 21 Nov): a starter who didn't show is unticked and the player who started in their place is picked;
+// "Came on" stays for who came off the bench.
+describe('who started in a starter\'s place (TRAK-519)', () => {
+  const listed = [{ id: 'dellas', starter: true }, { id: 'zagorakis', starter: true }, { id: 'charisteas', starter: false }, { id: 'basinas', starter: false }]
+  const starters = [{ id: 'dellas' }, { id: 'zagorakis' }]
+  const bench = [{ id: 'charisteas' }, { id: 'basinas' }]
+  const sent = (form: ReturnType<typeof evaluationToForm>, id: string) => formToSave('g1', form, listed).p_players.find(p => p.id === id)
+
+  it('puts the player in the no-show\'s place, and sends who started for whom', () => {
+    const form = startInstead(setPlayed(evaluationToForm(empty), 'dellas', false), 'dellas', 'basinas')
+    expect(whoPlayed(form, starters, bench).map(p => p.id)).toEqual(['basinas', 'zagorakis'])
+    expect(sent(form, 'basinas')).toMatchObject({ played: true, started_for: 'dellas' })
+    expect(sent(form, 'dellas')).toEqual({ id: 'dellas', played: false })
+    expect(sent(form, 'zagorakis')).not.toHaveProperty('started_for')
+  })
+
+  it('another pick, nobody, or the starter ticked again takes the player back off', () => {
+    let form = startInstead(setPlayed(evaluationToForm(empty), 'dellas', false), 'dellas', 'basinas')
+    form = startInstead(form, 'dellas', 'charisteas')
+    expect(hasPlayed(form, 'basinas', false)).toBe(false)
+    expect(whoPlayed(form, starters, bench).map(p => p.id)).toEqual(['charisteas', 'zagorakis'])
+    expect(hasPlayed(startInstead(form, 'dellas', null), 'charisteas', false)).toBe(false)
+    form = setPlayed(form, 'dellas', true)
+    expect(form.instead).toEqual({})
+    expect(hasPlayed(form, 'charisteas', false)).toBe(false)
+    expect(formToSave('g1', form, listed).p_players.some(p => 'started_for' in p)).toBe(false)
+  })
+
+  it('a reloaded draft keeps who started for whom', () => {
+    const form = evaluationToForm({ ...empty, players: [{ squad_player_id: 'dellas', played: false, did_job: null, against_expectation: null },
+      { squad_player_id: 'basinas', played: true, did_job: null, against_expectation: 'met', started_for: 'dellas' }] })
+    expect(form.instead).toEqual({ dellas: 'basinas' })
+    expect(whoPlayed(form, starters, bench).map(p => p.id)).toEqual(['basinas', 'zagorakis'])
   })
 })

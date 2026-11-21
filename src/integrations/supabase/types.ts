@@ -859,6 +859,7 @@ export type Database = {
           event_id: string
           played: boolean
           squad_player_id: string
+          started_for: string | null
         }
         Insert: {
           against_expectation?: string | null
@@ -866,6 +867,7 @@ export type Database = {
           event_id: string
           played: boolean
           squad_player_id: string
+          started_for?: string | null
         }
         Update: {
           against_expectation?: string | null
@@ -873,6 +875,7 @@ export type Database = {
           event_id?: string
           played?: boolean
           squad_player_id?: string
+          started_for?: string | null
         }
         Relationships: []
       }
