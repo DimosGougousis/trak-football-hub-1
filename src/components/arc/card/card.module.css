@@ -51,3 +51,6 @@
 /* Trak (TRAK-526): the title with a short corner line across from it, top right. */
 .titleRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .corner { flex: none; color: var(--text-muted); font-size: var(--text-sm); }
+/* Trak (TRAK-541): in the quick look the close button takes the top-right corner (16 px in, 32 px wide), and the panel's
+   text starts 24 px in, so the corner line stops 32 px short: 8 px clear of the button. Closing hands back the card's row. */
+.panel:not([data-returning]) .titleRow { padding-inline-end: var(--space-8); }
