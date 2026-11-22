@@ -373,5 +373,12 @@
   "reportJob": "Job: {{job}}",
   "reportDidntPlay": "Didn’t play",
   "reportObjectivesTitle": "Objectives",
-  "reportNoObjectives": "No objectives yet."
+  "reportNoObjectives": "No objectives yet.",
+  "sentReports": "Reports",
+  "sentReportsWhat": "{{name}}’s reports",
+  "sentReportName": "{{month}} report",
+  "reportSent": "Sent {{date}}",
+  "openReport": "Open",
+  "openReportName": "Open {{name}}’s {{month}} report",
+  "reportNotFound": "This report isn’t here."
 }

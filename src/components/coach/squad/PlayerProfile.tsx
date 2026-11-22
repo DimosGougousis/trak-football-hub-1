@@ -18,6 +18,7 @@ import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skele
 import { PlayerObjectivesSection } from '@/components/coach/season-plan/PlayerObjectivesSection'
 import { isPosition } from '@/lib/positions'
 import { PositionAndRolesSheet } from './PositionAndRolesSheet'
+import { SentReports } from './PlayerReport'
 import { usePlayerRoles } from './usePlayerRoles'
 import { useTranslation } from '@/lib/i18n'
 import { POSITION_WORD } from '@/lib/position-words'
@@ -59,7 +60,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
  * coach's assessment card exactly as it is elsewhere. Imad, 23 Oct: one row of cards, the latest first, swiping to
  * earlier ones, with no date line above them (the card's quick look has the date and session).
  */
-export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, season, squadSeason, since = '1 July', seasonFailed = false, onRetrySeason, placement, onViewReport }: {
+export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, season, squadSeason, since = '1 July', seasonFailed = false, onRetrySeason, placement, onViewReport, onOpenReport }: {
   player: SquadPlayer
   squad: string | null
   coachId: string
@@ -77,6 +78,8 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   placement?: { position: string | null }
   /** TRAK-527 (Reports 4/10): where the squad's plan is shared, the player's report, under Assess. */
   onViewReport?: () => void
+  /** TRAK-528 (Reports 5/10): the reports he was sent, under his assessments, each opening by its evaluation. */
+  onOpenReport?: (evaluationId: string) => void
 }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -186,6 +189,8 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
             </ScrollArea>
           </div>}
       </section>}</Grows>}
+
+    {onOpenReport && <SentReports playerId={player.id} name={player.name} coachId={coachId} onOpen={onOpenReport} />}
 
     {/* TRAK-423: the same small button as Home's Needs you, named for the player. TRAK-501: in the page's grid,
         justify-self keeps its own width (self-start only set its height, so it spanned the page). */}

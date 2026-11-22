@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import { RadarChart } from '@/components/arc/radar-chart/radar-chart'
 import { Badge } from '@/components/arc/badge/badge'
+import { Button } from '@/components/arc/button/button'
 import { CategoryBar } from '@/components/trak/CategoryBar'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
@@ -13,7 +14,8 @@ import { progressLabel } from '@/lib/objective-progress'
 import { useTranslation } from '@/lib/i18n'
 import { BANDS } from '@/lib/types'
 import {
-  bandOfScore, loadPlayerReport, overallOf, playerReportKey, reportDate, reportDayOf, reportMonth, reportSummary,
+  bandOfScore, loadPlayerReport, loadSentReports, overallOf, playerReportKey, reportDate, reportDayOf, reportMonth, reportSummary,
+  sentReportsKey,
   type PlayerReport as Report, type ReportAssessment,
 } from '@/lib/player-report'
 
@@ -45,7 +47,8 @@ export function PlayerReport({ playerId, name, squad, coachId }: { playerId: str
   return <ReportBody report={report.data} name={name} />
 }
 
-function ReportBody({ report, name }: { report: Report; name: string }) {
+/** A report: as it fills up, or, with `sentAt`, as it was sent (TRAK-528). */
+function ReportBody({ report, name, sentAt }: { report: Report; name: string; sentAt?: string }) {
   const { t } = useTranslation()
   const first = name.split(' ')[0]
   const s = reportSummary(report)
@@ -61,7 +64,9 @@ function ReportBody({ report, name }: { report: Report; name: string }) {
           <p className="text-sm text-ink-2">{period}</p>
         </div>
         {/* On a phone the state sits on its own line under the title; on a laptop, at the card's right. */}
-        <div className="w-full laptop:w-auto"><Badge tone="attention" size="md">{t('coachSquad:reportInProgress', { date: reportDate(report.report_day) })}</Badge></div>
+        <div className="w-full laptop:w-auto">{sentAt
+          ? <Badge tone="success" size="md">{t('coachSquad:reportSent', { date: reportDate(sentAt) })}</Badge>
+          : <Badge tone="attention" size="md">{t('coachSquad:reportInProgress', { date: reportDate(report.report_day) })}</Badge>}</div>
       </div>
       <dl className="m-0 grid grid-cols-2 gap-3 laptop:grid-cols-4">
         <Tile label={t('coachSquad:reportOverall')} sub={was}>
@@ -93,6 +98,45 @@ function ReportBody({ report, name }: { report: Report; name: string }) {
       <Objectives report={report} />
     </div>
   </div>
+}
+
+/** TRAK-528 (Reports 5/10): the reports he was sent, newest first, each opening as it was sent. Nothing before the
+ *  first one. */
+export function SentReports({ playerId, name, coachId, onOpen }: { playerId: string; name: string; coachId: string; onOpen: (evaluationId: string) => void }) {
+  const { t } = useTranslation()
+  const first = name.split(' ')[0]
+  const sent = useQuery({ queryKey: sentReportsKey(coachId, playerId), queryFn: () => loadSentReports(playerId) })
+  if (sent.isError) return <LoadError what={t('coachSquad:sentReportsWhat', { name: first })} onRetry={() => { void sent.refetch() }} />
+  if (!sent.data?.length) return null
+  const id = `sent-reports-${playerId}`
+  return <section aria-labelledby={id} className="grid gap-2">
+    <h4 id={id} className={TITLE}>{t('coachSquad:sentReports')}</h4>
+    <ul className="m-0 grid list-none p-0">
+      {sent.data.map(r => {
+        const month = reportMonth(r.report.report_day)
+        return <li key={r.evaluation_id} className="flex items-center justify-between gap-3 border-t border-line py-2.5 first:border-t-0">
+          <span className="grid min-w-0 gap-0.5">
+            <span className="text-sm font-medium text-ink">{t('coachSquad:sentReportName', { month })}</span>
+            <span className="text-xs text-ink-3">{t('coachSquad:reportSent', { date: reportDate(r.sent_at) })}</span>
+          </span>
+          <Button variant="secondary" size="sm" aria-label={t('coachSquad:openReportName', { name: first, month })}
+            onClick={() => onOpen(r.evaluation_id)}>{t('coachSquad:openReport')}</Button>
+        </li>
+      })}
+    </ul>
+  </section>
+}
+
+/** TRAK-528: one report he was sent, by its report day's evaluation, as it was sent. */
+export function SentReport({ playerId, evaluationId, name, coachId }: { playerId: string; evaluationId: string; name: string; coachId: string }) {
+  const { t } = useTranslation()
+  const first = name.split(' ')[0]
+  const sent = useQuery({ queryKey: sentReportsKey(coachId, playerId), queryFn: () => loadSentReports(playerId) })
+  if (sent.isError) return <LoadError what={t('coachSquad:reportWhat', { name: first })} onRetry={() => { void sent.refetch() }} />
+  if (!sent.data) return <LoadingSkeleton label={t('coachSquad:loadingReport', { name: first })} lines={4} />
+  const one = sent.data.find(r => r.evaluation_id === evaluationId)
+  return one ? <ReportBody report={one.report} name={name} sentAt={one.sent_at} />
+    : <p className="text-sm text-ink-2">{t('coachSquad:reportNotFound')}</p>
 }
 
 function Tile({ label, sub, children }: { label: string; sub: string; children: ReactNode }) {
