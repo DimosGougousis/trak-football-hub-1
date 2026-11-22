@@ -160,6 +160,8 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
   const steps = EVENT_STEPS.map(step => ({ ...step, label: t(STEP_WORD[step.id as keyof typeof STEP_WORD]) }))
   const laptop = useSideMenuScreen()
   const coachSquad = useCoachSquad(user?.id)
+  // The event's squad: a saved one keeps its own; a new one takes step 1's pick (TRAK-543), as Save does.
+  const eventSquad = sheet.row ? sheet.row.squad ?? null : sheet.form.squad === undefined ? coachSquad.squad : sheet.form.squad
   const games = useFeature('games')
   // TRAK-161: tell the coach as they type when families won't see the note.
   const noteProblem = familyNoteProblem(sheet.form.familyNote, childNames)
@@ -244,7 +246,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
           {/* Imad, 24 Oct: which squad a new event is for, never silently the last pill tapped. A saved event keeps
               its squad: moving a published one would change which families have it. */}
           {!sheet.row && coachSquad.squads.length >= 2 && (
-            <Choice label={t('nav:squad')} value={(sheet.form.squad === undefined ? coachSquad.squad : sheet.form.squad) ?? ALL_SQUADS}
+            <Choice label={t('nav:squad')} value={eventSquad ?? ALL_SQUADS}
               onChange={next => { if (next) setForm({ squad: next === ALL_SQUADS ? null : next }) }}
               options={[...coachSquad.squads, null].map(squad => ({ value: squad ?? ALL_SQUADS, label: squadName(squad) }))} />
           )}
@@ -362,8 +364,8 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
         {/* Keep the kit editor mounted between steps so unsaved colors survive Back. */}
         <div hidden={sheet.step !== 2}>
           {user && coachSquad.ready && <EventKitField
-            key={`${user.id}:${sheet.row ? sheet.row.squad ?? '' : coachSquad.squad ?? ''}`}
-            coachId={user.id} squad={sheet.row ? sheet.row.squad ?? null : coachSquad.squad}
+            key={`${user.id}:${eventSquad ?? ''}`}
+            coachId={user.id} squad={eventSquad}
             value={sheet.form.kitSnapshot ?? null}
             onChange={kitSnapshot => setForm({ kitSnapshot, kit: kitSnapshot ? describeEventKit(kitSnapshot) : '' })} />}
         </div>
@@ -393,7 +395,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
 
         {sheet.step === REVIEW && <>
           <EventSummary form={sheet.form} repeat={sheet.row ? null : sheet.repeat} noteProblem={noteProblem}
-            squad={coachSquad.squads.length >= 2 ? squadName(sheet.row ? sheet.row.squad : sheet.form.squad === undefined ? coachSquad.squad : sheet.form.squad) : undefined} />
+            squad={coachSquad.squads.length >= 2 ? squadName(eventSquad) : undefined} />
         </>}
 
         {datePassed && (sheet.step === 1 || sheet.step === REVIEW) && (
