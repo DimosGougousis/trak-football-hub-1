@@ -51,13 +51,15 @@ export async function loadSentReports(playerId: string): Promise<SentReport[]> {
 }
 
 /** The report a squad's plan is working towards: the date that's due, or else the next one (the season's last once
- *  none is left), and the report day before it. Null without a date. */
+ *  none is left), and the last report actually sent before it (`sentDays`, the published evaluations' dates), as
+ *  send_reports counts. Not the rhythm's date before it: a rhythm changed mid-season no longer matches the days sent
+ *  (TRAK-545). None sent, and the report runs from the season's first day. Null without a date. */
 export function reportDayOf(plan: { starts_on: string | null; ends_on: string | null; eval_every?: string | null; eval_day?: number | null },
-  due: EvaluationDue): { reportDay: string; lastReportDay: string | null } | null {
+  due: EvaluationDue, sentDays: readonly string[]): { reportDay: string; lastReportDay: string | null } | null {
   const dates = evaluationDates({ startsOn: plan.starts_on, endsOn: plan.ends_on, ...rhythmOf(plan) })
   const reportDay = due.dueOn ?? due.next ?? dates.at(-1) ?? null
   if (!reportDay) return null
-  return { reportDay, lastReportDay: dates.filter(d => d < reportDay).at(-1) ?? null }
+  return { reportDay, lastReportDay: [...sentDays].filter(d => d < reportDay).sort().at(-1) ?? null }
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
