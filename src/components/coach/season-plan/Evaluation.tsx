@@ -239,7 +239,9 @@ export function ObjectivesSection({ name, open, entry, onChange }: {
       {open.map(o => (
         <div key={o.id} className="grid gap-2">
           <p className="text-sm font-medium text-ink">{o.title}</p>
+          {/* TRAK-534: four answers don't fit a phone's card in one row, so there they sit two by two instead of scrolling out of view. */}
           <SegmentedControl label={`Progress on ${o.title}`} options={PROGRESS_OPTIONS} value={entry.progress[o.id] ?? ''}
+            className="[&>div]:grid [&>div]:grid-cols-2 tablet:[&>div]:flex"
             onValueChange={value => { if (isProgress(value)) onChange({ ...entry, progress: { ...entry.progress, [o.id]: value } }) }} />
         </div>
       ))}
