@@ -160,12 +160,11 @@ describe('TRAK-270, TRAK-424: one add button, and needs you in yellow', { timeou
   })
   afterEach(() => vi.useRealTimers())
 
-  // TRAK-424: Schedule's own green "+" and the phone's Back beside the avatar are gone; the frame's "+" is the one way
-  // to add, and it still opens New event on the day picked here.
-  it('has no add button of its own and no Back, and the frame\'s "+" opens New event on the chosen day', async () => {
+  // TRAK-424: Schedule's own green "+" is gone; the frame's "+" is the one way to add, and it still opens New event on
+  // the day picked here. (Its phone Back came back as TRAK-498's arrow, TRAK-540: schedule-card-actions-trak272.)
+  it('has no add button of its own, and the frame\'s "+" opens New event on the chosen day', async () => {
     await open()
     expect(screen.queryByRole('button', { name: 'Add event' })).toBeNull()
-    expect(screen.queryByRole('button', { name: /^Back$/ })).toBeNull()
     expect(screen.getAllByRole('button', { name: 'Quick add' })).toHaveLength(1)
     await userEvent.click(cell('2026-10-21'))
     await openNewEvent()

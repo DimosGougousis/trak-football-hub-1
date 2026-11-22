@@ -98,11 +98,36 @@ export function TrailLink({ crumb }: { crumb: Crumb }) {
   return <Link to={crumb.href} onClick={back(crumb)}>{crumb.label}</Link>
 }
 
+/** TRAK-498: a phone's round back arrow. Settings' back button's size; it overhangs its row (-my-1), so every title
+ *  stays where TRAK-422 put it. */
+function BackArrow({ to, onClick }: { to: string; onClick: (event: MouseEvent<HTMLElement>) => void }) {
+  const { t } = useTranslation()
+  return <Link to={to} onClick={onClick} aria-label={t('common:back')}
+    className="-my-1 flex h-9 w-9 flex-none items-center justify-center rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    style={{ color: 'var(--accent-strong)', borderColor: 'var(--border-strong)' }}>
+    <ChevronLeft size={18} strokeWidth={1.75} aria-hidden="true" />
+  </Link>
+}
+
+/** TRAK-540 (Imad, 22 Nov): the arrow on a nav row's page that opens from another page (Events, from Home's calendar
+ *  icon), which has no trail: back where the coach came from, or `to` when opened from a link. None on a laptop, where
+ *  the page is a row in the sidebar. */
+export function PhoneBack({ to }: { to: string }) {
+  const trails = useContext(TrailContext)
+  const navigate = useNavigate()
+  if (trails?.topBar) return null
+  return <BackArrow to={to} onClick={event => {
+    // The history's first entry, or a click that opens a new tab, follows the link.
+    if (!historyIndex() || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    navigate(-1)
+  }} />
+}
+
 /** The trail at the top of a page: where the coach came from, then `current`, this page's name. `parents` are the pages
  *  it sits under, after its nav row, for when nothing came before it (a link, a refresh). `style` can set Arc's text
  *  tokens, for a trail on a coloured header. On a laptop it shows in the frame's top bar instead (TRAK-347). */
 export function CoachTrail({ current, parents = [], className, style }: { current: string; parents?: Crumb[]; className?: string; style?: CSSProperties }) {
-  const { t } = useTranslation()
   const location = useLocation()
   const trails = useContext(TrailContext)
   const back = useTrailBack()
@@ -118,16 +143,11 @@ export function CoachTrail({ current, parents = [], className, style }: { curren
   }, [topBar, shown, current])
   if (topBar) return null
   // TRAK-498 (Imad, 20 Nov): on a phone the trail wasn't read as a way back, so an arrow leads it. It is the last crumb:
-  // back where the coach came from, or, opened from a link, the page above this one (its tab's first page). Settings'
-  // back button's size; it overhangs the trail's row (-my-1), so every title stays where TRAK-422 put it.
+  // back where the coach came from, or, opened from a link, the page above this one (its tab's first page).
   const up = behind.at(-1)
   return (
     <div data-trail="" className={['arc flex items-center gap-2', className].filter(Boolean).join(' ')} style={style}>
-      {up && <Link to={up.href} onClick={back(up)} aria-label={t('common:back')}
-        className="-my-1 flex h-9 w-9 flex-none items-center justify-center rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        style={{ color: 'var(--accent-strong)', borderColor: 'var(--border-strong)' }}>
-        <ChevronLeft size={18} strokeWidth={1.75} aria-hidden="true" />
-      </Link>}
+      {up && <BackArrow to={up.href} onClick={back(up)} />}
       <ArcProvider link={RouterLink}>
         <Breadcrumb ariaLabel="Breadcrumb trail" items={[...behind.map(crumb => ({ label: crumb.label, href: crumb.href, onClick: back(crumb) })), { label: current }]} />
       </ArcProvider>
