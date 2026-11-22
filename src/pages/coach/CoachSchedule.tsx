@@ -19,6 +19,8 @@ import { squadName } from '@/lib/coach-week'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
+import { PhoneBack } from '@/components/coach/CoachTrail'
+import { COACH_SCREEN_PATH } from '@/lib/coach-places'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { useGameEvaluations } from '@/components/coach/games/useGames'
@@ -594,7 +596,9 @@ export default function CoachSchedule() {
           <div className="flex items-center gap-2">
             {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. */}
             <CoachMenuButton name={profile?.full_name || t('nav:coach')} />
-            {/* TRAK-424: no Back beside the avatar, as on every other main page; Schedule opens from Home's calendar icon. */}
+            {/* TRAK-540 (Imad, 22 Nov; TRAK-424 had taken Back away): on a phone Events opens from Home's calendar icon,
+                so TRAK-498's arrow sits beside the avatar. */}
+            <PhoneBack to={COACH_SCREEN_PATH.home} />
             <PageTitle className="self-start">
               {t('nav:events')}
             </PageTitle>

@@ -113,3 +113,29 @@ describe('TRAK-498: a way back on a phone', { timeout: 30_000 }, () => {
     expect(screen.queryByRole('link', { name: 'Back' })).toBeNull()
   })
 })
+
+// TRAK-540 (Imad, 22 Nov): Events gets the arrow too, beside the avatar (it is a nav row, so it has no trail).
+describe('TRAK-540: Events on a phone has the arrow too', { timeout: 30_000 }, () => {
+  it('opened from Home\'s calendar icon: one tap goes back to Home', async () => {
+    screenIs(false)
+    const user = userEvent.setup()
+    renderApp('/coach/home')
+    await user.click(await screen.findByRole('link', { name: 'Events' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/schedule'))
+    await user.click(await screen.findByRole('link', { name: 'Back' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/home'))
+  })
+
+  it('opened from a link: the arrow goes to Home', async () => {
+    screenIs(false)
+    renderApp('/coach/schedule')
+    expect(await screen.findByRole('link', { name: 'Back' })).toHaveAttribute('href', '/coach/home')
+  })
+
+  it('on a laptop Events has no arrow: it is a row in the sidebar', async () => {
+    screenIs(true)
+    renderApp('/coach/schedule')
+    await screen.findByRole('heading', { name: 'Events' })
+    expect(screen.queryByRole('link', { name: 'Back' })).toBeNull()
+  })
+})
