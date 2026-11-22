@@ -32,7 +32,7 @@ export function PlayerReport({ playerId, name, squad, coachId }: { playerId: str
   const first = name.split(' ')[0]
   const evaluations = useSquadEvaluations(coachId, squad ? [squad] : [])
   const mine = evaluations.list.find(e => e.squad === squad)
-  const days = mine ? reportDayOf(mine.plan, mine.due) : null
+  const days = mine ? reportDayOf(mine.plan, mine.due, mine.sentDays) : null
   const report = useQuery({
     queryKey: playerReportKey(coachId, playerId, days?.reportDay ?? null),
     queryFn: () => loadPlayerReport(playerId, days!.reportDay, days!.lastReportDay),

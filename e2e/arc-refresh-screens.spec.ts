@@ -480,6 +480,39 @@ test.describe('TRAK-220 Arc panels opened over the page', () => {
   })
 })
 
+// TRAK-541 (Imad's live check, 22 Nov): an opened assessment card's close button sat on its date ("22 N"). The date
+// (TRAK-526) and the close button share the quick look's top-right corner; each must show whole, clear of the other.
+for (const width of [390, 1280]) {
+  test.describe(`TRAK-541 at ${width} px`, () => {
+    test.use({ timezoneId: 'Asia/Dubai', viewport: { width, height: 844 } })
+
+    test("an opened assessment card shows its whole date beside the close button", async ({ page, context }, testInfo) => {
+      const unexpected: string[] = []
+      await coachBackend(context, unexpected)
+      // The card reads its objective answers (TRAK-526); this spec's backend doesn't answer that yet (TRAK-538).
+      await context.route('**/rest/v1/assessment_objectives*', route => route.fulfill({ json: [] }))
+      await page.goto('/coach/squad/player/sq-2')
+      const card = page.getByRole('article', { name: /assessment, Bukayo Saka/ }).first()
+      await card.locator('h3 button').first().click()
+      const panel = page.getByRole('dialog')
+      await expect(panel.getByText('MESSAGE TO THE PLAYER')).toBeVisible()
+      await page.waitForTimeout(700)
+      const date = panel.locator('h2 + span')
+      await expect(date).toHaveText(/^\d{1,2} \w{3,}$/)
+      const close = panel.getByRole('button', { name: 'Close quick look' })
+      const [d, c] = [(await date.boundingBox())!, (await close.boundingBox())!]
+      const apart = d.x + d.width <= c.x || c.y + c.height <= d.y || d.y + d.height <= c.y
+      expect(apart, `date ${JSON.stringify(d)} and close ${JSON.stringify(c)} overlap`).toBe(true)
+      // Whole: nothing of the date is cut off inside its own box.
+      expect(await date.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`coach-card-date-${width}.png`) })
+      await page.keyboard.press('Escape')
+      await expect(panel).toBeHidden()
+      expect(unexpected).toEqual([])
+    })
+  })
+}
+
 // Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
 // On a phone the profile now takes the list's place, and "All players" returns to the same spot. TRAK-351: on every
 // screen a player opens as their own page, and going back returns to the same spot (TRAK-428: by the trail).
@@ -615,8 +648,10 @@ test.describe('TRAK-189 calendar on Dubai time', () => {
     await expect(needsYou).toHaveCSS('filter', /drop-shadow/)
     // TRAK-270 (Tarek, 23 Oct): the legend's mark is coach Home's corner, not a triangle.
     await expect(needsYou.locator('div')).toHaveCSS('clip-path', 'polygon(0px 0px, 100% 0px, 100% 100%)')
-    // TRAK-272, TRAK-275: a card's actions are a button group big enough to tap (icons only on a phone), and tapping the card opens its sheet.
-    const share = page.getByRole('group', { name: 'Actions for League' }).getByRole('button', { name: 'Share League' })
+    // TRAK-272, TRAK-275: a card's actions are big enough to tap, and tapping the card opens its sheet. TRAK-508 (20 Nov):
+    // Share is a green next-step button at the card's bottom right, out of the outline group of icons.
+    await expect(page.getByRole('group', { name: 'Actions for League' }).getByRole('button', { name: 'Share League' })).toHaveCount(0)
+    const share = page.getByRole('button', { name: 'Share League' })
     expect((await share.boundingBox())!.height).toBeGreaterThanOrEqual(36)
     await page.getByText('Kit: White shirts, black shorts').click()
     // A match's sheet is titled by its opponent, as on coach Home.

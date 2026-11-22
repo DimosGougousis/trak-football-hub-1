@@ -42,8 +42,9 @@ export function useSharedPlans(coachId: string | undefined, squads: string[]) {
   return { on, plans, shared, ready, failed, retry: () => { reads.forEach(read => { void read.refetch() }) } }
 }
 
-/** `sharedOn` and `lastDueOn` are what the dates count from: the day the plan was first shared, the last evaluation. */
-export type SquadEvaluation = { squad: string; plan: SeasonPlan; due: EvaluationDue; sharedOn: string; lastDueOn: string | null }
+/** `sharedOn` and `lastDueOn` are what the dates count from: the day the plan was first shared, the last evaluation.
+ *  `sentDays` are every published evaluation's date, oldest first: the report days actually sent (TRAK-545). */
+export type SquadEvaluation = { squad: string; plan: SeasonPlan; due: EvaluationDue; sharedOn: string; lastDueOn: string | null; sentDays: string[] }
 
 /** Each shared plan's evaluation: what's due and what's next, on the academy's `today`. */
 export function useSquadEvaluations(coachId: string | undefined, squads: string[]) {
@@ -56,9 +57,10 @@ export function useSquadEvaluations(coachId: string | undefined, squads: string[
   const now = new Date()
   const today = dayIn(zone.zone, now)
   const list: SquadEvaluation[] = !ready || failed ? [] : shared.plans.map(({ squad, plan }) => {
-    const lastDueOn = (evaluations.data ?? []).filter(e => e.plan_id === plan.id).map(e => e.due_on).sort().at(-1) ?? null
+    const sentDays = (evaluations.data ?? []).filter(e => e.plan_id === plan.id).map(e => e.due_on).sort()
+    const lastDueOn = sentDays.at(-1) ?? null
     const { due, sharedOn } = squadEvaluation({ plan: { ...plan, shared_at: plan.shared_at! }, lastDueOn, zone: zone.zone, now })
-    return { squad, plan, sharedOn, lastDueOn, due }
+    return { squad, plan, sharedOn, lastDueOn, sentDays, due }
   })
   return {
     list, today, zone: zone.zone, ready, failed,

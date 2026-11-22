@@ -101,7 +101,8 @@ describe('TRAK-182: the event sheet', () => {
     expect(meet.compareDocumentPosition(within(sheet).getByRole('link', { name: 'Open in Maps' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(sheet).getByText('Draft. Only you see this.')).toBeInTheDocument()
     expect(within(sheet).getByText('White')).toBeInTheDocument()
-    expect(await within(sheet).findByText('Families see this once you publish.')).toBeInTheDocument()
+    // TRAK-494 (Kostas, 20 Nov): no helper line under a draft; "Draft. Only you see this." says it.
+    expect(within(sheet).queryByText('Families see this once you publish.')).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Share' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
     // TRAK-230: an event still to come is edited from here.
@@ -200,8 +201,9 @@ describe('TRAK-182: the event sheet', () => {
     expect(await within(sheet).findByText('Published')).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Published' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Cancel event' })).toBeNull()
-    // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit.
-    expect(within(sheet).getByText('It has started, so its details are fixed.')).toBeInTheDocument()
+    // TRAK-230 (Kostas, 21 Oct, option A): started, so its details are fixed and there's no Edit. TRAK-494 (20 Nov): no
+    // line saying so either.
+    expect(within(sheet).queryByText('It has started, so its details are fixed.')).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Edit event' })).toBeNull()
     expect(within(sheet).queryByRole('button', { name: 'Share' })).toBeNull()
     expect(await within(sheet).findByRole('heading', { name: 'Attended · 2' })).toBeInTheDocument()
