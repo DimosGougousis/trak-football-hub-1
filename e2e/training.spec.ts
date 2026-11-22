@@ -672,18 +672,28 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const planned = card.getByRole('article', { name: 'Training, Receiving under pressure' })
     const long = card.getByRole('article', { name: /^Training, How To Win Games/ })
     await expect(long.getByRole('button', { name: 'Plan this session' })).toBeVisible()
-    // Each header is one line: as tall as its words on their own. This coach has U14 and U16, and Home starts on All, so
-    // each says its age group (Kostas, 29 Oct).
+    // Each header is one line of text. This coach has U14 and U16, and Home starts on All, so each says its age group
+    // (Kostas, 29 Oct). Counted on the words themselves: since 20 Nov their row also holds "Plan this session", so the
+    // row is the button's height (TRAK-539).
     for (const [article, text] of [[planned, 'Training plan · U16'], [long, 'Training plan · U14']] as const) {
-      await expect(article.getByText(text, { exact: true })).toBeVisible()
-      const words = (await article.getByText(text, { exact: true }).boundingBox())!
-      const label = (await article.getByText(text, { exact: true }).locator('..').boundingBox())!
-      expect(Math.round(label.height)).toBe(Math.round(words.height))
+      const heading = article.getByText(text, { exact: true })
+      await expect(heading).toBeVisible()
+      const lines = await heading.evaluate(el => {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size
+      })
+      expect(lines, `"${text}" wraps onto ${lines} lines`).toBe(1)
     }
     await expect(card.getByText(/How To Win Games|Receiving under pressure/)).toHaveCount(0)
-    // The total time on the label's line, on the right.
-    const [total, words] = [(await planned.getByText('40 min', { exact: true }).boundingBox())!, (await planned.getByText('Training plan · U16', { exact: true }).boundingBox())!]
-    expect(Math.abs(total.y - words.y)).toBeLessThanOrEqual(2)
+    // The total time on the label's line, on the right. The row centres its items since TRAK-507 (20 Nov), for the
+    // next-step button, so the two line up by their middles; their tops differ by the font sizes. Both are measured in
+    // one go: the page can still be settling, and two separate reads can catch it mid-move (TRAK-539).
+    const [total, words] = await planned.getByText('40 min', { exact: true }).evaluate(el => {
+      const box = (node: Element) => { const r = node.getBoundingClientRect(); return { x: r.x, width: r.width, middle: r.y + r.height / 2 } }
+      return [box(el), box(el.parentElement!.querySelector('h3')!)]
+    })
+    expect(Math.abs(total.middle - words.middle), `40 min's middle ${total.middle}, the heading's ${words.middle}`).toBeLessThanOrEqual(2)
     expect(total.x).toBeGreaterThan(words.x + words.width)
     // The card stays a snapshot: the long one is no taller than the planned one with its two practices.
     expect((await long.boundingBox())!.height).toBeLessThan((await planned.boundingBox())!.height)

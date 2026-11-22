@@ -428,7 +428,8 @@ test('the "+" grows into its menu with a close button, and Escape folds it back'
     const { unexpected, errors } = await open(page, context, 'coach', '/coach/home', width, height)
     await page.getByRole('button', { name, exact: true }).click()
     const menu = page.getByRole('menu', { name })
-    await expect(menu.getByRole('menuitem')).toHaveText(['Log training', 'Log match', 'Assess player', 'New event'])
+    // TRAK-499 (20 Nov): Log training and Log match left the "+"; it offers Assess player and New event.
+    await expect(menu.getByRole('menuitem')).toHaveText(['Assess player', 'New event'])
     await expect(page.getByRole('button', { name: `Close ${name.toLowerCase()}` })).toBeVisible()
     await menu.getByRole('menuitem', { name: 'New event' }).click()
     const form = page.getByRole('dialog', { name: 'New event' })
