@@ -1535,6 +1535,51 @@ export type Database = {
           },
         ]
       }
+      report_for_family: {
+        Row: {
+          evaluation_id: string
+          report: Json
+          sent_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          evaluation_id: string
+          report: Json
+          sent_at?: string
+          squad_player_id: string
+        }
+        Update: {
+          evaluation_id?: string
+          report?: Json
+          sent_at?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
+      report_for_player: {
+        Row: {
+          evaluation_id: string
+          note: string
+          report: Json
+          sent_at: string
+          squad_player_id: string
+        }
+        Insert: {
+          evaluation_id: string
+          note?: string
+          report: Json
+          sent_at?: string
+          squad_player_id: string
+        }
+        Update: {
+          evaluation_id?: string
+          note?: string
+          report?: Json
+          sent_at?: string
+          squad_player_id?: string
+        }
+        Relationships: []
+      }
       season_evaluations: {
         Row: {
           due_on: string

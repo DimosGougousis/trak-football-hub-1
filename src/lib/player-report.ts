@@ -38,6 +38,18 @@ export async function loadPlayerReport(playerId: string, reportDay: string, last
   return data as unknown as PlayerReport
 }
 
+/** TRAK-528 (Reports 5/10): a report as it was sent, the coach's copy (report_for_player). */
+export type SentReport = { evaluation_id: string; sent_at: string; report: PlayerReport }
+
+export const sentReportsKey = (coachId: string | undefined, playerId: string) => ['coach', coachId, 'sent-reports', playerId] as const
+
+/** The player's sent reports, the latest report day first. */
+export async function loadSentReports(playerId: string): Promise<SentReport[]> {
+  const { data, error } = await supabase.from('report_for_player').select('evaluation_id, sent_at, report').eq('squad_player_id', playerId)
+  if (error) throw error
+  return (data as unknown as SentReport[]).sort((a, b) => b.report.report_day.localeCompare(a.report.report_day))
+}
+
 /** The report a squad's plan is working towards: the date that's due, or else the next one (the season's last once
  *  none is left), and the report day before it. Null without a date. */
 export function reportDayOf(plan: { starts_on: string | null; ends_on: string | null; eval_every?: string | null; eval_day?: number | null },
