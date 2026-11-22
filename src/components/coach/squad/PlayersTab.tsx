@@ -17,6 +17,7 @@ import { POSITION_WORD } from '@/lib/position-words'
 import { useTranslation } from '@/lib/i18n'
 import { localParts, localTodayISO } from '@/lib/event-time'
 import { PlayerProfile } from './PlayerProfile'
+import { PlayerReport } from './PlayerReport'
 import { WatchBadge } from '@/components/coach/season-plan/WatchFirst'
 import { useWatchList } from '@/components/coach/season-plan/useWatching'
 import { useSharedPlans } from '@/components/coach/season-plan/useEvaluation'
@@ -35,11 +36,14 @@ const TREND = 6
  * the trail is the page's one way back; on a laptop, where the trail is in the top bar, the page keeps its Back button
  * (Imad, 19 Nov: "it does no harm").
  */
-export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = () => {} }: {
+export function PlayersTab({ roster, openId = null, report = false, onOpen = () => {}, onReport = () => {}, onBack = () => {} }: {
   roster: SquadRoster
   /** The player whose page is open (their address, /coach/squad/player/:id), or null for the list. */
   openId?: string | null
+  /** TRAK-527: the open player's report (/coach/squad/player/:id/report) in place of their page. */
+  report?: boolean
   onOpen?: (id: string) => void
+  onReport?: (id: string) => void
   onBack?: () => void
 }) {
   const { user } = useAuth()
@@ -106,16 +110,21 @@ export function PlayersTab({ roster, openId = null, onOpen = () => {}, onBack = 
     {openId != null && <div className="grid gap-4 pt-4">
       {laptop && <span className="arc"><Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft size={16} aria-hidden="true" />{t('common:back')}</Button></span>}
       {/* TRAK-428: a player who isn't found still has the way back; the page is "Player", as in the laptop's top bar. */}
-      <CoachTrail current={open?.name ?? t('nav:player')} />
+      <CoachTrail current={report ? t('coachSquad:report') : open?.name ?? t('nav:player')} />
       {/* TRAK-368: the page's title, as the older player page had it; the card's name is the visible one. */}
-      {open && <h1 className="sr-only">{open.name}</h1>}
+      {open && !report && <h1 className="sr-only">{open.name}</h1>}
       {/* TRAK-451: the page's card puts the standard room between its parts (TRAK-464). */}
-      {open && user ? <article aria-label={`${open.name}, ${open.position || t('coachSquad:noPositionYetLower')}`} className="grid gap-6 rounded-2xl border border-line bg-surface p-5 laptop:gap-8 laptop:p-6">
+      {/* TRAK-527: the report has a page of its own, where the player's page was. The report's title is its heading. */}
+      {open && user && report ? (open.waiting ? <p className="text-sm text-ink-2">{t('coachSquad:waitingConsentBody', { name: open.name.split(' ')[0] })}</p>
+        : <PlayerReport playerId={open.id} name={open.name} squad={squadOf.get(open.id) ?? squadLabel} coachId={user.id} />)
+      : open && user ? <article aria-label={`${open.name}, ${open.position || t('coachSquad:noPositionYetLower')}`} className="grid gap-6 rounded-2xl border border-line bg-surface p-5 laptop:gap-8 laptop:p-6">
         <PlayerProfile player={open} squad={squadOf.get(open.id) ?? squadLabel} coachId={user.id}
           facts={facts.data?.get(open.id)} factsFailed={facts.isError} onRetryFacts={() => { void facts.refetch() }}
           season={season.players.get(open.id)} squadSeason={season.squad} since={seasonStartLabel(seasonFrom)}
           seasonFailed={roster.assessmentsFailed} onRetrySeason={roster.retry}
-          placement={seasonPlan.on ? { position: roster.players.find(p => p.id === open.id)?.position ?? null } : undefined} />
+          placement={seasonPlan.on ? { position: roster.players.find(p => p.id === open.id)?.position ?? null } : undefined}
+          // TRAK-527: reports follow the evaluation, so only a squad whose plan is shared has one.
+          onViewReport={evaluated.has(squadOf.get(open.id) ?? squadLabel ?? '') ? () => onReport(open.id) : undefined} />
       </article> : !open && <p className="text-sm text-ink-2">{roster.squad == null || roster.squads.length <= 1
         // Every squad is in view, so the player isn't the coach's at all (TRAK-368: the older page's answer).
         ? t('coachSquad:playerNotFound')

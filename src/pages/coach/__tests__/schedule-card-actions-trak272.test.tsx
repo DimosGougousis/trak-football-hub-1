@@ -139,9 +139,10 @@ describe('TRAK-272: each Schedule card has a button group of its actions', { tim
     expect(await screen.findByRole('dialog', { name: /Shooting/ })).toBeInTheDocument()
   })
 
-  // TRAK-424: no Back beside the avatar, as on every other main page (this replaced TRAK-272's phone Back).
-  it('has no Back beside the avatar on a phone', async () => {
+  // TRAK-424 took TRAK-272's phone Back away; TRAK-540 (Imad, 22 Nov) puts TRAK-498's arrow beside the avatar instead.
+  it('has the back arrow beside the avatar on a phone, not the old Back button', async () => {
     await open()
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/coach/home')
   })
 })

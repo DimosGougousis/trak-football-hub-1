@@ -126,8 +126,9 @@ async function backend(context: BrowserContext, unexpected: string[], plans: Pla
       if (path === '/rest/v1/game_evaluations') return json(mine.map(draft => ({ event_id: draft.p_event_id, our_score: draft.p_our_score,
         their_score: draft.p_their_score, goals: draft.p_goals, how_they_scored: draft.p_how_they_scored, plan_worked: draft.p_plan_worked,
         saved_at: draft.saved_at, published_at: draft.published_at ?? null })))
+      // TRAK-518: as save_game_evaluation keeps it, an answer not given stays empty.
       if (path === '/rest/v1/game_evaluation_players') return json(listed.map(p => ({ squad_player_id: p.id, played: p.played,
-        did_job: p.did_job ?? 'yes', against_expectation: p.against_expectation ?? 'met' })))
+        did_job: p.did_job ?? null, against_expectation: p.against_expectation ?? null })))
       if (path === '/rest/v1/game_evaluation_notes') return json(listed.filter(p => p.note).map(p => ({ squad_player_id: p.id, note: p.note })))
     }
     if (path === '/rest/v1/game_shares') return json([...plans.entries()].filter(([key]) => key.startsWith('share:')).map(([, share]) => share))
@@ -762,10 +763,10 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(keyboard.count).toBeGreaterThan(10)
     expect(keyboard.missed).toEqual([])
 
-    // Player evaluation: everyone starts at Did the job · Met; Zagorakis did part of his job, above what was expected.
+    // Player evaluation: every answer starts empty (TRAK-518); Zagorakis did part of his job, above what was expected.
     await page.getByRole('button', { name: 'Next: Player evaluation' }).click()
     const card = page.getByRole('button', { name: /^Theodoros Zagorakis/ })
-    await expect(card).toContainText('Did the job · Met')
+    await expect(card).toContainText('Not answered')
     await expect(card).toContainText('Expected: Stretch')
     // TRAK-370 (Imad, 5 Nov), here since TRAK-358 took Everyone's job off the line-up: stretch and context are Trak's
     // orange, lead Trak's blue, on Arc's current badge (soft corners, no border).
@@ -820,7 +821,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
         note: '', context: [], expectation: 'usual' }],
       ['evaluation:m-past', { p_event_id: 'm-past', p_our_score: 2, p_their_score: 1, p_goals: [{ scorer: 'sq-1', assist: null }, { scorer: null, assist: null }],
         p_how_they_scored: 'A corner.', p_plan_worked: ['worked', 'partly'], saved_at: '2026-10-24T17:40:00Z',
-        p_players: [{ id: 'sq-1', played: true, did_job: 'partly', against_expectation: 'above', note: 'Brave all game.' }, { id: 'sq-4', played: true }] }],
+        p_players: [{ id: 'sq-1', played: true, did_job: 'partly', against_expectation: 'above', note: 'Brave all game.' },
+          { id: 'sq-4', played: true, did_job: 'yes', against_expectation: 'met' }] }],
     ])
     const coach = await open(page, context, '/coach/matches/m-past?tab=evaluation', width, height, plans)
     await page.getByRole('button', { name: 'Next: Player evaluation' }).click()

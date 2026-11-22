@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PlayerPlans } from '../lineup'
-import { answerOf, evaluationToForm, formToSave, hasPlayed, lineUpAtKickOff, planAnswered, previewReview, publishSummary, setPlayed, summary, withScore } from '../evaluation'
+import { answerOf, evaluationToForm, formToSave, hasPlayed, lineUpAtKickOff, planAnswered, previewReview, publishSummary, setPlayed, startInstead, summary, whoPlayed, withScore } from '../evaluation'
 
 // TRAK-288: the evaluation as the coach fills it, read against the plan as it locked at kick-off.
 const plans: PlayerPlans = {
@@ -20,13 +20,17 @@ describe('lineUpAtKickOff', () => {
 })
 
 describe('a new evaluation', () => {
-  it('starts at 0–0, with the starters ticked, nobody from the bench, and everyone at Yes · Met', () => {
+  // TRAK-518 (Imad, 20 Nov): no answer until the coach gives one.
+  it('starts at 0–0, with the starters ticked, nobody from the bench, and nobody answered', () => {
     const form = evaluationToForm(empty)
     expect(form).toMatchObject({ ourScore: 0, theirScore: 0, goals: [], howTheyScored: '', planWorked: [] })
     expect(hasPlayed(form, 'zagorakis', true)).toBe(true)
     expect(hasPlayed(form, 'charisteas', false)).toBe(false)
-    expect(answerOf(form, 'zagorakis')).toEqual({ didJob: 'yes', against: 'met', note: '' })
-    expect(summary(answerOf(form, 'zagorakis'))).toBe('Did the job · Met')
+    expect(answerOf(form, 'zagorakis')).toEqual({ didJob: null, against: null, note: '' })
+    expect(summary(answerOf(form, 'zagorakis'))).toBe('Not answered')
+    // Half an answer is still not answered; a player with no job is asked only "Against expectation".
+    expect(summary({ didJob: null, against: 'met', note: '' })).toBe('Not answered')
+    expect(summary({ didJob: null, against: 'met', note: '' }, false)).toBe('Met')
   })
 })
 
@@ -91,9 +95,11 @@ describe('publishing (TRAK-289)', () => {
     answers: { zagorakis: { didJob: 'partly' as const, against: 'above' as const, note: 'Brave all game.' }, dellas: { didJob: 'yes' as const, against: 'met' as const, note: 'Good.' } },
   }
 
-  it('sums it up: who played, how many changed from Yes · Met, and how many notes', () => {
-    expect(publishSummary(form, listed)).toEqual({ players: 3, changed: 1, notes: 2 })
-    expect(publishSummary(setPlayed(form, 'zagorakis', false), listed)).toEqual({ players: 2, changed: 0, notes: 1 })
+  it('sums it up: who played, how many still wait for an answer (TRAK-518), and how many notes', () => {
+    // Charisteas came on and has no answer yet; Dellas had no job, so "Met" is all he needs.
+    expect(publishSummary(form, listed, plans)).toEqual({ players: 3, left: 1, notes: 2 })
+    expect(publishSummary(setPlayed(form, 'zagorakis', false), listed, plans)).toEqual({ players: 2, left: 1, notes: 1 })
+    expect(publishSummary(setPlayed(form, 'charisteas', false), listed, plans)).toEqual({ players: 2, left: 0, notes: 2 })
   })
 
   it('waits for an answer to "Did the plan work?" for every goal', () => {
@@ -112,5 +118,41 @@ describe('publishing (TRAK-289)', () => {
     expect(previewReview(form, 'zagorakis', plans, null, 'parent')).toMatchObject({ job: '', didJob: null, note: null, coachName: null, against: 'above' })
     // TRAK-447: Charisteas had no job in the plan, so there is no "did the job" for him to read.
     expect(previewReview(form, 'charisteas', plans, null, 'player')).toMatchObject({ job: '', expectation: 'usual', context: [], didJob: null, against: 'met', note: null })
+  })
+})
+
+// TRAK-519 (Imad, 21 Nov): a starter who didn't show is unticked and the player who started in their place is picked;
+// "Came on" stays for who came off the bench.
+describe('who started in a starter\'s place (TRAK-519)', () => {
+  const listed = [{ id: 'dellas', starter: true }, { id: 'zagorakis', starter: true }, { id: 'charisteas', starter: false }, { id: 'basinas', starter: false }]
+  const starters = [{ id: 'dellas' }, { id: 'zagorakis' }]
+  const bench = [{ id: 'charisteas' }, { id: 'basinas' }]
+  const sent = (form: ReturnType<typeof evaluationToForm>, id: string) => formToSave('g1', form, listed).p_players.find(p => p.id === id)
+
+  it('puts the player in the no-show\'s place, and sends who started for whom', () => {
+    const form = startInstead(setPlayed(evaluationToForm(empty), 'dellas', false), 'dellas', 'basinas')
+    expect(whoPlayed(form, starters, bench).map(p => p.id)).toEqual(['basinas', 'zagorakis'])
+    expect(sent(form, 'basinas')).toMatchObject({ played: true, started_for: 'dellas' })
+    expect(sent(form, 'dellas')).toEqual({ id: 'dellas', played: false })
+    expect(sent(form, 'zagorakis')).not.toHaveProperty('started_for')
+  })
+
+  it('another pick, nobody, or the starter ticked again takes the player back off', () => {
+    let form = startInstead(setPlayed(evaluationToForm(empty), 'dellas', false), 'dellas', 'basinas')
+    form = startInstead(form, 'dellas', 'charisteas')
+    expect(hasPlayed(form, 'basinas', false)).toBe(false)
+    expect(whoPlayed(form, starters, bench).map(p => p.id)).toEqual(['charisteas', 'zagorakis'])
+    expect(hasPlayed(startInstead(form, 'dellas', null), 'charisteas', false)).toBe(false)
+    form = setPlayed(form, 'dellas', true)
+    expect(form.instead).toEqual({})
+    expect(hasPlayed(form, 'charisteas', false)).toBe(false)
+    expect(formToSave('g1', form, listed).p_players.some(p => 'started_for' in p)).toBe(false)
+  })
+
+  it('a reloaded draft keeps who started for whom', () => {
+    const form = evaluationToForm({ ...empty, players: [{ squad_player_id: 'dellas', played: false, did_job: null, against_expectation: null },
+      { squad_player_id: 'basinas', played: true, did_job: null, against_expectation: 'met', started_for: 'dellas' }] })
+    expect(form.instead).toEqual({ dellas: 'basinas' })
+    expect(whoPlayed(form, starters, bench).map(p => p.id)).toEqual(['basinas', 'zagorakis'])
   })
 })

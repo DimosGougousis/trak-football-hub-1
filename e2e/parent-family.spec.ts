@@ -259,6 +259,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
         // Imad, 23 Oct (TRAK-278): the sheet shows the log, read only. TRAK-426 (Kostas, 12 Nov): with Training and
         // Matches both on (this test answers every switch "on"), the old log retires, so there is no Edit log.
         await expect(logged.getByRole('link', { name: 'Edit log' })).toHaveCount(0)
+        // TRAK-537 (as TRAK-122): the checks above pass while the sheet is still below the screen, and an Escape in its
+        // first frame is lost (Radix starts listening a render later). Wait until it has risen (6 of 80 runs failed, 21 Nov).
+        await sheetAtRest(logged)
         await page.keyboard.press('Escape')
         await expect(logged).toBeHidden()
         await week.getByRole('button', { name: /Technical training/ }).click()

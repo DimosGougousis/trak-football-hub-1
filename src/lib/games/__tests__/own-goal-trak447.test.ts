@@ -9,7 +9,7 @@ import { reviewOf, words } from '@/lib/games/reviews'
  */
 const listed = [{ id: 'pat', starter: true }, { id: 'sam', starter: true }]
 const form = (goals: EvaluationForm['goals']): EvaluationForm =>
-  ({ ourScore: goals.length, theirScore: 0, goals, howTheyScored: '', planWorked: [], played: {}, answers: {} })
+  ({ ourScore: goals.length, theirScore: 0, goals, howTheyScored: '', planWorked: [], played: {}, answers: {}, instead: {} })
 
 describe('TRAK-447: own goals', () => {
   it('saves an own goal with nobody credited, beside a goal with a scorer', () => {

@@ -123,7 +123,10 @@ function Framed({ userId, name }: { userId: string; name: string }) {
       <Suspense fallback={<div className="min-h-screen bg-ground" />}><Outlet /></Suspense>
     </SidebarRail>
     {!wide && !barred && <div className="arc fixed inset-x-0 z-50 px-3 pointer-events-none" style={{ bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
+      {/* TRAK-498 (Imad, 20 Nov): a page under a tab (Season plan under Home, a match under Matches) keeps its tab
+          marked; tapping that tab goes to the tab's first page, as the laptop's sidebar does. */}
       <GlassTabBar label={t('nav:coach')} value={screen ?? ''} onValueChange={value => navigate(TO[value as Screen])}
+        onReselect={value => { if (pathname !== TO[value as Screen]) navigate(TO[value as Screen]) }}
         style={{ ['--glass-active' as string]: 'rgb(var(--t-brand))' }}
         items={[
           { value: 'home', label: t('nav:home'), icon: <House /> },

@@ -116,7 +116,8 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
       'ResultWon 2–1 · 1 goal without a scorer',
       'Who played2 played',
       'Did the plan work?1 of 2 answered',
-      'Player evaluation1 changed from Did the job · Met · 1 note',
+      // TRAK-518: every answer starts empty, so there is no Yes · Met to count changes from; both players are answered.
+      'Player evaluation1 note',
     ])
     expect(parts.map(part => within(part).getByRole('img').getAttribute('aria-label'))).toEqual(['Incomplete', 'Ready', 'Needed', 'Ready'])
     expect(within(card).getByRole('img', { name: '2 of 4 parts ready, 2 incomplete' })).toBeInTheDocument()
@@ -135,6 +136,35 @@ describe('TRAK-289: publishing the evaluation', { timeout: 30_000 }, () => {
     // Never asked here: the match has its competition and home or away.
     expect(screen.queryByRole('group', { name: 'Competition' })).toBeNull()
     expect(screen.queryByRole('group', { name: 'Home or away' })).toBeNull()
+  })
+
+  // TRAK-518 (Imad, 20 Nov): every answer starts empty, so Publish waits for each player who played.
+  it('waits until every player who played has their answers, and says how many are left', async () => {
+    const user = userEvent.setup()
+    backend({}, ['worked', 'partly'])
+    server.use(table('game_evaluation_players', [PLAYERS[0], { squad_player_id: 'dellas', played: true, did_job: null, against_expectation: null }]))
+    renderApp('/coach/matches/g1?tab=evaluation')
+    await user.click(await screen.findByRole('button', { name: 'Next: Player evaluation' }))
+    expect(screen.getByRole('button', { name: /^Traianos Dellas/ })).toHaveTextContent('Not answered')
+    await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
+    const card = screen.getByRole('region', { name: 'Evaluation review' })
+    const players = within(within(card).getByRole('list', { name: 'The plan' })).getAllByRole('listitem')[3]
+    expect(players).toHaveTextContent('Player evaluation1 of 2 answered')
+    expect(within(players).getByRole('img').getAttribute('aria-label')).toBe('Needed')
+    expect(screen.getByText('1 player still to evaluate.')).toBeInTheDocument()
+    expect(publishButton()).toBeDisabled()
+
+    // Dellas had a job, so one answer isn't enough; both are.
+    await user.click(within(card).getByRole('button', { name: 'Edit player evaluation' }))
+    await user.click(screen.getByRole('button', { name: /^Traianos Dellas/ }))
+    const open = screen.getByRole('button', { name: /^Traianos Dellas/ }).closest('article') as HTMLElement
+    await user.click(within(within(open).getByRole('group', { name: 'Against expectation' })).getByRole('radio', { name: 'Met' }))
+    expect(screen.getByRole('button', { name: /^Traianos Dellas/ })).toHaveTextContent('Not answered')
+    await user.click(within(within(open).getByRole('group', { name: 'Did the job?' })).getByRole('radio', { name: 'Yes' }))
+    expect(screen.getByRole('button', { name: /^Traianos Dellas/ })).toHaveTextContent('Did the job · Met')
+    await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
+    expect(screen.queryByText(/still to evaluate/)).toBeNull()
+    expect(publishButton()).toBeEnabled()
   })
 
   it('asks the competition and home or away of a match made without them, and publishes them', async () => {

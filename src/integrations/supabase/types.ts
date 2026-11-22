@@ -854,25 +854,28 @@ export type Database = {
       }
       game_evaluation_players: {
         Row: {
-          against_expectation: string
-          did_job: string
+          against_expectation: string | null
+          did_job: string | null
           event_id: string
           played: boolean
           squad_player_id: string
+          started_for: string | null
         }
         Insert: {
-          against_expectation?: string
-          did_job?: string
+          against_expectation?: string | null
+          did_job?: string | null
           event_id: string
           played: boolean
           squad_player_id: string
+          started_for?: string | null
         }
         Update: {
-          against_expectation?: string
-          did_job?: string
+          against_expectation?: string | null
+          did_job?: string | null
           event_id?: string
           played?: boolean
           squad_player_id?: string
+          started_for?: string | null
         }
         Relationships: []
       }
@@ -2174,6 +2177,10 @@ export type Database = {
           squad_player_id: string
           date_of_birth: string
         }[]
+      }
+      coach_player_report: {
+        Args: { p_squad_player_id: string; p_report_day: string; p_last_report_day?: string }
+        Returns: Json
       }
       create_parent_invite: {
         Args: { p_email: string }

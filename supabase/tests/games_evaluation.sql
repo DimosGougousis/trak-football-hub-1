@@ -112,9 +112,10 @@ SELECT pg_temp.g288check((SELECT our_score=2 AND their_score=1 AND how_they_scor
 SELECT pg_temp.g288check((SELECT array_agg(played ORDER BY squad_player_id) FROM public.game_evaluation_players
     WHERE event_id=pg_temp.g288id(500))='{t,f}',
   '3 player A played and player B didn''t');
-SELECT pg_temp.g288check((SELECT did_job='yes' AND against_expectation='met' FROM public.game_evaluation_players
+-- TRAK-518 (Imad, 20 Nov): no answer until the coach gives one; a draft keeps exactly what was answered.
+SELECT pg_temp.g288check((SELECT did_job IS NULL AND against_expectation IS NULL FROM public.game_evaluation_players
     WHERE event_id=pg_temp.g288id(500) AND squad_player_id=pg_temp.g288id(40)),
-  '3 everyone starts at Yes · Met');
+  '3 nothing is answered until the coach answers');
 SELECT pg_temp.g288check((SELECT note FROM public.game_evaluation_notes WHERE event_id=pg_temp.g288id(500))='You did your job.',
   '3 player A''s note goes in its own table');
 SELECT pg_temp.g288check(pg_temp.g288refused(pg_temp.g288save(500,2,1,jsonb_build_array(pg_temp.g288goal(40)),
