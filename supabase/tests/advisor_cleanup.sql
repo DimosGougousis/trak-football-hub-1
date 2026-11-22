@@ -53,11 +53,17 @@ SELECT pg_temp.ac_check(
   has_function_privilege('service_role', 'public.is_coach()', 'EXECUTE')
   AND has_function_privilege('service_role', 'public.my_organization_id()', 'EXECUTE'),
   '1 the service role keeps them too');
+-- TRAK-544: the uptime monitor's own function; taking anon's access away silences the database alert.
+SELECT pg_temp.ac_check(
+  has_function_privilege('anon', 'public.uptime_ping()', 'EXECUTE')
+  AND NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.uptime_ping()'::regprocedure),
+  '1 the uptime monitor''s uptime_ping() stays callable by anon, and is not SECURITY DEFINER');
 
 -- ── 2. Behaviour by role ───────────────────────────────────────────────
 SET LOCAL ROLE anon;
 SELECT pg_temp.ac_run('SELECT public.is_coach()', '42501', '2 a visitor is refused is_coach()');
 SELECT pg_temp.ac_run('SELECT public.my_consent_status()', '42501', '2 a visitor is refused my_consent_status()');
+SELECT pg_temp.ac_check((SELECT public.uptime_ping()) = 'trak-db-up', '2 a visitor runs uptime_ping() and gets trak-db-up');
 RESET ROLE;
 SELECT set_config('request.jwt.claims',
   jsonb_build_object('role', 'authenticated', 'sub', '98237000-0000-0000-0000-000000000001')::text, true);
@@ -87,8 +93,8 @@ DO $test$
 DECLARE failed integer; total integer;
 BEGIN
   SELECT count(*) FILTER (WHERE NOT passed), count(*) INTO failed, total FROM pg_temp.ac_results;
-  IF total <> 10 THEN
-    RAISE EXCEPTION 'Advisor cleanup: % assertions ran; expected exactly 10', total;
+  IF total <> 12 THEN
+    RAISE EXCEPTION 'Advisor cleanup: % assertions ran; expected exactly 12', total;
   END IF;
   IF failed > 0 THEN
     RAISE EXCEPTION 'Advisor cleanup: % of % failed: %', failed, total,
