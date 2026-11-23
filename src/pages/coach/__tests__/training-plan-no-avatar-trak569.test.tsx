@@ -48,6 +48,12 @@ describe("TRAK-569: no coach avatar on a training's plan session page", { timeou
     expect(screen.queryByRole('button', { name: 'Open menu' })).toBeNull()
   })
 
+  it('TRAK-572: the View page on a phone: no Open menu avatar either', async () => {
+    renderApp('/coach/training/soon/view')
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open menu' })).toBeNull()
+  })
+
   it("Training's list on a phone still has the avatar", async () => {
     renderApp('/coach/training')
     expect(await screen.findByRole('button', { name: 'Open menu' })).toBeInTheDocument()

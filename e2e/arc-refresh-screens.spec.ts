@@ -516,6 +516,37 @@ for (const width of [390, 1280]) {
   })
 }
 
+// TRAK-554 (Kostas, 23 Nov): a published event's "Published" is a state, not a button: it sits at the pop-up's top
+// right, under the date and above the kick-off time, not in the row of buttons with Share.
+for (const [width, height] of [[1280, 800], [390, 844]] as const) {
+  test.describe(`TRAK-554 at ${width} px`, () => {
+    test.use({ timezoneId: 'Asia/Dubai', viewport: { width, height } })
+
+    test('the event pop-up says Published at its top right, under the date', async ({ page, context }, testInfo) => {
+      const unexpected: string[] = []
+      await coachBackend(context, unexpected, true)
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+      // Before tonight's kick-off, so the sheet still offers Share.
+      await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
+      await page.goto('/coach/home')
+      await page.getByRole('button', { name: /Rivals FC/ }).first().click()
+      await page.getByRole('button', { name: 'Details' }).click()
+      const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
+      const published = sheet.getByText('Published', { exact: true })
+      await expect(published).toBeVisible()
+      await expect(sheet.getByRole('button', { name: 'Share' })).toBeVisible()
+      await page.waitForTimeout(500)
+      const [p, title, kickOff, share] = await Promise.all([published.boundingBox(), sheet.getByRole('heading', { name: 'vs Rivals FC' }).boundingBox(),
+        sheet.getByText('Kick-off', { exact: true }).boundingBox(), sheet.getByRole('button', { name: 'Share' }).boundingBox()])
+      expect(p!.x, 'right of the title').toBeGreaterThan(title!.x + title!.width)
+      expect(p!.y + p!.height, 'above the kick-off time').toBeLessThanOrEqual(kickOff!.y)
+      expect(p!.y + p!.height, 'above the buttons').toBeLessThan(share!.y)
+      await page.screenshot({ path: testInfo.outputPath(`event-published-${width}.png`) })
+      expect(unexpected).toEqual([])
+    })
+  })
+}
+
 // Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
 // On a phone the profile now takes the list's place, and "All players" returns to the same spot. TRAK-351: on every
 // screen a player opens as their own page, and going back returns to the same spot (TRAK-428: by the trail).
