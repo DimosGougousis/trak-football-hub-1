@@ -98,7 +98,9 @@ for (const [width, height] of [[1280, 800], [834, 1112], [390, 844]] as const) {
     // TRAK-362: the published match only, folded; opened, how each instruction went.
     const result = card.getByRole('button', { name: /^vs Synthetic United/ })
     await expect(card.getByText('vs Synthetic Draft')).toHaveCount(0)
-    await expect(result).toContainText('Won 2–1')
+    // TRAK-552: named as Matches home says it; on screen, the score leads with its word under it.
+    await expect(result).toHaveAccessibleName(/, Won 2–1$/)
+    await expect(result).toContainText('2–1Won')
     await result.click()
     await expect(card.getByText('Press as one')).toBeVisible()
     await expect(card.getByText('Partly')).toBeVisible()
@@ -218,6 +220,31 @@ for (const [width, height, beside] of [[1280, 800, true], [390, 844, false]] as 
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.waitForTimeout(1000) // the slice's sweep, for the picture only
     await page.screenshot({ path: testInfo.outputPath(`season-objectives-${width}.png`) })
+    expect(unexpected).toEqual([])
+  })
+}
+
+// TRAK-552 (Season plan card 4/5): each result is a white tile that leads with the score, WON / DREW / LOST under it in
+// green, grey or red; opened, how each instruction went, in its colour.
+for (const [width, height] of [[1280, 800], [390, 844]] as const) {
+  test(`results at ${width} px: the score leads, the word under it in the result's colour`, async ({ context, page }, testInfo) => {
+    const unexpected: string[] = []
+    await backend(context, unexpected, ['U16'])
+    await page.setViewportSize({ width, height })
+    await page.goto('/coach/home')
+    await foldOf(page, 'U16').click()
+    const panel = page.getByRole('region', { name: 'U16 season plan' }).getByRole('region', { name: 'Results' })
+    const row = panel.getByRole('button', { name: /^vs Synthetic United, / })
+    const [score, word, opponent] = [row.getByText('2–1', { exact: true }), row.getByText('Won', { exact: true }), row.getByText('vs Synthetic United', { exact: true })]
+    await expect(word).toHaveCSS('color', await page.evaluate(() => `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--t-success').trim().split(/\s+/).join(', ')})`))
+    const [s, w, o] = [(await score.boundingBox())!, (await word.boundingBox())!, (await opponent.boundingBox())!]
+    expect(w.y).toBeGreaterThanOrEqual(s.y + s.height - 1)
+    expect(o.x).toBeGreaterThan(Math.max(s.x + s.width, w.x + w.width))
+    await row.click()
+    await expect(panel.getByText('Partly', { exact: true })).toHaveCSS('color', await page.evaluate(() => `rgb(${getComputedStyle(document.documentElement).getPropertyValue('--t-warning').trim().split(/\s+/).join(', ')})`))
+    expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
+    await panel.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`results-${width}.png`) })
     expect(unexpected).toEqual([])
   })
 }

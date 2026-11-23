@@ -14,7 +14,7 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { forgetScreens } from '@/lib/screen-memory'
-import { instructionsWent, matchResult } from '@/lib/games/results'
+import { instructionsWent, matchOutcome, matchResult } from '@/lib/games/results'
 
 let n = 0
 let COACH = { id: 'coach-362' }
@@ -105,9 +105,14 @@ describe('TRAK-362 results in the Season plan card', () => {
     renderApp('/coach/home')
     const list = await results()
     const rows = rowButtons(list)
+    // Named as Matches home says it; TRAK-552: on screen each row leads with the score, its word under it.
+    expect(rows.map(r => r.getAttribute('aria-label'))).toEqual([
+      expect.stringMatching(/^vs Synthetic United, .+, Won 2–1$/),
+      expect.stringMatching(/^vs Synthetic Rovers, .+, Drew 1–1$/),
+    ])
     expect(rows.map(r => r.textContent)).toEqual([
-      expect.stringMatching(/^vs Synthetic United.*Won 2–1$/),
-      expect.stringMatching(/^vs Synthetic Rovers.*Drew 1–1$/),
+      expect.stringMatching(/^2–1Wonvs Synthetic United/),
+      expect.stringMatching(/^1–1Drewvs Synthetic Rovers/),
     ])
     for (const gone of ['Synthetic Draft', 'Synthetic Cancelled', 'Synthetic Juniors', 'Synthetic Old']) expect(within(list).queryByText(new RegExp(gone))).toBeNull()
     rows.forEach(r => expect(r).toHaveAttribute('aria-expanded', 'false'))
@@ -154,6 +159,11 @@ describe('TRAK-362 how a result is said', () => {
     expect(matchResult(0, 0)).toEqual({ label: 'Drew 0–0', tone: 'neutral' })
     expect(matchResult(1, 3)).toEqual({ label: 'Lost 1–3', tone: 'danger' })
     expect(matchResult(null, 2)).toEqual({ label: 'Published', tone: 'neutral' })
+    // TRAK-552: the same, with the score and its word apart for the card's score block.
+    expect(matchOutcome(2, 1)).toEqual({ score: '2–1', word: 'Won', tone: 'success' })
+    expect(matchOutcome(0, 0)).toEqual({ score: '0–0', word: 'Drew', tone: 'neutral' })
+    expect(matchOutcome(1, 3)).toEqual({ score: '1–3', word: 'Lost', tone: 'danger' })
+    expect(matchOutcome(null, 2)).toEqual({ score: null, word: 'Published', tone: 'neutral' })
   })
   it('pairs each instruction with its answer, in order, and skips empty ones', () => {
     expect(instructionsWent([{ title: 'Press as one' }, { title: ' ' }, { title: 'Stay compact' }], ['partly', null, 'worked']))
