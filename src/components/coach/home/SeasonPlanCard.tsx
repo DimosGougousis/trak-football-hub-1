@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { supabase } from '@/integrations/supabase/client'
@@ -101,7 +101,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
     return <section aria-label={`${squad} season plan`} className={`${card} relative overflow-hidden laptop:p-5 ${className ?? ''}`}>
       <PitchLines />
       <div className="relative flex items-center gap-4">
-        <span aria-hidden="true" className="grid size-12 flex-none place-items-center rounded-[14px] bg-brand/10 text-brand"><CalendarDays size={24} /></span>
+        {/* TRAK-573 (Kostas, 23 Nov): no calendar icon; "Not started" or "Not shared yet" says it. */}
         <div className="grid min-w-0 flex-1 gap-1.5">
           <Title squad={squad} years={plan ? years : null} />
           <span><Badge tone={plan ? 'warning' : 'neutral'} size="md" dot pill>{plan ? 'Not shared yet' : 'Not started'}</Badge></span>
