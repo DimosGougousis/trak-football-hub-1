@@ -89,7 +89,7 @@ for (const [width, height] of [[1280, 800], [834, 1112], [390, 844]] as const) {
     await foldOf(page, 'U16').click()
     // TRAK-363: measured from the one published match that carried it.
     await expect(card.getByText('Worked in 1 of 1 match · 100%')).toBeVisible()
-    await card.getByRole('button', { name: /^Player objectives/ }).click()
+    await card.getByRole('button', { name: 'Show players' }).click()
     await expect(card.getByText('Holds the line together')).toBeVisible()
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await card.scrollIntoViewIfNeeded()
@@ -252,6 +252,37 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await panel.scrollIntoViewIfNeeded()
     await page.screenshot({ path: testInfo.outputPath(`results-${width}.png`) })
+    expect(unexpected).toEqual([])
+  })
+}
+
+// TRAK-553 (Season plan card 5/5): the squad at a glance, one bar split by group with a legend in the same colours;
+// Show players opens the names, one column per group, side by side on a laptop and stacked on a phone.
+for (const [width, height, beside] of [[1280, 800, true], [390, 844, false]] as const) {
+  test(`player objectives at ${width} px: one bar, a legend, and Show players in ${beside ? 'columns' : 'one column'}`, async ({ context, page }, testInfo) => {
+    const unexpected: string[] = []
+    await backend(context, unexpected, ['U16'])
+    await page.setViewportSize({ width, height })
+    await page.goto('/coach/home')
+    await foldOf(page, 'U16').click()
+    const panel = page.getByRole('region', { name: 'U16 season plan' }).getByRole('region', { name: 'Player objectives' })
+    const bar = panel.getByRole('img', { name: / of 3 players$/ })
+    await expect(bar).toBeVisible()
+    // Each part of the bar is its group's legend colour, in the same order.
+    const parts = await bar.locator('span').evaluateAll(spans => spans.map(s => getComputedStyle(s).backgroundColor))
+    const keys = await panel.locator('ul[aria-hidden="true"] i').evaluateAll(marks => marks.map(m => getComputedStyle(m).backgroundColor))
+    expect(parts.length).toBeGreaterThan(1)
+    expect(parts).toEqual(keys)
+    await panel.getByRole('button', { name: 'Show players' }).click()
+    const columns = panel.getByRole('heading', { level: 4 })
+    await expect(columns.first()).toBeVisible()
+    const boxes = await columns.evaluateAll(hs => hs.map(h => { const r = h.parentElement!.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width } }))
+    if (beside) expect(new Set(boxes.map(b => Math.round(b.y))).size, 'the columns share a top').toBe(1)
+    else expect(boxes.every((b, i) => i === 0 || b.y > boxes[i - 1].y)).toBe(true)
+    await expect(panel.getByText('Holds the line together')).toBeVisible()
+    expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
+    await panel.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`player-objectives-${width}.png`) })
     expect(unexpected).toEqual([])
   })
 }
