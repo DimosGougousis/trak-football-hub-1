@@ -102,15 +102,14 @@ afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
 const user = () => userEvent.setup()
 const results = async () => {
   const card = await screen.findByRole('region', { name: 'U16 season plan' })
-  const heading = await within(card).findByRole('heading', { name: 'Results' })
-  return heading.parentElement!
+  // TRAK-550: each part of the open card is a section named by its title.
+  return within(card).findByRole('region', { name: 'Results' })
 }
 const rowButtons = (scope: HTMLElement) => within(scope).getAllByRole('button').filter(b => b.hasAttribute('aria-expanded'))
 
 const objectivesBlock = async () => {
   const card = await screen.findByRole('region', { name: 'U16 season plan' })
-  const heading = await within(card).findByRole('heading', { name: 'Season objectives' })
-  return heading.parentElement!
+  return within(card).findByRole('region', { name: 'Season objectives' })
 }
 
 describe('TRAK-363 season objectives measured on Home', () => {
@@ -147,7 +146,7 @@ describe('TRAK-363 season objectives measured on Home', () => {
     const user = userEvent.setup()
     renderApp('/coach/home')
     const card = await screen.findByRole('region', { name: 'U16 season plan' })
-    const results = (await within(card).findByRole('heading', { name: 'Results' })).parentElement!
+    const results = await within(card).findByRole('region', { name: 'Results' })
     await user.click(within(results).getByRole('button', { name: /^vs Synthetic United/ }))
     const press = await within(results).findByText('Press as one')
     expect(press.closest('li')).toHaveTextContent('Press as oneSeason objective: Win it back within 5 secondsWorked')

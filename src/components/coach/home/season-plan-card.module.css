@@ -1,0 +1,9 @@
+/* TRAK-550 (Season plan card 2/5, Kostas's 21 Nov mockup): the open shared card's parts, each in its own panel. Season
+   objectives and Results sit side by side once the card itself is wide enough (its width, not the window's: Home's
+   column is narrower than the screen), Player objectives across the bottom. Narrower, one column in today's order. */
+.body { container-type: inline-size; }
+.panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@container (min-width: 820px) {
+  .panels { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .wide { grid-column: 1 / -1; }
+}

@@ -159,3 +159,33 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     expect(unexpected).toEqual([])
   })
 }
+
+// TRAK-550 (Season plan card 2/5): open, each part is a panel. Where the card is wide enough, Season objectives and
+// Results sit side by side, Player objectives across the bottom; a tablet and a phone keep one column, in today's order.
+for (const [width, height, beside] of [[1280, 800, true], [834, 1112, false], [390, 844, false]] as const) {
+  test(`the open card's panels at ${width} px: ${beside ? 'side by side' : 'one column'}`, async ({ context, page }, testInfo) => {
+    const unexpected: string[] = []
+    await backend(context, unexpected, ['U16'])
+    await page.setViewportSize({ width, height })
+    await page.goto('/coach/home')
+    const card = page.getByRole('region', { name: 'U16 season plan' })
+    await foldOf(page, 'U16').click()
+    await expect(card.getByText('Worked in 1 of 1 match · 100%')).toBeVisible()
+    const panelOf = (title: string) => card.getByRole('region', { name: title })
+    const [objectives, results, players] = await Promise.all(['Season objectives', 'Results', 'Player objectives'].map(t => panelOf(t).boundingBox()))
+    if (beside) {
+      expect(Math.abs(objectives!.y - results!.y), 'the two panels share a top').toBeLessThanOrEqual(1)
+      expect(results!.x).toBeGreaterThan(objectives!.x + objectives!.width)
+      expect(players!.y).toBeGreaterThanOrEqual(Math.max(objectives!.y + objectives!.height, results!.y + results!.height))
+      expect(Math.abs(players!.width - (results!.x + results!.width - objectives!.x)), 'Player objectives spans both').toBeLessThanOrEqual(1)
+    } else {
+      expect(results!.y).toBeGreaterThanOrEqual(objectives!.y + objectives!.height)
+      expect(players!.y).toBeGreaterThanOrEqual(results!.y + results!.height)
+      expect(Math.abs(objectives!.width - results!.width)).toBeLessThanOrEqual(1)
+    }
+    expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
+    await card.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`card-panels-${width}.png`), fullPage: true })
+    expect(unexpected).toEqual([])
+  })
+}
