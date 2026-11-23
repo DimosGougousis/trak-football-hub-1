@@ -27,8 +27,7 @@ import { ROLE_WORD, TRAIT_WORD, shown } from '@/lib/squad/trait-words'
 import { EditIcon } from '@/components/trak/IconAction'
 import { CategoryBar } from '@/components/trak/CategoryBar'
 import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
-import { bandConfig } from '@/lib/types'
-import { scoreToBand } from '@/lib/rating-engine'
+import { scoreColor } from '@/lib/rating-engine'
 
 const FOOT = { left: 'coachSquad:footLeft', right: 'coachSquad:footRight', both: 'coachSquad:footBoth' } as const
 /** TRAK-451 (walk-through of 11 Nov): every block on the page has the same bold title, and the page's two smaller cards
@@ -155,8 +154,8 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
           axes={ATTRIBUTES.map(([k]) => ({ key: k, label: t(ATTRIBUTE_WORD[k]) }))}
           series={[{ key: 'player', label: first, values: season.scores }, ...(squadSeason ? [{ key: 'squad', label: t('coachSquad:squadAverage'), values: squadSeason }] : [])]}
           formatValue={value => value.toFixed(1)}
-          // TRAK-458: each of the player's points in its band's colour (the band's word is in the cards below).
-          pointColor={value => bandConfig(scoreToBand(value)).color} /></div>}
+          // TRAK-556: each of the player's points in its score's colour, the average rounded (the band's word is in the cards below).
+          pointColor={scoreColor} /></div>}
       </section>
     </div>
 
