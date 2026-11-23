@@ -182,7 +182,7 @@ describe('TRAK-364 the evaluation', () => {
     await user().type(screen.getByLabelText('Note to Quinn and parents'), 'Great first month.')
     expect(screen.queryByText(/Only Quinn sees it/)).toBeNull()
     await user().click(screen.getByRole('button', { name: 'Done' }))
-    // Pat: last time's ratings, Work Rate up to 9.
+    // Pat: last time's ratings, Work Rate up to 9: 6.2 to 6.5, which rounds to 7, Good (TRAK-556).
     await user().click(await screen.findByRole('button', { name: /^Pat Synthetic/ }))
     expect(screen.getByText('From last time: Steady, 6.2.')).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[0], 9)
@@ -191,14 +191,14 @@ describe('TRAK-364 the evaluation', () => {
 
     await user().click(screen.getByRole('button', { name: 'Next: Send' }))
     const changed = screen.getByRole('region', { name: 'What changed' })
-    expect(within(changed).getByText('Same band · 6.2 → 6.5')).toBeInTheDocument()
+    expect(within(changed).getByText('Steady → Good')).toBeInTheDocument()
     expect(screen.queryByText('Only the player sees your note.')).toBeNull()
 
     // A failed send keeps everything entered; the next one sends exactly the same.
     failNext = 1
     await user().click(screen.getByRole('button', { name: 'Send to 2 players' }))
     expect(await screen.findByText("Couldn't send the reports. Check your connection and try again; everything you entered is still here.")).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Same band · 6.2 → 6.5')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Steady → Good')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Send to 2 players' }))
     expect(await screen.findByText('Sent to 2 players.')).toBeInTheDocument()
     // The note as report_note: it goes in both copies (an old page's `note` reaches the player alone).

@@ -1,7 +1,7 @@
 import { forwardRef, type CSSProperties } from 'react'
 import { ElasticSlider } from '@/components/arc/elastic-slider/elastic-slider'
-import { BANDS, SLIDER_COLORS } from '@/lib/types'
-import { scoreToBand } from '@/lib/rating-engine'
+import { BANDS } from '@/lib/types'
+import { scoreColor, scoreToBand } from '@/lib/rating-engine'
 
 interface SliderInputProps {
   label: string
@@ -24,8 +24,8 @@ const MARKS = [2, 4, 6, 8]
 
 export const SliderInput = forwardRef<HTMLDivElement, SliderInputProps>(
   function SliderInput({ label, value, onChange, disabled }, ref) {
-    // TRAK-555: the fill takes the score's own colour (SLIDER_COLORS), not its band's.
-    const fill = SLIDER_COLORS[Math.min(10, Math.max(0, Math.round(value)))]
+    // TRAK-555: the fill takes the score's own colour, not its band's.
+    const fill = scoreColor(value)
     return (
       <div ref={ref} className={`arc${disabled ? ' opacity-40 grayscale' : ''}`}
         style={{ '--control-fill': fill } as CSSProperties}>

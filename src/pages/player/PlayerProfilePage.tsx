@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
 import { IconPassport, IconHowItWorks } from '@/components/icons/TrakIcons'
 import { ChevronRight, Settings as SettingsIcon } from 'lucide-react'
-import { bandForScore } from '@/lib/rating-engine'
+import { bandForScore, scoreColor, scoreShade } from '@/lib/rating-engine'
 import { ParentInviteCard } from '@/components/player/ParentInviteCard'
 import { PlayerConnections } from '@/components/player/PlayerConnections'
 import { useMySeason } from '@/lib/my-season'
@@ -114,9 +114,9 @@ export default function PlayerProfilePage() {
                   <div key={cat.name} className="flex items-center gap-2.5">
                     <span className="text-[11px] text-ink w-[110px] flex-shrink-0">{cat.name}</span>
                     <div className="flex-1 h-[5px] rounded-full bg-raised overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: bandInfo.color }} />
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: scoreColor(cat.score) }} />
                     </div>
-                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: bandInfo.text }}>
+                    <span className="text-[11px] font-semibold w-[68px] text-right flex-shrink-0" style={{ color: scoreShade(cat.score) }}>
                       {bandInfo.word}
                     </span>
                   </div>

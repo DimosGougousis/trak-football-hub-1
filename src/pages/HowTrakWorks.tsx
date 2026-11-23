@@ -7,22 +7,19 @@ import { BANDS, BAND_TEXT } from '@/lib/types'
 
 const BAND_DESCRIPTIONS: Record<string, string> = {
   exceptional: 'Outstanding — everything clicked',
-  standout: 'Excellent — clearly above the norm',
   good: 'Solid positive — contributing well',
   steady: 'Reliable — did the job',
-  mixed: 'Moments and struggles — inconsistent',
   developing: 'Below target — room to grow',
   difficult: 'Tough match — part of the journey',
 }
 
+// TRAK-556 (Imad, 23 Nov): five bands on whole scores; an average rounds to the nearest whole score.
 const RANGES: Record<string, string> = {
-  exceptional: '9.0 – 10.0',
-  standout:    '8.0 – 8.9',
-  good:        '7.0 – 7.9',
-  steady:      '6.0 – 6.9',
-  mixed:       '4.0 – 5.9',
-  developing:  '2.0 – 3.9',
-  difficult:   '0.0 – 1.9',
+  exceptional: '10',
+  good:        '7 – 9',
+  steady:      '5 – 6',
+  developing:  '3 – 4',
+  difficult:   '0 – 2',
 }
 
 export default function HowTrakWorks() {
@@ -122,7 +119,7 @@ export default function HowTrakWorks() {
             style={{ fontFamily: 'var(--t-font)' }}>
             A 7.2 and a 7.4 feel the same on the pitch, but a number invites comparison and pressure.
             Bands keep the focus on growth: how often you reach <span style={{ color: BAND_TEXT.Good }}>Good</span>,
-            how you bounce back from a <span style={{ color: BAND_TEXT.Mixed }}>Mixed</span> match, and when you
+            how you bounce back from a <span style={{ color: BAND_TEXT.Difficult }}>Difficult</span> match, and when you
             break into <span style={{ color: BAND_TEXT.Exceptional }}>Exceptional</span>.
           </p>
         </div>

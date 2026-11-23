@@ -13,6 +13,7 @@ import { ATTRIBUTE_WORD } from '@/lib/squad/attribute-words'
 import { progressLabel, type Progress } from '@/lib/objective-progress'
 import { useTranslation } from '@/lib/i18n'
 import { BANDS } from '@/lib/types'
+import { scoreColor, scoreShade } from '@/lib/rating-engine'
 import {
   bandOfScore, loadPlayerReport, loadSentReports, overallOf, playerReportKey, reportDate, reportDayOf, reportMonth, reportSummary,
   sentReportsKey, withEntry,
@@ -197,7 +198,7 @@ function ThenAndNow({ report, now, before, first }: { report: Report; now: Repor
               <dt className="text-sm text-ink">{t(ATTRIBUTE_WORD[k])}</dt>
               <dd className="m-0 text-sm">
                 {then && then.word !== band.word && <span className="text-ink-3">{then.word} → </span>}
-                <span className="font-medium" style={{ color: band.text }}>{band.word}</span>
+                <span className="font-medium" style={{ color: scoreShade(now[k]) }}>{band.word}</span>
               </dd>
             </div>
           })}
@@ -215,23 +216,26 @@ function SeasonLadder({ report }: { report: Report }) {
   const d0 = day(report.season_starts_on), d1 = Math.max(day(report.report_day), d0 + 1)
   const x = (iso: string) => L + (day(iso) - d0) / (d1 - d0) * (W - L - R)
   const points = report.assessments.map(a => ({ day: a.day, score: overallOf(a) }))
-  const low = Math.min(...points.map(p => p.score)) < 4 ? 0 : 4
+  // TRAK-556: an average rounds before it takes a band, so a band starts half a point under its whole score (Good at
+  // 6.5); the lines sit there, so every dot sits between its own band's lines.
+  const floor = (b: { minScore: number }) => Math.max(0, b.minScore - 0.5)
+  const low = Math.min(...points.map(p => p.score)) < 4.5 ? 0 : 4.5
   const y = (v: number) => TOP + (10 - v) / (10 - low) * (H - TOP - BOTTOM)
   // The bands' floors, from the top, down to the lowest shown.
-  const steps = BANDS.filter(b => b.minScore >= low)
+  const steps = BANDS.filter(b => floor(b) >= low)
   const from = Math.max(x(report.period_from), L)
   return <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={t('coachSquad:reportLadder', { count: points.length })} className="block">
     <rect x={from} y={TOP} width={Math.max(0, x(report.report_day) - from)} height={H - TOP - BOTTOM} style={{ fill: 'rgb(var(--t-brand))', fillOpacity: 0.07 }} />
     {steps.map((b, i) => {
-      const top = i === 0 ? 10 : steps[i - 1].minScore
+      const top = i === 0 ? 10 : floor(steps[i - 1])
       return <g key={b.word}>
-        <line x1={L} x2={W - R} y1={y(b.minScore)} y2={y(b.minScore)} style={{ stroke: 'rgb(var(--t-line))' }} />
-        <text x={L - 10} y={(y(b.minScore) + y(top)) / 2 + 4} textAnchor="end" style={{ fill: 'rgb(var(--t-ink-3))', font: '13px var(--t-font)' }}>{b.word}</text>
+        <line x1={L} x2={W - R} y1={y(floor(b))} y2={y(floor(b))} style={{ stroke: 'rgb(var(--t-line))' }} />
+        <text x={L - 10} y={(y(floor(b)) + y(top)) / 2 + 4} textAnchor="end" style={{ fill: 'rgb(var(--t-ink-3))', font: '13px var(--t-font)' }}>{b.word}</text>
       </g>
     })}
     {points.length > 1 && <path d={points.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(1)} ${y(p.score).toFixed(1)}`).join(' ')}
       style={{ fill: 'none', stroke: 'rgb(var(--t-brand))', strokeWidth: 2.5, strokeLinejoin: 'round', strokeLinecap: 'round' }} />}
-    {points.map((p, i) => <circle key={i} cx={x(p.day)} cy={y(p.score)} r={5} fill={bandOfScore(p.score).color} style={{ stroke: 'rgb(var(--t-surface))', strokeWidth: 2 }}>
+    {points.map((p, i) => <circle key={i} cx={x(p.day)} cy={y(p.score)} r={5} fill={scoreColor(p.score)} style={{ stroke: 'rgb(var(--t-surface))', strokeWidth: 2 }}>
       <title>{`${reportDate(p.day)}: ${bandOfScore(p.score).word}`}</title>
     </circle>)}
     <text x={L} y={H - 6} style={{ fill: 'rgb(var(--t-ink-3))', font: '12px var(--t-font)' }}>{reportDate(report.season_starts_on)}</text>

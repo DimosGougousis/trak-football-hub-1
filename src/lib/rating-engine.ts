@@ -1,4 +1,4 @@
-import { bandConfig } from './types'
+import { bandConfig, SCORE_COLORS, SCORE_SHADES } from './types'
 import type { MatchInput, BandType, BandConfig } from './types'
 
 function getPositionModifiers(position: string, inputs: Record<string, string | number>): number {
@@ -180,14 +180,22 @@ export function computeMatchScore(input: MatchInput): number {
   return Math.round(score * 100) / 100
 }
 
+/** TRAK-556 (Imad, 23 Nov): an average becomes a whole score before it takes a band or a colour, rounded as it is
+ *  shown (to one decimal, then to the nearest whole): 6.6 and 6.45 are 7, 9.5 is 10, 4.5 is 5. */
+export const wholeScore = (score: number) => Math.min(10, Math.max(0, Math.round(Math.round(score * 10) / 10)))
+
+/** TRAK-556 (Imad, 23 Nov): one score's colour (a bar, a radar point, a report dot), its whole score's in SCORE_COLORS;
+ *  and the darker shade for the band word written beside it. A band's pill keeps the band's colour (BANDS). */
+export const scoreColor = (score: number) => SCORE_COLORS[wholeScore(score)]
+export const scoreShade = (score: number) => SCORE_SHADES[wholeScore(score)]
+
 export function scoreToBand(score: number): BandType {
-  // 0..10 scale — 5 lands in the middle of "Mixed".
-  if (score >= 9) return 'exceptional'
-  if (score >= 8) return 'standout'
-  if (score >= 7) return 'good'
-  if (score >= 6) return 'steady'
-  if (score >= 4) return 'mixed'
-  if (score >= 2) return 'developing'
+  // TRAK-556: 10 Exceptional · 7–9 Good · 5–6 Steady · 3–4 Developing · 0–2 Difficult.
+  const whole = wholeScore(score)
+  if (whole >= 10) return 'exceptional'
+  if (whole >= 7) return 'good'
+  if (whole >= 5) return 'steady'
+  if (whole >= 3) return 'developing'
   return 'difficult'
 }
 

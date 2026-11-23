@@ -52,7 +52,7 @@ describe('TRAK-527 the bands', () => {
   })
   it('falls back to the latest assessment from before the season', () => {
     const report = { ...base, before_season: { id: 'old', day: '2026-06-01', ...six(4) } }
-    expect(reportSummary(report).overall?.word).toBe('Mixed')
+    expect(reportSummary(report).overall?.word).toBe('Developing')
   })
 })
 
