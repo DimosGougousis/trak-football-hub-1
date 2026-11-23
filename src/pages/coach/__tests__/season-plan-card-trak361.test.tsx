@@ -126,16 +126,22 @@ describe('TRAK-361 the Season plan card', () => {
     expect(fold(await cardOf('U16'))).toHaveAttribute('aria-expanded', 'false')
   }, 30_000)
 
-  it('lists the players worst first in one folded row, and View plan opens the plan', async () => {
+  it('shows the players as one bar, worst first, and Show players lists them; View plan opens the plan', async () => {
     renderApp('/coach/home')
     const card = await cardOf('U16')
     await user().click(fold(card))
-    const players = await within(card).findByRole('button', { name: /^Player objectives/ })
     // TRAK-550: each part of the open card is a section named by its title.
-    for (const part of ['Season objectives', 'Results', 'Player objectives']) expect(within(card).getByRole('region', { name: part })).toBeInTheDocument()
-    expect(players).toHaveTextContent('1 player working on objectives · 1 watching')
+    for (const part of ['Season objectives', 'Results']) expect(await within(card).findByRole('region', { name: part })).toBeInTheDocument()
+    const panel = within(card).getByRole('region', { name: 'Player objectives' })
+    expect(within(panel).getByText('1 player working on objectives · 1 watching')).toBeInTheDocument()
+    // TRAK-553: the squad at a glance, one bar split by group, worst first; Show players opens the names.
+    expect(within(panel).getByRole('img', { name: 'Not rated yet 1, Watching 1, No objective yet 1 of 3 players' })).toBeInTheDocument()
+    const players = within(panel).getByRole('button', { name: 'Show players' })
     expect(players).toHaveAttribute('aria-expanded', 'false')
+    expect(within(panel).queryByText('Wins their headers')).toBeNull()
     await user().click(players)
+    expect(players).toHaveAttribute('aria-expanded', 'true')
+    expect(players).toHaveAccessibleName('Hide players')
     const groups = within(card).getAllByRole('heading', { level: 4 }).map(h => h.textContent)
     expect(groups).toEqual(['Not rated yet · 1', 'Watching · 1', 'No objective yet · 1'])
     expect(within(card).getByText('Wins their headers')).toBeInTheDocument()
