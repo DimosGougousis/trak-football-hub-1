@@ -10,7 +10,7 @@ import { usePlayerObjectives } from './usePlayerObjectives'
 import { EditIcon } from '@/components/trak/IconAction'
 
 /* TRAK-354 (Season plan 6/18): a player's objectives on their own page, with one edit for both, under the same rules
-   as step 3. Each says which season objective it supports, or whose it is, and since when. No position, no
+   as step 3. Each says since when (TRAK-567: not which season objective it supports). No position, no
    objectives: the page says so and points at Positions. Shown only where the season plan is on. TRAK-356: once the plan
    is shared, a removed objective stays here, with when it was given and removed, and the set-up's Positions step is
    gone, so the line points at the position above. */
@@ -56,14 +56,13 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
       </div>
       : held.length === 0 && gone.length === 0 ? <p className="text-sm text-ink-2">No objective yet.</p>
       : <>{held.length === 0 ? <p className="text-sm text-ink-2">No objective yet.</p> : <ul className="m-0 grid list-none gap-3 p-0">
-        {held.map(o => {
-          const supports = plan.find(s => s.id === o.seasonObjectiveId)?.title
-          return <li key={o.id} className="grid gap-1 border-t border-line pt-2.5">
+        {held.map(o => (
+          <li key={o.id} className="grid gap-1 border-t border-line pt-2.5">
             <span className="text-[17px] font-medium text-ink">{o.title}</span>
-            {/* TRAK-512 (Imad, 20 Nov): "Supports" only when it backs a season objective; no "Your own" or "Their own". */}
-            <span className="text-sm text-ink-3">{supports ? `Supports: ${supports} · since ${since(o.since)}` : `Since ${since(o.since)}`}</span>
+            {/* TRAK-567 (phone review, 23 Nov): no "Supports: <season objective>" here any more, only since when. */}
+            <span className="text-sm text-ink-3">Since {since(o.since)}</span>
           </li>
-        })}
+        ))}
       </ul>}
       {gone.length > 0 && <div className="grid gap-1 border-t border-line pt-2.5">
         <h5 className="text-sm font-medium text-ink-2">Removed</h5>

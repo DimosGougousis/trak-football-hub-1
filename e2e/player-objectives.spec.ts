@@ -105,7 +105,8 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     await page.goto('/coach/squad/player/sq-1')
     const section = page.getByRole('region', { name: 'Objectives' })
     await expect(section).toContainText('Sweeps behind a high line')
-    await expect(section).toContainText('Supports: Win it back within 5 seconds')
+    // TRAK-567: no "Supports:" line on the player's page.
+    await expect(section).not.toContainText('Supports:')
     await expect(section).toContainText('Commands the box on crosses')
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.screenshot({ path: testInfo.outputPath(`objectives-player-page-${width}.png`) })
