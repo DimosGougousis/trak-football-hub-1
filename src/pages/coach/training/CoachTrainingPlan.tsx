@@ -15,6 +15,7 @@ import type { EventRow } from '@/lib/coach-events'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { useNotes, usePlan, useRegisters, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
 import { MenuTrail } from '@/components/coach/MenuTrail'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { RegisterSheet } from '@/components/coach/training/RegisterSheet'
 import { NotesForm } from '@/components/coach/training/NotesForm'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
@@ -138,8 +139,9 @@ function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) 
   return <>
     <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem]" top={wide ? TOP_BAR : '0px'}
       title={training.title} status={status}
-      // TRAK-367: the trail says which training by its day, as a training's name can be long.
-      crumbs={<MenuTrail current={day} />}
+      // TRAK-367: the trail says which training by its day, as a training's name can be long. TRAK-569 (phone review,
+      // 23 Nov): no coach avatar beside it (the side menu isn't needed here), as a match's page.
+      crumbs={<CoachTrail current={day} />}
       details={<>
         <span><CalendarDays {...metaIcon} /><strong>{day}</strong></span>
         {time && <span><Clock {...metaIcon} />{[time, minutes ? t('coachHome:minutes', { count: minutes }) : null, academy].filter(Boolean).join(' · ')}</span>}
