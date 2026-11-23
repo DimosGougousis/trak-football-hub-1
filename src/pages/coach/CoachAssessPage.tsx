@@ -318,8 +318,11 @@ function CoachAssessmentForm() {
     })
   }, [savedCheckIn.data])
   const objectivesReady = !asksObjectives || !!finalCheckIn || (playerObjectives.isSuccess && (!openedRowId || savedCheckIn.isSuccess) && allRated(openObjectives, checkIn))
+  // TRAK-542: the coach can jump past Objectives, so the steps and Review say when one still has no answer.
+  const objectivesMissing = asksObjectives && !finalCheckIn && playerObjectives.isSuccess && !allRated(openObjectives, checkIn)
   // TRAK-407: the steps' names in the language showing.
-  const steps = STEPS.filter(entry => entry.id !== 'objectives' || asksObjectives).map(entry => ({ id: entry.id, label: t(entry.label) }))
+  const steps = STEPS.filter(entry => entry.id !== 'objectives' || asksObjectives).map((entry, index) => ({ id: entry.id, label: t(entry.label),
+    error: entry.id === 'objectives' && objectivesMissing && index < step ? t('coachAssess:objectiveNoAnswer') : undefined }))
   const stepId = steps[step]?.id
   useEffect(() => {
     setConsentWait(false)
@@ -790,15 +793,27 @@ function CoachAssessmentForm() {
               [t('coachAssess:appearance'), appearance ? appearanceWord(appearance) : null],
               [t('coachAssess:overall'), `${bandWord(overallCfg.word)} · ${(Math.round(avg * 10) / 10).toFixed(1)}`],
               [t('coachAssess:stepRatings'), t('coachAssess:ratingsLine', { workRate, tactical, attitude, technical, physical, coachability })],
+              [t('coachAssess:stepObjectives'), !asksObjectives || !(finalCheckIn || playerObjectives.isSuccess) ? null
+                : <ul aria-label={t('coachAssess:stepObjectives')} className="m-0 grid list-none gap-1 p-0">
+                  {(finalCheckIn
+                    ? finalCheckIn.map(row => [row.added_title ?? row.player_objectives?.title ?? '', row.added_title ? t('coachAssess:objectiveAdded') : isProgress(row.status) ? progressLabel(row.status) : ''] as const)
+                    : [...openObjectives.map(o => [o.title, checkIn.progress[o.id] ? progressLabel(checkIn.progress[o.id]) : null] as const),
+                      ...checkIn.add.map(title => [title, t('coachAssess:objectiveAdded')] as const)]
+                  ).map(([title, answer]) => <li key={title} className="flex justify-between gap-3">
+                    <span className="min-w-0">{title}</span>
+                    <span className={answer === null ? 'shrink-0 text-warning' : 'shrink-0 text-ink-3'}>{answer ?? t('coachAssess:objectiveNoAnswer')}</span>
+                  </li>)}
+                </ul>],
               [t('coachAssess:messageTo', { name: firstName }), message || t('coachSchedule:none')],
               [t('coachAssess:privateNote'), <>{note.trim() || t('coachSchedule:none')}<span className="block mt-1 text-[11px] text-ink-3">{t('coachSquad:onlyYou')}</span></>],
             ] as const).filter(([, value]) => value !== null).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
                 <dt className="w-28 shrink-0 text-ink-3">{term}</dt>
-                <dd className="text-ink break-words min-w-0">{value}</dd>
+                <dd className="text-ink break-words min-w-0 flex-1">{value}</dd>
               </div>
             ))}
           </dl>
+          {objectivesMissing && <p className="mt-3 text-sm text-warning">{t('coachAssess:answerEachObjective')}</p>}
         </>}
         </fieldset>
         {/* Outside the consent-locked fieldset: retracting what the family can
