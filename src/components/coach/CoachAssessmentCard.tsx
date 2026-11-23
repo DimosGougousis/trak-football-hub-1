@@ -1,11 +1,11 @@
 import { currentLanguage, useTranslation } from '@/lib/i18n'
-import { bandWord } from '@/lib/band-words'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { Card } from '@/components/arc/card/card'
 import { SplitButton } from '@/components/arc/split-button/split-button'
+import { BandChip } from '@/components/arc/blocks/team-directory/squad-directory'
 import { CategoryBar, MetadataLabel } from '@/components/trak'
 import { scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
@@ -48,7 +48,7 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
   const [published, setPublished] = useState(assessment.published_at != null)
   const [busy, setBusy] = useState(false)
   const band = scoreToBand(average(assessment))
-  const bandName = bandWord(BANDS.find(b => b.word.toLowerCase() === band)?.word ?? band)
+  const bandName = BANDS.find(b => b.word.toLowerCase() === band)?.word ?? null
   const date = new Date(assessment.created_at).toLocaleDateString(currentLanguage() === 'en' ? 'en-GB' : currentLanguage(), { day: 'numeric', month: 'short' })
   const label = published ? t('coachHome:notePublished') : t('coachHome:stateDraft')
 
@@ -81,7 +81,8 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
       title={label}
       corner={date}
       description={playerName}
-      meta={bandName}
+      // TRAK-557 (Imad, 23 Nov): the overall band in the pill a player's page shows at its top right.
+      meta={<BandChip band={bandName} />}
       action={<SplitButton
         label={published ? t('coachHome:notePublished') : t('coachHome:publish')}
         // TRAK-497 (Imad, 20 Nov): green like Evaluate once published too (it turned grey).

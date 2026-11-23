@@ -14,14 +14,14 @@ import { renderApp } from '../../tests/support/render-app'
 import { signInAs } from '../../tests/support/session'
 import { server } from '../../tests/msw/server'
 import { table, rpc } from '../../tests/msw/supabase'
-import { BANDS, SCORE_COLORS, SCORE_SHADES } from '@/lib/types'
+import { BANDS, SCORE_COLORS } from '@/lib/types'
 
 const PLAYER = { id: 'player-bands-189' }
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
-// TRAK-556: a bar takes its score's colour and its word that colour's darker shade; a pill keeps its band's colours.
-const BAND_RGB = new Set([...BANDS.flatMap(b => [b.color, b.text]), ...SCORE_COLORS, ...SCORE_SHADES].map(rgb))
+// TRAK-556: a bar takes its score's colour (its word is in Trak's ink, TRAK-557); a pill keeps its band's colours.
+const BAND_RGB = new Set([...BANDS.flatMap(b => [b.color, b.text]), ...SCORE_COLORS].map(rgb))
 // Bar colours too light for small text: a word in one of these is the bug.
-const READABLE = new Set([...BANDS.map(b => b.text), ...SCORE_SHADES].map(rgb))
+const READABLE = new Set(BANDS.map(b => b.text).map(rgb))
 const BAR_ONLY = new Set([...BANDS.map(b => b.color), ...SCORE_COLORS].map(rgb).filter(c => !READABLE.has(c)))
 
 /** Every element whose text or fill is a band colour; whether it sits on a dark card; whether its text is a bar-only colour. */

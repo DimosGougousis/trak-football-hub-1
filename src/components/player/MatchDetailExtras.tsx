@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { SELF_RATING_BAND, categoryScoreToBand } from '@/lib/matchDetailHelpers'
 import { BANDS } from '@/lib/types'
-import { scoreColor, scoreShade } from '@/lib/rating-engine'
+import { scoreColor } from '@/lib/rating-engine'
 import type { Band } from '@/lib/clubMock'
 
 interface Props {
@@ -126,7 +126,7 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
                       flex: '0 0 80px',
                       fontSize: 11,
                       textAlign: 'right',
-                      color: scoreShade(score),
+                      color: 'rgb(var(--t-ink))',
                     }}
                   >
                     {band}

@@ -5,7 +5,7 @@ import { BandPill } from '@/components/trak'
 import { HomeTitle } from '@/components/trak/HomeHeader'
 import { DropdownMenu } from '@/components/arc/dropdown-menu/dropdown-menu'
 import { TeamSwitcher } from '@/components/arc/team-switcher/team-switcher'
-import { scoreColor, scoreShade, scoreToBand } from '@/lib/rating-engine'
+import { scoreColor, scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { ParentAssessment } from '@/lib/parent-data'
 
@@ -130,7 +130,7 @@ export function ParentAssessmentBands({ assessment }: { assessment: ParentAssess
           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden="true">
             {rated && <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(10, category.score)) * 10}%`, backgroundColor: scoreColor(category.score) }} />}
           </div>
-          <span className="text-xs w-20 text-right text-muted-foreground" style={band ? { color: scoreShade(category.score) } : undefined}>{band?.word ?? 'Not assessed'}</span>
+          <span className={`text-xs w-20 text-right ${band ? 'text-ink' : 'text-muted-foreground'}`}>{band?.word ?? 'Not assessed'}</span>
         </div>
       })}
     </div>
