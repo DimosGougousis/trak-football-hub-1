@@ -210,9 +210,16 @@ for (const [width, height, beside] of [[1280, 800, true], [390, 844, false]] as 
     await expect(donut.locator('path').first()).toHaveAttribute('d', /.{40,}/)
     await expect(donut.locator('path').first()).toHaveCSS('fill', 'rgb(11, 102, 35)')
     await expect(row.locator('span[aria-hidden="true"]').first()).toHaveCSS('background-color', 'rgb(11, 102, 35)')
-    // The words in the middle show whole at this size (at 148 px "Times it worked" read "Times it wo…").
-    expect(await donut.evaluate(el => [...el.querySelectorAll('span')].filter(s => s.children.length === 0 && s.textContent === 'Times worked')
-      .map(s => s.scrollWidth <= s.clientWidth))).toEqual([true])
+    // The word in the middle shows whole and clear of the ring (Kostas, 23 Nov: "Times worked" touched it, so it's
+    // "Worked" with the number under it): the text is at most two thirds of the ring's inner width.
+    const fit = await donut.evaluate(el => {
+      const word = [...el.querySelectorAll('span')].find(s => s.children.length === 0 && s.textContent === 'Worked')!
+      const range = document.createRange(); range.selectNodeContents(word)
+      const svg = el.querySelector('svg')!.getBoundingClientRect()
+      return { whole: word.scrollWidth <= word.clientWidth, text: range.getBoundingClientRect().width, inner: svg.width * (1 - 2 * 14 / 148) }
+    })
+    expect(fit.whole).toBe(true)
+    expect(fit.text, `"Worked" is ${Math.round(fit.text)} px in a ${Math.round(fit.inner)} px hole`).toBeLessThanOrEqual(fit.inner * 2 / 3)
     const [d, r] = [(await donut.boundingBox())!, (await row.boundingBox())!]
     expect(d.width).toBeLessThanOrEqual(150)
     if (beside) expect(r.x).toBeGreaterThan(d.x + d.width)
