@@ -10,13 +10,13 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { useSquadEvaluations } from '@/components/coach/season-plan/useEvaluation'
 import { ATTRIBUTES } from '@/lib/squad/attributes'
 import { ATTRIBUTE_WORD } from '@/lib/squad/attribute-words'
-import { progressLabel } from '@/lib/objective-progress'
+import { progressLabel, type Progress } from '@/lib/objective-progress'
 import { useTranslation } from '@/lib/i18n'
 import { BANDS } from '@/lib/types'
 import {
   bandOfScore, loadPlayerReport, loadSentReports, overallOf, playerReportKey, reportDate, reportDayOf, reportMonth, reportSummary,
-  sentReportsKey,
-  type PlayerReport as Report, type ReportAssessment,
+  sentReportsKey, withEntry,
+  type PlayerReport as Report, type ReportAssessment, type ReportRatings,
 } from '@/lib/player-report'
 
 /* TRAK-527 (Reports 4/10, Imad 21 Nov): Squad › a player's page › View report. The report the squad's plan is working
@@ -47,8 +47,21 @@ export function PlayerReport({ playerId, name, squad, coachId }: { playerId: str
   return <ReportBody report={report.data} name={name} />
 }
 
-/** A report: as it fills up, or, with `sentAt`, as it was sent (TRAK-528). */
-function ReportBody({ report, name, sentAt }: { report: Report; name: string; sentAt?: string }) {
+/** TRAK-531: report day's Preview, the report as Send will store it: the ratings and answers on screen, and the note. */
+export function ReportPreview({ playerId, name, coachId, reportDay, lastReportDay, ratings, progress, note }: {
+  playerId: string; name: string; coachId: string; reportDay: string; lastReportDay: string | null
+  ratings: ReportRatings; progress: Partial<Record<string, Progress>>; note: string
+}) {
+  const { t } = useTranslation()
+  const first = name.split(' ')[0]
+  const report = useQuery({ queryKey: playerReportKey(coachId, playerId, reportDay), queryFn: () => loadPlayerReport(playerId, reportDay, lastReportDay) })
+  if (report.isError) return <LoadError what={t('coachSquad:reportWhat', { name: first })} onRetry={() => { void report.refetch() }} />
+  if (!report.data) return <LoadingSkeleton label={t('coachSquad:loadingReport', { name: first })} lines={4} />
+  return <ReportBody report={withEntry(report.data, ratings, progress)} name={name} note={note} />
+}
+
+/** A report: as it fills up, or, with `sentAt`, as it was sent (TRAK-528); with the note to the player and parents. */
+function ReportBody({ report, name, sentAt, note }: { report: Report; name: string; sentAt?: string; note?: string }) {
   const { t } = useTranslation()
   const first = name.split(' ')[0]
   const s = reportSummary(report)
@@ -83,6 +96,11 @@ function ReportBody({ report, name, sentAt }: { report: Report; name: string; se
         </Tile>
       </dl>
     </article>
+
+    {note?.trim() && <section aria-labelledby={`note-${report.squad_player_id}`} className={CARD}>
+      <h3 id={`note-${report.squad_player_id}`} className={TITLE}>{t('coachSquad:reportNote')}</h3>
+      <p className="whitespace-pre-line break-words text-sm text-ink">{note.trim()}</p>
+    </section>}
 
     <div className="grid gap-4 laptop:grid-cols-2 laptop:items-start">
       <ThenAndNow report={report} now={s.now} before={s.before} first={first} />
@@ -135,7 +153,7 @@ export function SentReport({ playerId, evaluationId, name, coachId }: { playerId
   if (sent.isError) return <LoadError what={t('coachSquad:reportWhat', { name: first })} onRetry={() => { void sent.refetch() }} />
   if (!sent.data) return <LoadingSkeleton label={t('coachSquad:loadingReport', { name: first })} lines={4} />
   const one = sent.data.find(r => r.evaluation_id === evaluationId)
-  return one ? <ReportBody report={one.report} name={name} sentAt={one.sent_at} />
+  return one ? <ReportBody report={one.report} name={name} sentAt={one.sent_at} note={one.note} />
     : <p className="text-sm text-ink-2">{t('coachSquad:reportNotFound')}</p>
 }
 

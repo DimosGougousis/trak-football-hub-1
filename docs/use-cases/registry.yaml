@@ -224,20 +224,23 @@ use_cases:
   # shared, Assess asks how each open objective is going (the fifth line);
   # Tarek decided Met applies on publish, and the answers live apart from the
   # squad evaluation's.
+  # SPEC v6 2026-11-23 (TRAK-531, Reports 8/10): Imad renamed the squad
+  # evaluation report day: one Send for the squad, and the coach can send one
+  # player's report on its own first (the fourth line).
   - id: UC-C04
     actor: coach
     title: Assess a player on six sliders producing a band
     requirement: REQ-002
     status: enforced
     tier: [1, 2]
-    spec_version: 5
+    spec_version: 6
     given: A signed-in coach with at least one squad player
     when: They select a player, set the six sliders and submit
     then:
       - A coach_assessments row is persisted with all six category scores and no session
       - A band derived from the six scores is shown before submitting
       - Submitting is refused until a player is selected
-      - Where the academy's season plan is on and the squad's plan is shared, its due evaluation publishes all six scores for each consented player, starting from their latest scores, with no session
+      - Where the academy's season plan is on and the squad's plan is shared, its due report day sends all six scores for each consented player, starting from their latest scores, with no session; one player can be sent first, and Send then sends only the rest
       - Where the squad's plan is shared, Assess also asks how each of the player's open objectives is going (Not yet, Some progress, On track or Met) and saves only once each has an answer, with the six scores in the same save
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 
@@ -324,19 +327,23 @@ use_cases:
 
   # RECONCILED 2026-10-08 with TRAK-63 and J6: parents see bands,
   # never the coach's message or private note. This is still pending coverage.
+  # SPEC v3 2026-11-23 (TRAK-531, Reports 8/10): Imad decided report day's note
+  # goes to the player and his parents, in the report. A message to the child
+  # stays the child's; supabase/tests/report_day_send_trak531.sql proves both.
   - id: UC-P06
     actor: parent
     title: See the coach's assessment bands without the message or private note
     requirement: J6
     status: pending
     tier: [1, 2]
-    spec_version: 2
+    spec_version: 3
     given: A linked parent whose child has been assessed
     when: They open the parent home screen
     then:
       - The selected child's assessment band is shown
-      - The coach's message is never shown to the parent
+      - The coach's message to the child is never shown to the parent
       - The coach's private note is never shown to the parent
+      - A sent report's note to the player and parents is shown to the parent with the report
     source: MVP Requirements
 
   # REWRITTEN 2026-09-23 (Q-2026-09-23-01, TRAK-19). The consent threshold is

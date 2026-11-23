@@ -24,7 +24,7 @@ import { evaluationDates, evaluationDue, nextDateLine, rhythmOf, type EvalEvery 
    (TRAK-355) is the coach's alone, so it never waits to be shared. TRAK-364: the evaluation's rhythm, which waits
    under "Not shared yet" as the evaluation dates, as the season's dates do. */
 
-const PLAN_PARTS = { dates: 'Season dates', evaluation: 'Evaluation', objectives: 'Season objectives', reminder: 'Watching reminder' } as const
+const PLAN_PARTS = { dates: 'Season dates', evaluation: 'Reports', objectives: 'Season objectives', reminder: 'Watching reminder' } as const
 type Part = keyof typeof PLAN_PARTS
 const isPart = (part: string): part is Part => part in PLAN_PARTS
 
@@ -138,7 +138,7 @@ function EvaluationEdit({ coachId, squad, plan }: { coachId: string; squad: stri
 
   return (
     <EditScreen part="evaluation" problem={problem} saving={save.isPending} canSave={changed} onSave={() => save.mutate()}>
-      <section aria-label="Evaluation" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+      <section aria-label="Reports" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <EvaluationRhythm every={rhythm.every} day={rhythm.day} line={line} onChange={next => { setRhythm(next); setProblem(null) }} />
       </section>
     </EditScreen>

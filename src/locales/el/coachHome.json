@@ -17,7 +17,7 @@
   "changesNotShared_one": "Αλλαγές που δεν έχουν σταλεί · {{count}} παίκτης",
   "changesNotShared_other": "Αλλαγές που δεν έχουν σταλεί · {{count}} παίκτες",
   "planNotShared": "Το πλάνο δεν έχει σταλεί",
-  "evaluationDue": "Ώρα για αξιολόγηση",
+  "reportsReady": "Αναφορές έτοιμες",
   "evaluationDueSince": "Εκκρεμεί από {{day}}.",
   "evaluationDueNow": "Εκκρεμεί σήμερα",
   "evaluate": "Αξιολόγηση",

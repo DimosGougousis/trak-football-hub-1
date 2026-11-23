@@ -8,7 +8,7 @@ afterEach(cleanup)
 
 const show = (every: string, onChange = vi.fn()) => {
   render(<EvaluationRhythm every={every as never} day={0} onChange={onChange} line="" />)
-  return { onChange, group: screen.getByRole('group', { name: 'Evaluate each player' }) }
+  return { onChange, group: screen.getByRole('group', { name: 'Send each player a report' }) }
 }
 
 describe('TRAK-525 the rhythm choices', () => {

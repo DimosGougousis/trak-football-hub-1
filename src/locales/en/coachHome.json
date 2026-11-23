@@ -17,7 +17,7 @@
   "changesNotShared_one": "Changes not shared · {{count}} player",
   "changesNotShared_other": "Changes not shared · {{count}} players",
   "planNotShared": "Plan not shared",
-  "evaluationDue": "Evaluation due",
+  "reportsReady": "Reports ready",
   "evaluationDueSince": "Due since {{day}}.",
   "evaluationDueNow": "Due today",
   "evaluate": "Evaluate",

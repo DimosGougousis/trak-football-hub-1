@@ -40,8 +40,8 @@
     "hash": "53b15d37f0c86d2ded50fdb688a70f1683c72f8eb08c91c3e619510e349390f7"
   },
   "UC-C04": {
-    "spec_version": 5,
-    "hash": "e93816b6ce6057a37f80a3fc7614c5906ed0219edc9d15d2c97375d4bf3e563e"
+    "spec_version": 6,
+    "hash": "73ec94f458ff63b5d26491c1768303e8edd9bb263e2d2034254d0a5e9ffaf6ae"
   },
   "UC-C07": {
     "spec_version": 2,
@@ -64,8 +64,8 @@
     "hash": "bc7d5e7ba498b8b2831ff7864e84035d32187874a2a29bb503e6933e3b96f8a0"
   },
   "UC-P06": {
-    "spec_version": 2,
-    "hash": "a2906347f917d3d06c32bcdca5662cf7454062414539f809f5b33c39d1ee06af"
+    "spec_version": 3,
+    "hash": "f63bbe9134a0f7361a4676f9650d5cce71f96bd64242c78467b198ae2ffdfe93"
   },
   "UC-P07": {
     "spec_version": 2,

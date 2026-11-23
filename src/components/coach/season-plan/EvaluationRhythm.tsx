@@ -31,7 +31,7 @@ export function EvaluationRhythm({ every, day, onChange, line }: {
   return (
     <div className="grid gap-3">
       <div role="group" aria-labelledby={`${id}-every`} className="grid gap-2">
-        <span id={`${id}-every`} className="text-sm font-medium text-ink">Evaluate each player</span>
+        <span id={`${id}-every`} className="text-sm font-medium text-ink">Send each player a report</span>
         <div className="flex flex-wrap gap-2">
           {EVAL_MONTHS.map(value => <button key={value} type="button" aria-pressed={every === value} className={chip(every === value, 'grow px-3.5')}
             onClick={() => onChange({ every: value, day })}>{t(MONTH_LABEL[value])}</button>)}
