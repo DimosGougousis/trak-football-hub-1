@@ -7,3 +7,12 @@
   .panels { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
   .wide { grid-column: 1 / -1; }
 }
+
+/* TRAK-551 (3/5): Season objectives, the donut beside its list once the panel has room; narrower, the donut above the
+   list, centred. The panel's own width decides, so it works in either column layout. */
+.objectives { container-type: inline-size; }
+.measure { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 16px; }
+.measure > ul { width: 100%; }
+@container (min-width: 420px) {
+  .measure { grid-template-columns: 148px minmax(0, 1fr); justify-items: stretch; align-items: center; gap: 18px; }
+}

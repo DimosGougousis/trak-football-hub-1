@@ -285,10 +285,15 @@ function useMatchPlans(coachId: string, ids: string[]) {
 }
 
 const VERDICT_TONE = { Good: 'success', Watch: 'warning', 'At risk': 'danger' } as const
+/** TRAK-551 (Kostas, 21 Nov: calmer): the donut in shades of Trak green, one per season objective (a plan has at most
+ *  three), and the same colour as a square beside each objective, so the two can be matched. */
+const OBJECTIVE_GREENS = ['rgb(var(--t-brand))', 'color-mix(in oklab, rgb(var(--t-brand)) 55%, rgb(var(--t-surface)))',
+  'color-mix(in oklab, rgb(var(--t-brand)) 28%, rgb(var(--t-surface)))']
+const greenOf = (index: number) => OBJECTIVE_GREENS[index % OBJECTIVE_GREENS.length]
 
 /** TRAK-363: each season objective measured only from matches: a donut with a segment per objective (how often it
  *  Worked), and beside each its share and Good / Watch / At risk. Selecting one lists its matches. Two Didn'ts in a row
- *  need attention. */
+ *  need attention. TRAK-551: the donut smaller, beside its list (above it on a narrow panel); each row a white tile. */
 function SeasonObjectives({ objectives, matches, plans, wide }: {
   objectives: SeasonObjective[]; matches: ReturnType<typeof useSquadMatches>; plans: Map<string, MatchPlan> | undefined
   /** Without Matches there are no Results beside it, so it takes the whole row. */
@@ -307,28 +312,37 @@ function SeasonObjectives({ objectives, matches, plans, wide }: {
 
   // TRAK-550: each panel is a section named by its title, so a screen reader can jump between them.
   const titleId = useId()
-  return <section aria-labelledby={titleId} className={`${panel} ${wide ? styles.wide : ''}`}>
+  const rows = <ul className="m-0 grid list-none gap-1.5 p-0">{objectives.map((o, i) => {
+    const m = measures.get(o.id)
+    return <li key={o.id}>
+      <button type="button" aria-pressed={selected === o.id} disabled={!m?.matches} onClick={() => setSelected(selected === o.id ? null : o.id)}
+        className={`grid min-h-11 w-full grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[10px] border bg-surface px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default ${selected === o.id ? 'border-ink-3' : 'border-transparent enabled:hover:border-line-strong'}`}>
+        <span aria-hidden="true" className="size-3 rounded-[4px]" style={{ background: greenOf(i) }} />
+        <span className="grid min-w-0">
+          <span className="text-[15px] text-ink">{o.title}</span>
+          <span className="text-[13px] tabular-nums text-ink-3">{m?.matches ? `Worked in ${m.worked} of ${m.matches} ${m.matches === 1 ? 'match' : 'matches'} · ${m.pct}%` : 'No match yet'}</span>
+        </span>
+        {m?.verdict ? <Badge tone={VERDICT_TONE[m.verdict]} size="sm" pill>{m.verdict}</Badge> : <span />}
+      </button>
+    </li>
+  })}</ul>
+
+  return <section aria-labelledby={titleId} className={`${panel} ${styles.objectives} ${wide ? styles.wide : ''}`}>
     <div className="flex min-h-8 items-center"><h3 id={titleId} className={panelTitle}>Season objectives</h3></div>
     {objectives.length === 0 ? <p className="text-sm text-ink-3">None selected.</p> : <>
-      {measured && <DonutChart label="Times each season objective worked" totalLabel="Times it worked" legend={false}
-        data={objectives.map(o => ({ key: o.id, label: o.title, value: measures.get(o.id)?.worked ?? 0 }))}
-        activeKey={selected} onActiveChange={setSelected} size={168} thickness={20} emptyLabel="Nothing worked yet" />}
-      {/* TRAK-382: a donut draws no slice for 0, so an objective that has matches but never worked is named here. */}
-      {measured && noneWorked.length > 0 && <p className="text-center text-xs text-ink-3">Worked 0 times: {noneWorked.map(o => o.title).join(', ')}</p>}
-      <ul className="m-0 grid list-none gap-1.5 p-0">{objectives.map(o => {
-        const m = measures.get(o.id)
-        return <li key={o.id}>
-          <button type="button" aria-pressed={selected === o.id} disabled={!m?.matches} onClick={() => setSelected(selected === o.id ? null : o.id)}
-            className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default">
-            <span className="grid min-w-0">
-              <span className="text-sm text-ink">{o.title}</span>
-              <span className="text-xs text-ink-3">{m?.matches ? `Worked in ${m.worked} of ${m.matches} ${m.matches === 1 ? 'match' : 'matches'} · ${m.pct}%` : 'No match yet'}</span>
-            </span>
-            {m?.verdict && <Badge tone={VERDICT_TONE[m.verdict]} size="sm">{m.verdict}</Badge>}
-          </button>
-        </li>
-      })}</ul>
-      {chosen && <div className="grid gap-1 rounded-xl border border-line p-3">
+      {measured ? <div className={styles.measure}>
+        {/* Arc's donut takes its box's width, so the box is the donut's size and the donut fills it (centred, either would
+            shrink to nothing). */}
+        <div className="grid w-[148px] gap-1">
+          <DonutChart label="Times each season objective worked" totalLabel="Times worked" legend={false}
+            data={objectives.map((o, i) => ({ key: o.id, label: o.title, value: measures.get(o.id)?.worked ?? 0, color: greenOf(i) }))}
+            activeKey={selected} onActiveChange={setSelected} size={148} thickness={14} emptyLabel="Nothing worked yet" />
+          {/* TRAK-382: a donut draws no slice for 0, so an objective that has matches but never worked is named here. */}
+          {noneWorked.length > 0 && <p className="max-w-[148px] text-center text-xs text-ink-3">Worked 0 times: {noneWorked.map(o => o.title).join(', ')}</p>}
+        </div>
+        {rows}
+      </div> : rows}
+      {chosen && <div className="grid gap-1.5 rounded-[10px] bg-surface p-3">
         <h4 className="text-sm font-medium text-ink">{chosen.title}: match by match</h4>
         <ul className="m-0 grid list-none gap-1 p-0">{chosenMatches.map(({ game, went }, i) => (
           <li key={`${game.id}-${i}`} className="flex items-baseline justify-between gap-3 text-sm">
@@ -337,9 +351,13 @@ function SeasonObjectives({ objectives, matches, plans, wide }: {
           </li>))}
         </ul>
       </div>}
-      {stuck.length > 0 && <div role="status" className="grid gap-1 rounded-xl border border-line bg-surface p-3">
-        <h4 className="text-sm font-medium text-ink">Needs your attention</h4>
-        {stuck.map(o => <p key={o.id} className="text-sm text-ink-2">{o.title}: didn’t work in the last two matches.</p>)}
+      {/* TRAK-551: a white tile with the yellow of everything waiting on the coach down its left edge. */}
+      {stuck.length > 0 && <div role="status" className="grid grid-cols-[4px_minmax(0,1fr)] gap-3 rounded-[10px] bg-surface p-3">
+        <span aria-hidden="true" className="rounded" style={{ background: 'rgb(var(--t-attention))' }} />
+        <div className="grid gap-0.5">
+          <h4 className="text-sm font-medium text-ink">Needs your attention</h4>
+          {stuck.map(o => <p key={o.id} className="text-sm text-ink-2">{o.title}: didn’t work in the last two matches.</p>)}
+        </div>
       </div>}
     </>}
   </section>
