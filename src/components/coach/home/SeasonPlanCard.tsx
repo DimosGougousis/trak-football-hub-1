@@ -213,20 +213,39 @@ function SharedBody({ coachId, squad, plan }: { coachId: string; squad: string; 
   return <div className={styles.panels}>
     <SeasonObjectives objectives={objectives.data ?? []} matches={matches} plans={matchPlans.data} wide={!matches.on} />
     {matches.on && <Results matches={matches} plans={matchPlans.data} names={names} />}
-    <section aria-labelledby={`season-plan-players-title-${squad}`} className={`${panel} gap-2 ${styles.wide}`}>
-      <button type="button" aria-expanded={playersOpen} aria-controls={`season-plan-players-${squad}`} onClick={() => setPlayersOpen(!playersOpen)}
-        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <span className="grid gap-1">
-          <span id={`season-plan-players-title-${squad}`} className={panelTitle}>Player objectives</span>
-          <span className="text-sm text-ink-3">{players(working)} working on objectives{watchCount ? ` · ${watchCount} watching` : ''}</span>
-        </span>
-        {playersOpen ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
-      </button>
-      {playersOpen && <div id={`season-plan-players-${squad}`} className="grid gap-3">
-        {groups.map(group => <div key={group.label} className="grid gap-1">
-          <h4 className="text-sm font-medium text-ink-2">{group.label} <span className="font-normal text-ink-3">· {group.players.length}</span></h4>
-          <ul className="m-0 list-none divide-y divide-line p-0">{group.players.map(p => (
-            <li key={p.id} className="flex items-center gap-3 py-1.5">
+    {/* TRAK-553 (5/5): the squad at a glance, one bar split by group with a legend; Show players opens the names, one
+        column per group. Under the title, how many are working on objectives (and watched). */}
+    <section aria-labelledby={`season-plan-players-title-${squad}`} className={`${panel} ${styles.wide}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid min-w-0 gap-0.5">
+          <h3 id={`season-plan-players-title-${squad}`} className={panelTitle}>Player objectives</h3>
+          <span className="text-sm text-ink-2">{players(working)} working on objectives{watchCount ? ` · ${watchCount} watching` : ''}</span>
+        </div>
+        {groups.length > 0 && <button type="button" aria-expanded={playersOpen} aria-controls={`season-plan-players-${squad}`} onClick={() => setPlayersOpen(!playersOpen)}
+          className="inline-flex min-h-9 flex-none items-center gap-1.5 rounded-[10px] px-2.5 text-sm text-ink-2 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          {playersOpen ? 'Hide players' : 'Show players'}
+          {playersOpen ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
+        </button>}
+      </div>
+      {groups.length > 0 && <>
+        <div role="img" aria-label={`${groups.map(g => `${g.label} ${g.players.length}`).join(', ')} of ${players(inSquad.length)}`}
+          className="flex h-3 gap-[3px] overflow-hidden rounded-full">
+          {groups.map(g => <span key={g.label} className="h-full" style={{ flex: g.players.length, background: groupColour(g.label) }} />)}
+        </div>
+        <ul aria-hidden="true" className="m-0 flex list-none flex-wrap gap-x-[18px] gap-y-2 p-0 text-sm text-ink-2">
+          {groups.map(g => <li key={g.label} className="inline-flex items-center gap-[7px]">
+            <i className="inline-block size-2.5 rounded-[3px]" style={{ background: groupColour(g.label) }} />{g.label} <b className="font-medium tabular-nums text-ink">{g.players.length}</b>
+          </li>)}
+        </ul>
+      </>}
+      {playersOpen && <div id={`season-plan-players-${squad}`} className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+        {groups.map(group => <div key={group.label} className="grid content-start gap-2 rounded-[10px] bg-surface p-3">
+          <h4 className="flex items-center gap-2 text-sm font-medium text-ink">
+            <i aria-hidden="true" className="inline-block size-2.5 rounded-[3px]" style={{ background: groupColour(group.label) }} />
+            {group.label} <span className="font-normal text-ink-3">· {group.players.length}</span>
+          </h4>
+          <ul className="m-0 grid list-none gap-2 p-0">{group.players.map(p => (
+            <li key={p.id} className="flex items-center gap-2.5">
               <PlayerFace name={p.player_name} size="sm" />
               <span className="grid min-w-0">
                 <span className="truncate text-sm text-ink">{p.player_name}</span>
@@ -240,6 +259,15 @@ function SharedBody({ coachId, squad, plan }: { coachId: string; squad: string; 
     </section>
   </div>
 }
+
+/** TRAK-553 (Kostas, 21 Nov: muted): each group's colour in the bar, the legend and its column, from the role tokens:
+ *  soft red, amber and green for how players are doing, quieter shades for the rest. */
+const tint = (token: string, share: number) => `color-mix(in oklab, rgb(var(${token})) ${share}%, rgb(var(--t-surface)))`
+const GROUP_COLOUR: Record<string, string> = {
+  'Not yet': tint('--t-danger', 45), 'Some progress': tint('--t-warning', 50), 'On track': tint('--t-success', 50),
+  'Not rated yet': tint('--t-ink-3', 45), Watching: tint('--t-info', 35), 'No objective yet': tint('--t-ink-3', 20),
+}
+const groupColour = (label: string) => GROUP_COLOUR[label] ?? tint('--t-ink-3', 20)
 
 /** How a player's worst objective moved since the evaluation before. */
 const TREND: Record<string, string> = { '1': 'Better', '-1': 'Slipped', '0': 'Same' }
