@@ -170,7 +170,7 @@ function Tile({ label, sub, children }: { label: string; sub: string; children: 
 
 const sixOf = (a: ReportAssessment) => Object.fromEntries(ATTRIBUTES.map(([k]) => [k, a[k]]))
 
-/** The six bands at the last report and now, with the radar of both. */
+/** The six areas at the last report and now, as one radar of both (TRAK-547: no band list under it). */
 function ThenAndNow({ report, now, before, first }: { report: Report; now: ReportAssessment | null; before: ReportAssessment | null; first: string }) {
   const { t } = useTranslation()
   const id = `then-${report.squad_player_id}`
@@ -183,27 +183,14 @@ function ThenAndNow({ report, now, before, first }: { report: Report; now: Repor
     {!now ? <div role="group" aria-label={t('coachSquad:noAssessmentYet')} className="grid gap-2.5">
         {ATTRIBUTES.map(([k]) => <CategoryBar key={k} label={t(ATTRIBUTE_WORD[k])} />)}
       </div>
-      : <>
-        <div className="border-t border-line pt-3">
+      // TRAK-547 (Kostas, 22 Nov): the hexagon alone; no list of the six bands under it.
+      : <div className="border-t border-line pt-3">
           <RadarChart label={t('coachSquad:reportRadar', { name: first })} size={240} rings={5} max={10}
             axes={ATTRIBUTES.map(([k]) => ({ key: k, label: t(ATTRIBUTE_WORD[k]) }))}
             series={[{ key: 'now', label: t('coachSquad:reportNow'), values: sixOf(now) },
               ...(before ? [{ key: 'last', label: t('coachSquad:reportLast'), values: sixOf(before) }] : [])]}
             formatValue={value => bandOfScore(value).word} />
-        </div>
-        <dl className="m-0 border-t border-line">
-          {ATTRIBUTES.map(([k]) => {
-            const band = bandOfScore(now[k]), then = before ? bandOfScore(before[k]) : null
-            return <div key={k} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 border-b border-line py-2 last:border-b-0">
-              <dt className="text-sm text-ink">{t(ATTRIBUTE_WORD[k])}</dt>
-              <dd className="m-0 text-sm">
-                {then && then.word !== band.word && <span className="text-ink-3">{then.word} → </span>}
-                <span className="font-medium text-ink">{band.word}</span>
-              </dd>
-            </div>
-          })}
-        </dl>
-      </>}
+        </div>}
   </section>
 }
 
