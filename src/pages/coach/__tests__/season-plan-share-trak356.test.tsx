@@ -180,10 +180,11 @@ describe('TRAK-356 once shared', () => {
   it('Home says View plan, and the set-up steps never come back', async () => {
     sharedPlan()
     renderApp('/coach/home')
-    // TRAK-361: the card folds; open, it offers View plan.
+    // TRAK-361: the card folds; open, it offers View plan. TRAK-549: the state is a label, the weeks left beside it.
     const card = await screen.findByRole('region', { name: 'U16 season plan' })
-    expect(await within(card).findByText(/^Shared 1 Nov · \d+ weeks? left$/)).toBeInTheDocument()
-    await user().click(within(card).getByRole('button', { expanded: false }))
+    expect(await within(card).findByText('Shared 1 Nov')).toBeInTheDocument()
+    expect(within(card).getByText(/^\d+ weeks? left$/)).toBeInTheDocument()
+    await user().click(within(card).getByRole('button', { name: 'Open the U16 season plan' }))
     await user().click(screen.getByRole('button', { name: 'View plan' }))
     expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
     for (const step of ['positions', 'objectives', 'share']) {

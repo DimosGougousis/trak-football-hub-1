@@ -6,13 +6,15 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 const coachId = '97361000-0000-4000-8000-000000000001'
 type Row = Record<string, unknown>
 
-async function backend(context: BrowserContext, unexpected: string[], squads: string[]) {
+// TRAK-549: a squad can have no plan yet ('none') or one not shared yet ('draft'); the rest are shared.
+async function backend(context: BrowserContext, unexpected: string[], squads: string[], states: Record<string, 'none' | 'draft'> = {}) {
   const players: Row[] = squads.flatMap((squad, s) => ['Goalkeeper', 'Defender', 'Midfielder'].map((position, i) => ({
     id: `sq-${s}-${i}`, coach_user_id: coachId, player_name: `Synthetic Player ${squad} ${i + 1}`, position, age_group: squad,
     shirt_number: i + 1, status: 'active', linked_player_id: `child-${s}-${i}`, created_at: '2026-10-01T08:00:00Z',
   })))
   const plan = (squad: string): Row => ({ id: `plan-${squad}`, squad, starts_on: '2026-09-01', ends_on: '2027-06-30', shared_at: '2026-11-01T10:00:00Z',
-    positions_known: 'yes', watch_rule: 't2', last_shared_at: '2026-11-01T10:00:00Z', unshared_parts: [], unshared_players: [] })
+    positions_known: 'yes', watch_rule: 't2', last_shared_at: '2026-11-01T10:00:00Z', unshared_parts: [], unshared_players: [],
+    ...(states[squad] === 'draft' && { shared_at: null, last_shared_at: null }) })
   const user = { id: coachId, email: 'coach@card361.test', email_confirmed_at: '2026-10-01T00:00:00Z',
     created_at: '2026-10-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }
   const exp = Math.floor(Date.now() / 1000) + 3600
@@ -39,7 +41,7 @@ async function backend(context: BrowserContext, unexpected: string[], squads: st
     if (path === '/rest/v1/rpc/coach_squad_players_consent_pending') return json([])
     if (path === '/rest/v1/season_plans' && method === 'GET') {
       const squad = url.searchParams.get('squad')?.replace(/^eq\./, '')
-      return json(squads.filter(s => !squad || s === squad).map(plan))
+      return json(squads.filter(s => (!squad || s === squad) && states[s] !== 'none').map(plan))
     }
     if (path === '/rest/v1/season_objectives' && method === 'GET')
       return json([{ id: `so-${(url.searchParams.get('plan_id') ?? '').replace(/^eq\./, '')}`, place: 1, title: 'Stay compact', looks_like: '', status: 'open', created_at: '2026-09-01T08:00:00Z', retired_at: null }])
@@ -75,8 +77,12 @@ for (const [width, height] of [[1280, 800], [834, 1112], [390, 844]] as const) {
     await page.setViewportSize({ width, height })
     await page.goto('/coach/home')
     const card = page.getByRole('region', { name: 'U16 season plan' })
-    await expect(card.getByText(/^Shared 1 Nov · \d+ weeks? left$/)).toBeVisible()
+    // TRAK-549: a green label, the weeks left beside it, and the season as a bar; View plan at the top on a laptop.
+    await expect(card.getByText('Shared 1 Nov', { exact: true })).toBeVisible()
+    await expect(card.getByText(/^\d+ weeks? left$/)).toBeVisible()
+    await expect(card.getByRole('img', { name: /^Season from \d+ \w+ to \d+ \w+, \d+ weeks? left$/ })).toBeVisible()
     await expect(foldOf(page, 'U16')).toHaveAttribute('aria-expanded', 'false')
+    await expect(card.getByRole('button', { name: 'View plan' })).toHaveCount(width >= 1024 ? 1 : 0)
     await card.scrollIntoViewIfNeeded()
     await page.screenshot({ path: testInfo.outputPath(`card-folded-${width}.png`) })
 
@@ -126,3 +132,30 @@ test('under All, one folded card per squad, each opening on its own', async ({ c
   await page.screenshot({ path: testInfo.outputPath('cards-all-1280.png') })
   expect(unexpected).toEqual([])
 })
+
+// TRAK-549 (Kostas's 21 Nov mockup): before it's shared the card is one line, its next step on it: Start for a squad with
+// no plan, Continue for one not shared yet. Nothing to fold; no season bar; nothing scrolls sideways.
+for (const [width, height] of [[1280, 800], [390, 844]] as const) {
+  test(`not started and not shared yet at ${width} px: one line each, Start or Continue on it`, async ({ context, page }, testInfo) => {
+    const unexpected: string[] = []
+    await backend(context, unexpected, ['U14', 'U16'], { U14: 'none', U16: 'draft' })
+    await page.setViewportSize({ width, height })
+    await page.goto('/coach/home')
+    for (const [squad, state, action] of [['U14', 'Not started', 'Start'], ['U16', 'Not shared yet', 'Continue']] as const) {
+      const card = page.getByRole('region', { name: `${squad} season plan` })
+      await expect(card.getByText(state, { exact: true })).toBeVisible()
+      await expect(card.locator('button[aria-expanded]')).toHaveCount(0)
+      await expect(card.getByRole('img', { name: /^Season from/ })).toHaveCount(0)
+      // On the title's line: the button's middle falls within the title's height band.
+      const [title, button] = [(await card.getByText(`${squad} season plan`, { exact: true }).boundingBox())!, (await card.getByRole('button', { name: action }).boundingBox())!]
+      const middle = button.y + button.height / 2
+      expect(middle, `${action} at ${Math.round(middle)}, title ${Math.round(title.y)}–${Math.round(title.y + title.height + 30)}`).toBeGreaterThan(title.y)
+      expect(middle).toBeLessThan(title.y + title.height + 30)
+      expect(button.x).toBeGreaterThan(title.x + title.width)
+    }
+    expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
+    await page.getByRole('region', { name: 'Season plans' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`cards-before-sharing-${width}.png`) })
+    expect(unexpected).toEqual([])
+  })
+}

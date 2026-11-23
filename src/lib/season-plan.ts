@@ -167,10 +167,25 @@ export function seasonLeft(plan: Pick<SeasonPlan, 'starts_on' | 'ends_on'>, toda
 
 /** TRAK-361: Home's folded line, where the plan stands and what comes next. */
 export function planState(plan: SeasonPlan, today = localTodayISO()): string {
-  if (!plan.shared_at) return 'Not shared yet'
-  if (plan.unshared_parts.length || plan.unshared_players.length) return 'Changes not shared'
+  const label = planLabel(plan)
+  return label.tone === 'warning' ? label.text : [label.text, seasonLeft(plan, today)].filter(Boolean).join(' · ')
+}
+
+/** TRAK-549 (Season plan card 1/5): where a started plan stands, as the card's label: green once shared, amber while
+ *  the plan, or a change to it, waits to be shared. "Weeks left" sits beside it (seasonLeft). */
+export function planLabel(plan: SeasonPlan): { text: string; tone: 'success' | 'warning' } {
+  if (!plan.shared_at) return { text: 'Not shared yet', tone: 'warning' }
+  if (plan.unshared_parts.length || plan.unshared_players.length) return { text: 'Changes not shared', tone: 'warning' }
   const shared = lastShared(plan)
-  return [`Shared ${shared ? shortDate(shared) : ''}`, seasonLeft(plan, today)].filter(Boolean).join(' · ')
+  return { text: shared ? `Shared ${shortDate(shared)}` : 'Shared', tone: 'success' }
+}
+
+/** TRAK-549: how far through the season `today` is, from 0 to 1, for the card's season bar. Null without both dates. */
+export function seasonProgress(plan: Pick<SeasonPlan, 'starts_on' | 'ends_on'>, today = localTodayISO()): number | null {
+  if (!plan.starts_on || !plan.ends_on) return null
+  const span = dayNumber(plan.ends_on) - dayNumber(plan.starts_on)
+  if (span <= 0) return null
+  return Math.min(1, Math.max(0, (dayNumber(today) - dayNumber(plan.starts_on)) / span))
 }
 
 /** "1 September", for "since …" lines. */

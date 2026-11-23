@@ -14,7 +14,8 @@ import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { forgetScreens } from '@/lib/screen-memory'
-import { planState, seasonLeft, type SeasonPlan } from '@/lib/season-plan'
+import { planLabel, planState, seasonLeft, seasonProgress, type SeasonPlan } from '@/lib/season-plan'
+import { SIDE_MENU_QUERY } from '@/lib/side-menu-screen'
 
 type Plan = Record<string, unknown> & { id: string; squad: string }
 let n = 0
@@ -87,7 +88,10 @@ describe('TRAK-361 the Season plan card', () => {
   it('folds by mouse, touch and keyboard, with a real button that says so', async () => {
     renderApp('/coach/home')
     const card = await cardOf('U16')
-    expect(await within(card).findByText(/^Shared 1 Nov · \d+ weeks? left$/)).toBeInTheDocument()
+    // TRAK-549: the state is a green label, with the weeks left beside it and the season as a bar under them.
+    expect(await within(card).findByText('Shared 1 Nov')).toBeInTheDocument()
+    expect(within(card).getByText(/^\d+ weeks? left$/)).toBeInTheDocument()
+    expect(within(card).getByRole('img', { name: /^Season from 1 Sept to 30 Jun, \d+ weeks? left$/ })).toBeInTheDocument()
     const button = fold(card)
     expect(button.tagName).toBe('BUTTON')
     expect(button).toHaveAttribute('aria-expanded', 'false')
@@ -137,16 +141,71 @@ describe('TRAK-361 the Season plan card', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan'))
   }, 30_000)
 
-  it('a draft says it isn’t shared, and opens to Continue', async () => {
+  it('a draft says it isn’t shared, with Continue on its line and nothing to fold', async () => {
     plans = [{ ...shared('plan-16', 'U16'), shared_at: null, last_shared_at: null }]
     renderApp('/coach/home')
     const card = await cardOf('U16')
     expect(await within(card).findByText('Not shared yet')).toBeInTheDocument()
-    await user().click(fold(card))
+    // TRAK-549 (Kostas's mockup, 21 Nov): one line, its years, and Continue on it; there's nothing inside to open.
+    expect(within(card).getByText('2026–27')).toBeInTheDocument()
+    expect(within(card).queryAllByRole('button').filter(b => b.hasAttribute('aria-expanded'))).toEqual([])
+    expect(within(card).queryByRole('img', { name: /^Season from/ })).toBeNull()
     // TRAK-494 (Kostas, 20 Nov): no "Once you share the plan…" line.
     expect(within(card).queryByText(/Once you share the plan/)).toBeNull()
     await user().click(within(card).getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan'))
+  }, 30_000)
+
+  it('not started: one line with Start and nothing to fold', async () => {
+    plans = []
+    renderApp('/coach/home')
+    const card = await cardOf('U16')
+    expect(await within(card).findByText('Not started')).toBeInTheDocument()
+    expect(within(card).queryAllByRole('button').filter(b => b.hasAttribute('aria-expanded'))).toEqual([])
+    await user().click(within(card).getByRole('button', { name: 'Start' }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan'))
+  }, 30_000)
+
+  it('a shared plan with changes not shared says so, still with its season bar', async () => {
+    plans = [{ ...shared('plan-16', 'U16'), unshared_players: ['pat'] }]
+    renderApp('/coach/home')
+    const card = await cardOf('U16')
+    expect(await within(card).findByText('Changes not shared')).toBeInTheDocument()
+    expect(within(card).getByRole('img', { name: /^Season from 1 Sept to 30 Jun/ })).toBeInTheDocument()
+    expect(fold(card)).toHaveAttribute('aria-expanded', 'false')
+  }, 30_000)
+
+  it('has no season bar without both dates', async () => {
+    plans = [{ ...shared('plan-16', 'U16'), ends_on: null }]
+    renderApp('/coach/home')
+    const card = await cardOf('U16')
+    expect(await within(card).findByText('Shared 1 Nov')).toBeInTheDocument()
+    expect(within(card).queryByRole('img', { name: /^Season from/ })).toBeNull()
+  }, 30_000)
+
+  it('on a phone, View plan waits at the bottom of the open card; the arrow opens and folds it too', async () => {
+    renderApp('/coach/home')
+    const card = await cardOf('U16')
+    await within(card).findByText('Shared 1 Nov')
+    expect(within(card).queryByRole('button', { name: 'View plan' })).toBeNull()
+    await user().click(within(card).getByRole('button', { name: 'Open the U16 season plan' }))
+    expect(fold(card)).toHaveAttribute('aria-expanded', 'true')
+    expect(await within(card).findByRole('button', { name: 'View plan' })).toBeInTheDocument()
+    await user().click(within(card).getByRole('button', { name: 'Fold the U16 season plan' }))
+    expect(fold(card)).toHaveAttribute('aria-expanded', 'false')
+  }, 30_000)
+
+  it('on a laptop, View plan sits at the top beside the arrow, folded or open', async () => {
+    const real = window.matchMedia
+    window.matchMedia = ((query: string) => ({ ...real(query), matches: query === SIDE_MENU_QUERY })) as typeof window.matchMedia
+    try {
+      renderApp('/coach/home')
+      const card = await cardOf('U16')
+      await within(card).findByText('Shared 1 Nov')
+      expect(fold(card)).toHaveAttribute('aria-expanded', 'false')
+      await user().click(within(card).getByRole('button', { name: 'View plan' }))
+      await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan'))
+    } finally { window.matchMedia = real }
   }, 30_000)
 
   it('under All, one folded row per squad, each opening its own card', async () => {
@@ -221,6 +280,17 @@ describe('TRAK-361 the folded line', () => {
     expect(seasonLeft(plan({}), '2027-07-01')).toBe('season over')
     expect(seasonLeft(plan({ starts_on: '2026-12-01' }), '2026-11-06')).toMatch(/^starts 1 Dec$/)
     expect(seasonLeft(plan({ starts_on: null }), '2026-11-06')).toBeNull()
+  })
+  it('TRAK-549: the label apart from the weeks left, and how far through the season today is', () => {
+    expect(planLabel(plan({}))).toEqual({ text: 'Shared 3 Nov', tone: 'success' })
+    expect(planLabel(plan({ shared_at: null, last_shared_at: null }))).toEqual({ text: 'Not shared yet', tone: 'warning' })
+    expect(planLabel(plan({ unshared_parts: ['dates'] }))).toEqual({ text: 'Changes not shared', tone: 'warning' })
+    expect(seasonProgress(plan({}), '2026-09-01')).toBe(0)
+    expect(seasonProgress(plan({}), '2027-06-30')).toBe(1)
+    expect(seasonProgress(plan({}), '2026-08-01')).toBe(0)
+    expect(seasonProgress(plan({}), '2027-08-01')).toBe(1)
+    expect(seasonProgress(plan({ starts_on: '2026-09-01', ends_on: '2026-09-11' }), '2026-09-06')).toBe(0.5)
+    expect(seasonProgress(plan({ ends_on: null }), '2026-11-06')).toBeNull()
   })
   it('says what isn’t shared', () => {
     expect(planState(plan({ shared_at: null, last_shared_at: null }), '2026-11-06')).toBe('Not shared yet')
