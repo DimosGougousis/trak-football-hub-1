@@ -189,3 +189,35 @@ for (const [width, height, beside] of [[1280, 800, true], [834, 1112, false], [3
     expect(unexpected).toEqual([])
   })
 }
+
+// TRAK-551 (Season plan card 3/5): the donut is smaller and sits beside its list where the panel has room (above it,
+// centred, on a phone); each objective's square is its donut slice's colour, a Trak green.
+for (const [width, height, beside] of [[1280, 800, true], [390, 844, false]] as const) {
+  test(`season objectives at ${width} px: the donut ${beside ? 'beside' : 'above'} its list, each square its slice's colour`, async ({ context, page }, testInfo) => {
+    const unexpected: string[] = []
+    await backend(context, unexpected, ['U16'])
+    await page.setViewportSize({ width, height })
+    await page.goto('/coach/home')
+    await foldOf(page, 'U16').click()
+    const panel = page.getByRole('region', { name: 'U16 season plan' }).getByRole('region', { name: 'Season objectives' })
+    const donut = panel.getByRole('figure', { name: 'Times each season objective worked' })
+    const row = panel.getByRole('button', { name: /^Stay compact/ })
+    await expect(row).toContainText('Worked in 1 of 1 match · 100%')
+    await donut.scrollIntoViewIfNeeded()
+    // The slice grows in once the donut is on screen: wait until it's drawn, then read its colour.
+    await expect(donut.locator('path').first()).toHaveAttribute('d', /.{40,}/)
+    await expect(donut.locator('path').first()).toHaveCSS('fill', 'rgb(11, 102, 35)')
+    await expect(row.locator('span[aria-hidden="true"]').first()).toHaveCSS('background-color', 'rgb(11, 102, 35)')
+    // The words in the middle show whole at this size (at 148 px "Times it worked" read "Times it wo…").
+    expect(await donut.evaluate(el => [...el.querySelectorAll('span')].filter(s => s.children.length === 0 && s.textContent === 'Times worked')
+      .map(s => s.scrollWidth <= s.clientWidth))).toEqual([true])
+    const [d, r] = [(await donut.boundingBox())!, (await row.boundingBox())!]
+    expect(d.width).toBeLessThanOrEqual(150)
+    if (beside) expect(r.x).toBeGreaterThan(d.x + d.width)
+    else expect(r.y).toBeGreaterThan(d.y + d.height - 1)
+    expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
+    await page.waitForTimeout(1000) // the slice's sweep, for the picture only
+    await page.screenshot({ path: testInfo.outputPath(`season-objectives-${width}.png`) })
+    expect(unexpected).toEqual([])
+  })
+}
