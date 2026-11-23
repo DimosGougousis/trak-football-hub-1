@@ -74,7 +74,7 @@ export function ShareStep({ coachId, squad, plan, seasonObjectives, onBack, onSe
           </div>
           {/* TRAK-364: the rhythm, and the first date from today: the plan counts from the day it's shared. */}
           <div className="grid gap-1 tablet:grid-cols-[12rem_1fr]">
-            <dt className="text-sm text-ink-3">Evaluation</dt>
+            <dt className="text-sm text-ink-3">Reports</dt>
             <dd className="m-0 text-sm text-ink">{(() => {
               const { every, day: weekday } = rhythmOf(plan ?? {})
               const first = dated ? evaluationDates({ startsOn: plan!.starts_on, endsOn: plan!.ends_on, every, day: weekday }).find(d => d >= localTodayISO()) : undefined

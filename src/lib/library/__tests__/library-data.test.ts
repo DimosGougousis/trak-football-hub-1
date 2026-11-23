@@ -6,7 +6,7 @@ import {
   LIBRARIES, SESSIONS, ageBandOf, agesLabel, forAge, libraryOrder, playersOf, programmeOf, programmeWeeks, searchLibrary, sessionLine, sizeOf,
   squadsAgeBand, titleParts, weekOf,
 } from '../library'
-import { BANDS } from '@/lib/types'
+import { TILE_TONES } from '@/lib/types' // TRAK-556: the tiles keep their colours by the old band names
 import { TRAINING_THEMES } from '@/lib/training-theme'
 
 /**
@@ -47,7 +47,7 @@ describe('TRAK-264: the tiles take the assessment colours, mostly green', () => 
   }
 
   it('uses only band colours: five green, one slate, one clay', () => {
-    const word = (colour: string) => BANDS.find(b => b.text === colour)?.word
+    const word = (colour: string) => Object.entries(TILE_TONES).find(([, t]) => t.text === colour)?.[0]
     const words = LIBRARIES.map(l => word(l.colour))
     expect(words.every(Boolean)).toBe(true)
     expect(words.filter(w => ['Exceptional', 'Standout', 'Good'].includes(w!))).toHaveLength(5)

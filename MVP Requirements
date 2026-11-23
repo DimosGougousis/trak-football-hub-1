@@ -141,15 +141,21 @@ month; every 3 or 6 months counts the season's months from its first). When the
 rhythm leaves the season's last four weeks without a date, a last one is added
 on the chosen day on or before the season's end (TRAK-525; a plan saved as every
 2 or 6 weeks keeps its dates, as Custom). Dates count in the academy's
-time zone, from the day the plan was first shared. Home shows one Evaluation
-due card for the squad in place of its per-player Assess reminders. A missed
-date stays due, and one evaluation covers every date that has passed. The
-evaluation rates every consented player of the squad on the same six sliders,
-each starting from their latest ratings however they were given. A player with
-no ratings yet must be rated before Publish. Each player may get a note that
-only that player sees, never their family. Publish writes one published
-assessment per player with no session, all at once or not at all, and a failed
-publish keeps everything entered. Families see the bands as they do now. The
+time zone, from the day the plan was first shared. Home shows one Reports ready
+card for the squad (Open) in place of its per-player Assess reminders (TRAK-531;
+"Evaluation" now means a match's only). A missed date stays due, and one report
+day covers every date that has passed. Report day rates every consented player
+of the squad on the same six sliders, each starting from their latest
+assessment: the ratings however they were given, and the objectives' answers
+from one since the last report day. A player with no ratings yet must be rated
+before he is sent. Each player may get an optional note of up to 600 characters,
+"Note to {name} and parents", which goes in both copies of his report; a message
+written before this, or from Assess, stays the child's alone. Preview shows the
+player's report as it will be sent. "Send {name}'s report" sends one player on
+his own; the list then says Sent, and "Send to N players" sends only the rest
+and closes the day, so nobody is sent twice (Imad, 21 Nov). Each send writes one
+published assessment per player with no session, all its players or none, and a
+failed send keeps everything entered. Families see the bands as they do now. The
 session assessment stays available. Changing the rhythm after sharing waits
 under Not shared yet as the evaluation dates.
 
@@ -174,7 +180,9 @@ Player home shows the latest band, six bars and coach message, marked new until
 opened. Before the first
 assessment it says the player is waiting for their coach. The player and linked
 parent see coach-recorded match and training history. Parents see bands and
-history for the selected child, never the coach's message or private notes.
+history for the selected child, never the coach's message or private notes. A
+sent report's note to the player and parents is the one note they read, with the
+report (TRAK-531; the family's report page is TRAK-529).
 Sibling switching must show only the selected child's data.
 
 A failed load shows a clear error and retry control. It must not look like an

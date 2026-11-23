@@ -94,9 +94,10 @@ describe('TRAK-527 a player\'s report', () => {
 
     const then = screen.getByRole('region', { name: 'Then and now' })
     expect(within(then).getByText('Now, against the report of 25 Oct')).toBeInTheDocument()
-    // Each of the six areas, in the player's page's order, from the last report's band to now's.
-    expect(within(then).getAllByRole('definition').map(row => row.textContent))
-      .toEqual(['Steady → Good', 'Steady → Good', 'Steady → Good', 'Steady → Standout', 'Steady → Good', 'Steady → Good'])
+    // TRAK-547 (Kostas, 22 Nov): the hexagon alone, now against the last report; no list of the six bands under it.
+    expect(within(then).getByRole('figure', { name: /Nikos’s six areas/ })).toBeInTheDocument()
+    expect(within(then).queryAllByRole('definition')).toEqual([])
+    expect(within(then).queryByText(/→/)).toBeNull()
 
     expect(within(screen.getByRole('region', { name: 'Season so far' })).getByRole('img', { name: '2 assessments this season' })).toBeInTheDocument()
 

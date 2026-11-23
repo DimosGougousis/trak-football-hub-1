@@ -44,10 +44,8 @@
   "sliderCoachability": "Coachability",
   "overallBand": "OVERALL BAND",
   "band_exceptional": "Exceptional",
-  "band_standout": "Standout",
   "band_good": "Good",
   "band_steady": "Steady",
-  "band_mixed": "Mixed",
   "band_developing": "Developing",
   "band_difficult": "Difficult",
   "messageTo": "Message to {{name}}",
@@ -100,5 +98,7 @@
   "stepObjectives": "Objectives",
   "objectivesCaps": "OBJECTIVES",
   "objectiveAdded": "Added",
-  "couldntLoadObjectives": "Couldn't load the objectives."
+  "couldntLoadObjectives": "Couldn't load the objectives.",
+  "objectiveNoAnswer": "No answer",
+  "answerEachObjective": "Answer each objective to save."
 }

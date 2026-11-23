@@ -4,7 +4,8 @@
  * evaluation lists every consented player, each from their latest ratings; a player with none has to be rated before
  * Publish; a note goes to the player alone. Publish sends everyone at once, and a failed publish keeps everything
  * entered. The set-up's step 1 and View plan's Edit set the rhythm; a new rhythm after sharing waits under Not shared
- * yet as the evaluation dates. Synthetic people; dates are worked out from today with the app's own rules, in the
+ * yet as the evaluation dates. TRAK-531 renamed it report day ("Reports"): the note goes to the player and parents, and
+ * the coach can send one player first. Synthetic people; dates are worked out from today with the app's own rules, in the
  * academy's time zone, so the suite never depends on the day it runs.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -29,7 +30,9 @@ let n = 0
 let COACH = { id: 'coach-364' }
 let seasonOn = true
 let plan: Plan
-let evaluations: { plan_id: string; due_on: string }[] = []
+let evaluations: { id?: string; plan_id: string; due_on: string; closed_at?: string | null }[] = []
+let sentRows: { squad_player_id: string }[] = []
+let answers: Record<string, unknown>[] = []
 let published: unknown[] = []
 let failNext = 0
 let patches: Record<string, unknown>[] = []
@@ -57,6 +60,8 @@ beforeEach(() => {
     last_shared_at: new Date(Date.now() - 90 * DAY).toISOString(), positions_known: 'yes', watch_rule: 't2', unshared_parts: [], unshared_players: [],
     eval_every: '2w', eval_day: 0 }
   evaluations = []
+  sentRows = []
+  answers = []
   published = []
   failNext = 0
   patches = []
@@ -80,11 +85,15 @@ beforeEach(() => {
       return new HttpResponse(null, { status: 204 })
     }),
     http.get(`${SUPABASE_URL}/rest/v1/season_evaluations`, () => HttpResponse.json(evaluations)),
+    http.get(`${SUPABASE_URL}/rest/v1/report_for_player`, () => HttpResponse.json(sentRows)),
+    http.get(`${SUPABASE_URL}/rest/v1/assessment_objectives`, () => HttpResponse.json(answers)),
     http.post(`${SUPABASE_URL}/rest/v1/rpc/publish_evaluation_with_objectives`, async ({ request }) => {
-      const args = await request.json() as { p_due_on: string; p_players: { squad_player_id: string }[] }
+      const args = await request.json() as { p_due_on: string; p_players: { squad_player_id: string }[]; p_close?: boolean }
       published.push(args)
       if (failNext > 0) { failNext -= 1; return HttpResponse.json({ message: 'Network down' }, { status: 503 }) }
-      evaluations = [...evaluations, { plan_id: 'plan-1', due_on: args.p_due_on }]
+      // As the database: one day, open until the squad's Send closes it (TRAK-531).
+      evaluations = [...evaluations.filter(e => e.id !== 'ev-1'), { id: 'ev-1', plan_id: 'plan-1', due_on: args.p_due_on, closed_at: args.p_close === false ? null : new Date().toISOString() }]
+      sentRows = [...sentRows, ...args.p_players.map(p => ({ squad_player_id: p.squad_player_id }))]
       return HttpResponse.json({ evaluation_id: 'ev-1', due_on: args.p_due_on,
         assessments: args.p_players.map((p, i) => ({ squad_player_id: p.squad_player_id, assessment_id: `as-${i}` })) })
     }),
@@ -106,20 +115,20 @@ afterEach(() => { cleanup(); forgetScreens(); localStorage.clear(); server.event
 const user = () => userEvent.setup()
 
 describe('TRAK-364 Home', () => {
-  it('one Evaluation due card in place of the per-player Assess cards; a missed date stays due', async () => {
+  it('one Reports ready card in place of the per-player Assess cards; a missed date stays due', async () => {
     const { due, today } = expected()
     expect(due.dueOn).not.toBeNull()
     expect(due.since! < today).toBe(true)
     renderApp('/coach/home')
-    const section = (await screen.findByText('Evaluation due')).closest('section')!
+    const section = (await screen.findByText('Reports ready')).closest('section')!
     expect(within(section).getByText(evalDay(due.since!))).toBeInTheDocument()
     expect(within(section).getByText(`Due since ${evalDay(due.since!)}.`)).toBeInTheDocument()
     // Quinn was never assessed: elsewhere an Assess card; here the evaluation covers him.
     expect(within(section).queryByText('Quinn Synthetic')).toBeNull()
     expect(within(section).queryByText(/Never assessed/)).toBeNull()
-    await user().click(within(section).getByRole('button', { name: 'Evaluate' }))
+    await user().click(within(section).getByRole('button', { name: 'Open' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/evaluation'))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Evaluation' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reports' })).toBeInTheDocument()
   }, 30_000)
 
   it('no card once the due date is published, and the per-player Assess cards still give way', async () => {
@@ -128,7 +137,7 @@ describe('TRAK-364 Home', () => {
     expect(await screen.findByRole('heading', { name: /^Needs you/ })).toBeInTheDocument()
     await waitFor(() => expect(reads).toContain('/rest/v1/season_evaluations'))
     await waitFor(() => expect(screen.queryByText('Loading who needs you')).toBeNull())
-    expect(screen.queryByText('Evaluation due')).toBeNull()
+    expect(screen.queryByText('Reports ready')).toBeNull()
     expect(screen.queryByText(/Never assessed/)).toBeNull()
   }, 30_000)
 
@@ -137,7 +146,7 @@ describe('TRAK-364 Home', () => {
     renderApp('/coach/home')
     expect(await screen.findByText(/^Never assessed, \d+ weeks in the squad$/)).toBeInTheDocument()
     expect(screen.getByText('Quinn Synthetic')).toBeInTheDocument()
-    expect(screen.queryByText('Evaluation due')).toBeNull()
+    expect(screen.queryByText('Reports ready')).toBeNull()
     expect(reads).not.toContain('/rest/v1/season_evaluations')
     expect(reads).not.toContain('/rest/v1/season_plans')
   }, 30_000)
@@ -146,22 +155,23 @@ describe('TRAK-364 Home', () => {
     plan = { ...plan, shared_at: null, last_shared_at: null }
     renderApp('/coach/home')
     expect(await screen.findByText(/^Never assessed, \d+ weeks in the squad$/)).toBeInTheDocument()
-    expect(screen.queryByText('Evaluation due')).toBeNull()
+    expect(screen.queryByText('Reports ready')).toBeNull()
   }, 30_000)
 })
 
 describe('TRAK-364 the evaluation', () => {
-  it('starts from last time, waits for a player with no ratings, and sends the note to the player alone', async () => {
+  it('starts from last time, waits for a player with no ratings, and sends the note to the player and parents', async () => {
     const { due } = expected()
     renderApp('/coach/evaluation')
     const list = await screen.findByRole('list', { name: 'Players' })
     expect(within(list).getByRole('button', { name: /^Pat Synthetic/ })).toHaveTextContent('Steady · 6.2')
     expect(within(list).getByRole('button', { name: /^Quinn Synthetic/ })).toHaveTextContent('Not rated yet')
     expect(within(list).queryByText('Rae Synthetic')).toBeNull()
-    expect(screen.getByText(/^Not in this evaluation: Rae Synthetic\./)).toBeInTheDocument()
+    // TRAK-531: no helper lines under the list or the note.
+    expect(screen.queryByText(/^Not in this evaluation/)).toBeNull()
 
-    await user().click(screen.getByRole('button', { name: 'Next: Publish' }))
-    expect(screen.getByRole('button', { name: 'Publish to 2 players' })).toBeDisabled()
+    await user().click(screen.getByRole('button', { name: 'Next: Send' }))
+    expect(screen.getByRole('button', { name: 'Send to 2 players' })).toBeDisabled()
     expect(screen.getByText('Rate Quinn first: no ratings yet.')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Players' }))
 
@@ -169,55 +179,56 @@ describe('TRAK-364 the evaluation', () => {
     await user().click(await screen.findByRole('button', { name: /^Quinn Synthetic/ }))
     expect(await screen.findByText(/^No ratings yet: each starts at 5\./)).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[3], 8)
-    await user().type(screen.getByLabelText('Note to Quinn'), 'Great first month.')
-    expect(screen.getByText('Optional. Only Quinn sees it.')).toBeInTheDocument()
+    await user().type(screen.getByLabelText('Note to Quinn and parents'), 'Great first month.')
+    expect(screen.queryByText(/Only Quinn sees it/)).toBeNull()
     await user().click(screen.getByRole('button', { name: 'Done' }))
-    // Pat: last time's ratings, Work Rate up to 9.
+    // Pat: last time's ratings, Work Rate up to 9: 6.2 to 6.5, which rounds to 7, Good (TRAK-556).
     await user().click(await screen.findByRole('button', { name: /^Pat Synthetic/ }))
     expect(screen.getByText('From last time: Steady, 6.2.')).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[0], 9)
     await user().click(screen.getByRole('button', { name: 'Done' }))
     expect(await screen.findByText('1 player changed')).toBeInTheDocument()
 
-    await user().click(screen.getByRole('button', { name: 'Next: Publish' }))
+    await user().click(screen.getByRole('button', { name: 'Next: Send' }))
     const changed = screen.getByRole('region', { name: 'What changed' })
-    expect(within(changed).getByText('Same band · 6.2 → 6.5')).toBeInTheDocument()
-    expect(screen.getByText('Only the player sees your note.')).toBeInTheDocument()
+    expect(within(changed).getByText('Steady → Good')).toBeInTheDocument()
+    expect(screen.queryByText('Only the player sees your note.')).toBeNull()
 
-    // A failed publish keeps everything entered; the next one sends exactly the same.
+    // A failed send keeps everything entered; the next one sends exactly the same.
     failNext = 1
-    await user().click(screen.getByRole('button', { name: 'Publish to 2 players' }))
-    expect(await screen.findByText("Couldn't publish the evaluation. Check your connection and try again; everything you entered is still here.")).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Same band · 6.2 → 6.5')).toBeInTheDocument()
-    await user().click(screen.getByRole('button', { name: 'Publish to 2 players' }))
-    expect(await screen.findByText('Published to 2 players.')).toBeInTheDocument()
+    await user().click(screen.getByRole('button', { name: 'Send to 2 players' }))
+    expect(await screen.findByText("Couldn't send the reports. Check your connection and try again; everything you entered is still here.")).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Steady → Good')).toBeInTheDocument()
+    await user().click(screen.getByRole('button', { name: 'Send to 2 players' }))
+    expect(await screen.findByText('Sent to 2 players.')).toBeInTheDocument()
+    // The note as report_note: it goes in both copies (an old page's `note` reaches the player alone).
     const sent = {
-      p_plan_id: 'plan-1', p_due_on: due.dueOn, p_objectives: [],
+      p_plan_id: 'plan-1', p_due_on: due.dueOn, p_objectives: [], p_close: true,
       p_players: [
-        { squad_player_id: 'pat', work_rate: 9, tactical: 6, attitude: 6, technical: 6, physical: 6, coachability: 6, note: '' },
-        { squad_player_id: 'quinn', work_rate: 5, tactical: 5, attitude: 5, technical: 8, physical: 5, coachability: 5, note: 'Great first month.' },
+        { squad_player_id: 'pat', work_rate: 9, tactical: 6, attitude: 6, technical: 6, physical: 6, coachability: 6, report_note: '' },
+        { squad_player_id: 'quinn', work_rate: 5, tactical: 5, attitude: 5, technical: 8, physical: 5, coachability: 5, report_note: 'Great first month.' },
       ],
     }
     expect(published).toEqual([sent, sent])
-    expect(screen.getByText(/^The next evaluation opens /)).toBeInTheDocument()
+    expect(screen.getByText(/^The next reports open /)).toBeInTheDocument()
   }, 45_000)
 
   it('keeps what was entered while the coach is away from the screen', async () => {
     renderApp('/coach/evaluation')
     await user().click(await screen.findByRole('button', { name: /^Quinn Synthetic/ }))
-    await user().type(screen.getByLabelText('Note to Quinn'), 'Keep going.')
+    await user().type(screen.getByLabelText('Note to Quinn and parents'), 'Keep going.')
     await user().click(screen.getByRole('button', { name: 'Done' }))
     cleanup()
     renderApp('/coach/evaluation')
     await user().click(await screen.findByRole('button', { name: /^Quinn Synthetic/ }))
-    expect(screen.getByLabelText('Note to Quinn')).toHaveValue('Keep going.')
+    expect(screen.getByLabelText('Note to Quinn and parents')).toHaveValue('Keep going.')
   }, 30_000)
 
   it('before its date, says when it opens', async () => {
     evaluations = [{ plan_id: 'plan-1', due_on: expected().due.dueOn! }]
     const { due } = expected()
     renderApp('/coach/evaluation')
-    expect(await screen.findByText(new RegExp(`^The next evaluation opens ${evalDay(due.next!, true)}\\.`))).toBeInTheDocument()
+    expect(await screen.findByText(new RegExp(`^The next reports open ${evalDay(due.next!, true)}\\.`))).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Players' })).toBeNull()
   }, 30_000)
 })
@@ -226,10 +237,10 @@ describe('TRAK-364 the rhythm', () => {
   it('step 1 asks how often and on which day, shows the first date, and saves it', async () => {
     plan = { ...plan, shared_at: null, last_shared_at: null, eval_every: 'month', eval_day: 0 }
     renderApp('/coach/season-plan')
-    const every = await screen.findByRole('group', { name: 'Evaluate each player' })
+    const every = await screen.findByRole('group', { name: 'Send each player a report' })
     expect(within(every).getByRole('button', { name: 'Every month' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(screen.getByRole('group', { name: 'On the last' })).getByRole('button', { name: 'Sunday' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText(/^First evaluation \w{3} \d+ \w{3} \d{4}: each player’s six ratings/)).toBeInTheDocument()
+    expect(screen.getByText(/^First report \w{3} \d+ \w{3} \d{4}: each player’s six ratings/)).toBeInTheDocument()
     // TRAK-525: the choices are every month, every 3 months, every 6 months and Custom.
     await user().click(within(every).getByRole('button', { name: 'Every 3 months' }))
     await user().click(within(screen.getByRole('group', { name: 'On the last' })).getByRole('button', { name: 'Saturday' }))
@@ -241,9 +252,9 @@ describe('TRAK-364 the rhythm', () => {
     evaluations = [{ plan_id: 'plan-1', due_on: expected().due.dueOn! }]
     renderApp('/coach/season-plan')
     const season = await screen.findByRole('region', { name: 'Season' })
-    expect(await within(season).findByText(/^Every 2 weeks, on Sunday · Next evaluation /)).toBeInTheDocument()
-    await user().click(within(season).getByRole('button', { name: 'Edit how often you evaluate' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Evaluation' })).toBeInTheDocument()
+    expect(await within(season).findByText(/^Every 2 weeks, on Sunday · Next report /)).toBeInTheDocument()
+    await user().click(within(season).getByRole('button', { name: 'Edit how often you send reports' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reports' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     // TRAK-525: every 2 weeks is now Custom; every 6 months is one of the new choices.
     await user().click(screen.getByRole('button', { name: 'Every 6 months' }))
@@ -272,8 +283,8 @@ describe('TRAK-365 objectives in the evaluation', () => {
     expect(within(list).getByRole('button', { name: /^Pat Synthetic/ })).toHaveTextContent('Objectives to rate')
     expect(within(list).getByRole('button', { name: /^Quinn Synthetic/ })).not.toHaveTextContent('Objectives to rate')
 
-    await user().click(screen.getByRole('button', { name: 'Next: Publish' }))
-    expect(screen.getByRole('button', { name: 'Publish to 2 players' })).toBeDisabled()
+    await user().click(screen.getByRole('button', { name: 'Next: Send' }))
+    expect(screen.getByRole('button', { name: 'Send to 2 players' })).toBeDisabled()
     expect(screen.getByText('Say how Pat is doing on their objectives first.')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Players' }))
 
@@ -291,8 +302,8 @@ describe('TRAK-365 objectives in the evaluation', () => {
     expect(screen.queryByLabelText('Add another objective')).toBeNull()
     await user().click(screen.getByRole('button', { name: 'Done' }))
 
-    await user().click(screen.getByRole('button', { name: 'Next: Publish' }))
-    await user().click(screen.getByRole('button', { name: 'Publish to 2 players' }))
+    await user().click(screen.getByRole('button', { name: 'Next: Send' }))
+    await user().click(screen.getByRole('button', { name: 'Send to 2 players' }))
     await waitFor(() => expect(published).toHaveLength(1))
     expect(published[0]).toMatchObject({
       p_plan_id: 'plan-1', p_due_on: due.dueOn,
@@ -327,4 +338,73 @@ describe('TRAK-365 objectives in the evaluation', () => {
     await user().click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(resolved).toEqual([{ p_player_objective_id: 'oa', p_choice: 'simpler', p_title: 'Win it back within 8 seconds' }]))
   }, 30_000)
+})
+
+/* TRAK-531 (Reports 8/10, Imad 21 Nov): report day. The coach sends one player's report on its own; the list then says
+   Sent and "Send to N players" counts only the rest, which it sends without him. Each player's objectives start from
+   his latest answers since the last report day, and Preview shows his report as Send will store it, note included. */
+describe('TRAK-531 report day', () => {
+  const objective = (id: string, title: string, slot: number) => ({
+    id, squad_player_id: 'pat', slot, title, source: 'own', season_objective_id: null, status: 'open', retired_at: null, created_at: '2026-09-01T08:00:00Z',
+  })
+
+  it('sends one player on his own, then "Send to N players" sends only the rest', async () => {
+    const { due } = expected()
+    renderApp('/coach/evaluation')
+    await user().click(await screen.findByRole('button', { name: /^Pat Synthetic/ }))
+    await user().type(screen.getByLabelText('Note to Pat and parents'), 'Well done.')
+    await user().click(screen.getByRole('button', { name: 'Send Pat’s report' }))
+    expect(await screen.findByText('Pat’s report is sent.')).toBeInTheDocument()
+    expect(published).toEqual([{
+      p_plan_id: 'plan-1', p_due_on: due.dueOn, p_objectives: [], p_close: false,
+      p_players: [{ squad_player_id: 'pat', work_rate: 7, tactical: 6, attitude: 6, technical: 6, physical: 6, coachability: 6, report_note: 'Well done.' }],
+    }])
+    const list = screen.getByRole('list', { name: 'Players' })
+    expect(within(list).queryByRole('button', { name: /^Pat Synthetic/ })).toBeNull()
+    expect(within(within(list).getByText('Pat Synthetic').closest('li')!).getByText('Sent')).toBeInTheDocument()
+
+    await user().click(within(list).getByRole('button', { name: /^Quinn Synthetic/ }))
+    await user().click(screen.getByRole('button', { name: 'Done' }))
+    await user().click(screen.getByRole('button', { name: 'Next: Send' }))
+    await user().click(screen.getByRole('button', { name: 'Send to 1 player' }))
+    expect(await screen.findByText('Sent to 1 player.')).toBeInTheDocument()
+    expect(published).toHaveLength(2)
+    expect(published[1]).toMatchObject({ p_due_on: due.dueOn, p_close: true, p_players: [{ squad_player_id: 'quinn' }] })
+  }, 45_000)
+
+  it('starts the objectives from his latest answers, and Preview shows his report with the note', async () => {
+    const { due } = expected()
+    answers = [
+      { player_objective_id: 'oa', status: 'not_yet', coach_assessments: { squad_player_id: 'pat', created_at: new Date(Date.now() - 2 * DAY).toISOString() } },
+      { player_objective_id: 'oa', status: 'on_track', coach_assessments: { squad_player_id: 'pat', created_at: new Date(Date.now() - DAY).toISOString() } },
+      { player_objective_id: 'ob', status: 'some_progress', coach_assessments: { squad_player_id: 'pat', created_at: new Date(Date.now() - DAY).toISOString() } },
+    ]
+    server.use(
+      table('player_objectives', [objective('oa', 'Win it back within 5 seconds', 1), objective('ob', 'Scan before receiving', 2)]),
+      rpc('coach_player_report', ({ p_report_day }) => ({
+        squad_player_id: 'pat', player_name: 'Pat Synthetic', squad: 'U16', season_starts_on: plan.starts_on, period_from: plan.starts_on,
+        report_day: p_report_day, last_report_day: null, assessments: [], before_season: null, matches: [],
+        objectives: [{ id: 'oa', title: 'Win it back within 5 seconds', at_last_report: null, now: null }], trainings: { attended: 0, total: 0 },
+      })),
+    )
+    renderApp('/coach/evaluation')
+    const list = await screen.findByRole('list', { name: 'Players' })
+    expect(within(list).getByRole('button', { name: /^Pat Synthetic/ })).not.toHaveTextContent('Objectives to rate')
+
+    await user().click(within(list).getByRole('button', { name: /^Pat Synthetic/ }))
+    await user().type(screen.getByLabelText('Note to Pat and parents'), 'Keep scanning.')
+    await user().click(screen.getByRole('button', { name: 'Preview' }))
+    expect(await screen.findByRole('heading', { name: /^Pat’s \w+ report$/ })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Note from the coach' })).toHaveTextContent('Keep scanning.')
+    await user().click(screen.getByRole('button', { name: 'Pat Synthetic' }))
+
+    await user().click(await screen.findByRole('button', { name: 'Send Pat’s report' }))
+    await waitFor(() => expect(published).toHaveLength(1))
+    expect(published[0]).toMatchObject({
+      p_due_on: due.dueOn, p_close: false,
+      p_objectives: [{ squad_player_id: 'pat', progress: [
+        { player_objective_id: 'oa', status: 'on_track' }, { player_objective_id: 'ob', status: 'some_progress' },
+      ], add: [] }],
+    })
+  }, 45_000)
 })

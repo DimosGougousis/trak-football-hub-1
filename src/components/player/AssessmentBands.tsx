@@ -1,4 +1,4 @@
-import { bandForScore } from '@/lib/rating-engine'
+import { bandForScore, scoreColor } from '@/lib/rating-engine'
 
 export type AssessmentScores = {
   work_rate: number; tactical: number; attitude: number; technical: number; physical: number; coachability: number
@@ -25,9 +25,9 @@ export function AssessmentBands({ scores }: { scores: AssessmentScores }) {
             style={{ fontFamily: 'var(--t-font-mono)' }}>{cat.label}</span>
           <div className="flex-1 h-1.5 rounded-full bg-raised overflow-hidden">
             <div className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: band.color }} />
+              style={{ width: `${(cat.score / 10) * 100}%`, backgroundColor: scoreColor(cat.score) }} />
           </div>
-          <span className="text-[11px] flex-shrink-0 w-[72px] text-right" style={{ color: band.text }}>
+          <span className="text-[11px] flex-shrink-0 w-[72px] text-right text-ink">
             {band.word}
           </span>
         </li>

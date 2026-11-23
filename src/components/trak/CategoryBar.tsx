@@ -1,5 +1,5 @@
 import { BANDS } from '@/lib/types'
-import { scoreToBand } from '@/lib/rating-engine'
+import { scoreColor, scoreToBand } from '@/lib/rating-engine'
 
 interface CategoryBarProps {
   label: string
@@ -16,14 +16,15 @@ export function CategoryBar({ label, score }: CategoryBarProps) {
         <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
           {label}
         </span>
-        {config && <span className="text-xs" style={{ color: config.text }}>
+        {/* TRAK-557: the word in Trak's ink; the bar carries the colour. */}
+        {config && <span className="text-xs text-ink">
           {config.word}
         </span>}
       </div>
       <div className="h-1.5 rounded-full bg-raised overflow-hidden">
         {config && score != null && <div
           className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${(score / 10) * 100}%`, backgroundColor: config.color }}
+          style={{ width: `${(score / 10) * 100}%`, backgroundColor: scoreColor(score) }}
         />}
       </div>
     </div>

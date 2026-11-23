@@ -71,7 +71,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMocks(); delete document.documentElement.dataset.layout })
 
-const BAND_WORDS = /Exceptional|Standout|Good|Steady|Mixed|Developing/
+const BAND_WORDS = /Exceptional|Good|Steady|Developing|Difficult/ // TRAK-556: the five bands
 
 describe("TRAK-441 slice 5: the player's My season in the coach's look", () => {
   it('a phone: the page header with the trail, the season pill, the next evaluation and three cards', async () => {

@@ -17,84 +17,32 @@ const baseMatch: MatchInput = {
   is_friendly: false,
 }
 
+// TRAK-556 (Imad, 23 Nov): 10 Exceptional · 7–9 Good · 5–6 Steady · 3–4 Developing · 0–2 Difficult.
 describe('scoreToBand', () => {
-  it('maps 9.0+ to exceptional', () => {
+  it('gives every whole score its band from the table', () => {
+    expect(Array.from({ length: 11 }, (_, s) => scoreToBand(s))).toEqual([
+      'difficult', 'difficult', 'difficult', 'developing', 'developing', 'steady', 'steady', 'good', 'good', 'good', 'exceptional',
+    ])
+  })
+
+  it('rounds an average to the nearest whole score first', () => {
+    expect(scoreToBand(6.6)).toBe('good')
     expect(scoreToBand(9.5)).toBe('exceptional')
-    expect(scoreToBand(9.0)).toBe('exceptional')
+    expect(scoreToBand(9.4)).toBe('good')
+    expect(scoreToBand(4.5)).toBe('steady')
+    expect(scoreToBand(4.4)).toBe('developing')
+    expect(scoreToBand(2.5)).toBe('developing')
+    expect(scoreToBand(2.44)).toBe('difficult')
   })
-  it('maps 8.0-8.99 to standout', () => {
-    expect(scoreToBand(8.5)).toBe('standout')
-    expect(scoreToBand(8.99)).toBe('standout')
+
+  it('rounds as the average is shown, to one decimal first: 6.45 shows as 6.5 and is Good', () => {
+    expect(scoreToBand(6.45)).toBe('good')
+    expect(scoreToBand(6.44)).toBe('steady')
   })
-  it('maps 7.0-7.99 to good', () => {
-    expect(scoreToBand(7.5)).toBe('good')
-  })
-  it('maps 6.0-6.99 to steady', () => {
-    expect(scoreToBand(6.5)).toBe('steady')
-  })
-  it('maps 4.0-5.99 to mixed', () => {
-    expect(scoreToBand(5.0)).toBe('mixed')
-    expect(scoreToBand(4.0)).toBe('mixed')
-  })
-  it('maps 2.0-3.99 to developing', () => {
-    expect(scoreToBand(3.0)).toBe('developing')
-    expect(scoreToBand(2.0)).toBe('developing')
-  })
-  it('maps below 2.0 to difficult', () => {
-    expect(scoreToBand(0)).toBe('difficult')
-    expect(scoreToBand(1.99)).toBe('difficult')
-  })
+
   it('returns a string, never a number', () => {
     const result = scoreToBand(7.5)
     expect(typeof result).toBe('string')
-  })
-
-  // Boundary condition tests
-  it('scoreToBand(10) → exceptional (top of scale)', () => {
-    expect(scoreToBand(10)).toBe('exceptional')
-  })
-
-  it('scoreToBand(0) → difficult (bottom of scale)', () => {
-    expect(scoreToBand(0)).toBe('difficult')
-  })
-
-  it('scoreToBand(5) → mixed (middle of scale)', () => {
-    expect(scoreToBand(5)).toBe('mixed')
-  })
-
-  it('scoreToBand(6.5) → steady (default fallback value used throughout the app)', () => {
-    expect(scoreToBand(6.5)).toBe('steady')
-  })
-
-  // Band boundary ±0.01 tests
-  it('boundary at 9.0: 8.99 → standout, 9.0 → exceptional', () => {
-    expect(scoreToBand(8.99)).toBe('standout')
-    expect(scoreToBand(9.0)).toBe('exceptional')
-  })
-
-  it('boundary at 8.0: 7.99 → good, 8.0 → standout', () => {
-    expect(scoreToBand(7.99)).toBe('good')
-    expect(scoreToBand(8.0)).toBe('standout')
-  })
-
-  it('boundary at 7.0: 6.99 → steady, 7.0 → good', () => {
-    expect(scoreToBand(6.99)).toBe('steady')
-    expect(scoreToBand(7.0)).toBe('good')
-  })
-
-  it('boundary at 6.0: 5.99 → mixed, 6.0 → steady', () => {
-    expect(scoreToBand(5.99)).toBe('mixed')
-    expect(scoreToBand(6.0)).toBe('steady')
-  })
-
-  it('boundary at 4.0: 3.99 → developing, 4.0 → mixed', () => {
-    expect(scoreToBand(3.99)).toBe('developing')
-    expect(scoreToBand(4.0)).toBe('mixed')
-  })
-
-  it('boundary at 2.0: 1.99 → difficult, 2.0 → developing', () => {
-    expect(scoreToBand(1.99)).toBe('difficult')
-    expect(scoreToBand(2.0)).toBe('developing')
   })
 })
 
@@ -154,7 +102,7 @@ describe('computeMatchScore', () => {
   })
 
   // GK worked example
-  it('produces Standout for GK worked example', () => {
+  it('produces Good for GK worked example (8.2)', () => {
     const score = computeMatchScore({
       ...baseMatch,
       position: 'gk',
@@ -166,7 +114,7 @@ describe('computeMatchScore', () => {
         commanding: 'yes', errors: 'none',
       },
     })
-    expect(scoreToBand(score)).toBe('standout')
+    expect(scoreToBand(score)).toBe('good')
   })
 
   // ATT friendly worked example
@@ -186,7 +134,7 @@ describe('computeMatchScore', () => {
   })
 
   // DEF loss worked example
-  it('produces Mixed for DEF loss worked example', () => {
+  it('produces Steady for DEF loss worked example (5.6)', () => {
     const score = computeMatchScore({
       ...baseMatch,
       position: 'def',
@@ -198,7 +146,7 @@ describe('computeMatchScore', () => {
         positioning: 'no', goals_conceded: '3+', assists: '0',
       },
     })
-    expect(scoreToBand(score)).toBe('mixed')
+    expect(scoreToBand(score)).toBe('steady')
   })
 
   // Boundary condition tests

@@ -39,13 +39,13 @@ export async function loadPlayerReport(playerId: string, reportDay: string, last
 }
 
 /** TRAK-528 (Reports 5/10): a report as it was sent, the coach's copy (report_for_player). */
-export type SentReport = { evaluation_id: string; sent_at: string; report: PlayerReport }
+export type SentReport = { evaluation_id: string; sent_at: string; report: PlayerReport; note: string }
 
 export const sentReportsKey = (coachId: string | undefined, playerId: string) => ['coach', coachId, 'sent-reports', playerId] as const
 
 /** The player's sent reports, the latest report day first. */
 export async function loadSentReports(playerId: string): Promise<SentReport[]> {
-  const { data, error } = await supabase.from('report_for_player').select('evaluation_id, sent_at, report').eq('squad_player_id', playerId)
+  const { data, error } = await supabase.from('report_for_player').select('evaluation_id, sent_at, report, note').eq('squad_player_id', playerId)
   if (error) throw error
   return (data as unknown as SentReport[]).sort((a, b) => b.report.report_day.localeCompare(a.report.report_day))
 }
@@ -60,6 +60,16 @@ export function reportDayOf(plan: { starts_on: string | null; ends_on: string | 
   const reportDay = due.dueOn ?? due.next ?? dates.at(-1) ?? null
   if (!reportDay) return null
   return { reportDay, lastReportDay: [...sentDays].filter(d => d < reportDay).sort().at(-1) ?? null }
+}
+
+/** TRAK-531: Preview on report day, the report as Send will store it: the ratings on screen as the report day's
+ *  assessment, and each objective's answer on screen as its answer now. */
+export function withEntry(report: PlayerReport, ratings: ReportRatings, progress: Partial<Record<string, Progress>>): PlayerReport {
+  return {
+    ...report,
+    assessments: [...report.assessments, { id: 'preview', day: report.report_day, ...ratings }],
+    objectives: report.objectives.map(o => ({ ...o, now: progress[o.id] ?? o.now })),
+  }
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10

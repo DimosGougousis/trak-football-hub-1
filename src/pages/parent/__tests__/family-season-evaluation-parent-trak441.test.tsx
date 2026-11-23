@@ -73,7 +73,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMocks(); delete document.documentElement.dataset.layout })
 
-const BAND_WORDS = /Exceptional|Standout|Good|Steady|Mixed|Developing/
+const BAND_WORDS = /Exceptional|Good|Steady|Developing|Difficult/ // TRAK-556: the five bands
 /** A parent's page never has the coach's note, the job, or the words for them. */
 function expectNothingHeldBack() {
   const shown = document.body.textContent ?? ''
@@ -91,7 +91,8 @@ describe("TRAK-441 slice 5: the parent's season in the coach's look", () => {
     expect(within(screen.getByRole('region', { name: 'Giourkas’s position' })).getByText('Right back')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Giourkas’s objectives' })).getByText('On track')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Squad objectives' })).getByText('Win the ball back in their half')).toBeInTheDocument()
-    expect(screen.queryByText(/updates this at each evaluation/)).toBeNull()
+    // TRAK-536: the helper line is gone from both looks (TRAK-494); today's page is the one with a "Back" link.
+    expect(screen.queryByRole('link', { name: 'Back' })).toBeNull()
     expectNothingHeldBack()
   })
 
@@ -99,7 +100,9 @@ describe("TRAK-441 slice 5: the parent's season in the coach's look", () => {
     switchOn = false
     screenIs(false)
     renderApp('/parent/season')
-    expect(await screen.findByText(/updates this at each evaluation/, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Giourkas.s season$/ }, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/parent/home')
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull()
   })
 })
 

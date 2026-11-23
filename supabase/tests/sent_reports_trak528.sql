@@ -127,9 +127,10 @@ SELECT pg_temp.r528check(NOT (pg_temp.r528copy('family', 'first', 40)->'report'-
   AND NOT (pg_temp.r528copy('family', 'first', 40)->'report'->'matches'->0 ? 'did_job')
   AND pg_temp.r528copy('family', 'first', 40)->'report'->'matches'->0 @> '{"opponent":"North FC","against_expectation":"above"}'::jsonb,
   '2 the parents'' copy has no job and no Did the job?, but Below, Met or Above');
-SELECT pg_temp.r528check(NOT (pg_temp.r528copy('family', 'first', 40) ? 'note')
+-- TRAK-531: the parents' copy has a note since; a message written to the player, as here, never goes in it.
+SELECT pg_temp.r528check(pg_temp.r528copy('family', 'first', 40)->>'note' = ''
   AND (pg_temp.r528copy('family', 'first', 40)->'report') - 'matches' = (pg_temp.r528copy('player', 'first', 40)->'report') - 'matches',
-  '2 the parents'' copy has no note, and otherwise the same report');
+  '2 the parents'' copy has no note to the player, and otherwise the same report');
 
 -- ── 3. A sent report never changes ──────────────────────────────────────────
 INSERT INTO pg_temp.r528_kept SELECT 'ola-sent', pg_temp.r528copy('player', 'first', 40);

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useFeatureState } from '@/components/trak/parked'
 import { loadSeasonPlan, seasonPlanKey, type SeasonPlan } from '@/lib/season-plan'
 import { squadEvaluation, type EvaluationDue } from '@/lib/evaluation'
+import { isProgress, type Progress } from '@/lib/objective-progress'
 import { dayIn } from '@/lib/watch-first'
 import { useAcademyTimeZone } from './useWatching'
 
@@ -14,9 +15,10 @@ import { useAcademyTimeZone } from './useWatching'
 
 export const seasonEvaluationsKey = (coachId: string | undefined) => ['coach', coachId, 'season-evaluations'] as const
 
-/** The coach's published evaluations: which plan, and the date each closed. */
-export async function loadSeasonEvaluations(): Promise<{ plan_id: string; due_on: string }[]> {
-  const { data, error } = await supabase.from('season_evaluations').select('plan_id, due_on').retry(false)
+/** The coach's report days sent: which plan, the date, and whether the squad's Send has closed it (TRAK-531: sending
+ *  one player first leaves it open). */
+export async function loadSeasonEvaluations(): Promise<{ id: string; plan_id: string; due_on: string; closed_at: string | null }[]> {
+  const { data, error } = await supabase.from('season_evaluations').select('id, plan_id, due_on, closed_at').retry(false)
   if (error) throw error
   return data ?? []
 }
@@ -43,8 +45,9 @@ export function useSharedPlans(coachId: string | undefined, squads: string[]) {
 }
 
 /** `sharedOn` and `lastDueOn` are what the dates count from: the day the plan was first shared, the last evaluation.
- *  `sentDays` are every published evaluation's date, oldest first: the report days actually sent (TRAK-545). */
-export type SquadEvaluation = { squad: string; plan: SeasonPlan; due: EvaluationDue; sharedOn: string; lastDueOn: string | null; sentDays: string[] }
+ *  `sentDays` are every closed report day's date, oldest first: the report days actually sent (TRAK-545). `openId` is
+ *  the report day some players were already sent, which stays due until the squad's Send (TRAK-531). */
+export type SquadEvaluation = { squad: string; plan: SeasonPlan; due: EvaluationDue; sharedOn: string; lastDueOn: string | null; sentDays: string[]; openId: string | null }
 
 /** Each shared plan's evaluation: what's due and what's next, on the academy's `today`. */
 export function useSquadEvaluations(coachId: string | undefined, squads: string[]) {
@@ -57,10 +60,14 @@ export function useSquadEvaluations(coachId: string | undefined, squads: string[
   const now = new Date()
   const today = dayIn(zone.zone, now)
   const list: SquadEvaluation[] = !ready || failed ? [] : shared.plans.map(({ squad, plan }) => {
-    const sentDays = (evaluations.data ?? []).filter(e => e.plan_id === plan.id).map(e => e.due_on).sort()
+    const mine = (evaluations.data ?? []).filter(e => e.plan_id === plan.id)
+    const sentDays = mine.filter(e => e.closed_at !== null).map(e => e.due_on).sort()
     const lastDueOn = sentDays.at(-1) ?? null
-    const { due, sharedOn } = squadEvaluation({ plan: { ...plan, shared_at: plan.shared_at! }, lastDueOn, zone: zone.zone, now })
-    return { squad, plan, sharedOn, lastDueOn, sentDays, due }
+    const open = mine.find(e => e.closed_at === null) ?? null
+    const { due: scheduled, sharedOn } = squadEvaluation({ plan: { ...plan, shared_at: plan.shared_at! }, lastDueOn, zone: zone.zone, now })
+    // The open day is the one due, even after a later date passes: its other players still get that day's report.
+    const due = open ? { ...scheduled, dueOn: open.due_on, since: scheduled.since ?? open.due_on } : scheduled
+    return { squad, plan, sharedOn, lastDueOn, sentDays, due, openId: open?.id ?? null }
   })
   return {
     list, today, zone: zone.zone, ready, failed,
@@ -68,4 +75,51 @@ export function useSquadEvaluations(coachId: string | undefined, squads: string[
     evaluated: shared.shared,
     retry: () => { shared.retry(); void zone.refetch(); void evaluations.refetch() },
   }
+}
+
+/** TRAK-531: the players already sent their report on the report day still open (send one player). */
+export const sentOnDayKey = (coachId: string | undefined, evaluationId: string | null) => ['coach', coachId, 'sent-on-day', evaluationId] as const
+export function useSentOnDay(coachId: string | undefined, evaluationId: string | null) {
+  const query = useQuery({
+    queryKey: sentOnDayKey(coachId, evaluationId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('report_for_player').select('squad_player_id').eq('evaluation_id', evaluationId!)
+      if (error) throw error
+      return new Set((data ?? []).map(r => r.squad_player_id))
+    },
+    enabled: !!coachId && !!evaluationId,
+  })
+  return { ...query, sent: query.data ?? NOBODY, isPending: !!evaluationId && query.isPending }
+}
+const NOBODY = new Set<string>()
+
+/** TRAK-531: where report day starts each player's objectives: his latest answer to each, from an assessment since the
+ *  last report day (`after`, or from the season's first day `from`), in the academy's `zone`. */
+export const reportDayAnswersKey = (coachId: string | undefined, from: string | null) => ['coach', coachId, 'report-day-answers', from] as const
+export function useReportDayAnswers(coachId: string | undefined, { after, from, zone }: { after: string | null; from: string | null; zone: string }) {
+  const since = after ?? from
+  return useQuery({
+    queryKey: reportDayAnswersKey(coachId, since),
+    queryFn: async () => {
+      // A day early on the server, whatever the zone; the academy's day decides below.
+      const coarse = new Date(Date.parse(`${since}T00:00:00Z`) - 86_400_000).toISOString()
+      const { data, error } = await supabase.from('assessment_objectives' as never)
+        .select('player_objective_id, status, coach_assessments!inner(squad_player_id, created_at)')
+        .gte('coach_assessments.created_at', coarse).not('status', 'is', null).retry(false)
+      if (error) throw error
+      type Row = { player_objective_id: string | null; status: string | null; coach_assessments: { squad_player_id: string | null; created_at: string } }
+      const latest = new Map<string, Map<string, { at: string; status: Progress }>>()
+      for (const row of (data ?? []) as unknown as Row[]) {
+        const { squad_player_id: player, created_at: at } = row.coach_assessments
+        const day = dayIn(zone, new Date(at))
+        if (!player || !row.player_objective_id || !isProgress(row.status) || (after ? day <= after : day < since!)) continue
+        const mine = latest.get(player) ?? new Map()
+        const seen = mine.get(row.player_objective_id)
+        if (!seen || seen.at < at) mine.set(row.player_objective_id, { at, status: row.status })
+        latest.set(player, mine)
+      }
+      return new Map([...latest].map(([player, answers]) => [player, Object.fromEntries([...answers].map(([id, a]) => [id, a.status]))]))
+    },
+    enabled: !!coachId && !!since,
+  })
 }
