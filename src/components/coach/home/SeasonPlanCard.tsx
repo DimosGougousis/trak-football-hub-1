@@ -360,9 +360,10 @@ function SeasonObjectives({ objectives, matches, plans, wide }: {
     {objectives.length === 0 ? <p className="text-sm text-ink-3">None selected.</p> : <>
       {measured ? <div className={styles.measure}>
         {/* Arc's donut takes its box's width, so the box is the donut's size and the donut fills it (centred, either would
-            shrink to nothing). */}
+            shrink to nothing). Kostas, 23 Nov: the middle says "Worked" with the number under it ("Times worked" touched
+            the ring). */}
         <div className="grid w-[148px] gap-1">
-          <DonutChart label="Times each season objective worked" totalLabel="Times worked" legend={false}
+          <DonutChart label="Times each season objective worked" totalLabel="Worked" legend={false}
             data={objectives.map((o, i) => ({ key: o.id, label: o.title, value: measures.get(o.id)?.worked ?? 0, color: greenOf(i) }))}
             activeKey={selected} onActiveChange={setSelected} size={148} thickness={14} emptyLabel="Nothing worked yet" />
           {/* TRAK-382: a donut draws no slice for 0, so an objective that has matches but never worked is named here. */}
