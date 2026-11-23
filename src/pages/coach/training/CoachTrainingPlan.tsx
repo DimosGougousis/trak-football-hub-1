@@ -14,7 +14,6 @@ import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import type { EventRow } from '@/lib/coach-events'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { useNotes, usePlan, useRegisters, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
-import { MenuTrail } from '@/components/coach/MenuTrail'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { RegisterSheet } from '@/components/coach/training/RegisterSheet'
 import { NotesForm } from '@/components/coach/training/NotesForm'
@@ -225,8 +224,8 @@ function PitchView({ training, plan }: { training: Training; plan: Plan | null }
   // TRAK-429: the coach pages' width, its title where theirs is.
   return <div className="grid gap-5 pt-5">
     {/* TRAK-334: opened from Training home's View plan, the trail goes back there; from the training's page, to that,
-        which is also where it sits when opened from a link. */}
-    <MenuTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
+        which is also where it sits when opened from a link. TRAK-572: no coach avatar beside it, as on the training's page. */}
+    <CoachTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
     <header className="grid gap-1">
       <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:view')}</p>
       <h1 className={INNER_TITLE}>{[day, time].filter(Boolean).join(' · ')}</h1>
