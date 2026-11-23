@@ -851,7 +851,7 @@ test("TRAK-428 at 390 px: a player's page has one way back, and neither the name
   })
   await context.route('**/rest/v1/coach_assessments?*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
     id: 'as-9', squad_player_id: 'sq-2', coach_user_id: ids.coach, created_at: '2026-11-10T08:00:00Z', published_at: '2026-11-10T09:00:00Z',
-    coach_rating: 9, work_rate: 9, tactical: 9, attitude: 9, technical: 9, physical: 9, coachability: 9, squad_players: { player_name: 'Giourkas Seitaridis' } }]) }))
+    coach_rating: 10, work_rate: 10, tactical: 10, attitude: 10, technical: 10, physical: 10, coachability: 10, squad_players: { player_name: 'Giourkas Seitaridis' } }]) })) // TRAK-556: Exceptional is a 10
   await page.goto('/coach/squad')
   await page.getByRole('button', { name: /^Giourkas Seitaridis/ }).click()
   const profile = page.locator('article[aria-label^="Giourkas Seitaridis,"]')
