@@ -95,8 +95,8 @@ afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
 const user = () => userEvent.setup()
 const results = async () => {
   const card = await screen.findByRole('region', { name: 'U16 season plan' })
-  const heading = await within(card).findByRole('heading', { name: 'Results' })
-  return heading.parentElement!
+  // TRAK-550: each part of the open card is a section named by its title.
+  return within(card).findByRole('region', { name: 'Results' })
 }
 const rowButtons = (scope: HTMLElement) => within(scope).getAllByRole('button').filter(b => b.hasAttribute('aria-expanded'))
 

@@ -131,6 +131,8 @@ describe('TRAK-361 the Season plan card', () => {
     const card = await cardOf('U16')
     await user().click(fold(card))
     const players = await within(card).findByRole('button', { name: /^Player objectives/ })
+    // TRAK-550: each part of the open card is a section named by its title.
+    for (const part of ['Season objectives', 'Results', 'Player objectives']) expect(within(card).getByRole('region', { name: part })).toBeInTheDocument()
     expect(players).toHaveTextContent('1 player working on objectives · 1 watching')
     expect(players).toHaveAttribute('aria-expanded', 'false')
     await user().click(players)

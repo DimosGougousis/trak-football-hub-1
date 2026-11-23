@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, ChevronDown, ChevronUp } from 'lucide-react'
@@ -23,6 +23,7 @@ import {
 import { measureObjectives } from '@/lib/season-objective-measure'
 import { DonutChart } from '@/components/arc/donut-chart/donut-chart'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import styles from './season-plan-card.module.css'
 
 /* TRAK-361 (Season plan 13/18, spec TRAK-348): the season plan's card under Needs you, where the academy's switch is
    on. Folded, one line: the state and what comes next ("Shared 3 Nov · 34 weeks left"). Open: the season objectives,
@@ -36,6 +37,9 @@ import { useSideMenuScreen } from '@/lib/side-menu-screen'
    names the season objective it carried. */
 
 const card = 'arc grid gap-3 rounded-2xl border border-line bg-surface p-4'
+// TRAK-550: each part of the open card in a light panel, under a small capitals title (the mockup's).
+const panel = 'grid min-w-0 content-start gap-3 rounded-[14px] bg-raised p-4'
+const panelTitle = 'text-[13px] font-medium uppercase tracking-[.06em] text-ink-2'
 const players = (n: number) => `${n} ${n === 1 ? 'player' : 'players'}`
 const storeKey = (coachId: string, squad: string) => `trak.season-plan-card.${coachId}.${squad}`
 function remembered(coachId: string, squad: string) {
@@ -133,7 +137,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
         </div>
       </div>
       <SeasonBar plan={plan} left={left} />
-      {open && <div id={`season-plan-body-${squad}`} className="grid gap-4">
+      {open && <div id={`season-plan-body-${squad}`} className={`grid gap-4 ${styles.body}`}>
         <SharedBody coachId={coachId} squad={squad} plan={plan} />
         {!wide && <div className="flex justify-end">{viewPlan}</div>}
       </div>}
@@ -206,14 +210,14 @@ function SharedBody({ coachId, squad, plan }: { coachId: string; squad: string; 
   const working = status.size
   const watchCount = groups.find(g => g.label === 'Watching')?.players.length ?? 0
 
-  return <>
-    <SeasonObjectives objectives={objectives.data ?? []} matches={matches} plans={matchPlans.data} />
+  return <div className={styles.panels}>
+    <SeasonObjectives objectives={objectives.data ?? []} matches={matches} plans={matchPlans.data} wide={!matches.on} />
     {matches.on && <Results matches={matches} plans={matchPlans.data} names={names} />}
-    <div className="grid gap-2 border-t border-line pt-3">
+    <section aria-labelledby={`season-plan-players-title-${squad}`} className={`${panel} gap-2 ${styles.wide}`}>
       <button type="button" aria-expanded={playersOpen} aria-controls={`season-plan-players-${squad}`} onClick={() => setPlayersOpen(!playersOpen)}
         className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         <span className="grid gap-1">
-          <span className="text-sm font-medium text-ink">Player objectives</span>
+          <span id={`season-plan-players-title-${squad}`} className={panelTitle}>Player objectives</span>
           <span className="text-sm text-ink-3">{players(working)} working on objectives{watchCount ? ` · ${watchCount} watching` : ''}</span>
         </span>
         {playersOpen ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
@@ -233,8 +237,8 @@ function SharedBody({ coachId, squad, plan }: { coachId: string; squad: string; 
           </ul>
         </div>)}
       </div>}
-    </div>
-  </>
+    </section>
+  </div>
 }
 
 /** How a player's worst objective moved since the evaluation before. */
@@ -285,8 +289,10 @@ const VERDICT_TONE = { Good: 'success', Watch: 'warning', 'At risk': 'danger' } 
 /** TRAK-363: each season objective measured only from matches: a donut with a segment per objective (how often it
  *  Worked), and beside each its share and Good / Watch / At risk. Selecting one lists its matches. Two Didn'ts in a row
  *  need attention. */
-function SeasonObjectives({ objectives, matches, plans }: {
+function SeasonObjectives({ objectives, matches, plans, wide }: {
   objectives: SeasonObjective[]; matches: ReturnType<typeof useSquadMatches>; plans: Map<string, MatchPlan> | undefined
+  /** Without Matches there are no Results beside it, so it takes the whole row. */
+  wide: boolean
 }) {
   const [selected, setSelected] = useState<string | null>(null)
   const measures = measureObjectives(objectives.map(o => o.id), matches.published.map(game => ({
@@ -299,8 +305,10 @@ function SeasonObjectives({ objectives, matches, plans }: {
   const chosenMatches = chosen ? matches.published.flatMap(game => instructionsWent(plans?.get(game.id)?.goals, plans?.get(game.id)?.planWorked)
     .filter(item => item.seasonObjectiveId === chosen.id).map(item => ({ game, went: item.went }))) : []
 
-  return <div className="grid gap-3">
-    <h3 className="text-sm font-medium text-ink-2">Season objectives</h3>
+  // TRAK-550: each panel is a section named by its title, so a screen reader can jump between them.
+  const titleId = useId()
+  return <section aria-labelledby={titleId} className={`${panel} ${wide ? styles.wide : ''}`}>
+    <div className="flex min-h-8 items-center"><h3 id={titleId} className={panelTitle}>Season objectives</h3></div>
     {objectives.length === 0 ? <p className="text-sm text-ink-3">None selected.</p> : <>
       {measured && <DonutChart label="Times each season objective worked" totalLabel="Times it worked" legend={false}
         data={objectives.map(o => ({ key: o.id, label: o.title, value: measures.get(o.id)?.worked ?? 0 }))}
@@ -334,7 +342,7 @@ function SeasonObjectives({ objectives, matches, plans }: {
         {stuck.map(o => <p key={o.id} className="text-sm text-ink-2">{o.title}: didn’t work in the last two matches.</p>)}
       </div>}
     </>}
-  </div>
+  </section>
 }
 
 function Results({ matches, plans, names }: {
@@ -343,18 +351,20 @@ function Results({ matches, plans, names }: {
   const [all, setAll] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const shown = all ? matches.published : matches.published.slice(0, RESULTS_SHOWN)
-  return <div className="grid gap-2 border-t border-line pt-3">
-    <h3 className="text-sm font-medium text-ink-2">Results</h3>
+  const titleId = useId()
+  return <section aria-labelledby={titleId} className={`${panel} gap-2`}>
+    {/* TRAK-550: Show all sits at the panel's top right. */}
+    <div className="flex min-h-8 items-center justify-between gap-3">
+      <h3 id={titleId} className={panelTitle}>Results</h3>
+      {matches.published.length > RESULTS_SHOWN && <Button variant="ghost" size="sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${matches.published.length}`}</Button>}
+    </div>
     {matches.published.length === 0 ? <p className="text-sm text-ink-3">No published match yet this season.</p>
       : <ul className="m-0 list-none divide-y divide-line p-0">{shown.map(game => {
         const scores = matches.scores(game.id)
         return <ResultRow key={game.id} game={game} result={matchResult(scores.ourScore, scores.theirScore)} plan={plans?.get(game.id)} names={names}
           open={openId === game.id} onToggle={() => setOpenId(openId === game.id ? null : game.id)} />
       })}</ul>}
-    {matches.published.length > RESULTS_SHOWN && <span className="justify-self-start">
-      <Button variant="ghost" size="sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${matches.published.length}`}</Button>
-    </span>}
-  </div>
+  </section>
 }
 
 function ResultRow({ game, result, plan, names, open, onToggle }: {
