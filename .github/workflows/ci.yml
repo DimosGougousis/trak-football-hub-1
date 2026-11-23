@@ -80,9 +80,9 @@ jobs:
 
       # A fresh checkout: the proof must describe the candidate itself, and no
       # test or build has run on this machine.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
