@@ -100,5 +100,7 @@
   "stepObjectives": "Objectives",
   "objectivesCaps": "OBJECTIVES",
   "objectiveAdded": "Added",
-  "couldntLoadObjectives": "Couldn't load the objectives."
+  "couldntLoadObjectives": "Couldn't load the objectives.",
+  "objectiveNoAnswer": "No answer",
+  "answerEachObjective": "Answer each objective to save."
 }

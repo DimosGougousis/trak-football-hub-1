@@ -100,5 +100,7 @@
   "stepObjectives": "Objectives",
   "objectivesCaps": "OBJECTIVES",
   "objectiveAdded": "Added",
-  "couldntLoadObjectives": "Couldn't load the objectives."
+  "couldntLoadObjectives": "Couldn't load the objectives.",
+  "objectiveNoAnswer": "Χωρίς απάντηση",
+  "answerEachObjective": "Απαντήστε σε κάθε στόχο για να αποθηκεύσετε."
 }
