@@ -133,7 +133,8 @@ test.describe('TRAK-182 coach screens', () => {
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
     // TRAK-368: the player's own page in Squad; the list behind it is hidden, so wait for the page's own section.
-    ['player', '/coach/squad/player/sq-2', 'Season so far'],
+    // TRAK-546: "Season so far" is gone from it, so About is the section waited for.
+    ['player', '/coach/squad/player/sq-2', 'About Bukayo'],
     // TRAK-418: the coach's own How Trak works, opened from Settings.
     ['how-trak-works', '/coach/how-trak-works', 'Every week'],
   ] as const) {
