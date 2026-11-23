@@ -117,8 +117,8 @@ export type RatingKey = (typeof RATINGS)[number]['key']
 export type Ratings = Record<RatingKey, number>
 /** Where a player with no ratings yet starts: the assessment's own start, 5 each. */
 export const START_RATING = 5
-/** As the assessment's message. */
-export const NOTE_MAX = 300
+/** TRAK-531: the note to the player and parents, as report_for_player's check. */
+export const NOTE_MAX = 600
 
 export const startRatings = (): Ratings => Object.fromEntries(RATINGS.map(r => [r.key, START_RATING])) as Ratings
 export const ratingsAverage = (r: Ratings) => RATINGS.reduce((sum, { key }) => sum + r[key], 0) / RATINGS.length
@@ -156,11 +156,12 @@ export function startEntry(before: Ratings | undefined): EvaluationEntry {
   return before ? { ratings: { ...before }, note: '', rated: true } : { ratings: startRatings(), note: '', rated: false }
 }
 
-/** What publish_evaluation() is sent: each player once, the six ratings and the note, trimmed. */
+/** What publish_evaluation_with_objectives() is sent: each player once, the six ratings and the note to the player
+ *  and parents, trimmed. `report_note`, not `note`: `note` is the old message to the player alone (TRAK-531). */
 export function toPublish(players: string[], entries: Record<string, EvaluationEntry>) {
   return players.map(id => {
     const entry = entries[id]
-    return { squad_player_id: id, ...entry.ratings, note: entry.note.trim() }
+    return { squad_player_id: id, ...entry.ratings, report_note: entry.note.trim() }
   })
 }
 
@@ -170,16 +171,16 @@ export function toPublish(players: string[], entries: Record<string, EvaluationE
 export function firstDateLine({ startsOn, endsOn, every, day, today }: {
   startsOn: string | null; endsOn: string | null; every: EvalEvery; day: number; today: string
 }): string {
-  if (!startsOn || !endsOn || endsOn <= startsOn) return 'Add the season’s dates to see your evaluation days.'
+  if (!startsOn || !endsOn || endsOn <= startsOn) return 'Add the season’s dates to see your report days.'
   const first = evaluationDates({ startsOn, endsOn, every, day }).find(d => d >= today)
-  return first ? `First evaluation ${evalDay(first, true)}: each player’s six ratings, which give their band. Everyone starts where they were last time.`
-    : 'No evaluation date is left in this season.'
+  return first ? `First report ${evalDay(first, true)}: each player’s six ratings, which give their band. Everyone starts where they were last time.`
+    : 'No report day is left in this season.'
 }
 
 /** Once shared: whether one is due, or the next date. */
 export function nextDateLine(due: EvaluationDue, today: string): string {
   if (due.dueOn) return `Due now${due.since && due.since < today ? `, since ${evalDay(due.since)}` : ''}.`
-  return due.next ? `Next evaluation ${evalDay(due.next, true)}.` : 'No evaluation is left this season.'
+  return due.next ? `Next report ${evalDay(due.next, true)}.` : 'No report is left this season.'
 }
 
 /** The academy's calendar day for an instant, as YYYY-MM-DD (watch-first's dayIn, kept here so this file stands alone). */

@@ -149,7 +149,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           </div>
           <div className="flex items-center justify-between gap-3">
             <dl className="m-0 grid gap-1">
-              <dt className="text-sm text-ink-3">Evaluation</dt>
+              <dt className="text-sm text-ink-3">Reports</dt>
               <dd className="m-0 text-sm text-ink">{(() => {
                 const { every, day } = rhythmOf(plan)
                 const mine = evaluation.list.find(e => e.squad === squad)
@@ -157,7 +157,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
                 return `${rhythmText(every, day).replace(/^e/, 'E')}${when}`
               })()}</dd>
             </dl>
-            {edit('Edit how often you evaluate', () => navigate('/coach/season-plan/edit/evaluation'))}
+            {edit('Edit how often you send reports', () => navigate('/coach/season-plan/edit/evaluation'))}
           </div>
         </section>
 

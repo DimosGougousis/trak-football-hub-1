@@ -380,5 +380,6 @@
   "reportSent": "Sent {{date}}",
   "openReport": "Open",
   "openReportName": "Open {{name}}’s {{month}} report",
+  "reportNote": "Note from the coach",
   "reportNotFound": "This report isn’t here."
 }

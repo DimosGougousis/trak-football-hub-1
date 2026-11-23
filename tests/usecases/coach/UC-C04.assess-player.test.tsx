@@ -189,6 +189,7 @@ useCase('UC-C04', () => {
       table('season_plans', [{ id: 'plan-1', squad: 'U16', starts_on: day(-120), ends_on: day(200), shared_at: new Date(Date.now() - 90 * DAY).toISOString(),
         unshared_parts: [], unshared_players: [], eval_every: '2w', eval_day: 0 }]),
       table('season_evaluations', []), table('player_objectives', []), rpc('stuck_player_objectives', () => []),
+      table('assessment_objectives', []),
       table('coach_assessments', [{ squad_player_id: 'squad-1', created_at: '2026-08-20T10:00:00Z', published_at: '2026-08-20T10:00:00Z',
         work_rate: 8, tactical: 7, attitude: 6, technical: 5, physical: 4, coachability: 3 }]),
       http.post(`${SUPABASE_URL}/rest/v1/rpc/publish_evaluation_with_objectives`, async ({ request }) => {
@@ -204,13 +205,60 @@ useCase('UC-C04', () => {
     expect(screen.getByText('From last time: Mixed, 5.5.')).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[5], 9)
     await user.click(screen.getByRole('button', { name: 'Done' }))
-    await user.click(screen.getByRole('button', { name: 'Next: Publish' }))
+    await user.click(screen.getByRole('button', { name: 'Next: Send' }))
     expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Mixed → Steady')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Publish to 1 player' }))
+    await user.click(screen.getByRole('button', { name: 'Send to 1 player' }))
     await waitFor(() => expect(published).toHaveLength(1))
     expect(published[0]).toMatchObject({ p_plan_id: 'plan-1', p_players: [{ squad_player_id: 'squad-1',
-      work_rate: 8, tactical: 7, attitude: 6, technical: 5, physical: 4, coachability: 9, note: '' }] })
+      work_rate: 8, tactical: 7, attitude: 6, technical: 5, physical: 4, coachability: 9, report_note: '' }] })
     expect(published[0]).not.toHaveProperty('p_players.0.session_id')
+  }, 20_000)
+
+  // v6 (TRAK-531): report day sends one player first, and Send then sends only the rest (supabase/tests/
+  // report_day_send_trak531.sql proves the day stays open and nobody is sent twice).
+  it('sends one player first, then Send sends only the rest', async () => {
+    const coach = { id: 'coach-uc-c04-send-one' }
+    signInAs(coach)
+    const DAY = 86_400_000
+    const day = (n: number) => new Date(Date.now() + n * DAY).toISOString().slice(0, 10)
+    const two = [['squad-1', 'Nikos Papadopoulos'], ['squad-2', 'Eleni Georgiou']].map(([id, name], i) => ({ id, player_name: name,
+      coach_user_id: coach.id, position: 'Midfielder', shirt_number: 8 + i, age_group: 'U16', status: 'active', linked_player_id: `child-${i}`,
+      created_at: '2026-08-01T08:00:00Z' }))
+    const published: { p_players: { squad_player_id: string }[]; p_close: boolean; p_due_on: string }[] = []
+    let evaluations: Record<string, unknown>[] = []
+    let sent: { squad_player_id: string }[] = []
+    server.use(
+      table('profiles', [{ id: 'p-send', user_id: coach.id, role: 'coach', full_name: 'Coach Vasilis', invite_code: 'ABCD' }]),
+      table('squad_players', two),
+      table('coach_details', [{ user_id: coach.id, organization_id: 'org-1' }]),
+      table('organizations', [{ id: 'org-1', time_zone: 'Asia/Dubai' }]),
+      rpc('feature_on', ({ p_feature }) => p_feature === 'season_plan'),
+      rpc('coach_squad_player_consent_required', () => false),
+      table('season_plans', [{ id: 'plan-1', squad: 'U16', starts_on: day(-120), ends_on: day(200), shared_at: new Date(Date.now() - 90 * DAY).toISOString(),
+        unshared_parts: [], unshared_players: [], eval_every: '2w', eval_day: 0 }]),
+      http.get(`${SUPABASE_URL}/rest/v1/season_evaluations`, () => HttpResponse.json(evaluations)),
+      http.get(`${SUPABASE_URL}/rest/v1/report_for_player`, () => HttpResponse.json(sent)),
+      table('player_objectives', []), rpc('stuck_player_objectives', () => []), table('assessment_objectives', []),
+      table('coach_assessments', two.map(p => ({ squad_player_id: p.id, created_at: '2026-08-20T10:00:00Z', published_at: '2026-08-20T10:00:00Z',
+        work_rate: 6, tactical: 6, attitude: 6, technical: 6, physical: 6, coachability: 6 }))),
+      http.post(`${SUPABASE_URL}/rest/v1/rpc/publish_evaluation_with_objectives`, async ({ request }) => {
+        const args = await request.json() as (typeof published)[number]
+        published.push(args)
+        evaluations = [{ id: 'ev-1', plan_id: 'plan-1', due_on: args.p_due_on, closed_at: args.p_close ? '2026-11-23T10:00:00Z' : null }]
+        sent = [...sent, ...args.p_players.map(p => ({ squad_player_id: p.squad_player_id }))]
+        return HttpResponse.json({ evaluation_id: 'ev-1', assessments: args.p_players.map(p => ({ squad_player_id: p.squad_player_id, assessment_id: `as-${p.squad_player_id}` })) })
+      }),
+    )
+    renderApp('/coach/evaluation')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /^Nikos Papadopoulos/ }))
+    await user.click(screen.getByRole('button', { name: 'Send Nikos’s report' }))
+    await waitFor(() => expect(published).toHaveLength(1))
+    expect(published[0]).toMatchObject({ p_close: false, p_players: [{ squad_player_id: 'squad-1' }] })
+    await user.click(await screen.findByRole('button', { name: 'Next: Send' }))
+    await user.click(screen.getByRole('button', { name: 'Send to 1 player' }))
+    await waitFor(() => expect(published).toHaveLength(2))
+    expect(published[1]).toMatchObject({ p_close: true, p_players: [{ squad_player_id: 'squad-2' }] })
   }, 20_000)
 
   // v5 (TRAK-526): where the squad's plan is shared, Assess asks how each open objective is going after Ratings, and

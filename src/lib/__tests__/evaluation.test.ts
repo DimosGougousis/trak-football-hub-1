@@ -73,10 +73,10 @@ describe('TRAK-364 what is due', () => {
 
   it('says it in words', () => {
     expect(nextDateLine({ dueOn: '2026-11-29', since: '2026-10-25', next: null }, '2026-12-01')).toBe('Due now, since Sun 25 Oct.')
-    expect(nextDateLine({ dueOn: null, since: null, next: '2026-12-27' }, '2026-12-01')).toBe('Next evaluation Sun 27 Dec 2026.')
-    expect(nextDateLine({ dueOn: null, since: null, next: null }, '2027-01-05')).toBe('No evaluation is left this season.')
-    expect(firstDateLine({ ...season, every: 'month', day: 0, today: '2026-10-26' })).toMatch(/^First evaluation Sun 29 Nov 2026: /)
-    expect(firstDateLine({ startsOn: null, endsOn: null, every: 'month', day: 0, today: '2026-10-26' })).toBe('Add the season’s dates to see your evaluation days.')
+    expect(nextDateLine({ dueOn: null, since: null, next: '2026-12-27' }, '2026-12-01')).toBe('Next report Sun 27 Dec 2026.')
+    expect(nextDateLine({ dueOn: null, since: null, next: null }, '2027-01-05')).toBe('No report is left this season.')
+    expect(firstDateLine({ ...season, every: 'month', day: 0, today: '2026-10-26' })).toMatch(/^First report Sun 29 Nov 2026: /)
+    expect(firstDateLine({ startsOn: null, endsOn: null, every: 'month', day: 0, today: '2026-10-26' })).toBe('Add the season’s dates to see your report days.')
     expect(rhythmText('month', 0)).toBe('every month, on the last Sunday')
     expect(rhythmText('2w', 6)).toBe('every 2 weeks, on Saturday')
   })
@@ -112,8 +112,9 @@ describe('TRAK-364 ratings', () => {
     expect(bandMove(r(7), null)).toBe(0)
   })
 
+  // TRAK-531: as report_note, for the player and parents; `note` was the message to the player alone.
   it('sends each player once, with the six ratings and the note trimmed', () => {
     expect(toPublish(['a'], { a: { ratings: r(6), note: '  Keep going.  ', rated: true } }))
-      .toEqual([{ squad_player_id: 'a', ...r(6), note: 'Keep going.' }])
+      .toEqual([{ squad_player_id: 'a', ...r(6), report_note: 'Keep going.' }])
   })
 })
