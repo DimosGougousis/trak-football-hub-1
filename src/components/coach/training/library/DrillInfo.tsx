@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { DETAILS, type Changed, type Details, type LibraryDrill } from '@/lib/training/library'
+import { useTranslation } from '@/lib/i18n'
 
 /* TRAK-392 (Drill Library 7/11): the parts of a drill shown both on its page (TRAK-389) and in Plan session's View
    drill pop-up, so the two read the same: what the last press changed, the five details with the changed ones marked,
@@ -10,13 +11,14 @@ export const SIDE_HEADING = 'text-xs font-medium uppercase tracking-[0.08em] tex
 
 /** What the last press changed, or what pressing does. */
 export function ChangeNote({ changed }: { changed: Changed | null }) {
+  const { t } = useTranslation()
   /* TRAK-457 (11 Nov walk-through): no line until the coach presses Easier or Harder ("Set for 20 players. Press Easier or
      Harder…" is gone). The empty status region stays, out of the layout, so the change is still read out when it comes. */
   return changed ? <div role="status" className="grid gap-1.5 rounded-xl bg-warning/15 px-3.5 py-3 text-[15px] text-ink">
       <p className="font-medium">{changed.title}</p>
       {changed.items.length ? <ul className="grid gap-1">{changed.items.map(c =>
-        <li key={c.key}>{c.name}: {c.from} to {c.to}.{c.why ? ` ${c.why}` : ''}</li>)}</ul>
-        : <p>Nothing changes with that many.</p>}
+        <li key={c.key}>{t('coachTraining:libChangeLine', { name: c.name, from: c.from, to: c.to })}{c.why ? ` ${c.why}` : ''}</li>)}</ul>
+        : <p>{t('coachTraining:libNothingChanges')}</p>}
     </div>
     : <p role="status" className="sr-only" />
 }
@@ -35,18 +37,19 @@ export function DetailList({ details, changed }: { details: Details; changed: Ch
 
 /** Why this works, How to play, Watch for. */
 export function AboutDrill({ drill }: { drill: LibraryDrill }) {
+  const { t } = useTranslation()
   const id = useId()
   return <>
     <section aria-labelledby={`${id}-why`} className="grid gap-1.5">
-      <h2 id={`${id}-why`} className={SIDE_HEADING}>Why this works</h2>
+      <h2 id={`${id}-why`} className={SIDE_HEADING}>{t('coachTraining:libWhyWorks')}</h2>
       <p className="text-[17px] text-ink">{drill.why}</p>
     </section>
     <section aria-labelledby={`${id}-how`} className="grid gap-1.5">
-      <h2 id={`${id}-how`} className={SIDE_HEADING}>How to play</h2>
+      <h2 id={`${id}-how`} className={SIDE_HEADING}>{t('coachTraining:libHowToPlay')}</h2>
       <ol className="grid list-decimal gap-2 pl-5 text-[15px] text-ink marker:text-ink-3">{drill.how.map(line => <li key={line}>{line}</li>)}</ol>
     </section>
     <section aria-labelledby={`${id}-watch`} className="grid gap-1.5">
-      <h2 id={`${id}-watch`} className={SIDE_HEADING}>Watch for</h2>
+      <h2 id={`${id}-watch`} className={SIDE_HEADING}>{t('coachTraining:libWatchFor')}</h2>
       <ul className="grid list-disc gap-1.5 pl-5 text-[15px] text-ink marker:text-brand">{drill.watch.map(w => <li key={w}>{w}</li>)}</ul>
     </section>
   </>

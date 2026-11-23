@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, Plus } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { splitTrainings } from '@/lib/training/sessions'
@@ -19,7 +20,7 @@ import { Button } from '@/components/arc/button/button'
    Once a training coming up holds the drill, in its plan or its draft, the button says "Added to <day>" and opens it. */
 
 type Status = 'planned' | 'draft' | 'none'
-const STATUS: Record<Status, string> = { planned: 'Planned', draft: 'Draft', none: 'Not planned' }
+const STATUS = { planned: 'coachTraining:libPlanned', draft: 'coachTraining:libDraft', none: 'coachTraining:notPlanned' } as const satisfies Record<Status, string>
 
 /** The trainings coming up, each with how far its plan is and whether it already holds the drill. */
 function useComingUp(drill: LibraryDrill) {
@@ -49,6 +50,7 @@ function useComingUp(drill: LibraryDrill) {
 }
 
 export function AddToTraining({ drill, players, level }: { drill: LibraryDrill; players: number; level: number }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const coming = useComingUp(drill)
@@ -61,33 +63,33 @@ export function AddToTraining({ drill, players, level }: { drill: LibraryDrill; 
   return <div className="grid gap-1.5">
     {added ? <Link to={planPath(added.id)}
       className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-4 text-[15px] font-medium text-brand hover:bg-brand/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-      <Check aria-hidden size={18} />Added to {gameWhen(added).day}</Link>
-      : <Button size="lg" className="w-full" disabled={coming.pending} onClick={() => setOpen(true)}><Plus aria-hidden size={18} />Add to training</Button>}
+      <Check aria-hidden size={18} />{t('coachTraining:libAddedTo', { day: gameWhen(added).day })}</Link>
+      : <Button size="lg" className="w-full" disabled={coming.pending} onClick={() => setOpen(true)}><Plus aria-hidden size={18} />{t('coachTraining:libAddToTraining')}</Button>}
     {added && <button type="button" onClick={() => setOpen(true)}
       className="justify-self-center rounded px-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-      Add to another training</button>}
+      {t('coachTraining:libAddToAnother')}</button>}
 
-    <BottomSheet className="arc" open={open} onOpenChange={setOpen} detents={[0.92]} title={`Add ${drill.name} to which training?`}
-      description="It joins the plan as a new part at the end, set as it is here. Nothing is saved until you save the plan.">
+    <BottomSheet className="arc" open={open} onOpenChange={setOpen} detents={[0.92]} title={t('coachTraining:libWhichTraining', { name: drill.name })}
+      description={t('coachTraining:libJoinsPlan')}>
       <div className="grid gap-4 pb-4">
-        {coming.error ? <LoadError what="your trainings" onRetry={coming.retry} retrying={coming.retrying} />
-          : coming.pending ? <LoadingSkeleton label="Loading your trainings…" rows={2} />
+        {coming.error ? <LoadError what={t('coachTraining:libYourTrainingsWhat')} onRetry={coming.retry} retrying={coming.retrying} />
+          : coming.pending ? <LoadingSkeleton label={t('coachTraining:loadingTrainings')} rows={2} />
           : !coming.rows.length ? <p className="rounded-xl bg-raised px-4 py-3 text-[15px] text-ink-2">
-            No trainings coming up. Add one in Events, then add this drill to it.</p>
-          : <ul aria-label="Trainings coming up" className="grid divide-y divide-line rounded-xl border border-line">
+            {t('coachTraining:libNoComing')}</p>
+          : <ul aria-label={t('coachTraining:libComingUp')} className="grid divide-y divide-line rounded-xl border border-line">
             {coming.rows.map(({ training, status, holds }) => {
               const { day, time } = gameWhen(training)
               return <li key={training.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="grid min-w-0 flex-1 gap-1">
                   <span className="truncate text-[15px] font-medium text-ink">{training.title}</span>
                   <span className="text-sm text-ink-3">{[day, time, coming.everySquad ? training.squad : null,
-                    holds ? 'Has this drill' : STATUS[status]].filter(Boolean).join(' · ')}</span>
+                    holds ? t('coachTraining:libHasDrill') : t(STATUS[status])].filter(Boolean).join(' · ')}</span>
                 </span>
-                <Button size="sm" variant="secondary" aria-label={`Add to ${training.title}, ${day}`} onClick={() => add(training)}>Add</Button>
+                <Button size="sm" variant="secondary" aria-label={t('coachTraining:libAddToAria', { title: training.title, day })} onClick={() => add(training)}>{t('coachTraining:libAdd')}</Button>
               </li>
             })}
           </ul>}
-        <div className="flex justify-end"><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button></div>
+        <div className="flex justify-end"><Button variant="secondary" onClick={() => setOpen(false)}>{t('coachSchedule:cancel')}</Button></div>
       </div>
     </BottomSheet>
   </div>

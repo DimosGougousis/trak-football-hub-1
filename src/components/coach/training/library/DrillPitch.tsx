@@ -1,5 +1,6 @@
 import { useId, useMemo } from 'react'
 import { PITCH } from '@/lib/fixed-colours'
+import { useTranslation } from '@/lib/i18n'
 import { CANVAS, cardView, describePitch, fit, layout, type LibraryDrill, type Role, type Shape } from '@/lib/training/library'
 
 /* TRAK-386 (Drill Library 2/11): a Library drill's set-up, drawn to scale for the players and level given (Kostas,
@@ -80,8 +81,9 @@ function PitchSvg({ shapes, card, label, className, variant }: { shapes: Shape[]
 
 /** The key under a full picture: what each colour means for this drill ("Attackers", "Defenders", "Keeper"). */
 export function PitchKey({ legend, className = '' }: { legend: readonly (readonly [Role, string])[]; className?: string }) {
+  const { t } = useTranslation()
   return (
-    <ul className={`flex flex-wrap gap-x-3.5 gap-y-1 text-[13px] text-ink-2 ${className}`} aria-label="Key">
+    <ul className={`flex flex-wrap gap-x-3.5 gap-y-1 text-[13px] text-ink-2 ${className}`} aria-label={t('coachTraining:libKey')}>
       {legend.map(([role, label]) => (
         <li key={`${role}-${label}`} className="inline-flex items-center gap-1.5">
           <i aria-hidden className="inline-block h-3 w-3 rounded-full" style={{ background: FILL[role], border: `1.5px solid ${PITCH.edge}` }} />

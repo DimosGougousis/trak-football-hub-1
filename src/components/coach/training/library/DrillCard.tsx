@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from '@/lib/i18n'
 import { drillPath, fit, type LibraryDrill } from '@/lib/training/library'
 import { DrillPitch } from './DrillPitch'
 import { CardBookmark } from './BookmarkButton'
@@ -6,11 +7,14 @@ import { CardBookmark } from './BookmarkButton'
 /* TRAK-387 (Drill Library 3/11): a picture-first drill card (Kostas, 6 Nov, from Tarek's mockup). The same fit as the
    drill's page, so the card and the page always match. `note` says how a search found it ("Also called waves"). */
 
-const FOCUS = { team: '', individual: 'Individual', goalkeeping: 'Goalkeeping' } as const
+// TRAK-408: the focus in the language showing.
+const FOCUS = { team: null, individual: 'coachTraining:libFocusIndividual', goalkeeping: 'coachTraining:libFocusGoalkeeping' } as const
 
 export function DrillCard({ drill, players, level, note = '' }: { drill: LibraryDrill; players: number; level: number; note?: string }) {
+  const { t } = useTranslation()
   const { details } = fit(drill, players, level)
-  const sub = [note, FOCUS[drill.focus]].filter(Boolean).join(' · ')
+  const focus = FOCUS[drill.focus]
+  const sub = [note, focus ? t(focus) : ''].filter(Boolean).join(' · ')
   return (
     <Link to={drillPath(drill.id)}
       className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
