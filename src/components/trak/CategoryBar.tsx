@@ -1,5 +1,5 @@
 import { BANDS } from '@/lib/types'
-import { scoreColor, scoreShade, scoreToBand } from '@/lib/rating-engine'
+import { scoreColor, scoreToBand } from '@/lib/rating-engine'
 
 interface CategoryBarProps {
   label: string
@@ -16,7 +16,8 @@ export function CategoryBar({ label, score }: CategoryBarProps) {
         <span className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-3" style={{ fontFamily: 'var(--t-font-mono)' }}>
           {label}
         </span>
-        {config && <span className="text-xs" style={{ color: scoreShade(score!) }}>
+        {/* TRAK-557: the word in Trak's ink; the bar carries the colour. */}
+        {config && <span className="text-xs text-ink">
           {config.word}
         </span>}
       </div>

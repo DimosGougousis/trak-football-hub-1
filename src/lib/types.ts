@@ -54,9 +54,6 @@ export const BAND_TEXT = Object.fromEntries(BANDS.map(b => [b.word, b.text])) as
 /** TRAK-555/556 (Imad, 23 Nov): one colour per whole score from 0 to 10 (index = score), for anything that shows one
  *  score: the slider, the attribute bars, radar points, the report's dots. Read them through scoreColor. */
 export const SCORE_COLORS = ['#DC2626', '#DC2626', '#EA580C', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981', '#059669', '#5B21B6']
-/** TRAK-556: each score colour's darker shade (the same hue's 700/800 step), for a band word written beside its bar:
- *  4.5:1 or more on the page. Read them through scoreShade. */
-export const SCORE_SHADES = ['#B91C1C', '#B91C1C', '#C2410C', '#C2410C', '#B45309', '#A16207', '#4D7C0F', '#15803D', '#047857', '#065F46', '#5B21B6']
 
 /** TRAK-556: the Library's tiles, the code's tiles and How Trak works' icons borrowed band colours as decoration
  *  (Kostas, 22 Oct). They keep those colours, by their old names, when the bands change. */

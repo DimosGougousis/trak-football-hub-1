@@ -6,7 +6,7 @@
  * neighbouring bands are clearly different colours (CIE76 ΔE 30 or more; the old set's closest pair was 11).
  */
 import { describe, expect, it } from 'vitest'
-import { BANDS, BAND_TEXT, SCORE_SHADES } from '@/lib/types'
+import { BANDS, BAND_TEXT } from '@/lib/types'
 
 const SCREEN = '#FDFBF7', CARD = '#FFFFFF', INK = '#1A2421'
 const linear = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -38,12 +38,6 @@ describe('TRAK-458: band colours on light screens', () => {
     for (let i = 0; i < BANDS.length - 1; i++) {
       expect(deltaE(BANDS[i].color, BANDS[i + 1].color), `${BANDS[i].word} and ${BANDS[i + 1].word}`).toBeGreaterThanOrEqual(30)
     }
-  })
-
-  // TRAK-556: a band word beside a bar is written in its score's darker shade.
-  it.each(SCORE_SHADES.map((shade, score) => [score, shade] as const))('the word beside a %s reads on the page and on a card', (_score, shade) => {
-    expect(contrast(shade, SCREEN)).toBeGreaterThanOrEqual(4.5)
-    expect(contrast(shade, CARD)).toBeGreaterThanOrEqual(4.5)
   })
 
   it('names the readable shade for each band word', () => {

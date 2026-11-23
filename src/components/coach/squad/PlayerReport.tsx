@@ -13,7 +13,7 @@ import { ATTRIBUTE_WORD } from '@/lib/squad/attribute-words'
 import { progressLabel, type Progress } from '@/lib/objective-progress'
 import { useTranslation } from '@/lib/i18n'
 import { BANDS } from '@/lib/types'
-import { scoreColor, scoreShade } from '@/lib/rating-engine'
+import { scoreColor } from '@/lib/rating-engine'
 import {
   bandOfScore, loadPlayerReport, loadSentReports, overallOf, playerReportKey, reportDate, reportDayOf, reportMonth, reportSummary,
   sentReportsKey, withEntry,
@@ -198,7 +198,7 @@ function ThenAndNow({ report, now, before, first }: { report: Report; now: Repor
               <dt className="text-sm text-ink">{t(ATTRIBUTE_WORD[k])}</dt>
               <dd className="m-0 text-sm">
                 {then && then.word !== band.word && <span className="text-ink-3">{then.word} → </span>}
-                <span className="font-medium" style={{ color: scoreShade(now[k]) }}>{band.word}</span>
+                <span className="font-medium text-ink">{band.word}</span>
               </dd>
             </div>
           })}

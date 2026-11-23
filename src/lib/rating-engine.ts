@@ -1,4 +1,4 @@
-import { bandConfig, SCORE_COLORS, SCORE_SHADES } from './types'
+import { bandConfig, SCORE_COLORS } from './types'
 import type { MatchInput, BandType, BandConfig } from './types'
 
 function getPositionModifiers(position: string, inputs: Record<string, string | number>): number {
@@ -184,10 +184,9 @@ export function computeMatchScore(input: MatchInput): number {
  *  shown (to one decimal, then to the nearest whole): 6.6 and 6.45 are 7, 9.5 is 10, 4.5 is 5. */
 export const wholeScore = (score: number) => Math.min(10, Math.max(0, Math.round(Math.round(score * 10) / 10)))
 
-/** TRAK-556 (Imad, 23 Nov): one score's colour (a bar, a radar point, a report dot), its whole score's in SCORE_COLORS;
- *  and the darker shade for the band word written beside it. A band's pill keeps the band's colour (BANDS). */
+/** TRAK-556 (Imad, 23 Nov): one score's colour (a bar, a radar point, a report dot), its whole score's in SCORE_COLORS.
+ *  The band word beside it is in Trak's ink (TRAK-557); a band's pill keeps the band's colour (BANDS). */
 export const scoreColor = (score: number) => SCORE_COLORS[wholeScore(score)]
-export const scoreShade = (score: number) => SCORE_SHADES[wholeScore(score)]
 
 export function scoreToBand(score: number): BandType {
   // TRAK-556: 10 Exceptional · 7–9 Good · 5–6 Steady · 3–4 Developing · 0–2 Difficult.
