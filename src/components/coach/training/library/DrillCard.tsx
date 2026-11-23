@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from '@/lib/i18n'
-import { drillPath, fit, type LibraryDrill } from '@/lib/training/library'
+import { drillPath, fit, shownDrill, type LibraryDrill } from '@/lib/training/library'
 import { DrillPitch } from './DrillPitch'
 import { CardBookmark } from './BookmarkButton'
 
@@ -34,9 +34,10 @@ export function DrillCards({ drills, players, level, notes, label }: {
 }) {
   return (
     <ul aria-label={label} className="grid grid-cols-2 gap-2.5 tablet:gap-3 tablet:[grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+      {/* TRAK-409: each drill in the language showing; the card only shows it and links by id. */}
       {drills.map(d => <li key={d.id} className="relative min-w-0">
-        <DrillCard drill={d} players={players} level={level} note={notes?.(d)} />
-        <CardBookmark drill={d} />
+        <DrillCard drill={shownDrill(d)} players={players} level={level} note={notes?.(d)} />
+        <CardBookmark drill={shownDrill(d)} />
       </li>)}
     </ul>
   )

@@ -7,7 +7,7 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { ON_LIBRARY, PRACTICE_KIND_COLOURS } from '@/lib/fixed-colours'
 import {
   CHANGE_PRACTICE_PATH, CHARACTERISTICS, KINDS, KIND_ORDER, LIBRARY, MY_DRILLS_PATH, PLAYERS_TODAY, START_LEVEL, allDrillsPath, anotherDrill,
-  changedBy, characteristic, drillPath, fit, foundAs, squadPlayers, type Changed, kindInfo, kindPath, libraryDrill, nextLevel, practiceKey, practiceLayout, refit, searchDrills, step, typesOf, type Change,
+  changedBy, characteristic, drillPath, fit, foundAs, shownDrill, squadPlayers, type Changed, kindInfo, kindPath, libraryDrill, nextLevel, practiceKey, practiceLayout, refit, searchDrills, step, typesOf, type Change,
   type Kind, type LibraryDrill, type Squad,
 } from '@/lib/training/library'
 import { useBookmarks, useSquadSize } from '@/components/coach/training/useTraining'
@@ -304,9 +304,12 @@ type Kept = { drill: string; players: number; level: number; changed: Changed | 
 export function DrillPage() {
   const { t } = useTranslation()
   const { drillId } = useParams()
-  const drill = libraryDrill(drillId)
+  const found = libraryDrill(drillId)
   const { squad, name } = useLibrarySquad()
-  if (!drill) return <Navigate to="/coach/training/drills" replace />
+  if (!found) return <Navigate to="/coach/training/drills" replace />
+  // TRAK-409: the page shows the drill in the language showing. It saves nothing: Add to training passes only the
+  // drill's id, and Plan session takes the English drill from the Library.
+  const drill = shownDrill(found)
   return <SubPage title={drill.name} intro={<DrillHead drill={drill} />}>
     {!squad ? <LoadingSkeleton label={t('coachTraining:libLoadingDrill')} rows={2} />
       : <DrillBody key={drill.id} drill={drill} start={squad} squadName={name} />}
