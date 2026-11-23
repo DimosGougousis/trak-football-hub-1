@@ -114,7 +114,6 @@
   "assessments": "Assessments",
   "showLatest": "Show the latest {{count}}",
   "allCount": "All {{count}}",
-  "swipeEarlier": "Swipe for earlier",
   "noAssessmentYet": "No assessment yet.",
   "allAssessmentsOf": "All of {{name}}'s assessments",
   "assessmentsOf": "{{name}}'s assessments",

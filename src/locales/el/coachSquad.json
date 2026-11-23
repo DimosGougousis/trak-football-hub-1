@@ -114,7 +114,6 @@
   "assessments": "Αξιολογήσεις",
   "showLatest": "Μόνο οι τελευταίες {{count}}",
   "allCount": "Όλες ({{count}})",
-  "swipeEarlier": "Σύρετε για παλαιότερες",
   "noAssessmentYet": "Καμία αξιολόγηση ακόμα.",
   "allAssessmentsOf": "Όλες οι αξιολογήσεις: {{name}}",
   "assessmentsOf": "Αξιολογήσεις: {{name}}",
