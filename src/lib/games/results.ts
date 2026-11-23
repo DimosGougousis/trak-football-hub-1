@@ -12,6 +12,14 @@ export function matchResult(our: number | null, their: number | null): { label: 
   return { label: i18n.t(said, { our, their }), tone }
 }
 
+/** TRAK-552: the same result as matchResult, with the score and its word apart ("2–1", "Won") for the season plan
+ *  card's score block. Before a score is in, no score and "Published". */
+export function matchOutcome(our: number | null, their: number | null): { score: string | null; word: string; tone: ResultTone } {
+  if (our == null || their == null) return { score: null, word: i18n.t('coachHome:notePublished'), tone: 'neutral' }
+  const [said, tone] = our > their ? ['coachMatches:outcomeWon', 'success'] as const : our === their ? ['coachMatches:outcomeDrew', 'neutral'] as const : ['coachMatches:outcomeLost', 'danger'] as const
+  return { score: `${our}–${their}`, word: i18n.t(said), tone }
+}
+
 const WENT: Record<string, string> = { worked: 'Worked', partly: 'Partly', didnt: 'Didn’t' }
 
 /** Each instruction of the match's plan with how it went, in their order. An answer that's missing says nothing. */

@@ -15,7 +15,7 @@ import { useObjectiveProgress } from '@/components/coach/season-plan/useObjectiv
 import { STATUS_ORDER, latestProgress, playerProgress, progressLabel } from '@/lib/objective-progress'
 import { useWatchList } from '@/components/coach/season-plan/useWatching'
 import { gameTitle, gameWhen, useGameEvaluations, useGames, type Game } from '@/components/coach/games/useGames'
-import { instructionsWent, matchResult } from '@/lib/games/results'
+import { instructionsWent, matchOutcome, matchResult } from '@/lib/games/results'
 import {
   loadRemovedSeasonObjectives, loadSeasonObjectives, planLabel, removedSeasonObjectivesKey, seasonLeft, seasonObjectivesKey, seasonProgress, shortDate, useSeasonPlan,
   type SeasonObjective, type SeasonPlan,
@@ -377,39 +377,52 @@ function Results({ matches, plans, names }: {
       {matches.published.length > RESULTS_SHOWN && <Button variant="ghost" size="sm" onClick={() => setAll(!all)}>{all ? 'Show fewer' : `Show all ${matches.published.length}`}</Button>}
     </div>
     {matches.published.length === 0 ? <p className="text-sm text-ink-3">No published match yet this season.</p>
-      : <ul className="m-0 list-none divide-y divide-line p-0">{shown.map(game => {
+      : <ul className="m-0 grid list-none gap-1.5 p-0">{shown.map(game => {
         const scores = matches.scores(game.id)
-        return <ResultRow key={game.id} game={game} result={matchResult(scores.ourScore, scores.theirScore)} plan={plans?.get(game.id)} names={names}
+        return <ResultRow key={game.id} game={game} result={matchResult(scores.ourScore, scores.theirScore)}
+          outcome={matchOutcome(scores.ourScore, scores.theirScore)} plan={plans?.get(game.id)} names={names}
           open={openId === game.id} onToggle={() => setOpenId(openId === game.id ? null : game.id)} />
       })}</ul>}
   </section>
 }
 
-function ResultRow({ game, result, plan, names, open, onToggle }: {
-  game: Game; result: ReturnType<typeof matchResult>; plan: MatchPlan | undefined; names: Map<string, string>; open: boolean; onToggle: () => void
+/** TRAK-552 (4/5): how each instruction went, in its colour: Worked green, Partly amber, Didn't red. */
+const WENT_COLOUR: Record<string, string> = { Worked: 'text-success', Partly: 'text-warning', 'Didn’t': 'text-danger' }
+const OUTCOME_COLOUR = { success: 'text-success', neutral: 'text-ink-3', danger: 'text-danger' } as const
+
+/** TRAK-362: one published match, folded; opened, how each instruction went. TRAK-552: a white tile that leads with the
+ *  score, the word under it in green, grey or red. Its name still says the result as Matches home says it. */
+function ResultRow({ game, result, outcome, plan, names, open, onToggle }: {
+  game: Game; result: ReturnType<typeof matchResult>; outcome: ReturnType<typeof matchOutcome>; plan: MatchPlan | undefined
+  names: Map<string, string>; open: boolean; onToggle: () => void
 }) {
   const went = plan ? instructionsWent(plan.goals, plan.planWorked) : null
-  return <li>
+  const { day } = gameWhen(game)
+  return <li className="overflow-hidden rounded-[10px] bg-surface">
     <button type="button" aria-expanded={open} aria-controls={`result-${game.id}`} onClick={onToggle}
-      className="flex min-h-11 w-full items-center gap-3 rounded-lg py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-      <span className="grid min-w-0 flex-1">
-        <span className="truncate text-sm text-ink">{gameTitle(game)}</span>
-        <span className="truncate text-xs text-ink-3">{gameWhen(game).day}</span>
+      aria-label={`${gameTitle(game)}, ${day}, ${result.label}`}
+      className="grid min-h-11 w-full grid-cols-[64px_minmax(0,1fr)_20px] items-center gap-3 py-2 pl-2 pr-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+      <span aria-hidden="true" className="grid justify-items-center rounded-lg bg-ink/[0.06] py-1.5 tabular-nums">
+        {outcome.score && <span className="text-lg font-semibold leading-tight text-ink">{outcome.score}</span>}
+        <span className={`text-[11px] font-medium uppercase tracking-[.05em] ${OUTCOME_COLOUR[outcome.tone]}`}>{outcome.word}</span>
       </span>
-      <Badge tone={result.tone} size="sm">{result.label}</Badge>
-      {open ? <ChevronUp size={18} aria-hidden="true" /> : <ChevronDown size={18} aria-hidden="true" />}
+      <span aria-hidden="true" className="grid min-w-0">
+        <span className="truncate text-[15px] text-ink">{gameTitle(game)}</span>
+        <span className="truncate text-[13px] text-ink-3">{day}</span>
+      </span>
+      {open ? <ChevronUp size={18} aria-hidden="true" className="text-ink-3" /> : <ChevronDown size={18} aria-hidden="true" className="text-ink-3" />}
     </button>
-    {open && <div id={`result-${game.id}`} className="pb-2 pl-1">
+    {open && <div id={`result-${game.id}`} className="px-3 pb-3 laptop:pl-[84px]">
       {!went ? <LoadingSkeleton label="Loading how the plan went…" lines={1} />
         : went.length === 0 ? <p className="text-sm text-ink-3">No instructions</p>
-        : <ul className="m-0 grid list-none gap-1 p-0">{went.map((item, i) => (
-          <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+        : <ul className="m-0 grid list-none gap-2 p-0">{went.map((item, i) => (
+          <li key={i} className="flex items-start justify-between gap-3 text-sm">
             <span className="grid min-w-0">
               <span className="text-ink">{item.title}</span>
               {/* TRAK-363: the season objective this instruction carried. */}
               {item.seasonObjectiveId && <span className="text-xs text-ink-3">Season objective: {names.get(item.seasonObjectiveId) ?? 'removed since'}</span>}
             </span>
-            <span className="shrink-0 text-ink-3">{item.went ?? '—'}</span>
+            <span className={`shrink-0 font-medium ${item.went ? WENT_COLOUR[item.went] ?? 'text-ink-3' : 'text-ink-3'}`}>{item.went ?? '—'}</span>
           </li>))}
         </ul>}
     </div>}
