@@ -79,13 +79,13 @@ useCase('UC-C04', () => {
     setSlider(physical, 6)
     setSlider(coachability, 5)
 
-    // avg = (10+9+8+7+6+5)/6 = 7.5 -> scoreToBand clears the ">= 7" branch,
-    // i.e. 'good' / "Good" — distinct from the default avg-5 "Mixed" band,
-    // proving the band is derived from the six scores rather than fixed.
+    // avg = (10+9+8+7+6+5)/6 = 7.5, which rounds to 8: 'good' / "Good"
+    // (TRAK-556), distinct from the default avg-5 "Steady" band, proving the
+    // band is derived from the six scores rather than fixed.
     const overallBandLabel = await screen.findByText('OVERALL BAND')
     const overallBandCard = overallBandLabel.parentElement as HTMLElement
     expect(within(overallBandCard).getByText('Good')).toBeInTheDocument()
-    expect(within(overallBandCard).queryByText('Mixed')).not.toBeInTheDocument()
+    expect(within(overallBandCard).queryByText('Steady')).not.toBeInTheDocument()
 
     // TRAK-182: saving is the Review step's (Save, with no message).
     await saveAssessment()
@@ -113,24 +113,20 @@ useCase('UC-C04', () => {
     await pickPlayer()
     await assessStep('Ratings')
 
-    // All six sliders default to 5, so avg = 5. scoreToBand(5) in
-    // src/lib/rating-engine.ts checks thresholds high-to-low (9/8/7/6/4/2)
-    // and 5 clears the ">= 4" branch before the ">= 2" one, so it returns
-    // 'mixed' — not 'developing' (that needs avg in [2, 4)). BANDS in
-    // src/lib/types.ts renders 'mixed' as the word "Mixed". The registry
-    // clause only requires *a* band derived from the six scores to be shown
-    // before submitting — it does not name a particular word — so this
-    // asserts the word the engine actually produces for the default scores,
-    // verified against scoreToBand/BANDS rather than assumed.
+    // All six sliders default to 5, so avg = 5. TRAK-556: scoreToBand in
+    // src/lib/rating-engine.ts gives 5 and 6 'steady', which BANDS in
+    // src/lib/types.ts renders as "Steady". The registry clause only requires
+    // *a* band derived from the six scores to be shown before submitting, so
+    // this asserts the word the engine produces for the default scores.
     //
-    // "Mixed" also appears once per slider (SliderInput shows a live
+    // "Steady" also appears once per slider (SliderInput shows a live
     // per-category band next to each of the six sliders), so a bare
-    // `findByText('Mixed')` is ambiguous. Scope to the "OVERALL BAND" card,
+    // `findByText('Steady')` is ambiguous. Scope to the "OVERALL BAND" card,
     // which is what the registry clause actually means by "a band derived
     // from the six scores".
     const overallBandLabel = await screen.findByText('OVERALL BAND')
     const overallBandCard = overallBandLabel.parentElement as HTMLElement
-    expect(within(overallBandCard).getByText('Mixed')).toBeInTheDocument()
+    expect(within(overallBandCard).getByText('Steady')).toBeInTheDocument()
   }, 20_000) // TRAK-182: walking the steps; CI under load needs more than 5 s.
 
   it('refuses to submit until a player is selected', async () => {
@@ -201,12 +197,13 @@ useCase('UC-C04', () => {
     renderApp('/coach/evaluation')
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /^Nikos Papadopoulos/ }))
-    // The band follows the six scores here too: 8+7+6+5+4+3 is 5.5, Mixed; Coachability up to 9 makes 6.5, Steady.
-    expect(screen.getByText('From last time: Mixed, 5.5.')).toBeInTheDocument()
+    // The band follows the six scores here too (TRAK-556, rounded): 8+7+6+5+4+3 is 5.5, Steady; Coachability up to 9
+    // makes 6.5, which rounds to 7, Good.
+    expect(screen.getByText('From last time: Steady, 5.5.')).toBeInTheDocument()
     setSlider(screen.getAllByRole('slider')[5], 9)
     await user.click(screen.getByRole('button', { name: 'Done' }))
     await user.click(screen.getByRole('button', { name: 'Next: Send' }))
-    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Mixed → Steady')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'What changed' })).getByText('Steady → Good')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Send to 1 player' }))
     await waitFor(() => expect(published).toHaveLength(1))
     expect(published[0]).toMatchObject({ p_plan_id: 'plan-1', p_players: [{ squad_player_id: 'squad-1',

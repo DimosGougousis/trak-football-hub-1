@@ -13,12 +13,12 @@ describe('band colours', () => {
     expect(new Set(colours).size).toBe(BANDS.length)
   })
 
+  // TRAK-556: the old match-rating pill reads the one ladder too.
   it('the 0–10 rating scale uses the same colour for each band', () => {
-    expect(getRatingBand(9.5).color).toBe(BAND_COLOR.Exceptional)
-    expect(getRatingBand(8.5).color).toBe(BAND_COLOR.Standout)
-    expect(getRatingBand(7.5).color).toBe(BAND_COLOR.Good)
-    expect(getRatingBand(6.5).color).toBe(BAND_COLOR.Steady)
-    expect(getRatingBand(5.8).color).toBe(BAND_COLOR.Mixed)
-    expect(getRatingBand(5.0).color).toBe(BAND_COLOR.Developing)
+    expect(getRatingBand(10).color).toBe(BAND_COLOR.Exceptional)
+    expect(getRatingBand(8.5).color).toBe(BAND_COLOR.Good)
+    expect(getRatingBand(6.4).color).toBe(BAND_COLOR.Steady)
+    expect(getRatingBand(4).color).toBe(BAND_COLOR.Developing)
+    expect(getRatingBand(1).color).toBe(BAND_COLOR.Difficult)
   })
 })

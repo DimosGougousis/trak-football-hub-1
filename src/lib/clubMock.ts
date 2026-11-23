@@ -8,7 +8,7 @@ export const CLUB = {
 }
 
 export type AgeGroup = 'U19' | 'U17' | 'U15'
-export type Band = 'Exceptional' | 'Standout' | 'Good' | 'Steady' | 'Mixed' | 'Developing' | 'Difficult'
+export type Band = 'Exceptional' | 'Good' | 'Steady' | 'Developing' | 'Difficult'
 
 // Derived from BANDS rather than restated. This file held a third copy of the
 // band colours; a fourth, on PlayerProfilePage, had different thresholds too.
@@ -39,16 +39,16 @@ export interface ClubPlayer {
 }
 
 export const PLAYERS: ClubPlayer[] = [
-  { id: '1', name: 'Andreas Kostas', ageGroup: 'U19', position: 'Midfielder', matches: 12, band: 'Standout' },
+  { id: '1', name: 'Andreas Kostas', ageGroup: 'U19', position: 'Midfielder', matches: 12, band: 'Good' },
   { id: '2', name: 'Yannis Papadakis', ageGroup: 'U19', position: 'Forward', matches: 10, band: 'Good' },
   { id: '3', name: 'Petros Manolas', ageGroup: 'U19', position: 'Defender', matches: 11, band: 'Steady' },
   { id: '4', name: 'Kostas Mitroglou', ageGroup: 'U19', position: 'Forward', matches: 9, band: 'Exceptional' },
   { id: '5', name: 'Sofia Andreou', ageGroup: 'U17', position: 'Midfielder', matches: 8, band: 'Good' },
-  { id: '6', name: 'Eleni Vasileiou', ageGroup: 'U17', position: 'Defender', matches: 9, band: 'Mixed' },
+  { id: '6', name: 'Eleni Vasileiou', ageGroup: 'U17', position: 'Defender', matches: 9, band: 'Steady' },
   { id: '7', name: 'Nikos Stamatis', ageGroup: 'U17', position: 'Goalkeeper', matches: 10, band: 'Steady' },
   { id: '8', name: 'Markos Lagos', ageGroup: 'U17', position: 'Forward', matches: 7, band: 'Developing' },
   { id: '9', name: 'Christos Pappas', ageGroup: 'U15', position: 'Midfielder', matches: 6, band: 'Good' },
-  { id: '10', name: 'Alexandros Theo', ageGroup: 'U15', position: 'Defender', matches: 5, band: 'Mixed' },
+  { id: '10', name: 'Alexandros Theo', ageGroup: 'U15', position: 'Defender', matches: 5, band: 'Developing' },
   { id: '11', name: 'Giorgos Marinos', ageGroup: 'U15', position: 'Forward', matches: 6, band: 'Steady' },
 ]
 

@@ -73,7 +73,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMocks(); delete document.documentElement.dataset.layout })
 
-const BAND_WORDS = /Exceptional|Standout|Good|Steady|Mixed|Developing/
+const BAND_WORDS = /Exceptional|Good|Steady|Developing|Difficult/ // TRAK-556: the five bands
 /** A parent's page never has the coach's note, the job, or the words for them. */
 function expectNothingHeldBack() {
   const shown = document.body.textContent ?? ''

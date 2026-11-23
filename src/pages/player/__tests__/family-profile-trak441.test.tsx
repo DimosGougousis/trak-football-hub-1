@@ -71,7 +71,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMocks(); delete document.documentElement.dataset.layout })
 
-const BAND_WORDS = /Exceptional|Standout|Good|Steady|Mixed|Developing/
+const BAND_WORDS = /Exceptional|Good|Steady|Developing|Difficult/ // TRAK-556: the five bands
 
 describe("TRAK-441 slice 6: the player's Profile in the coach's look", () => {
   // Live, 16 Nov: a player can't read his parent's name (the database hides it), so the row read "Your parent" and nothing.

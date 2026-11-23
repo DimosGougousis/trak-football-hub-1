@@ -1,5 +1,5 @@
 import content from './play-it-right.json'
-import { BANDS, type BandConfig } from '@/lib/types'
+import { TILE_TONES, type TileTone } from '@/lib/types'
 import { LIBRARY_PATH } from './library'
 
 /* TRAK-268 (Kostas, 23 Oct): Play It Right in Trak's look. Its content is the old
@@ -42,7 +42,7 @@ const SENIOR = content.senior as { stepsLabel: string[]; tipLabel: string; pilla
 
 /** Kostas's tiles: the assessment colours, mostly green (four green, one slate, one clay), in an
  *  order where no colour sits beside itself two or three tiles a row. */
-const PART_BANDS: Record<string, BandConfig['word']> = {
+const PART_BANDS: Record<string, TileTone> = {
   commit: 'Exceptional', attitude: 'Standout', sport: 'Steady', train: 'Mixed', match: 'Exceptional', off: 'Standout',
 }
 
@@ -58,7 +58,7 @@ export interface Part {
 }
 
 export const PARTS: Part[] = CODE.map(c => {
-  const band = BANDS.find(b => b.word === PART_BANDS[c.id])!
+  const band = TILE_TONES[PART_BANDS[c.id]!]
   return { id: c.id, n: c.n, name: c.name.replace(' & ', ' and ').replace(/ (\w)/g, (_, l: string) => ` ${l.toLowerCase()}`), line: c.line, colour: band.text, tint: band.bg }
 })
 
@@ -97,7 +97,7 @@ export function shownOrder(key: string, n: number): number[] {
 
 /** A speaker's round badge: their initials, in one of the band colours (the same one every time). */
 export function speaker(name: string) {
-  const colours = BANDS.map(b => b.text)
+  const colours = Object.values(TILE_TONES).map(t => t.text)
   let h = 0
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) | 0
   return { initials: name.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '?', colour: colours[Math.abs(h) % colours.length] }

@@ -3,8 +3,8 @@ import { computeMatchScore, scoreToBand } from '../lib/rating-engine'
 import { BANDS } from '../lib/types'
 
 describe('pilot readiness checks', () => {
-  it('all 7 bands have display config', () => {
-    const bands = ['exceptional', 'standout', 'good', 'steady', 'mixed', 'developing', 'difficult']
+  it('all 5 bands have display config', () => {
+    const bands = ['exceptional', 'good', 'steady', 'developing', 'difficult']
     bands.forEach(b => {
       const config = BANDS.find(c => c.word.toLowerCase() === b)
       expect(config).toBeDefined()

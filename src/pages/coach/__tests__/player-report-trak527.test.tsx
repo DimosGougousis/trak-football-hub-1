@@ -96,7 +96,7 @@ describe('TRAK-527 a player\'s report', () => {
     expect(within(then).getByText('Now, against the report of 25 Oct')).toBeInTheDocument()
     // Each of the six areas, in the player's page's order, from the last report's band to now's.
     expect(within(then).getAllByRole('definition').map(row => row.textContent))
-      .toEqual(['Steady → Good', 'Steady → Good', 'Steady → Good', 'Steady → Standout', 'Steady → Good', 'Steady → Good'])
+      .toEqual(['Steady → Good', 'Steady → Good', 'Steady → Good', 'Steady → Good', 'Steady → Good', 'Steady → Good'])
 
     expect(within(screen.getByRole('region', { name: 'Season so far' })).getByRole('img', { name: '2 assessments this season' })).toBeInTheDocument()
 

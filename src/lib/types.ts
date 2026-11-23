@@ -5,7 +5,7 @@ export type Venue = 'home' | 'away'
 export type CardType = 'none' | 'yellow' | 'red'
 export type BodyCondition = 'fresh' | 'good' | 'tired' | 'knock'
 export type SelfRating = 'poor' | 'average' | 'good' | 'excellent'
-export type BandType = 'exceptional' | 'standout' | 'good' | 'steady' | 'mixed' | 'developing' | 'difficult'
+export type BandType = 'exceptional' | 'good' | 'steady' | 'developing' | 'difficult'
 export type MedalType = 'first_match' | 'on_a_roll' | 'first_star' | 'ten_down' | 'most_improved' | 'self_aware'
 export type GoalCategory = 'performance' | 'consistency' | 'development' | 'personal'
 export type ProgressLevel = 'just_started' | 'making_progress' | 'nearly_there' | 'achieved'
@@ -28,33 +28,44 @@ export interface BandConfig {
   minScore: number
 }
 
-// Bands span the full 0..10 slider range. 5 sits squarely in "Mixed" (the neutral middle).
-// Edges:  0–2 Difficult · 2–4 Developing · 4–6 Mixed · 6–7 Steady · 7–8 Good · 8–9 Standout · 9–10 Exceptional
+// TRAK-556 (Imad, 23 Nov): five bands on whole scores, 10 Exceptional · 7–9 Good · 5–6 Steady · 3–4 Developing ·
+// 0–2 Difficult. `minScore` is each band's lowest whole score; scoreToBand rounds an average first.
 // TRAK-458 (Kostas, 13 Nov, "full spectrum"): each band its own bright hue, so any two tell apart at a glance:
 // green, teal, blue, violet, yellow, orange, red. `color` is the bright fill (black words on it, 5:1 or more);
 // `text` its darker shade for a word written in colour (4.5:1 on the page and on `bg`); `border` a darker edge, so a
 // light fill (yellow, teal) still reads as a shape on the page. The word is always shown, so colour is never the only
 // signal. (Before: TRAK-229's greens, slate and three close clays.)
 export const BANDS: BandConfig[] = [
-  { word: 'Exceptional', color: '#0A9F4A', text: '#087938', bg: '#d8f0e2', border: '#077235', minScore: 9 },
-  { word: 'Standout',    color: '#14B8A6', text: '#0d796e', bg: '#d9f4f1', border: '#0e8478', minScore: 8 },
+  { word: 'Exceptional', color: '#0A9F4A', text: '#087938', bg: '#d8f0e2', border: '#077235', minScore: 10 },
   { word: 'Good',        color: '#2F7FE0', text: '#2768b8', bg: '#deebfa', border: '#225ba1', minScore: 7 },
-  { word: 'Steady',      color: '#8B5CF6', text: '#754dcf', bg: '#ece5fe', border: '#6442b1', minScore: 6 },
-  { word: 'Mixed',       color: '#F2B705', text: '#8c6a03', bg: '#fdf3d7', border: '#ae8404', minScore: 4 },
-  { word: 'Developing',  color: '#F07A1A', text: '#a85512', bg: '#fdeada', border: '#ad5813', minScore: 2 },
+  { word: 'Steady',      color: '#8B5CF6', text: '#754dcf', bg: '#ece5fe', border: '#6442b1', minScore: 5 },
+  { word: 'Developing',  color: '#F07A1A', text: '#a85512', bg: '#fdeada', border: '#ad5813', minScore: 3 },
   { word: 'Difficult',   color: '#E0413A', text: '#bc3731', bg: '#fae1df', border: '#a12f2a', minScore: 0 },
 ]
 
 /** TRAK-189: each band's colour by name, from BANDS, for the few places that
  *  name a band directly. Every band keeps its own colour so they tell apart. */
 export const BAND_COLOR = Object.fromEntries(BANDS.map(b => [b.word, b.color])) as
-  Record<'Exceptional' | 'Standout' | 'Good' | 'Steady' | 'Mixed' | 'Developing' | 'Difficult', string>
+  Record<'Exceptional' | 'Good' | 'Steady' | 'Developing' | 'Difficult', string>
 /** TRAK-229: a band's word written in colour uses this readable shade, never `color`. */
 export const BAND_TEXT = Object.fromEntries(BANDS.map(b => [b.word, b.text])) as typeof BAND_COLOR
 
 /** TRAK-555 (Imad, 23 Nov): the elastic slider's fill, one colour per score from 0 to 10 (index = score).
  *  Only the slider: band badges, bars and charts keep BANDS' seven colours. */
 export const SLIDER_COLORS = ['#DC2626', '#DC2626', '#EA580C', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981', '#059669', '#5B21B6']
+
+/** TRAK-556: the Library's tiles, the code's tiles and How Trak works' icons borrowed band colours as decoration
+ *  (Kostas, 22 Oct). They keep those colours, by their old names, when the bands change. */
+export const TILE_TONES = {
+  Exceptional: { text: '#087938', bg: '#d8f0e2' },
+  Standout:    { text: '#0d796e', bg: '#d9f4f1' },
+  Good:        { text: '#2768b8', bg: '#deebfa' },
+  Steady:      { text: '#754dcf', bg: '#ece5fe' },
+  Mixed:       { text: '#8c6a03', bg: '#fdf3d7' },
+  Developing:  { text: '#a85512', bg: '#fdeada' },
+  Difficult:   { text: '#bc3731', bg: '#fae1df' },
+}
+export type TileTone = keyof typeof TILE_TONES
 
 // The one way to turn a band into its colours. Before this existed, seven call
 // sites each wrote `BANDS.find(b => b.word.toLowerCase() === band)` with their

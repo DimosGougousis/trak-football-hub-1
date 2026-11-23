@@ -43,7 +43,7 @@ beforeEach(() => {
     rpc('child_events', () => []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1', linked_player_id: PLAYER.id, status: 'active' }]),
     table('coach_assessments', [{ id: 'as-1', squad_player_id: 'squad-1', coach_user_id: 'coach-1', created_at: '2026-10-12T10:00:00Z',
-      work_rate: 9, tactical: 6, attitude: 8, technical: 5, physical: 7, coachability: 3 }]),
+      work_rate: 10, tactical: 6, attitude: 8, technical: 4, physical: 7, coachability: 1 }]),
     table('player_parent_links', []),
     rpc('get_player_invites_for_current_user', () => []),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
@@ -71,7 +71,7 @@ describe('TRAK-229: band colours on light cards, words in readable shades', () =
 
   it("the coach's assessment card on a player's profile (TRAK-200's Arc card)", () => {
     render(<MemoryRouter><CoachAssessmentCard assessment={{ id: 'as-card', created_at: '2026-10-12T10:00:00Z', published_at: null,
-      work_rate: 9, tactical: 6, attitude: 8, technical: 5, physical: 7, coachability: 3 }} /></MemoryRouter>)
+      work_rate: 10, tactical: 6, attitude: 8, technical: 4, physical: 7, coachability: 1 }} /></MemoryRouter>)
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(6)
     onLight(painted)
