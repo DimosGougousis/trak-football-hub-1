@@ -79,6 +79,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-354: so a player's page lists their objectives; there are none.
     if (path === '/rest/v1/player_objectives') return json([])
     if (path === '/rest/v1/objective_progress') return json([])
+    // TRAK-526: each assessment card reads its objective answers; none here (TRAK-538).
+    if (path === '/rest/v1/assessment_objectives') return json([])
     if (path === '/rest/v1/rpc/stuck_player_objectives') return json([])
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
