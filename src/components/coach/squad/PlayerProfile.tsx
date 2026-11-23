@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/arc/button/button'
 import { PlayerFace } from '@/components/trak/PlayerFace'
-import { RadarChart } from '@/components/arc/radar-chart/radar-chart'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
 import { BandChip, type SquadPlayer } from '@/components/arc/blocks/team-directory/squad-directory'
 import { CoachAssessmentCard } from '@/components/coach/CoachAssessmentCard'
@@ -11,7 +10,6 @@ import { LoadError } from '@/components/trak/LoadError'
 import { ATTRIBUTES } from '@/lib/squad/attributes'
 import { bornLine } from '@/lib/squad/format'
 import { loadPlayerAssessments } from '@/lib/coach-assessments'
-import type { Scores } from '@/lib/squad/season-profile'
 import { PlayerFactsEditor } from './PlayerFactsEditor'
 import type { PlayerFacts } from './usePlayerFacts'
 import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
@@ -27,11 +25,10 @@ import { ROLE_WORD, TRAIT_WORD, shown } from '@/lib/squad/trait-words'
 import { EditIcon } from '@/components/trak/IconAction'
 import { CategoryBar } from '@/components/trak/CategoryBar'
 import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
-import { scoreColor } from '@/lib/rating-engine'
 
 const FOOT = { left: 'coachSquad:footLeft', right: 'coachSquad:footRight', both: 'coachSquad:footBoth' } as const
-/** TRAK-451 (walk-through of 11 Nov): every block on the page has the same bold title, and the page's two smaller cards
- *  (position, roles and profile; the season) sit inside its own card (corners and room from TRAK-464). */
+/** TRAK-451 (walk-through of 11 Nov): every block on the page has the same bold title, and the page's smaller cards sit
+ *  inside its own card (corners and room from TRAK-464). TRAK-546: Position and roles, and About, are a card each. */
 const TITLE = 'text-base font-semibold text-ink'
 const INNER = 'rounded-xl border border-line p-4'
 
@@ -55,24 +52,17 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * TRAK-263 (Imad, 22 Oct): one player's profile in Squad's Players view. Foot, nationality, born and traits (the
- * coach edits all but the date of birth, which is the academy roster's); the season radar against the squad; the
- * coach's assessment card exactly as it is elsewhere. Imad, 23 Oct: one row of cards, the latest first, swiping to
+ * coach edits all but the date of birth, which is the academy roster's); the coach's assessment card exactly as it is
+ * elsewhere. TRAK-546 (Kostas, 22 Nov): no "Season so far" radar here; the hexagon lives only in the report. Imad, 23 Oct: one row of cards, the latest first, swiping to
  * earlier ones, with no date line above them (the card's quick look has the date and session).
  */
-export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, season, squadSeason, since = '1 July', seasonFailed = false, onRetrySeason, placement, onViewReport, onOpenReport }: {
+export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, placement, onViewReport, onOpenReport }: {
   player: SquadPlayer
   squad: string | null
   coachId: string
   facts: PlayerFacts | undefined
   factsFailed: boolean
   onRetryFacts: () => void
-  season: { scores: Scores; count: number } | undefined
-  squadSeason: Scores | null
-  /** TRAK-350: when the season started, from the squad's season plan when there is one. */
-  since?: string
-  /** TRAK-368: the squad's assessments didn't load, so the season can't be told; never "No assessment this season yet". */
-  seasonFailed?: boolean
-  onRetrySeason?: () => void
   /** TRAK-353, TRAK-354: where the season plan is on, the roster's position; the player's position and roles, and their objectives, show here. */
   placement?: { position: string | null }
   /** TRAK-527 (Reports 4/10): where the squad's plan is shared, the player's report, under Assess. */
@@ -119,43 +109,26 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   return <>
     {header}
 
-    {/* A laptop's pane has room for two columns: the profile card beside the season's. */}
-    <div className="grid gap-4 laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] laptop:items-start">
-      <div data-inner-card className={`${INNER} grid gap-6`}>
-        {placement && <PositionAndRoles coachId={coachId} id={player.id} name={player.name} position={placement.position} />}
-        <section aria-labelledby={`about-${player.id}`} className="grid gap-2">
+    {/* TRAK-546 (Kostas, 22 Nov): Position and roles, and About, a card each; on a laptop side by side, the same height. */}
+    <div className={`grid gap-4 ${placement ? 'laptop:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]' : ''}`}>
+      {placement && <div data-inner-card className={INNER}><PositionAndRoles coachId={coachId} id={player.id} name={player.name} position={placement.position} /></div>}
+      <section data-inner-card aria-labelledby={`about-${player.id}`} className={`${INNER} grid content-start gap-2`}>
+        {/* TRAK-546: About's pencil right of its title, as Position and roles' is. */}
+        <div className="flex items-baseline justify-between gap-3">
           <h4 id={`about-${player.id}`} className={TITLE}>{t('coachSquad:aboutName', { name: first })}</h4>
-          {factsFailed ? <LoadError what={t('coachSquad:profileWhat', { name: first })} onRetry={onRetryFacts} />
-            : <Grows loading={!facts} label={t('coachSquad:loadingProfile', { name: first })} height={236}>{facts && <div className="grid gap-2">
-              <dl className="m-0 border-t border-line">
-                <Fact label={t('coachSquad:preferredFoot')}>{facts.foot ? t(FOOT[facts.foot]) : notSet}</Fact>
-                <Fact label={t('coachSquad:nationality')}>{facts.nationality ?? notSet}</Fact>
-                <Fact label={t('coachSquad:born')}>{facts.born ? bornLine(facts.born, new Date()) : notSet}</Fact>
-                <Fact label={t('coachSquad:traits')}>{facts.traits.length
-                  ? <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label={t('coachSquad:traitsOf', { name: first })}>
-                      {facts.traits.map(trait => <li key={trait} className="rounded-full border border-line bg-raised px-2.5 py-0.5 text-sm text-ink">{shown(TRAIT_WORD, trait)}</li>)}
-                    </ul>
-                  : <span className="text-ink-3">{t('coachSquad:nonePicked')}</span>}</Fact>
-              </dl>
-              <span className="justify-self-start"><PlayerFactsEditor playerId={player.id} name={player.name} coachId={coachId} facts={facts} /></span>
-            </div>}</Grows>}
-        </section>
-      </div>
-
-      <section data-inner-card aria-labelledby={`season-${player.id}`} className={INNER}>
-        <div className="grid gap-2">
-          <h4 id={`season-${player.id}`} className={TITLE}>{t('coachSquad:seasonSoFar')}</h4>
-          {seasonFailed ? <LoadError what={t('coachSquad:seasonWhat', { name: first })} onRetry={onRetrySeason} /> : <p className="text-sm text-ink-3">{season
-            ? t('coachSquad:seasonAverage', { count: season.count, since })
-            : t('coachSquad:noSeasonAssessment')}</p>}
+          {facts && !factsFailed && <PlayerFactsEditor playerId={player.id} name={player.name} coachId={coachId} facts={facts} />}
         </div>
-        {/* TRAK-451: a light line above the chart. */}
-        {season && !seasonFailed && <div data-chart-rule className="mt-3 border-t border-line pt-3"><RadarChart label={t('coachSquad:radarLabel', { name: player.name })} size={240} rings={5} max={10}
-          axes={ATTRIBUTES.map(([k]) => ({ key: k, label: t(ATTRIBUTE_WORD[k]) }))}
-          series={[{ key: 'player', label: first, values: season.scores }, ...(squadSeason ? [{ key: 'squad', label: t('coachSquad:squadAverage'), values: squadSeason }] : [])]}
-          formatValue={value => value.toFixed(1)}
-          // TRAK-556: each of the player's points in its score's colour, the average rounded (the band's word is in the cards below).
-          pointColor={scoreColor} /></div>}
+        {factsFailed ? <LoadError what={t('coachSquad:profileWhat', { name: first })} onRetry={onRetryFacts} />
+          : <Grows loading={!facts} label={t('coachSquad:loadingProfile', { name: first })} height={196}>{facts && <dl className="m-0 border-t border-line">
+              <Fact label={t('coachSquad:preferredFoot')}>{facts.foot ? t(FOOT[facts.foot]) : notSet}</Fact>
+              <Fact label={t('coachSquad:nationality')}>{facts.nationality ?? notSet}</Fact>
+              <Fact label={t('coachSquad:born')}>{facts.born ? bornLine(facts.born, new Date()) : notSet}</Fact>
+              <Fact label={t('coachSquad:traits')}>{facts.traits.length
+                ? <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label={t('coachSquad:traitsOf', { name: first })}>
+                    {facts.traits.map(trait => <li key={trait} className="rounded-full border border-line bg-raised px-2.5 py-0.5 text-sm text-ink">{shown(TRAIT_WORD, trait)}</li>)}
+                  </ul>
+                : <span className="text-ink-3">{t('coachSquad:nonePicked')}</span>}</Fact>
+            </dl>}</Grows>}
       </section>
     </div>
 

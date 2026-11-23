@@ -9,13 +9,10 @@ import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import { needsYou } from '@/lib/coach-needs-you'
 import { BANDS } from '@/lib/types'
 import { bandMoves } from '@/lib/squad/snapshot'
-import { seasonAverages } from '@/lib/squad/season-profile'
-import { seasonWindow } from '@/lib/squad/season'
-import { seasonStartLabel, useSeasonPlan } from '@/lib/season-plan'
+import { useSeasonPlan } from '@/lib/season-plan'
 import { isPosition } from '@/lib/positions'
 import { POSITION_WORD } from '@/lib/position-words'
 import { useTranslation } from '@/lib/i18n'
-import { localParts, localTodayISO } from '@/lib/event-time'
 import { PlayerProfile } from './PlayerProfile'
 import { PlayerReport, SentReport } from './PlayerReport'
 import { WatchBadge } from '@/components/coach/season-plan/WatchFirst'
@@ -25,7 +22,6 @@ import { usePlayerFacts } from './usePlayerFacts'
 import type { SquadRoster } from './useSquadRoster'
 
 const GROUP: Record<string, PositionGroup> = { Goalkeeper: 'GK', Defender: 'DEF', Midfielder: 'MID', Attacker: 'ATT', Forward: 'ATT' }
-const dateOf = (iso: string) => localParts(iso).date
 const TREND = 6
 
 /**
@@ -65,14 +61,11 @@ export function PlayersTab({ roster, openId = null, report = false, sent = null,
     }
     return byPlayer
   }, [roster.assessments])
-  // TRAK-350: the season starts when the squad's season plan says, where there is one; otherwise on 1 July.
   const squadLabel = roster.squad ?? (roster.squads.length === 1 ? roster.squads[0] : null)
   const seasonPlan = useSeasonPlan(user?.id, squadLabel)
   // TRAK-355: a watched player shows Watching, or Ready once their reminder is due, where the season plan is on.
   const watching = useWatchList(user?.id, roster, seasonPlan.on)
   const watchOf = new Map(watching.list.map(w => [w.playerId, w]))
-  const seasonFrom = seasonPlan.plan?.starts_on ?? seasonWindow(localTodayISO()).from
-  const season = useMemo(() => seasonAverages(roster.assessments, seasonFrom, dateOf), [roster.assessments, seasonFrom])
   // TRAK-266 (Imad, 22 Oct): the colour key only where the coach is needed: amber for a player to assess or a draft
   // families can't see yet, by Home's Needs you rule. Everyone else gets no badge. TRAK-364: as on Home, a squad that's
   // evaluated (its season plan shared) has no per-player Assess; its evaluation is due on Home instead.
@@ -124,8 +117,6 @@ export function PlayersTab({ roster, openId = null, report = false, sent = null,
       : open && user ? <article aria-label={`${open.name}, ${open.position || t('coachSquad:noPositionYetLower')}`} className="grid gap-6 rounded-2xl border border-line bg-surface p-5 laptop:gap-8 laptop:p-6">
         <PlayerProfile player={open} squad={squadOf.get(open.id) ?? squadLabel} coachId={user.id}
           facts={facts.data?.get(open.id)} factsFailed={facts.isError} onRetryFacts={() => { void facts.refetch() }}
-          season={season.players.get(open.id)} squadSeason={season.squad} since={seasonStartLabel(seasonFrom)}
-          seasonFailed={roster.assessmentsFailed} onRetrySeason={roster.retry}
           placement={seasonPlan.on ? { position: roster.players.find(p => p.id === open.id)?.position ?? null } : undefined}
           // TRAK-527: reports follow the evaluation, so only a squad whose plan is shared has one.
           onViewReport={evaluated.has(squadOf.get(open.id) ?? squadLabel ?? '') ? () => onReport(open.id) : undefined}

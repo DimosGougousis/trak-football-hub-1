@@ -286,7 +286,7 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(playerList(panel).getByText('Newcomer R.')).toBeInTheDocument()
   })
 
-  it("a player's profile: foot, nationality, born from the roster, traits and the season so far", async () => {
+  it("a player's profile: foot, nationality, born from the roster, traits; no season so far (TRAK-546)", async () => {
     const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     server.use(
@@ -302,7 +302,9 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(within(about).getByText('Greece')).toBeInTheDocument()
     expect(within(about).getByText(/^1\/1\/2012 · \d+ years old$/)).toBeInTheDocument()
     expect(within(within(about).getByRole('list', { name: "Leo's traits" })).getAllByRole('listitem').map(li => li.textContent)).toEqual(['Places shots', 'Plays one-twos'])
-    expect(within(panel).getByText(/Average of 2 assessments since 1 July/)).toBeInTheDocument()
+    // TRAK-546: the season's radar lives only in the report.
+    expect(within(panel).queryByText(/Average of 2 assessments since 1 July/)).toBeNull()
+    expect(within(panel).queryByRole('heading', { name: 'Season so far' })).toBeNull()
   })
 
   it('the coach edits traits from the fixed list; picking one of a pair unpicks the other', async () => {
