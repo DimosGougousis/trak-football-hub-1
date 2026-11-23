@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronUp } from 'lucide-react'
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { supabase } from '@/integrations/supabase/client'
@@ -17,10 +17,12 @@ import { useWatchList } from '@/components/coach/season-plan/useWatching'
 import { gameTitle, gameWhen, useGameEvaluations, useGames, type Game } from '@/components/coach/games/useGames'
 import { instructionsWent, matchResult } from '@/lib/games/results'
 import {
-  loadRemovedSeasonObjectives, loadSeasonObjectives, planState, removedSeasonObjectivesKey, seasonObjectivesKey, useSeasonPlan, type SeasonObjective, type SeasonPlan,
+  loadRemovedSeasonObjectives, loadSeasonObjectives, planLabel, removedSeasonObjectivesKey, seasonLeft, seasonObjectivesKey, seasonProgress, shortDate, useSeasonPlan,
+  type SeasonObjective, type SeasonPlan,
 } from '@/lib/season-plan'
 import { measureObjectives } from '@/lib/season-objective-measure'
 import { DonutChart } from '@/components/arc/donut-chart/donut-chart'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 
 /* TRAK-361 (Season plan 13/18, spec TRAK-348): the season plan's card under Needs you, where the academy's switch is
    on. Folded, one line: the state and what comes next ("Shared 3 Nov · 34 weeks left"). Open: the season objectives,
@@ -78,6 +80,7 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
   const navigate = useNavigate()
   const season = useSeasonPlan(coachId, squad)
   const [open, setOpen] = useState(() => remembered(coachId, squad))
+  const wide = useSideMenuScreen()
   const toPlan = () => { onOpen(); navigate('/coach/season-plan') }
   // TRAK-335: a skeleton while it loads, never "Loading…", and nothing shifts once it has.
   if (season.isPending) return <LoadingSkeleton label={`Loading the ${squad} season plan…`} lines={2} className={className} />
@@ -87,36 +90,87 @@ function SquadPlanCard({ coachId, squad, onOpen, className }: { coachId: string;
     </section>
   }
   const plan = season.plan
-  if (!plan) {
-    return <section aria-labelledby={`season-plan-${squad}`} className={`${card} !flex items-center gap-4 ${className ?? ''}`}>
-      <div className="grid min-w-0 flex-1 gap-2">
-        <h2 id={`season-plan-${squad}`} className="text-base font-medium text-ink">{squad} season plan</h2>
-        <p className="truncate text-sm text-ink-3">Not started</p>
+  const years = plan?.starts_on && plan.ends_on ? `${plan.starts_on.slice(0, 4)}–${plan.ends_on.slice(2, 4)}` : null
+  // TRAK-549 (Season plan card 1/5, Kostas's 21 Nov mockup): before it's shared, the card is one line with its next step
+  // on it, Start or Continue, and nothing to fold. TRAK-433 (Tarek, 15 Nov): Start stays compact, never full width.
+  if (!plan || !plan.shared_at) {
+    return <section aria-label={`${squad} season plan`} className={`${card} relative overflow-hidden laptop:p-5 ${className ?? ''}`}>
+      <PitchLines />
+      <div className="relative flex items-center gap-4">
+        <span aria-hidden="true" className="grid size-12 flex-none place-items-center rounded-[14px] bg-brand/10 text-brand"><CalendarDays size={24} /></span>
+        <div className="grid min-w-0 flex-1 gap-1.5">
+          <Title squad={squad} years={plan ? years : null} />
+          <span><Badge tone={plan ? 'warning' : 'neutral'} size="md" dot pill>{plan ? 'Not shared yet' : 'Not started'}</Badge></span>
+        </div>
+        <Button size="sm" onClick={toPlan}>{plan ? 'Continue' : 'Start'}</Button>
       </div>
-      <Button size="sm" onClick={toPlan}>Start</Button>
     </section>
   }
-  const years = plan.starts_on && plan.ends_on ? ` ${plan.starts_on.slice(0, 4)}–${plan.ends_on.slice(2, 4)}` : ''
   const toggle = () => { remember(coachId, squad, !open); setOpen(!open) }
+  const label = planLabel(plan)
+  const left = seasonLeft(plan)
+  const viewPlan = <Button variant="secondary" size="sm" onClick={toPlan}>View plan</Button>
   return (
-    <section aria-label={`${squad} season plan`} className={`${card} ${className ?? ''}`}>
-      <button type="button" aria-expanded={open} aria-controls={`season-plan-body-${squad}`} onClick={toggle}
-        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <span className="grid min-w-0 gap-1">
-          <span className="text-base font-medium text-ink">{squad} season plan{years}</span>
-          <span className="truncate text-sm text-ink-3">{planState(plan)}</span>
-        </span>
-        {open ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
-      </button>
-      {open && <div id={`season-plan-body-${squad}`} className="grid gap-4">
-        {/* TRAK-494: no "Once you share the plan, how the season is going shows here." before it's shared. */}
-        {plan.shared_at && <SharedBody coachId={coachId} squad={squad} plan={plan} />}
-        <div className="flex justify-end">
-          <Button variant="secondary" size="sm" onClick={toPlan}>{plan.shared_at ? 'View plan' : 'Continue'}</Button>
+    <section aria-label={`${squad} season plan`} className={`${card} laptop:p-5 ${className ?? ''}`}>
+      {/* TRAK-549: the title and its state open and fold the card; View plan and the arrow sit at the top right. On a
+          phone View plan waits at the bottom of the open card, as before. */}
+      <div className="flex items-start gap-3">
+        <button type="button" aria-expanded={open} aria-controls={`season-plan-body-${squad}`} onClick={toggle}
+          className="grid min-h-11 min-w-0 flex-1 gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <Title squad={squad} years={years} />
+          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-ink-2">
+            <Badge tone={label.tone} size="md" dot pill>{label.text}</Badge>
+            {left && <span>{left}</span>}
+          </span>
+        </button>
+        <div className="flex flex-none items-center gap-2">
+          {wide && viewPlan}
+          <button type="button" aria-expanded={open} aria-controls={`season-plan-body-${squad}`} onClick={toggle}
+            aria-label={`${open ? 'Fold' : 'Open'} the ${squad} season plan`}
+            className="grid size-10 place-items-center rounded-xl text-ink-2 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            {open ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
+          </button>
         </div>
+      </div>
+      <SeasonBar plan={plan} left={left} />
+      {open && <div id={`season-plan-body-${squad}`} className="grid gap-4">
+        <SharedBody coachId={coachId} squad={squad} plan={plan} />
+        {!wide && <div className="flex justify-end">{viewPlan}</div>}
       </div>}
     </section>
   )
+}
+
+function Title({ squad, years }: { squad: string; years: string | null }) {
+  return <span className="flex flex-wrap items-baseline gap-x-2">
+    <span className="text-lg font-medium text-ink">{squad} season plan</span>
+    {years && <span className="text-[15px] text-ink-3">{years}</span>}
+  </span>
+}
+
+/** TRAK-549 (Kostas, 22 Nov: keep it): the season from its first day to its last, filled to today. The words say it
+ *  for a screen reader; no bar without both dates. */
+function SeasonBar({ plan, left }: { plan: SeasonPlan; left: string | null }) {
+  const progress = seasonProgress(plan)
+  if (progress == null || !plan.starts_on || !plan.ends_on) return null
+  const [from, to] = [shortDate(`${plan.starts_on}T00:00:00`), shortDate(`${plan.ends_on}T00:00:00`)]
+  const at = `${Math.round(progress * 1000) / 10}%`
+  return <div role="img" aria-label={`Season from ${from} to ${to}${left ? `, ${left}` : ''}`} className="grid gap-1.5">
+    <div className="relative h-1.5 rounded-full bg-raised">
+      <span className="absolute inset-y-0 left-0 rounded-full bg-brand" style={{ width: at }} />
+      <span className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-brand bg-surface" style={{ left: at }} />
+    </div>
+    <div aria-hidden="true" className="flex justify-between text-xs tabular-nums text-ink-3"><span>{from}</span><span>{to}</span></div>
+  </div>
+}
+
+/** Faint pitch lines behind a card that isn't shared yet, on a laptop only (the mockup's). */
+function PitchLines() {
+  return <svg aria-hidden="true" viewBox="0 0 260 160" fill="none" stroke="currentColor" strokeWidth="2"
+    className="pointer-events-none absolute -right-8 top-1/2 hidden h-40 w-[260px] -translate-y-1/2 text-line laptop:block">
+    <rect x="2" y="2" width="300" height="156" rx="4" /><line x1="130" y1="2" x2="130" y2="158" /><circle cx="130" cy="80" r="34" />
+    <circle cx="130" cy="80" r="3" fill="currentColor" /><rect x="2" y="40" width="40" height="80" /><rect x="2" y="60" width="14" height="40" />
+  </svg>
 }
 
 function SharedBody({ coachId, squad, plan }: { coachId: string; squad: string; plan: SeasonPlan }) {
