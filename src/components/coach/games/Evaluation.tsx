@@ -166,7 +166,8 @@ export function Evaluation({ game, opensAt, who, plans, planGoals, form, draft, 
             askCompetition={!game.competition} askHomeAway={game.home_away !== 'home' && game.home_away !== 'away'}
             onPublish={draft.publish} publishing={draft.publishing} problem={draft.publishProblem} />}
       <div className="flex flex-wrap items-center gap-3">
-        {step > 0 && <Button variant="ghost" onClick={() => onStep(step - 1)}>{t('common:back')}</Button>}
+        {/* TRAK-570 (Tarek, phone review, 23 Nov): Back looks as Training's, an outlined secondary button. */}
+        {step > 0 && <Button variant="secondary" onClick={() => onStep(step - 1)}>{t('common:back')}</Button>}
         {step < 2 && <Button className="ml-auto" onClick={() => onStep(step + 1)}>{next(step)}</Button>}
       </div>
     </div>
