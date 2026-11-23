@@ -62,7 +62,7 @@ function showForm() {
   </Routes></MemoryRouter>, queries())
 }
 const next = () => screen.getByRole('button', { name: 'Next' })
-const NAMES = ['Player', 'Ratings', 'Objectives', 'Message & note', 'Review']
+const NAMES = ['Player', 'Ratings', 'Objectives', 'Message & note', 'Note', 'Review']
 const steps = () => within(screen.getByRole('navigation', { name: 'Assessment steps' })).getAllByRole('listitem')
   .map(item => NAMES.find(name => item.textContent?.includes(name)))
 
@@ -71,7 +71,8 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     showForm()
     await pickOption('Player', 'Alex Synthetic')
-    await waitFor(() => expect(steps()).toEqual(['Player', 'Ratings', 'Objectives', 'Message & note', 'Review']))
+    // TRAK-532: with a shared plan the assessment stays with the coach, so the step holds the private note alone.
+    await waitFor(() => expect(steps()).toEqual(['Player', 'Ratings', 'Objectives', 'Note', 'Review']))
     await waitFor(() => expect(next()).toBeEnabled())
     await user.click(next())
     await user.click(next())
@@ -95,6 +96,28 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
       p_progress: [{ player_objective_id: 'obj-a', status: 'on_track' }, { player_objective_id: 'obj-b', status: 'met' }],
       p_add: ['Scan before receiving'],
     })
+    // TRAK-532: saved unpublished, the coach's own; families get reports.
+    expect(saves[0].p_row).toHaveProperty('published_at', null)
+  })
+
+  // TRAK-532 (Imad, 21 Nov): with a shared plan, one Save; no Publish, no Save draft, no message to the player.
+  it('TRAK-532: the note step has the private note alone, and Review ends with one Save', async () => {
+    const user = userEvent.setup()
+    showForm()
+    await pickOption('Player', 'Alex Synthetic')
+    await waitFor(() => expect(next()).toBeEnabled())
+    await user.click(next())
+    await user.click(next())
+    await user.click(within(await screen.findByRole('group', { name: 'Progress on Shoot first time' })).getByRole('button', { name: 'On track' }))
+    await user.click(within(screen.getByRole('group', { name: 'Progress on Press from the front' })).getByRole('button', { name: 'On track' }))
+    await user.click(next())
+    expect(await screen.findByLabelText(/Private note/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Message to Alex')).toBeNull()
+    await user.click(next())
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /^Publish/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
+    expect(screen.queryByText('Message to Alex')).toBeNull()
   })
 
   // TRAK-542 (found live, 22 Nov): jumping to Review left Objectives ticked, Review without them, and Save grey with no reason.
