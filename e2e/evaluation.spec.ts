@@ -79,7 +79,8 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     // Home: one Reports ready card, missed a while ago, and no Assess card for Quinn, who was never assessed.
     const card = page.getByRole('listitem').filter({ hasText: 'Reports ready' })
     await expect(card).toBeVisible()
-    await expect(card.getByText(/^Due since \w{3} \d+ \w{3}\.$/)).toBeVisible()
+    // TRAK-538: once the due date is far enough back, Home leads with "Urgent: ".
+    await expect(card.getByText(/^(Urgent: )?Due since \w{3} \d+ \w{3}\.$/)).toBeVisible()
     await expect(page.getByText(/Never assessed/)).toHaveCount(0)
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.screenshot({ path: testInfo.outputPath(`home-${width}.png`) })
