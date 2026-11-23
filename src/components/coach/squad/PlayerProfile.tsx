@@ -165,9 +165,8 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
       : <Grows loading={!assessments.data} label={t('coachSquad:loadingAssessments', { name: first })} height={280}>{assessments.data && <section aria-labelledby={`assessments-${player.id}`} className="grid grid-cols-[minmax(0,1fr)] gap-2">
         <div className="flex items-baseline justify-between gap-3">
           <h4 id={`assessments-${player.id}`} className={TITLE}>{t('coachSquad:assessments')}</h4>
-          {list.length > SHOWN
-            ? <button type="button" onClick={() => showAll(!all)} className="text-sm font-medium text-brand">{all ? t('coachSquad:showLatest', { count: SHOWN }) : t('coachSquad:allCount', { count: list.length })}</button>
-            : list.length > 1 && <span className="text-sm text-ink-3 [@media(pointer:fine)]:hidden">{t('coachSquad:swipeEarlier')}</span>}
+          {/* TRAK-568 (phone review, 23 Nov): no "Swipe for earlier" line; the slider bar under the cards already says so. */}
+          {list.length > SHOWN && <button type="button" onClick={() => showAll(!all)} className="text-sm font-medium text-brand">{all ? t('coachSquad:showLatest', { count: SHOWN }) : t('coachSquad:allCount', { count: list.length })}</button>}
         </div>
         {/* TRAK-501 (Imad, 19 Nov): before the first assessment, the six bands empty, where the first card will be. */}
         {list.length === 0 ? <div role="group" aria-label={t('coachSquad:noAssessmentYet')} className={`${INNER} grid gap-2.5 laptop:w-[calc(50%-6px)]`}>
