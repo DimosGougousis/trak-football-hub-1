@@ -52,6 +52,10 @@ export const BAND_COLOR = Object.fromEntries(BANDS.map(b => [b.word, b.color])) 
 /** TRAK-229: a band's word written in colour uses this readable shade, never `color`. */
 export const BAND_TEXT = Object.fromEntries(BANDS.map(b => [b.word, b.text])) as typeof BAND_COLOR
 
+/** TRAK-555 (Imad, 23 Nov): the elastic slider's fill, one colour per score from 0 to 10 (index = score).
+ *  Only the slider: band badges, bars and charts keep BANDS' seven colours. */
+export const SLIDER_COLORS = ['#DC2626', '#DC2626', '#EA580C', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981', '#059669', '#5B21B6']
+
 // The one way to turn a band into its colours. Before this existed, seven call
 // sites each wrote `BANDS.find(b => b.word.toLowerCase() === band)` with their
 // own fallback, and four files gave up and kept a private copy of the map. One
