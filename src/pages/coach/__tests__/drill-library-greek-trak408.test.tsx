@@ -54,6 +54,15 @@ describe('TRAK-408: the Drill Library in Greek', { timeout: 20_000 }, () => {
     expect(screen.queryByText('Players today')).toBeNull()
   })
 
+  // TRAK-409: the drill's own words too.
+  it("a drill's page shows the drill's name, how to play and watch for in Greek", async () => {
+    renderApp('/coach/training/drills/d/lib-keep-the-ball')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Κράτα τη μπάλα' })).toBeInTheDocument()
+    expect(await screen.findByText('Οι επιθετικοί κρατούν τη μπάλα όσο περισσότερο μπορούν.')).toBeInTheDocument()
+    expect(screen.getByText('Οι παίκτες κινούνται πριν την πάσα, όχι μετά.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Keep the ball' })).toBeNull()
+  })
+
   it('Change any practice: its title and the five things in Greek', async () => {
     renderApp('/coach/training/drills/change')
     expect(await screen.findByRole('heading', { level: 1, name: 'Αλλάξτε οποιαδήποτε άσκηση' })).toBeInTheDocument()
