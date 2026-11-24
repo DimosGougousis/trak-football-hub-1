@@ -1,4 +1,4 @@
-.trigger { position: relative; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--foreground); cursor: pointer; transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); }
+.trigger { position: relative; display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--foreground); cursor: pointer; transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard); }
 .trigger[data-state="open"], .trigger:active { border-color: var(--border-strong); background: var(--surface-muted); }
 @media (hover: hover) and (pointer: fine) { .trigger:hover { border-color: var(--border-strong); background: var(--surface-muted); } }
 .trigger > span:first-child { display: grid; place-items: center; }
