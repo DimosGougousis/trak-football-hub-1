@@ -51,6 +51,8 @@ const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0]
 
 // The mockup's look, kept in one place.
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+// Every state renders the same root and header first, so the header stays put when the plan finishes loading.
+const PAGE = 'grid gap-6 pb-4 sm:gap-7'
 const CARD = 'rounded-2xl border-2 border-slate-300 bg-white shadow-sm'
 const BTN = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition-colors hover:border-slate-900 disabled:opacity-50 print:hidden ${FOCUS}`
 const BTN_DARK = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50 print:hidden ${FOCUS}`
@@ -155,10 +157,10 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
 
   // The pitch is a bonus: a formation that fails to load leaves the list, never the whole plan.
   if (roster.error || objectives.error || removed.error) {
-    return <>{header(false)}<LoadError what="your season plan" onRetry={() => { roster.retry(); void objectives.refetch(); void removed.refetch() }} /></>
+    return <div id="season-plan-print" className={PAGE}>{header(false)}<LoadError what="your season plan" onRetry={() => { roster.retry(); void objectives.refetch(); void removed.refetch() }} /></div>
   }
   if (roster.isPending || objectives.isPending || removed.isPending || formations.isPending) {
-    return <>{header(false)}<LoadingSkeleton label="Loading your season plan…" lines={4} className="pt-2" /></>
+    return <div id="season-plan-print" className={PAGE}>{header(false)}<LoadingSkeleton label="Loading your season plan…" lines={4} className="pt-2" /></div>
   }
 
   const listed = [...board.lines.flatMap(line => line.players), ...board.unplaced]
@@ -205,7 +207,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
       <button type="button" onClick={() => setOpenId(player.id)} aria-haspopup="dialog"
         className={`flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 sm:items-center ${FOCUS}`}>
         <span className="flex min-w-0 items-start gap-3">
-          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-black ${has ? 'border-slate-300 bg-slate-100 text-slate-900' : 'border-amber-400 bg-amber-100 text-amber-900'}`}>
+          <span aria-hidden="true" className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-black ${has ? 'border-slate-300 bg-slate-100 text-slate-900' : 'border-amber-400 bg-amber-100 text-amber-900'}`}>
             {shortOf(player.position)}
           </span>
           <span className="grid min-w-0">
@@ -227,7 +229,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   }
 
   return (
-    <div id="season-plan-print" className="grid gap-6 pb-4 sm:gap-7">
+    <div id="season-plan-print" className={PAGE}>
       {header(true)}
       {opened && (isPosition(opened.position)
         ? <PlayerObjectivesSheet coachId={coachId} player={{ id: opened.id, name: opened.player_name, position: opened.position }}
@@ -310,10 +312,10 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
         <SectionHeading id="plan-readiness" bar="bg-slate-900">Squad readiness</SectionHeading>
         <div className="grid grid-cols-1 items-start gap-5 sm:gap-6 xl:grid-cols-2">
 
-          <div className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
+          <section aria-labelledby="plan-positions" className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <h3 className="text-xl font-black tracking-tight text-slate-900">Positions</h3>
+                <h3 id="plan-positions" className="text-xl font-black tracking-tight text-slate-900">Positions</h3>
                 {board.unplaced.length === 0
                   ? <span className={GOOD}><Check aria-hidden size={14} strokeWidth={3} />All Placed</span>
                   : <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{board.unplaced.length} Without Position</span>}
@@ -388,9 +390,9 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
                 <li key={p.id}><button type="button" aria-haspopup="dialog" className={`${BTN} min-h-10 px-3 text-xs`} onClick={() => setOpenId(p.id)}>{p.player_name}</button></li>))}
               </ul>
             </div>}
-          </div>
+          </section>
 
-          <div className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
+          <section aria-labelledby="plan-players" className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <h3 id="plan-players" className="text-xl font-black tracking-tight text-slate-900">Player Objectives</h3>
@@ -437,7 +439,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
                 {visible.map(playerRow)}
               </ul>
             </div>}
-          </div>
+          </section>
         </div>
       </section>
 

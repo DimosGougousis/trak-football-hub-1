@@ -97,8 +97,8 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     await page.screenshot({ path: testInfo.outputPath(`share-step-${width}.png`) })
     await share.click()
 
-    // View plan, read-only, with an Edit beside each part.
-    await expect(page.getByText(`Shared ${today}.`)).toBeVisible()
+    // View plan, read-only, with an Edit beside each part (24 Nov: the header's Shared pill).
+    await expect(page.getByText(`Shared · ${today}`)).toBeVisible()
     await expect(page).toHaveURL(/\/coach\/season-plan$/)
     expect(shares).toEqual([{ p_plan_id: 'plan-1', p_talked: true }])
     await expect(page.getByRole('navigation', { name: 'Season plan steps' })).toHaveCount(0)
@@ -106,7 +106,7 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     await page.screenshot({ path: testInfo.outputPath(`view-plan-${width}.png`) })
 
     // One screen: remove Stay compact, and it retires into the history.
-    await page.getByRole('button', { name: 'Edit season objectives' }).click()
+    await page.getByRole('button', { name: 'Edit Objectives' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'Season objectives' })).toBeVisible()
     await page.getByRole('button', { name: 'Remove Stay compact' }).click()
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
@@ -121,7 +121,7 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
 
     // Share the changes clears the banner, with no second tick.
     await page.getByRole('button', { name: 'Share the changes' }).click()
-    await expect(page.getByText(`Shared ${today}.`)).toBeVisible()
+    await expect(page.getByText(`Shared · ${today}`)).toBeVisible()
     await expect(page.getByText(/^Not shared yet/)).toHaveCount(0)
     expect(shares).toEqual([{ p_plan_id: 'plan-1', p_talked: true }, { p_plan_id: 'plan-1', p_talked: false }])
 
@@ -133,10 +133,10 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     await expect(card.getByText(/^\d+ weeks? left$/)).toBeVisible()
     await card.locator('button[aria-expanded]').first().click()
     await card.getByRole('button', { name: 'View plan' }).click()
-    await expect(page.getByText(`Shared ${today}.`)).toBeVisible()
+    await expect(page.getByText(`Shared · ${today}`)).toBeVisible()
     await page.goto('/coach/season-plan/positions')
     await expect(page).toHaveURL(/\/coach\/season-plan$/)
-    await expect(page.getByRole('heading', { name: 'Season objectives' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Core tactical objectives' })).toBeVisible()
     expect(unexpected).toEqual([])
   })
 }
