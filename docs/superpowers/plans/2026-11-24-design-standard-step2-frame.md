@@ -19,7 +19,7 @@
 - Every tappable thing at least 44 px.
 - Phone and tablet below the side-menu width: unchanged behaviour (glass tab bar with "+", avatar opens the rail as a sheet).
 - No route, word or permission changes. Existing tests `sidebar-rail-keeps-page-trak301` and `coach-frame-trak259` stay green.
-- One PR titled `TRAK-<n> [design] Design standard step 2: coach frame` (issue number from Dimos). It contains step 1's commits until #776 merges: open it as **draft** and mark ready only after #776 is in `main`.
+- One PR titled `TRAK-769 [design] Design standard step 2: coach frame` (issue number from Dimos). It contains step 1's commits until #776 merges: open it as **draft** and mark ready only after #776 is in `main`.
 
 ## Review Focus
 
@@ -58,7 +58,7 @@ Expected: FAIL (240, 32 px rows, 16 px icons).
 Run: `npx vitest run src/components/arc/__tests__/sidebar-rail-standard.test.tsx src/components/arc/__tests__/sidebar-rail-keeps-page-trak301.test.tsx src/components/coach/__tests__/coach-frame-trak259.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit** `feat: the side rail at the standard's sizes (TRAK-<n>)`
+- [ ] **Step 5: Commit** `feat: the side rail at the standard's sizes (TRAK-769)`
 
 ### Task 2: Remember the fold
 
@@ -82,7 +82,7 @@ Expected: PASS.
 
 - [ ] **Step 4: Run and see them pass** — same command. Expected: PASS.
 
-- [ ] **Step 5: Commit** `feat: the side rail remembers a coach's fold (TRAK-<n>)`
+- [ ] **Step 5: Commit** `feat: the side rail remembers a coach's fold (TRAK-769)`
 
 ### Task 3: The 64 px top bar
 
@@ -100,7 +100,7 @@ Expected: PASS.
 - [ ] **Step 2: Run and see them fail.** Expected: FAIL.
 - [ ] **Step 3: Implement** the values; update the TRAK-417 comment to say 64 px.
 - [ ] **Step 4: Run and see them pass.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat: the laptop top bar at 64 px (TRAK-<n>)`
+- [ ] **Step 5: Commit** `feat: the laptop top bar at 64 px (TRAK-769)`
 
 ### Task 4: Bell and "+ Create" in the top bar
 
@@ -118,7 +118,7 @@ Expected: PASS.
 - [ ] **Step 2: Run and see them fail.** Expected: FAIL.
 - [ ] **Step 3: Implement.** Open (morphed) Create keeps its current panel look; only the closed button fills.
 - [ ] **Step 4: Run them and `quick-add-trak182`, `bell-says-it-once-trak226`.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat: the bell and Create at the standard's size and look (TRAK-<n>)`
+- [ ] **Step 5: Commit** `feat: the bell and Create at the standard's size and look (TRAK-769)`
 
 ### Task 5: The squad pill
 
@@ -139,7 +139,7 @@ Expected: PASS.
 - [ ] **Step 2: Run and see them fail.** Expected: FAIL.
 - [ ] **Step 3: Implement.** The open list (menu of squads) is unchanged.
 - [ ] **Step 4: Run them and `src/components/parent`.** Expected: PASS.
-- [ ] **Step 5: Commit** `feat: the squad picker as a compact pill (TRAK-<n>)`
+- [ ] **Step 5: Commit** `feat: the squad picker as a compact pill (TRAK-769)`
 
 ### Task 6: Docs and final candidate
 
