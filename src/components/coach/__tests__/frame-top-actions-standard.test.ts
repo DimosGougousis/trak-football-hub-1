@@ -21,10 +21,10 @@ describe('the top bar actions follow the design standard', () => {
 
   it('Create is a filled main button at the top', () => {
     const css = read('components/arc/action-morph/action-morph.module.css')
-    const closed = rule(css, '.root[data-anchor="top"][data-view="fab"] .shape')
-    expect(closed).toMatch(/background:\s*var\(--accent\)/)
-    expect(closed).toMatch(/color:\s*var\(--accent-foreground\)/)
-    expect(rule(css, '.root[data-anchor="top"][data-view="fab"] .fab')).toMatch(/font-weight:\s*600/)
+    const face = rule(css, '.root[data-anchor="top"] .fab')
+    expect(face).toMatch(/background:\s*var\(--accent\)/)
+    expect(face).toMatch(/color:\s*var\(--accent-foreground\)/)
+    expect(face).toMatch(/font-weight:\s*600/)
   })
 
   it('reduced transparency keeps the closed Create filled', () => {
@@ -38,5 +38,15 @@ describe('the top bar actions follow the design standard', () => {
     expect(quickAdd).toContain('{ width: topWidth, height: 44 }')
     expect(quickAdd).toMatch(/<Plus size=\{16\} strokeWidth=\{2\.2\} aria-hidden="true" className="text-on-brand" \/>\{t\('nav:create'\)\}/)
     expect(quickAdd).toContain('context.font = `600 15px ${style.fontFamily}`')
+  })
+})
+
+describe('Create closes without a dark slab (step 2 review)', () => {
+  it('fills the fab face, not the closing shape', () => {
+    const css = read('components/arc/action-morph/action-morph.module.css')
+    expect(rule(css, '.root[data-anchor="top"][data-view="fab"] .shape')).not.toMatch(/background:\s*var\(--accent\)/)
+    const face = rule(css, '.root[data-anchor="top"] .fab')
+    expect(face).toMatch(/background:\s*var\(--accent\)/)
+    expect(face).toMatch(/color:\s*var\(--accent-foreground\)/)
   })
 })

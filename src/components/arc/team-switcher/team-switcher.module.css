@@ -230,7 +230,10 @@
 .triggerText .truncate, .rowText .truncate { padding-block: 2px; }
 
 /* Trak (TRAK-769, design standard): the compact pill, one 44 px line with a dark tile, in the laptop rail. */
-.trigger[data-size="compact"] { grid-template-columns: 28px minmax(0, 1fr) 14px; gap: 10px; height: 44px; padding: 0 12px 0 8px; border-radius: 12px; }
+.trigger[data-size="compact"] { grid-template-columns: 28px minmax(0, 1fr) 16px; gap: 10px; height: 44px; padding: 0 12px 0 8px; border-radius: 12px; }
 .trigger[data-size="compact"] .triggerTile { width: 28px; height: 28px; }
 .trigger[data-size="compact"] .tile { background: var(--foreground); color: var(--surface); box-shadow: none; }
-.compactLine { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); font-weight: 600; line-height: 20px; font-variant-numeric: tabular-nums; }
+/* The name truncates; the count after it always shows. 14 px, as the rail's rows. */
+.compactLine { display: flex; min-width: 0; align-items: baseline; font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pillName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pillCount { flex: none; }

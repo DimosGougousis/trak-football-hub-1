@@ -6,8 +6,8 @@ export interface Workspace {
   name: string;
   /** Plan name shown under the name, such as "Enterprise". Trak: the squad's size, such as "26 players". */
   plan?: string;
-  /** Trak (TRAK-769): one line for the compact trigger, such as "U16 · 15". Falls back to the name. */
-  short?: string;
+  /** Trak (TRAK-769): the size shown after the name in the compact trigger, "U16 · 15". */
+  count?: number;
   /** Member count, shown as "214 members". */
   members?: number;
   /** Your role in this workspace, such as "Owner" or "Guest". */

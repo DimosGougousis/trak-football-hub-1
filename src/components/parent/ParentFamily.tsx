@@ -85,7 +85,7 @@ export function ChildSwitcher() {
   const { children, selectedChild, selectChild } = useParentChildren()
   if (!selectedChild) return null
   const initials = (name: string) => name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
-  return <TeamSwitcher className="arc" manage={false} noun={{ one: 'child', many: 'Children' }} value={selectedChild.id} onSwitch={async () => {}}
+  return <TeamSwitcher className="arc" size="compact" manage={false} noun={{ one: 'child', many: 'Children' }} value={selectedChild.id} onSwitch={async () => {}}
     onValueChange={selectChild} workspaces={children.map(child => ({ id: child.id, name: child.name,
       logo: <span aria-hidden="true" style={{ fontSize: '.4em', fontWeight: 500 }}>{initials(child.name)}</span> }))} />
 }

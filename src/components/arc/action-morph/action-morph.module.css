@@ -32,12 +32,10 @@
 /* Trak (Imad, 23 Oct): a settled form lets a date or time picker open past its edge (see shapeRef). */
 .root[data-view="face"] .shape[data-settled] { overflow: visible; }
 /* At the top the closed button is a glass pill of its own; in the tab bar it sits on the slot's glass (GlassTabBar). */
-/* Trak, design standard (TRAK-769): closed, the top "+ Create" is the main button, filled near-black. */
-.root[data-anchor="top"][data-view="fab"] .shape {
-  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-foreground);
-  box-shadow: var(--shadow-resting);
-}
-.root[data-anchor="top"][data-view="fab"] .fab { font-weight: 600; }
+/* Trak, design standard (TRAK-769): closed, the top "+ Create" is the main button, filled near-black. The fill is on
+   the fab face, which fades in once the shape has shrunk, so a closing panel never turns dark (review). */
+.root[data-anchor="top"][data-view="fab"] .shape { border: 1px solid var(--accent); background: var(--surface); box-shadow: var(--shadow-resting); }
+.root[data-anchor="top"] .fab { background: var(--accent); color: var(--accent-foreground); font-weight: 600; }
 
 /* Every face hangs from the shape's corner at its own natural size. */
 .face { position: absolute; right: 0; bottom: 0; box-sizing: border-box; transform-origin: 100% 100%; }

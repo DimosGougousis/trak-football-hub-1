@@ -428,7 +428,7 @@ export function TeamSwitcher({
       >
         {shown && <Swap k={shown.id} reduced={reduced} className={styles.triggerTile}><WorkspaceTile workspace={shown} size={size === "compact" ? 28 : 32} /></Swap>}
         {size === "compact" && triggerStatus === "idle"
-          ? <Swap k={shown?.id ?? "none"} reduced={reduced} className={styles.compactLine}><span className={styles.truncate}>{shown?.short ?? shown?.name}</span></Swap>
+          ? <span className={styles.compactLine}><span data-pill-name className={styles.pillName}>{shown?.name}</span>{shown?.count != null && <span data-pill-count className={styles.pillCount}> · {shown.count}</span>}</span>
           : <span className={styles.triggerText}>
           <Swap k={shown?.id ?? "none"} reduced={reduced} className={styles.triggerName}><span className={styles.truncate}>{shown?.name}</span></Swap>
           <Swap k={`${triggerStatus}:${shown?.id}`} reduced={reduced} className={styles.triggerMeta}>

@@ -4,21 +4,14 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { TeamSwitcher } from '@/components/arc/team-switcher/team-switcher'
-import { squadPill } from '@/components/coach/SquadSwitcher'
 
 afterEach(cleanup)
 const css = readFileSync(join(__dirname, '..', '..', 'arc', 'team-switcher', 'team-switcher.module.css'), 'utf8')
 
 describe('the squad pill', () => {
-  it('names the squad and its size on one line', () => {
-    expect(squadPill('U16', 15)).toBe('U16 · 15')
-    expect(squadPill('All squads', 41)).toBe('All squads · 41')
-    expect(squadPill('U16', undefined)).toBe('U16')
-  })
-
   it('the compact trigger shows the short line, not the two-line name and size', () => {
     render(<TeamSwitcher className="arc" size="compact" manage={false} value="u16" onSwitch={async () => {}}
-      workspaces={[{ id: 'u16', name: 'U16', plan: '15 players', short: 'U16 · 15' }]} />)
+      workspaces={[{ id: 'u16', name: 'U16', plan: '15 players', count: 15 }]} />)
     const trigger = screen.getByRole('button', { name: /U16/ })
     expect(trigger.getAttribute('data-size')).toBe('compact')
     expect(trigger.textContent).toContain('U16 · 15')
@@ -28,14 +21,31 @@ describe('the squad pill', () => {
   it('is 44 px tall, truncates a long name and keeps its chevron', () => {
     const compact = css.match(/\.trigger\[data-size="compact"\]\s*\{([^}]*)\}/)?.[1] ?? ''
     expect(compact).toMatch(/height:\s*44px/)
-    expect(compact).toMatch(/grid-template-columns:\s*28px minmax\(0, 1fr\) 14px/)
-    const line = css.match(/\.compactLine\s*\{([^}]*)\}/)?.[1] ?? ''
-    expect(line).toMatch(/text-overflow:\s*ellipsis/)
-    expect(line).toMatch(/white-space:\s*nowrap/)
+    expect(compact).toMatch(/grid-template-columns:\s*28px minmax\(0, 1fr\) 16px/)
+    const name = css.match(/\.pillName\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(name).toMatch(/text-overflow:\s*ellipsis/)
+    expect(name).toMatch(/white-space:\s*nowrap/)
   })
 
   it("the parent's switcher is unchanged", () => {
     render(<TeamSwitcher className="arc" manage={false} value="a" onSwitch={async () => {}} workspaces={[{ id: 'a', name: 'Sam', plan: 'U12' }]} />)
     expect(screen.getByRole('button', { name: /Sam/ }).hasAttribute('data-size')).toBe(false)
+  })
+})
+
+describe('the pill keeps its count (step 2 review)', () => {
+  it('the name truncates, the count never does, at 14 px', () => {
+    render(<TeamSwitcher className="arc" size="compact" manage={false} value="all" onSwitch={async () => {}}
+      workspaces={[{ id: 'all', name: 'All squads', plan: '41 players', count: 41 }]} />)
+    const trigger = screen.getByRole('button', { name: /All squads/ })
+    expect(trigger.querySelector('[data-pill-name]')?.textContent).toBe('All squads')
+    expect(trigger.querySelector('[data-pill-count]')?.textContent).toBe(' · 41')
+    expect(css).toMatch(/\.compactLine\s*\{[^}]*font-size:\s*14px/)
+    expect(css).toMatch(/\.pillCount\s*\{[^}]*flex:\s*none/)
+  })
+
+  it("the parent's child switcher is a compact pill too", () => {
+    const family = readFileSync(join(__dirname, '..', '..', 'parent', 'ParentFamily.tsx'), 'utf8')
+    expect(family).toMatch(/<TeamSwitcher[^>]*size="compact"/)
   })
 })

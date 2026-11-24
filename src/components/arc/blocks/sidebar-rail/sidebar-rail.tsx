@@ -12,6 +12,8 @@ import { useTranslation } from "@/lib/i18n";
 
 /** Design standard (TRAK-769): the laptop rail, open and folded. */
 export const RAIL_WIDTH = { open: 192, folded: 68 } as const;
+/** The laptop's top bar height in px (TRAK-769): pages that pin a header under it start here. */
+export const TOP_BAR = 64;
 const FULL = RAIL_WIDTH.open;
 const RAIL = RAIL_WIDTH.folded;
 /** Below this shell width the opened sidebar floats over the page from the rail instead of squeezing it, the way a tablet drawer does. */
@@ -195,8 +197,7 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
       if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
       event.preventDefault();
       if (narrow) { onSheetOpenChange?.(!sheetOpen); return; }
-      setCollapsed(value => { writeFold(foldKey, !value); return !value; });
-      setStatus(collapsed ? "sidebarExpanded" : "sidebarCollapsed");
+      toggleRail();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -228,7 +229,8 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
 
   function toggleRail() {
     setCollapsed(!collapsed);
-    writeFold(foldKey, !collapsed);
+    // Only a choice made where the rail starts open is remembered: a peek on a narrow window is not (TRAK-769 review).
+    if (roomy.current) writeFold(foldKey, !collapsed);
     setStatus(collapsed ? "sidebarExpanded" : "sidebarCollapsed");
   }
 

@@ -144,3 +144,25 @@ describe('the 64 px top bar', () => {
     expect(index).toContain(':root[data-layout="coach"] .trak-trainings-frame { height: calc(100dvh - 169px); }')
   })
 })
+
+describe('step 2 review fixes', () => {
+  const source = (file: string) => readFileSync(join(__dirname, '..', '..', '..', file), 'utf8')
+
+  it('one top bar height, used by every pinned header', async () => {
+    const { TOP_BAR } = await import('../blocks/sidebar-rail/sidebar-rail')
+    expect(TOP_BAR).toBe(64)
+    for (const file of ['pages/coach/CoachGame.tsx', 'pages/coach/training/CoachTrainingPlan.tsx', 'components/player/FamilyMatch.tsx', 'components/trak/FamilyPage.tsx'])
+      expect([file, source(file)]).not.toEqual([file, expect.stringContaining("'60px'")])
+    const library = source('pages/coach/library/parts.tsx')
+    expect(library).toContain('const STICK = TOP_BAR + 12')
+    expect(library).toContain('top-[76px]')
+  })
+
+  it('a peek on a narrow window does not change the remembered fold', async () => {
+    shellWidth = 600
+    localStorage.setItem('t.fold', '1')
+    render(<Frame foldKey="t.fold" />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Expand sidebar' }))
+    expect(localStorage.getItem('t.fold')).toBe('1')
+  })
+})

@@ -12,6 +12,7 @@ import { useReview, type Review } from '@/lib/games/reviews'
 import { useMarkOpened, wasOpened } from '@/lib/games/news'
 import { useFrameTrail } from '@/components/trak/FamilyFrame'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
+import { TOP_BAR } from '@/components/arc/blocks/sidebar-rail/sidebar-rail'
 import { PageHeader, PageHeaderPanel } from '@/components/arc/blocks/page-header/page-header'
 import { ArcProvider } from '@/components/arc/lib/arc-provider'
 import { Breadcrumb } from '@/components/arc/breadcrumb/breadcrumb'
@@ -91,7 +92,7 @@ export function FamilyMatch({ event, changes, child, as, back, cantMakeIt }: {
 
   return <ArcProvider link={RouterLink}>
     {/* On a laptop the trail is the top bar's and a family page has no actions, so the header's own top row folds away. */}
-    <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem] laptop:![--ph-bar:0px]" top={wide ? '60px' : '0px'}
+    <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem] laptop:![--ph-bar:0px]" top={wide ? `${TOP_BAR}px` : '0px'}
       title={title} status={status}
       crumbs={inTopBar ? undefined : <Breadcrumb items={[{ label: t(back.href.endsWith('/home') ? 'nav:home' : asPlayer ? 'nav:matches' : 'nav:events'), href: back.href,
         onClick: click => { click.preventDefault(); back.go() } }, { label: title }]} />}
