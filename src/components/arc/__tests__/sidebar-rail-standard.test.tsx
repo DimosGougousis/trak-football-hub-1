@@ -69,3 +69,52 @@ describe('the side rail at the standard sizes', () => {
     expect(readFileSync(join(__dirname, '..', 'arc-theme.css'), 'utf8')).toContain('--surface-rail: rgb(var(--t-rail));')
   })
 })
+
+describe("the rail remembers a coach's fold", () => {
+  it('remembers a fold across visits', async () => {
+    const first = render(<Frame foldKey="t.fold" />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    expect(localStorage.getItem('t.fold')).toBe('1')
+    first.unmount()
+    const onWidth = vi.fn()
+    render(<Frame foldKey="t.fold" onWidth={onWidth} />)
+    expect(onWidth).toHaveBeenLastCalledWith(68)
+  })
+
+  it('opens again when unfolded', async () => {
+    localStorage.setItem('t.fold', '1')
+    const first = render(<Frame foldKey="t.fold" />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Expand sidebar' }))
+    expect(localStorage.getItem('t.fold')).toBe('0')
+    first.unmount()
+    const onWidth = vi.fn()
+    render(<Frame foldKey="t.fold" onWidth={onWidth} />)
+    expect(onWidth).toHaveBeenLastCalledWith(192)
+  })
+
+  it('without a key, starts open and stores nothing', async () => {
+    const onWidth = vi.fn()
+    render(<Frame onWidth={onWidth} />)
+    expect(onWidth).toHaveBeenLastCalledWith(192)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    expect(localStorage.length).toBe(0)
+  })
+
+  it('a mid-width window still starts folded', () => {
+    shellWidth = 700
+    localStorage.setItem('t.fold', '0')
+    const onWidth = vi.fn()
+    render(<Frame foldKey="t.fold" onWidth={onWidth} />)
+    expect(onWidth).toHaveBeenLastCalledWith(68)
+  })
+})
+
+describe('only the coach frame remembers the fold', () => {
+  const source = (file: string) => readFileSync(join(__dirname, '..', '..', file), 'utf8')
+  it('the coach frame passes its key', () => {
+    expect(source('coach/CoachFrame.tsx')).toContain('foldKey="trak.coach.railFolded"')
+  })
+  it('the family frame passes none', () => {
+    expect(source('trak/FamilyFrame.tsx')).not.toContain('foldKey')
+  })
+})
