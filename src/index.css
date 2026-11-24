@@ -1,12 +1,12 @@
-/* Self-hosted DM Sans + DM Mono (SIL Open Font License).
+/* Self-hosted fonts (SIL Open Font License): Inter, Trak's typeface (design
+   standard, TRAK-768), and the older DM Sans, DM Mono and Jost that some code
+   still names.
 
-   Previously loaded from fonts.googleapis.com, which sends every user's IP
-   address to Google on each page load. The users here are children in the EU,
-   so the files are served from our own origin and no request leaves the app.
-
-   Subsets and unicode-ranges match what Google served, so rendering is
-   unchanged. Neither family ships a Greek subset, so Greek text falls back to
-   a system font exactly as it did before. */
+   They are served from our own origin, never from Google's font service, which
+   would send every user's IP address to Google on each page load. The users here
+   are children in the EU, so no request leaves the app (vercel.json allows fonts
+   from our origin only). Inter ships Latin, Latin-ext and Greek, as the app is
+   in Greek too; inter-typeface.test.ts checks. */
 
 @font-face {
   font-family: 'DM Mono';
@@ -141,6 +141,32 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* Inter (TRAK-768), variable 100 to 900, from @fontsource-variable/inter 5.3.0. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-normal-variable-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-normal-variable-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-normal-variable-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -175,8 +201,8 @@
        its edge and any words beside it stay --t-warning for contrast. */
     --t-attention: 234 179 8; /* TRAK-275: #EAB308 (Tarek, 23 Oct) */
     --t-orange: 156 69 22;
-    --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
-    --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
+    --t-font: 'Inter', system-ui, sans-serif;
+    --t-font-mono: 'Inter', system-ui, sans-serif;
 
     /* TRAK-199: how wide a page (.trak-page), a page of text or a form (.trak-read),
        every page in a coach's menu and a list or calendar page (.trak-wide, TRAK-252,
