@@ -7,10 +7,10 @@ describe('season plan pitch-ready page', () => {
     expect(defaultFormation([{ id: 'c', isDefault: false, format: 11 }])).toBeNull()
   })
 
-  it('puts the starters on the pitch, everyone else on the bench, and skips a starter who left', () => {
+  it('keeps every place of the shape: starters on it, empty places and a starter who left as empty, the rest on the bench', () => {
     const players = [{ id: 'gk' }, { id: 'd1' }, { id: 'sub' }]
     const { spots, bench } = pitchOf({ shape: '2-2', starters: { 1: 'gk', 2: 'd1', 3: 'gone' } }, players)
-    expect(spots.map(s => [s.slot, s.player.id])).toEqual([[1, 'gk'], [2, 'd1']])
+    expect(spots.map(s => [s.slot, s.player?.id ?? null])).toEqual([[1, 'gk'], [2, 'd1'], [3, null], [4, null], [5, null]])
     expect(bench.map(p => p.id)).toEqual(['sub'])
   })
 

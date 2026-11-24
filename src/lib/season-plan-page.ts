@@ -9,14 +9,12 @@ export function defaultFormation<F extends { isDefault: boolean; format: number 
   return formations.filter(f => f.isDefault).sort((a, b) => b.format - a.format)[0] ?? null
 }
 
-/** Who stands where on the pitch, and everyone else on the bench. A starter who left the squad leaves their place empty. */
+/** Every place of the shape, with who stands there (null for an empty place, or a starter who left the squad), and
+ *  everyone else on the bench. Empty places still show, so the shape reads as itself (Rehearsal FC, 25 Nov). */
 export function pitchOf<P extends { id: string }>(formation: { shape: string; starters: XI }, players: P[]) {
   const byId = new Map(players.map(p => [p.id, p]))
-  const spots: (Slot & { player: P })[] = slotsOf(formation.shape).flatMap(slot => {
-    const player = byId.get(formation.starters[slot.slot])
-    return player ? [{ ...slot, player }] : []
-  })
-  const onPitch = new Set(spots.map(s => s.player.id))
+  const spots: (Slot & { player: P | null })[] = slotsOf(formation.shape).map(slot => ({ ...slot, player: byId.get(formation.starters[slot.slot]) ?? null }))
+  const onPitch = new Set(spots.flatMap(s => (s.player ? [s.player.id] : [])))
   return { spots, bench: players.filter(p => !onPitch.has(p.id)) }
 }
 

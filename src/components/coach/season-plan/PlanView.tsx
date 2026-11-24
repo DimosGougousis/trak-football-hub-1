@@ -184,15 +184,22 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   const watchAction = (id: string) => ({ label: watchOf.has(id) ? 'Keep watching' as const : 'Watch first' as const, pending: watch.isPending,
     onWatch: () => watch.mutate([id], { onSuccess: () => setOpenId(null), onError: () => setProblem(WATCH_FAILED) }) })
 
+  // The keeper stands lower than slotsOf's 8%, so the back line's names never touch the keeper (Rehearsal FC, 25 Nov).
+  const place = (spot: NonNullable<typeof pitch>['spots'][number]) => ({ left: `${spot.x}%`, top: `${100 - (spot.slot === 1 ? 2 : spot.y)}%` })
   const dot = (spot: NonNullable<typeof pitch>['spots'][number]) => {
     const p = spot.player
+    const role = shortPosition(slotPosition(formation!.shape, spot.slot))
+    if (!p) return <span key={spot.slot} style={place(spot)} aria-label={`${role}, empty place`} role="img"
+      className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
+      <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-slate-400 bg-white/60 text-xs font-black text-slate-400">{role}</span>
+      <span className="whitespace-nowrap rounded border border-dashed border-slate-300 bg-white/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-slate-500">Empty</span>
+    </span>
     const none = count(p) === 0
     return <button key={spot.slot} type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
-      aria-label={`${p.player_name}, ${shortPosition(slotPosition(formation!.shape, spot.slot))}${none ? ', no objective yet' : ''}`}
-      style={{ left: `${spot.x}%`, top: `${100 - spot.y}%` }}
+      aria-label={`${p.player_name}, ${role}${none ? ', no objective yet' : ''}`} style={place(spot)}
       className={`absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-lg transition-all ${FOCUS} ${dim(p) ? 'scale-95 opacity-25' : 'hover:scale-105'}`}>
       <span className={`relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white text-xs font-black text-slate-900 shadow-sm ${none ? 'border-amber-500 ring-2 ring-amber-400' : 'border-slate-900'}`}>
-        {shortPosition(slotPosition(formation!.shape, spot.slot))}
+        {role}
         {none && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-white">!</span>}
       </span>
       <span className="whitespace-nowrap rounded border border-slate-300 bg-white/95 px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-slate-900 shadow-sm">{lastName(p.player_name)}</span>
@@ -347,7 +354,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
                   <rect x="125" y="10" width="150" height="44" fill="none" stroke="#15803D" strokeWidth="2" />
                   <rect x="125" y="226" width="150" height="44" fill="none" stroke="#15803D" strokeWidth="2" />
                 </svg>
-                <div className="absolute inset-x-4 inset-y-8">{pitch.spots.map(dot)}</div>
+                <div className="absolute inset-x-4 inset-y-12">{pitch.spots.map(dot)}</div>
               </div>
               <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-3">
                 <span className="mr-1 text-xs font-black uppercase tracking-wider text-slate-500">Bench ({pitch.bench.length}):</span>
@@ -365,7 +372,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
                 </p>}
                 <ul className="m-0 max-h-[310px] list-none divide-y divide-slate-200 overflow-y-auto rounded-xl border-2 border-slate-200 p-0">
                   {listed.filter(p => unit === 'ALL' || shortOf(p.position) === unit).map(p => {
-                    const starter = pitch?.spots.some(s => s.player.id === p.id)
+                    const starter = pitch?.spots.some(s => s.player?.id === p.id)
                     return <li key={p.id}>
                       <button type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
                         className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 ${FOCUS}`}>
