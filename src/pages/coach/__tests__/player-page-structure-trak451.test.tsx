@@ -71,7 +71,8 @@ describe("TRAK-451: a player's page has structure", () => {
     await screen.findByRole('heading', { name: 'Assessments', level: 4 })
     const titles = ['Position and roles', 'About Traianos', 'Objective', 'Assessments']
       .map(name => screen.getByRole('heading', { name, level: 4 }))
-    for (const title of titles) expect(title).toHaveClass('font-semibold')
+    // Design standard step 3: the standard's section label, the same on every block.
+    for (const title of titles) expect(title).toHaveClass('font-bold', 'uppercase')
     expect(new Set(titles.map(title => title.className)).size).toBe(1)
   })
 

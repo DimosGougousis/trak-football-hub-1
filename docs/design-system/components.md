@@ -52,7 +52,7 @@ A card: white, `line` edge, 16 px corners, 20/24 px padding. A titled card is a 
 </SectionCard>
 ```
 
-`title`, `pill`, `action` make the header row; `footer` sits under a `line-soft` hairline; `as` is `'section'` (default),
+`title`, `pill`, `action` make the header row (`titleAs` is `'h3'` under a section label, `'h2'` where nothing labels the card from above); `footer` sits under a `line-soft` hairline; `as` is `'section'` (default),
 `'div'` or `'article'`.
 
 ## Page header

@@ -8,6 +8,7 @@ import { loadSeasonObjectives, seasonObjectivesKey, useSeasonPlan } from '@/lib/
 import { PlayerObjectivesSheet } from './PlayerObjectivesSheet'
 import { usePlayerObjectives } from './usePlayerObjectives'
 import { EditIcon } from '@/components/trak/IconAction'
+import { SECTION_LABEL } from '@/components/trak/standard'
 
 /* TRAK-354 (Season plan 6/18): a player's objectives on their own page, with one edit for both, under the same rules
    as step 3. Each says since when (TRAK-567: not which season objective it supports). No position, no
@@ -40,7 +41,7 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
   return <section aria-labelledby={`objectives-${id}`} className="grid gap-2">
     <div className="flex items-baseline justify-between gap-3">
       {/* TRAK-451: the player's page's bold title. */}
-      <h4 id={`objectives-${id}`} className="text-base font-semibold text-ink">{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
+      <h4 id={`objectives-${id}`} className={SECTION_LABEL}>{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
       {/* TRAK-455: once there are objectives, editing them is a pencil; giving the first one keeps its words. */}
       {action && (held.length ? <EditIcon label={action} haspopup onClick={() => setEditing(true)} />
         : <button type="button" onClick={() => setEditing(true)} aria-haspopup="dialog"

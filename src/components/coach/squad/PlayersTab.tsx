@@ -22,12 +22,11 @@ import { usePlayerFacts } from './usePlayerFacts'
 import type { SquadRoster } from './useSquadRoster'
 
 const GROUP: Record<string, PositionGroup> = { Goalkeeper: 'GK', Defender: 'DEF', Midfielder: 'MID', Attacker: 'ATT', Forward: 'ATT' }
-const TREND = 6
 
 /**
  * TRAK-263 (Imad, 22 Oct): Squad's Players view, replacing Snapshot. Every roster player in Arc's team directory
- * (position filters, search by name or shirt number). Imad, 23 Oct: each row ends with a sparkline of the player's
- * ratings, and there's no band bar above. TRAK-351 (Tarek, 3 Nov): a player opens as their own full page, with no list
+ * (position filters, search by name or shirt number). Design standard step 3 (Dimos, 24 Nov): the players are grouped
+ * from Attackers down to Goalkeepers, with no ratings graph beside them (it replaced Imad's 23 Oct sparkline). TRAK-351 (Tarek, 3 Nov): a player opens as their own full page, with no list
  * beside it; the list stays mounted behind it, so going back finds its filter and search as left. TRAK-428: on a phone
  * the trail is the page's one way back; on a laptop, where the trail is in the top bar, the page keeps its Back button
  * (Imad, 19 Nov: "it does no harm").
@@ -52,15 +51,6 @@ export function PlayersTab({ roster, openId = null, report = false, sent = null,
   const ids = useMemo(() => roster.players.map(p => p.id), [roster.players])
   const facts = usePlayerFacts(user?.id, ids)
   const moves = useMemo(() => bandMoves(roster.assessments), [roster.assessments])
-  // Imad, 23 Oct: each row's sparkline, the last six overall ratings, oldest first.
-  const trends = useMemo(() => {
-    const byPlayer = new Map<string, number[]>()
-    for (const row of [...roster.assessments].sort((a, b) => a.created_at.localeCompare(b.created_at))) {
-      if (row.coach_rating == null) continue
-      byPlayer.set(row.squad_player_id, [...(byPlayer.get(row.squad_player_id) ?? []), row.coach_rating].slice(-TREND))
-    }
-    return byPlayer
-  }, [roster.assessments])
   const squadLabel = roster.squad ?? (roster.squads.length === 1 ? roster.squads[0] : null)
   const seasonPlan = useSeasonPlan(user?.id, squadLabel)
   // TRAK-355: a watched player shows Watching, or Ready once their reminder is due, where the season plan is on.
@@ -89,7 +79,6 @@ export function PlayersTab({ roster, openId = null, report = false, sent = null,
       id: p.id, name: p.player_name, position: positionOf(p), group: GROUP[p.position ?? ''] ?? null, shirt: p.shirt_number,
       band: move ? BANDS.find(b => b.word.toLowerCase() === move.band)?.word ?? null : null, move: move?.move ?? 0,
       waiting: roster.consentPending.has(p.id),
-      trend: trends.get(p.id),
       flag: watchOf.has(p.id) ? <WatchBadge watch={watchOf.get(p.id)} />
         // TRAK-423: a state, like Draft; the Assess button is on the player's page.
         : owed.get(p.id) === 'assess' ? <Badge tone="attention" size="sm">{t('coachHome:stateDue')}</Badge>

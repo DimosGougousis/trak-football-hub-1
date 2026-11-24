@@ -232,7 +232,8 @@ const playerList = (panel: HTMLElement) => within(within(panel).getByRole('list'
 const row = (panel: HTMLElement, name: string) => within(panel).getByRole('button', { name: new RegExp(`^${name}`) })
 
 describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
-  it("lists every roster player, each with a sparkline of their ratings and no band bar (Imad, 23 Oct)", async () => {
+  // Design standard step 3 (Dimos, 24 Nov): the ratings sparkline beside each player (Imad, 23 Oct) is gone.
+  it("lists every roster player, with no ratings graph and no band bar", async () => {
     coachReads(SNAP_PLAYERS)
     server.use(table('coach_assessments', [
       rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z'),
@@ -242,11 +243,9 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     const panel = await view('Players')
     await within(panel).findByText('Leo M.')
     expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3)
-    // Oldest first, so the line falls for Leo and rises for Sami.
-    // The row is a button, so a screen reader hears the sparkline's label in the row's name.
-    expect(row(panel, 'Leo M.')).toHaveAccessibleName(/Leo M\.'s last 2 ratings: 6\.5, 5\.0\./)
-    expect(row(panel, 'Sami K.')).toHaveAccessibleName(/Sami K\.'s last 2 ratings: 8\.2, 9\.1\./)
-    expect(row(panel, 'Newcomer R.').querySelector('figure')).toBeNull()
+    // Rated players get no graph either, and no ratings in the row's name.
+    for (const name of ['Leo M.', 'Sami K.', 'Newcomer R.']) expect(row(panel, name).querySelector('figure')).toBeNull()
+    expect(row(panel, 'Leo M.')).not.toHaveAccessibleName(/ratings/)
     expect(row(panel, 'Leo M.')).not.toHaveTextContent('Mixed')
     expect(within(panel).queryByText(/assessed/)).toBeNull()
     // Nobody's page opens until the coach taps a row (TRAK-351: a player opens as their own page, not beside the list).
