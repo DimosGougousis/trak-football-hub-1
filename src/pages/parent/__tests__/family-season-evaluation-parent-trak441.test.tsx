@@ -117,7 +117,8 @@ describe("TRAK-441 slice 5: the parent's evaluation in the coach's look", () => 
     expect(within(bands).getAllByText(BAND_WORDS)).toHaveLength(6)
     expect(bands.textContent).not.toMatch(/\d/)
     expect(within(await screen.findByRole('region', { name: 'Progress' })).getByText('Deliver from wide areas')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /All assessments/ })).toHaveAttribute('href', '/parent/assessments')
+    // TRAK-530: the list it opens is All reports.
+    expect(screen.getByRole('link', { name: /All reports/ })).toHaveAttribute('href', '/parent/assessments')
     expectNothingHeldBack()
     expect(noteReads).toBe(0)
   })

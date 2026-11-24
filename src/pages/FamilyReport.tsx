@@ -13,6 +13,7 @@ import { reportDate, reportMonth, useFamilyReports } from '@/lib/player-report'
 import { markOpened, wasOpened } from '@/lib/games/news'
 import { firstName } from '@/lib/parent-data'
 import { useTranslation } from '@/lib/i18n'
+import { trackEvent } from '@/lib/telemetry'
 
 /* TRAK-529 (Reports 6/10, Imad 21 Nov): one sent report as the player and his parents read it, opened from Home's
    Latest report. The coach's report (ReportBody) under the family's page header: the player's own copy, with his job
@@ -32,6 +33,13 @@ function Report({ as, childId, readerId, childName }: { as: As; childId: string;
   useEffect(() => {
     if (one) markOpened(readerId, childId, 'report', one.evaluation_id, Math.max(Date.now(), Date.parse(one.sent_at)))
   }, [one, readerId, childId])
+  // TRAK-530: the pilot's count of opens (J7) reads these, by the report day's assessment.
+  const shownId = one?.evaluation_id
+  useEffect(() => {
+    if (!one) return
+    void trackEvent(as === 'player' ? 'feedback_opened' : 'assessment_viewed', {
+      assessment_id: one.report.assessments.find(a => a.day === one.report.report_day)?.id ?? null, evaluation_id: one.evaluation_id })
+  }, [shownId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (reports.isPending) return <LoadingSkeleton className="pt-12" label={t('common:loadingReport')} lines={4} />
   const title = one ? t('coachSquad:sentReportName', { month: reportMonth(one.report.report_day) }) : t('coachSquad:report')

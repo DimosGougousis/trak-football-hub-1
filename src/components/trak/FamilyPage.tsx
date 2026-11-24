@@ -39,7 +39,7 @@ export function FamilyPage({ title, status, details, from, children }: {
   </ArcProvider>
 }
 
-export type FamilyRow = { label: string; value?: ReactNode; to?: string; onClick?: () => void; expanded?: boolean; controls?: string }
+export type FamilyRow = { key?: string; label: string; value?: ReactNode; to?: string; onClick?: () => void; expanded?: boolean; controls?: string }
 
 /** Profile's lists: a row that opens a page, does something, or only says something. */
 export function FamilyRows({ rows }: { rows: FamilyRow[] }) {
@@ -51,7 +51,7 @@ export function FamilyRows({ rows }: { rows: FamilyRow[] }) {
   const line = 'flex min-h-[52px] w-full items-center gap-3 px-5 py-3 text-left text-[15px]'
   const press = `${line} hover:bg-raised focus-visible:bg-raised`
   return <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
-    {rows.map(row => <li key={row.label}>
+    {rows.map(row => <li key={row.key ?? row.label}>
       {row.to ? <Link to={row.to} className={press}>{body(row, true)}</Link>
         : row.onClick ? <button type="button" onClick={row.onClick} aria-expanded={row.expanded} aria-controls={row.controls} className={press}>{body(row, true)}</button>
         // No chevron: its value lines up with the others' (20 px side, 16 px chevron, 12 px gap).

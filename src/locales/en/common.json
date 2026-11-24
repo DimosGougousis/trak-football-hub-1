@@ -120,5 +120,6 @@
   "latestReport": "Latest report",
   "openReport": "Open report",
   "loadingReport": "Loading the report",
-  "couldntLoadReport": "Couldn’t load the report."
+  "couldntLoadReport": "Couldn’t load the report.",
+  "allReports": "All reports"
 }

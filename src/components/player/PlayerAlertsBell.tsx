@@ -5,6 +5,8 @@ import { LoadError } from '@/components/trak/LoadError'
 import { assessmentAlertTitle, eventAlert } from '@/lib/parent-data'
 import { noteEventSnapshots, noteFirstSeen, readFirstSeen, type PlayerEvent } from '@/lib/player-events'
 import { newsAlert, useFamilyNews, type NewsItem } from '@/lib/games/news'
+import { reportAlert, useFamilyReports, type FamilyReport } from '@/lib/player-report'
+import { useTranslation } from '@/lib/i18n'
 
 /* TRAK-163 (Imad, 12 Oct): players get the parent's bell for their squad's
    events: new, changed (with the new time) and cancelled, counted since the
@@ -29,14 +31,21 @@ type BellProps = {
   assessment?: PublishedAssessmentAlert | null
   assessmentLoadFailed?: boolean
   onRetry?: () => void
+  /** TRAK-530: his latest sent report, in the new look in place of the assessment. */
+  report?: FamilyReport
 }
 
-/** Home's bell: reads his game plans and reviews itself, so their arrival re-renders the bell, not Home under it. */
-export function PlayerHomeBell(props: Omit<BellProps, 'news'>) {
-  return <PlayerAlertsBell {...props} news={useFamilyNews(props.userId, true).all} />
+/** Home's bell: reads his game plans and reviews itself, so their arrival re-renders the bell, not Home under it.
+ *  TRAK-530: in the new look, his latest report in place of the assessment (no family screen opens one any more). */
+export function PlayerHomeBell({ look = false, ...props }: Omit<BellProps, 'news' | 'report'> & { look?: boolean }) {
+  const news = useFamilyNews(props.userId, true).all
+  const reports = useFamilyReports(look ? props.userId : undefined, true)
+  return look ? <PlayerAlertsBell {...props} assessment={null} assessmentLoadFailed={false} news={news} report={reports.data?.[0]} />
+    : <PlayerAlertsBell {...props} news={news} />
 }
 
-export function PlayerAlertsBell({ userId, events, news = [], assessment, assessmentLoadFailed, onRetry }: BellProps) {
+export function PlayerAlertsBell({ userId, events, news = [], assessment, assessmentLoadFailed, onRetry, report }: BellProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   // Live run, 19 Oct (Tarek): the event page's Back returns where the bell was opened (Home).
   const { pathname } = useLocation()
@@ -56,6 +65,10 @@ export function PlayerAlertsBell({ userId, events, news = [], assessment, assess
     description: assessment.hasMessage === false ? 'Your ratings to read.' : 'Your ratings and a message to read.', date: assessment.publishedAt,
     action: { label: 'Open assessment', onSelect: () => navigate(`/player/feedback/${assessment.id}`) },
   })
+  if (report) {
+    const { path, month, ...alert } = reportAlert(report, userId, userId, 'player')
+    alerts.push({ ...alert, description: t('coachSquad:sentReportName', { month }), action: { label: t('common:openReport'), onSelect: () => navigate(path) } })
+  }
   for (const item of news) {
     const { path, action, ...alert } = newsAlert(item, 'player', '')
     alerts.push({ ...alert, tone: 'success', action: { label: action, onSelect: () => navigate(path, { state: { from: pathname } }) } })

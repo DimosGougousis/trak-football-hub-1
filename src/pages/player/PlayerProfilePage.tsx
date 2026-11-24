@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ArrowRight, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell, NavBar, MetadataLabel } from '@/components/trak'
@@ -13,14 +13,13 @@ import { ParentInviteCard } from '@/components/player/ParentInviteCard'
 import { PlayerConnections } from '@/components/player/PlayerConnections'
 import { useMySeason } from '@/lib/my-season'
 import { loadConnections } from '@/components/player/PlayerConnections'
-import { BandBars } from '@/components/player/LatestEvaluation'
+import { ReportsList } from '@/components/player/LatestEvaluation'
 import { useCalendarLinkStatus } from '@/components/trak/AddToCalendar'
 import { useFamilyAcademy, useFamilyLook } from '@/components/trak/FamilyFrame'
 import { FamilyPageTitle } from '@/components/trak/FamilyPageTitle'
 import { FamilyRows, familyCard, familyColumns, familyH2, familyStack } from '@/components/trak/FamilyPage'
 import { Avatar } from '@/components/arc/avatar/avatar'
 import { Badge } from '@/components/arc/badge/badge'
-import { evalDay } from '@/lib/evaluation'
 import { languageOf, useLanguage } from '@/lib/i18n'
 
 export default function PlayerProfilePage() {
@@ -53,7 +52,7 @@ export default function PlayerProfilePage() {
 
   // TRAK-441 slice 6, behind family_look: the coach's look. The old blocks' functions are kept (see ProfileLook).
   const look = useFamilyLook()
-  if (look) return <ProfileLook position={position} ageGroup={details?.age_group} assessments={assessments} />
+  if (look) return <ProfileLook position={position} ageGroup={details?.age_group} />
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -226,7 +225,7 @@ type Assessment = { id: string; created_at: string; work_rate: number; tactical:
  * academy, the parent as a row), How Trak works and Settings. Left out: the parked Passport ("Coming soon"), and the
  * parent invitations card, which Home shows whenever there is one to share or resend.
  */
-function ProfileLook({ position, ageGroup, assessments }: { position?: string | null; ageGroup?: string | null; assessments: Assessment[] }) {
+function ProfileLook({ position, ageGroup }: { position?: string | null; ageGroup?: string | null }) {
   const { t, language } = useLanguage()
   const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
@@ -243,8 +242,6 @@ function ProfileLook({ position, ageGroup, assessments }: { position?: string | 
   const parents = links.data?.parents ?? []
   const who = [position, ageGroup].filter(Boolean).join(' · ')
   const where = [academy?.name, coaches.length ? t('common:coachNamed', { name: coaches.join(', ') }) : null].filter(Boolean).join(' · ')
-  const [latest, ...earlier] = assessments
-  const open = (id: string) => `/player/feedback/${encodeURIComponent(id)}`
   return (
     <MobileShell width="wide">
       <div className="pt-3 pb-28 laptop:pt-6">
@@ -259,23 +256,8 @@ function ProfileLook({ position, ageGroup, assessments }: { position?: string | 
                 {where && <p className="text-sm text-ink-3">{where}</p>}
               </div>
             </section>
-            {latest && <section aria-label={t('common:myCard')} className={familyCard}>
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 className={familyH2}>{t('common:myCard')}</h2><span className="text-sm text-ink-3">{evalDay(latest.created_at)}</span>
-              </div>
-              <BandBars assessment={latest} />
-              <Link to={open(latest.id)} className="mt-3 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand">
-                {t('common:openEvaluation')} <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-              {earlier.length > 0 && <div className="mt-2 grid gap-1 border-t border-line pt-3">
-                <h3 className="text-sm text-ink-3">{t('common:earlier')}</h3>
-                <ul className="divide-y divide-line">{earlier.map(a => <li key={a.id}>
-                  <Link to={open(a.id)} className="flex min-h-11 items-center justify-between gap-3 text-[15px] text-ink">
-                    {evalDay(a.created_at)}<ChevronRight size={16} aria-hidden="true" className="text-ink-3" />
-                  </Link>
-                </li>)}</ul>
-              </div>}
-            </section>}
+            {/* TRAK-530: his reports, each opening its report, where My card listed his evaluations. */}
+            {user && <ReportsList childId={user.id} as="player" title={t('coachSquad:sentReports')} />}
           </div>
           <section aria-label={t('settings:account')} className="grid gap-2">
             <h2 className={familyH2}>{t('settings:account')}</h2>
