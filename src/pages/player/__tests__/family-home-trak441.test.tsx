@@ -72,19 +72,29 @@ describe('TRAK-441: the player Home in the coach\'s look', () => {
     expect(screen.queryByRole('region', { name: 'Season so far' })).toBeNull()
   })
 
-  it('slice 2.5: the latest evaluation as the coach\'s bars, marked New; its note stays on its own page', async () => {
+  it('TRAK-529: the latest report as the coach\'s bars, marked New; its note stays on its own page', async () => {
     server.use(
-      table('coach_assessments', [{ id: 'eval-1', coach_user_id: 'coach-1', created_at: '2026-11-08T10:00:00Z', coach_rating: 7.5,
-        work_rate: 8, tactical: 7, attitude: 8, technical: 7, physical: 6, coachability: 9, evaluation_id: null }]),
-      table('coach_shared_feedback', [{ body: 'Keep pressing high.', published_at: '2026-11-08T10:00:00Z' }]),
+      table('report_for_player', [{ evaluation_id: 'ev-oct', sent_at: '2026-10-25T18:00:00Z', note: 'Keep pressing high.',
+        report: { squad_player_id: 'squad-1', player_name: 'Giourkas Seitaridis', squad: 'U16', season_starts_on: '2026-08-01', period_from: '2026-09-28',
+          report_day: '2026-10-25', last_report_day: '2026-09-27', before_season: null, matches: [], objectives: [], trainings: { attended: 5, total: 6 },
+          assessments: [{ id: 'a1', day: '2026-10-25', work_rate: 8, tactical: 7, attitude: 8, technical: 7, physical: 6, coachability: 9 }] } }]),
     )
     screenIs(false)
     renderApp('/player/home')
-    const card = await screen.findByRole('region', { name: 'Latest evaluation' }, { timeout: 5000 })
+    const card = await screen.findByRole('region', { name: 'Latest report' }, { timeout: 5000 })
+    expect(within(card).getByText('October')).toBeInTheDocument()
     expect(within(card).getByText('New')).toBeInTheDocument()
-    expect(within(card).getByRole('link', { name: /Open evaluation/ })).toHaveAttribute('href', '/player/feedback/eval-1')
+    expect(within(card).getByRole('link', { name: /Open report/ })).toHaveAttribute('href', '/player/report/ev-oct')
     expect(screen.queryByText('Keep pressing high.')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Latest evaluation' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Latest coach assessment' })).toBeNull()
+  })
+
+  it('TRAK-529: no report yet, no card', async () => {
+    screenIs(false)
+    renderApp('/player/home')
+    await screen.findByRole('region', { name: 'Season so far' }, { timeout: 5000 })
+    expect(screen.queryByRole('region', { name: 'Latest report' })).toBeNull()
   })
 
   // Slice 2.6b (Imad, 13 Nov): a player who reports for themselves gets the parent's red Can't make it; one under the
