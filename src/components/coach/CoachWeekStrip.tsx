@@ -16,7 +16,7 @@ import { Button } from '@/components/arc/button/button'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
 import { useCoachSquad, useWeekRoster } from '@/lib/coach-squad'
 import { MatchAction } from '@/components/coach/games/MatchAction'
-import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
+import { NEXT_STEP_SIZE, NEXT_STEP_SMALL, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { coachWeek, squadName, type WeekItem, type WeekSession } from '@/lib/coach-week'
 import { loadWeek } from '@/lib/coach-week-load'
 import { publishEvent } from '@/lib/event-publish'
@@ -128,7 +128,7 @@ function CoachWeek({ coachId, version, games, inView, squadLabel, squadOf, label
           : <EventSheetCoach event={event} coachId={coachId} onChanged={refresh} />}
       </EventSheet>
     }}
-    renderPrimary={id => <NextStep item={strips.get(id)!.item} coachId={coachId} roster={roster.data} onChanged={refresh} />} /></WeekMorph>
+    renderPrimary={id => <NextStep small item={strips.get(id)!.item} coachId={coachId} roster={roster.data} onChanged={refresh} />} /></WeekMorph>
 }
 
 /** TRAK-461: while the week loads it is one placeholder the size of the week, which grows into it. Both of the strip's
@@ -141,18 +141,20 @@ function WeekMorph({ loading, children }: { loading: boolean; children?: ReactNo
 }
 
 /** The chosen event's one next step (TRAK-262). A weekly series' Publish uses Schedule's own sheet. */
-export function NextStep({ item, coachId, roster, onChanged }: {
+export function NextStep({ item, coachId, roster, onChanged, small = false }: {
   item: WeekItem
   coachId: string
   roster: { player_name: string | null; age_group: string | null; status: string | null }[] | undefined
   onChanged: () => void
+  /** TRAK-561: beside the week's Details, Details' size; Needs you keeps the full next step. */
+  small?: boolean
 }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [publishing, setPublishing] = useState(false)
   const row = item.row
-  const go = (label: string, onClick: () => void, disabled = false) =>
-    <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} disabled={disabled} onClick={onClick}>{label}</Button>
+  const go = (label: string, onClick?: () => void, disabled = false) =>
+    <Button size={small ? NEXT_STEP_SMALL : NEXT_STEP_SIZE} className={small ? undefined : NEXT_STEP_WIDTH} disabled={disabled} onClick={onClick}>{label}</Button>
 
   if (item.step === 'publish' && row) return go(publishing ? t('coachHome:publishing') : t('coachHome:publish'), () => {
     if (row.series_id) return navigate(`/coach/schedule?publish=${row.id}`)
@@ -167,13 +169,13 @@ export function NextStep({ item, coachId, roster, onChanged }: {
     const rows = roster?.filter(p => row.squad == null || p.age_group?.trim() === row.squad)
     if (!rows) return go(t('coachHome:share'), () => {}, true)
     // TRAK-497: Arc's green button like every next step (it was a 36 px pill of its own).
-    return <span className="arc"><ShareEventButton arc="next-step" text={whatsAppShareText(shareableFromRow(row, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })}>
+    return <span className="arc"><ShareEventButton arc="next-step" small={small} text={whatsAppShareText(shareableFromRow(row, squadLabelFrom(rows)), { childNames: rows.map(p => p.player_name ?? '').filter(Boolean) })}>
       <ShareIcon size={16} tight />{t('coachHome:share')}
     </ShareEventButton></span>
   }
   // Imad, 23 Oct: the register opens here. Schedule shows only the squad last picked, so an event of another squad
   // (Home on All) was never found there, and Schedule stayed on today.
-  if (item.step === 'register' && row) return <StepSheet label={t('coachHome:takeRegister')} title={t('coachHome:takeRegister')} description={item.title}>
+  if (item.step === 'register' && row) return <StepSheet trigger={go(t('coachHome:takeRegister'))} title={t('coachHome:takeRegister')} description={item.title}>
     {close => <TakeRegister eventId={row.id} coachId={coachId} sessionId={null} squad={row.squad ?? null} onSaved={() => { close(); onChanged() }} />}
   </StepSheet>
   // TRAK-288: where Games is on, the match's evaluation on its game page: Evaluate, then Publish once a draft is saved.
@@ -187,21 +189,22 @@ export function NextStep({ item, coachId, roster, onChanged }: {
   // Imad, 23 Oct: View log shows the log; editing is one tap further, inside it.
   if (item.step === 'view' && item.sessionId) {
     const sessionId = item.sessionId
-    return <StepSheet label={t('coachHome:viewLog')} title={item.title} description={t('coachHome:logged')}>{() => <SessionLog sessionId={sessionId} coachId={coachId} />}</StepSheet>
+    return <StepSheet trigger={go(t('coachHome:viewLog'))} title={item.title} description={t('coachHome:logged')}>{() => <SessionLog sessionId={sessionId} coachId={coachId} />}</StepSheet>
   }
   return null
 }
 
 /** A next step that opens in a sheet over Home rather than another page. */
-function StepSheet({ label, title, description, children }: {
-  label: string
+function StepSheet({ trigger, title, description, children }: {
+  /** The next step's button, at its size (TRAK-561). */
+  trigger: ReactNode
   title: string
   description: string
   children: (close: () => void) => ReactNode
 }) {
   const [open, setOpen] = useState(false)
   return <BottomSheet open={open} onOpenChange={setOpen} title={title} description={description} detents={[0.62, 0.92]} className="arc"
-    trigger={<Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH}>{label}</Button>}>
+    trigger={trigger}>
     <div className="pb-4">{open && children(() => setOpen(false))}</div>
   </BottomSheet>
 }
