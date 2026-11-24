@@ -118,3 +118,29 @@ describe('only the coach frame remembers the fold', () => {
     expect(source('trak/FamilyFrame.tsx')).not.toContain('foldKey')
   })
 })
+
+describe('the 64 px top bar', () => {
+  it('is 64 px, nearly opaque white with a blur, over a soft hairline', () => {
+    const bar = rule('.topbar')
+    expect(bar).toMatch(/height:\s*64px/)
+    expect(bar).toMatch(/border-bottom:\s*1px solid var\(--border-subtle\)/)
+    expect(bar).toMatch(/background:\s*color-mix\(in oklab, var\(--background\) 95%, transparent\)/)
+    expect(bar).toMatch(/backdrop-filter:\s*blur\(/)
+  })
+  it('has 44 px icon buttons', () => {
+    const button = rule('.iconButton')
+    expect(button).toMatch(/width:\s*44px/)
+    expect(button).toMatch(/height:\s*44px/)
+    expect(button).toMatch(/border-radius:\s*12px/)
+  })
+  it('sets the trail at 14 px, the current page semibold', () => {
+    expect(rule('.crumbs')).toMatch(/font-size:\s*14px/)
+    expect(rule('.crumbs .crumbCurrent')).toMatch(/font-weight:\s*600/)
+  })
+  it('full-height pages fit under it', () => {
+    expect(css).toContain('.content :global(.min-h-screen) { min-height: calc(100vh - 64px); }')
+    expect(css).toContain('.content :global(.h-dvh) { height: calc(100dvh - 64px); }')
+    const index = readFileSync(join(__dirname, '..', '..', '..', 'index.css'), 'utf8')
+    expect(index).toContain(':root[data-layout="coach"] .trak-trainings-frame { height: calc(100dvh - 169px); }')
+  })
+})

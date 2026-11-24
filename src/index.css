@@ -311,10 +311,10 @@
 @media (min-width: 1024px) and (min-height: 500px) {
   :root[data-layout="coach"] { --wide-w: calc(100vw - var(--rail-w, 0px)); }
   /* With no bottom bar, the room kept for it goes: Assess's Back and Next sit at
-     the bottom, and the Trainings frame runs down to it (below the frame's 60 px
+     the bottom, and the Trainings frame runs down to it (below the frame's 64 px
      top bar and its own 105 px header). */
   :root[data-layout="coach"] .trak-bar-room { margin-bottom: 0; }
-  :root[data-layout="coach"] .trak-trainings-frame { height: calc(100dvh - 165px); }
+  :root[data-layout="coach"] .trak-trainings-frame { height: calc(100dvh - 169px); }
 
   /* TRAK-254: easier to read on a laptop. Each fixed text size a coach screen uses
      is two pixels larger (titles a little more), Arc's text sizes follow, and grey
