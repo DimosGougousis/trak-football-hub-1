@@ -93,6 +93,7 @@
   --surface: rgb(var(--t-surface));
   --surface-raised: rgb(var(--t-raised));
   --surface-muted: rgb(var(--t-raised));
+  --surface-rail: rgb(var(--t-rail));
   --foreground: rgb(var(--t-ink));
   --text-secondary: rgb(var(--t-ink-2));
   --text-muted: rgb(var(--t-ink-3));

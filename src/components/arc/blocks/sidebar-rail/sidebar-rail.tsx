@@ -10,8 +10,10 @@ import { motionTokens } from "../../lib/motion-tokens";
 import styles from "./sidebar-rail.module.css";
 import { useTranslation } from "@/lib/i18n";
 
-const FULL = 240;
-const RAIL = 64;
+/** Design standard (TRAK-769): the laptop rail, open and folded. */
+export const RAIL_WIDTH = { open: 192, folded: 68 } as const;
+const FULL = RAIL_WIDTH.open;
+const RAIL = RAIL_WIDTH.folded;
 /** Below this shell width the opened sidebar floats over the page from the rail instead of squeezing it, the way a tablet drawer does. */
 const FLOAT = 640;
 /** Below this shell width the sidebar starts as the icon rail, so the page keeps room to read. It can still be opened. */
@@ -53,7 +55,7 @@ export interface SidebarRailProps {
   onSheetOpenChange?: (open: boolean) => void;
   /** Groups open at first, by id. */
   defaultOpen?: Record<string, boolean>;
-  /** The width the sidebar takes from the page (240 open, 64 folded), for fixed bars that centre on the page. */
+  /** The width the sidebar takes from the page (RAIL_WIDTH: 192 open, 68 folded), for fixed bars that centre on the page. */
   onWidthChange?: (width: number) => void;
   children: ReactNode;
 }
@@ -101,8 +103,8 @@ function NavRow({ entry, nested, current, lit, expanded, turned, controls, colla
   const { t } = useTranslation();
   return <RailTip enabled={tips} label={entry.label} note={entry.count ? t("nav:needYou", { count: entry.count }) : undefined}>
     <button type="button" className={[styles.item, nested ? styles.nested : "", lit ? styles.lit : ""].join(" ")} aria-current={current ? "page" : undefined} aria-expanded={expanded} aria-controls={controls} onClick={onClick}>
-      {lit && <motion.span layoutId={layoutId} className={styles.highlight} style={{ borderRadius: 8 }} transition={reduce ? instant : motionTokens.spring.morph} />}
-      {Icon && <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />}
+      {lit && <motion.span layoutId={layoutId} className={styles.highlight} style={{ borderRadius: 12 }} transition={reduce ? instant : motionTokens.spring.morph} />}
+      {Icon && <Icon className={styles.icon} size={18} strokeWidth={1.9} aria-hidden="true" />}
       <motion.span className={styles.label} initial={false} animate={{ opacity: collapsed ? 0 : 1, x: collapsed ? -6 : 0 }} transition={fade}>{entry.label}{entry.count ? <span className={styles.srOnly}>, {entry.count} need you</span> : null}</motion.span>
       {entry.count ? <>
         <motion.span className={styles.count} aria-hidden="true" initial={false} animate={{ opacity: collapsed ? 0 : 1 }} transition={fade}>{entry.count}</motion.span>
