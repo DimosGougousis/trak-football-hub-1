@@ -381,5 +381,6 @@
   "openReport": "Open",
   "openReportName": "Open {{name}}’s {{month}} report",
   "reportNote": "Σημείωση του προπονητή",
-  "reportNotFound": "This report isn’t here."
+  "reportNotFound": "This report isn’t here.",
+  "reportMovedUp": "Moved up: {{areas}}"
 }

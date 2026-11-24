@@ -116,5 +116,9 @@
   "consent": "Συγκατάθεση",
   "consentGiven": "Δόθηκε συγκατάθεση",
   "yourChildren": "Τα παιδιά σας",
-  "notConnected": "Δεν έχει συνδεθεί"
+  "notConnected": "Δεν έχει συνδεθεί",
+  "latestReport": "Latest report",
+  "openReport": "Open report",
+  "loadingReport": "Loading the report",
+  "couldntLoadReport": "Couldn’t load the report."
 }

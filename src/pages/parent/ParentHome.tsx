@@ -19,7 +19,7 @@ import { FamilySeasonCard } from '@/components/parent/FamilySeasonCard'
 import { ParentConsentBar } from '@/pages/parent/ParentConsent'
 import { FrameActions, useFamilyLook } from '@/components/trak/FamilyFrame'
 import { ForYou } from '@/components/trak/ForYou'
-import { LatestEvaluation } from '@/components/player/LatestEvaluation'
+import { LatestReport } from '@/components/player/LatestEvaluation'
 import { SeasonSoFar } from '@/components/player/SeasonSoFar'
 
 export default function ParentHome() {
@@ -49,7 +49,6 @@ export default function ParentHome() {
   const loading = matchQuery.isPending || developmentQuery.isPending
   // TRAK-441 slice 2.6 (Imad, 13 Nov), behind family_look: the coach's Home, as the player's.
   const look = useFamilyLook()
-  const latest = development?.assessments[0]
   const bell = <ParentAlertsBell />
   const header = <HomeHeader calendarTo="/parent/matches" center={<ParentChildSwitcher />} right={bell} />
   const week = selectedChild && <LoadedWeekStrip key={selectedChild.id} loadKey={selectedChild.id} absentFor={selectedChild.id} picker={look}
@@ -94,8 +93,8 @@ export default function ParentHome() {
         <ParentFamilyContent>
           {hasError ? <ParentLoadError onRetry={() => { void matchQuery.refetch(); void developmentQuery.refetch() }} />
             : loading ? <ParentLoading /> : look ? (
-              // TRAK-441 slice 2.6: the week, For you and the season; then Latest evaluation and Season so far. No rating
-              // (TRAK-435): "Recorded matches" and the swipe cards are gone; the evaluation's page has the rest.
+              // TRAK-441 slice 2.6: the week, For you and the season; then Latest report (TRAK-529) and Season so far. No
+              // rating (TRAK-435): "Recorded matches" and the swipe cards are gone; the report's page has the rest.
               <div className="grid grid-cols-[minmax(0,1fr)] gap-5 laptop:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] laptop:items-start laptop:gap-6">
                 <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-5">
                   {week}
@@ -104,8 +103,7 @@ export default function ParentHome() {
                   {season}
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)] content-start gap-5">
-                  {latest && parentId && selectedChild && <LatestEvaluation assessment={latest} readerId={parentId} childId={selectedChild.id}
-                    href={`/parent/assessment/${encodeURIComponent(latest.id)}`} />}
+                  {parentId && selectedChild && <LatestReport key={selectedChild.id} childId={selectedChild.id} readerId={parentId} as="parent" />}
                   {selectedChild && <SeasonSoFar key={selectedChild.id} childId={selectedChild.id} />}
                   {recognition}
                 </div>

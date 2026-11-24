@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { dateLocale } from '@/lib/i18n'
 import { scoreToBand } from '@/lib/rating-engine'
@@ -6,6 +7,7 @@ import { bandConfig, type BandConfig } from '@/lib/types'
 import { evaluationDates, rhythmOf, type EvaluationDue } from '@/lib/evaluation'
 import type { Progress } from '@/lib/objective-progress'
 import { ATTRIBUTES, type AttributeKey } from '@/lib/squad/attributes'
+import { rosterRows } from '@/lib/games/shared-plans'
 
 /* TRAK-527 (Reports 4/10, Imad 21 Nov): one player's report for one report day, for the coach. Report days cut the
    season into periods: the season plan's evaluation dates (evaluation.ts), the first period from the season's first
@@ -41,13 +43,37 @@ export async function loadPlayerReport(playerId: string, reportDay: string, last
 /** TRAK-528 (Reports 5/10): a report as it was sent, the coach's copy (report_for_player). */
 export type SentReport = { evaluation_id: string; sent_at: string; report: PlayerReport; note: string }
 
+const latestFirst = (rows: SentReport[]) => rows.sort((a, b) => b.report.report_day.localeCompare(a.report.report_day))
+
+export const familyReportsKey = (childId: string, asPlayer: boolean) => ['family-reports', childId, asPlayer ? 'player' : 'parent'] as const
+
+/** TRAK-529 (Reports 6/10): a child's sent reports, the latest report day first. The player reads his own copy; a
+ *  guardian reads the parents' copy (no job or "Did the job?", and only the report's note to the player and parents,
+ *  TRAK-531) and never asks for the player's, whose note can be an older message for him alone. */
+export async function loadFamilyReports(childId: string, asPlayer: boolean, signal: AbortSignal): Promise<SentReport[]> {
+  const ids = (await rosterRows(childId, signal)).map(row => row.id)
+  if (!ids.length) return []
+  const { data, error } = asPlayer
+    ? await supabase.from('report_for_player').select('evaluation_id, sent_at, report, note').in('squad_player_id', ids).abortSignal(signal)
+    : await supabase.from('report_for_family').select('evaluation_id, sent_at, report, note').in('squad_player_id', ids).abortSignal(signal)
+  if (error) throw error
+  return latestFirst(data as unknown as SentReport[])
+}
+
+/** Home's Latest report and the report's page share one read. */
+export const useFamilyReports = (childId: string | undefined, asPlayer: boolean) => useQuery({
+  queryKey: familyReportsKey(childId ?? '', asPlayer),
+  queryFn: ({ signal }) => loadFamilyReports(childId!, asPlayer, signal),
+  enabled: !!childId,
+})
+
 export const sentReportsKey = (coachId: string | undefined, playerId: string) => ['coach', coachId, 'sent-reports', playerId] as const
 
 /** The player's sent reports, the latest report day first. */
 export async function loadSentReports(playerId: string): Promise<SentReport[]> {
   const { data, error } = await supabase.from('report_for_player').select('evaluation_id, sent_at, report, note').eq('squad_player_id', playerId)
   if (error) throw error
-  return (data as unknown as SentReport[]).sort((a, b) => b.report.report_day.localeCompare(a.report.report_day))
+  return latestFirst(data as unknown as SentReport[])
 }
 
 /** The report a squad's plan is working towards: the date that's due, or else the next one (the season's last once
@@ -81,6 +107,10 @@ export function ratingsOn(report: PlayerReport, day: string): ReportAssessment |
   const all = [...(report.before_season ? [report.before_season] : []), ...report.assessments]
   return all.filter(a => a.day <= day).at(-1) ?? null
 }
+
+/** TRAK-529: the areas whose band went up since the last report, in the radar's order. None at the first report. */
+export const movedUp = (now: ReportRatings, before: ReportRatings | null): AttributeKey[] =>
+  before ? ATTRIBUTES.map(([key]) => key).filter(key => bandOfScore(now[key]).minScore > bandOfScore(before[key]).minScore) : []
 
 const onTrack = (status: Progress | null) => status === 'on_track' || status === 'met'
 

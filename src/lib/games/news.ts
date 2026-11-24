@@ -14,7 +14,7 @@ import { rosterRows } from './shared-plans'
 export type News = { kind: 'plan' | 'plan_changed' | 'review'; eventId: string; at: string }
 /** With its match, the child's role in the plan (starter, bench, not_selected), the coach's name and the score. */
 export type NewsItem = News & { event: PlayerEvent; role: string | null; coachName: string | null; score: [number, number] | null }
-type Opened = 'plan' | 'review' | 'evaluation'
+type Opened = 'plan' | 'review' | 'evaluation' | 'report'
 
 // ponytail: a fixed window, so a first visit isn't every past match; a per-reader "seen since" if families ask for older.
 const RECENT_MS = 14 * 86_400_000
