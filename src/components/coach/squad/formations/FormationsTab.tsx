@@ -8,6 +8,8 @@ import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { MorphSelect } from '@/components/arc/morph-select/morph-select'
+import { Select } from '@/components/arc/select/select'
+import { useCoachSquad } from '@/lib/coach-squad'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { usePlayerRoles } from '@/components/coach/squad/usePlayerRoles'
@@ -42,9 +44,16 @@ type Edit = { draft: FormationDraft; history: FormationDraft[] }
 export function FormationsTab({ roster }: { roster: SquadRoster }) {
   const { user } = useAuth()
   const { t } = useTranslation()
+  const { pick } = useCoachSquad(user?.id)
   // The squad picked, or a coach's only squad.
   const squad = roster.squad ?? (roster.squads.length === 1 ? roster.squads[0] : null)
-  // TRAK-432: Arc's empty state; the squad is chosen in the menu, so there is no button here.
+  // TRAK-562 (phone review, 23 Nov): with All squads selected, a squad dropdown here. Selecting one picks it as the side
+  // menu does, so every coach page follows it.
+  if (!squad && user && roster.squads.length >= 2) return <div className="arc pt-6 max-w-sm">
+    <Select label={t('nav:squad')} description={t('coachSquad:fmPickSquad')} placeholder={t('coachSquad:fmSelectSquad')}
+      value="" onValueChange={pick} options={roster.squads.map(name => ({ value: name, label: name }))} />
+  </div>
+  // TRAK-432: Arc's empty state, while there is no squad to select.
   if (!squad || !user) return <div className="arc pt-10">
     <EmptyState icon={<LayoutGrid size={24} strokeWidth={1.5} />} title={t('coachSquad:fmPickSquad')} description={t('coachSquad:fmPickSquadBody')} />
   </div>
