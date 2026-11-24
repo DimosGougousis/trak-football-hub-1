@@ -72,7 +72,7 @@ updated to match so older components follow.
 | `--t-success` | done / good | 4 120 87 | emerald-700 |
 | `--t-pitch` (new) | pitch fill and markings | 5 150 105 | emerald-600 |
 | `--t-warning` | "needs you" words | 146 64 14 | amber-800 |
-| `--t-attention` | "needs you" marks only | 245 158 11 | amber-500 |
+| `--t-attention` | "needs you" marks only | 234 179 8 | kept at #EAB308 (TRAK-275, a team decision); close to the mockup's amber-500 |
 | `--t-info` | information | 29 78 216 | blue-700 |
 | `--t-danger` | errors, delete | 185 28 28 | red-700 |
 | `--t-orange` | out-of-position ring | unchanged | |

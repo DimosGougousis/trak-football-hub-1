@@ -187,7 +187,7 @@ function Evaluation({ query, eventId, child, asPlayer }: { query: UseQueryResult
         <p className={label}>{t('common:yourJob')}</p>
         <p className="mt-0.5 whitespace-pre-line text-[17px] font-medium text-ink">{review.job}</p>
         {review.didJob && <p className="mt-3 flex items-center gap-2.5 text-[16px] text-ink">
-          {review.didJob === 'yes' && <span className="grid size-6 flex-none place-items-center rounded-full bg-brand text-on-brand"><Check size={14} strokeWidth={2.4} aria-hidden="true" /></span>}
+          {review.didJob === 'yes' && <span className="grid size-6 flex-none place-items-center rounded-full bg-success text-on-brand"><Check size={14} strokeWidth={2.4} aria-hidden="true" /></span>}
           {t(`common:didJob_${review.didJob}`)}
         </p>}
       </section>}

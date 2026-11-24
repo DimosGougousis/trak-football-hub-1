@@ -173,7 +173,7 @@ export function FixtureImport({ onConfirm, existingKeys }: FixtureImportProps) {
         </div>
       )}
 
-      {added !== null && <p className="text-[13px] text-brand">{t('coachSchedule:fxAdded', { count: added })}</p>}
+      {added !== null && <p className="text-[13px] text-success">{t('coachSchedule:fxAdded', { count: added })}</p>}
 
       {loaded && (
         <>

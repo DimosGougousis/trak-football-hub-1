@@ -173,7 +173,7 @@
     --t-warning: 146 64 14;      /* "needs you" words */
     /* TRAK-270 (Tarek, 23 Oct): "needs you" marks in a clear amber. A mark only, never text:
        its edge and any words beside it stay --t-warning for contrast. */
-    --t-attention: 245 158 11;
+    --t-attention: 234 179 8; /* TRAK-275: #EAB308 (Tarek, 23 Oct) */
     --t-orange: 156 69 22;
     --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
     --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
