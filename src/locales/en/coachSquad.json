@@ -240,6 +240,7 @@
   "fmPlaceToOpen_other": "Place {{count}} players to open Formations",
   "fmNeedsPosition": "A formation is built from where each player plays, so every player in {{squad}} needs a position first.",
   "fmGoPositions": "Go to Positions",
+  "fmPlacedCaption": "players placed",
   "fmWhat": "your formations",
   "fmLoading": "Loading your formations…",
   "fmPlaybook": "Your matchday playbook",

@@ -79,3 +79,37 @@ describe('Formations on the design standard', () => {
     expect(badge.closest('.bg-raised')).not.toBeNull()
   })
 })
+
+describe('locked Formations shows how many are placed', () => {
+  const unplaced = (id: string, name: string, shirt: number) => player(id, name, null, shirt)
+
+  it('a squad with players to place shows how many are placed', () => {
+    show([], [...PLACED, unplaced('p3', 'Liam Synthetic', 10)])
+    const card = screen.getByRole('region', { name: 'Place 1 player to open Formations' })
+    expect(within(card).getByText('2 / 3')).toBeInTheDocument()
+    expect(within(card).getByText('players placed')).toBeInTheDocument()
+    const bar = within(card).getByRole('progressbar')
+    expect(bar.getAttribute('aria-valuenow')).toBe('67')
+    expect((bar.firstElementChild as HTMLElement).className).toContain('bg-attention')
+    expect(within(card).getByRole('button', { name: 'Go to Positions' })).toBeInTheDocument()
+  })
+
+  it('nobody placed reads 0 / N with an empty bar', () => {
+    show([], [unplaced('p3', 'Liam Synthetic', 10), unplaced('p4', 'Owen Synthetic', 5), unplaced('p5', 'Ada Synthetic', 8)])
+    expect(screen.getByText('0 / 3')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0')
+  })
+
+  it('everyone placed opens Formations', () => {
+    show([formation()])
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByRole('heading', { level: 2, name: 'Saved formations' })).toBeInTheDocument()
+  })
+
+  it('Greek has the caption', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const el = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', '..', '..', 'locales', 'el', 'coachSquad.json'), 'utf8'))
+    expect(el.fmPlacedCaption).toBeTruthy()
+  })
+})

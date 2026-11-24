@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { MorphSelect } from '@/components/arc/morph-select/morph-select'
 import { Select } from '@/components/arc/select/select'
 import { useCoachSquad } from '@/lib/coach-squad'
-import { SECTION_LABEL, SectionCard, SectionLabel, StatusPill } from '@/components/trak/standard'
+import { NumberBlock, SECTION_LABEL, SectionCard, SectionLabel, StatusPill } from '@/components/trak/standard'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { usePlayerRoles } from '@/components/coach/squad/usePlayerRoles'
@@ -112,11 +112,13 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   }, [list, unplaced, roles.isPending, consented, writes.start])
 
   // Arc's styles apply inside .arc; a phone's frame doesn't give one (the laptop's does), so each view brings its own.
-  if (unplaced > 0) return <section aria-labelledby="formations-locked" className="arc grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-6">
-    <h2 id="formations-locked" className="text-lg font-medium text-ink">{t('coachSquad:fmPlaceToOpen', { count: unplaced })}</h2>
-    <p className="max-w-prose text-sm text-ink-2">{t('coachSquad:fmNeedsPosition', { squad })}</p>
-    <Button variant="secondary" onClick={() => navigate('/coach/season-plan/positions')}>{t('coachSquad:fmGoPositions')}</Button>
-  </section>
+  // Design standard step 3: how many are placed, as a number block, until everyone is.
+  const placed = consented.length - unplaced
+  if (unplaced > 0) return <div className="arc"><SectionCard title={t('coachSquad:fmPlaceToOpen', { count: unplaced })}>
+    <NumberBlock value={`${placed} / ${consented.length}`} caption={t('coachSquad:fmPlacedCaption')} progress={consented.length ? placed / consented.length : 0} tone="needs" />
+    <p className="max-w-prose text-[15px] text-ink-2">{t('coachSquad:fmNeedsPosition', { squad })}</p>
+    <div><Button variant="secondary" onClick={() => navigate('/coach/season-plan/positions')}>{t('coachSquad:fmGoPositions')}</Button></div>
+  </SectionCard></div>
   if (formations.isError || roles.isError) return <LoadError what={t('coachSquad:fmWhat')} onRetry={() => { void formations.refetch(); void roles.refetch() }} />
   if (!list || roles.isPending || writes.start.isPending) return <LoadingSkeleton label={t('coachSquad:fmLoading')} lines={3} rows={2} />
 
