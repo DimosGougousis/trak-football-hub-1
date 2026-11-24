@@ -149,27 +149,31 @@
   :root {
     /* TRAK-189: Trak's own colours, by role, as RGB channels so Tailwind's /alpha
        works (bg-brand/10). Screens use these, never a hex code or white-at-N%:
-       hard-coded-colours.test.ts fails on a new one. Values are still today's
-       dark look; the light palette replaces them once Imad approves it. */
-    --t-ground: 246 245 241;        /* the screen */
+       hard-coded-colours.test.ts fails on a new one. Values: the design standard
+       (docs/design-system/colour-and-type.md), white and slate with near-black
+       main buttons; design-standard-tokens.test.ts pins them and their contrast. */
+    --t-ground: 255 255 255;        /* the screen */
     --t-surface: 255 255 255;       /* cards, sheets */
-    --t-raised: 238 237 231;        /* chips, quiet buttons, tracks */
-    --t-ink: 26 36 33;        /* headings and body */
-    --t-ink-2: 87 97 92;      /* supporting lines */
-    --t-ink-3: 94 102 98;      /* labels, timestamps, placeholders */
-    --t-line: 226 224 216;          /* card edges, dividers */
-    --t-line-strong: 133 139 135;   /* text boxes, pickers */
-    --t-brand: 11 102 35;       /* main buttons, selected states */
+    --t-raised: 241 245 249;        /* chips, quiet buttons, tracks */
+    --t-rail: 250 250 250;          /* a laptop's side rail */
+    --t-ink: 15 23 42;        /* headings and body */
+    --t-ink-2: 71 85 105;     /* supporting lines */
+    --t-ink-3: 94 110 133;    /* labels, timestamps, placeholders (slate-500, a touch darker: 4.5:1 on chips) */
+    --t-line: 203 213 225;          /* card edges, dividers */
+    --t-line-soft: 241 245 249;     /* hairlines inside a card */
+    --t-line-strong: 100 116 139;   /* text boxes, pickers (3:1 on white) */
+    --t-brand: 15 23 42;        /* main buttons, selected states */
     --t-on-brand: 255 255 255;         /* text on the brand colour */
     --t-scrim: 0 0 0;            /* behind a modal, at an opacity */
     --t-on-bright: 0 0 0;        /* text on bright band and status colours, in every theme */
-    --t-danger: 180 35 24;
-    --t-success: 11 102 35;
-    --t-info: 59 91 169;
-    --t-warning: 138 83 0;
-    /* TRAK-270 (Tarek, 23 Oct): "needs you" marks in a clear yellow. A mark only, never text:
+    --t-danger: 185 28 28;
+    --t-success: 4 120 87;       /* done, good */
+    --t-pitch: 5 150 105;        /* the pitch's fill and markings */
+    --t-info: 29 78 216;
+    --t-warning: 146 64 14;      /* "needs you" words */
+    /* TRAK-270 (Tarek, 23 Oct): "needs you" marks in a clear amber. A mark only, never text:
        its edge and any words beside it stay --t-warning for contrast. */
-    --t-attention: 234 179 8; /* TRAK-275: back to TRAK-270's #EAB308 (Tarek, 23 Oct) */
+    --t-attention: 245 158 11;
     --t-orange: 156 69 22;
     --t-font: Futura, 'Jost', 'Century Gothic', sans-serif;
     --t-font-mono: Futura, 'Jost', 'Century Gothic', sans-serif;
@@ -186,33 +190,34 @@
     --sheet-w: 430px;
     --rail-w: 0px;
 
-    --background: 48 18% 95%;
-    --foreground: 160 16% 12%;
+    /* The older components' colours, the same palette as the role tokens above. */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 160 16% 12%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 160 16% 12%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 136 81% 22%;
+    --primary: 222 47% 11%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 51 13% 92%;
-    --secondary-foreground: 160 16% 12%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 51 13% 92%;
-    --muted-foreground: 150 5% 36%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 136 81% 22%;
+    --accent: 222 47% 11%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 77% 40%;
+    --destructive: 0 74% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 48 15% 87%;
-    --input: 140 3% 53%;
-    --ring: 136 81% 22%;
+    --border: 213 27% 84%;
+    --input: 215 16% 47%;
+    --ring: 222 47% 11%;
 
     --radius: 0.75rem;
 
@@ -288,7 +293,7 @@
   /* TRAK-254: easier to read on a laptop. Each fixed text size a coach screen uses
      is two pixels larger (titles a little more), Arc's text sizes follow, and grey
      supporting text is one step darker. A phone keeps today's sizes. */
-  :root[data-layout="coach"] { --t-ink-3: 74 82 78; }
+  :root[data-layout="coach"] { --t-ink-3: 71 85 105; }
   :root[data-layout="coach"] .arc { --text-xs: .875rem; --text-sm: 1rem; --text-base: 1.0625rem; }
   :root[data-layout="coach"] .text-xs { font-size: .875rem; }
   :root[data-layout="coach"] .text-sm { font-size: 1rem; }

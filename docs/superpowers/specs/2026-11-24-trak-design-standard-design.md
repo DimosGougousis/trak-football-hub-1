@@ -63,7 +63,7 @@ updated to match so older components follow.
 | `--t-rail` (new) | the laptop rail | 250 250 250 | `#FAFAFA` |
 | `--t-ink` | headings, body | 15 23 42 | slate-900 |
 | `--t-ink-2` | supporting lines | 71 85 105 | slate-600 |
-| `--t-ink-3` | labels, captions | 100 116 139 | slate-500 |
+| `--t-ink-3` | labels, captions | 94 110 133 | slate-500, a touch darker so labels on `raised` chips pass 4.5:1 |
 | `--t-line` | card edges, dividers | 203 213 225 | slate-300 |
 | `--t-line-soft` (new) | hairlines inside a card | 241 245 249 | slate-100 |
 | `--t-line-strong` | text boxes, pickers | 100 116 139 | slate-500 (see note) |

@@ -48,7 +48,7 @@
 ```ts
 const EXPECTED = {
   ground: '255 255 255', surface: '255 255 255', raised: '241 245 249', rail: '250 250 250',
-  ink: '15 23 42', 'ink-2': '71 85 105', 'ink-3': '100 116 139',
+  ink: '15 23 42', 'ink-2': '71 85 105', 'ink-3': '94 110 133',
   line: '203 213 225', 'line-soft': '241 245 249', 'line-strong': '100 116 139',
   brand: '15 23 42', 'on-brand': '255 255 255',
   success: '4 120 87', pitch: '5 150 105', warning: '146 64 14', attention: '245 158 11',
