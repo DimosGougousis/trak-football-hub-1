@@ -80,3 +80,22 @@ Arc's `Button` (`@/components/arc/button/button`), with no Trak-only variants:
 | Delete | `danger` | `danger` text |
 
 Every size is at least 44 px tall, with 12 px corners and 14 px semibold text.
+
+## Frame (laptop)
+
+Arc's side rail (`src/components/arc/blocks/sidebar-rail/`), used by the coach frame (`CoachFrame`) and the player and
+parent frame (`FamilyFrame`). Set by TRAK-769.
+
+- **Rail:** 192 px open, 68 px folded (`RAIL_WIDTH`), on the `rail` colour with a `line` edge. Rows are 44 px with
+  12 px corners, 18 px icons and 14 px text; the current row has an `ink/8` fill and semibold `ink` text, other rows
+  `ink-2` with `ink/5` on hover. Brand and profile rows are 64 px.
+- **Fold:** the panel button in the top bar, or `[`, folds the rail; folded rows show their name as a tooltip. With a
+  `foldKey`, the rail remembers the person's fold on the device (`CoachFrame` uses `trak.coach.railFolded`; the family
+  frame keeps none). A window under 760 px wide always starts folded.
+- **Top bar:** 64 px, sticky, `ground` at 95% with a blur, a `line-soft` hairline under it. Left: the fold button and
+  the trail (14 px, the current page semibold). Right: the bell (44 px outlined square with its count) and "+ Create"
+  (the main button, 44 px, as wide as its word). Full-height pages fit under it (`calc(100vh - 64px)`).
+- **Squad picker:** Arc's `TeamSwitcher` with `size="compact"`: one 44 px line, "U16 · 15" (`squadPill`), a dark
+  28 px tile and a chevron. The open menu still lists each squad with its size in players.
+- **Phone and tablet:** the glass tab bar with "+" stays; the avatar opens the same rail as a sheet, with the same row
+  styles.

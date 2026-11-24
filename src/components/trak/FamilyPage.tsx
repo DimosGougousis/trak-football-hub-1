@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
+import { TOP_BAR } from '@/components/arc/blocks/sidebar-rail/sidebar-rail'
 import { PageHeader } from '@/components/arc/blocks/page-header/page-header'
 import { ArcProvider } from '@/components/arc/lib/arc-provider'
 import { Breadcrumb } from '@/components/arc/breadcrumb/breadcrumb'
@@ -30,7 +31,7 @@ export function FamilyPage({ title, status, details, from, children }: {
   const wide = useSideMenuScreen()
   const inTopBar = useFrameTrail(title)
   return <ArcProvider link={RouterLink}>
-    <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem] laptop:![--ph-bar:0px]" top={wide ? '60px' : '0px'}
+    <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem] laptop:![--ph-bar:0px]" top={wide ? `${TOP_BAR}px` : '0px'}
       title={title} status={status} details={details}
       crumbs={inTopBar ? undefined : <Breadcrumb items={[from, { label: title }]} />}>
       <div className="pt-4">{children}</div>
