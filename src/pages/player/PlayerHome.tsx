@@ -18,7 +18,7 @@ import { trackEvent } from '@/lib/telemetry'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
 import { MySeasonCard } from '@/components/player/MySeasonCard'
-import { LatestEvaluation } from '@/components/player/LatestEvaluation'
+import { LatestReport } from '@/components/player/LatestEvaluation'
 import { SeasonSoFar } from '@/components/player/SeasonSoFar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
 import { progressSummary, useEvaluationProgress } from '@/lib/evaluation-progress'
@@ -362,8 +362,8 @@ export default function PlayerHome() {
 
         {/* Coach assessments: the parent's swipe cards (TRAK-172, Imad 19 Oct), each opening
             that assessment; the coach's message on the latest stays below (TRAK-71). */}
-        {/* TRAK-441 slice 2.5: the coach's look shows the latest evaluation's bands; its note is on its own page. */}
-        {look && user && coachAssessment && <LatestEvaluation assessment={coachAssessment} readerId={user.id} />}
+        {/* TRAK-441 slice 2.5, TRAK-529: the coach's look shows the latest report's bands; the rest is on its page. */}
+        {look && user && <LatestReport childId={user.id} readerId={user.id} as="player" />}
         {look && user && <SeasonSoFar key={user.id} childId={user.id} />}
         {!look && coachAssessment && (
           <div className="mt-5">
