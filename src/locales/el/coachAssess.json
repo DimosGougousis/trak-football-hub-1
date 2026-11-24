@@ -1,6 +1,8 @@
 {
   "stepRatings": "Βαθμολογίες",
   "stepMessage": "Μήνυμα & σημείωση",
+  "stepPlayerBands": "Παίκτης & βαθμίδες",
+  "stepObjectivesNotes": "Στόχοι & σημειώσεις",
   "thePlayer": "ο παίκτης",
   "logged": " · καταγράφηκε {{time}}",
   "sessionFallback": "Δραστηριότητα",

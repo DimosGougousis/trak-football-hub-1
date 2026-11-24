@@ -32,17 +32,12 @@ import { usePlayerObjectives } from '@/components/coach/season-plan/usePlayerObj
 import { ObjectivesSection } from '@/components/coach/season-plan/Evaluation'
 import { allRated, emptyObjectives, isProgress, progressLabel, type ObjectivesEntry, type Progress } from '@/lib/objective-progress'
 
-/** TRAK-182 (Imad, 15 Oct): the assessment one step per screen. The message
-    and the private note get their own steps, so player-visible words never sit
-    beside private ones. */
+/** TRAK-559 (phone review, 23 Nov): 3 steps, not 5. The player and the bands; then the objectives (TRAK-526, only where
+    the player's squad has a shared season plan) with the message and the private note, still two boxes (Imad, 16 Oct):
+    the message (white) reaches the player, the note (yellow) only the coach; then Review, which saves. */
 const STEPS = [
-  { id: 'who', label: 'nav:player' },
-  { id: 'ratings', label: 'coachAssess:stepRatings' },
-  // TRAK-526 (Imad, 21 Nov): only where the player's squad has a shared season plan.
-  { id: 'objectives', label: 'coachAssess:stepObjectives' },
-  // Imad, 16 Oct: one step for both, still two boxes: the message (white)
-  // reaches the player, the note (yellow) only the coach, and stands out.
-  { id: 'message', label: 'coachAssess:stepMessage' },
+  { id: 'player', label: 'coachAssess:stepPlayerBands' },
+  { id: 'notes', label: 'coachAssess:stepObjectivesNotes' },
   { id: 'review', label: 'coachSchedule:stepReview' },
 ] as const
 
@@ -283,6 +278,9 @@ function CoachAssessmentForm() {
   const playerReady = !!playerId && formReady && !consentWait
   // TRAK-182 (Imad, 15 Oct): one step per screen; the review step saves.
   const [step, setStep] = useState(0)
+  // TRAK-559: the coach has gone past step 1 for this player, so a lock that comes later keeps the bands on screen.
+  const [started, setStarted] = useState(false)
+  useEffect(() => { if (step > 0) setStarted(true) }, [step])
 
   /* TRAK-526 (Imad, 21 Nov): after Ratings, how each open objective is going, as the squad evaluation asks, where the
      season plan is on and the player's squad has a shared plan. A draft keeps the answers; Met closes an objective and
@@ -321,11 +319,13 @@ function CoachAssessmentForm() {
   // TRAK-542: the coach can jump past Objectives, so the steps and Review say when one still has no answer.
   const objectivesMissing = asksObjectives && !finalCheckIn && playerObjectives.isSuccess && !allRated(openObjectives, checkIn)
   // TRAK-407: the steps' names in the language showing.
-  const steps = STEPS.filter(entry => entry.id !== 'objectives' || asksObjectives).map((entry, index) => ({ id: entry.id, label: t(entry.label),
-    error: entry.id === 'objectives' && objectivesMissing && index < step ? t('coachAssess:objectiveNoAnswer') : undefined }))
+  // Without a shared plan the second step holds the message and the note alone, and says so.
+  const steps = STEPS.map((entry, index) => ({ id: entry.id, label: t(entry.id === 'notes' && !asksObjectives ? 'coachAssess:stepMessage' : entry.label),
+    error: entry.id === 'notes' && objectivesMissing && index < step ? t('coachAssess:objectiveNoAnswer') : undefined }))
   const stepId = steps[step]?.id
   useEffect(() => {
     setConsentWait(false)
+    setStarted(false)
     if (!playerId) return
     let cancelled = false
     void supabase.rpc('coach_squad_player_consent_required' as never, { p_squad_player_id: playerId } as never)
@@ -593,7 +593,7 @@ function CoachAssessmentForm() {
             </p>
           </div>
         ) : null}
-        {stepId === 'who' && <>
+        {stepId === 'player' && <>
         {/* ---- 2. player card (sq-item) ---- */}
         {selectedPlayer ? (
           <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-line">
@@ -656,7 +656,9 @@ function CoachAssessmentForm() {
             withdrawn mid-edit, the refused save sets consentWait: the form
             locks, and everything the coach entered stays in state. */}
         <fieldset disabled={!formReady || saving || consentWait} className="contents">
-        {stepId === 'ratings' && <>
+        {/* TRAK-559: the bands sit under the player once the player can be assessed. A player waiting for a parent shows
+            none; consent withdrawn mid-edit keeps them on screen, locked by the fieldset, with what the coach set (J5). */}
+        {stepId === 'player' && formReady && (!consentWait || started) && <>
         {/* ---- 5. sliders on a light card (TRAK-229); each fill takes its band's colour ---- */}
         <div className="rounded-2xl bg-surface border border-line p-[14px_16px] space-y-5 tablet:space-y-0 tablet:grid tablet:grid-cols-2 tablet:gap-x-10 tablet:gap-y-5">
           <SliderInput label={t('coachAssess:sliderWorkRate')} value={workRate}     onChange={setWorkRate} disabled={!formReady || saving || consentWait} />
@@ -696,7 +698,7 @@ function CoachAssessmentForm() {
         </div>
 
         </>}
-        {stepId === 'objectives' && <div className="arc">
+        {stepId === 'notes' && asksObjectives && <div className="arc">
           {finalCheckIn ? <section aria-labelledby="assess-objectives" className="grid gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
               <h3 id="assess-objectives" className="text-lg font-medium text-ink">{t('coachAssess:stepObjectives')}</h3>
               <ul className="m-0 grid list-none gap-2 p-0">{finalCheckIn.map(row => <li key={row.player_objective_id ?? row.added_title} className="flex justify-between gap-3 text-sm text-ink">
@@ -709,7 +711,7 @@ function CoachAssessmentForm() {
             : <ObjectivesSection name={firstName} open={openObjectives} entry={checkIn} onChange={setCheckIn} />}
         </div>}
 
-        {stepId === 'message' && <>
+        {stepId === 'notes' && <>
         {/* ---- 7. message to the player (K9, J5) ----
             Two boxes rather than one, because the schema has two tables and the
             coach needs to see which words the player will read. Nothing copies
@@ -820,7 +822,7 @@ function CoachAssessmentForm() {
             already read is always allowed, even while the form is locked. It
             sits with the message, and on the first step when consent locks the
             rest of the steps away (TRAK-182). */}
-        {(stepId === 'message' || (stepId === 'who' && consentWait)) && sharedPublished && existingId ? (
+        {(stepId === 'notes' || (stepId === 'player' && consentWait)) && sharedPublished && existingId ? (
           <button
             type="button"
             onClick={() => void handleUnpublish()}
@@ -856,7 +858,7 @@ function CoachAssessmentForm() {
           {step > 0 && <Button size="lg" variant="secondary" className="flex-1" aria-label={t('coachSchedule:backTo', { step: steps[step - 1].label })}
             onClick={() => setStep(step - 1)}>{t('common:back')}</Button>}
           {/* The first step opens only once the player can be assessed: the form below it stays locked otherwise. */}
-          <Button size="lg" className="flex-1" disabled={(stepId === 'who' && !playerReady) || (stepId === 'objectives' && !objectivesReady)}
+          <Button size="lg" className="flex-1" disabled={(stepId === 'player' && !playerReady) || (stepId === 'notes' && !objectivesReady)}
             onClick={() => setStep(step + 1)}>{t('coachSchedule:next')}</Button>
         </>}
       </div>
