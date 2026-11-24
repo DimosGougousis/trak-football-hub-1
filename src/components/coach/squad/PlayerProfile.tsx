@@ -25,11 +25,12 @@ import { ROLE_WORD, TRAIT_WORD, shown } from '@/lib/squad/trait-words'
 import { EditIcon } from '@/components/trak/IconAction'
 import { CategoryBar } from '@/components/trak/CategoryBar'
 import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
+import { SECTION_LABEL } from '@/components/trak/standard'
 
 const FOOT = { left: 'coachSquad:footLeft', right: 'coachSquad:footRight', both: 'coachSquad:footBoth' } as const
 /** TRAK-451 (walk-through of 11 Nov): every block on the page has the same bold title, and the page's smaller cards sit
  *  inside its own card (corners and room from TRAK-464). TRAK-546: Position and roles, and About, are a card each. */
-const TITLE = 'text-base font-semibold text-ink'
+const TITLE = SECTION_LABEL
 const INNER = 'rounded-xl border border-line p-4'
 
 /** TRAK-461: while a part of the page loads, a placeholder its size stands in its place and grows into it. */
@@ -97,7 +98,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
     <PlayerFace name={player.name} size="lg" />
     <div className="grid min-w-0 gap-2">
       {/* TRAK-428: a long name wraps beside the band, never cut ("Giourkas Sei…" on a phone). */}
-      <h3 className="break-words text-xl font-medium text-ink">{player.name}</h3>
+      <h3 className="break-words text-xl font-bold tracking-[-0.01em] text-ink">{player.name}</h3>
       <p className="text-sm text-ink-2">{[player.shirt != null && `#${player.shirt}`, player.position, squad].filter(Boolean).join(' · ')}</p>
     </div>
     <span className="ml-auto"><BandChip band={player.band} move={player.move} waiting={player.waiting} /></span>
