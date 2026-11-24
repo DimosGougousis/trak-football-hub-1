@@ -10,6 +10,8 @@ import { TeamSwitcher } from '@/components/arc/team-switcher/team-switcher'
    Create or Join. */
 
 const players = (n: number) => `${n} ${n === 1 ? 'player' : 'players'}`
+/** TRAK-769 (design standard): the rail's compact pill, "U16 · 15", or just the name while sizes load. */
+export const squadPill = (name: string, count: number | undefined) => (count == null ? name : `${name} · ${count}`)
 
 export function SquadSwitcher({ coachId }: { coachId: string }) {
   const coachSquad = useCoachSquad(coachId)
@@ -29,16 +31,17 @@ export function SquadSwitcher({ coachId }: { coachId: string }) {
     },
   })
   if (!coachSquad.view) return null
-  const size = (squad: string | null) => {
+  const count = (squad: string | null) => {
     if (!sizes.data) return undefined
-    return players(squad ? sizes.data.get(squad) ?? 0 : [...sizes.data.values()].reduce((sum, n) => sum + n, 0))
+    return squad ? sizes.data.get(squad) ?? 0 : [...sizes.data.values()].reduce((sum, n) => sum + n, 0)
   }
+  const size = (squad: string | null) => { const n = count(squad); return n == null ? undefined : players(n) }
   const squads = [
-    { id: ALL_SQUADS, name: 'All squads', plan: size(null), logo: <Users aria-hidden="true" style={{ width: '.5em', height: '.5em' }} /> },
+    { id: ALL_SQUADS, name: 'All squads', plan: size(null), short: squadPill('All squads', count(null)), logo: <Users aria-hidden="true" style={{ width: '.5em', height: '.5em' }} /> },
     // The tile shows the age, "17"; the name says U17.
-    ...coachSquad.squads.map(squad => ({ id: squad, name: squad, plan: size(squad),
+    ...coachSquad.squads.map(squad => ({ id: squad, name: squad, plan: size(squad), short: squadPill(squad, count(squad)),
       logo: <span aria-hidden="true" style={{ fontSize: '.42em', fontWeight: 500 }}>{squad.replace(/\D/g, '') || squad.slice(0, 1)}</span> })),
   ]
-  return <TeamSwitcher className="arc" workspaces={squads} value={coachSquad.view} manage={false}
+  return <TeamSwitcher className="arc" size="compact" workspaces={squads} value={coachSquad.view} manage={false}
     onSwitch={async () => {}} onValueChange={coachSquad.pick} />
 }

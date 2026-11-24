@@ -228,3 +228,9 @@
 /* Trak (TRAK-324): Futura's glyphs are taller than the line; room above and below, so a truncating box never cuts a
    letter (the side menu cuts no letter, Kostas 29 Oct). */
 .triggerText .truncate, .rowText .truncate { padding-block: 2px; }
+
+/* Trak (TRAK-769, design standard): the compact pill, one 44 px line with a dark tile, in the laptop rail. */
+.trigger[data-size="compact"] { grid-template-columns: 28px minmax(0, 1fr) 14px; gap: 10px; height: 44px; padding: 0 12px 0 8px; border-radius: 12px; }
+.trigger[data-size="compact"] .triggerTile { width: 28px; height: 28px; }
+.trigger[data-size="compact"] .tile { background: var(--foreground); color: var(--surface); box-shadow: none; }
+.compactLine { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); font-weight: 600; line-height: 20px; font-variant-numeric: tabular-nums; }
