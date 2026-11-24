@@ -93,8 +93,9 @@ export default function ParentAssessment() {
                   <div className="flex flex-wrap gap-x-6">
                     {matchId && <Link to={`/parent/match/${encodeURIComponent(matchId)}`} className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand">
                       {t('common:matchDetails')} <ArrowRight size={16} aria-hidden="true" /></Link>}
+                    {/* TRAK-530: the new look lists reports, not assessments. */}
                     <Link to="/parent/assessments" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-brand">
-                      {t('common:allAssessments')} <ArrowRight size={16} aria-hidden="true" /></Link>
+                      {t('common:allReports')} <ArrowRight size={16} aria-hidden="true" /></Link>
                   </div>
                 </div>
               </div>}

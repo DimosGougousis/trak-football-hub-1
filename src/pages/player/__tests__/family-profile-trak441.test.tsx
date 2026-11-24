@@ -1,6 +1,6 @@
 /**
  * TRAK-441 slice 6 (mockup 12 Nov), behind the academy's family_look switch: the player's Profile in the coach's look.
- * Who he is, My card (the latest evaluation's bars, no number, with its date and the earlier ones) and Account (each row
+ * Who he is, his Reports (TRAK-530: each sent report, newest first, opening it; My card's evaluations are gone) and Account (each row
  * opening its place, Sign out signing out). With the switch off, today's Profile. Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -59,6 +59,10 @@ beforeEach(() => {
     table('player_parent_links', [{ parent_user_id: 'parent-1' }]),
     table('coach_shared_feedback', [{ body: NOTE, published_at: '2026-11-08T10:00:00Z' }]),
     table('notification_settings', [{ event_reminders: true }]),
+    // TRAK-530: two sent reports.
+    table('report_for_player', [['ev-sep', '2026-09-27'], ['ev-oct', '2026-10-25']].map(([id, day]) => ({ evaluation_id: id, sent_at: `${day}T18:00:00Z`, note: '',
+      report: { squad_player_id: 'squad-1', player_name: 'Giourkas Seitaridis', squad: 'U16', season_starts_on: '2026-08-01', period_from: '2026-08-01',
+        report_day: day, last_report_day: null, before_season: null, assessments: [], matches: [], objectives: [], trainings: { attended: 0, total: 0 } } }))),
     rpcRows('season_plan_for_player', [PLAN]),
     rpc('mark_season_plan_seen', () => null),
     rpc('evaluation_progress', () => [{ assessment_id: 'eval-2', due_on: '2026-11-08', objectives: PLAN.objectives.map(o => ({ id: o.id, title: o.title, status: 'on_track', history: o.history })) }]),
@@ -70,8 +74,6 @@ beforeEach(() => {
   )
 })
 afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMocks(); delete document.documentElement.dataset.layout })
-
-const BAND_WORDS = /Exceptional|Good|Steady|Developing|Difficult/ // TRAK-556: the five bands
 
 describe("TRAK-441 slice 6: the player's Profile in the coach's look", () => {
   // Live, 16 Nov: a player can't read his parent's name (the database hides it), so the row read "Your parent" and nothing.
@@ -89,20 +91,18 @@ describe("TRAK-441 slice 6: the player's Profile in the coach's look", () => {
     expect(await within(row).findByText('Linked')).toBeInTheDocument()
   })
 
-  it('who he is, My card with the latest bars and its date, earlier evaluations, and Account', async () => {
+  it('who he is, his reports newest first, and Account', async () => {
     screenIs(false)
     renderApp('/player/profile')
     expect(await screen.findByText('Right back · U16', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(await screen.findByText('Rehearsal FC · Coach Otto Rehhagel')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Profile' })).toBeInTheDocument()
 
-    const card = await screen.findByRole('region', { name: 'My card' })
-    expect(within(card).getByText('Sun 8 Nov')).toBeInTheDocument()
-    expect(within(card).getAllByText(BAND_WORDS)).toHaveLength(6)
-    expect(within(card).queryByText(/^\d+(\.\d+)?$/)).toBeNull()
-    expect(card.textContent).not.toMatch(/\d\.\d/)
-    expect(within(card).getByRole('link', { name: /Open evaluation/ })).toHaveAttribute('href', '/player/feedback/eval-2')
-    expect(within(card).getByRole('link', { name: /Sat 12 Sep/ })).toHaveAttribute('href', '/player/feedback/eval-1')
+    const reports = await screen.findByRole('region', { name: 'Reports' })
+    expect(within(reports).getAllByRole('link').map(link => [link.textContent, link.getAttribute('href')]))
+      .toEqual([['October report25 Oct', '/player/report/ev-oct'], ['September report27 Sep', '/player/report/ev-sep']])
+    expect(screen.queryByRole('region', { name: 'My card' })).toBeNull()
+    expect(document.querySelector('a[href*="/player/feedback/"]')).toBeNull()
 
     const account = screen.getByRole('region', { name: 'Account' })
     expect(await within(account).findByRole('link', { name: /Calendar.*In your calendar/ })).toHaveAttribute('href', '/settings#calendar')

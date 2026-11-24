@@ -187,10 +187,11 @@ export function assessmentAlertTitle(coachName: string | null | undefined): stri
   return name && name !== 'Coach' ? `New assessment from Coach ${name}` : 'New assessment from your coach'
 }
 
-/** Newest first. Awards are left out on Home's bell while awards are parked (TRAK-31). */
+/** Newest first. Awards are left out on Home's bell while awards are parked (TRAK-31); assessments in the new look,
+ *  where the bell says the latest report instead (TRAK-530). */
 export function parentAlerts(matches: ParentMatch[], development: ParentDevelopment | undefined,
-  { awards = true, events = [], eventsFirstSeen = {} }:
-  { awards?: boolean, events?: PlayerEvent[], eventsFirstSeen?: Record<string, number> } = {}): ParentAlert[] {
+  { awards = true, assessments = true, events = [], eventsFirstSeen = {} }:
+  { awards?: boolean, assessments?: boolean, events?: PlayerEvent[], eventsFirstSeen?: Record<string, number> } = {}): ParentAlert[] {
   const coach = (id: string | null) => (id && development?.coachNames[id]) || 'Coach'
   return [
     // Activity is ordered by when it was recorded, including backfilled games.
@@ -201,7 +202,7 @@ export function parentAlerts(matches: ParentMatch[], development: ParentDevelopm
         id: `match-${match.id}`, kind: 'match', targetId: match.id, title: 'Match logged', date: match.created_at,
         description: `vs ${match.opponent || match.competition || 'Unknown'}${match.team_score != null && match.opponent_score != null ? ` · ${match.team_score}–${match.opponent_score}` : ''}`,
       })),
-    ...(development?.assessments ?? []).map((assessment): ParentAlert => ({
+    ...(assessments ? development?.assessments ?? [] : []).map((assessment): ParentAlert => ({
       id: `assessment-${assessment.id}`, kind: 'assessment', targetId: assessment.id, date: assessment.created_at,
       title: assessmentAlertTitle(assessment.coach_user_id ? development?.coachNames[assessment.coach_user_id] : null),
       description: assessment.coach_rating == null ? 'Not assessed' : bandConfig(scoreToBand(assessment.coach_rating)).word,

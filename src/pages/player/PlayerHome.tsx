@@ -291,7 +291,7 @@ export default function PlayerHome() {
     </MobileShell>
   )
 
-  const bell = user && <PlayerHomeBell key={user.id} userId={user.id}
+  const bell = user && <PlayerHomeBell key={user.id} userId={user.id} look={look}
     events={loadedFor.current?.userId === user.id ? upcomingEvents : []}
     assessment={loadFailed ? null : assessmentAlert} assessmentLoadFailed={feedbackLoadFailed || loadFailed}
     onRetry={() => setReloadKey(k => k + 1)} />

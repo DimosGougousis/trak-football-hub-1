@@ -5,7 +5,8 @@ import { CategoryBar } from '@/components/trak/CategoryBar'
 import { LoadError } from '@/components/trak/LoadError'
 import { wasOpened } from '@/lib/games/news'
 import { useTranslation } from '@/lib/i18n'
-import { ratingsOn, reportMonth, useFamilyReports } from '@/lib/player-report'
+import { ratingsOn, reportDate, reportMonth, useFamilyReports } from '@/lib/player-report'
+import { FamilyRows, familyH2 } from '@/components/trak/FamilyPage'
 import type { ParentAssessment } from '@/lib/parent-assessments'
 
 const CATEGORIES = [['coachAssess:sliderWorkRate', 'work_rate'], ['coachHome:attributeTactical', 'tactical'], ['coachHome:attributeAttitude', 'attitude'],
@@ -50,4 +51,16 @@ export function LatestReport({ childId, readerId, as }: { childId: string; reade
       {t('common:openReport')} <ArrowRight size={16} aria-hidden="true" />
     </Link>
   </section>
+}
+
+/** TRAK-530 (Reports 7/10): the child's sent reports, newest first, each opening its report: the player's and the
+ *  parent's Profile, and the parent's All reports. Nothing before the first report. */
+export function ReportsList({ childId, as, title }: { childId: string; as: 'player' | 'parent'; title?: string }) {
+  const { t } = useTranslation()
+  const reports = useFamilyReports(childId, as === 'player')
+  if (reports.isError) return <LoadError what={title ?? t('coachSquad:sentReports')} onRetry={() => { void reports.refetch() }} />
+  if (!reports.data?.length) return null
+  const rows = <FamilyRows rows={reports.data.map(r => ({ key: r.evaluation_id, to: `/${as}/report/${encodeURIComponent(r.evaluation_id)}`,
+    label: t('coachSquad:sentReportName', { month: reportMonth(r.report.report_day) }), value: reportDate(r.report.report_day) }))} />
+  return title ? <section aria-label={title} className="grid gap-2"><h2 className={familyH2}>{title}</h2>{rows}</section> : rows
 }

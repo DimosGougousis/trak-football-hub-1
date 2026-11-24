@@ -22,7 +22,8 @@ import { FamilyRows, familyCard, familyColumns, familyH2, familyStack } from '@/
 import { hasOwnConsent } from '@/lib/parent-consent-withdrawal'
 import { useMySeason } from '@/lib/my-season'
 import { languageOf, useLanguage, useTranslation } from '@/lib/i18n'
-import type { ParentChild } from '@/lib/parent-data'
+import { firstName, type ParentChild } from '@/lib/parent-data'
+import { ReportsList } from '@/components/player/LatestEvaluation'
 
 export default function ParentProfilePage() {
   const { user, profile } = useAuth()
@@ -146,7 +147,7 @@ function ProfileLook() {
   const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { children, parentId } = useParentChildren()
+  const { children, parentId, selectedChild } = useParentChildren()
   const academy = useFamilyAcademy('parent')
   const calendar = useCalendarLinkStatus()
   const emails = useQuery({
@@ -183,6 +184,9 @@ function ProfileLook() {
                 </ul>}
               </ParentFamilyContent>
             </section>
+            {/* TRAK-530: the chosen child's reports, each opening its report. */}
+            {selectedChild && <ReportsList key={selectedChild.id} childId={selectedChild.id} as="parent"
+              title={t('coachSquad:sentReportsWhat', { name: firstName(selectedChild) })} />}
           </div>
           <div className={familyStack}>
             <section aria-label={t('settings:account')} className="grid gap-2">
