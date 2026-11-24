@@ -72,3 +72,10 @@ describe('the standard pieces', () => {
     expect(classes).not.toMatch(/(slate|emerald|amber|gray)-\d/)
   })
 })
+
+describe('SectionCard heading level', () => {
+  it('can title a card with an h2 where no label sits above it', () => {
+    render(<SectionCard title="Locked" titleAs="h2">Body</SectionCard>)
+    expect(screen.getByRole('heading', { level: 2, name: 'Locked' })).toBeInTheDocument()
+  })
+})

@@ -113,3 +113,10 @@ describe('locked Formations shows how many are placed', () => {
     expect(el.fmPlacedCaption).toBeTruthy()
   })
 })
+
+describe('heading order (step 3 review)', () => {
+  it("the locked card's title is the page's next heading, an h2", () => {
+    show([], [...PLACED, player('p3', 'Liam Synthetic', null, 10)])
+    expect(screen.getByRole('heading', { level: 2, name: 'Place 1 player to open Formations' })).toBeInTheDocument()
+  })
+})

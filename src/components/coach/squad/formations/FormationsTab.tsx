@@ -114,7 +114,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   // Arc's styles apply inside .arc; a phone's frame doesn't give one (the laptop's does), so each view brings its own.
   // Design standard step 3: how many are placed, as a number block, until everyone is.
   const placed = consented.length - unplaced
-  if (unplaced > 0) return <div className="arc"><SectionCard title={t('coachSquad:fmPlaceToOpen', { count: unplaced })}>
+  if (unplaced > 0) return <div className="arc"><SectionCard titleAs="h2" title={t('coachSquad:fmPlaceToOpen', { count: unplaced })}>
     <NumberBlock value={`${placed} / ${consented.length}`} caption={t('coachSquad:fmPlacedCaption')} progress={consented.length ? placed / consented.length : 0} tone="needs" />
     <p className="max-w-prose text-[15px] text-ink-2">{t('coachSquad:fmNeedsPosition', { squad })}</p>
     <div><Button variant="secondary" onClick={() => navigate('/coach/season-plan/positions')}>{t('coachSquad:fmGoPositions')}</Button></div>
