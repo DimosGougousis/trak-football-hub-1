@@ -6,12 +6,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowDown, ArrowUp, Search, X } from "lucide-react";
 import { PlayerFace } from "@/components/trak/PlayerFace";
 import { GlassSegmented } from "../../glass-segmented/glass-segmented";
-import { Sparkline } from "../../sparkline/sparkline";
 import { motionTokens } from "../../lib/motion-tokens";
 import { BANDS } from "@/lib/types";
 import styles from "./squad-directory.module.css";
 import { useTranslation } from "@/lib/i18n";
 import { bandWord } from "@/lib/band-words";
+import { SECTION_LABEL } from "@/components/trak/standard";
 
 export type PositionGroup = "GK" | "DEF" | "MID" | "ATT";
 
@@ -31,19 +31,20 @@ export interface SquadPlayer {
   waiting?: boolean;
   /** Trak (TRAK-266): what the coach still owes this player, as a badge in the colour key. */
   flag?: ReactNode;
-  /** Trak (Imad, 23 Oct): overall ratings, oldest first, drawn as the row's sparkline. */
-  trend?: number[];
 }
 
-const FILTERS = ["All", "GK", "DEF", "MID", "ATT"] as const;
+/** Design standard step 3 (Dimos, 24 Nov): the lines from the front down, the list's groups and its filters alike. */
+export const GROUP_ORDER = ["ATT", "MID", "DEF", "GK"] as const;
+const GROUP_WORD = { ATT: "coachSquad:groupATT", MID: "coachSquad:groupMID", DEF: "coachSquad:groupDEF", GK: "coachSquad:groupGK" } as const;
+const FILTERS = ["All", ...GROUP_ORDER] as const;
 const FILTER_WORD = { All: "coachSquad:filterAll", GK: "coachSquad:filterGK", DEF: "coachSquad:filterDEF", MID: "coachSquad:filterMID", ATT: "coachSquad:filterATT" } as const;
 type Filter = (typeof FILTERS)[number];
 
 export function BandChip({ band, move = 0, waiting = false }: { band: string | null; move?: -1 | 0 | 1; waiting?: boolean }) {
   const { t } = useTranslation();
   const config = BANDS.find(entry => entry.word === band);
-  if (waiting) return <span className={styles.chip} data-empty="">{t("coachSquad:waitingForConsent")}</span>;
-  if (!config) return <span className={styles.chip} data-empty="">{t("coachSquad:notAssessed")}</span>;
+  if (waiting) return <span className={styles.chip} data-tone="needs">{t("coachSquad:waitingForConsent")}</span>;
+  if (!config) return <span className={styles.chip} data-empty="" data-tone="neutral">{t("coachSquad:notAssessed")}</span>;
   return <span className={styles.chip} style={{ background: config.bg, borderColor: config.border, color: config.text }}>
     {bandWord(config.word)}
     {move === 1 && <ArrowUp size={12} strokeWidth={2.2} aria-label={t("coachSquad:up")} />}
@@ -72,6 +73,10 @@ export function SquadDirectory({ title, players, summary, onOpen }: {
 
   const needle = query.trim().toLowerCase();
   const visible = players.filter(player => (filter === "All" || player.group === filter) && `${player.name} ${player.position} ${player.shirt ?? ""}`.toLowerCase().includes(needle));
+  // Design standard step 3: the visible players by line, Attackers first; no position yet last; empty lines left out.
+  const byShirt = (a: SquadPlayer, b: SquadPlayer) => (a.shirt ?? 999) - (b.shirt ?? 999) || a.name.localeCompare(b.name);
+  const groups = [...GROUP_ORDER, null].map(group => ({ group, players: visible.filter(player => player.group === group).sort(byShirt) }))
+    .filter(entry => entry.players.length > 0);
 
   function reset() {
     setQuery("");
@@ -103,23 +108,25 @@ export function SquadDirectory({ title, players, summary, onOpen }: {
       <div className={styles.listPane}>
         <ul className={styles.peopleList} aria-label={t("coachSquad:tabPlayers")}>
           <AnimatePresence mode="popLayout" initial={false}>
-            {visible.map(player => {
-              return <motion.li key={player.id} layout={reduce ? false : "position"} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }}
+            {groups.flatMap(({ group, players: members }) => [
+              // The line's label sits in the one list as a row of its own, so the list still holds one item per player.
+              <motion.li key={`group-${group ?? "none"}`} role="presentation" className={styles.groupRow} layout={reduce ? false : "position"}
+                initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: reduce ? 0 : motionTokens.duration.exit } }}
+                transition={{ layout: listTransition, opacity: { duration: reduce ? 0 : motionTokens.duration.fast } }}>
+                <h3 className={SECTION_LABEL}>{t(group ? GROUP_WORD[group] : "coachSquad:noPositionYet")} <span className="tabular-nums">{members.length}</span></h3>
+              </motion.li>,
+              ...members.map(player => <motion.li key={player.id} layout={reduce ? false : "position"} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }}
                 exit={{ opacity: 0, transition: { duration: reduce ? 0 : motionTokens.duration.exit } }}
                 transition={{ layout: listTransition, opacity: { duration: reduce ? 0 : motionTokens.duration.fast } }}>
                 <button type="button" className={styles.personRow} onClick={() => onOpen(player)}>
                   <PlayerFace name={player.name} />
                   <span className={styles.personText}><span className={styles.personName}>{player.name}</span><span className={styles.personRole}>{player.position}{player.shirt != null ? ` · #${player.shirt}` : ""}</span></span>
                   {player.flag}
-                  {/* Trak (Imad, 23 Oct): a sparkline of the player's ratings in place of the band chip; under two there's no line. */}
-                  {player.waiting ? <BandChip band={null} waiting />
-                    : player.trend && player.trend.length >= 2 ? <span className={styles.trend}>
-                      <Sparkline data={player.trend} label={t("coachSquad:lastRatings", { name: player.name, count: player.trend.length })}
-                        value={player.trend.map(score => score.toFixed(1)).join(", ")} width={64} height={24} area={false} interactive={false} />
-                    </span> : null}
+                  {/* Design standard step 3 (Dimos, 24 Nov): no ratings graph beside a player; a waiting player still says so. */}
+                  {player.waiting && <BandChip band={null} waiting />}
                 </button>
-              </motion.li>;
-            })}
+              </motion.li>),
+            ])}
           </AnimatePresence>
         </ul>
         {visible.length === 0 && <div className={styles.empty}>
