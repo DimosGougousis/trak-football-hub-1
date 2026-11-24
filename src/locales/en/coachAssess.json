@@ -1,6 +1,8 @@
 {
   "stepRatings": "Ratings",
   "stepMessage": "Message & note",
+  "stepPlayerBands": "Player & bands",
+  "stepObjectivesNotes": "Objectives & notes",
   "thePlayer": "the player",
   "logged": " · logged {{time}}",
   "sessionFallback": "Session",
