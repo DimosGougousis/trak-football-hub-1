@@ -8,6 +8,10 @@ export interface CoachFrame {
   subscribeSaved: (listener: () => void) => () => void
 }
 
+/** TRAK-560: the room a phone's bottom sheet leaves under it, so it sits above the frame's floating tab bar: the bar's
+ *  12 px lift, its 62 px height (Arc's glass tab bar) and the phone's home-indicator strip. 64 px was the old flat bar. */
+export const ABOVE_TAB_BAR = 'calc(74px + env(safe-area-inset-bottom, 0px))'
+
 export const CoachFrameContext = createContext<CoachFrame | null>(null)
 
 export const useCoachFrame = () => useContext(CoachFrameContext)
