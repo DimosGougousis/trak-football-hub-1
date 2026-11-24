@@ -315,7 +315,7 @@ function useMatchPlans(coachId: string, ids: string[]) {
 const VERDICT_TONE = { Good: 'success', Watch: 'warning', 'At risk': 'danger' } as const
 /** TRAK-551 (Kostas, 21 Nov: calmer): the donut in shades of Trak green, one per season objective (a plan has at most
  *  three), and the same colour as a square beside each objective, so the two can be matched. */
-const OBJECTIVE_GREENS = ['rgb(var(--t-brand))', 'color-mix(in oklab, rgb(var(--t-brand)) 55%, rgb(var(--t-surface)))',
+const OBJECTIVE_GREENS = ['rgb(var(--t-success))', 'color-mix(in oklab, rgb(var(--t-success)) 55%, rgb(var(--t-surface)))',
   'color-mix(in oklab, rgb(var(--t-brand)) 28%, rgb(var(--t-surface)))']
 const greenOf = (index: number) => OBJECTIVE_GREENS[index % OBJECTIVE_GREENS.length]
 

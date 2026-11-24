@@ -51,7 +51,7 @@ function ringClass(player: BoardPlayer, fit: Fit) {
 }
 
 function Markings() {
-  return <svg viewBox="0 0 100 125" preserveAspectRatio="none" className="absolute inset-0 size-full text-brand" aria-hidden="true">
+  return <svg viewBox="0 0 100 125" preserveAspectRatio="none" className="absolute inset-0 size-full text-pitch" aria-hidden="true">
     <g fill="none" stroke="currentColor" strokeOpacity={0.25} strokeWidth={0.6}>
       <rect x="1" y="1" width="98" height="123" rx="2" />
       <line x1="1" y1="62.5" x2="99" y2="62.5" />
@@ -67,7 +67,7 @@ function Markings() {
 export function BoardPitch({ label, shape, format, place, className = '' }: {
   label: string; shape: string; format: number; place: (slot: number, at: CSSProperties) => ReactNode; className?: string
 }) {
-  return <div className={`relative mx-auto aspect-[4/5] w-full max-w-[460px] overflow-hidden rounded-xl border border-line bg-brand/5 ${className}`}
+  return <div className={`relative mx-auto aspect-[4/5] w-full max-w-[460px] overflow-hidden rounded-xl border border-line bg-pitch/5 ${className}`}
     role="group" aria-label={label}>
     <Markings />
     {slotsOf(shape).slice(0, format).map(({ slot, x, y }) => place(slot, { left: `${x}%`, top: `${topOf(y)}%` }))}
@@ -83,7 +83,7 @@ export function BoardFace({ name, ring = '', done = false, context = false, abse
     <PlayerFace name={name} size={size} aria-hidden="true" />
     {absent && <TriangleAlert size={14} aria-hidden="true" data-mark="absent" className="absolute -left-1.5 -top-1.5 rounded-full bg-surface text-warning" />}
     {context && <span aria-hidden="true" data-mark="context" className={`${MARK} -right-1.5 -top-1.5 bg-ink font-serif italic text-surface`}>i</span>}
-    {done && <span aria-hidden="true" data-mark="done" className={`${MARK} -bottom-1.5 -right-1.5 bg-brand text-on-brand`}><Check size={10} strokeWidth={3} /></span>}
+    {done && <span aria-hidden="true" data-mark="done" className={`${MARK} -bottom-1.5 -right-1.5 bg-success text-on-brand`}><Check size={10} strokeWidth={3} /></span>}
   </span>
 }
 
