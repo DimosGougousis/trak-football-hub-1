@@ -1,20 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronUp, Pencil } from 'lucide-react'
-import { Alert } from '@/components/arc/alert/alert'
-import { Button } from '@/components/arc/button/button'
+import {
+  AlertTriangle, ArrowUpRight, BellRing, CalendarRange, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronRight, Clock, Pencil, Plus,
+  Printer, Share2, SlidersHorizontal, UserX,
+} from 'lucide-react'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { PlayerFace } from '@/components/trak/PlayerFace'
+import { PageTop } from '@/components/coach/PageTop'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
 import { PositionAndRolesSheet } from '@/components/coach/squad/PositionAndRolesSheet'
-import { isPosition, positionsBoard } from '@/lib/positions'
+import { useFormations } from '@/components/coach/squad/formations/useFormations'
+import { POSITIONS, isPosition, positionsBoard } from '@/lib/positions'
+import { shortPosition, slotPosition } from '@/lib/squad/formation-board'
 import {
-  changesText, lastShared, loadRemovedSeasonObjectives, notSharedYet, removedSeasonObjectivesKey, seasonPlanKey, shareSeasonPlan, shortDate,
-  type SeasonObjective, type SeasonPlan,
+  changesText, lastShared, loadRemovedSeasonObjectives, notSharedYet, phaseLabel, removedSeasonObjectivesKey, seasonPlanKey, shareSeasonPlan,
+  shortDate, type SeasonObjective, type SeasonPlan,
 } from '@/lib/season-plan'
+import { defaultFormation, missingFirst, nextReportText, pitchOf } from '@/lib/season-plan-page'
 import type { Tables } from '@/integrations/supabase/types'
 import { isWatchRule, ruleText } from '@/lib/watch-first'
 import { PlayerObjectivesSheet } from './PlayerObjectivesSheet'
@@ -22,24 +28,65 @@ import { usePlayerObjectives } from './usePlayerObjectives'
 import { useWatchList, useWatchPlayers } from './useWatching'
 import { WatchBadge } from './WatchFirst'
 import { useSquadEvaluations } from './useEvaluation'
-import { nextDateLine, rhythmOf, rhythmText } from '@/lib/evaluation'
-import { EditIcon } from '@/components/trak/IconAction'
+import { rhythmOf, rhythmText } from '@/lib/evaluation'
 
 /* TRAK-356 (Season plan 8/18, spec TRAK-348): View plan. Once shared, the set-up never comes back: the plan reads part
-   by part, each with its Edit, one screen each (Tarek, 1 Nov). Edits save straight away and wait under "Not shared
-   yet" until the coach shares the changes (Tarek, 6 Nov: a list of changes). Positions are edited in Squad (PLAN.md);
-   a player's objectives in their sheet. A season objective or player objective removed after sharing stays in its
-   history, with its dates. Player objectives fold, so the rest of the plan is a short scroll away (Tarek, 2 Nov).
-   Watching (TRAK-355) lists who is watched first, with the squad's reminder and its Edit; Give objectives opens their
-   sheet, or their position first. Home's Set up for a watched player lands here with their sheet open (?player=).
-   TRAK-364: the Season card also says how often each player is evaluated, and when next, with its own Edit. */
+   by part, each with its Edit. Edits save straight away and wait under "Not shared yet" until the coach shares the
+   changes (Tarek, 6 Nov). Positions are edited in Squad; a player's objectives in their sheet. A season objective or
+   player objective removed after sharing stays in its history, with its dates. Watching (TRAK-355) lists who is watched
+   first. Home's Set up for a watched player lands here with their sheet open (?player=).
+   Pitch-ready page (Tarek, 24 Nov, season_plan_pitch_ready_mockup.html, its look taken literally): a header with the
+   squad, the share state, Share and Print; one schedule strip with the next report; the season objectives as three
+   cards by phase of play; Squad readiness: Positions on the squad's default formation (Squad › Formations) with a
+   bench and a list, and Player objectives with the first player missing one, players without one listed first.
+   Share Plan shares the changes (no link: the plan is read in the app). Print hides everything but this page. */
 
 type Player = Tables<'squad_players'>
 const SHARE_FAILED = "Couldn't share the changes. Check your connection and try again."
 const WATCH_FAILED = "Couldn't start watching. Check your connection and try again."
-const players = (n: number) => `${n} ${n === 1 ? 'player' : 'players'}`
+const PREVIEW = 4
 const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-const card = 'grid gap-3 rounded-2xl border border-line bg-surface p-5'
+const shortOf = (position: string | null) => POSITIONS.find(p => p.value === position)?.short ?? '–'
+const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0]
+
+// The mockup's look, kept in one place.
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+const CARD = 'rounded-2xl border-2 border-slate-300 bg-white shadow-sm'
+const BTN = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition-colors hover:border-slate-900 disabled:opacity-50 print:hidden ${FOCUS}`
+const BTN_DARK = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50 print:hidden ${FOCUS}`
+const GOOD = 'inline-flex items-center gap-1 rounded-lg border-2 border-green-700 bg-green-50 px-2.5 py-1 text-xs font-extrabold text-green-800'
+const WAIT = 'inline-flex items-center gap-1 rounded-lg border-2 border-amber-500 bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-950'
+const PILL = (on: boolean) => `min-h-[38px] rounded-lg border-2 px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${on ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 hover:border-slate-900'}`
+const PHASE_THEME: Record<string, { top: string; badge: string; dot: string }> = {
+  in_possession: { top: 'border-t-green-600', badge: 'border-green-700 bg-green-50 text-green-800', dot: 'bg-green-600' },
+  out_of_possession: { top: 'border-t-blue-700', badge: 'border-blue-700 bg-blue-50 text-blue-900', dot: 'bg-blue-700' },
+  transition: { top: 'border-t-amber-500', badge: 'border-amber-500 bg-amber-50 text-amber-950', dot: 'bg-amber-500' },
+}
+const NO_PHASE_THEME = { top: 'border-t-slate-900', badge: 'border-slate-700 bg-slate-100 text-slate-900', dot: 'bg-slate-900' }
+
+function SectionHeading({ id, bar, children }: { id: string; bar: string; children: ReactNode }) {
+  return <div className="flex items-center gap-2.5">
+    <span aria-hidden="true" className={`h-6 w-2.5 rounded-sm ${bar}`} />
+    <h2 id={id} className="text-sm font-black uppercase tracking-wider text-slate-900 sm:text-base">{children}</h2>
+  </div>
+}
+
+function Meter({ done, of, label, good }: { done: number; of: number; label: string; good: boolean }) {
+  const pct = of ? Math.round((done / of) * 100) : 0
+  return <div className="grid gap-2">
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="flex items-baseline gap-2">
+        <span className="whitespace-nowrap text-4xl font-black tracking-tight text-slate-900 tabular-nums">{done} / {of}</span>
+        <span className="text-sm font-bold text-slate-600">{label}</span>
+      </span>
+      <span className={`text-sm font-black ${good ? 'text-green-700' : 'text-amber-700'}`}>{pct}%</span>
+    </div>
+    <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={of} aria-valuenow={done}
+      className="h-3 w-full overflow-hidden rounded-full border border-slate-300 bg-slate-200">
+      <div className={`h-full rounded-full transition-all duration-300 ${good ? 'bg-green-600' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
+    </div>
+  </div>
+}
 
 export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   coachId: string
@@ -53,10 +100,13 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   const objectives = usePlayerObjectives(coachId)
   const watching = useWatchList(coachId, roster)
   const watch = useWatchPlayers(coachId)
+  const formations = useFormations(coachId, squad)
   const removed = useQuery({ queryKey: removedSeasonObjectivesKey(coachId, plan.id), queryFn: () => loadRemovedSeasonObjectives(plan.id) })
   const evaluation = useSquadEvaluations(coachId, [squad])
   const [openId, setOpenId] = useState<string | null>(null)
-  const [playersOpen, setPlayersOpen] = useState(false)
+  const [unit, setUnit] = useState<string>('ALL')
+  const [view, setView] = useState<'pitch' | 'list'>('pitch')
+  const [showAll, setShowAll] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const share = useMutation({
     mutationFn: () => shareSeasonPlan(plan.id, false),
@@ -72,59 +122,113 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   const asked = useRef(params.get('player'))
   useEffect(() => {
     if (!asked.current || roster.isPending) return
-    if (roster.players.some(p => p.id === asked.current)) {
-      setOpenId(asked.current)
-      setPlayersOpen(true)
-    }
+    if (roster.players.some(p => p.id === asked.current)) setOpenId(asked.current)
     asked.current = null
     setParams(current => { const next = new URLSearchParams(current); next.delete('player'); return next }, { replace: true })
   }, [roster.isPending, roster.players, setParams])
 
-  if (roster.error || objectives.error || removed.error) {
-    return <LoadError what="your season plan" onRetry={() => { roster.retry(); void objectives.refetch(); void removed.refetch() }} />
-  }
-  if (roster.isPending || objectives.isPending || removed.isPending) return <LoadingSkeleton label="Loading your season plan…" lines={4} className="pt-2" />
-
   const names = new Map(roster.players.map(p => [p.id, p.player_name]))
   const changes = notSharedYet(plan, id => names.get(id))
-  const board = positionsBoard(roster.players, roster.consentPending)
-  const placed = board.lines.flatMap(line => line.players)
-  const withSome = placed.filter(p => objectives.of(p.id).length > 0).length
-  const opened = roster.players.find(p => p.id === openId)
   const shared = lastShared(plan)
+  const board = positionsBoard(roster.players, roster.consentPending)
+  const header = (actions: boolean) => (
+    <PageTop title="Season plan" trail={<CoachTrail current="Season plan" />}
+      pill={<>
+        <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-slate-900 bg-white px-3 py-1.5 text-xs font-extrabold tracking-tight text-slate-900 sm:text-sm">
+          {squad}{roster.isPending ? '' : ` · ${board.total} Players`}
+        </span>
+        {changes.length
+          ? <span className={`${WAIT} px-3 py-1.5 sm:text-sm`}><AlertTriangle aria-hidden size={16} strokeWidth={2.5} className="text-amber-700" />Changes not shared</span>
+          : <span className={`${GOOD} px-3 py-1.5 sm:text-sm`}><CheckCircle2 aria-hidden size={16} strokeWidth={2.5} className="text-green-700" />Shared{shared ? ` · ${shortDate(shared)}` : ''}</span>}
+      </>}>
+      {actions && <div className="flex flex-wrap items-center gap-2.5 print:hidden">
+        <button type="button" className={BTN} disabled={share.isPending}
+          onClick={() => { setProblem(null); if (changes.length) share.mutate(); else toast('Everything is shared.') }}>
+          <Share2 aria-hidden size={16} strokeWidth={2.25} />{share.isPending ? 'Sharing…' : 'Share Plan'}
+        </button>
+        <button type="button" className={BTN} onClick={() => window.print()}>
+          <Printer aria-hidden size={16} strokeWidth={2.25} />Print / Pitch Sheet
+        </button>
+      </div>}
+    </PageTop>
+  )
+
+  // The pitch is a bonus: a formation that fails to load leaves the list, never the whole plan.
+  if (roster.error || objectives.error || removed.error) {
+    return <>{header(false)}<LoadError what="your season plan" onRetry={() => { roster.retry(); void objectives.refetch(); void removed.refetch() }} /></>
+  }
+  if (roster.isPending || objectives.isPending || removed.isPending || formations.isPending) {
+    return <>{header(false)}<LoadingSkeleton label="Loading your season plan…" lines={4} className="pt-2" /></>
+  }
+
+  const listed = [...board.lines.flatMap(line => line.players), ...board.unplaced]
+  const placed = board.lines.flatMap(line => line.players)
+  const count = (p: Player) => objectives.of(p.id).length
+  const missing = placed.filter(p => count(p) === 0)
+  const sorted = missingFirst(placed, count)
+  const visible = showAll ? sorted : sorted.slice(0, PREVIEW)
+  const opened = roster.players.find(p => p.id === openId)
   const plain = seasonObjectives.map(o => ({ id: o.id, title: o.title }))
   const watchOf = new Map(watching.list.map(w => [w.playerId, w]))
   const watched = roster.players.filter(p => watchOf.has(p.id))
   const rule = watching.list[0]?.rule ?? (isWatchRule(plan.watch_rule) ? plan.watch_rule : 't2')
+  const formation = defaultFormation(formations.data ?? [])
+  const pitch = formation ? pitchOf(formation, listed) : null
+  const showPitch = !!pitch && view === 'pitch'
+  const dim = (p: Player) => unit !== 'ALL' && shortOf(p.position) !== unit
+  const { every, day: evalDay } = rhythmOf(plan)
+  const mine = evaluation.list.find(e => e.squad === squad)
   // The sheets' Watch first, as in the set-up steps: watching (again) closes the sheet.
   const watchAction = (id: string) => ({ label: watchOf.has(id) ? 'Keep watching' as const : 'Watch first' as const, pending: watch.isPending,
     onWatch: () => watch.mutate([id], { onSuccess: () => setOpenId(null), onError: () => setProblem(WATCH_FAILED) }) })
 
-  // TRAK-455: a pencil, its full name read out.
-  const edit = (label: string, onClick: () => void) => <EditIcon label={label} onClick={onClick} />
-  const row = (player: Player) => {
+  const dot = (spot: NonNullable<typeof pitch>['spots'][number]) => {
+    const p = spot.player
+    const none = count(p) === 0
+    return <button key={spot.slot} type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
+      aria-label={`${p.player_name}, ${shortPosition(slotPosition(formation!.shape, spot.slot))}${none ? ', no objective yet' : ''}`}
+      style={{ left: `${spot.x}%`, top: `${100 - spot.y}%` }}
+      className={`absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-lg transition-all ${FOCUS} ${dim(p) ? 'scale-95 opacity-25' : 'hover:scale-105'}`}>
+      <span className={`relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white text-xs font-black text-slate-900 shadow-sm ${none ? 'border-amber-500 ring-2 ring-amber-400' : 'border-slate-900'}`}>
+        {shortPosition(slotPosition(formation!.shape, spot.slot))}
+        {none && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-white">!</span>}
+      </span>
+      <span className="whitespace-nowrap rounded border border-slate-300 bg-white/95 px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-slate-900 shadow-sm">{lastName(p.player_name)}</span>
+    </button>
+  }
+
+  const playerRow = (player: Player) => {
     const held = objectives.of(player.id)
     const gone = objectives.removedOf(player.id)
+    const has = held.length > 0
     return <li key={player.id}>
       <button type="button" onClick={() => setOpenId(player.id)} aria-haspopup="dialog"
-        className="flex w-full items-center gap-3 rounded-lg py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <PlayerFace name={player.player_name} size="sm" />
-        <span className="grid min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-sm font-medium text-ink">{player.player_name}</span>
-            <WatchBadge watch={watchOf.get(player.id)} />
+        className={`flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 sm:items-center ${FOCUS}`}>
+        <span className="flex min-w-0 items-start gap-3">
+          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-black ${has ? 'border-slate-300 bg-slate-100 text-slate-900' : 'border-amber-400 bg-amber-100 text-amber-900'}`}>
+            {shortOf(player.position)}
           </span>
-          <span className="text-xs text-ink-3">{held.length ? held.map(o => o.title).join(' · ') : 'No objective yet'}</span>
-          {gone.length > 0 && <span className="text-xs text-ink-3">Removed: {gone.map(o => `${o.title} (${shortDate(o.removed)})`).join(' · ')}</span>}
+          <span className="grid min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-extrabold text-slate-900">{player.player_name}</span>
+              {has ? <span className="rounded border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-800">{held.length} obj</span>
+                : <span className="rounded border border-amber-400 bg-amber-100 px-2 py-0.5 text-[11px] font-extrabold text-amber-900">Missing</span>}
+              <WatchBadge watch={watchOf.get(player.id)} />
+            </span>
+            <span className={`mt-0.5 text-xs font-semibold ${has ? 'text-slate-600' : 'text-amber-800'}`}>
+              {has ? held.map(o => o.title).join(' · ') : 'No objective yet. Tap to assign'}
+            </span>
+            {gone.length > 0 && <span className="text-xs text-slate-500">Removed: {gone.map(o => `${o.title} (${shortDate(o.removed)})`).join(' · ')}</span>}
+          </span>
         </span>
-        {/* TRAK-423: the pencil, as every Edit; the row is the button, so the word stays for a screen reader only. */}
-        <Pencil aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-brand" /><span className="sr-only">Edit</span>
+        <ChevronRight aria-hidden size={16} className="mt-2 shrink-0 text-slate-400 sm:mt-0" /><span className="sr-only">Edit</span>
       </button>
     </li>
   }
 
   return (
-    <div className="arc grid gap-5">
+    <div id="season-plan-print" className="grid gap-6 pb-4 sm:gap-7">
+      {header(true)}
       {opened && (isPosition(opened.position)
         ? <PlayerObjectivesSheet coachId={coachId} player={{ id: opened.id, name: opened.player_name, position: opened.position }}
           seasonObjectives={plain} open onOpenChange={open => { if (!open) setOpenId(null) }} saveNeedsChange onSaved={() => setOpenId(null)}
@@ -132,114 +236,231 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
         : <PositionAndRolesSheet coachId={coachId} player={{ id: opened.id, name: opened.player_name, position: opened.position }}
           open onOpenChange={open => { if (!open) setOpenId(null) }} saveNeedsChange onSaved={() => setOpenId(null)} watch={watchAction(opened.id)} />)}
 
-      {changes.length
-        ? <Alert tone="warning" title={`Not shared yet: ${changesText(changes)}.`} />
-        // TRAK-494 (Kostas, 20 Nov): the title alone; no "Edits wait here until you share them."
-        : <Alert tone="success" title={`Shared ${shared ? shortDate(shared) : ''}.`} />}
+      {changes.length > 0 && <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 sm:flex-row sm:items-center print:hidden">
+        <span className="flex items-center gap-3">
+          <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-amber-700" />
+          <span className="text-base font-extrabold text-slate-900">Not shared yet: {changesText(changes)}.</span>
+        </span>
+        <button type="button" className={BTN_DARK} disabled={share.isPending} onClick={() => { setProblem(null); share.mutate() }}>
+          {share.isPending ? 'Sharing…' : 'Share the changes'}
+        </button>
+      </div>}
+      {problem && <p role="alert" className="rounded-xl border-2 border-red-600 bg-red-50 p-4 text-sm font-bold text-red-900">{problem}</p>}
 
-      <div className="grid items-start gap-4 laptop:grid-cols-2">
-        <section aria-labelledby="plan-season" className={card}>
-          <h2 id="plan-season" className="text-lg font-medium text-ink">Season</h2>
-          <div className="flex items-center justify-between gap-3">
-            <dl className="m-0 grid gap-1">
-              <dt className="text-sm text-ink-3">Dates</dt>
-              <dd className="m-0 text-sm text-ink">{plan.starts_on && plan.ends_on ? `${day(plan.starts_on)} – ${day(plan.ends_on)}` : 'No dates yet'}</dd>
-            </dl>
-            {edit('Edit the season’s dates', () => navigate('/coach/season-plan/edit/dates'))}
+      <section aria-label="Season schedule" className={`${CARD} flex flex-col justify-between gap-3.5 px-4 py-3.5 sm:px-5 lg:flex-row lg:items-center`}>
+        <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center sm:gap-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-100"><CalendarRange aria-hidden size={16} strokeWidth={2.25} className="text-slate-900" /></span>
+            <span className="text-sm sm:text-base"><span className="font-semibold text-slate-600">Season: </span>
+              <span className="font-extrabold text-slate-900">{plan.starts_on && plan.ends_on ? `${day(plan.starts_on)} – ${day(plan.ends_on)}` : 'No dates yet'}</span></span>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <dl className="m-0 grid gap-1">
-              <dt className="text-sm text-ink-3">Reports</dt>
-              <dd className="m-0 text-sm text-ink">{(() => {
-                const { every, day } = rhythmOf(plan)
-                const mine = evaluation.list.find(e => e.squad === squad)
-                const when = mine ? ` · ${nextDateLine(mine.due, evaluation.today)}` : ''
-                return `${rhythmText(every, day).replace(/^e/, 'E')}${when}`
-              })()}</dd>
-            </dl>
-            {edit('Edit how often you send reports', () => navigate('/coach/season-plan/edit/evaluation'))}
-          </div>
-        </section>
-
-        <section aria-labelledby="plan-objectives" className={card}>
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="plan-objectives" className="text-lg font-medium text-ink">Season objectives</h2>
-            {edit('Edit season objectives', () => navigate('/coach/season-plan/edit/objectives'))}
-          </div>
-          {seasonObjectives.length === 0 ? <p className="text-sm text-ink-3">None.</p>
-            : <ol className="m-0 grid list-none gap-3 p-0">{seasonObjectives.map(o => (
-              <li key={o.id} className="grid gap-1">
-                <span className="text-[17px] font-medium text-ink">{o.title}</span>
-                {o.looks_like && <span className="text-sm text-ink-3">{o.looks_like}</span>}
-              </li>))}
-            </ol>}
-          {(removed.data ?? []).length > 0 && <div className="grid gap-1 border-t border-line pt-3">
-            <h3 className="text-sm font-medium text-ink-2">Removed</h3>
-            <ul className="m-0 grid list-none gap-1 p-0">{removed.data!.map(o => (
-              <li key={o.id} className="text-sm text-ink-3"><span className="text-ink-2">{o.title}</span> · added {shortDate(o.created_at)}, removed {shortDate(o.retired_at)}</li>))}
-            </ul>
-          </div>}
-        </section>
-
-        <section aria-labelledby="plan-positions" className={card}>
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="plan-positions" className="text-lg font-medium text-ink">Positions</h2>
-            {edit('Edit positions in Squad', () => navigate('/coach/squad'))}
-          </div>
-          <p className="text-sm text-ink-2">{board.placed} of {players(board.total)} placed.</p>
-          {/* Home's "Place them" lands here once the plan is shared: each name opens their position. */}
-          {board.unplaced.length > 0 && <div className="grid gap-1">
-            <h3 className="text-sm font-medium text-ink-2">No position yet <span className="font-normal text-ink-3">· {board.unplaced.length}</span></h3>
-            <ul className="m-0 flex list-none flex-wrap gap-2 p-0">{board.unplaced.map(p => (
-              <li key={p.id}><Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}>{p.player_name}</Button></li>))}
-            </ul>
-          </div>}
-        </section>
-
-        <section aria-labelledby="plan-players" className={card}>
-          <button type="button" aria-expanded={playersOpen} onClick={() => setPlayersOpen(!playersOpen)}
-            className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-            <span className="grid gap-2">
-              <span id="plan-players" className="text-lg font-medium text-ink">Player objectives</span>
-              <span className="text-sm text-ink-3">{withSome} of {players(placed.length)} {withSome === 1 ? 'has' : 'have'} one or two</span>
+          <span aria-hidden="true" className="hidden h-6 w-0.5 bg-slate-200 sm:block" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-100"><Clock aria-hidden size={16} strokeWidth={2.25} className="text-slate-900" /></span>
+              <span className="min-w-0 text-sm sm:text-base"><span className="font-semibold text-slate-600">Reports: </span>
+                <span className="font-bold text-slate-900">{rhythmText(every, evalDay).replace(/^e/, 'E')}</span></span>
             </span>
-            {playersOpen ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}
-          </button>
-          {playersOpen && board.lines.filter(line => line.players.length > 0).map(line => (
-            <div key={line.value} className="grid gap-2">
-              <h3 className="text-sm font-medium text-ink-2">{line.line} <span className="font-normal text-ink-3">· {line.players.length}</span></h3>
-              <ul className="m-0 list-none divide-y divide-line p-0">{line.players.map(row)}</ul>
-            </div>
-          ))}
-        </section>
-      </div>
-
-      {watched.length > 0 && <section aria-labelledby="plan-watching" className={card}>
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="plan-watching" className="text-lg font-medium text-ink">Watching <span className="font-normal text-ink-3">· {watched.length}</span></h2>
-          {edit('Edit the watching reminder', () => navigate('/coach/season-plan/edit/reminder'))}
+            {mine && <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-amber-500 bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-950 sm:text-sm">
+              <BellRing aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{nextReportText(mine.due, evaluation.today)}
+            </span>}
+          </div>
         </div>
-        <p className="text-sm text-ink-3">Reminder {ruleText(rule)}, 4 weeks at the latest.</p>
-        <ul className="m-0 list-none divide-y divide-line p-0">{watched.map(player => {
+        <button type="button" className={`${BTN} shrink-0`} onClick={() => navigate('/coach/season-plan/edit/schedule')}>
+          <Pencil aria-hidden size={16} strokeWidth={2.25} />Edit Schedule
+        </button>
+      </section>
+
+      <section aria-labelledby="plan-objectives" className="grid gap-3.5 break-inside-avoid">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionHeading id="plan-objectives" bar="bg-green-700">Core tactical objectives</SectionHeading>
+          <button type="button" className={BTN} onClick={() => navigate('/coach/season-plan/edit/objectives')}>
+            <SlidersHorizontal aria-hidden size={16} strokeWidth={2.25} />Edit Objectives
+          </button>
+        </div>
+        {seasonObjectives.length === 0
+          ? <p className={`${CARD} p-5 text-base font-semibold text-slate-700`}>No season objectives yet.</p>
+          : <ol className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:gap-5 tablet:grid-cols-3">{seasonObjectives.map((o, index) => {
+            const theme = (o.phase && PHASE_THEME[o.phase]) || NO_PHASE_THEME
+            const phase = phaseLabel(o.phase)
+            return <li key={o.id}>
+              <button type="button" onClick={() => navigate('/coach/season-plan/edit/objectives')} aria-label={`Edit ${o.title}`}
+                className={`group grid h-full w-full content-start gap-3 rounded-2xl border-2 border-t-[6px] border-slate-300 ${theme.top} bg-white p-5 text-left shadow-sm transition-all hover:border-slate-900 hover:shadow-md sm:p-6 ${FOCUS}`}>
+                <span className="flex items-center justify-between gap-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ${theme.badge}`}>
+                    <span aria-hidden="true" className={`h-2 w-2 rounded-full ${theme.dot}`} />
+                    {String(index + 1).padStart(2, '0')}{phase ? ` · ${phase}` : ''}
+                  </span>
+                  <Pencil aria-hidden size={16} className="text-slate-400 group-hover:text-slate-900 print:hidden" />
+                </span>
+                <span className="text-xl font-black leading-snug tracking-tight text-slate-900 sm:text-2xl">{o.title}</span>
+                {o.looks_like && <span className="text-base font-semibold leading-relaxed text-slate-700">{o.looks_like}</span>}
+              </button>
+            </li>
+          })}</ol>}
+        {(removed.data ?? []).length > 0 && <div className="grid gap-1">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Removed</h3>
+          <ul className="m-0 grid list-none gap-1 p-0">{removed.data!.map(o => (
+            <li key={o.id} className="text-sm text-slate-600"><span className="font-bold text-slate-800">{o.title}</span> · added {shortDate(o.created_at)}, removed {shortDate(o.retired_at)}</li>))}
+          </ul>
+        </div>}
+      </section>
+
+      <section aria-labelledby="plan-readiness" className="grid gap-3.5">
+        <SectionHeading id="plan-readiness" bar="bg-slate-900">Squad readiness</SectionHeading>
+        <div className="grid grid-cols-1 items-start gap-5 sm:gap-6 xl:grid-cols-2">
+
+          <div className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-xl font-black tracking-tight text-slate-900">Positions</h3>
+                {board.unplaced.length === 0
+                  ? <span className={GOOD}><Check aria-hidden size={14} strokeWidth={3} />All Placed</span>
+                  : <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{board.unplaced.length} Without Position</span>}
+              </div>
+              <button type="button" className={BTN} onClick={() => navigate('/coach/squad')}>Manage Positions<ArrowUpRight aria-hidden size={16} strokeWidth={2.25} /></button>
+            </div>
+            <Meter done={board.placed} of={board.total} label="players placed" good={board.unplaced.length === 0} />
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div role="group" aria-label="Show a position" className="flex flex-wrap items-center gap-2">
+                <button type="button" aria-pressed={unit === 'ALL'} className={PILL(unit === 'ALL')} onClick={() => setUnit('ALL')}>ALL: {board.total}</button>
+                {board.lines.map(line => <button key={line.value} type="button" aria-pressed={unit === line.short} className={PILL(unit === line.short)}
+                  onClick={() => setUnit(line.short)}>{line.short}: {line.players.length}</button>)}
+              </div>
+              {pitch && <div role="group" aria-label="View" className="ml-auto flex items-center rounded-xl border-2 border-slate-300 bg-white p-0.5 print:hidden">
+                {(['pitch', 'list'] as const).map(v => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${view === v ? 'bg-slate-900 text-white' : 'text-slate-700 hover:text-slate-900'}`}>
+                  {v === 'pitch' ? `${formation!.shape} Pitch` : 'List'}
+                </button>)}
+              </div>}
+            </div>
+
+            {showPitch ? <div className="grid gap-3">
+              <div className="relative h-96 w-full select-none overflow-hidden rounded-xl border-2 border-green-700 bg-green-50" aria-label={`${formation!.name}, ${formation!.shape}`} role="group">
+                <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full opacity-45" viewBox="0 0 400 280" preserveAspectRatio="none">
+                  <rect x="10" y="10" width="380" height="260" fill="none" stroke="#15803D" strokeWidth="2" />
+                  <line x1="10" y1="140" x2="390" y2="140" stroke="#15803D" strokeWidth="2" />
+                  <circle cx="200" cy="140" r="34" fill="none" stroke="#15803D" strokeWidth="2" />
+                  <rect x="125" y="10" width="150" height="44" fill="none" stroke="#15803D" strokeWidth="2" />
+                  <rect x="125" y="226" width="150" height="44" fill="none" stroke="#15803D" strokeWidth="2" />
+                </svg>
+                <div className="absolute inset-x-4 inset-y-8">{pitch.spots.map(dot)}</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-3">
+                <span className="mr-1 text-xs font-black uppercase tracking-wider text-slate-500">Bench ({pitch.bench.length}):</span>
+                {pitch.bench.map(p => <button key={p.id} type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
+                  className={`rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-900 transition-all hover:border-slate-900 ${FOCUS} ${dim(p) ? 'opacity-30' : ''}`}>
+                  <span className="mr-1 font-extrabold text-slate-500">{shortOf(p.position)}</span>{p.player_name}
+                </button>)}
+              </div>
+            </div>
+              : <div className="grid gap-2">
+                {formations.isError ? <p className="text-sm font-semibold text-slate-600">
+                  Couldn’t load the pitch. <button type="button" className={`font-bold text-slate-900 underline ${FOCUS}`} onClick={() => void formations.refetch()}>Try again</button>
+                </p> : !formation && <p className="text-sm font-semibold text-slate-600">
+                  No default formation yet. <button type="button" className={`font-bold text-slate-900 underline ${FOCUS}`} onClick={() => navigate('/coach/squad')}>Set one in Squad</button> to see the pitch.
+                </p>}
+                <ul className="m-0 max-h-[310px] list-none divide-y divide-slate-200 overflow-y-auto rounded-xl border-2 border-slate-200 p-0">
+                  {listed.filter(p => unit === 'ALL' || shortOf(p.position) === unit).map(p => {
+                    const starter = pitch?.spots.some(s => s.player.id === p.id)
+                    return <li key={p.id}>
+                      <button type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
+                        className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 ${FOCUS}`}>
+                        <span className="flex items-center gap-3">
+                          <PlayerFace name={p.player_name} size="sm" />
+                          <span className="grid">
+                            <span className="text-sm font-extrabold text-slate-900">{p.player_name}</span>
+                            <span className="text-xs font-semibold text-slate-500">{!isPosition(p.position) ? 'No position yet' : !pitch ? p.position : starter ? 'Starting XI' : 'Bench'}</span>
+                          </span>
+                        </span>
+                        <span className="rounded-lg border-2 border-slate-300 bg-white px-2.5 py-1 text-xs font-black text-slate-900">{shortOf(p.position)}</span>
+                      </button>
+                    </li>
+                  })}
+                </ul>
+              </div>}
+
+            {/* Home's "Place them" lands here once the plan is shared: each name opens their position. */}
+            {board.unplaced.length > 0 && <div className="grid gap-2">
+              <h4 className="text-xs font-black uppercase tracking-wider text-amber-800">No position yet · {board.unplaced.length}</h4>
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">{board.unplaced.map(p => (
+                <li key={p.id}><button type="button" aria-haspopup="dialog" className={`${BTN} min-h-10 px-3 text-xs`} onClick={() => setOpenId(p.id)}>{p.player_name}</button></li>))}
+              </ul>
+            </div>}
+          </div>
+
+          <div className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <h3 id="plan-players" className="text-xl font-black tracking-tight text-slate-900">Player Objectives</h3>
+                {missing.length
+                  ? <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{missing.length} Missing</span>
+                  : <span className={GOOD}><Check aria-hidden size={14} strokeWidth={3} />All Assigned</span>}
+              </div>
+              {placed.length > PREVIEW && <button type="button" className={BTN} aria-expanded={showAll} aria-controls="plan-players-list" onClick={() => setShowAll(!showAll)}>
+                {showAll ? 'Collapse List' : `View All (${placed.length})`}
+                <ChevronDown aria-hidden size={16} strokeWidth={2.25} className={`transition-transform ${showAll ? 'rotate-180' : ''}`} />
+              </button>}
+            </div>
+            <Meter done={placed.length - missing.length} of={placed.length} label="players have 1–2 objectives" good={missing.length === 0} />
+
+            {missing.length > 0
+              ? <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 sm:flex-row sm:items-center">
+                <span className="flex items-start gap-3 sm:items-center">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400 bg-amber-200 text-amber-900"><UserX aria-hidden size={20} strokeWidth={2.25} /></span>
+                  <span className="grid">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-800">Action needed</span>
+                    <span className="text-base font-extrabold text-slate-900">Missing objective: {missing[0].player_name} ({shortOf(missing[0].position)})</span>
+                  </span>
+                </span>
+                <button type="button" className={`${BTN_DARK} shrink-0`} aria-haspopup="dialog" onClick={() => setOpenId(missing[0].id)}>
+                  <Plus aria-hidden size={16} strokeWidth={2.5} />Assign Objective
+                </button>
+              </div>
+              : placed.length > 0 && <div className="flex items-center gap-3 rounded-xl border-2 border-green-700 bg-green-50 p-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-green-600 bg-green-100 text-green-800"><CheckCheck aria-hidden size={20} strokeWidth={2.5} /></span>
+                <span className="grid">
+                  <span className="text-xs font-black uppercase tracking-wider text-green-800">Squad ready</span>
+                  <span className="text-sm font-extrabold text-slate-900 sm:text-base">All {placed.length} {squad} players have objectives.</span>
+                </span>
+              </div>}
+
+            {placed.length > 0 && <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  {showAll || placed.length <= PREVIEW ? `Full ${squad} squad (${placed.length})` : `Squad preview (showing ${PREVIEW} of ${placed.length})`}
+                </span>
+                <span className="text-xs font-semibold text-slate-500 print:hidden">Tap any player to edit</span>
+              </div>
+              <ul id="plan-players-list" className="m-0 list-none divide-y-2 divide-slate-100 overflow-hidden rounded-xl border-2 border-slate-200 bg-white p-0">
+                {visible.map(playerRow)}
+              </ul>
+            </div>}
+          </div>
+        </div>
+      </section>
+
+      {watched.length > 0 && <section aria-labelledby="plan-watching" className={`${CARD} grid gap-3 p-5 sm:p-6 print:hidden`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="plan-watching" className="text-xl font-black tracking-tight text-slate-900">Watching <span className="font-bold text-slate-500">· {watched.length}</span></h2>
+          <button type="button" className={BTN} onClick={() => navigate('/coach/season-plan/edit/reminder')}><Pencil aria-hidden size={16} strokeWidth={2.25} />Edit Reminder</button>
+        </div>
+        <p className="text-sm font-semibold text-slate-600">Reminder {ruleText(rule)}, 4 weeks at the latest.</p>
+        <ul className="m-0 list-none divide-y-2 divide-slate-100 p-0">{watched.map(player => {
           const w = watchOf.get(player.id)!
-          return <li key={player.id} className="flex items-center gap-3 py-2">
+          return <li key={player.id} className="flex items-center gap-3 py-2.5">
             <PlayerFace name={player.player_name} size="sm" />
             <span className="grid min-w-0 flex-1">
-              <span className="truncate text-sm font-medium text-ink">{player.player_name}</span>
-              <span className="text-xs text-ink-3">{w.ready ? `${w.why}: time to set them up` : `Since ${shortDate(w.since)} · ${w.progress}`}</span>
+              <span className="truncate text-sm font-extrabold text-slate-900">{player.player_name}</span>
+              <span className="text-xs font-semibold text-slate-600">{w.ready ? `${w.why}: time to set them up` : `Since ${shortDate(w.since)} · ${w.progress}`}</span>
             </span>
-            <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setOpenId(player.id)}>
-              {isPosition(player.position) ? 'Give objectives' : 'Give a position'}
-            </Button>
+            <button type="button" className={`${BTN} min-h-10 px-3 text-xs`} aria-haspopup="dialog" onClick={() => setOpenId(player.id)}>
+              {isPosition(player.position) ? 'Give Objectives' : 'Give a Position'}
+            </button>
           </li>
         })}</ul>
       </section>}
-
-      {problem && <Alert tone="danger" title={problem} />}
-      {changes.length > 0 && <div className="flex flex-wrap items-center justify-end gap-3">
-        <span className="text-sm text-ink-3">{changes.length === 1 ? '1 change' : `${changes.length} changes`} not shared</span>
-        <Button loading={share.isPending} onClick={() => { setProblem(null); share.mutate() }}>Share the changes</Button>
-      </div>}
     </div>
   )
 }

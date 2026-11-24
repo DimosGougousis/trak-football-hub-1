@@ -16,7 +16,7 @@ export type SeasonPlan = Pick<Tables<'season_plans'>, 'id' | 'squad' | 'starts_o
   & Partial<Pick<Tables<'season_plans'>, 'eval_every' | 'eval_day'>>
 /** TRAK-352: the answer to "Do you know where they play yet?" */
 export type PositionsKnown = 'yes' | 'some' | 'not_yet'
-export type SeasonObjective = Pick<Tables<'season_objectives'>, 'id' | 'place' | 'title' | 'looks_like'>
+export type SeasonObjective = Pick<Tables<'season_objectives'>, 'id' | 'place' | 'title' | 'looks_like' | 'phase'>
 /** TRAK-356: a season objective removed after the plan was shared, kept with when it was added and removed. */
 export type RemovedSeasonObjective = Pick<Tables<'season_objectives'>, 'id' | 'title' | 'looks_like' | 'created_at'> & { retired_at: string }
 
@@ -24,15 +24,23 @@ export const MAX_SEASON_OBJECTIVES = 3
 export const OBJECTIVE_TITLE_MAX = 80
 export const OBJECTIVE_LINE_MAX = 300
 
-/** The mockup's six (2 Nov), each with what it looks like. */
-export const SEASON_OBJECTIVE_PRESETS = [
-  { title: 'Win it back within 5 seconds', looksLike: 'The nearest three press the moment we lose it.' },
-  { title: 'Play through the middle', looksLike: 'Show between the lines and play forward.' },
-  { title: 'Attack the wide areas', looksLike: 'Get it wide early and cross before they set.' },
-  { title: 'Stay compact', looksLike: 'No more than 35 m from back to front.' },
-  { title: 'Own the set pieces', looksLike: 'Everyone knows their job at corners and free kicks.' },
-  { title: 'React first', looksLike: 'Win it: look forward. Lose it: get back.' },
+/** A season objective's phase of play, the coach's cards' tag (24 Nov). Coach-only: the shared snapshot has none. */
+export const PHASES = [
+  { value: 'in_possession', label: 'In possession' }, { value: 'out_of_possession', label: 'Out of possession' },
+  { value: 'transition', label: 'Transition' }, { value: 'set_pieces', label: 'Set pieces' },
 ] as const
+export type Phase = (typeof PHASES)[number]['value']
+export const phaseLabel = (phase: string | null) => PHASES.find(p => p.value === phase)?.label ?? null
+
+/** The mockup's six (2 Nov), each with what it looks like and its phase. */
+export const SEASON_OBJECTIVE_PRESETS: readonly { title: string; looksLike: string; phase: Phase }[] = [
+  { title: 'Win it back within 5 seconds', looksLike: 'The nearest three press the moment we lose it.', phase: 'transition' },
+  { title: 'Play through the middle', looksLike: 'Show between the lines and play forward.', phase: 'in_possession' },
+  { title: 'Attack the wide areas', looksLike: 'Get it wide early and cross before they set.', phase: 'in_possession' },
+  { title: 'Stay compact', looksLike: 'No more than 35 m from back to front.', phase: 'out_of_possession' },
+  { title: 'Own the set pieces', looksLike: 'Everyone knows their job at corners and free kicks.', phase: 'set_pieces' },
+  { title: 'React first', looksLike: 'Win it: look forward. Lose it: get back.', phase: 'transition' },
+]
 
 export const seasonPlanKey = (coachId: string | undefined, squad: string | null) => ['coach', coachId, 'season-plan', squad] as const
 export const seasonObjectivesKey = (coachId: string | undefined, planId: string | undefined) => ['coach', coachId, 'season-objectives', planId] as const
@@ -50,7 +58,7 @@ export async function loadSeasonPlan(coachId: string, squad: string): Promise<Se
 
 /** Every season objective of a plan, open and removed. A row with no status is open. */
 async function loadSeasonObjectiveRows(planId: string) {
-  const { data, error } = await supabase.from('season_objectives').select('id, place, title, looks_like, status, created_at, retired_at')
+  const { data, error } = await supabase.from('season_objectives').select('id, place, title, looks_like, phase, status, created_at, retired_at')
     .eq('plan_id', planId).order('place')
   if (error) throw error
   return data ?? []
@@ -59,7 +67,7 @@ async function loadSeasonObjectiveRows(planId: string) {
 /** The plan's open season objectives, in their places. */
 export async function loadSeasonObjectives(planId: string): Promise<SeasonObjective[]> {
   return (await loadSeasonObjectiveRows(planId)).filter(o => o.status !== 'retired')
-    .map(({ id, place, title, looks_like }) => ({ id, place, title, looks_like }))
+    .map(({ id, place, title, looks_like, phase }) => ({ id, place, title, looks_like, phase }))
 }
 
 /** TRAK-356: the ones removed after sharing, the latest first. */
@@ -69,7 +77,7 @@ export async function loadRemovedSeasonObjectives(planId: string): Promise<Remov
     .sort((a, b) => b.retired_at.localeCompare(a.retired_at))
 }
 
-export type ObjectiveDraft = { id?: string; title: string; looksLike: string }
+export type ObjectiveDraft = { id?: string; title: string; looksLike: string; phase: string | null }
 
 /** Writes a plan's season objectives as the coach left them: what's gone is deleted while the plan is a draft and
  *  retired once it's shared (TRAK-356), what changed is reworded, and what's new takes a free place. What's gone goes
@@ -85,13 +93,13 @@ export async function writeSeasonObjectives(planId: string, saved: SeasonObjecti
   }
   for (const o of next) {
     const before = saved.find(s => s.id === o.id)
-    if (!before || (before.title === o.title.trim() && before.looks_like === o.looksLike.trim())) continue
-    const { error } = await supabase.from('season_objectives').update({ title: o.title.trim(), looks_like: o.looksLike.trim() }).eq('id', before.id)
+    if (!before || (before.title === o.title.trim() && before.looks_like === o.looksLike.trim() && before.phase === o.phase)) continue
+    const { error } = await supabase.from('season_objectives').update({ title: o.title.trim(), looks_like: o.looksLike.trim(), phase: o.phase }).eq('id', before.id)
     if (error) throw error
   }
   const taken = new Set(saved.filter(s => kept.has(s.id)).map(s => s.place))
   const free = [1, 2, 3].filter(place => !taken.has(place))
-  const fresh = next.filter(o => !o.id).map((o, i) => ({ plan_id: planId, place: free[i], title: o.title.trim(), looks_like: o.looksLike.trim() }))
+  const fresh = next.filter(o => !o.id).map((o, i) => ({ plan_id: planId, place: free[i], title: o.title.trim(), looks_like: o.looksLike.trim(), phase: o.phase }))
   if (fresh.length) {
     const { error } = await supabase.from('season_objectives').insert(fresh)
     if (error) throw error

@@ -406,3 +406,11 @@
     font-size: 16px;
   }
 }
+
+/* Season plan's Print / Pitch Sheet (24 Nov): only the plan prints; the menus, bars and buttons stay off the paper. */
+@media print {
+  body:has(#season-plan-print) * { visibility: hidden; }
+  /* As specific as the line above (it has the id inside :has), so the plan wins. */
+  body:has(#season-plan-print) #season-plan-print, body:has(#season-plan-print) #season-plan-print * { visibility: visible; }
+  #season-plan-print { position: absolute; inset: 0 0 auto 0; padding: 0 16px; }
+}
