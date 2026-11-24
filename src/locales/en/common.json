@@ -116,5 +116,9 @@
   "consent": "Consent",
   "consentGiven": "Consent given",
   "yourChildren": "Your children",
-  "notConnected": "Not connected"
+  "notConnected": "Not connected",
+  "latestReport": "Latest report",
+  "openReport": "Open report",
+  "loadingReport": "Loading the report",
+  "couldntLoadReport": "Couldn’t load the report."
 }

@@ -230,6 +230,7 @@
   "fmSaveFailed": "Couldn't save the formation. Check your connection and try again; your changes are still here.",
   "fmASide": "{{count}} a side",
   "fmPickSquad": "Select one squad to see its formations",
+  "fmSelectSquad": "Select a squad",
   "fmPickSquadBody": "A formation belongs to one squad, so its players never mix with another's. Choose a squad in the menu.",
   "fmPlaceToOpen_one": "Place {{count}} player to open Formations",
   "fmPlaceToOpen_other": "Place {{count}} players to open Formations",
@@ -375,5 +376,6 @@
   "openReport": "Open",
   "openReportName": "Open {{name}}’s {{month}} report",
   "reportNote": "Note from the coach",
-  "reportNotFound": "This report isn’t here."
+  "reportNotFound": "This report isn’t here.",
+  "reportMovedUp": "Moved up: {{areas}}"
 }

@@ -1,7 +1,7 @@
 /**
  * TRAK-441 slice 2.6 (Imad, 13 Nov), behind the academy's family_look switch: the parent's Home in the coach's look, as
- * the player's. The coach's week, For you, the child's season, Latest evaluation (bands, opening the parent's page) and
- * Season so far; "Recorded matches" with its rating and the swipe cards are gone. With the switch off, today's Home.
+ * the player's. The coach's week, For you, the child's season, Latest report (TRAK-529: bands, opening the parent's
+ * report) and Season so far; "Recorded matches" with its rating and the swipe cards are gone. With the switch off, today's Home.
  * Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -42,6 +42,11 @@ beforeEach(() => {
       coach_rating: 7.5, work_rate: 8, tactical: 7, attitude: 8, technical: 7, physical: 6, coachability: 9 }]),
     table('matches', [{ id: 'm1', team_score: 2, opponent_score: 1, computed_rating: 7.2, match_date: '2026-11-01', created_at: '2026-11-01T12:00:00Z' }]),
     table('game_for_family', []), table('game_review_for_family', []),
+    // TRAK-529: the parents' copy of October's report.
+    table('report_for_family', [{ evaluation_id: 'ev-oct', sent_at: '2026-10-25T18:00:00Z', report: { squad_player_id: 'sq-441',
+      player_name: 'Giourkas Seitaridis', squad: 'U16', season_starts_on: '2026-08-01', period_from: '2026-09-28', report_day: '2026-10-25',
+      last_report_day: '2026-09-27', before_season: null, matches: [], objectives: [], trainings: { attended: 5, total: 6 },
+      assessments: [{ id: 'a1', day: '2026-10-25', work_rate: 8, tactical: 7, attitude: 8, technical: 7, physical: 6, coachability: 9 }] } }]),
     rpcRows('child_events', []), rpcRows('family_training_history', []), rpcRows('get_children_awaiting_consent', []),
     rpcRows('get_roster_children_awaiting_consent', []), rpcRows('get_my_child_logins', []), rpcRows('get_my_approved_children_awaiting_signup', []),
     rpcRows('season_plan_for_player', []), rpcRows('family_academy', [{ name: 'Rehearsal FC', logo_url: null }]),
@@ -53,11 +58,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); window.matchMedia = realMatchMedia; vi.restoreAllMocks(); delete document.documentElement.dataset.layout })
 
 describe("TRAK-441: the parent Home in the coach's look", () => {
-  it('a phone: the coach\'s week, Latest evaluation opening the parent\'s page, Season so far; no rating', async () => {
+  it('a phone: the coach\'s week, Latest report opening the parent\'s report, Season so far; no rating', async () => {
     screenIs(false)
     renderApp('/parent/home')
-    const latest = await screen.findByRole('region', { name: 'Latest evaluation' }, { timeout: 5000 })
-    expect(within(latest).getByRole('link', { name: /Open evaluation/ })).toHaveAttribute('href', '/parent/assessment/eval-441')
+    const latest = await screen.findByRole('region', { name: 'Latest report' }, { timeout: 5000 })
+    expect(within(latest).getByRole('link', { name: /Open report/ })).toHaveAttribute('href', '/parent/report/ev-oct')
     expect(within(latest).getByText('New')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'This week', level: 2 })).toBeInTheDocument()
     const soFar = await screen.findByRole('region', { name: 'Season so far' })
@@ -82,7 +87,7 @@ describe("TRAK-441: the parent Home in the coach's look", () => {
     expect(within(summary).queryByText('Good')).toBeNull()
     expect(within(summary).queryByText('Not rated')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Season so far' })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Latest evaluation' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Latest report' })).toBeNull()
   })
 
   it("the week's chosen event has a red Can't make it beside Details: a reason, Tell the coach, and the week says so", async () => {
@@ -131,7 +136,7 @@ describe("TRAK-441: the parent Home in the coach's look", () => {
     const forYou = await screen.findByRole('region', { name: /^For you/ }, { timeout: 5000 })
     expect(within(forYou).getByText('Giourkas starts')).toBeInTheDocument()
     expect(within(forYou).getByText('How Giourkas’s match went')).toBeInTheDocument()
-    await screen.findByRole('region', { name: 'Latest evaluation' })
+    await screen.findByRole('region', { name: 'Latest report' })
     await screen.findByRole('region', { name: 'Season so far' })
     const shown = document.body.textContent ?? ''
     for (const secret of ['Shadow their number nine', 'Keep him calm early', 'Win every header', 'Switched off late', 'Tires after an hour']) expect(shown).not.toContain(secret)
@@ -142,7 +147,7 @@ describe("TRAK-441: the parent Home in the coach's look", () => {
     screenIs(true)
     renderApp('/parent/home')
     await screen.findByRole('navigation', { name: 'Trak' }, { timeout: 5000 })
-    await screen.findByRole('region', { name: 'Latest evaluation' })
+    await screen.findByRole('region', { name: 'Latest report' })
     const bells = screen.getAllByRole('button', { name: /^Alerts/ })
     expect(bells).toHaveLength(1)
     expect(bells[0].closest('main')).toBeNull()

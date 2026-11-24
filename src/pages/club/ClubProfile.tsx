@@ -142,7 +142,7 @@ export default function ClubProfile() {
               TRK-{joinCode}
             </span>
             {copied
-              ? <Check size={18} style={{ color: 'rgb(var(--t-brand))' }} />
+              ? <Check size={18} style={{ color: 'rgb(var(--t-success))' }} />
               : <Copy size={18} style={{ color: 'rgb(var(--t-brand) / 0.5)' }} />
             }
           </button>

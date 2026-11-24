@@ -310,7 +310,7 @@ export default function DevSetupPage() {
 
       {done ? (
         <div className="w-full space-y-2">
-          <div className="text-center py-3 text-[14px] font-semibold text-brand">All done!</div>
+          <div className="text-center py-3 text-[14px] font-semibold text-success">All done!</div>
           <button onClick={() => navigate('/')}
             className="w-full py-4 rounded-xl bg-brand text-on-brand font-bold text-sm">
             Go to app →
