@@ -42,3 +42,37 @@ describe('done marks stay green, the pitch has its own green', () => {
     expect(board).not.toMatch(/bg-brand\/5/)
   })
 })
+
+describe('the palette change leaves nothing unreadable or lost (whole-branch review)', () => {
+  it('the season objectives donut is in shades of green (TRAK-551)', () => {
+    const line = lineOf('components/coach/home/SeasonPlanCard.tsx', 'const OBJECTIVE_GREENS')
+    expect(line).toContain('--t-success')
+    expect(line).not.toContain('--t-brand')
+  })
+
+  it("the club's copied tick is green", () => {
+    expect(lineOf('pages/club/ClubProfile.tsx', '<Check size={18} style=')).toContain('--t-success')
+  })
+
+  // Near-black against the grey sentence around it is 2.4:1, under the 3:1 a link needs to stand out without an underline.
+  it.each([
+    ['pages/parent/ParentAssessment.tsx', 'void progress.refetch() }} className='],
+    ['pages/parent/ParentAssessment.tsx', 'void query.refetch() }} className='],
+    ['pages/player/PlayerFeedback.tsx', 'type="button" onClick={() => void progress.refetch()} className='],
+    ['pages/player/PlayerFeedback.tsx', 'onClick={onRetry} className='],
+    ['pages/Settings.tsx', 'setLoadAttempt(value => value + 1)} className='],
+  ])('%s: the Try again link inside a sentence is underlined', (file, marker) => {
+    expect(lineOf(file, marker)).toMatch(/\bunderline\b/)
+  })
+
+  it("Notes' soft panel still shows on a white card", () => {
+    const line = lineOf('components/coach/training/NotesForm.tsx', 'grid gap-3 rounded-xl')
+    expect(line).toContain('bg-raised')
+    expect(line).not.toContain('bg-ground')
+  })
+
+  it("Arc's info alert icon is the info blue, as its badge is", () => {
+    const css = readFileSync(join(SRC, 'components/arc/alert/alert.module.css'), 'utf8')
+    expect(css).toContain('.info .icon { color: var(--info); }')
+  })
+})

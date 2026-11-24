@@ -47,6 +47,10 @@ describe('design standard: palette tokens', () => {
     expect(css).toContain(':root[data-layout="coach"] { --t-ink-3: 71 85 105; }')
   })
 
+  it("older components' muted text is ink-3, which passes on its muted background", () => {
+    expect(root).toContain('--muted-foreground: 215 17% 45%;')
+  })
+
   it('Tailwind knows the new tokens', () => {
     const config = readFileSync(join(ROOT, 'tailwind.config.ts'), 'utf8')
     for (const name of ['rail', 'line-soft', 'pitch', 'attention'])

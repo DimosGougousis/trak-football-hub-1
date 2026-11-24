@@ -38,7 +38,7 @@ function EvaluationProgressLook({ assessmentId, childId }: { assessmentId: strin
   const progress = useEvaluationProgress([assessmentId], childId)
   return progress.isError
     ? <p role="alert" className="text-[15px] text-ink-2">{t('common:couldntLoadProgress')}{' '}
-      <button type="button" onClick={() => { void progress.refetch() }} className="font-medium text-brand">{t('coachTraining:tryAgain')}</button></p>
+      <button type="button" onClick={() => { void progress.refetch() }} className="font-medium text-brand underline underline-offset-2">{t('coachTraining:tryAgain')}</button></p>
     : <EvaluationProgressCard objectives={progress.data?.get(assessmentId)?.objectives ?? []} look />
 }
 
@@ -79,7 +79,7 @@ export default function ParentAssessment() {
             status={fresh.current ? <Badge tone="success" dot>{t('common:new')}</Badge> : undefined}
             details={<>{assessment?.created_at && <span><strong>{evalDay(assessment.created_at)}</strong></span>}<span><UserRound size={14} strokeWidth={1.75} aria-hidden="true" />{name}</span></>}>
             {query.isError ? <p role="alert" className="text-[15px] text-ink-2">{t('common:couldntLoadFeedback')}{' '}
-              <button type="button" onClick={() => { void query.refetch() }} className="font-medium text-brand">{t('coachTraining:tryAgain')}</button></p>
+              <button type="button" onClick={() => { void query.refetch() }} className="font-medium text-brand underline underline-offset-2">{t('coachTraining:tryAgain')}</button></p>
               : <div className={familyColumns}>
                 <div className={familyStack}>
                   {assessment ? <section aria-label={t('common:bands')} className={familyCard}>

@@ -34,6 +34,8 @@ Rules:
 
 - **Brand means "do this" or "selected".** A tick, a completed state or a "saved" message is `success`, not `brand`.
   The pitch is `pitch`.
+- **A link inside a sentence is underlined** (`underline underline-offset-2`). Near-black `brand` beside grey text is
+  only 2.4:1, too little to show it's a link by colour alone.
 - **Contrast.** Text is at least 4.5:1 on what it sits on, including `ink-3` on `raised` chips. Input edges and focus
   rings are at least 3:1, which is why text boxes use `line-strong`, not `line`.
 - **Status is tone on tint:** text in the tone, background `tone/10`, edge `tone/25`. "Needs you" puts `warning` words

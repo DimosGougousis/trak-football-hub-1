@@ -32,7 +32,7 @@ function EvaluationProgress({ assessmentId, look = false }: { assessmentId: stri
   const progress = useEvaluationProgress([assessmentId])
   if (progress.isError) return look
     ? <p role="alert" className="text-[15px] text-ink-2">{t('common:couldntLoadProgress')}{' '}
-      <button type="button" onClick={() => void progress.refetch()} className="font-medium text-brand">{t('coachTraining:tryAgain')}</button></p>
+      <button type="button" onClick={() => void progress.refetch()} className="font-medium text-brand underline underline-offset-2">{t('coachTraining:tryAgain')}</button></p>
     : <div role="alert" className="space-y-3">
       <p className="text-muted-foreground">Couldn't load your progress. Please try again.</p>
       <button onClick={() => void progress.refetch()} className="min-h-11 rounded-xl bg-primary px-5 text-primary-foreground">Retry</button>
@@ -154,7 +154,7 @@ function FeedbackPage({ state, assessmentId, readerId, onRetry }: { state: Feedb
     status={fresh.current ? <Badge tone="success" dot>{t('common:new')}</Badge> : undefined}
     details={loaded?.created ? <span><strong>{evalDay(loaded.created)}</strong></span> : undefined}>
     {!loaded ? <p role="alert" className="text-[15px] text-ink-2">{t('common:couldntLoadFeedback')}{' '}
-      <button type="button" onClick={onRetry} className="font-medium text-brand">{t('coachTraining:tryAgain')}</button></p>
+      <button type="button" onClick={onRetry} className="font-medium text-brand underline underline-offset-2">{t('coachTraining:tryAgain')}</button></p>
       : <div className={familyColumns}>
         {loaded.scores && <section aria-label={t('common:bands')} className={familyCard}>
           <h2 className={`${familyH2} mb-3`}>{t('common:bands')}</h2><BandBars assessment={loaded.scores} />
