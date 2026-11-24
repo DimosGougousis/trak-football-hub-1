@@ -6,3 +6,6 @@
 export const NEXT_STEP_SIZE = 'md' as const
 /** Its minimum width, so a short word ("Share") is as wide as a long one ("Take register"). */
 export const NEXT_STEP_WIDTH = 'min-w-[128px]'
+/** TRAK-561 (phone review, 23 Nov): beside Home's week Details and on an Events card, a next step is Details' size:
+ *  Arc's small button (36 px), as wide as its words. */
+export const NEXT_STEP_SMALL = 'sm' as const

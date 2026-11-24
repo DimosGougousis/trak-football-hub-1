@@ -45,7 +45,7 @@ import type { Fixture } from '@/lib/fixtures-csv'
 import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { MatchAction } from '@/components/coach/games/MatchAction'
-import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
+import { NEXT_STEP_SMALL } from '@/components/coach/next-step'
 import { shareEventText } from '@/lib/share-event'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
@@ -844,7 +844,7 @@ export default function CoachSchedule() {
                           {groupItems.length > 0 && <ButtonGroup label={t('coachSchedule:actionsFor', { title: ev.title })} items={groupItems} variant="outline" size="md" />}
                           {steps.map(item => item.id === 'match' && evaluateState && row
                             ? <MatchAction key={item.id} state={evaluateState} eventId={row.id} />
-                            : <Button key={item.id} size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} aria-label={item.label} title={item.label} onClick={item.onSelect}>
+                            : <Button key={item.id} size={NEXT_STEP_SMALL} aria-label={item.label} title={item.label} onClick={item.onSelect}>
                                 {item.id === 'share' && <ShareIcon size={16} tight />}{item.content}
                               </Button>)}
                         </div>
