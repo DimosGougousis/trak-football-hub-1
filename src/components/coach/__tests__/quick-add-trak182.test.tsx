@@ -41,7 +41,8 @@ beforeEach(() => {
     table('session_attendance', []),
     table('event_absences', []),
     // TRAK-288: Games off, so Log match is still the quick match log.
-    rpc('feature_on', ({ p_feature }) => p_feature !== 'games' && eventsOn),
+    // Coach–player P18: tasks off too, so the menu is Assess player and New event.
+    rpc('feature_on', ({ p_feature }) => p_feature !== 'games' && p_feature !== 'tasks' && eventsOn),
   )
 })
 afterEach(() => { server.events.removeAllListeners() })

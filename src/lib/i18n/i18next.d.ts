@@ -5,6 +5,7 @@ import type coachHowTrakWorks from '@/locales/en/coachHowTrakWorks.json'
 import type coachMatches from '@/locales/en/coachMatches.json'
 import type coachSchedule from '@/locales/en/coachSchedule.json'
 import type coachSquad from '@/locales/en/coachSquad.json'
+import type coachTasks from '@/locales/en/coachTasks.json'
 import type coachTraining from '@/locales/en/coachTraining.json'
 import type common from '@/locales/en/common.json'
 import type drills from '@/locales/en/drills.json'
@@ -24,6 +25,7 @@ declare module 'i18next' {
       coachMatches: typeof coachMatches
       coachSchedule: typeof coachSchedule
       coachSquad: typeof coachSquad
+      coachTasks: typeof coachTasks
       coachTraining: typeof coachTraining
       common: typeof common
       drills: typeof drills
