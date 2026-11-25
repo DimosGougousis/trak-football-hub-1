@@ -12,7 +12,7 @@ import { EVENT_COLOR } from '@/lib/coach-events'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
 import { PitchIcon } from '@/components/icons/PitchIcon'
 import { Button } from '@/components/arc/button/button'
-import { Calendar } from '@/components/arc/calendar/calendar'
+import { MonthStrip } from '@/components/coach/MonthStrip'
 import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { MatchAction } from '@/components/coach/games/MatchAction'
@@ -118,16 +118,16 @@ export default function CoachGames() {
           ) : <SkeletonMorph loading={loading} stagger={0} loadingLabel={t('coachSquad:fmMatchesLoading')}>
             {/* TRAK-461: while the matches load, each part of the page is a placeholder of its shape that grows into it. */}
             <div className="grid gap-6 sm:gap-7">
-              {/* ── The month of matches, full width and centred (as Events, TRAK-574). ── */}
-              <MorphBlock height={360} radius={16} className="grid min-w-0" style={FILL}>{!loading &&
-                <section aria-label={t('coachMatches:matchCalendar')} className={`${CARD} arc grid justify-items-center gap-3 p-4 sm:p-5`}>
-                  <Calendar locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()} showToday className="!w-full max-w-[720px]"
+              {/* ── The month of matches as Events' low strip across the top (TRAK-574), not a square grid. ── */}
+              <MorphBlock height={190} radius={16} className="grid min-w-0" style={FILL}>{!loading &&
+                <section aria-label={t('coachMatches:matchCalendar')} className={`${CARD} arc grid gap-3 px-4 py-3 sm:px-5`}>
+                  <MonthStrip locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()}
                     value={next ? new Date(`${gameDay(next)}T12:00:00`) : undefined} onChange={pick}
                     month={shownMonth} onMonthChange={setMonth}
                     marks={date => (byDay.get(dayKey(date)) ?? []).map(game => published(game) ? PLAYED_COLOR : EVENT_COLOR.match)}
                     attention={date => draftDays.has(dayKey(date))} />
                   <div role="group" aria-label={t('coachSchedule:colourKey')}
-                    className="flex w-full max-w-[720px] flex-wrap items-center justify-center gap-x-4 gap-y-1.5 border-t-2 border-line-soft pt-3">
+                    className="flex w-full flex-wrap items-center gap-x-4 gap-y-1.5 border-t-2 border-line-soft pt-2.5">
                     <Key mark={<span className="h-2.5 w-2.5 rounded-full" style={{ background: EVENT_COLOR.match }} />}>{t('coachSchedule:kindMatch')}</Key>
                     <Key mark={<span className="h-2.5 w-2.5 rounded-full" style={{ background: PLAYED_COLOR }} />}>{t('coachMatches:keyPlayed')}</Key>
                     <Key mark={<span className="h-2.5 w-2.5" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
