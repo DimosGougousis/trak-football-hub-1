@@ -11,9 +11,10 @@ import { table, rpc, SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { localTodayISO, toInstant } from '@/lib/event-time'
 
 /**
- * TRAK-182 (Imad's 6e/6l): Schedule's month is Arc's calendar, Monday first
- * like the Home week strip, with a dot per event. Each day's label carries the
- * count, so a screen reader hears which days are busy.
+ * TRAK-182 (Imad's 6e/6l): Schedule's month has a dot per event. Each day's
+ * label carries the count, so a screen reader hears which days are busy.
+ * TRAK-574 (Dimos, 25 Nov): the month is one low strip of its days, not a
+ * square grid, so the tapped day's events show under it without scrolling.
  */
 const COACH = { id: 'coach-182-cal' }
 const today = localTodayISO()
@@ -44,7 +45,7 @@ beforeEach(() => {
   )
 })
 
-describe('TRAK-182: Schedule month on Arc\'s calendar', () => {
+describe('TRAK-182, TRAK-574: the month strip on Events', () => {
   it('shows a hollow ring for cancelled events, while scheduled events stay filled', async () => {
     renderApp('/coach/schedule')
     const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })
@@ -58,19 +59,20 @@ describe('TRAK-182: Schedule month on Arc\'s calendar', () => {
     expect(filled.style.borderStyle).not.toBe('solid')
   })
 
-  it('counts each day\'s events, starts weeks on Monday, and lists a tapped day', async () => {
+  it('counts each day\'s events, lists all the month\'s days in one strip, and lists a tapped day', async () => {
     renderApp('/coach/schedule')
     const busy = await screen.findByRole('gridcell', { name: `${fullDate(today)}, 2 events` })
     expect(busy).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` })).toBeInTheDocument()
-    // TRAK-504: the first week opens with blank cells before the 1st, so the second week is the one that is all days.
-    const fullWeek = within(screen.getAllByRole('row')[1]).getAllByRole('gridcell')
-    expect(fullWeek[0].getAttribute('aria-label')).toMatch(/^Monday/)
-    // Tarek's #311 review: the day names over the columns start on Monday too,
-    // or "Su" would sit over the Monday column with every other test green.
-    const header = [...document.querySelectorAll('[aria-hidden="true"]')]
-      .find(el => el.children.length === 7 && [...el.children].every(c => c.tagName === 'SPAN' && c.textContent?.length === 2))
-    expect([...header!.children].map(c => c.textContent)).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])
+    // TRAK-574: the month is one strip of its own days, from the 1st to the last, each naming its weekday (no blank cells).
+    const days = within(screen.getByRole('row')).getAllByRole('gridcell')
+    const first = new Date(`${today}T12:00:00`)
+    first.setDate(1)
+    const last = new Date(first.getFullYear(), first.getMonth() + 1, 0, 12)
+    expect(days).toHaveLength(last.getDate())
+    expect(days[0].getAttribute('aria-label')).toMatch(new RegExp(`^${first.toLocaleDateString('en-GB', { weekday: 'long' })}, 1 `))
+    expect(days[0]).toHaveTextContent(first.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 2))
+    expect(days.at(-1)!.getAttribute('aria-label')).toMatch(new RegExp(`^${last.toLocaleDateString('en-GB', { weekday: 'long' })}, ${last.getDate()} `))
 
     await userEvent.click(screen.getByRole('gridcell', { name: `${fullDate(other)}, 1 event` }))
     expect(await screen.findByText('Recovery')).toBeInTheDocument()
