@@ -305,5 +305,9 @@
   "noDraftsLeft": "Every event coming up is published.",
   "publishedSome": "Published {{done}} of {{count}}. The rest are still drafts: tap Publish to try them again.",
   "couldntPublishDrafts": "Nothing was published. Check your connection and tap Publish again.",
-  "reviewAndPublish": "Review and publish"
+  "reviewAndPublish": "Review and publish",
+  "calendar": "Calendar",
+  "allPublished": "All published",
+  "eventCount_one": "{{count}} event",
+  "eventCount_other": "{{count}} events"
 }
