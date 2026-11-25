@@ -53,14 +53,15 @@ export interface FeedOptions {
  * VTIMEZONE). The same closed list as organizations.time_zone: a zone the
  * feed can't describe would leave phones guessing.
  */
-export type FeedTimeZone = 'Asia/Dubai' | 'Europe/Athens'
+export type FeedTimeZone = 'Asia/Dubai' | 'Europe/Athens' | 'Europe/Madrid'
 export const FEED_TZID: FeedTimeZone = 'Asia/Dubai'
-export const FEED_TIME_ZONES: readonly FeedTimeZone[] = ['Asia/Dubai', 'Europe/Athens']
+export const FEED_TIME_ZONES: readonly FeedTimeZone[] = ['Asia/Dubai', 'Europe/Athens', 'Europe/Madrid']
 
 /** What a family reads after a clock time, e.g. "18:30 Athens time". */
 const ZONE_LABEL: Record<FeedTimeZone, string> = {
   'Asia/Dubai': 'Dubai time',
   'Europe/Athens': 'Athens time',
+  'Europe/Madrid': 'Madrid time',
 }
 
 const VTIMEZONE: Record<FeedTimeZone, string[]> = {
@@ -94,6 +95,26 @@ const VTIMEZONE: Record<FeedTimeZone, string[]> = {
     'TZOFFSETFROM:+0300',
     'TZOFFSETTO:+0200',
     'TZNAME:EET',
+    'END:STANDARD',
+    'END:VTIMEZONE',
+  ],
+  // Spain: the same EU rules, from 02:00 local in March and back at 03:00 local in October.
+  'Europe/Madrid': [
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/Madrid',
+    'BEGIN:DAYLIGHT',
+    'DTSTART:19810329T020000',
+    'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU',
+    'TZOFFSETFROM:+0100',
+    'TZOFFSETTO:+0200',
+    'TZNAME:CEST',
+    'END:DAYLIGHT',
+    'BEGIN:STANDARD',
+    'DTSTART:19961027T030000',
+    'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU',
+    'TZOFFSETFROM:+0200',
+    'TZOFFSETTO:+0100',
+    'TZNAME:CET',
     'END:STANDARD',
     'END:VTIMEZONE',
   ],
