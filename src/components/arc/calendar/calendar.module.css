@@ -76,3 +76,20 @@
 /* Tarek, 23 Oct: "the same way it is on the home screen": coach Home's corner flag (week-picker.module.css),
    tucked into the day's top-right corner, not a triangle standing out of it. */
 .attention { position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-top-right-radius: 4px; background: var(--attention); filter: drop-shadow(0 0 .6px var(--warning)); clip-path: polygon(0 0, 100% 0, 100% 100%); pointer-events: none; }
+
+/* Trak (TRAK-574): the stretched month. From 640 px it fills its container on 28 px rows; a day is a wide cell with a
+   round 28 px disc centred in it. The selected disc's box is one cell (wide and short), so its steps (100% + 4px of its
+   own width and height) still land on a day; only its round fill is centred inside. */
+@media (min-width: 640px) {
+  .calendar.stretch { --day: 28px; width: 100%; }
+  .stretch .header { margin-bottom: 8px; }
+  .stretch .weekdays { margin-bottom: 2px; }
+  .stretch .day, .stretch .placeholderDay { aspect-ratio: auto; height: var(--day); border-radius: 0; }
+  .stretch .day::before, .stretch .day.today:not(.selected)::after { inset: 0 auto; left: 50%; width: var(--day); border-radius: 50%; translate: -50% 0; }
+  .stretch .highlight { aspect-ratio: auto; height: var(--day); }
+  .stretch .highlightFill { inset: 0 auto; left: 50%; width: var(--day); translate: -50% 0; }
+  /* The number sits a little high so the event dots under it never touch it. */
+  .stretch .dayNumber { translate: 0 -3px; }
+  .stretch .marks { bottom: 2px; }
+  .stretch .attention { top: 1px; right: calc(50% - var(--day) / 2 + 1px); }
+}
