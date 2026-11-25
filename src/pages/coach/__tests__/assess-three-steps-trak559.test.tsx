@@ -115,6 +115,22 @@ describe('TRAK-559: Assess player in 3 steps', { timeout: 30_000 }, () => {
     await waitFor(() => expect(screen.getByLabelText(/Private note/)).toHaveValue('Work on the first touch'))
   })
 
+  // TRAK-585 (Imad, 25 Nov): one kept with the coach under TRAK-532, saved again, is shared with the family.
+  it('TRAK-585: Save publishes an unpublished one where the plan is shared', async () => {
+    const user = userEvent.setup()
+    showForm('/coach/assess?assessment=draft-1')
+    await waitFor(() => expect(screen.getByRole('slider', { name: 'Work Rate' })).toHaveAttribute('aria-valuenow', '8'))
+    await waitFor(() => expect(next()).toBeEnabled())
+    await user.click(next())
+    const progress = await screen.findByRole('group', { name: 'Progress on Shoot first time' })
+    await waitFor(() => expect(within(progress).getByRole('button', { name: 'On track' })).toHaveAttribute('aria-pressed', 'true'))
+    await user.click(next())
+    await user.click(await screen.findByRole('button', { name: 'Save' }))
+    await screen.findByText('Coach home')
+    expect(saves).toHaveLength(1)
+    expect(saves[0]).toMatchObject({ p_assessment_id: 'draft-1', p_row: { published_at: expect.any(String) } })
+  })
+
   it('a squad with no shared plan still has 3 steps: the second holds the message and the note', async () => {
     shared = null
     const user = userEvent.setup()

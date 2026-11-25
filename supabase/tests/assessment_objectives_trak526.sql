@@ -1,10 +1,11 @@
 -- @trak-suite mode=--assessment-objectives in-all=true
 -- TRAK-526 (Reports 3/10, Imad 21 Nov; storage and drafts decided by Tarek, 21 Nov): Assess player's objective
 -- check-in. save_assessment_with_objectives() writes the assessment as the coach and the answers in one transaction:
--- every open objective once, Not yet to Met; added titles. TRAK-532 (Kostas, 23 Nov): with a shared plan an assessment
--- stays with the coach (saved unpublished) and Save applies Met and creates the added objectives at once; a saved
--- one's answers are final. A squad with no shared plan has no check-in. Only the coach
--- reads it; nobody writes it directly; squad evaluations' objective_progress is untouched. Synthetic fixtures; rolls back.
+-- every open objective once, Not yet to Met; added titles. TRAK-532 (Kostas, 23 Nov): with a shared plan Save applies
+-- Met and creates the added objectives at once, even unpublished; a saved one's answers are final. TRAK-585: Assess's
+-- Save publishes there again, so an unpublished save is a page from before it. A squad with no shared plan has no
+-- check-in. Only the coach reads it; nobody writes it directly; squad evaluations' objective_progress is untouched.
+-- Synthetic fixtures; rolls back.
 BEGIN;
 SET LOCAL TIME ZONE 'UTC';
 DO $$ BEGIN
@@ -101,8 +102,8 @@ SELECT pg_temp.a526check(pg_temp.a526count(format('SELECT count(*) FROM public.a
 SELECT pg_temp.a526check((SELECT count(*) FROM public.assessment_objectives WHERE assessment_id = (SELECT id FROM pg_temp.a526_ids WHERE name = 'ola')) = 3,
   '1 the coach reads it');
 
--- 2. TRAK-532: saved unpublished (as Assess now saves where the plan is shared), Met closes C and the added objective
---    starts at once; the assessment stays with the coach, and its check-in is final.
+-- 2. TRAK-532: saved unpublished (as Assess saved where the plan is shared until TRAK-585), Met closes C and the added
+--    objective starts at once; the assessment stays unpublished, and its check-in is final.
 INSERT INTO pg_temp.a526_ids SELECT 'pia', (SELECT public.save_assessment_with_objectives(NULL, pg_temp.a526row(41, 'draft'),
   jsonb_build_array(jsonb_build_object('player_objective_id', pg_temp.a526obj(41, 'C'), 'status', 'met')), '["Scan before receiving"]'::jsonb));
 SELECT pg_temp.a526check(pg_temp.a526status(41, 'C') = 'met' AND pg_temp.a526status(41, 'Scan before receiving') = 'open'

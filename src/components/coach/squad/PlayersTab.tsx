@@ -112,9 +112,7 @@ export function PlayersTab({ roster, openId = null, report = false, sent = null,
           // TRAK-527: reports follow the evaluation, so only a squad whose plan is shared has one.
           onViewReport={evaluated.has(squadOf.get(open.id) ?? squadLabel ?? '') ? () => onReport(open.id) : undefined}
           // TRAK-528: the reports he was sent; only a squad whose plan is shared sends any.
-          onOpenReport={evaluated.has(squadOf.get(open.id) ?? squadLabel ?? '') ? evaluationId => onSentReport(open.id, evaluationId) : undefined}
-          // TRAK-532: there an assessment stays with the coach.
-          coachOnly={evaluated.has(squadOf.get(open.id) ?? squadLabel ?? '')} />
+          onOpenReport={evaluated.has(squadOf.get(open.id) ?? squadLabel ?? '') ? evaluationId => onSentReport(open.id, evaluationId) : undefined} />
       </article> : !open && <p className="text-sm text-ink-2">{roster.squad == null || roster.squads.length <= 1
         // Every squad is in view, so the player isn't the coach's at all (TRAK-368: the older page's answer).
         ? t('coachSquad:playerNotFound')
