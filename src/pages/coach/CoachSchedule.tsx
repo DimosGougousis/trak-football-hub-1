@@ -642,12 +642,13 @@ export default function CoachSchedule() {
 
         {loadFailed && <LoadError what={t('coachSchedule:scheduleWhat')} onRetry={retry} retrying={retrying} />}
 
-        {/* ── Month (Arc calendar, TRAK-182), compact and on top. TRAK-154: on a laptop the drafts to come stand beside
-            it, as the season plan's "Not shared yet" box; above the day's events on a phone or tablet. ── */}
-        <div className="grid gap-6 laptop:grid-cols-[auto_minmax(0,1fr)] laptop:items-start">
-        <section aria-label={t('coachSchedule:calendar')} className={`${CARD} arc grid justify-items-center gap-3 p-4 sm:w-fit sm:p-5`}>
-          {/* Smaller than Arc's 328 px and never stretched to the column, so the day's events stay in view under it. */}
-          <Calendar locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()} showToday className="!w-[min(100%,296px)]"
+        {/* ── One column on every screen: the month on top, then any notice (TRAK-154's drafts to come, as the season
+            plan's "Not shared yet" box), then the picked day's events. ── */}
+        <div className="grid gap-6">
+        <section aria-label={t('coachSchedule:calendar')} className={`${CARD} arc grid justify-items-center gap-3 p-4 sm:p-5`}>
+          {/* The month (Arc calendar, TRAK-182) grows with the page and stays centred; past 720 px its square days would
+              push the day's events off a laptop's screen. */}
+          <Calendar locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()} showToday className="!w-full max-w-[720px]"
             value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
             month={new Date(viewYear, viewMonth, 1)}
             onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
@@ -657,7 +658,7 @@ export default function CoachSchedule() {
           {/* Legend. TRAK-255: Cancelled (the hollow ring the month draws) and Needs you (the amber corner). Under the
               month. */}
           <div role="group" aria-label={t('coachSchedule:colourKey')}
-            className="flex w-full max-w-[296px] flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t-2 border-line-soft pt-3">
+            className="flex w-full max-w-[720px] flex-wrap items-center justify-center gap-x-4 gap-y-1.5 border-t-2 border-line-soft pt-3">
             {EVENT_KINDS.map(type => (
               <span key={type} className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLOR[type] }} />
