@@ -8,7 +8,7 @@ import type { Part } from '@/lib/training/parts'
 
 const part = (key: string, minutes: number): Part => ({ key, type: 'own', name: key, minutes, drill: null })
 const card = (parts: Part[]) => render(<SessionCard parts={parts} length={90} current={parts[0].key}
-  onOpen={vi.fn()} onReorder={vi.fn()} onMove={vi.fn()} onRemove={vi.fn()} onAdd={vi.fn()} onStandard={vi.fn()}
+  onOpen={vi.fn()} onAdd={vi.fn()} onReview={vi.fn()} onStandard={vi.fn()}
   fromShape={false} standard />)
 
 describe('Your session: the total is said once', () => {

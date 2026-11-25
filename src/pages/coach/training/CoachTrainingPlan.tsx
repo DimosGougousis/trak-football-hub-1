@@ -119,9 +119,10 @@ function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) 
     show('plan')
     window.scrollTo({ top: 0 })
   }
-  // Before it starts, Review & share, as a match's header; from the start, Who's here.
+  // Before it starts, Review & share, as a match's header; from the start, Who's here. Plan session one column (25 Nov):
+  // on the Training plan tab, Your session's Review & share is the only one, so the header has none there.
   const primary: PageHeaderAction | undefined = cancelled || loop.closed ? undefined
-    : !started ? { key: 'review', label: t('coachMatches:reviewShare'), icon: <Share {...icon} />, onSelect: () => {
+    : !started ? tab === 'plan' ? undefined : { key: 'review', label: t('coachMatches:reviewShare'), icon: <Share {...icon} />, onSelect: () => {
       openPlan()
       requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById('plan-share')?.scrollIntoView?.({ block: 'center' })))
     } }
@@ -137,7 +138,9 @@ function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) 
     : <Badge tone={plan ? 'success' : 'attention'} dot>{plan ? t('coachTraining:readyBadge') : t('coachTraining:notPlanned')}</Badge>
 
   return <>
-    <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem]" top={wide ? TOP_BAR : '0px'}
+    {/* Plan session one column (25 Nov): on a laptop, the Training plan tab drops the header's empty action row, as the
+        family pages do, so the plan starts under the title. */}
+    <PageHeader className={`[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem] ${tab === 'plan' && !primary && !secondary.length ? 'laptop:![--ph-bar:0px]' : ''}`} top={wide ? TOP_BAR : '0px'}
       title={training.title} status={status}
       // TRAK-367: the trail says which training by its day, as a training's name can be long. TRAK-569 (phone review,
       // 23 Nov): no coach avatar beside it (the side menu isn't needed here), as a match's page.
