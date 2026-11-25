@@ -11,6 +11,9 @@ export const BTN = `inline-flex min-h-11 items-center justify-center gap-2 round
 export const BTN_DARK = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-brand bg-brand px-4 py-2 text-sm font-bold text-on-brand shadow-sm transition-colors hover:bg-brand/90 disabled:opacity-50 print:hidden ${FOCUS}`
 export const GOOD = 'inline-flex items-center gap-1 rounded-lg border-2 border-success bg-success/10 px-2.5 py-1 text-xs font-extrabold text-success'
 export const WAIT = 'inline-flex items-center gap-1 rounded-lg border-2 border-attention bg-attention/20 px-2.5 py-1 text-xs font-extrabold text-ink'
+/** The season plan's quiet and red badges, beside GOOD and WAIT. */
+export const QUIET = 'inline-flex items-center gap-1 rounded-lg border-2 border-line bg-raised px-2.5 py-1 text-xs font-extrabold text-ink-2'
+export const LOST = 'inline-flex items-center gap-1 rounded-lg border-2 border-danger bg-danger/10 px-2.5 py-1 text-xs font-extrabold text-danger'
 export const PILL = (on: boolean) => `min-h-[38px] rounded-lg border-2 px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${on ? 'border-brand bg-brand text-on-brand' : 'border-line bg-surface text-ink hover:border-ink'}`
 /** The squad badge beside a page's title ("U16 · 15 Players"). */
 export const BADGE = 'inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-surface px-3 py-1.5 text-xs font-extrabold tracking-tight text-ink sm:text-sm'

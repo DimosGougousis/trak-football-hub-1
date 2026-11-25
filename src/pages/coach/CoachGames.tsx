@@ -21,7 +21,7 @@ import { currentLanguage, dateLocale, i18n, useTranslation } from '@/lib/i18n'
 import { COMPETITION_WORD, MATCH_WORD } from '@/lib/games/match-words'
 import { shown } from '@/lib/squad/trait-words'
 import { PageTop } from '@/components/coach/PageTop'
-import { BADGE, BTN, CARD, FOCUS, GOOD, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
+import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, the open
    drafts, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
@@ -39,8 +39,6 @@ const FILL = { width: '100%' }
 const PLAYED_COLOR = 'rgb(var(--t-success))'
 /** TRAK-270: the amber corner of "needs you", here a day with a draft still open. */
 const DRAFT_COLOR = 'rgb(var(--t-attention))'
-const QUIET = 'inline-flex items-center gap-1 rounded-lg border-2 border-line bg-raised px-2.5 py-1 text-xs font-extrabold text-ink-2'
-const LOST = 'inline-flex items-center gap-1 rounded-lg border-2 border-danger bg-danger/10 px-2.5 py-1 text-xs font-extrabold text-danger'
 /** The season plan's badge for an Arc tone: green good, amber waiting, red lost, else quiet. */
 const toneBadge = (tone: string) => tone === 'success' ? GOOD : tone === 'attention' || tone === 'warning' ? WAIT : tone === 'danger' ? LOST : QUIET
 /** A calendar day as the database writes an event's date, in the phone's own day. */
