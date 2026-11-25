@@ -62,18 +62,18 @@ function showForm() {
   </Routes></MemoryRouter>, queries())
 }
 const next = () => screen.getByRole('button', { name: 'Next' })
-const NAMES = ['Player', 'Ratings', 'Objectives', 'Message & note', 'Review']
+// TRAK-559: 3 steps. NAMES are checked in order, so the longer names come first.
+const NAMES = ['Player & bands', 'Objectives & notes', 'Message & note', 'Review']
 const steps = () => within(screen.getByRole('navigation', { name: 'Assessment steps' })).getAllByRole('listitem')
   .map(item => NAMES.find(name => item.textContent?.includes(name)))
 
 describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
-  it('asks after Ratings, waits for every answer, and saves the bands and answers in one call', async () => {
+  it('asks on the second step, waits for every answer, and saves the bands and answers in one call', async () => {
     const user = userEvent.setup()
     showForm()
     await pickOption('Player', 'Alex Synthetic')
-    await waitFor(() => expect(steps()).toEqual(['Player', 'Ratings', 'Objectives', 'Message & note', 'Review']))
+    await waitFor(() => expect(steps()).toEqual(['Player & bands', 'Objectives & notes', 'Review']))
     await waitFor(() => expect(next()).toBeEnabled())
-    await user.click(next())
     await user.click(next())
     const first = await screen.findByRole('group', { name: 'Progress on Shoot first time' })
     const second = screen.getByRole('group', { name: 'Progress on Press from the front' })
@@ -83,7 +83,6 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
     await user.click(within(second).getByRole('button', { name: 'Met' }))
     await user.type(await screen.findByLabelText('Add another objective'), 'Scan before receiving')
     await user.click(screen.getByRole('button', { name: 'Add' }))
-    await user.click(next())
     await user.click(next())
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByText('Coach home')
@@ -95,6 +94,26 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
       p_progress: [{ player_objective_id: 'obj-a', status: 'on_track' }, { player_objective_id: 'obj-b', status: 'met' }],
       p_add: ['Scan before receiving'],
     })
+    // TRAK-532: saved unpublished, the coach's own; families get reports.
+    expect(saves[0].p_row).toHaveProperty('published_at', null)
+  })
+
+  // TRAK-532 (Imad, 21 Nov): with a shared plan, one Save; no Publish, no Save draft, no message to the player.
+  it('TRAK-532: the second step has the objectives and the private note, no message, and Review ends with one Save', async () => {
+    const user = userEvent.setup()
+    showForm()
+    await pickOption('Player', 'Alex Synthetic')
+    await waitFor(() => expect(next()).toBeEnabled())
+    await user.click(next())
+    await user.click(within(await screen.findByRole('group', { name: 'Progress on Shoot first time' })).getByRole('button', { name: 'On track' }))
+    await user.click(within(screen.getByRole('group', { name: 'Progress on Press from the front' })).getByRole('button', { name: 'On track' }))
+    expect(screen.getByLabelText(/Private note/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Message to Alex')).toBeNull()
+    await user.click(next())
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /^Publish/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save draft' })).toBeNull()
+    expect(screen.queryByText('Message to Alex')).toBeNull()
   })
 
   // TRAK-542 (found live, 22 Nov): jumping to Review left Objectives ticked, Review without them, and Save grey with no reason.
@@ -131,8 +150,8 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
     showForm()
     await pickOption('Player', 'Alex Synthetic')
     await waitFor(() => expect(next()).toBeEnabled())
-    expect(steps()).toEqual(['Player', 'Ratings', 'Message & note', 'Review'])
-    for (let i = 0; i < 3; i++) await user.click(next())
+    expect(steps()).toEqual(['Player & bands', 'Message & note', 'Review'])
+    for (let i = 0; i < 2; i++) await user.click(next())
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByText('Coach home')
     expect(saves).toHaveLength(0)

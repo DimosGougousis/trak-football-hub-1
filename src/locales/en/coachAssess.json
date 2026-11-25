@@ -21,6 +21,7 @@
   "savedDraftMsg": "Saved. Your message is a draft; {{name}} can't see it yet.",
   "savedCanRead": "Saved. {{name}} can read your message now.",
   "assessmentSaved": "Assessment saved.",
+  "savedCoachOnly": "Saved. Only you see it; the family reads the report.",
   "couldNotFinish": "Could not finish saving. Your text is still here — please try again.",
   "notUnpublished": "Not unpublished ({{error}}). {{name}} can still see the message. Try again.",
   "notUnpublishedMissing": "Not unpublished: the message could not be found. Reload to see what {{name}} can read.",
