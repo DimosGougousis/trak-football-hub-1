@@ -18,6 +18,7 @@ import { trackEvent } from '@/lib/telemetry'
 import { PlayerParentInviteCard } from '@/components/player/PlayerParentInviteCard'
 import { OwnConsentCard } from '@/components/player/OwnConsentCard'
 import { MySeasonCard } from '@/components/player/MySeasonCard'
+import { MyTasks } from '@/components/player/MyTasks'
 import { LatestReport } from '@/components/player/LatestEvaluation'
 import { SeasonSoFar } from '@/components/player/SeasonSoFar'
 import { ParentAssessmentCarousel } from '@/components/parent/ParentAssessmentCarousel'
@@ -321,6 +322,9 @@ export default function PlayerHome() {
             .gte('event_date', from).lte('event_date', to).order('event_date', { ascending: true })} />}
         {/* TRAK-133 (J8.10): once there are events, offer the phone calendar. */}
         <CalendarHomePrompt hasEvents={upcomingEvents.length > 0} />
+
+        {/* TRAK-579: what the coach asked the player to confirm; nothing when there's nothing to answer. */}
+        {user && <MyTasks key={user.id} />}
 
         {mayHaveMissedHistory && (
           <div className="rounded-xl border p-4 my-4" role="status"
