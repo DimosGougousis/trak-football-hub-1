@@ -196,36 +196,34 @@ describe('TRAK-320: Previous matches', { timeout: 20_000 }, () => {
   })
 })
 
-describe('TRAK-321: Top scorers and assists', { timeout: 20_000 }, () => {
-  it('counts this season\'s published evaluations: goals, then assists, with matches played', async () => {
+describe("TRAK-576: one column in the season plan's look", { timeout: 20_000 }, () => {
+  it('shows the month of matches, the open drafts straight under it, and no top scorers or assists', async () => {
+    const user = userEvent.setup()
     const now = Date.now()
+    const soon = onTheMinute(now + 3 * DAY)
     eventsRead([
+      match('soon', 'U16', soon, { opponent: 'Parkview Athletic' }),
       match('won', 'U16', onTheMinute(now - 7 * DAY), { competition: 'league' }),
-      match('drew', 'U16', onTheMinute(now - 3 * DAY), { competition: 'tournament' }),
-      match('draft', 'U16', onTheMinute(now - 1 * DAY)),
     ])
-    server.use(
-      table('game_evaluations', [
-        { event_id: 'won', saved_at: '2026-10-01T18:00:00Z', published_at: '2026-10-01T19:00:00Z', our_score: 2, their_score: 0,
-          goals: [{ scorer: 'sp-2', assist: 'sp-1' }, { scorer: 'sp-2', assist: null }] },
-        { event_id: 'drew', saved_at: '2026-10-08T18:00:00Z', published_at: '2026-10-08T19:00:00Z', our_score: 1, their_score: 1,
-          goals: [{ scorer: 'sp-1', assist: 'sp-2' }] },
-        // A draft counts for nothing until it's published.
-        { event_id: 'draft', saved_at: '2026-10-28T18:00:00Z', published_at: null, our_score: 3, their_score: 0,
-          goals: [{ scorer: 'sp-1', assist: null }, { scorer: 'sp-1', assist: null }, { scorer: 'sp-1', assist: null }] },
-      ]),
-      table('game_evaluation_players', [
-        { event_id: 'won', squad_player_id: 'sp-1', played: true }, { event_id: 'won', squad_player_id: 'sp-2', played: true },
-        { event_id: 'drew', squad_player_id: 'sp-1', played: true }, { event_id: 'drew', squad_player_id: 'sp-2', played: true },
-      ]),
-    )
+    server.use(table('game_evaluations', [
+      { event_id: 'won', saved_at: '2026-10-01T18:00:00Z', published_at: '2026-10-01T19:00:00Z', our_score: 2, their_score: 0,
+        goals: [{ scorer: 'sp-2', assist: 'sp-1' }] },
+    ]))
     renderApp('/coach/matches')
-    const grid = await screen.findByRole('table')
-    await waitFor(() => expect(within(grid).getAllByRole('row')).toHaveLength(3))
-    // TRAK-446: no helper line under the title.
-    expect(screen.queryByText(/from your published evaluations/)).toBeNull()
-    const rows = within(grid).getAllByRole('row').slice(1).map(row => row.textContent)
-    expect(rows).toEqual(['1Angelos Charisteas212', '2Giorgos Karagounis112'])
+    const calendar = await screen.findByRole('region', { name: 'Match calendar' })
+    const drafts = screen.getByRole('region', { name: 'Open drafts' })
+    expect(within(drafts).getByText('No drafts open.')).toBeInTheDocument()
+    // One column: the month, then the open drafts, then the next match, the matches to come and the previous ones.
+    const order = [calendar, drafts, screen.getByRole('region', { name: 'Next match' }),
+      screen.getByRole('region', { name: 'Your matches' }), screen.getByRole('region', { name: 'Previous matches' })]
+    order.slice(1).forEach((region, i) => expect(order[i].compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy())
+    // TRAK-321's table is gone from this page.
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByText(/Top scorers/)).toBeNull()
+
+    // The month opens on the next match's; its day opens the match.
+    await user.click(calendar.querySelector<HTMLButtonElement>(`[data-present] [data-date="${athens(soon).year}-${athens(soon).month}-${athens(soon).day}"]`)!)
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches/soon'))
   })
 })
 })
