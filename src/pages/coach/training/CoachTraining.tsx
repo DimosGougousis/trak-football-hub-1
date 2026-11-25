@@ -1,4 +1,4 @@
-import { useTranslation } from '@/lib/i18n'
+import { i18n, useTranslation } from '@/lib/i18n'
 import { TRAINING_WORD } from '@/lib/training/words'
 import { shown as shownWord } from '@/lib/squad/trait-words'
 import { useLayoutEffect, useState, type ReactNode } from 'react'
@@ -11,7 +11,7 @@ import { splitTrainings, trainingMinutes } from '@/lib/training/sessions'
 import { useTrainingEnded } from '@/lib/training/ended'
 import { herePath, planPath, sessionSummary } from '@/lib/training/plans'
 import { registerProblem } from '@/lib/event-register'
-import { againLabel, loopSteps, nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
+import { againLabel, nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
 import { gameWhen } from '@/components/coach/games/useGames'
 import {
   useDrafts, useHere, useNotes, usePastTrainings, usePlannedTrainings, useRegisters, useTrainings, type Draft, type Training,
@@ -30,7 +30,9 @@ import { Button } from '@/components/arc/button/button'
 import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { ScrollArea } from '@/components/arc/scroll-area/scroll-area'
-import { Stepper } from '@/components/arc/stepper/stepper'
+import { SplitButton } from '@/components/arc/split-button/split-button'
+import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
+import { NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { SearchField } from '@/components/arc/search-field/search-field'
 import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
@@ -225,87 +227,75 @@ function SessionsView() {
   )
 }
 
-/** The training the card shows: its name and badge, when and where, the loop, the message to families, and the one next
- *  action. After the training, its Notes. */
+/** The training the card shows. TRAK-584 (Kostas, 25 Nov; mockup T3mPZUwXMG2fMJw9ZzytPG): in the Next match card's style
+ *  (CoachGames' NextGame). A "Next training" label over its name; no loop stepper (as TRAK-333 took the match's away); the
+ *  badge as Matches' (cardBadge); one split button, the next thing to do with the training's other pages behind the
+ *  chevron; the countdown always, ending on Started, then Finished. After the training, Notes opens in a sheet, as
+ *  Evaluate opens a match's. The message to families is edited in Events, as a match's is. */
 function NextTraining({ training, phase, planned, draft, sessionId, onStart, onClosed }: {
   training: Training; phase: Phase; planned: boolean; draft: Draft | undefined; sessionId: string | null; onStart: () => void; onClosed: () => void
 }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const here = useHere(sessionId ? [sessionId] : [])
   const [copying, setCopying] = useState(false)
+  const [noting, setNoting] = useState(false)
   const { day, time, academy } = gameWhen(training)
   const minutes = trainingMinutes(training)
-  const count = sessionId ? here.data?.get(sessionId) ?? null : null
-  const badge = trainingBadge({ phase, planned, here: count, draft: !!draft })
-  const stoppedAt = draft ? draft.parts[draft.step]?.name ?? t('coachMatches:reviewShare') : null
-  const current = phase === 'after' ? 3 : planned || phase === 'day' ? 2 : 1
-  // A step the card has moved past is ticked only if it really happened; otherwise it says what's missing (live check,
-  // 3 Nov: a training ended with no register showed Who's here ticked).
-  const steps = loopSteps({ current, planned, registered: !!sessionId }).map(step => ({ ...step, label: shownWord(TRAINING_WORD, step.label),
-    ...('error' in step && step.error ? { error: shownWord(TRAINING_WORD, step.error) } : {}) }))
-  const message = training.family_note?.trim()
-  const locked = startedLocked(training)
   // TRAK-493: once the training is over its countdown says "Finished", never "Started".
   const ended = useTrainingEnded(training)
+  const started = startedLocked(training)
+  const badge = cardBadge({ phase, started, planned, draft: !!draft })
   // Who's here opens as the register does everywhere else: published, not cancelled, started.
   const registerWhy = registerProblem({ ...training, event_type: 'training' }, new Date())
   // TRAK-456: a plan, written or not, is the training page's Training plan tab.
   const plan = () => navigate(planPath(training.id))
-  const review = plan
+  const viewPlan = { label: t('coachMatches:actViewPlan'), onSelect: plan }
+  const logistics = { label: t('coachMatches:actLogistics'), onSelect: () => navigate(`${TRAINING_PATH}/${training.id}?tab=logistics`) }
+  const action = phase === 'after'
+    ? { label: t('coachTraining:loopNotes'), onClick: () => setNoting(true), more: planned ? [viewPlan, logistics] : [logistics] }
+    : phase === 'day' && started
+      ? { label: t('coachTraining:loopHere'), onClick: () => navigate(herePath(training.id)), disabled: !!registerWhy && !sessionId, more: planned ? [viewPlan, logistics] : [logistics] }
+      : planned ? { label: viewPlan.label, onClick: plan, more: [logistics] }
+      : draft ? { label: t('coachTraining:continuePlan'), onClick: plan, more: [logistics] }
+      : { label: t('coachTraining:planSession'), onClick: plan, more: [{ label: t('coachTraining:usePastPlan'), onSelect: () => setCopying(true) }, logistics] }
 
   return (
     <section aria-labelledby="next-training" className={`${CARD} arc relative flex min-w-0 flex-col gap-4 overflow-hidden p-5 pl-7 sm:p-6 sm:pl-8`}>
       <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5" style={{ background: EVENT_COLOR.training }} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid min-w-0 gap-1.5">
-          {/* Kostas, 30 Oct: no "Next training" heading; the name and badge lead the card. */}
-          <h2 id="next-training" className="text-[22px] font-black tracking-tight text-ink break-words sm:text-2xl">{training.title}</h2>
-          <p className="text-sm font-semibold text-ink-2">{[phase !== 'before' && phoneEventTime(training).date === localTodayISO() ? t('coachHome:today') : day, time,
-            training.venue, minutes ? t('coachHome:minutes', { count: minutes }) : null].filter(Boolean).join(' · ')}</p>
-          {academy && <p className="text-xs font-semibold text-ink-3">{academy}</p>}
-        </div>
-        <span className={`${toneBadge(badge.tone)} shrink-0`}>{shownWord(TRAINING_WORD, badge.label)}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SectionHeading id="next-training" bar="bg-ink">{t('coachTraining:nextTraining')}</SectionHeading>
+        <span className={toneBadge(badge.tone)}>{badge.label}</span>
+      </div>
+      <div className="grid min-w-0 gap-1.5">
+        <p className="text-[22px] font-black tracking-tight text-ink break-words sm:text-2xl">{training.title}</p>
+        <p className="text-sm font-semibold text-ink-2">{[phase !== 'before' && phoneEventTime(training).date === localTodayISO() ? t('coachHome:today') : day, time,
+          training.venue, minutes ? t('coachHome:minutes', { count: minutes }) : null].filter(Boolean).join(' · ')}</p>
+        {academy && <p className="text-xs font-semibold text-ink-3">{academy}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="arc"><SplitButton className={NEXT_STEP_WIDTH} label={action.label} onClick={action.onClick} disabled={'disabled' in action && action.disabled}
+          actions={action.more} /></span>
+        <Countdown variant="compact" units={['days', 'hours', 'minutes']} target={training.starts_at}
+          label={t('coachTraining:startsIn')} completeLabel={t(ended ? 'coachTraining:finished' : 'coachTraining:started')} onComplete={onStart} className="ml-auto" />
       </div>
 
-      <Stepper label={t('coachTraining:whereTrainingIs')} steps={steps} current={current} />
-
-      {phase === 'after' ? <NotesForm training={training} planned={planned} onReview={review} onClosed={onClosed} />
-        : <>
-          {/* TRAK-367: always there to add one, until the training starts and its details are fixed. Edit opens the form at
-              the note, in Schedule, which alone can save it to this training and the ones after. */}
-          {(message || !locked) && <p className="flex items-start gap-2 rounded-xl bg-raised px-4 py-3 text-sm text-ink-2">
-            <Info aria-hidden size={16} className="mt-1 flex-none text-ink-3" />
-            <span className="min-w-0 flex-1 break-words"><span className="font-medium text-ink">{t('coachSchedule:messageToPlayers')}{message && ':'}</span> {message}</span>
-            {/* TRAK-455: editing the message is a pencil; adding one keeps its words. */}
-            {!locked && (message ? <EditIcon label={t('coachTraining:editMessage')} to={`/coach/schedule?edit=${training.id}&step=${NOTE_STEP}`} className="-my-2.5" />
-              : <Link to={`/coach/schedule?edit=${training.id}&step=${NOTE_STEP}`} className={linkClass}>{t('coachTraining:addMessage')}</Link>)}
-          </p>}
-          <div className="flex flex-wrap items-center gap-3">
-            {phase === 'day' ? <>
-              <Button size="lg" disabled={!!registerWhy && !sessionId} onClick={() => navigate(herePath(training.id))}>{t('coachTraining:loopHere')}</Button>
-              {planned ? <Button size="lg" variant="secondary" onClick={review}>{t('coachTraining:reviewPlan')}</Button>
-                : <Button size="lg" variant="secondary" onClick={plan}>{t('coachTraining:planSession')}</Button>}
-            </> : planned ? <>
-              <Button size="lg" onClick={review}>{t('coachTraining:reviewPlan')}</Button>
-              <EditIcon label={t('coachTraining:editPlan')} onClick={plan} />
-            </> : draft ? <>
-              <Button size="lg" onClick={plan}>{t('coachTraining:continuePlan')}</Button>
-            </> : <>
-              <Button size="lg" onClick={plan}>{t('coachTraining:planSession')}</Button>
-              <Button size="lg" variant="secondary" onClick={() => setCopying(true)}><Copy aria-hidden size={16} />{t('coachTraining:usePastPlan')}</Button>
-            </>}
-            <Countdown variant="compact" units={['days', 'hours', 'minutes']} target={training.starts_at}
-              label={t('coachTraining:startsIn')} completeLabel={t(ended ? 'coachTraining:finished' : 'coachTraining:started')} onComplete={onStart} className="ml-auto" />
-          </div>
-          {/* Kostas, 3 Nov: the mockup is clean; a line only when a button is waiting for the training to start. */}
-          {phase === 'day' && registerWhy && !sessionId && <p className="text-sm text-ink-3">{t('coachTraining:hereOpens')}</p>}
-          {stoppedAt && phase === 'before' && !planned && <p className="text-sm text-ink-3">{t('coachTraining:stoppedAt', { step: stoppedAt })}</p>}
-        </>}
-
       <PastPlanSheet open={copying} onOpenChange={setCopying} training={training} />
+      <BottomSheet className="arc" open={noting} onOpenChange={setNoting} detents={[0.92]} title={t('coachTraining:loopNotes')}
+        description={[training.title, day, time].filter(Boolean).join(' · ')}>
+        <div className="pb-4"><NotesForm training={training} planned={planned} onReview={plan} onClosed={() => { setNoting(false); onClosed() }} /></div>
+      </BottomSheet>
     </section>
   )
+}
+
+/** TRAK-584: the Next training card's badge, as Matches' (lib/games/loop STATE): Plan not written and Draft wait on the
+ *  coach; Plan ready is a match's Plan shared (a training plan is the coach's own); Started and Finished are a match's
+ *  Locked at kick-off and Full time. */
+function cardBadge({ phase, started, planned, draft }: { phase: Phase; started: boolean; planned: boolean; draft: boolean }) {
+  if (phase === 'after') return { label: shownWord(TRAINING_WORD, 'Finished'), tone: 'neutral' }
+  if (started) return { label: i18n.t('coachTraining:started'), tone: 'neutral' }
+  if (planned) return { label: shownWord(TRAINING_WORD, 'Plan ready'), tone: 'success' }
+  return draft ? { label: shownWord(TRAINING_WORD, 'Draft'), tone: 'attention' } : { label: shownWord(TRAINING_WORD, 'Plan not written'), tone: 'attention' }
 }
 
 /** Open drafts, under the Next training as Matches has them under its month (TRAK-577): plans the coach kept for later,

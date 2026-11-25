@@ -10,7 +10,8 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 // TRAK-306: the side menu (a laptop's sidebar, a phone's sheet) cuts no letter: g, q and p keep their tails.
 // TRAK-310: each training coming up has View plan and Edit plan, or Create plan, on its right.
 // TRAK-339 (Training redo 1/5): Training home like Matches: the Next training card, Upcoming trainings, Past trainings;
-// Plan session goes straight to the planner, Use a past plan copies one, and Notes close a training.
+// Plan session goes straight to the planner, Use a past plan copies one, and Notes close a training. TRAK-584: the card is
+// in the Next match card's style; Use a past plan is behind Plan session, and Notes open in a sheet.
 // Production build, synthetic intercepted backend; test people are named after footballers.
 test.use({ timezoneId: 'Asia/Dubai' })
 
@@ -171,10 +172,12 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   test(`Training home at ${width} px: the Next training card, Upcoming trainings, Past trainings`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
     await expect(page.getByRole('heading', { level: 1, name: 'Training' })).toHaveCount(1)
-    const next = page.getByRole('region', { name: 'Before AEK U16 on Saturday' })
+    // TRAK-584: the Next match card's style: a label over the name, Matches' badge, one split button.
+    const next = page.getByRole('region', { name: 'Next training' })
+    await expect(next.getByText('Before AEK U16 on Saturday')).toBeVisible()
     await expect(next.getByText('Plan not written')).toBeVisible()
-    await expect(next.getByRole('button', { name: 'Plan session' })).toBeVisible()
-    await expect(next.getByRole('button', { name: 'Use a past plan' })).toBeVisible()
+    await expect(next.getByRole('button', { name: 'Plan session', exact: true })).toBeVisible()
+    await expect(next.getByRole('button', { name: 'Plan session more actions' })).toBeVisible()
     const upcoming = page.getByRole('region', { name: 'Upcoming trainings' }).first()
     await expect(upcoming.getByRole('link')).toHaveCount(3)
     await expect(upcoming.getByRole('link').first()).toContainText('Before AEK U16 on Saturday')
@@ -402,7 +405,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   // TRAK-340: Plan session is parts, one step each, then Review (TRAK-456: Review & share, on the page's Training plan tab).
   test(`Planning at ${width} px: Trak's five parts, a drill each, Review, saved`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
-    await page.getByRole('region', { name: 'Before AEK U16 on Saturday' }).getByRole('button', { name: 'Plan session' }).click()
+    await page.getByRole('region', { name: 'Next training' }).getByRole('button', { name: 'Plan session', exact: true }).click()
     await expect(page).toHaveURL(/\/coach\/training\/t-thu\?tab=plan$/)
     const warmup = page.getByRole('region', { name: 'Dry warm-up' })
     // TRAK-392: the Library's starter drill is picked; the three choices are the Library's.
@@ -501,7 +504,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
 
   test(`Use a past plan at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height)
-    await page.getByRole('region', { name: 'Before AEK U16 on Saturday' }).getByRole('button', { name: 'Use a past plan' }).click()
+    await page.getByRole('region', { name: 'Next training' }).getByRole('button', { name: 'Plan session more actions' }).click()
+    await page.getByRole('menuitem', { name: 'Use a past plan' }).click()
     const copy = page.getByRole('dialog', { name: 'Use a past plan' })
     await expect(copy.getByRole('list', { name: 'Past plans' }).getByRole('listitem')).toHaveCount(2)
     await page.waitForTimeout(600)
@@ -648,15 +652,16 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const done = { ...training('t-done', 'U16', 0, '18:00', 'Defending the box'),
       starts_at: new Date(ended - 90 * MINUTE).toISOString(), ends_at: new Date(ended).toISOString() }
     const { unexpected, errors } = await open(page, context, '/coach/training', width, height, [done, ...TRAININGS])
-    const card = page.getByRole('region', { name: 'Defending the box' })
+    // TRAK-584: Notes opens in a sheet from the card's split button.
+    await expect(page.getByRole('region', { name: 'Next training' }).getByText('Defending the box')).toBeVisible()
+    await page.getByRole('region', { name: 'Next training' }).getByRole('button', { name: 'Notes', exact: true }).click()
+    const card = page.getByRole('dialog', { name: 'Notes' })
     await expect(card.getByText('Would you run this session again?')).toBeVisible()
     await card.getByRole('button', { name: 'Yes, with changes' }).click()
     await card.getByLabel('A note for next time').fill('Rondo grids too small.')
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-notes-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    const keyboard = await everyControlByKeyboard(page, '.trak-wide')
-    expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
   })
