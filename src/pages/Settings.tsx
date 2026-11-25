@@ -299,7 +299,7 @@ function AccountSettings({ userId }: { userId: string }) {
       content: roleData === 'loading' ? <p role="status" className="text-sm text-ink-3">{t('settings:loadingProfile')}</p>
         : roleData === 'error' ? <div role="alert" className="text-sm text-ink-3">
             <p>{t('settings:profileLoadError')}</p>
-            <button onClick={() => setLoadAttempt(value => value + 1)} className="mt-2 text-brand">{t('common:retry')}</button>
+            <button onClick={() => setLoadAttempt(value => value + 1)} className="mt-2 text-brand underline underline-offset-2">{t('common:retry')}</button>
           </div>
         : <SettingsRows>
             <SettingsRow label={t('settings:club')}>{coachClub || '—'}</SettingsRow>

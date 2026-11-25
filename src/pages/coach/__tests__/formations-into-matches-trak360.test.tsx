@@ -257,7 +257,7 @@ describe('TRAK-515 save first, then carry on', () => {
     await waitFor(() => expect(place(1)).toHaveAccessibleName(/^Synthetic Goalkeeper 01/))
     await user().click(within(benchList()).getByRole('button', { name: /^Synthetic Goalkeeper 02, bench/ }))
     await user().click(place(1))
-    expect(screen.getByText('Unsaved changes', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText('Unsaved changes', { selector: '[role="status"] span' })).toBeInTheDocument()
     expect(screen.queryByText(/Save your changes first/)).toBeNull()
   }
 
@@ -286,6 +286,6 @@ describe('TRAK-515 save first, then carry on', () => {
     await user().click(screen.getByRole('button', { name: 'Make default for 11 a side' }))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(calls).toEqual([])
-    expect(screen.getByText('Unsaved changes', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText('Unsaved changes', { selector: '[role="status"] span' })).toBeInTheDocument()
   }, 30_000)
 })

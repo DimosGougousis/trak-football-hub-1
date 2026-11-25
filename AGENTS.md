@@ -42,6 +42,7 @@ explicitly open; an issue being Done does not prove a newer requirement passed.
 | Database client and generated types | `src/integrations/supabase/` |
 | Rating and bands | `src/lib/rating-engine.ts`, `src/lib/types.ts` (`BANDS`) |
 | Shared UI | `src/components/trak/` |
+| Season plan look (season plan, Squad, a player's page) | `src/components/coach/pitch-ready.tsx`, role tokens only |
 | Squad views (Players, Attributes, Availability) | `src/pages/coach/CoachSquadPage.tsx`, `src/components/coach/squad/`, `src/lib/squad/` |
 | Games (one loop per match, behind the `games` switch) | `docs/superpowers/specs/2026-10-27-games-tab-design.md`, `src/pages/coach/CoachGames.tsx`, `src/components/coach/games/`, `src/lib/games/` |
 | Training (plan each training from the Drill Library, My drills = bookmarks, behind the `training` switch) | `docs/superpowers/specs/2026-10-28-training-tab-design.md`, `src/pages/coach/training/`, `src/components/coach/training/`, `src/lib/training/` |
@@ -64,6 +65,8 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   substitute for its consent and assignment checks.
 - Wording (TRAK-454, 11 Nov walk-through): write "e.g." (Greek "π.χ."), never "For example"; and "select",
   never "pick" ("Select a date", "None selected"), in English and Greek.
+- New and changed screens follow the design standard in `docs/design-system/`
+  (colour, type, spacing, and the shared pieces in `src/components/trak/standard/`).
 - Follow the existing mobile shell and design tokens. Use `BANDS` for band
   wording and colors; keep player-visible messages separate from private notes.
 - Spacing and corners follow [docs/design-system/spacing-and-corners.md](docs/design-system/spacing-and-corners.md)

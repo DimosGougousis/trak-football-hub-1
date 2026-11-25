@@ -4,8 +4,32 @@ import { MobileShell, NavBar } from '@/components/trak'
 import { ParentChildSelector, ParentFamilyContent, ParentLoadError, ParentLoading, ParentRating } from '@/components/parent/ParentFamily'
 import { useParentAssessments } from '@/hooks/useParentAssessments'
 import { formatParentDate } from '@/lib/parent-data'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { FamilyPage } from '@/components/trak/FamilyPage'
+import { ReportsList } from '@/components/player/LatestEvaluation'
+import { useParentChildren } from '@/contexts/ParentChildrenContext'
+import { useTranslation } from '@/lib/i18n'
+
+/** TRAK-530 (Reports 7/10), the new look: All assessments is All reports, the chosen child's, under Profile. */
+function AllReports() {
+  const navigate = useNavigate()
+  const { t } = useTranslation()
+  const { selectedChild } = useParentChildren()
+  return <MobileShell width="wide">
+    <div className="pb-28"><ParentFamilyContent>
+      <FamilyPage title={t('common:allReports')} from={{ label: t('nav:profile'), href: '/parent/profile' }}>
+        {selectedChild && <ReportsList key={selectedChild.id} childId={selectedChild.id} as="parent" />}
+      </FamilyPage>
+    </ParentFamilyContent></div>
+    <NavBar role="parent" activeTab="/parent/profile" onNavigate={navigate} />
+  </MobileShell>
+}
 
 export default function ParentAssessments() {
+  return useFamilyLook() ? <AllReports /> : <AssessmentHistory />
+}
+
+function AssessmentHistory() {
   const navigate = useNavigate()
   const location = useLocation()
   const query = useParentAssessments()

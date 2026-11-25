@@ -51,7 +51,7 @@ describe('TRAK-312: one consent check per page load', { timeout: 20_000 }, () =>
     coachReads()
     renderApp('/coach/squad')
     const panel = await screen.findByRole('region', { name: 'Players' }, { timeout: 5000 })
-    expect(await within(panel).findByText('Player 27', undefined, { timeout: 5000 })).toBeInTheDocument()
+    expect(await within(panel).findByRole('button', { name: /Player 27/ }, { timeout: 5000 })).toBeInTheDocument()
 
     expect(single).toBe(0)
     expect(batches).toHaveLength(1)
@@ -63,6 +63,6 @@ describe('TRAK-312: one consent check per page load', { timeout: 20_000 }, () =>
     renderApp('/coach/squad')
     expect(await screen.findByText("Couldn't load your squad", undefined, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText('Your squad is being prepared')).toBeNull()
-    expect(screen.queryByText('Player 01')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Player 01/ })).toBeNull()
   })
 })

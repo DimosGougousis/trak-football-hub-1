@@ -71,7 +71,7 @@
   --space-12: 3rem; --space-16: 4rem; --space-20: 5rem; --space-24: 6rem;
   /* Spacing and corners rule: docs/design-system/spacing-and-corners.md (TRAK-464). */
   --radius-control: .75rem; --radius-panel: 1rem; --radius-surface: 1rem; --radius-pill: 9999px;
-  --control-height-sm: 2.25rem; --control-height-md: 2.75rem; --control-height-lg: 3.125rem;
+  --control-height-sm: 2.75rem; --control-height-md: 2.75rem; --control-height-lg: 3.125rem;
   --font-display: var(--font-geist, "Geist Variable"), sans-serif;
   --font-body: var(--font-inter, "Inter Variable"), sans-serif;
   --text-xs: .75rem; --text-sm: .875rem; --text-base: 1rem; --text-lg: 1.125rem;
@@ -93,11 +93,12 @@
   --surface: rgb(var(--t-surface));
   --surface-raised: rgb(var(--t-raised));
   --surface-muted: rgb(var(--t-raised));
+  --surface-rail: rgb(var(--t-rail));
   --foreground: rgb(var(--t-ink));
   --text-secondary: rgb(var(--t-ink-2));
   --text-muted: rgb(var(--t-ink-3));
   --border: rgb(var(--t-line));
-  --border-subtle: rgb(var(--t-line));
+  --border-subtle: rgb(var(--t-line-soft));
   --border-strong: rgb(var(--t-line-strong));
   --accent: rgb(var(--t-brand));
   --accent-strong: rgb(var(--t-brand));
@@ -112,16 +113,16 @@
   --warning: rgb(var(--t-warning));
   --attention: rgb(var(--t-attention));
   --danger: rgb(var(--t-danger));
-  /* TRAK-370 (Imad, 5 Nov): Arc's current badge. Its info tone keeps the green it had; its categorical colours are
+  /* TRAK-370 (Imad, 5 Nov): Arc's current badge. Its info tone is Trak's blue (design standard); its categorical colours are
      Trak's: amber is Trak's orange (stretch, context), sky Trak's blue (lead). */
-  --info: var(--accent);
+  --info: rgb(var(--t-info));
   --tone-amber: rgb(var(--t-orange));
   --tone-sky: rgb(var(--t-info));
   --shadow-resting: 0 1px 2px hsl(0 0% 0% / .06);
   --shadow-raised: 0 8px 22px hsl(0 0% 0% / .08);
   --shadow-floating: 0 22px 55px hsl(0 0% 0% / .14);
   /* Chart series (Arc Pro radar chart): the child first in Trak green, then the squad in Trak's blue. */
-  --series-1: rgb(var(--t-brand));
+  --series-1: rgb(var(--t-success));
   --series-2: rgb(var(--t-info));
   --series-3: rgb(var(--t-warning));
   --series-4: rgb(var(--t-danger));

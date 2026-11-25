@@ -7,7 +7,7 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { ON_LIBRARY, PRACTICE_KIND_COLOURS } from '@/lib/fixed-colours'
 import {
   CHANGE_PRACTICE_PATH, CHARACTERISTICS, KINDS, KIND_ORDER, LIBRARY, MY_DRILLS_PATH, PLAYERS_TODAY, START_LEVEL, allDrillsPath, anotherDrill,
-  changedBy, characteristic, drillPath, fit, foundAs, squadPlayers, type Changed, kindInfo, kindPath, libraryDrill, nextLevel, practiceKey, practiceLayout, refit, searchDrills, step, typesOf, type Change,
+  changedBy, characteristic, drillPath, fit, foundAs, shownDrill, squadPlayers, type Changed, kindInfo, kindPath, libraryDrill, nextLevel, practiceKey, practiceLayout, refit, searchDrills, step, typesOf, type Change,
   type Kind, type LibraryDrill, type Squad,
 } from '@/lib/training/library'
 import { useBookmarks, useSquadSize } from '@/components/coach/training/useTraining'
@@ -23,6 +23,7 @@ import { ChipGroup } from '@/components/arc/chip-group/chip-group'
 import { Button } from '@/components/arc/button/button'
 import { PageTop } from '@/components/coach/PageTop'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
+import { useTranslation } from '@/lib/i18n'
 
 /* TRAK-387 (Drill Library 3/11, parent TRAK-384): Training › Drills is the new Library, from the 8 Nov mockup. Find a
    drill (results take the place of everything else while the coach types), My drills and All drills, then "What kind
@@ -34,7 +35,8 @@ import { EmptyState } from '@/components/arc/empty-state/empty-state'
    academy with Training off, and players keep Play It Right; nothing is deleted. No Programmes link (Kostas, 8 Nov). */
 
 type PracticeKind = Exclude<Kind, 'warmup'>
-const GROUP_NAME: Record<Kind, string> = { warmup: 'Get ready', technical: 'Technical practices', skill: 'Skill practices', game: 'Game related practices' }
+// TRAK-408: the screens' words in the language showing; the drills' own wording (names, kinds, types) is TRAK-409.
+const GROUP_NAME = { warmup: 'coachTraining:libGroupWarmup', technical: 'coachTraining:libGroupTechnical', skill: 'coachTraining:libGroupSkill', game: 'coachTraining:libGroupGame' } as const satisfies Record<Kind, string>
 
 /** The squad every picture is fitted to: the squad picked at the top (or the whole roster on All), kept to what a
  *  drill can be drawn for, at the standard level. */
@@ -72,9 +74,10 @@ function SubPage({ title, intro, children }: { title: string; intro?: ReactNode;
 /** The search box: Arc's search field with its magnifier, the same box as Past trainings and Squad (TRAK-431, Kostas
  *  16 Nov, in place of 6 Nov's plain box). The page's heading says what it searches, so its label is for screen readers. */
 function FindBox({ value, onChange, big = false }: { value: string; onChange: (q: string) => void; big?: boolean }) {
+  const { t } = useTranslation()
   return <div className={`arc [&_label]:sr-only ${big ? '[&_input]:text-[17px] [&>div>div]:min-h-14' : ''}`}>
     {/* TRAK-520 (Imad, 20 Nov): the example in the box, in place of "Search". */}
-    <SearchField label="Search drills" autoComplete="off" value={value} onValueChange={onChange} placeholder="e.g. rondo, pressing" />
+    <SearchField label={t('coachTraining:searchDrills')} autoComplete="off" value={value} onValueChange={onChange} placeholder={t('coachTraining:searchDrillsEx')} />
   </div>
 }
 
@@ -89,8 +92,6 @@ function useQueryParam(key: string): [string, (value: string) => void] {
   }, { replace: true })
   return [value, set]
 }
-
-const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
 const Empty = ({ children }: { children: ReactNode }) =>
   <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-[15px] text-ink-2">{children}</p>
@@ -108,6 +109,7 @@ const GLYPHS: Record<PracticeKind, ReactNode> = {
 
 /** The Drills tab: Find a drill, My drills and All drills, then the three kinds of practice. */
 export function LibraryHome() {
+  const { t } = useTranslation()
   const { squad } = useLibrarySquad()
   const bookmarks = useBookmarks()
   const [query, setQuery] = useQueryParam('q')
@@ -118,24 +120,24 @@ export function LibraryHome() {
   return (
     <div className="grid gap-6 pt-2">
       <div className="grid gap-3">
-        <h2 className="text-[22px] font-medium tracking-[-0.01em] text-ink tablet:text-[28px]">Find a drill</h2>
+        <h2 className="text-[22px] font-medium tracking-[-0.01em] text-ink tablet:text-[28px]">{t('coachTraining:libFindDrill')}</h2>
         <FindBox value={query} onChange={setQuery} big />
       </div>
 
-      {!squad ? <LoadingSkeleton label="Loading the drills…" rows={3} />
-        : searching ? <section aria-label="Search results" className="grid gap-3">
-          <p role="status" className="text-sm text-ink-3">{found.length ? `${plural(found.length, 'drill')} found.` : ''}</p>
-          {found.length ? <DrillCards drills={found} players={squad.players} level={squad.level} notes={d => foundAs(d, query, squad)} label="Drills found" />
-            : <Empty>No drills match. Try another word, like rondo or shooting.</Empty>}
+      {!squad ? <LoadingSkeleton label={t('coachTraining:libLoadingDrills')} rows={3} />
+        : searching ? <section aria-label={t('coachTraining:libSearchResults')} className="grid gap-3">
+          <p role="status" className="text-sm text-ink-3">{found.length ? t('coachTraining:libFound', { count: found.length }) : ''}</p>
+          {found.length ? <DrillCards drills={found} players={squad.players} level={squad.level} notes={d => foundAs(d, query, squad)} label={t('coachTraining:drillsFound')} />
+            : <Empty>{t('coachTraining:libNoMatchLike')}</Empty>}
         </section>
         : <>
           <div className="grid gap-3 tablet:grid-cols-2">
-            <HomeLink to={MY_DRILLS_PATH} icon={<List aria-hidden size={26} />} title="My drills" note={!bookmarks.isSuccess ? ' ' : saved ? plural(saved, 'drill') : 'Nothing added yet'} />
-            <HomeLink to={allDrillsPath()} icon={<LayoutGrid aria-hidden size={26} />} title="All drills" note={`Every drill in the Library, ${LIBRARY.length} in all`} />
+            <HomeLink to={MY_DRILLS_PATH} icon={<List aria-hidden size={26} />} title={t('coachTraining:libMyDrills')} note={!bookmarks.isSuccess ? ' ' : saved ? t('coachTraining:libDrillCount', { count: saved }) : t('coachTraining:libNothingAdded')} />
+            <HomeLink to={allDrillsPath()} icon={<LayoutGrid aria-hidden size={26} />} title={t('coachTraining:libAllDrills')} note={t('coachTraining:libEveryDrill', { count: LIBRARY.length })} />
           </div>
 
           <section aria-labelledby="practice-kinds" className="grid gap-3">
-            <h2 id="practice-kinds" className="text-lg font-medium text-ink">What kind of practice?</h2>
+            <h2 id="practice-kinds" className="text-lg font-medium text-ink">{t('coachTraining:libWhatKind')}</h2>
             <ul className="grid gap-3 tablet:grid-cols-3">
               {KINDS.map(kind => <li key={kind.key}>
                 <Link to={kindPath(kind.key)} style={{ background: PRACTICE_KIND_COLOURS[kind.key], color: ON_LIBRARY }}
@@ -149,9 +151,9 @@ export function LibraryHome() {
               </li>)}
             </ul>
             <p className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-              <Link to={CHANGE_PRACTICE_PATH} className="font-medium text-brand underline-offset-4 hover:underline">Change any practice</Link>
-              <Link to={allDrillsPath('Individual')} className="font-medium text-brand underline-offset-4 hover:underline">Individual work</Link>
-              <Link to={allDrillsPath('Goalkeeping')} className="font-medium text-brand underline-offset-4 hover:underline">Goalkeeping</Link>
+              <Link to={CHANGE_PRACTICE_PATH} className="font-medium text-brand underline-offset-4 hover:underline">{t('coachTraining:libChangeAny')}</Link>
+              <Link to={allDrillsPath('Individual')} className="font-medium text-brand underline-offset-4 hover:underline">{t('coachTraining:libIndividualWork')}</Link>
+              <Link to={allDrillsPath('Goalkeeping')} className="font-medium text-brand underline-offset-4 hover:underline">{t('coachTraining:libGoalkeeping')}</Link>
             </p>
           </section>
 
@@ -180,22 +182,23 @@ function HomeLink({ to, icon, title, note }: { to: string; icon: ReactNode; titl
 /** The Library drills the coach bookmarked (TRAK-390), as picture cards grouped Get ready → Technical → Skill → Game
  *  related. A drill no longer in the Library is left out. */
 export function MyDrills() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { squad } = useLibrarySquad()
   const bookmarks = useBookmarks()
   const mine = (bookmarks.data ?? []).flatMap(id => libraryDrill(id) ?? [])
   return (
-    <SubPage title="My drills">
-      {bookmarks.error ? <LoadError what="your drills" onRetry={() => void bookmarks.refetch()} retrying={bookmarks.isFetching} />
-        : !squad || bookmarks.isPending ? <LoadingSkeleton label="Loading your drills…" rows={2} />
-        : !mine.length ? <div className="arc"><EmptyState icon={<Bookmark size={24} strokeWidth={1.5} />} title="Nothing in My drills yet"
-            description="Open a drill and choose Add to My drills, or use the bookmark on its card."
-            action={<Button onClick={() => navigate(allDrillsPath())}>Browse all drills</Button>} /></div>
+    <SubPage title={t('coachTraining:libMyDrills')}>
+      {bookmarks.error ? <LoadError what={t('coachTraining:libYourDrillsWhat')} onRetry={() => void bookmarks.refetch()} retrying={bookmarks.isFetching} />
+        : !squad || bookmarks.isPending ? <LoadingSkeleton label={t('coachTraining:libLoadingYour')} rows={2} />
+        : !mine.length ? <div className="arc"><EmptyState icon={<Bookmark size={24} strokeWidth={1.5} />} title={t('coachTraining:libNothingMine')}
+            description={t('coachTraining:libNothingMineHow')}
+            action={<Button onClick={() => navigate(allDrillsPath())}>{t('coachTraining:libBrowseAll')}</Button>} /></div>
         : <div className="grid gap-7">
           {KIND_ORDER.map(kind => {
             const drills = LIBRARY.filter(d => d.kind === kind && mine.includes(d))
             return drills.length ? <section key={kind} aria-labelledby={`mine-${kind}`}>
-              <GroupLabel id={`mine-${kind}`}>{GROUP_NAME[kind]}</GroupLabel>
+              <GroupLabel id={`mine-${kind}`}>{t(GROUP_NAME[kind])}</GroupLabel>
               <DrillCards drills={drills} players={squad.players} level={squad.level} />
             </section> : null
           })}
@@ -208,6 +211,7 @@ export function MyDrills() {
 
 /** Technical, Skill or Game related: its drill types as buttons (and All), then its drills by type, simple to complex. */
 export function PracticePage() {
+  const { t } = useTranslation()
   const { kind } = useParams()
   const info = KINDS.find(k => k.key === kind)
   const { squad } = useLibrarySquad()
@@ -215,23 +219,23 @@ export function PracticePage() {
   if (!info) return <Navigate to="/coach/training/drills" replace />
   const types = typesOf(info.key)
   const shown = types.includes(type as never) ? [type] : types
-  const empty = (t: string) => t === '11 v 11' ? 'Needs 22 players and a full pitch. None yet.' : 'None yet.'
+  const empty = (type: string) => type === '11 v 11' ? t('coachTraining:libNeeds22') : t('coachTraining:libNoneYet')
 
   return (
     <SubPage title={info.long}>
       <div className="arc mb-5">
-        <ChipGroup label="Show drills" multiple={false} value={[shown.length === 1 ? shown[0] : '']}
-          options={[{ value: '', label: 'All' }, ...types.map(t => ({ value: t, label: t }))]}
+        <ChipGroup label={t('coachTraining:libShowDrills')} multiple={false} value={[shown.length === 1 ? shown[0] : '']}
+          options={[{ value: '', label: t('coachTraining:filterAll') }, ...types.map(type => ({ value: type, label: type }))]}
           onValueChange={next => setType(next[0] ?? '')} />
       </div>
-      {!squad ? <LoadingSkeleton label="Loading the drills…" rows={3} />
+      {!squad ? <LoadingSkeleton label={t('coachTraining:libLoadingDrills')} rows={3} />
         : <div className="grid gap-7">
-          {shown.map(t => {
-            const drills = LIBRARY.filter(d => d.kind === info.key && d.type === t)
-            const id = `type-${t.replace(/\W+/g, '-').toLowerCase()}`
-            return <section key={t} aria-labelledby={id}>
-              <GroupLabel id={id}>{t}</GroupLabel>
-              {drills.length ? <DrillCards drills={drills} players={squad.players} level={squad.level} /> : <Empty>{empty(t)}</Empty>}
+          {shown.map(type => {
+            const drills = LIBRARY.filter(d => d.kind === info.key && d.type === type)
+            const id = `type-${type.replace(/\W+/g, '-').toLowerCase()}`
+            return <section key={type} aria-labelledby={id}>
+              <GroupLabel id={id}>{type}</GroupLabel>
+              {drills.length ? <DrillCards drills={drills} players={squad.players} level={squad.level} /> : <Empty>{empty(type)}</Empty>}
             </section>
           })}
         </div>}
@@ -242,6 +246,9 @@ export function PracticePage() {
 /* ── All drills ─────────────────────────────────────────────────────────── */
 
 const SHOW = ['Technical', 'Skill', 'Game related', 'Individual', 'Goalkeeping'] as const
+/** The filters' words; the address keeps the English value. */
+const SHOW_WORD = { Technical: 'coachTraining:libShowTechnical', Skill: 'coachTraining:libShowSkill', 'Game related': 'coachTraining:libShowGame',
+  Individual: 'coachTraining:libShowIndividual', Goalkeeping: 'coachTraining:libShowGoalkeeping' } as const satisfies Record<(typeof SHOW)[number], string>
 
 const keepFor = (show: string) => (d: LibraryDrill) =>
   !show ? true : show === 'Individual' ? d.focus === 'individual' : show === 'Goalkeeping' ? d.focus === 'goalkeeping' : kindInfo(d.kind).name === show
@@ -249,30 +256,31 @@ const keepFor = (show: string) => (d: LibraryDrill) =>
 /** Every drill as cards, grouped by kind; searching shows the best match first. Filters: the three kinds, Individual,
  *  Goalkeeping. */
 export function AllDrills() {
+  const { t } = useTranslation()
   const { squad } = useLibrarySquad()
   const [rawShow, setShow] = useQueryParam('show')
   const show = (SHOW as readonly string[]).includes(rawShow) ? rawShow : ''
   const [query, setQuery] = useQueryParam('q')
   const searching = !!query.trim()
   const found = squad ? searchDrills(query, squad, keepFor(show)) : []
-  const title = show || 'All drills'
+  const title = show ? t(SHOW_WORD[show as (typeof SHOW)[number]]) : t('coachTraining:libAllDrills')
 
   return (
     <SubPage title={title}>
       <div className="arc mb-4">
-        <ChipGroup label="Show" multiple={false} value={[show]}
-          options={[{ value: '', label: 'All' }, ...SHOW.map(s => ({ value: s, label: s }))]}
+        <ChipGroup label={t('coachTraining:libShow')} multiple={false} value={[show]}
+          options={[{ value: '', label: t('coachTraining:filterAll') }, ...SHOW.map(s => ({ value: s, label: t(SHOW_WORD[s]) }))]}
           onValueChange={next => setShow(next[0] ?? '')} />
       </div>
       <div className="mb-6"><FindBox value={query} onChange={setQuery} /></div>
-      {!squad ? <LoadingSkeleton label="Loading the drills…" rows={3} />
-        : !found.length ? <Empty>No drills match. Try another word.</Empty>
-        : searching ? <DrillCards drills={found} players={squad.players} level={squad.level} notes={d => foundAs(d, query, squad)} label="Drills found" />
+      {!squad ? <LoadingSkeleton label={t('coachTraining:libLoadingDrills')} rows={3} />
+        : !found.length ? <Empty>{t('coachTraining:noDrillsMatch')}</Empty>
+        : searching ? <DrillCards drills={found} players={squad.players} level={squad.level} notes={d => foundAs(d, query, squad)} label={t('coachTraining:drillsFound')} />
         : <div className="grid gap-7">
           {KIND_ORDER.map(kind => {
             const drills = found.filter(d => d.kind === kind)
             return drills.length ? <section key={kind} aria-labelledby={`all-${kind}`}>
-              <GroupLabel id={`all-${kind}`}>{GROUP_NAME[kind]}</GroupLabel>
+              <GroupLabel id={`all-${kind}`}>{t(GROUP_NAME[kind])}</GroupLabel>
               <DrillCards drills={drills} players={squad.players} level={squad.level} />
             </section> : null
           })}
@@ -294,28 +302,34 @@ type Kept = { drill: string; players: number; level: number; changed: Changed | 
  *  marked, why, how and what to watch for, and Another drill. A new drill starts fresh. Add to training (TRAK-391), at
  *  the players and level set here, and Add to My drills (TRAK-390) sit under them. */
 export function DrillPage() {
+  const { t } = useTranslation()
   const { drillId } = useParams()
-  const drill = libraryDrill(drillId)
+  const found = libraryDrill(drillId)
   const { squad, name } = useLibrarySquad()
-  if (!drill) return <Navigate to="/coach/training/drills" replace />
+  if (!found) return <Navigate to="/coach/training/drills" replace />
+  // TRAK-409: the page shows the drill in the language showing. It saves nothing: Add to training passes only the
+  // drill's id, and Plan session takes the English drill from the Library.
+  const drill = shownDrill(found)
   return <SubPage title={drill.name} intro={<DrillHead drill={drill} />}>
-    {!squad ? <LoadingSkeleton label="Loading the drill…" rows={2} />
+    {!squad ? <LoadingSkeleton label={t('coachTraining:libLoadingDrill')} rows={2} />
       : <DrillBody key={drill.id} drill={drill} start={squad} squadName={name} />}
   </SubPage>
 }
 
 /** TRAK-457: the drill's other names ("Also called") aren't shown; search still finds the drill by them. */
 function DrillHead({ drill }: { drill: LibraryDrill }) {
+  const { t } = useTranslation()
   return <span className="grid gap-2">
     <span className="flex flex-wrap gap-1.5">
       <span className={CHIP}>{kindInfo(drill.kind).name}</span>
       {drill.kind !== 'warmup' && <span className={CHIP}>{drill.type}</span>}
-      {drill.focus !== 'team' && <span className={CHIP}>{drill.focus === 'individual' ? 'Individual' : 'Goalkeeping'}</span>}
+      {drill.focus !== 'team' && <span className={CHIP}>{drill.focus === 'individual' ? t('coachTraining:libFocusIndividual') : t('coachTraining:libFocusGoalkeeping')}</span>}
     </span>
   </span>
 }
 
 function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Squad; squadName: string | null }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const kept = (location.state as { drillPage?: Kept } | null)?.drillPage
@@ -338,23 +352,23 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
   const count = (by: -1 | 1) => {
     const to = Math.min(PLAYERS_TODAY.max, Math.max(PLAYERS_TODAY.min, players + by))
     if (to === players) return
-    keep({ players: to, level, changed: { title: `${to} players today. Trak refitted the drill:`, items: refit(drill, players, to, level) } })
+    keep({ players: to, level, changed: { title: t('coachTraining:libRefitted', { players: to }), items: refit(drill, players, to, level) } })
   }
 
   return <div className="grid items-start gap-4 laptop:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
     <div className="grid gap-3.5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-      <div className="flex flex-wrap items-center justify-end gap-2.5" role="group" aria-label="Players today">
-        <span className="text-sm text-ink-2">Players today</span>
-        <button type="button" className={STEPPER_BUTTON} aria-label="One player fewer" disabled={players <= PLAYERS_TODAY.min} onClick={() => count(-1)}><Minus aria-hidden size={18} /></button>
+      <div className="flex flex-wrap items-center justify-end gap-2.5" role="group" aria-label={t('coachTraining:libPlayersToday')}>
+        <span className="text-sm text-ink-2">{t('coachTraining:libPlayersToday')}</span>
+        <button type="button" className={STEPPER_BUTTON} aria-label={t('coachTraining:libOneFewer')} disabled={players <= PLAYERS_TODAY.min} onClick={() => count(-1)}><Minus aria-hidden size={18} /></button>
         <span className="min-w-[30px] text-center text-[22px] font-medium tabular-nums text-ink" aria-live="polite">{players}</span>
-        <button type="button" className={STEPPER_BUTTON} aria-label="One player more" disabled={players >= PLAYERS_TODAY.max} onClick={() => count(1)}><Plus aria-hidden size={18} /></button>
+        <button type="button" className={STEPPER_BUTTON} aria-label={t('coachTraining:libOneMore')} disabled={players >= PLAYERS_TODAY.max} onClick={() => count(1)}><Plus aria-hidden size={18} /></button>
       </div>
       <DrillPitch drill={drill} players={players} level={level} />
       <PitchKey legend={fitted.legend} />
       <div className="arc grid grid-cols-2 gap-2 tablet:grid-cols-3">
-        <Button variant="secondary" disabled={nextLevel(drill, players, level, -1) === null} onClick={() => press(-1)}><ArrowDown aria-hidden size={16} />Easier</Button>
-        <Button variant="secondary" disabled={nextLevel(drill, players, level, 1) === null} onClick={() => press(1)}><ArrowUp aria-hidden size={16} />Harder</Button>
-        {another && <span className="col-span-2 grid tablet:col-span-1"><Button variant="secondary" onClick={() => navigate(drillPath(another.id))}><Repeat aria-hidden size={16} />Another drill</Button></span>}
+        <Button variant="secondary" disabled={nextLevel(drill, players, level, -1) === null} onClick={() => press(-1)}><ArrowDown aria-hidden size={16} />{t('coachTraining:easier')}</Button>
+        <Button variant="secondary" disabled={nextLevel(drill, players, level, 1) === null} onClick={() => press(1)}><ArrowUp aria-hidden size={16} />{t('coachTraining:harder')}</Button>
+        {another && <span className="col-span-2 grid tablet:col-span-1"><Button variant="secondary" onClick={() => navigate(drillPath(another.id))}><Repeat aria-hidden size={16} />{t('coachTraining:libAnotherDrill')}</Button></span>}
       </div>
       <ChangeNote changed={changed} />
       <DetailList details={fitted.details} changed={changed} />
@@ -375,6 +389,7 @@ function DrillBody({ drill, start, squadName }: { drill: LibraryDrill; start: Sq
  *  what changes follow it; Conditions shows his three rules. The thing and the set-up live in the address, so Back
  *  returns to them. The answers are Trak's own; Steve checks them after the pilot (Kostas, 9 Nov). */
 export function ChangePractice() {
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const shown = characteristic(params.get('part')) ?? CHARACTERISTICS[0]
   const examples = shown.examples ?? []
@@ -388,26 +403,26 @@ export function ChangePractice() {
   }, { replace: true })
 
   return (
-    <SubPage title="Change any practice">
+    <SubPage title={t('coachTraining:libChangeAny')}>
       <div className="arc mb-4">
-        <ChipGroup label="Five things that shape a practice" multiple={false} value={[shown.key]}
+        <ChipGroup label={t('coachTraining:libFiveThings')} multiple={false} value={[shown.key]}
           options={CHARACTERISTICS.map(c => ({ value: c.key, label: c.name }))}
           onValueChange={next => { if (next[0]) go(next[0], 0) }} />
       </div>
       <section aria-labelledby="practice-question" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <h2 id="practice-question" className="max-w-[60ch] text-xl font-medium leading-snug text-ink">{shown.question}</h2>
         {shown.rules
-          ? <ul className="grid gap-3 tablet:grid-cols-3" aria-label="Three rules">
+          ? <ul className="grid gap-3 tablet:grid-cols-3" aria-label={t('coachTraining:libThreeRules')}>
             {shown.rules.map(rule => <li key={rule.title} className="grid content-start gap-1 rounded-xl bg-raised px-3.5 py-3">
               <span className="text-[17px] font-medium leading-tight text-ink">{rule.title}</span>
               <span className="text-[15px] text-ink-2">{rule.text}</span>
             </li>)}
           </ul>
           : <div className="grid items-start gap-4 tablet:grid-cols-2">
-            <PitchPicture shapes={practiceLayout(shown.key, eg)} label={`${shown.name} example: ${examples[eg].label}`} />
+            <PitchPicture shapes={practiceLayout(shown.key, eg)} label={t('coachTraining:libExample', { name: shown.name, label: examples[eg].label })} />
             <div className="grid content-start gap-3">
               <div className="arc">
-                <ChipGroup label="Select an example" multiple={false} value={[String(eg)]}
+                <ChipGroup label={t('coachTraining:libSelectExample')} multiple={false} value={[String(eg)]}
                   options={examples.map((x, i) => ({ value: String(i), label: x.label }))}
                   onValueChange={next => { if (next[0]) go(shown.key, Number(next[0])) }} />
               </div>

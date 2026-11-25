@@ -108,6 +108,8 @@ beforeEach(() => {
     table('training_notes', []), table('squad_player_also_plays', []), table('squad_player_roles', []), table('squad_position_history', []),
     table('squad_player_profiles', []), rpc('coach_player_birth_dates', () => []), rpc('coach_squad_season', () => []),
     table('coach_assessment_notes', []), table('coach_shared_feedback', []),
+    // The pitch-ready page's pitch (24 Nov).
+    table('formations', []),
   )
 })
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear(); server.events.removeAllListeners() })
@@ -251,10 +253,12 @@ describe('TRAK-364 the rhythm', () => {
   it('after sharing, View plan says it with an Edit; a new rhythm waits under Not shared yet as the evaluation dates', async () => {
     evaluations = [{ plan_id: 'plan-1', due_on: expected().due.dueOn! }]
     renderApp('/coach/season-plan')
-    const season = await screen.findByRole('region', { name: 'Season' })
-    expect(await within(season).findByText(/^Every 2 weeks, on Sunday · Next report /)).toBeInTheDocument()
-    await user().click(within(season).getByRole('button', { name: 'Edit how often you send reports' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Reports' })).toBeInTheDocument()
+    // 24 Nov (pitch-ready page): the schedule strip, its next-report pill, and one Edit schedule screen.
+    const season = await screen.findByRole('region', { name: 'Season schedule' })
+    expect(within(season).getByText('Every 2 weeks, on Sunday')).toBeInTheDocument()
+    expect(await within(season).findByText(/^Next report: /)).toBeInTheDocument()
+    await user().click(within(season).getByRole('button', { name: 'Edit Schedule' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Season schedule' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     // TRAK-525: every 2 weeks is now Custom; every 6 months is one of the new choices.
     await user().click(screen.getByRole('button', { name: 'Every 6 months' }))

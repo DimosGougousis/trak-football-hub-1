@@ -154,6 +154,8 @@ describe('TRAK-361 the Season plan card', () => {
     renderApp('/coach/home')
     const card = await cardOf('U16')
     expect(await within(card).findByText('Not shared yet')).toBeInTheDocument()
+    // TRAK-573 (Kostas, 23 Nov): no calendar icon; the label says it.
+    expect(card.querySelector('.lucide-calendar-days')).toBeNull()
     // TRAK-549 (Kostas's mockup, 21 Nov): one line, its years, and Continue on it; there's nothing inside to open.
     expect(within(card).getByText('2026–27')).toBeInTheDocument()
     expect(within(card).queryAllByRole('button').filter(b => b.hasAttribute('aria-expanded'))).toEqual([])
@@ -169,6 +171,7 @@ describe('TRAK-361 the Season plan card', () => {
     renderApp('/coach/home')
     const card = await cardOf('U16')
     expect(await within(card).findByText('Not started')).toBeInTheDocument()
+    expect(card.querySelector('.lucide-calendar-days')).toBeNull()
     expect(within(card).queryAllByRole('button').filter(b => b.hasAttribute('aria-expanded'))).toEqual([])
     await user().click(within(card).getByRole('button', { name: 'Start' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan'))

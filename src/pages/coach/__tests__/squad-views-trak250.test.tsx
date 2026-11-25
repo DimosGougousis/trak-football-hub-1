@@ -108,18 +108,18 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     // Two squads: the first (U10) shows until the coach picks the other.
     // TRAK-266: All first and picked; then one squad at a time.
     const first = await view('Players')
-    await within(first).findByText('Nia Rehearsal')
-    expect(within(first).getByText('Theo Rehearsal')).toBeInTheDocument()
+    await within(first).findByRole('button', { name: /^Nia Rehearsal/ })
+    expect(within(first).getByRole('button', { name: /^Theo Rehearsal/ })).toBeInTheDocument()
     expect(await squadsOffered()).toEqual(['All squads', 'U10', 'U12'])
     await pickSquad('U10')
-    await waitFor(() => expect(within(first).queryByText('Theo Rehearsal')).toBeNull())
+    await waitFor(() => expect(within(first).queryByRole('button', { name: /^Theo Rehearsal/ })).toBeNull())
 
     await pickSquad('U12')
-    const players = () => within(within(screen.getByRole('region', { name: 'Players' })).getByRole('list', { name: 'Players' }))
-    await waitFor(() => expect(players().getAllByRole('listitem')).toHaveLength(2))
-    expect(players().getByText('Ida Rehearsal')).toBeInTheDocument()
-    expect(players().getByText('Theo Rehearsal')).toBeInTheDocument()
-    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
+    const players = () => within(screen.getByRole('region', { name: 'Players' }))
+    await waitFor(() => expect(players().getAllByRole('button', { name: / Rehearsal, number / })).toHaveLength(2))
+    expect(players().getByRole('button', { name: /^Ida Rehearsal/ })).toBeInTheDocument()
+    expect(players().getByRole('button', { name: /^Theo Rehearsal/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Nia Rehearsal/ })).toBeNull()
   })
 
   it('a failed roster read shows Try again, never an empty squad', async () => {
@@ -135,7 +135,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     failing = false
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     const panel = await screen.findByRole('region', { name: 'Players' })
-    expect(await within(panel).findByText('Nia Rehearsal')).toBeInTheDocument()
+    expect(await within(panel).findByRole('button', { name: /^Nia Rehearsal/ })).toBeInTheDocument()
     expect(screen.queryByText("Couldn't load your squad")).toBeNull()
   })
 
@@ -178,7 +178,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     expect(screen.getByText("Couldn't load your squad")).toBeInTheDocument()
     expect(screen.queryByText('Your squad is being prepared')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
-    expect(await within(await screen.findByRole('region', { name: 'Players' })).findByText('Nia Rehearsal')).toBeInTheDocument()
+    expect(await within(await screen.findByRole('region', { name: 'Players' })).findByRole('button', { name: /^Nia Rehearsal/ })).toBeInTheDocument()
   })
 
   // TRAK-79 (from the retired squad-consent-status test): another coach signing in on this
@@ -186,7 +186,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
   it("a different coach never sees the previous coach's players", async () => {
     coachReads()
     renderApp('/coach/squad')
-    await within(await screen.findByRole('region', { name: 'Players' })).findByText('Nia Rehearsal')
+    await within(await screen.findByRole('region', { name: 'Players' })).findByRole('button', { name: /^Nia Rehearsal/ })
     cleanup()
 
     const second = { id: `${COACH.id}-other` }
@@ -203,10 +203,10 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     renderApp('/coach/squad')
     await screen.findByRole('radio', { name: 'Players' })
     await screen.findByRole('status')
-    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Nia Rehearsal/ })).toBeNull()
     release()
-    expect(await screen.findByText('Zed Rehearsal')).toBeInTheDocument()
-    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
+    expect(await screen.findByRole('button', { name: /^Zed Rehearsal/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Nia Rehearsal/ })).toBeNull()
   })
 
   // A failed consent check is a failed read: the squad is never listed as if every child could be assessed.
@@ -215,7 +215,7 @@ describe('TRAK-250: the Squad shell', { timeout: 20_000 }, () => {
     server.use(rpc('coach_squad_player_consent_required', () => ({ status: 500, body: { message: 'synthetic failure' } })))
     renderApp('/coach/squad')
     expect(await screen.findByText("Couldn't load your squad", undefined, { timeout: 5000 })).toBeInTheDocument()
-    expect(screen.queryByText('Nia Rehearsal')).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Nia Rehearsal/ })).toBeNull()
   })
 })
 
@@ -228,33 +228,35 @@ const SNAP_PLAYERS = [
   { id: 'sq-sami', coach_user_id: 'x', player_name: 'Sami K.', position: 'Attacker', shirt_number: 9, age_group: 'U12' },
   { id: 'sq-new', coach_user_id: 'x', player_name: 'Newcomer R.', position: 'Defender', shirt_number: 3, age_group: 'U12' },
 ]
-const playerList = (panel: HTMLElement) => within(within(panel).getByRole('list', { name: 'Players' }))
+/** Every player's tile in the view: their face and shirt number, named for them. */
+const tiles = (panel: HTMLElement) => within(panel).getAllByRole('button', { name: /, (number \d+|no shirt number)$/ })
 const row = (panel: HTMLElement, name: string) => within(panel).getByRole('button', { name: new RegExp(`^${name}`) })
+const cluster = (panel: HTMLElement, name: string) => within(within(panel).getByRole('list', { name }))
 
 describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
-  it("lists every roster player, each with a sparkline of their ratings and no band bar (Imad, 23 Oct)", async () => {
+  // Dimos, 25 Nov: the season plan's look; players clustered by position, each shown by face and shirt number only.
+  it('clusters the players by position, GK to ATT, each a face and a shirt number, named for screen readers', async () => {
     coachReads(SNAP_PLAYERS)
     server.use(table('coach_assessments', [
       rating('sq-leo', 6.5, '2026-09-01T10:00:00Z'), rating('sq-leo', 5.0, '2026-10-01T10:00:00Z'),
-      rating('sq-sami', 8.2, '2026-09-01T10:00:00Z'), rating('sq-sami', 9.1, '2026-10-01T10:00:00Z'),
     ]))
     renderApp('/coach/squad')
     const panel = await view('Players')
-    await within(panel).findByText('Leo M.')
-    expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3)
-    // Oldest first, so the line falls for Leo and rises for Sami.
-    // The row is a button, so a screen reader hears the sparkline's label in the row's name.
-    expect(row(panel, 'Leo M.')).toHaveAccessibleName(/Leo M\.'s last 2 ratings: 6\.5, 5\.0\./)
-    expect(row(panel, 'Sami K.')).toHaveAccessibleName(/Sami K\.'s last 2 ratings: 8\.2, 9\.1\./)
-    expect(row(panel, 'Newcomer R.').querySelector('figure')).toBeNull()
-    expect(row(panel, 'Leo M.')).not.toHaveTextContent('Mixed')
-    expect(within(panel).queryByText(/assessed/)).toBeNull()
-    // Nobody's page opens until the coach taps a row (TRAK-351: a player opens as their own page, not beside the list).
+    await within(panel).findByRole('button', { name: 'Leo M., number 8' })
+    expect(tiles(panel)).toHaveLength(3)
+    expect(within(panel).getAllByRole('heading', { level: 2 }).map(h => h.textContent)).toEqual(['Defenders · 1', 'Midfielders · 1', 'Attackers · 1'])
+    expect(cluster(panel, 'Defenders').getByRole('button', { name: 'Newcomer R., number 3' })).toBeInTheDocument()
+    expect(cluster(panel, 'Attackers').getByRole('button', { name: 'Sami K., number 9' })).toHaveTextContent(/^9$/)
+    // Only the face and the number show: no name, band, ratings graph or position words on the tile.
+    expect(within(panel).queryByText('Leo M.')).toBeNull()
+    expect(row(panel, 'Leo M.').querySelector('figure')).toBeNull()
+    expect(row(panel, 'Leo M.')).toHaveAttribute('title', 'Leo M.')
+    // Nobody's page opens until the coach taps a player (TRAK-351: a player opens as their own page, not beside the list).
     expect(within(panel).queryByRole('region', { name: /^About / })).toBeNull()
   })
 
-  // TRAK-266 (Imad, 22 Oct): the colour key only where the coach is needed, as Home's Needs you.
-  it('badges a player due an assessment and a draft to finish, and no one else', async () => {
+  // TRAK-266 (Imad, 22 Oct): the colour key only where the coach is needed, as Home's Needs you; now a tag on the face.
+  it('tags a player due an assessment and a draft to finish, and no one else', async () => {
     const joined = new Date(Date.now() - 35 * 86_400_000).toISOString()
     const recent = new Date(Date.now() - 2 * 86_400_000).toISOString()
     coachReads(SNAP_PLAYERS.map(p => ({ ...p, created_at: joined })))
@@ -264,26 +266,26 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     ]))
     renderApp('/coach/squad')
     const panel = await view('Players')
-    await within(panel).findByText('Leo M.')
     await waitFor(() => expect(row(panel, 'Leo M.')).toHaveTextContent('Due'))
     expect(row(panel, 'Sami K.')).toHaveTextContent('Draft')
     expect(row(panel, 'Newcomer R.')).not.toHaveTextContent(/Due|Draft/)
   })
 
-  it('filters by position and searches by name or shirt number', async () => {
+  it("the season plan's position pills show one cluster at a time", async () => {
     const user = userEvent.setup()
     coachReads(SNAP_PLAYERS)
     renderApp('/coach/squad')
     const panel = await view('Players')
-    await within(panel).findByText('Leo M.')
-    // TRAK-266: the position filters are Arc's glass segmented control, as before #420.
-    await user.click(within(panel).getByRole('radio', { name: 'ATT' }))
-    await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(1))
-    expect(playerList(panel).getByText('Sami K.')).toBeInTheDocument()
-    await user.click(within(panel).getByRole('radio', { name: 'All' }))
-    await user.type(within(panel).getByRole('searchbox'), '3')
-    await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(1))
-    expect(playerList(panel).getByText('Newcomer R.')).toBeInTheDocument()
+    await within(panel).findByRole('button', { name: /^Leo M\./ })
+    const pills = within(within(panel).getByRole('group', { name: 'Filter by position' }))
+    expect(pills.getByRole('button', { name: 'ALL: 3' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(pills.getByRole('button', { name: 'Attackers: 1' }))
+    await waitFor(() => expect(tiles(panel)).toHaveLength(1))
+    expect(row(panel, 'Sami K.')).toBeInTheDocument()
+    await user.click(pills.getByRole('button', { name: 'Goalkeepers: 0' }))
+    expect(await within(panel).findByText('No one matches')).toBeInTheDocument()
+    await user.click(pills.getByRole('button', { name: 'ALL: 3' }))
+    await waitFor(() => expect(tiles(panel)).toHaveLength(3))
   })
 
   it("a player's profile: foot, nationality, born from the roster, traits; no season so far (TRAK-546)", async () => {
@@ -339,8 +341,8 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     server.use(rpc('coach_squad_player_consent_required', args => args.p_squad_player_id === 'sq-new'))
     renderApp('/coach/squad')
     const panel = await view('Players')
-    await within(panel).findByText('Newcomer R.')
-    expect(row(panel, 'Newcomer R.')).toHaveTextContent('Waiting for consent')
+    await within(panel).findByRole('button', { name: /^Newcomer R\./ })
+    expect(cluster(panel, 'Waiting for consent').getByRole('button', { name: 'Newcomer R., number 3' })).toBeInTheDocument()
     await user.click(row(panel, 'Newcomer R.'))
     expect(await within(panel).findByText(/Newcomer is waiting for consent/)).toBeInTheDocument()
     expect(within(panel).queryByRole('button', { name: /^Edit .+'s profile$/ })).toBeNull()
@@ -357,7 +359,7 @@ describe('TRAK-263: Players view', { timeout: 20_000 }, () => {
     expect(within(panel).queryByText('Not set')).toBeNull()
     // TRAK-351: the player's page has the screen to itself; the trail (TRAK-428) brings the squad back, all three.
     await user.click(within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getByRole('link', { name: 'Squad' }))
-    await waitFor(() => expect(playerList(panel).getAllByRole('listitem')).toHaveLength(3))
+    await waitFor(() => expect(tiles(panel)).toHaveLength(3))
   })
 })
 

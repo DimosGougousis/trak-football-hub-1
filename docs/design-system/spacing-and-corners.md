@@ -2,7 +2,8 @@
 
 One standard for every Trak screen: coach, player, parent and the signed-out pages.
 Set by TRAK-464 (PR #642, 15 Nov 2026), part of the design system (TRAK-241).
-New and changed screens follow it. Text sizes are not part of this rule.
+New and changed screens follow it. Colours and text sizes are in [Colour and type](colour-and-type.md);
+the shared pieces that apply all three are in [Components](components.md).
 
 ## Corners
 
@@ -28,7 +29,7 @@ Four sizes. Round things (avatars, pills, dots) stay round.
 | Between two lines of text in a row | at least 4 px (`gap-1`) |
 | A title and the line under it | 8 px (`gap-2` or `mt-2`) |
 | Cards in a list | 16 px (`gap-4` or `space-y-4`) |
-| A page's sections | 24 px; 32 px on a laptop (`gap-6 laptop:gap-8`) |
+| A page's sections | 40 px; 48 px on a laptop (`gap-10 laptop:gap-12`), the design standard (TRAK-768) |
 | Page sides | `WIDE_COLUMN` in `src/components/trak/MobileShell.tsx` (20 px phone, 32 px tablet and up) |
 
 Arc components use the `--space-*` tokens in `src/components/arc/arc-theme.css` (`--space-1` is 4 px, `--space-2` 8 px, and so on).

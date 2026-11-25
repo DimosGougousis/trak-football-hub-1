@@ -119,7 +119,10 @@ describe('TRAK-72 player page', () => {
     )
     renderApp('/coach/squad/player/sp-1')
     const page = await screen.findByRole('article', { name: /^Alex Synthetic/ })
-    expect(page).toHaveTextContent('#8 · Midfielder · U16')
+    // Dimos, 25 Nov: the shirt number on the face, position and squad as the season plan's badges.
+    expect(page).toHaveTextContent('Shirt number 8')
+    expect(within(page).getByText('Midfielder')).toBeInTheDocument()
+    expect(within(page).getByText('U16')).toBeInTheDocument()
     expect(screen.queryByText(/^\d+ assessments?$/)).toBeNull()
   })
 })

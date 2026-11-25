@@ -172,11 +172,11 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
   const topWidth = useTopButtonWidth(t('nav:create'))
   return <ActionMorph label={bar ? t('nav:quickAdd') : t('nav:create')} anchor={bar ? 'bottom' : 'top'} lift={bar ? keyboard : 0}
     // At the top the root needs a size of its own: in the bar the slot gives it one.
-    className={bar ? undefined : 'arc'} style={bar ? undefined : { width: topWidth, height: 40 }} rows={rows} view={view} onViewChange={show} onSelect={choose}
+    className={bar ? undefined : 'arc'} style={bar ? undefined : { width: topWidth, height: 44 }} rows={rows} view={view} onViewChange={show} onSelect={choose}
     faces={[{ id: 'event', title: t('coachSchedule:newEvent'), content: eventFace }]}
     trigger={bar
       ? <Plus size={22} strokeWidth={2.2} aria-hidden="true" className="text-brand" />
-      : <><Plus size={16} strokeWidth={2.2} aria-hidden="true" className="text-brand" />{t('nav:create')}</>} />
+      : <><Plus size={16} strokeWidth={2.2} aria-hidden="true" className="text-on-brand" />{t('nav:create')}</>} />
 }
 
 /** The laptop's "+ Create" needs a size of its own (ActionMorph morphs from it): its word, plus the "+" and padding. */
@@ -187,7 +187,7 @@ function useTopButtonWidth(word: string) {
     const context = document.createElement('canvas').getContext('2d')
     if (!context) return MIN
     const style = getComputedStyle(document.body)
-    context.font = `500 15px ${style.fontFamily}`
+    context.font = `600 15px ${style.fontFamily}`
     return Math.max(MIN, Math.ceil(context.measureText(word).width + AROUND))
   }, [word])
 }

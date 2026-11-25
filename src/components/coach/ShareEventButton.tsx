@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { canShareSheet } from '@/lib/share-event'
 import { Button } from '@/components/arc/button/button'
-import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
+import { NEXT_STEP_SIZE, NEXT_STEP_SMALL, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 
 /** Imad's share icon (TRAK-168, 18 Oct): a box with an arrow out, drawn in the text colour. */
 /** `tight` crops the drawing's margin, so it is as big as a lucide icon beside it (TRAK-275's button group). */
@@ -22,20 +22,22 @@ export function ShareIcon({ size = 16, tight = false }: { size?: number; tight?:
  * before. Either way nothing is sent until the coach picks a chat. The message carries its
  * own event link, so only `text` is shared.
  */
-export function ShareEventButton({ text, className, children, arc, 'aria-label': label }: {
+export function ShareEventButton({ text, className, children, arc, small = false, 'aria-label': label }: {
   text: string
   className?: string
   children?: ReactNode
   /** TRAK-427: Arc's secondary button, as the pop-up's other actions. Without a share sheet it opens WhatsApp's link in
    *  a new tab on click, so it is a button, not a link. */
   arc?: boolean | 'next-step'
+  /** TRAK-561: a next step at Details' size (Home's week). */
+  small?: boolean
   'aria-label'?: string
 }) {
   if (arc) {
     // TRAK-497: as a next step (Home's week), the green primary every next step is; elsewhere the secondary.
     const step = arc === 'next-step'
     return (
-      <Button variant={step ? 'primary' : 'secondary'} size={step ? NEXT_STEP_SIZE : undefined} className={step ? NEXT_STEP_WIDTH : undefined} aria-label={label}
+      <Button variant={step ? 'primary' : 'secondary'} size={step ? (small ? NEXT_STEP_SMALL : NEXT_STEP_SIZE) : undefined} className={step && !small ? NEXT_STEP_WIDTH : undefined} aria-label={label}
         onClick={() => {
           if (canShareSheet()) navigator.share({ text }).catch(() => {})
           else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')

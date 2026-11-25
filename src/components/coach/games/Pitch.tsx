@@ -61,7 +61,7 @@ const KEY_MARK = 'grid size-4 place-items-center rounded-full text-[10px] font-b
 export function MarkersKey() {
   const { t } = useTranslation()
   return <ul aria-label={t('coachMatches:key')} className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1.5 p-0 text-sm text-ink-3">
-    <li className="flex items-center gap-1.5"><span aria-hidden="true" className={`${KEY_MARK} bg-brand text-on-brand`}><Check size={10} strokeWidth={3} /></span>
+    <li className="flex items-center gap-1.5"><span aria-hidden="true" className={`${KEY_MARK} bg-success text-on-brand`}><Check size={10} strokeWidth={3} /></span>
       {t('coachMatches:keyJob')}</li>
     <li className="flex items-center gap-2"><span aria-hidden="true" className={`size-3.5 rounded-full ${RING.stretch}`} />{t('coachMatches:keyStretch')}</li>
     <li className="flex items-center gap-2"><span aria-hidden="true" className={`size-3.5 rounded-full ${RING.lead}`} />{t('coachMatches:keyLead')}</li>

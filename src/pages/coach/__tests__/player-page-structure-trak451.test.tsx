@@ -71,7 +71,8 @@ describe("TRAK-451: a player's page has structure", () => {
     await screen.findByRole('heading', { name: 'Assessments', level: 4 })
     const titles = ['Position and roles', 'About Traianos', 'Objective', 'Assessments']
       .map(name => screen.getByRole('heading', { name, level: 4 }))
-    for (const title of titles) expect(title).toHaveClass('font-semibold')
+    // Dimos, 25 Nov: the season plan's barred black title, the same on every block.
+    for (const title of titles) expect(title).toHaveClass('font-black', 'uppercase')
     expect(new Set(titles.map(title => title.className)).size).toBe(1)
   })
 

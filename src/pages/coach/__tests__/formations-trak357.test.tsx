@@ -136,7 +136,7 @@ describe('TRAK-357 Squad › Formations', () => {
     await user().click(place(1))
     expect(place(1)).toHaveAccessibleName(/^Synthetic Goalkeeper 02/)
     expect(within(benchList()).getByRole('button', { name: /^Synthetic Goalkeeper 01, bench/ })).toBeInTheDocument()
-    expect(screen.getByText('Unsaved changes', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText('Unsaved changes', { selector: '[role="status"] span' })).toBeInTheDocument()
 
     // Keyboard: Enter on two places swaps them.
     place(2).focus()

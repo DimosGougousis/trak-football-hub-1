@@ -1,16 +1,20 @@
 import { Link } from 'react-router-dom'
-import { drillPath, fit, type LibraryDrill } from '@/lib/training/library'
+import { useTranslation } from '@/lib/i18n'
+import { drillPath, fit, shownDrill, type LibraryDrill } from '@/lib/training/library'
 import { DrillPitch } from './DrillPitch'
 import { CardBookmark } from './BookmarkButton'
 
 /* TRAK-387 (Drill Library 3/11): a picture-first drill card (Kostas, 6 Nov, from Tarek's mockup). The same fit as the
    drill's page, so the card and the page always match. `note` says how a search found it ("Also called waves"). */
 
-const FOCUS = { team: '', individual: 'Individual', goalkeeping: 'Goalkeeping' } as const
+// TRAK-408: the focus in the language showing.
+const FOCUS = { team: null, individual: 'coachTraining:libFocusIndividual', goalkeeping: 'coachTraining:libFocusGoalkeeping' } as const
 
 export function DrillCard({ drill, players, level, note = '' }: { drill: LibraryDrill; players: number; level: number; note?: string }) {
+  const { t } = useTranslation()
   const { details } = fit(drill, players, level)
-  const sub = [note, FOCUS[drill.focus]].filter(Boolean).join(' · ')
+  const focus = FOCUS[drill.focus]
+  const sub = [note, focus ? t(focus) : ''].filter(Boolean).join(' · ')
   return (
     <Link to={drillPath(drill.id)}
       className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-transform active:scale-[.98] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -30,9 +34,10 @@ export function DrillCards({ drills, players, level, notes, label }: {
 }) {
   return (
     <ul aria-label={label} className="grid grid-cols-2 gap-2.5 tablet:gap-3 tablet:[grid-template-columns:repeat(auto-fill,minmax(260px,1fr))]">
+      {/* TRAK-409: each drill in the language showing; the card only shows it and links by id. */}
       {drills.map(d => <li key={d.id} className="relative min-w-0">
-        <DrillCard drill={d} players={players} level={level} note={notes?.(d)} />
-        <CardBookmark drill={d} />
+        <DrillCard drill={shownDrill(d)} players={players} level={level} note={notes?.(d)} />
+        <CardBookmark drill={shownDrill(d)} />
       </li>)}
     </ul>
   )

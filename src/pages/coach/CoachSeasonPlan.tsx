@@ -44,7 +44,7 @@ const SAVE_FAILED = "Couldn't save the plan. Check your connection and try again
 const NO_TITLE = 'Give each objective a title, or delete it.'
 const END_BEFORE_START = 'The season has to end after it starts.'
 
-type Objective = { key: string; id?: string; title: string; looksLike: string }
+type Objective = { key: string; id?: string; title: string; looksLike: string; phase: string | null }
 type Form = { startsOn: string; endsOn: string; evalEvery: EvalEvery; evalDay: number; objectives: Objective[] }
 
 const toForm = (plan: SeasonPlan | null, saved: SeasonObjective[]): Form => ({
@@ -52,11 +52,11 @@ const toForm = (plan: SeasonPlan | null, saved: SeasonObjective[]): Form => ({
   endsOn: plan?.ends_on ?? '',
   evalEvery: rhythmOf(plan ?? {}).every,
   evalDay: rhythmOf(plan ?? {}).day,
-  objectives: saved.map(o => ({ key: o.id, id: o.id, title: o.title, looksLike: o.looks_like })),
+  objectives: saved.map(o => ({ key: o.id, id: o.id, title: o.title, looksLike: o.looks_like, phase: o.phase })),
 })
 /** What a form built from the saved plan shows, to tell when the saved plan has moved on. */
 const savedKey = (plan: SeasonPlan | null, saved: SeasonObjective[]) =>
-  JSON.stringify([plan?.id, plan?.starts_on, plan?.ends_on, plan?.eval_every, plan?.eval_day, saved.map(o => [o.id, o.title, o.looks_like])])
+  JSON.stringify([plan?.id, plan?.starts_on, plan?.ends_on, plan?.eval_every, plan?.eval_day, saved.map(o => [o.id, o.title, o.looks_like, o.phase])])
 
 export default function CoachSeasonPlan() {
   const navigate = useNavigate()
@@ -82,7 +82,9 @@ export default function CoachSeasonPlan() {
     <div className="min-h-screen bg-ground pb-24">
       <div className={WIDE_COLUMN}>
         {/* An edit screen has its own heading, and Cancel as its way out (TRAK-422: under the same trail, 20 px down). */}
-        {shared && editing ? <CoachTrail className="mt-5" current="Season plan" />
+        {/* Pitch-ready page (24 Nov): View plan draws its own header, with Share and Print. */}
+        {shared && user && loaded && !editing && step === 0 ? null
+          : shared && editing ? <CoachTrail className="mt-5" current="Season plan" />
           // TRAK-378: on a phone the avatar opens the side menu, where the squad picker is (TRAK-376).
           : <PageTop title="Season plan" trail={<CoachTrail current="Season plan" />}
             below={squad && !season.isPending && <p className="-mt-1 text-sm text-ink-3">{squad} · {sharedOn ? `Shared ${shortDate(sharedOn)}` : season.plan ? 'Draft, only you see it' : 'Not started'}</p>} />}
@@ -141,9 +143,9 @@ function SetUp({ squad, plan, saved, onNext }: { squad: string; plan: SeasonPlan
     setSavedNow(false)
     setProblem(null)
   }
-  const add = (title: string, looksLike: string) => {
+  const add = (title: string, looksLike: string, phase: string | null) => {
     const key = `new-${(nextKey.current += 1)}`
-    change({ ...form, objectives: [...form.objectives, { key, title, looksLike }] })
+    change({ ...form, objectives: [...form.objectives, { key, title, looksLike, phase }] })
     if (!title) setFocusKey(key)
   }
   const datesProblem = form.startsOn && form.endsOn && form.endsOn <= form.startsOn ? END_BEFORE_START : null

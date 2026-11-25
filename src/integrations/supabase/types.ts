@@ -1623,6 +1623,7 @@ export type Database = {
           created_at: string
           id: string
           looks_like: string
+          phase: string | null
           place: number
           plan_id: string
           retired_at: string | null
@@ -1636,6 +1637,7 @@ export type Database = {
           created_at?: string
           id?: string
           looks_like?: string
+          phase?: string | null
           place: number
           plan_id: string
           retired_at?: string | null
@@ -1649,6 +1651,7 @@ export type Database = {
           created_at?: string
           id?: string
           looks_like?: string
+          phase?: string | null
           place?: number
           plan_id?: string
           retired_at?: string | null
@@ -1989,6 +1992,45 @@ export type Database = {
           },
         ]
       }
+      task_responses: {
+        Row: {
+          responded_at: string
+          responder_user_id: string
+          source_version: number
+          squad_player_id: string
+          task_id: string
+        }
+        Insert: {
+          responded_at?: string
+          responder_user_id: string
+          source_version: number
+          squad_player_id: string
+          task_id: string
+        }
+        Update: {
+          responded_at?: string
+          responder_user_id?: string
+          source_version?: number
+          squad_player_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_responses_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_responses_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "trak_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_notes: {
         Row: {
           again: string | null
@@ -2171,6 +2213,72 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: true
             referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trak_tasks: {
+        Row: {
+          answer_kind: string
+          audience: string
+          coach_user_id: string
+          created_at: string
+          due_at: string | null
+          id: string
+          organization_id: string
+          source_id: string | null
+          source_type: string
+          source_version: number
+          squad: string
+          squad_player_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          answer_kind: string
+          audience?: string
+          coach_user_id: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          organization_id: string
+          source_id?: string | null
+          source_type: string
+          source_version?: number
+          squad: string
+          squad_player_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          answer_kind?: string
+          audience?: string
+          coach_user_id?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          organization_id?: string
+          source_id?: string | null
+          source_type?: string
+          source_version?: number
+          squad?: string
+          squad_player_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trak_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trak_tasks_squad_player_id_fkey"
+            columns: ["squad_player_id"]
+            isOneToOne: false
+            referencedRelation: "squad_players"
             referencedColumns: ["id"]
           },
         ]
@@ -2487,7 +2595,39 @@ export type Database = {
         }[]
       }
       mark_season_plan_seen: { Args: { p_child?: string }; Returns: undefined }
-      watch_players: { Args: { p_squad_player_ids: string[] }; Returns: number }
+      my_tasks: {
+        Args: { p_child?: string }
+        Returns: {
+          answer_kind: string
+          answered: boolean
+          due_at: string | null
+          outdated: boolean
+          source_id: string | null
+          source_type: string
+          task_id: string
+          time_zone: string
+          title: string
+        }[]
+      }
+      respond_to_task: {
+        Args: { p_child?: string; p_task_id: string }
+        Returns: undefined
+      }
+      undo_task_response: {
+        Args: { p_child?: string; p_task_id: string }
+        Returns: undefined
+      }
+      create_task: {
+        Args: {
+          p_answer_kind: string
+          p_due_at?: string
+          p_squad: string
+          p_squad_player_id: string
+          p_title: string
+        }
+        Returns: string
+      }
+      watch_players:{ Args: { p_squad_player_ids: string[] }; Returns: number }
       take_event_register: {
         Args: { p_event_id: string; p_present: string[] }
         Returns: string

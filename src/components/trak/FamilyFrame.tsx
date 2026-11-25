@@ -16,10 +16,13 @@ import { ChildSwitcher } from '@/components/parent/ParentFamily'
 /** Pages under no tab of their own, and the tab they sit under (the one their NavBar marks). */
 const UNDER: [RegExp, string][] = [
   [/^\/player\/(match|event)\//, '/player/matches'],
-  [/^\/player\/(season|calendar|feedback)/, '/player/home'],
-  [/^\/parent\/(match|event|session|assessments)/, '/parent/matches'],
+  [/^\/player\/(season|calendar|feedback|report)/, '/player/home'],
+  [/^\/parent\/(match|event|session)/, '/parent/matches'],
+  // TRAK-530: All reports opens from Profile.
+  [/^\/parent\/assessments/, '/parent/profile'],
   // TRAK-441 slice 5: an evaluation opens from Home's Latest evaluation, so it sits under Home (a match's stays under Events).
-  [/^\/parent\/(season|assessment\/)/, '/parent/home'],
+  // TRAK-529: a report opens from Home's Latest report.
+  [/^\/parent\/(season|assessment\/|report\/)/, '/parent/home'],
 ]
 
 /**

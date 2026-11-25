@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink, MapPin, ClipboardCheck, ClipboardList, CalendarDays } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Send, Trash2, Ban, X, FileUp, ExternalLink, MapPin, ClipboardCheck, ClipboardList, CalendarDays } from 'lucide-react'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { ButtonGroup, type ButtonGroupItem } from '@/components/arc/button-group/button-group'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
@@ -19,6 +19,7 @@ import { squadName } from '@/lib/coach-week'
 import { askToEmailFamilies } from '@/lib/event-emails'
 import { useAuth } from '@/contexts/AuthContext'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
+import { ABOVE_TAB_BAR } from '@/components/coach/coach-frame-context'
 import { PhoneBack } from '@/components/coach/CoachTrail'
 import { COACH_SCREEN_PATH } from '@/lib/coach-places'
 import { MobileShell, NavBar, LoadError } from '@/components/trak'
@@ -32,11 +33,12 @@ import {
 } from '@/lib/coach-events'
 import { TRAINING_THEMES, catalogueLink, type TrainingTheme } from '@/lib/training-theme'
 import { FixtureImport } from '@/components/coach/FixtureImport'
-import { DraftsReviewSheet, DraftsStrip } from '@/components/coach/DraftsReview'
+import { DraftsReviewSheet } from '@/components/coach/DraftsReview'
 import { publishDrafts, upcomingDrafts } from '@/lib/draft-review'
 import { useOldLogRetired } from '@/components/coach/old-log'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
-import { Calendar } from '@/components/arc/calendar/calendar'
+import { MonthStrip } from '@/components/coach/MonthStrip'
+import { BTN, BTN_DARK, CARD, SectionHeading } from '@/components/coach/pitch-ready'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
@@ -45,7 +47,7 @@ import type { Fixture } from '@/lib/fixtures-csv'
 import { familyNoteProblem, shareableFromRow, squadLabelFrom, whatsAppShareText } from '@/lib/event-share'
 import { ShareEventButton, ShareIcon } from '@/components/coach/ShareEventButton'
 import { MatchAction } from '@/components/coach/games/MatchAction'
-import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
+import { NEXT_STEP_SMALL } from '@/components/coach/next-step'
 import { shareEventText } from '@/lib/share-event'
 import { hasStarted, registerProblem } from '@/lib/event-register'
 import { TakeRegister } from '@/components/coach/TakeRegister'
@@ -55,7 +57,6 @@ import { EventSummary } from '@/components/coach/EventSummary'
 import { describeEventKit } from '@/lib/kit-templates'
 import { withAlpha } from '@/lib/with-alpha'
 import { Chip, EventEditSheet, Field, ScopeChoice } from '@/components/coach/EventEditSheet'
-import { Badge } from '@/components/arc/badge/badge'
 import {
   KIND_LABEL, competitionProblem, failed, font, inSeries, inputClass, mono, pastProblem, type EditSheet, type Scope, NOTE_STEP,
 } from '@/lib/event-edit'
@@ -102,6 +103,16 @@ const NEEDS_YOU_COLOR = 'rgb(var(--t-attention))' // TRAK-270: a clear yellow, n
 /** TRAK-461: an event card's usual height, and its placeholder filling the column as the card does. */
 const EVENT_CARD = 140
 const FILL = { width: '100%' }
+
+/* The season plan's pitch-ready look: cards, buttons and headings from pitch-ready.tsx; the event badges here. */
+const BADGE = 'inline-flex items-center gap-1 rounded-lg border-2 px-2.5 py-1 text-xs font-extrabold'
+const GOOD = `${BADGE} border-success bg-success/10 text-success`
+const WAIT = `${BADGE} border-attention bg-attention/20 text-warning`
+const DRAFT_BADGE = `${BADGE} border-dashed border-line-strong bg-surface text-ink-2`
+const QUIET_BADGE = `${BADGE} border-line bg-raised text-ink-2`
+const CANCELLED_BADGE = `${BADGE} border-danger bg-danger/10 text-danger`
+const SQUAD_PILL = 'inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-surface px-3 py-1.5 text-xs font-extrabold tracking-tight text-ink sm:text-sm'
+
 
 const TYPE_LABEL: Record<ShownType, string> = { ...KIND_LABEL, tournament: 'Tournament' }
 /** TRAK-407: each type's word in the language showing. */
@@ -589,97 +600,105 @@ export default function CoachSchedule() {
 
   return (
     <MobileShell width="wide">
-      <div className="pt-5 pb-28 space-y-4">
+      {/* The season plan's pitch-ready look (TRAK-348, Tarek's 24 Nov mockup): one header with the squad and the
+          drafts' state, bold bordered cards, and section headings with a coloured bar. The month stays on top at its
+          compact size, so the picked day's events read straight under it on every screen. */}
+      <div className="grid gap-6 pb-28 sm:gap-7">
 
         {/* Header. TRAK-422: the one page title, 20 px from the top like every coach page. */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. */}
-            <CoachMenuButton name={profile?.full_name || t('nav:coach')} />
-            {/* TRAK-540 (Imad, 22 Nov; TRAK-424 had taken Back away): on a phone Events opens from Home's calendar icon,
-                so TRAK-498's arrow sits beside the avatar. */}
-            <PhoneBack to={COACH_SCREEN_PATH.home} />
-            <PageTitle className="self-start">
-              {t('nav:events')}
-            </PageTitle>
-          </div>
-          <div className="flex items-center gap-2">
+        <header className="grid gap-3 pt-5">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 self-start">
+              {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. */}
+              <CoachMenuButton name={profile?.full_name || t('nav:coach')} />
+              {/* TRAK-540 (Imad, 22 Nov; TRAK-424 had taken Back away): on a phone Events opens from Home's calendar icon,
+                  so TRAK-498's arrow sits beside the avatar. */}
+              <PhoneBack to={COACH_SCREEN_PATH.home} />
+              <PageTitle>{t('nav:events')}</PageTitle>
+              <span className={SQUAD_PILL}>{everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</span>
+              {/* TRAK-154: the drafts waiting are the box under the month; with none, this says so. */}
+              {eventsOn && loaded && drafts.length === 0 && <span className={`${GOOD} px-3 py-1.5 sm:text-sm`}>
+                <CheckCircle2 aria-hidden size={16} strokeWidth={2.5} className="text-success" />{t('coachSchedule:allPublished')}</span>}
+            </div>
             {/* TRAK-162: the CSV import is parked; no coach is offered it. */}
-            {FIXTURE_IMPORT_ENABLED && <button
-              onClick={() => (parked ? comingSoon() : setSheet({ kind: 'import' }))}
-              className="flex items-center justify-center w-8 h-8 rounded-full"
-              style={{ background: 'rgb(var(--t-raised))' }}
-              aria-label={t('coachSchedule:importFixtures')}>
-              <FileUp size={15} color="rgb(var(--t-ink))" />
-            </button>}
+            {FIXTURE_IMPORT_ENABLED && <div className="flex flex-wrap items-center gap-2.5">
+              <button type="button" className={BTN} onClick={() => (parked ? comingSoon() : setSheet({ kind: 'import' }))}
+                aria-label={t('coachSchedule:importFixtures')}>
+                <FileUp aria-hidden size={16} strokeWidth={2.25} />{wide && t('coachSchedule:importFixtures')}
+              </button>
+            </div>}
             {/* TRAK-424: no "+" of its own; the frame's "+" adds an event, on the day picked here (create-day.ts). */}
           </div>
-        </div>
+        </header>
 
         {loadFailed && <LoadError what={t('coachSchedule:scheduleWhat')} onRetry={retry} retrying={retrying} />}
 
-        {eventsOn && <DraftsStrip count={drafts.length}
-          onReview={() => (parked ? comingSoon() : setSheet({ kind: 'drafts', ticked: null, problem: null }))} />}
+        {/* ── One column on every screen: the month on top, then any notice (TRAK-154's drafts to come, as the season
+            plan's "Not shared yet" box), then the picked day's events. ── */}
+        <div className="grid gap-6">
+        <section aria-label={t('coachSchedule:calendar')} className={`${CARD} arc grid gap-3 px-4 py-3 sm:px-5`}>
+          {/* TRAK-574: the month as one low strip across the top (MonthStrip), not a square grid, so a tapped day's
+              events show straight under it without scrolling. */}
+          <MonthStrip locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()}
+            value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
+            month={new Date(viewYear, viewMonth, 1)}
+            onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
+            marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])}
+            attention={date => needsYou.has(toDateStr(date))} />
 
-        {/* TRAK-252: on a coach's laptop the month and the chosen day stand side by side. */}
-        <div className="space-y-4 laptop:grid laptop:grid-cols-2 laptop:gap-6 laptop:items-start laptop:space-y-0">
-        {/* ── Month (Arc calendar, TRAK-182) ───────────────────────────────── */}
-        <div className="arc rounded-2xl border border-line overflow-hidden" style={{ background: 'rgb(var(--t-surface))' }}>
-          {/* TRAK-271: room between the last row of days and the legend's line. */}
-          <div className="flex justify-center px-2 pt-2 pb-4">
-            {/* TRAK-252 (option A): on a laptop the same Arc calendar fills its column. */}
-            <Calendar locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()} showToday className="laptop:!w-full"
-              value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
-              month={new Date(viewYear, viewMonth, 1)}
-              onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
-              marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])}
-              attention={date => needsYou.has(toDateStr(date))} />
-          </div>
-
-          {/* Legend. TRAK-255: Cancelled (the hollow ring the month draws) and Needs you (the amber corner). */}
-          <div role="group" aria-label={t('coachSchedule:colourKey')} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 border-t border-line">
+          {/* Legend. TRAK-255: Cancelled (the hollow ring the strip draws) and Needs you (the amber corner). */}
+          <div role="group" aria-label={t('coachSchedule:colourKey')}
+            className="flex w-full flex-wrap items-center gap-x-4 gap-y-1.5 border-t-2 border-line-soft pt-2.5">
             {EVENT_KINDS.map(type => (
-              <div key={type} className="flex items-center gap-1.5">
-                <div className="w-[7px] h-[7px] rounded-full" style={{ background: TYPE_COLOR[type] }} />
-                <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
-                  {t(TYPE_WORD[type])}
-                </span>
+              <div key={type} className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLOR[type] }} />
+                <span className="text-xs font-bold text-ink-2">{t(TYPE_WORD[type])}</span>
               </div>
             ))}
-            <div className="flex items-center gap-1.5">
-              <div className="w-[8px] h-[8px] rounded-full box-border" style={{ border: `1.5px solid ${CANCELLED_COLOR}` }} />
-              <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>{t('coachHome:noteCancelled')}</span>
+            <div className="flex items-center gap-2">
+              <div className="box-border h-2.5 w-2.5 rounded-full" style={{ border: `1.5px solid ${CANCELLED_COLOR}` }} />
+              <span className="text-xs font-bold text-ink-2">{t('coachHome:noteCancelled')}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              {/* Coach Home's corner (TRAK-270), as the month draws it. */}
-              <div className="w-[8px] h-[8px]" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
-                <div className="w-full h-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
+            <div className="flex items-center gap-2">
+              {/* Coach Home's corner (TRAK-270), as the strip draws it. */}
+              <div className="h-2.5 w-2.5" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
+                <div className="h-full w-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
               </div>
-              <span className="text-[10px] uppercase tracking-[0.08em]" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>{t('coachHome:needsYouTitle')}</span>
+              <span className="text-xs font-bold text-ink-2">{t('coachHome:needsYouTitle')}</span>
             </div>
           </div>
+        </section>
+
+        {eventsOn && drafts.length > 0 && <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-attention bg-attention/10 p-4 sm:flex-row sm:items-center">
+          <span className="flex items-center gap-3">
+            <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-warning" />
+            <span className="text-base font-extrabold text-ink">{t('coachSchedule:draftsWaiting', { count: drafts.length })}</span>
+          </span>
+          <button type="button" className={`${BTN_DARK} shrink-0`}
+            onClick={() => (parked ? comingSoon() : setSheet({ kind: 'drafts', ticked: null, problem: null }))}>
+            <Send aria-hidden size={16} strokeWidth={2.25} />{t('coachSchedule:reviewDrafts')}
+          </button>
+        </div>}
         </div>
 
-        {/* ── Selected day ─────────────────────────────────────────────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] font-medium tracking-[0.1em] uppercase text-ink-3" style={mono}>
-              {formatEventDay(selected)}
-            </span>
-
+        {/* ── Selected day, under the month ─────────────────────────────────── */}
+        <section aria-labelledby="schedule-day" className="grid gap-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SectionHeading id="schedule-day" bar="bg-success">{formatEventDay(selected)}</SectionHeading>
+            {loaded && <span className="text-xs font-black uppercase tracking-wider text-ink-3">{t('coachSchedule:eventCount', { count: selectedEvents.length })}</span>}
           </div>
 
           {/* TRAK-461: while the events load, two placeholders the size of an event's card grow into the day's cards. */}
           <SkeletonMorph loading={!loaded && !loadFailed} stagger={0} loadingLabel={t('coachSchedule:scheduleLoading')}>
-          {!loaded && !loadFailed ? <div className="space-y-4">{[0, 1].map(index => <MorphBlock key={index} height={EVENT_CARD} radius={16} style={FILL} />)}</div>
+          {!loaded && !loadFailed ? <div className="grid gap-4">{[0, 1].map(index => <MorphBlock key={index} height={EVENT_CARD} radius={16} style={FILL} />)}</div>
           : selectedEvents.length === 0 ? (
             // TRAK-432: Arc's empty state; the frame's "+" is the button, named as this screen shows it.
-            <div className="space-y-4"><MorphBlock key={0} height={EVENT_CARD} radius={16} style={FILL}><div className="arc">
+            <div className="grid gap-4"><MorphBlock key={0} height={EVENT_CARD} radius={16} style={FILL}><div className={`${CARD} arc`}>
               <EmptyState icon={<CalendarDays size={24} strokeWidth={1.5} />} title={t('coachSchedule:nothingPlanned')}
                 description={t(wide ? 'coachSchedule:addWithCreate' : 'coachSchedule:addWithPlus')} />
             </div></MorphBlock></div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid gap-4">
               {selectedEvents.map((ev, index) => {
                 const row = ev.row
                 const cancelled = !!row && isCancelled(row)
@@ -740,8 +759,7 @@ export default function CoachSchedule() {
                 const base = toPlayerEvent(sheetSource as unknown as Record<string, unknown>)
                 const sheetEvent: StripEvent | null = base && { ...base, draft: !!row && !row.published, sessionId: row ? undefined : ev.id }
                 const titleText = (
-                  <p className="text-[14px] font-medium truncate"
-                    style={{ color: 'rgb(var(--t-ink))', ...font, textDecoration: cancelled ? 'line-through' : undefined }}>
+                  <p className={`truncate text-base font-black tracking-tight sm:text-lg ${cancelled ? 'text-ink-3 line-through' : 'text-ink'}`}>
                     {ev.title}
                   </p>
                 )
@@ -752,10 +770,11 @@ export default function CoachSchedule() {
                       if ((event.target as HTMLElement).closest('button, a, [role="menuitem"], [role="group"]')) return
                       cardTriggers.current.get(ev.id)?.click()
                     }}
-                    className="rounded-2xl px-4 py-3 flex items-start gap-3 cursor-pointer"
-                    style={{ background: 'rgb(var(--t-surface))', border: row && !row.published && !cancelled ? '1.5px dashed rgb(var(--t-line-strong))' : '1px solid rgb(var(--t-line))' }}>
-                    <div className="w-1 self-stretch rounded-full flex-shrink-0"
-                      style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type], minHeight: 28 }} />
+                    // The season plan's objective card: a thick coloured edge (here the event's kind, on its left), a draft
+                    // dashed because only the coach sees it.
+                    className={`relative flex cursor-pointer items-start gap-3 overflow-hidden rounded-2xl border-2 bg-surface p-4 pl-6 shadow-sm transition-all hover:border-ink hover:shadow-md sm:p-5 sm:pl-7 ${row && !row.published && !cancelled ? 'border-dashed border-line-strong' : 'border-line'}`}>
+                    <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5"
+                      style={{ background: cancelled ? CANCELLED_COLOR : TYPE_COLOR[ev.type] }} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2">
                       <div className="flex-1 min-w-0">
@@ -784,15 +803,14 @@ export default function CoachSchedule() {
                       {/* TRAK-508 (Imad, 20 Nov): Needs you at the card's top right. TRAK-270: the yellow of needs you; its
                           word stays dark for contrast. */}
                       {waiting && (
-                        <span className="block w-fit flex-none rounded-full px-2 py-[1px] text-[11px] font-medium"
-                          style={{ ...font, color: 'rgb(var(--t-warning))', background: 'rgb(var(--t-attention) / 0.22)', border: `1.5px solid ${NEEDS_YOU_COLOR}` }}>{t('coachHome:needsYouTitle')}</span>
+                        <span className={`${WAIT} flex-none`}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-warning" />{t('coachHome:needsYouTitle')}</span>
                       )}
                       </div>
-                      <p className="text-[9px] mt-1" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>
+                      <p className="mt-1 text-xs font-semibold text-ink-2">
                         {/* TRAK-159: a scheduled event says its time, or that it has none. */}
                         {ev.time
-                          ? <span className="text-[11px] font-medium" style={{ color: 'rgb(var(--t-ink))' }}>{ev.time}</span>
-                          : row && <span className="text-[10px] font-medium" style={{ color: NO_TIME_COLOR }}>{t('coachSchedule:noTimeSet')}</span>}
+                          ? <span className="text-sm font-black text-ink tabular-nums">{ev.time}</span>
+                          : row && <span className="text-xs font-bold" style={{ color: NO_TIME_COLOR }}>{t('coachSchedule:noTimeSet')}</span>}
                         {/* TRAK-508 (Imad, 20 Nov): no kind word or dot; the line on the card's edge says it. A screen reader still
                             hears it. */}
                         <span className="sr-only">{`${ev.time || row ? ' · ' : ''}${t(TYPE_WORD[ev.type])}`}</span>
@@ -805,27 +823,25 @@ export default function CoachSchedule() {
                         })()}
                       </p>
                       {row?.kit && (
-                        <p className="text-[9px] mt-1" style={{ ...mono, color: 'rgb(var(--t-ink-3))' }}>{t('coachSchedule:kitLine', { kit: row.kit })}</p>
+                        <p className="mt-1 text-xs font-semibold text-ink-2">{t('coachSchedule:kitLine', { kit: row.kit })}</p>
                       )}
                       {/* TRAK-255 (TRAK-225's link): the venue opens in Maps from the coach's day too. */}
                       {place && (
                         <a href={place.mapsUrl} target="_blank" rel="noopener noreferrer"
-                          className="mt-1 flex w-fit items-center gap-1 min-h-8 text-[12px] font-medium text-brand underline" style={font}>
+                          className="mt-1 flex w-fit min-h-8 items-center gap-1 text-xs font-bold text-ink underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                           <MapPin size={13} aria-hidden="true" />{t('coachSchedule:openInMaps')}
                         </a>
                       )}
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         {state && (
-                          // TRAK-427: Arc's badge, as on the newer pages: Published in the app's green, a draft outlined and
-                          // quiet (only the coach sees it), a started event quiet, a cancelled one in the danger red.
-                          <span className="arc"><Badge size="sm" pill tone={cancelled ? 'danger' : !row?.published || startedLocked(row) ? 'neutral' : 'success'} outline={!row?.published && !cancelled}>{state.text}</Badge></span>
+                          // TRAK-427, in the season plan's badges: Published green, a draft dashed and quiet (only the
+                          // coach sees it), a started event quiet, a cancelled one red.
+                          <span className={cancelled ? CANCELLED_BADGE : !row?.published ? DRAFT_BADGE : startedLocked(row) ? QUIET_BADGE : GOOD}>
+                            {!cancelled && row?.published && !startedLocked(row) && <Check aria-hidden size={14} strokeWidth={3} />}{state.text}
+                          </span>
                         )}
-                        {!row && (
-                          <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium text-ink-2 bg-raised" style={font}>{t('coachHome:logged')}</span>
-                        )}
-                        {row && row.event_type === 'match' && sessionId && (
-                          <span className="block w-fit rounded-full px-2 py-[1px] text-[11px] font-medium text-ink-2 bg-raised" style={font}>{t('coachSchedule:matchLogged')}</span>
-                        )}
+                        {!row && <span className={QUIET_BADGE}>{t('coachHome:logged')}</span>}
+                        {row && row.event_type === 'match' && sessionId && <span className={QUIET_BADGE}>{t('coachSchedule:matchLogged')}</span>}
                       </div>
                       {row && !cancelled && clashes.has(row.id) && (() => {
                         const c = clashes.get(row.id)!
@@ -844,7 +860,7 @@ export default function CoachSchedule() {
                           {groupItems.length > 0 && <ButtonGroup label={t('coachSchedule:actionsFor', { title: ev.title })} items={groupItems} variant="outline" size="md" />}
                           {steps.map(item => item.id === 'match' && evaluateState && row
                             ? <MatchAction key={item.id} state={evaluateState} eventId={row.id} />
-                            : <Button key={item.id} size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} aria-label={item.label} title={item.label} onClick={item.onSelect}>
+                            : <Button key={item.id} size={NEXT_STEP_SMALL} aria-label={item.label} title={item.label} onClick={item.onSelect}>
                                 {item.id === 'share' && <ShareIcon size={16} tight />}{item.content}
                               </Button>)}
                         </div>
@@ -856,8 +872,7 @@ export default function CoachSchedule() {
             </div>
           )}
           </SkeletonMorph>
-        </div>
-        </div>
+        </section>
       </div>
 
       {/* ── Event sheet: new or edit, one step per screen (TRAK-182); a match page pulls up the same one (TRAK-331) ── */}
@@ -873,7 +888,7 @@ export default function CoachSchedule() {
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachSchedule:cancelEvent')}
             className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: ABOVE_TAB_BAR }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:cancelTitle', { title: sheet.row.title })}</span>
             {inSeries(sheet.row) && (
               <ScopeChoice scope={sheet.scope}
@@ -905,7 +920,7 @@ export default function CoachSchedule() {
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachSchedule:eventCancelled')}
             className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: ABOVE_TAB_BAR }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:eventCancelled')}</span>
             <p className="text-[12px] text-ink-2" style={font}>
               {t('coachSchedule:letGroupKnow', { note: sheet.note })}
@@ -930,7 +945,7 @@ export default function CoachSchedule() {
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachSchedule:importFixtures')}
             className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-2xl p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: ABOVE_TAB_BAR }}>
             <div className="flex items-center justify-between">
               <span className="text-[16px] font-medium text-ink" style={font}>{t('coachSchedule:importFixtures')}</span>
               <button onClick={() => setSheet({ kind: 'closed' })} aria-label={t('coachSchedule:close')}>
@@ -955,7 +970,7 @@ export default function CoachSchedule() {
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={t('coachHome:takeRegister')}
             className="w-full max-w-sheet max-h-[85vh] overflow-y-auto rounded-t-2xl p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: ABOVE_TAB_BAR }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[16px] font-medium text-ink" style={font}>
                 {t('coachSchedule:registerTitle', { title: sheet.row.title, day: formatEventDay(displayEventTime(sheet.row).date) })}
@@ -977,7 +992,7 @@ export default function CoachSchedule() {
           onClick={e => { if (e.target === e.currentTarget) setSheet({ kind: 'closed' }) }}>
           <div role="dialog" aria-label={sheet.action === 'publish' ? t('coachSchedule:publishEvent') : t('coachSchedule:deleteDraft')}
             className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: ABOVE_TAB_BAR }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>
               {t(sheet.action === 'publish' ? 'coachSchedule:publishTitle' : 'coachSchedule:deleteTitle', { title: sheet.row.title, day: formatEventDay(sheet.row.event_date!) })}
             </span>
@@ -1008,7 +1023,7 @@ export default function CoachSchedule() {
           style={{ background: 'rgb(var(--t-scrim) / 0.75)' }}>
           <div role="dialog" aria-label={t('coachSchedule:notPublished')}
             className="w-full max-w-sheet rounded-t-2xl p-5 space-y-3"
-            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: 64 }}>
+            style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', marginBottom: ABOVE_TAB_BAR }}>
             <span className="text-[16px] font-medium text-ink block" style={font}>{t('coachSchedule:notPublished')}</span>
             <p className="text-[12px] text-ink-2" style={font}>
               {t('coachSchedule:noneEventsWentOut', { count: sheet.count })}

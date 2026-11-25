@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { Button } from '@/components/arc/button/button'
 import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
+import { BTN_DARK } from '@/components/coach/pitch-ready'
 import { NeedsYou } from '@/components/coach/home/NeedsYou'
 import { PlanReview } from '@/components/arc/blocks/plan-review/plan-review'
 import type { NeedsYouItem } from '@/lib/coach-needs-you'
@@ -64,18 +65,13 @@ describe("TRAK-423: a player's page and Squad", () => {
     )
   }
 
-  it("a player's page: Assess is the same small button, named for the player", async () => {
+  it("a player's page: Assess is the season plan's main button, named for the player", async () => {
     coach()
-    // TRAK-501: the same button as Needs you's Assess, which TRAK-497 made the week's next step.
-    const small = lookOf(undefined, NEXT_STEP_SIZE)
+    // Dimos, 25 Nov: the player's page follows the season plan's look, so Assess is its dark button.
     renderApp('/coach/squad/player/sp-1')
     const assess = await screen.findByRole('button', { name: 'Assess Kostas' })
     expect(assess).toHaveTextContent(/^Assess$/)
-    // Arc's own classes first; anything after them is where it sits on the page, not how it looks.
-    expect(assess.className.startsWith(small)).toBe(true)
-    expect(assess.className).toContain(NEXT_STEP_WIDTH)
-    // TRAK-501: in the page's grid, self-start only set the height, so it spanned the page; it keeps its own width.
-    expect(assess.className).toContain('justify-self-start')
+    expect(assess.className).toBe(BTN_DARK)
   })
   // Squad's row tag ("Due", not "Assess") is checked in squad-views-trak250, which has a player owed an assessment.
 })

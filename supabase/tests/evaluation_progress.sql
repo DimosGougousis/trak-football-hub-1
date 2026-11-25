@@ -134,7 +134,21 @@ SELECT public.publish_evaluation_with_objectives(pg_temp.ev401id(50), pg_temp.ev
     pg_temp.ev401entry(44, jsonb_build_array(pg_temp.ev401p(44, 'U', 'some_progress')))));
 RESET ROLE;
 
--- 1. The child reads the progress of an evaluation, with the words before it and none after it.
+-- 0. TRAK-532: report day now keeps the bands with the coach (published_at NULL), so the child reads nothing of them;
+-- the family reads the report instead. The rest of this suite checks the evaluations published before TRAK-532, so
+-- the fixtures publish them by hand, as they were then.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ev401check(pg_temp.ev401read(20, ARRAY[[40, 1], [40, 2]]) = '[]'::jsonb
+  AND pg_temp.ev401read(30, ARRAY[[40, 1], [40, 2]]) = '[]'::jsonb,
+  '0 TRAK-532: an evaluation from report day stays with the coach; the child and guardian read none of it');
+RESET ROLE;
+SELECT pg_temp.ev401check(NOT EXISTS (SELECT 1 FROM public.coach_assessments a JOIN public.season_evaluations e ON e.id = a.evaluation_id
+    WHERE e.plan_id = pg_temp.ev401id(50) AND a.published_at IS NOT NULL),
+  '0 TRAK-532: report day stores every evaluation assessment unpublished');
+UPDATE public.coach_assessments a SET published_at = now() FROM public.season_evaluations e
+ WHERE e.id = a.evaluation_id AND e.plan_id = pg_temp.ev401id(50);
+
+-- 1. The child reads the progress of a published evaluation, with the words before it and none after it.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.ev401check(jsonb_array_length(pg_temp.ev401read(20, ARRAY[[40, 2]])) = 1
   AND (pg_temp.ev401read(20, ARRAY[[40, 2]]) -> 0 ->> 'due_on')::date = pg_temp.ev401today() - 20
@@ -243,7 +257,7 @@ SELECT pg_temp.ev401check(NOT has_function_privilege('anon', 'public.evaluation_
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.ev401_results;
- IF total <> 19 THEN RAISE EXCEPTION 'Evaluation progress: % checks ran; expected 19', total; END IF;
+ IF total <> 21 THEN RAISE EXCEPTION 'Evaluation progress: % checks ran; expected 21', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.ev401_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Evaluation progress checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Evaluation progress: % of % passed', total, total;

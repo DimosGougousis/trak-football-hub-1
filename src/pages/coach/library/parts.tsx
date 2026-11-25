@@ -1,3 +1,4 @@
+import { TOP_BAR } from '@/components/arc/blocks/sidebar-rail/sidebar-rail'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { PitchArt, ProgrammeArt } from '@/components/library/LibraryArt'
@@ -208,8 +209,8 @@ export function SessionDetail({ session, compact = false }: { session: LibrarySe
   )
 }
 
-/** Where a laptop's open item sticks: just under the frame's 60px top bar. */
-const STICK = 72
+/** Where a laptop's open item sticks: 12 px under the frame's top bar (TRAK-769: 64 px). */
+const STICK = TOP_BAR + 12
 
 /** On a laptop, Squad's way (TRAK-263, TRAK-267): one card with a narrow list on the left and the open item
  *  wide beside it. The open item stays in view (sticky, under the frame's top bar) however far down the
@@ -243,7 +244,7 @@ export function BesideList<T extends { id: string }>({ label, items, open, row, 
         {items.map(item => <li key={item.id} className="min-w-0">{row(item, item.id === open?.id)}</li>)}
       </ul>
       <div className="min-w-0">
-        <div ref={pane} className="sticky top-[72px] max-h-[calc(100dvh-84px)] overflow-y-auto">
+        <div ref={pane} className="sticky top-[76px] max-h-[calc(100dvh-88px)] overflow-y-auto">
           {open ? view(open) : (
             <div className="flex min-h-[320px] flex-col items-center justify-center gap-1 p-6 text-center">
               <p className="text-[16px] font-semibold text-ink">{empty.title}</p>

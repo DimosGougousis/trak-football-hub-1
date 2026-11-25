@@ -1,6 +1,7 @@
 import { LIBRARY, type LibraryDrill } from './drills'
 import { fit } from './fit'
 import { drillOrder, kindInfo, type DrillTypeName } from './kinds'
+import { shownDrill } from './words'
 
 /* TRAK-385 (Drill Library 1/11): smart search (Kostas, 7 Nov: the same drill has many names, so plain search fails).
    A drill is found by its name, its type and kind, the other names coaches use for its type ("piggy in the middle"
@@ -31,12 +32,13 @@ export const ALSO_CALLED: Record<DrillTypeName, readonly string[]> = {
 /** The other names shown on a drill page: the first three. */
 export const alsoCalled = (d: Pick<LibraryDrill, 'type'>) => ALSO_CALLED[d.type].slice(0, 3)
 
-/** Lower case, curly quotes made straight, and "4 v 4", "4vs4", "4 on 4" all become "4v4". */
-export const norm = (text: string) => text.toLowerCase()
-  .replace(/(\d+)\s*(?:v|vs|versus|on)\.?\s*(\d+)/g, '$1v$2')
+/** Lower case, curly quotes made straight, and "4 v 4", "4vs4", "4 on 4" all become "4v4". TRAK-409: any alphabet,
+ *  without accents ("ροντο" finds "ρόντο"), and Greek's final ς as σ. */
+export const norm = (text: string) => text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/ς/g, 'σ')
+  .replace(/(\d+)\s*(?:v|vs|versus|on|εναντιον)\.?\s*(\d+)/g, '$1v$2')
   .replace(/[‘’]/g, "'")
 
-const words = (text: string) => norm(text).split(/[^a-z0-9']+/).filter(Boolean)
+const words = (text: string) => norm(text).split(/[^\p{L}\p{N}']+/u).filter(Boolean)
 
 /** How many letters differ between two words (edit distance), so "posession" still finds "possession". Words more
  *  than two letters apart in length count as far apart. */
@@ -86,7 +88,7 @@ export function score(d: LibraryDrill, query: string, squad: Squad): number {
  *  plain name. Empty otherwise. */
 export function foundAs(d: LibraryDrill, query: string, squad: Squad): string {
   const q = norm(query).trim(), qs = words(q)
-  if (!q || score(d, query, squad) !== 3) return ''
+  if (!q || score(shownDrill(d), query, squad) !== 3) return ''
   const name = ALSO_CALLED[d.type].find(a => norm(a).includes(q) || qs.every(w => wordHit(w, words(a))))
   return name ? `Also called ${name}` : ''
 }
@@ -94,7 +96,8 @@ export function foundAs(d: LibraryDrill, query: string, squad: Squad): string {
 /** The drills that match, best first, then in Library order. `keep` narrows the pool (a kind, a drill type…). */
 export function searchDrills(query: string, squad: Squad, keep: (d: LibraryDrill) => boolean = () => true, drills: readonly LibraryDrill[] = LIBRARY): LibraryDrill[] {
   return drills.filter(keep)
-    .map(d => ({ d, s: score(d, query, squad) }))
+    // TRAK-409: scored in the words the coach reads, but the drill itself is returned, so a plan saves it in English.
+    .map(d => ({ d, s: score(shownDrill(d), query, squad) }))
     .filter(r => r.s > 0)
     .sort((a, b) => b.s - a.s || drillOrder(a.d) - drillOrder(b.d))
     .map(r => r.d)

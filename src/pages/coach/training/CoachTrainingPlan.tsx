@@ -1,3 +1,4 @@
+import { TOP_BAR as RAIL_TOP_BAR } from '@/components/arc/blocks/sidebar-rail/sidebar-rail'
 import { useTranslation } from '@/lib/i18n'
 import { partName, TRAINING_WORD } from '@/lib/training/words'
 import { shown } from '@/lib/squad/trait-words'
@@ -44,7 +45,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 type Row = Training & EventRow
 /** The laptop's top bar is pinned above the page; the header pins under it, as a match's. */
-const TOP_BAR = '60px'
+const TOP_BAR = `${RAIL_TOP_BAR}px`
 const icon = { size: 16, strokeWidth: 1.75, 'aria-hidden': true } as const
 const metaIcon = { size: 14, strokeWidth: 1.75, 'aria-hidden': true } as const
 

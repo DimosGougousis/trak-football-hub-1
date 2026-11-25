@@ -11,6 +11,8 @@ export interface BellAlert {
   tone?: NotificationItem['tone']
   details?: ReactNode
   action?: NotificationItem['action']
+  /** TRAK-530: already read elsewhere on this device (a report opened from Home). */
+  read?: boolean
 }
 
 /**
@@ -38,7 +40,7 @@ export function AlertsBell({ alerts, storageKey, notice, onOpen }: {
     title: alert.title,
     description: alert.description,
     time: relativeLabel(alert.date),
-    read: isAlertRead(alert, state),
+    read: alert.read || isAlertRead(alert, state),
     tone: alert.tone,
     details: alert.details,
     action: alert.action,

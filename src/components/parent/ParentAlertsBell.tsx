@@ -8,6 +8,9 @@ import { firstName, parentAlerts } from '@/lib/parent-data'
 import { newsAlert, useFamilyNews } from '@/lib/games/news'
 import { noteEventSnapshots, noteFirstSeen, readFirstSeen } from '@/lib/player-events'
 import { trackEvent } from '@/lib/telemetry'
+import { useFamilyLook } from '@/components/trak/FamilyFrame'
+import { reportAlert, useFamilyReports } from '@/lib/player-report'
+import { useTranslation } from '@/lib/i18n'
 
 /* TRAK-74 (decision 25 Sep): the parent's alerts are a bell on Home instead of
    a tab. It counts the selected child's matches, assessments and events
@@ -25,6 +28,10 @@ export function ParentAlertsBell() {
   const events = useParentEvents()
   // TRAK-436: the child's game plans and the coach's reviews. They replace "Match logged": a match is now the coach's review.
   const news = useFamilyNews(selectedChild?.id, false)
+  // TRAK-530: in the new look, the child's latest report in place of the assessments (no family screen opens one).
+  const look = useFamilyLook()
+  const reports = useFamilyReports(look ? selectedChild?.id : undefined, false)
+  const { t } = useTranslation()
   const firstSeenKey = parentId ? `trak:parent-alerts-events:${parentId}` : null
   useEffect(() => {
     if (!firstSeenKey || !parentId || !events.data) return
@@ -37,9 +44,11 @@ export function ParentAlertsBell() {
   const failed = development.isError || events.isError || news.isError
   const loading = development.isPending || events.isPending || news.isPending
   // Read before this render's events are recorded as first seen.
+  const latest = reports.data?.[0]
   const alerts = failed || loading ? [] : [...parentAlerts([], development.data,
-    { awards: false, events: events.data ?? [], eventsFirstSeen: readFirstSeen(firstSeenKey) }),
-  ...news.all.map(item => ({ ...newsAlert(item, 'parent', firstName(selectedChild)), kind: 'news' as const }))]
+    { awards: false, assessments: !look, events: events.data ?? [], eventsFirstSeen: readFirstSeen(firstSeenKey) }),
+  ...news.all.map(item => ({ ...newsAlert(item, 'parent', firstName(selectedChild)), kind: 'news' as const })),
+  ...(latest ? [{ ...reportAlert(latest, parentId, selectedChild.id, 'parent'), kind: 'report' as const }] : [])]
     .sort((a, b) => (Date.parse(b.date ?? '') || 0) - (Date.parse(a.date ?? '') || 0))
 
   return (
@@ -49,6 +58,10 @@ export function ParentAlertsBell() {
         : loading ? <ParentLoading /> : undefined}
       onOpen={() => { if (alerts.length) void trackEvent('alert_opened', { count: alerts.length }) }}
       alerts={alerts.map(alert => {
+        if (alert.kind === 'report') {
+          const { path, month, kind: _kind, ...rest } = alert
+          return { ...rest, description: t('coachSquad:sentReportName', { month }), action: { label: t('common:openReport'), onSelect: () => navigate(path) } }
+        }
         if (alert.kind === 'news') {
           const { path, action, kind: _kind, ...rest } = alert
           return { ...rest, tone: 'success' as const, action: { label: action, onSelect: () => navigate(path, { state: { from: pathname } }) } }
