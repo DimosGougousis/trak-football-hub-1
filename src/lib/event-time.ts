@@ -257,7 +257,9 @@ export function calendarFieldsFromInstant(
   }
 }
 
-const ACADEMY_ZONES: Record<number, string> = { 240: 'Dubai time', 180: 'Athens time', 120: 'Athens time' }
+// ponytail: an academy's zone is read from its UTC offset that day. Madrid's summer (+2) is Athens's winter, so a Madrid
+// event from late March to late October reads "Athens time"; pass the academy's zone name to fix it once that matters.
+const ACADEMY_ZONES: Record<number, string> = { 240: 'Dubai time', 180: 'Athens time', 120: 'Athens time', 60: 'Madrid time' }
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 

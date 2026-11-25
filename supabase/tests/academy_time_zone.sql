@@ -85,6 +85,10 @@ SELECT pg_temp.tz175check((SELECT time_zone = 'Asia/Dubai' FROM public.organizat
  '1 an academy is on Dubai time unless set');
 SELECT pg_temp.tz175refused(format('UPDATE public.organizations SET time_zone = ''Europe/London'' WHERE id = %L', pg_temp.tz175id(101)),
  '1 only a zone the calendar feed can describe','23514','organizations_time_zone_supported');
+-- Madrid too (Spain, 26 Nov 2026), then back, before any event exists.
+UPDATE public.organizations SET time_zone = 'Europe/Madrid' WHERE id = pg_temp.tz175id(101);
+SELECT pg_temp.tz175check((SELECT time_zone = 'Europe/Madrid' FROM public.organizations WHERE id = pg_temp.tz175id(101)),
+ '1 an academy in Spain can run on Madrid time');
 -- The operator (this superuser session) sets Athens before any event exists.
 UPDATE public.organizations SET time_zone = 'Europe/Athens' WHERE id = pg_temp.tz175id(101);
 SELECT pg_temp.tz175check((SELECT time_zone = 'Europe/Athens' FROM public.organizations WHERE id = pg_temp.tz175id(101)),
@@ -277,8 +281,8 @@ SELECT pg_temp.tz175check(
 DO $$ DECLARE failures text; n integer; BEGIN
  SELECT string_agg(label||coalesce(': '||detail,''),E'\n') INTO failures FROM pg_temp.tz175_results WHERE ok IS DISTINCT FROM true;
  SELECT count(*) INTO n FROM pg_temp.tz175_results;
- IF n <> 28 THEN
-  RAISE EXCEPTION 'Academy time zone: % checks ran; expected exactly 28', n;
+ IF n <> 29 THEN
+  RAISE EXCEPTION 'Academy time zone: % checks ran; expected exactly 29', n;
  END IF;
  IF failures IS NOT NULL THEN
   RAISE EXCEPTION USING MESSAGE='Academy time zone failed',DETAIL=failures;
