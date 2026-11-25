@@ -1623,6 +1623,7 @@ export type Database = {
           created_at: string
           id: string
           looks_like: string
+          phase: string | null
           place: number
           plan_id: string
           retired_at: string | null
@@ -1636,6 +1637,7 @@ export type Database = {
           created_at?: string
           id?: string
           looks_like?: string
+          phase?: string | null
           place: number
           plan_id: string
           retired_at?: string | null
@@ -1649,6 +1651,7 @@ export type Database = {
           created_at?: string
           id?: string
           looks_like?: string
+          phase?: string | null
           place?: number
           plan_id?: string
           retired_at?: string | null

@@ -2,13 +2,17 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/arc/button/button'
 import { Input } from '@/components/arc/input/input'
 import { Textarea } from '@/components/arc/textarea/textarea'
-import { MAX_SEASON_OBJECTIVES, OBJECTIVE_LINE_MAX, OBJECTIVE_TITLE_MAX, SEASON_OBJECTIVE_PRESETS } from '@/lib/season-plan'
+import { Select } from '@/components/arc/select/select'
+import { MAX_SEASON_OBJECTIVES, OBJECTIVE_LINE_MAX, OBJECTIVE_TITLE_MAX, PHASES, SEASON_OBJECTIVE_PRESETS } from '@/lib/season-plan'
 
 /* TRAK-350's season objectives card, which TRAK-356's Edit after sharing shares: up to three, each a title and what it
    looks like, from the mockup's six or the coach's own. Before the first share an objective is deleted; after it, it
-   is removed, and kept in its history. */
+   is removed, and kept in its history. 24 Nov: each may name its phase of play (the coach's cards only). */
 
-export type EditableObjective = { key: string; id?: string; title: string; looksLike: string }
+const NO_PHASE = 'none'
+const PHASE_OPTIONS = [{ value: NO_PHASE, label: 'No phase' }, ...PHASES]
+
+export type EditableObjective = { key: string; id?: string; title: string; looksLike: string; phase: string | null }
 
 export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onChange, onAdd }: {
   objectives: EditableObjective[]
@@ -16,7 +20,7 @@ export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onCha
   focusKey: string | null
   removeWord: 'Delete' | 'Remove'
   onChange: (next: EditableObjective[]) => void
-  onAdd: (title: string, looksLike: string) => void
+  onAdd: (title: string, looksLike: string, phase: string | null) => void
 }) {
   const full = objectives.length >= MAX_SEASON_OBJECTIVES
   const chosen = new Set(objectives.map(o => o.title.trim()))
@@ -36,6 +40,8 @@ export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onCha
               placeholder="e.g. Win the second ball" onChange={event => set(o.key, { title: event.target.value })} />
             <Textarea label="What it looks like" value={o.looksLike} maxLength={OBJECTIVE_LINE_MAX} rows={2}
               onChange={event => set(o.key, { looksLike: event.target.value })} />
+            <Select label="Phase of play" options={PHASE_OPTIONS} value={o.phase ?? NO_PHASE}
+              onValueChange={value => set(o.key, { phase: value === NO_PHASE ? null : value })} />
             <span className="justify-self-end">
               <Button variant="ghost" size="sm" aria-label={`${removeWord} ${o.title.trim() || `objective ${index + 1}`}`}
                 onClick={() => onChange(objectives.filter(other => other.key !== o.key))}>
@@ -50,11 +56,11 @@ export function SeasonObjectivesEditor({ objectives, focusKey, removeWord, onCha
         <div className="flex flex-wrap gap-2">
           {SEASON_OBJECTIVE_PRESETS.filter(preset => !chosen.has(preset.title)).map(preset => (
             <Button key={preset.title} variant="secondary" size="sm" disabled={full} title={preset.looksLike}
-              onClick={() => onAdd(preset.title, preset.looksLike)}>
+              onClick={() => onAdd(preset.title, preset.looksLike, preset.phase)}>
               <Plus size={16} aria-hidden="true" />{preset.title}
             </Button>
           ))}
-          <Button variant="secondary" size="sm" disabled={full} onClick={() => onAdd('', '')}>
+          <Button variant="secondary" size="sm" disabled={full} onClick={() => onAdd('', '', null)}>
             <Plus size={16} aria-hidden="true" />Write your own
           </Button>
         </div>
