@@ -53,25 +53,25 @@ const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0]
 // Every state renders the same root and header first, so the header stays put when the plan finishes loading.
 const PAGE = 'grid gap-6 pb-4 sm:gap-7'
 const PHASE_THEME: Record<string, { top: string; badge: string; dot: string }> = {
-  in_possession: { top: 'border-t-green-600', badge: 'border-green-700 bg-green-50 text-green-800', dot: 'bg-green-600' },
-  out_of_possession: { top: 'border-t-blue-700', badge: 'border-blue-700 bg-blue-50 text-blue-900', dot: 'bg-blue-700' },
-  transition: { top: 'border-t-amber-500', badge: 'border-amber-500 bg-amber-50 text-amber-950', dot: 'bg-amber-500' },
+  in_possession: { top: 'border-t-success', badge: 'border-success bg-success/10 text-success', dot: 'bg-success' },
+  out_of_possession: { top: 'border-t-info', badge: 'border-info bg-info/10 text-info', dot: 'bg-info' },
+  transition: { top: 'border-t-attention', badge: 'border-attention bg-attention/10 text-warning', dot: 'bg-attention' },
 }
-const NO_PHASE_THEME = { top: 'border-t-slate-900', badge: 'border-slate-700 bg-slate-100 text-slate-900', dot: 'bg-slate-900' }
+const NO_PHASE_THEME = { top: 'border-t-ink', badge: 'border-line-strong bg-raised text-ink', dot: 'bg-ink' }
 
 function Meter({ done, of, label, good }: { done: number; of: number; label: string; good: boolean }) {
   const pct = of ? Math.round((done / of) * 100) : 0
   return <div className="grid gap-2">
     <div className="flex items-baseline justify-between gap-3">
       <span className="flex items-baseline gap-2">
-        <span className="whitespace-nowrap text-4xl font-black tracking-tight text-slate-900 tabular-nums">{done} / {of}</span>
-        <span className="text-sm font-bold text-slate-600">{label}</span>
+        <span className="whitespace-nowrap text-4xl font-black tracking-tight text-ink tabular-nums">{done} / {of}</span>
+        <span className="text-sm font-bold text-ink-2">{label}</span>
       </span>
-      <span className={`text-sm font-black ${good ? 'text-green-700' : 'text-amber-700'}`}>{pct}%</span>
+      <span className={`text-sm font-black ${good ? 'text-success' : 'text-warning'}`}>{pct}%</span>
     </div>
     <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={of} aria-valuenow={done}
-      className="h-3 w-full overflow-hidden rounded-full border border-slate-300 bg-slate-200">
-      <div className={`h-full rounded-full transition-all duration-300 ${good ? 'bg-green-600' : 'bg-amber-500'}`} style={{ width: `${pct}%` }} />
+      className="h-3 w-full overflow-hidden rounded-full border border-line bg-raised">
+      <div className={`h-full rounded-full transition-all duration-300 ${good ? 'bg-success' : 'bg-attention'}`} style={{ width: `${pct}%` }} />
     </div>
   </div>
 }
@@ -126,8 +126,8 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           {squad}{roster.isPending ? '' : ` · ${board.total} Players`}
         </span>
         {changes.length
-          ? <span className={`${WAIT} px-3 py-1.5 sm:text-sm`}><AlertTriangle aria-hidden size={16} strokeWidth={2.5} className="text-amber-700" />Changes not shared</span>
-          : <span className={`${GOOD} px-3 py-1.5 sm:text-sm`}><CheckCircle2 aria-hidden size={16} strokeWidth={2.5} className="text-green-700" />Shared{shared ? ` · ${shortDate(shared)}` : ''}</span>}
+          ? <span className={`${WAIT} px-3 py-1.5 sm:text-sm`}><AlertTriangle aria-hidden size={16} strokeWidth={2.5} className="text-warning" />Changes not shared</span>
+          : <span className={`${GOOD} px-3 py-1.5 sm:text-sm`}><CheckCircle2 aria-hidden size={16} strokeWidth={2.5} className="text-success" />Shared{shared ? ` · ${shortDate(shared)}` : ''}</span>}
       </>}>
       {actions && <div className="flex flex-wrap items-center gap-2.5 print:hidden">
         <button type="button" className={BTN} disabled={share.isPending}
@@ -177,18 +177,18 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
     const role = shortPosition(slotPosition(formation!.shape, spot.slot))
     if (!p) return <span key={spot.slot} style={place(spot)} aria-label={`${role}, empty place`} role="img"
       className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1">
-      <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-slate-400 bg-white/60 text-xs font-black text-slate-400">{role}</span>
-      <span className="whitespace-nowrap rounded border border-dashed border-slate-300 bg-white/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-slate-500">Empty</span>
+      <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-line-strong bg-surface/60 text-xs font-black text-ink-3">{role}</span>
+      <span className="whitespace-nowrap rounded border border-dashed border-line bg-surface/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-ink-3">Empty</span>
     </span>
     const none = count(p) === 0
     return <button key={spot.slot} type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
       aria-label={`${p.player_name}, ${role}${none ? ', no objective yet' : ''}`} style={place(spot)}
       className={`absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded-lg transition-all ${FOCUS} ${dim(p) ? 'scale-95 opacity-25' : 'hover:scale-105'}`}>
-      <span className={`relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white text-xs font-black text-slate-900 shadow-sm ${none ? 'border-amber-500 ring-2 ring-amber-400' : 'border-slate-900'}`}>
+      <span className={`relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-surface text-xs font-black text-ink shadow-sm ${none ? 'border-attention ring-2 ring-attention' : 'border-ink'}`}>
         {role}
-        {none && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-white">!</span>}
+        {none && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-attention text-[9px] font-black text-on-bright">!</span>}
       </span>
-      <span className="whitespace-nowrap rounded border border-slate-300 bg-white/95 px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-slate-900 shadow-sm">{lastName(p.player_name)}</span>
+      <span className="whitespace-nowrap rounded border border-line bg-surface/95 px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-ink shadow-sm">{lastName(p.player_name)}</span>
     </button>
   }
 
@@ -198,25 +198,25 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
     const has = held.length > 0
     return <li key={player.id}>
       <button type="button" onClick={() => setOpenId(player.id)} aria-haspopup="dialog"
-        className={`flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50 sm:items-center ${FOCUS}`}>
+        className={`flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-raised/60 sm:items-center ${FOCUS}`}>
         <span className="flex min-w-0 items-start gap-3">
-          <span aria-hidden="true" className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-black ${has ? 'border-slate-300 bg-slate-100 text-slate-900' : 'border-amber-400 bg-amber-100 text-amber-900'}`}>
+          <span aria-hidden="true" className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-black ${has ? 'border-line bg-raised text-ink' : 'border-attention bg-attention/15 text-warning'}`}>
             {shortOf(player.position)}
           </span>
           <span className="grid min-w-0">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-extrabold text-slate-900">{player.player_name}</span>
-              {has ? <span className="rounded border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-bold text-green-800">{held.length} obj</span>
-                : <span className="rounded border border-amber-400 bg-amber-100 px-2 py-0.5 text-[11px] font-extrabold text-amber-900">Missing</span>}
+              <span className="text-sm font-extrabold text-ink">{player.player_name}</span>
+              {has ? <span className="rounded border border-success/25 bg-success/10 px-2 py-0.5 text-[11px] font-bold text-success">{held.length} obj</span>
+                : <span className="rounded border border-attention bg-attention/15 px-2 py-0.5 text-[11px] font-extrabold text-warning">Missing</span>}
               <WatchBadge watch={watchOf.get(player.id)} />
             </span>
-            <span className={`mt-0.5 text-xs font-semibold ${has ? 'text-slate-600' : 'text-amber-800'}`}>
+            <span className={`mt-0.5 text-xs font-semibold ${has ? 'text-ink-2' : 'text-warning'}`}>
               {has ? held.map(o => o.title).join(' · ') : 'No objective yet. Tap to assign'}
             </span>
-            {gone.length > 0 && <span className="text-xs text-slate-500">Removed: {gone.map(o => `${o.title} (${shortDate(o.removed)})`).join(' · ')}</span>}
+            {gone.length > 0 && <span className="text-xs text-ink-3">Removed: {gone.map(o => `${o.title} (${shortDate(o.removed)})`).join(' · ')}</span>}
           </span>
         </span>
-        <ChevronRight aria-hidden size={16} className="mt-2 shrink-0 text-slate-400 sm:mt-0" /><span className="sr-only">Edit</span>
+        <ChevronRight aria-hidden size={16} className="mt-2 shrink-0 text-ink-3 sm:mt-0" /><span className="sr-only">Edit</span>
       </button>
     </li>
   }
@@ -231,33 +231,33 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
         : <PositionAndRolesSheet coachId={coachId} player={{ id: opened.id, name: opened.player_name, position: opened.position }}
           open onOpenChange={open => { if (!open) setOpenId(null) }} saveNeedsChange onSaved={() => setOpenId(null)} watch={watchAction(opened.id)} />)}
 
-      {changes.length > 0 && <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 sm:flex-row sm:items-center print:hidden">
+      {changes.length > 0 && <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-attention bg-attention/10 p-4 sm:flex-row sm:items-center print:hidden">
         <span className="flex items-center gap-3">
-          <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-amber-700" />
-          <span className="text-base font-extrabold text-slate-900">Not shared yet: {changesText(changes)}.</span>
+          <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-warning" />
+          <span className="text-base font-extrabold text-ink">Not shared yet: {changesText(changes)}.</span>
         </span>
         <button type="button" className={BTN_DARK} disabled={share.isPending} onClick={() => { setProblem(null); share.mutate() }}>
           {share.isPending ? 'Sharing…' : 'Share the changes'}
         </button>
       </div>}
-      {problem && <p role="alert" className="rounded-xl border-2 border-red-600 bg-red-50 p-4 text-sm font-bold text-red-900">{problem}</p>}
+      {problem && <p role="alert" className="rounded-xl border-2 border-danger bg-danger/10 p-4 text-sm font-bold text-danger">{problem}</p>}
 
       <section aria-label="Season schedule" className={`${CARD} flex flex-col justify-between gap-3.5 px-4 py-3.5 sm:px-5 lg:flex-row lg:items-center`}>
         <div className="flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center sm:gap-5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-100"><CalendarRange aria-hidden size={16} strokeWidth={2.25} className="text-slate-900" /></span>
-            <span className="text-sm sm:text-base"><span className="font-semibold text-slate-600">Season: </span>
-              <span className="font-extrabold text-slate-900">{plan.starts_on && plan.ends_on ? `${day(plan.starts_on)} – ${day(plan.ends_on)}` : 'No dates yet'}</span></span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-raised"><CalendarRange aria-hidden size={16} strokeWidth={2.25} className="text-ink" /></span>
+            <span className="text-sm sm:text-base"><span className="font-semibold text-ink-2">Season: </span>
+              <span className="font-extrabold text-ink">{plan.starts_on && plan.ends_on ? `${day(plan.starts_on)} – ${day(plan.ends_on)}` : 'No dates yet'}</span></span>
           </div>
-          <span aria-hidden="true" className="hidden h-6 w-0.5 bg-slate-200 sm:block" />
+          <span aria-hidden="true" className="hidden h-6 w-0.5 bg-raised sm:block" />
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-100"><Clock aria-hidden size={16} strokeWidth={2.25} className="text-slate-900" /></span>
-              <span className="min-w-0 text-sm sm:text-base"><span className="font-semibold text-slate-600">Reports: </span>
-                <span className="font-bold text-slate-900">{rhythmText(every, evalDay).replace(/^e/, 'E')}</span></span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-raised"><Clock aria-hidden size={16} strokeWidth={2.25} className="text-ink" /></span>
+              <span className="min-w-0 text-sm sm:text-base"><span className="font-semibold text-ink-2">Reports: </span>
+                <span className="font-bold text-ink">{rhythmText(every, evalDay).replace(/^e/, 'E')}</span></span>
             </span>
-            {mine && <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-amber-500 bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-950 sm:text-sm">
-              <BellRing aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{nextReportText(mine.due, evaluation.today)}
+            {mine && <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-attention bg-attention/15 px-3 py-1 text-xs font-extrabold text-warning sm:text-sm">
+              <BellRing aria-hidden size={14} strokeWidth={2.5} className="text-warning" />{nextReportText(mine.due, evaluation.today)}
             </span>}
           </div>
         </div>
@@ -268,50 +268,50 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
 
       <section aria-labelledby="plan-objectives" className="grid gap-3.5 break-inside-avoid">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SectionHeading id="plan-objectives" bar="bg-green-700">Core tactical objectives</SectionHeading>
+          <SectionHeading id="plan-objectives" bar="bg-success">Core tactical objectives</SectionHeading>
           <button type="button" className={BTN} onClick={() => navigate('/coach/season-plan/edit/objectives')}>
             <SlidersHorizontal aria-hidden size={16} strokeWidth={2.25} />Edit Objectives
           </button>
         </div>
         {seasonObjectives.length === 0
-          ? <p className={`${CARD} p-5 text-base font-semibold text-slate-700`}>No season objectives yet.</p>
+          ? <p className={`${CARD} p-5 text-base font-semibold text-ink-2`}>No season objectives yet.</p>
           : <ol className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:gap-5 tablet:grid-cols-3">{seasonObjectives.map((o, index) => {
             const theme = (o.phase && PHASE_THEME[o.phase]) || NO_PHASE_THEME
             const phase = phaseLabel(o.phase)
             return <li key={o.id}>
               <button type="button" onClick={() => navigate('/coach/season-plan/edit/objectives')} aria-label={`Edit ${o.title}`}
-                className={`group grid h-full w-full content-start gap-3 rounded-2xl border-2 border-t-[6px] border-slate-300 ${theme.top} bg-white p-5 text-left shadow-sm transition-all hover:border-slate-900 hover:shadow-md sm:p-6 ${FOCUS}`}>
+                className={`group grid h-full w-full content-start gap-3 rounded-2xl border-2 border-t-[6px] border-line ${theme.top} bg-surface p-5 text-left shadow-sm transition-all hover:border-ink hover:shadow-md sm:p-6 ${FOCUS}`}>
                 <span className="flex items-center justify-between gap-2">
                   <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-black uppercase tracking-wider ${theme.badge}`}>
                     <span aria-hidden="true" className={`h-2 w-2 rounded-full ${theme.dot}`} />
                     {String(index + 1).padStart(2, '0')}{phase ? ` · ${phase}` : ''}
                   </span>
-                  <Pencil aria-hidden size={16} className="text-slate-400 group-hover:text-slate-900 print:hidden" />
+                  <Pencil aria-hidden size={16} className="text-ink-3 group-hover:text-ink print:hidden" />
                 </span>
-                <span className="text-xl font-black leading-snug tracking-tight text-slate-900 sm:text-2xl">{o.title}</span>
-                {o.looks_like && <span className="text-base font-semibold leading-relaxed text-slate-700">{o.looks_like}</span>}
+                <span className="text-xl font-black leading-snug tracking-tight text-ink sm:text-2xl">{o.title}</span>
+                {o.looks_like && <span className="text-base font-semibold leading-relaxed text-ink-2">{o.looks_like}</span>}
               </button>
             </li>
           })}</ol>}
         {(removed.data ?? []).length > 0 && <div className="grid gap-1">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Removed</h3>
+          <h3 className="text-xs font-black uppercase tracking-wider text-ink-3">Removed</h3>
           <ul className="m-0 grid list-none gap-1 p-0">{removed.data!.map(o => (
-            <li key={o.id} className="text-sm text-slate-600"><span className="font-bold text-slate-800">{o.title}</span> · added {shortDate(o.created_at)}, removed {shortDate(o.retired_at)}</li>))}
+            <li key={o.id} className="text-sm text-ink-2"><span className="font-bold text-ink">{o.title}</span> · added {shortDate(o.created_at)}, removed {shortDate(o.retired_at)}</li>))}
           </ul>
         </div>}
       </section>
 
       <section aria-labelledby="plan-readiness" className="grid gap-3.5">
-        <SectionHeading id="plan-readiness" bar="bg-slate-900">Squad readiness</SectionHeading>
+        <SectionHeading id="plan-readiness" bar="bg-ink">Squad readiness</SectionHeading>
         <div className="grid grid-cols-1 items-start gap-5 sm:gap-6 xl:grid-cols-2">
 
           <section aria-labelledby="plan-positions" className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <h3 id="plan-positions" className="text-xl font-black tracking-tight text-slate-900">Positions</h3>
+                <h3 id="plan-positions" className="text-xl font-black tracking-tight text-ink">Positions</h3>
                 {board.unplaced.length === 0
                   ? <span className={GOOD}><Check aria-hidden size={14} strokeWidth={3} />All Placed</span>
-                  : <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{board.unplaced.length} Without Position</span>}
+                  : <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-warning" />{board.unplaced.length} Without Position</span>}
               </div>
               <button type="button" className={BTN} onClick={() => navigate('/coach/squad')}>Manage Positions<ArrowUpRight aria-hidden size={16} strokeWidth={2.25} /></button>
             </div>
@@ -323,53 +323,53 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
                 {board.lines.map(line => <button key={line.value} type="button" aria-pressed={unit === line.short} className={PILL(unit === line.short)}
                   onClick={() => setUnit(line.short)}>{line.short}: {line.players.length}</button>)}
               </div>
-              {pitch && <div role="group" aria-label="View" className="ml-auto flex items-center rounded-xl border-2 border-slate-300 bg-white p-0.5 print:hidden">
+              {pitch && <div role="group" aria-label="View" className="ml-auto flex items-center rounded-xl border-2 border-line bg-surface p-0.5 print:hidden">
                 {(['pitch', 'list'] as const).map(v => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${view === v ? 'bg-slate-900 text-white' : 'text-slate-700 hover:text-slate-900'}`}>
+                  className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${view === v ? 'bg-brand text-on-brand' : 'text-ink-2 hover:text-ink'}`}>
                   {v === 'pitch' ? `${formation!.shape} Pitch` : 'List'}
                 </button>)}
               </div>}
             </div>
 
             {showPitch ? <div className="grid gap-3">
-              <div className="relative h-96 w-full select-none overflow-hidden rounded-xl border-2 border-green-700 bg-green-50" aria-label={`${formation!.name}, ${formation!.shape}`} role="group">
-                <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full opacity-45" viewBox="0 0 400 280" preserveAspectRatio="none">
-                  <rect x="10" y="10" width="380" height="260" fill="none" stroke="#15803D" strokeWidth="2" />
-                  <line x1="10" y1="140" x2="390" y2="140" stroke="#15803D" strokeWidth="2" />
-                  <circle cx="200" cy="140" r="34" fill="none" stroke="#15803D" strokeWidth="2" />
-                  <rect x="125" y="10" width="150" height="44" fill="none" stroke="#15803D" strokeWidth="2" />
-                  <rect x="125" y="226" width="150" height="44" fill="none" stroke="#15803D" strokeWidth="2" />
+              <div className="relative h-96 w-full select-none overflow-hidden rounded-xl border-2 border-pitch bg-pitch/10" aria-label={`${formation!.name}, ${formation!.shape}`} role="group">
+                <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full text-pitch opacity-45" viewBox="0 0 400 280" preserveAspectRatio="none">
+                  <rect x="10" y="10" width="380" height="260" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <line x1="10" y1="140" x2="390" y2="140" stroke="currentColor" strokeWidth="2" />
+                  <circle cx="200" cy="140" r="34" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <rect x="125" y="10" width="150" height="44" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <rect x="125" y="226" width="150" height="44" fill="none" stroke="currentColor" strokeWidth="2" />
                 </svg>
                 <div className="absolute inset-x-4 inset-y-12">{pitch.spots.map(dot)}</div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-3">
-                <span className="mr-1 text-xs font-black uppercase tracking-wider text-slate-500">Bench ({pitch.bench.length}):</span>
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border-2 border-line bg-surface p-3">
+                <span className="mr-1 text-xs font-black uppercase tracking-wider text-ink-3">Bench ({pitch.bench.length}):</span>
                 {pitch.bench.map(p => <button key={p.id} type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
-                  className={`rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-900 transition-all hover:border-slate-900 ${FOCUS} ${dim(p) ? 'opacity-30' : ''}`}>
-                  <span className="mr-1 font-extrabold text-slate-500">{shortOf(p.position)}</span>{p.player_name}
+                  className={`rounded-lg border border-line bg-raised/60 px-2.5 py-1 text-xs font-bold text-ink transition-all hover:border-ink ${FOCUS} ${dim(p) ? 'opacity-30' : ''}`}>
+                  <span className="mr-1 font-extrabold text-ink-3">{shortOf(p.position)}</span>{p.player_name}
                 </button>)}
               </div>
             </div>
               : <div className="grid gap-2">
-                {formations.isError ? <p className="text-sm font-semibold text-slate-600">
-                  Couldn’t load the pitch. <button type="button" className={`font-bold text-slate-900 underline ${FOCUS}`} onClick={() => void formations.refetch()}>Try again</button>
-                </p> : !formation && <p className="text-sm font-semibold text-slate-600">
-                  No default formation yet. <button type="button" className={`font-bold text-slate-900 underline ${FOCUS}`} onClick={() => navigate('/coach/squad')}>Set one in Squad</button> to see the pitch.
+                {formations.isError ? <p className="text-sm font-semibold text-ink-2">
+                  Couldn’t load the pitch. <button type="button" className={`font-bold text-ink underline ${FOCUS}`} onClick={() => void formations.refetch()}>Try again</button>
+                </p> : !formation && <p className="text-sm font-semibold text-ink-2">
+                  No default formation yet. <button type="button" className={`font-bold text-ink underline ${FOCUS}`} onClick={() => navigate('/coach/squad')}>Set one in Squad</button> to see the pitch.
                 </p>}
-                <ul className="m-0 max-h-[310px] list-none divide-y divide-slate-200 overflow-y-auto rounded-xl border-2 border-slate-200 p-0">
+                <ul className="m-0 max-h-[310px] list-none divide-y divide-line overflow-y-auto rounded-xl border-2 border-line p-0">
                   {listed.filter(p => unit === 'ALL' || shortOf(p.position) === unit).map(p => {
                     const starter = pitch?.spots.some(s => s.player?.id === p.id)
                     return <li key={p.id}>
                       <button type="button" aria-haspopup="dialog" onClick={() => setOpenId(p.id)}
-                        className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 ${FOCUS}`}>
+                        className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-raised/60 ${FOCUS}`}>
                         <span className="flex items-center gap-3">
                           <PlayerFace name={p.player_name} size="sm" />
                           <span className="grid">
-                            <span className="text-sm font-extrabold text-slate-900">{p.player_name}</span>
-                            <span className="text-xs font-semibold text-slate-500">{!isPosition(p.position) ? 'No position yet' : !pitch ? p.position : starter ? 'Starting XI' : 'Bench'}</span>
+                            <span className="text-sm font-extrabold text-ink">{p.player_name}</span>
+                            <span className="text-xs font-semibold text-ink-3">{!isPosition(p.position) ? 'No position yet' : !pitch ? p.position : starter ? 'Starting XI' : 'Bench'}</span>
                           </span>
                         </span>
-                        <span className="rounded-lg border-2 border-slate-300 bg-white px-2.5 py-1 text-xs font-black text-slate-900">{shortOf(p.position)}</span>
+                        <span className="rounded-lg border-2 border-line bg-surface px-2.5 py-1 text-xs font-black text-ink">{shortOf(p.position)}</span>
                       </button>
                     </li>
                   })}
@@ -378,7 +378,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
 
             {/* Home's "Place them" lands here once the plan is shared: each name opens their position. */}
             {board.unplaced.length > 0 && <div className="grid gap-2">
-              <h4 className="text-xs font-black uppercase tracking-wider text-amber-800">No position yet · {board.unplaced.length}</h4>
+              <h4 className="text-xs font-black uppercase tracking-wider text-warning">No position yet · {board.unplaced.length}</h4>
               <ul className="m-0 flex list-none flex-wrap gap-2 p-0">{board.unplaced.map(p => (
                 <li key={p.id}><button type="button" aria-haspopup="dialog" className={`${BTN} min-h-10 px-3 text-xs`} onClick={() => setOpenId(p.id)}>{p.player_name}</button></li>))}
               </ul>
@@ -388,9 +388,9 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
           <section aria-labelledby="plan-players" className={`${CARD} grid gap-5 p-5 break-inside-avoid sm:p-6`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <h3 id="plan-players" className="text-xl font-black tracking-tight text-slate-900">Player Objectives</h3>
+                <h3 id="plan-players" className="text-xl font-black tracking-tight text-ink">Player Objectives</h3>
                 {missing.length
-                  ? <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-amber-700" />{missing.length} Missing</span>
+                  ? <span className={WAIT}><AlertTriangle aria-hidden size={14} strokeWidth={2.5} className="text-warning" />{missing.length} Missing</span>
                   : <span className={GOOD}><Check aria-hidden size={14} strokeWidth={3} />All Assigned</span>}
               </div>
               {placed.length > PREVIEW && <button type="button" className={BTN} aria-expanded={showAll} aria-controls="plan-players-list" onClick={() => setShowAll(!showAll)}>
@@ -401,34 +401,34 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
             <Meter done={placed.length - missing.length} of={placed.length} label="players have 1–2 objectives" good={missing.length === 0} />
 
             {missing.length > 0
-              ? <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 sm:flex-row sm:items-center">
+              ? <div className="flex flex-col justify-between gap-3 rounded-xl border-2 border-attention bg-attention/10 p-4 sm:flex-row sm:items-center">
                 <span className="flex items-start gap-3 sm:items-center">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400 bg-amber-200 text-amber-900"><UserX aria-hidden size={20} strokeWidth={2.25} /></span>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-attention bg-attention/25 text-warning"><UserX aria-hidden size={20} strokeWidth={2.25} /></span>
                   <span className="grid">
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-800">Action needed</span>
-                    <span className="text-base font-extrabold text-slate-900">Missing objective: {missing[0].player_name} ({shortOf(missing[0].position)})</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-warning">Action needed</span>
+                    <span className="text-base font-extrabold text-ink">Missing objective: {missing[0].player_name} ({shortOf(missing[0].position)})</span>
                   </span>
                 </span>
                 <button type="button" className={`${BTN_DARK} shrink-0`} aria-haspopup="dialog" onClick={() => setOpenId(missing[0].id)}>
                   <Plus aria-hidden size={16} strokeWidth={2.5} />Assign Objective
                 </button>
               </div>
-              : placed.length > 0 && <div className="flex items-center gap-3 rounded-xl border-2 border-green-700 bg-green-50 p-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-green-600 bg-green-100 text-green-800"><CheckCheck aria-hidden size={20} strokeWidth={2.5} /></span>
+              : placed.length > 0 && <div className="flex items-center gap-3 rounded-xl border-2 border-success bg-success/10 p-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-success bg-success/15 text-success"><CheckCheck aria-hidden size={20} strokeWidth={2.5} /></span>
                 <span className="grid">
-                  <span className="text-xs font-black uppercase tracking-wider text-green-800">Squad ready</span>
-                  <span className="text-sm font-extrabold text-slate-900 sm:text-base">All {placed.length} {squad} players have objectives.</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-success">Squad ready</span>
+                  <span className="text-sm font-extrabold text-ink sm:text-base">All {placed.length} {squad} players have objectives.</span>
                 </span>
               </div>}
 
             {placed.length > 0 && <div className="grid gap-2">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                <span className="text-xs font-black uppercase tracking-wider text-ink-3">
                   {showAll || placed.length <= PREVIEW ? `Full ${squad} squad (${placed.length})` : `Squad preview (showing ${PREVIEW} of ${placed.length})`}
                 </span>
-                <span className="text-xs font-semibold text-slate-500 print:hidden">Tap any player to edit</span>
+                <span className="text-xs font-semibold text-ink-3 print:hidden">Tap any player to edit</span>
               </div>
-              <ul id="plan-players-list" className="m-0 list-none divide-y-2 divide-slate-100 overflow-hidden rounded-xl border-2 border-slate-200 bg-white p-0">
+              <ul id="plan-players-list" className="m-0 list-none divide-y-2 divide-line-soft overflow-hidden rounded-xl border-2 border-line bg-surface p-0">
                 {visible.map(playerRow)}
               </ul>
             </div>}
@@ -438,17 +438,17 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
 
       {watched.length > 0 && <section aria-labelledby="plan-watching" className={`${CARD} grid gap-3 p-5 sm:p-6 print:hidden`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="plan-watching" className="text-xl font-black tracking-tight text-slate-900">Watching <span className="font-bold text-slate-500">· {watched.length}</span></h2>
+          <h2 id="plan-watching" className="text-xl font-black tracking-tight text-ink">Watching <span className="font-bold text-ink-3">· {watched.length}</span></h2>
           <button type="button" className={BTN} onClick={() => navigate('/coach/season-plan/edit/reminder')}><Pencil aria-hidden size={16} strokeWidth={2.25} />Edit Reminder</button>
         </div>
-        <p className="text-sm font-semibold text-slate-600">Reminder {ruleText(rule)}, 4 weeks at the latest.</p>
-        <ul className="m-0 list-none divide-y-2 divide-slate-100 p-0">{watched.map(player => {
+        <p className="text-sm font-semibold text-ink-2">Reminder {ruleText(rule)}, 4 weeks at the latest.</p>
+        <ul className="m-0 list-none divide-y-2 divide-line-soft p-0">{watched.map(player => {
           const w = watchOf.get(player.id)!
           return <li key={player.id} className="flex items-center gap-3 py-2.5">
             <PlayerFace name={player.player_name} size="sm" />
             <span className="grid min-w-0 flex-1">
-              <span className="truncate text-sm font-extrabold text-slate-900">{player.player_name}</span>
-              <span className="text-xs font-semibold text-slate-600">{w.ready ? `${w.why}: time to set them up` : `Since ${shortDate(w.since)} · ${w.progress}`}</span>
+              <span className="truncate text-sm font-extrabold text-ink">{player.player_name}</span>
+              <span className="text-xs font-semibold text-ink-2">{w.ready ? `${w.why}: time to set them up` : `Since ${shortDate(w.since)} · ${w.progress}`}</span>
             </span>
             <button type="button" className={`${BTN} min-h-10 px-3 text-xs`} aria-haspopup="dialog" onClick={() => setOpenId(player.id)}>
               {isPosition(player.position) ? 'Give Objectives' : 'Give a Position'}
