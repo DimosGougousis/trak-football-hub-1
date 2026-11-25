@@ -2620,9 +2620,9 @@ export type Database = {
       create_task: {
         Args: {
           p_answer_kind: string
-          p_due_at?: string
+          p_due_on: string
           p_squad: string
-          p_squad_player_id: string
+          p_squad_player_id: string | null
           p_title: string
         }
         Returns: string

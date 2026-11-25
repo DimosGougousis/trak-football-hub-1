@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, type NavigateOptions } from 'react-router-dom'
 import { createDay } from '@/lib/create-day'
-import { ClipboardPen, Plus, CalendarPlus } from 'lucide-react'
+import { ClipboardPen, Plus, CalendarPlus, ListChecks } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -15,6 +15,7 @@ import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { ActionMorph, type MorphRow } from '@/components/arc/action-morph/action-morph'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { useCreateSaved } from './coach-frame-context'
+import { SendTask } from './SendTask'
 import { currentLanguage, useTranslation } from '@/lib/i18n'
 
 /* TRAK-182 part 8 (Imad, 15 Oct): the coach's "+" opens a menu, then the
@@ -28,7 +29,7 @@ import { currentLanguage, useTranslation } from '@/lib/i18n'
    into each short form, then folds back.
    TRAK-499 (Imad, 19 and 20 Nov): Log training and Log match are gone, and so is every way into the old log pages.
    A training is planned and registered in Training, a match evaluated in Matches; "+" is Assess player and New event. */
-type View = 'fab' | 'menu' | 'event'
+type View = 'fab' | 'menu' | 'event' | 'task'
 
 const field = 'w-full rounded-xl border border-line bg-ground px-3 py-2.5 text-[16px] text-ink placeholder-ink-3 outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
@@ -78,6 +79,8 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
   const keyboard = useKeyboardInset()
   // Events switched off for the academy (TRAK-124): New event says "Coming soon", as Schedule does.
   const eventsOn = useFeature('events')
+  // Coach–player P18: Send a task only where the academy's tasks switch is on.
+  const tasksOn = useFeature('tasks')
   const { comingSoon } = useParked()
   const [view, setView] = useState<View>('fab')
   const bar = placement === 'bar'
@@ -128,11 +131,13 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
     setError(null)
     if (id === 'assess') go('/coach/assess')
     else if (id === 'event') { if (eventsOn) show('event'); else { close(); comingSoon() } }
+    else if (id === 'task') show('task')
   }
   const rows: MorphRow[] = [
     // Imad, 16 Oct (Kostas's item 9): assessing is one of the coach's quick actions.
     { id: 'assess', label: t('coachSchedule:assessPlayer'), icon: <ClipboardPen /> },
     { id: 'event', label: t('coachSchedule:newEvent'), icon: <CalendarPlus /> },
+    ...(tasksOn ? [{ id: 'task', label: t('coachTasks:sendTask'), icon: <ListChecks /> }] : []),
   ]
 
   // In the tab bar the pickers open upward: opening down ran off the screen (Imad, 16 Oct).
@@ -173,7 +178,8 @@ export function CoachCreate({ placement, onSaved }: { placement: 'bar' | 'top'; 
   return <ActionMorph label={bar ? t('nav:quickAdd') : t('nav:create')} anchor={bar ? 'bottom' : 'top'} lift={bar ? keyboard : 0}
     // At the top the root needs a size of its own: in the bar the slot gives it one.
     className={bar ? undefined : 'arc'} style={bar ? undefined : { width: topWidth, height: 44 }} rows={rows} view={view} onViewChange={show} onSelect={choose}
-    faces={[{ id: 'event', title: t('coachSchedule:newEvent'), content: eventFace }]}
+    faces={[{ id: 'event', title: t('coachSchedule:newEvent'), content: eventFace },
+      { id: 'task', title: t('coachTasks:sendTask'), content: <SendTask className={pickers} onSent={close} /> }]}
     trigger={bar
       ? <Plus size={22} strokeWidth={2.2} aria-hidden="true" className="text-brand" />
       : <><Plus size={16} strokeWidth={2.2} aria-hidden="true" className="text-on-brand" />{t('nav:create')}</>} />

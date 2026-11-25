@@ -27,7 +27,7 @@ export function useParked() {
    TRAK-294 Training, and TRAK-350 the season plan. TRAK-441: family_look is
    the family app in the coach's look, read for a player or parent through
    family_feature_on (feature_on knows only a coach's academy). */
-export type Feature = 'events' | 'games' | 'training' | 'season_plan' | 'family_look'
+export type Feature = 'events' | 'games' | 'training' | 'season_plan' | 'family_look' | 'tasks'
 
 export function useFeature(feature?: Feature): boolean {
   return useFeatureState(feature).on

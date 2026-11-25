@@ -1,0 +1,17 @@
+{
+  "sendTask": "Send a task",
+  "to": "To",
+  "wholeSquad": "Whole squad",
+  "answer": "They answer",
+  "gotIt": "Got it",
+  "done": "Done",
+  "readyForReview": "Ready for review",
+  "what": "What to do",
+  "whatExample": "e.g. Bring your shin pads",
+  "due": "Due",
+  "send": "Send",
+  "needWhat": "Write what to do.",
+  "needDay": "Select the day it's due.",
+  "couldntSend": "Couldn't send it. Try again.",
+  "sentTo": "Sent to {{who}}"
+}

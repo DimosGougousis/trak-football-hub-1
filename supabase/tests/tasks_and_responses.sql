@@ -74,6 +74,7 @@ INSERT INTO public.squad_players(id,coach_user_id,player_name,age_group,linked_p
  (pg_temp.t578id(46),pg_temp.t578id(10),'Synthetic Player Leo','U16',pg_temp.t578id(26)),
  (pg_temp.t578id(44),pg_temp.t578id(12),'Synthetic Player Max','U16',pg_temp.t578id(24));
 INSERT INTO public.academy_features(organization_id,feature) VALUES (pg_temp.t578id(100),'tasks'),(pg_temp.t578id(101),'tasks');
+UPDATE public.organizations SET time_zone = 'Europe/Athens' WHERE id = pg_temp.t578id(101);
 SELECT pg_temp.t578check((SELECT count(*) FROM public.squad_players WHERE id IN (pg_temp.t578id(40),pg_temp.t578id(42),pg_temp.t578id(46))
     AND organization_id = pg_temp.t578id(100) AND status = 'active') = 3,
   '0 CONTROL the roster rows carry their coach''s academy and are active');
@@ -83,12 +84,19 @@ SELECT public.record_parental_consent(pg_temp.t578id(22), 'parent', '{"coaching_
 
 -- ── 1. A coach sends tasks; each player sees their own ─────────────────────
 SELECT pg_temp.t578actor(10);
-INSERT INTO pg_temp.t578_kept SELECT 'squad-got-it', public.create_task('U16', NULL, 'got_it', 'Read the plan for Tuesday', now() + interval '2 days');
-INSERT INTO pg_temp.t578_kept SELECT 'squad-done', public.create_task(' U16 ', NULL, 'done', 'Bring your shin pads', now() + interval '3 days');
-INSERT INTO pg_temp.t578_kept SELECT 'ola-review', public.create_task('U16', pg_temp.t578id(40), 'ready_for_review', 'Your first touch', now() + interval '4 days');
-INSERT INTO pg_temp.t578_kept SELECT 'squad-no-due', public.create_task('U16', NULL, 'got_it', 'Kit day is Friday', NULL);
+INSERT INTO pg_temp.t578_kept SELECT 'squad-got-it', public.create_task('U16', NULL, 'got_it', 'Read the plan for Tuesday', current_date + 2);
+INSERT INTO pg_temp.t578_kept SELECT 'squad-done', public.create_task(' U16 ', NULL, 'done', 'Bring your shin pads', current_date + 3);
+INSERT INTO pg_temp.t578_kept SELECT 'ola-review', public.create_task('U16', pg_temp.t578id(40), 'ready_for_review', 'Your first touch', current_date + 4);
+INSERT INTO pg_temp.t578_kept SELECT 'squad-no-due', public.create_task('U16', NULL, 'got_it', 'Kit day is Friday', current_date + 5);
 SELECT pg_temp.t578actor(12);
-INSERT INTO pg_temp.t578_kept SELECT 'b-squad', public.create_task('U16', NULL, 'got_it', 'Academy B squad task', now() + interval '2 days');
+INSERT INTO pg_temp.t578_kept SELECT 'b-squad', public.create_task('U16', NULL, 'got_it', 'Academy B squad task', current_date + 2);
+-- A task can also have no due time (a later feature's); this one stands for it.
+RESET ROLE;
+UPDATE public.trak_tasks SET due_at = NULL WHERE id = pg_temp.t578task('squad-no-due');
+SELECT pg_temp.t578check((SELECT due_at FROM public.trak_tasks WHERE id = pg_temp.t578task('squad-got-it')) = (current_date + 3)::timestamp AT TIME ZONE 'Asia/Dubai'
+    AND (SELECT due_at FROM public.trak_tasks WHERE id = pg_temp.t578task('b-squad')) = (current_date + 3)::timestamp AT TIME ZONE 'Europe/Athens',
+  '1 a task is due at the end of its day on its academy''s clock (Dubai, Athens)');
+SET LOCAL ROLE authenticated;
 SELECT pg_temp.t578actor(20);
 SELECT pg_temp.t578check(pg_temp.t578count() = 4 AND pg_temp.t578state('ola-review') = 'false/false',
   '1 Ola sees the three squad tasks and her own', pg_temp.t578count()::text);
@@ -224,24 +232,32 @@ SET LOCAL ROLE authenticated;
 
 -- ── 8. What a coach can send ────────────────────────────────────────────────
 SELECT pg_temp.t578actor(11);
-SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''got_it'', ''Not my squad'', NULL)', '42501'),
+SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''got_it'', ''Not my squad'', current_date + 1)', '42501'),
   '8 a coach without that squad can''t send it a task');
 SELECT pg_temp.t578actor(12);
-SELECT pg_temp.t578check(pg_temp.t578refused(format('SELECT public.create_task(''U16'', %L, ''got_it'', ''Not my player'', NULL)', pg_temp.t578id(42)), '42501'),
+SELECT pg_temp.t578check(pg_temp.t578refused(format('SELECT public.create_task(''U16'', %L, ''got_it'', ''Not my player'', current_date + 1)', pg_temp.t578id(42)), '42501'),
   '8 a coach in another academy can''t send a task to academy A''s player, even with a squad of the same name');
 SELECT pg_temp.t578actor(10);
-SELECT pg_temp.t578check(pg_temp.t578refused(format('SELECT public.create_task(''U16'', %L, ''got_it'', ''Waiting for consent'', NULL)', pg_temp.t578id(46)), '42501'),
+SELECT pg_temp.t578check(pg_temp.t578refused(format('SELECT public.create_task(''U16'', %L, ''got_it'', ''Waiting for consent'', current_date + 1)', pg_temp.t578id(46)), '42501'),
   '8 a task for a player waiting for consent is refused');
-SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''seen'', ''A silent one'', NULL)', '22023')
-    AND pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, NULL, ''No answer'', NULL)', '22023'),
+SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''seen'', ''A silent one'', current_date + 1)', '22023')
+    AND pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, NULL, ''No answer'', current_date + 1)', '22023'),
   '8 a coach asks for Got it, Done or Ready for review, never seen');
-SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''Too late'', now() - interval ''1 minute'')', '22023'),
-  '8 a due time already passed is refused');
-SELECT pg_temp.t578check(pg_temp.t578refused(format('SELECT public.create_task(''U16'', NULL, ''done'', %L, NULL)', repeat('x', 81)), '23514')
-    AND pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''   '', NULL)', '23514'),
+SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''Too late'', (now() AT TIME ZONE ''Asia/Dubai'')::date - 1)', '22023'),
+  '8 a day already past on the academy''s clock is refused');
+SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''No day'', NULL)', '22023'),
+  '8 a manual task always has a day');
+INSERT INTO pg_temp.t578_kept SELECT 'today', public.create_task('U16', NULL, 'done', 'Due today', (now() AT TIME ZONE 'Asia/Dubai')::date);
+RESET ROLE;
+SELECT pg_temp.t578check((SELECT due_at FROM public.trak_tasks WHERE id = pg_temp.t578task('today')) = ((now() AT TIME ZONE 'Asia/Dubai')::date + 1)::timestamp AT TIME ZONE 'Asia/Dubai',
+  '8 today on the academy''s clock is allowed, open until the academy''s midnight');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.t578actor(10);
+SELECT pg_temp.t578check(pg_temp.t578refused(format('SELECT public.create_task(''U16'', NULL, ''done'', %L, current_date + 1)', repeat('x', 81)), '23514')
+    AND pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''   '', current_date + 1)', '23514'),
   '8 a title is 1 to 80 characters');
 SELECT pg_temp.t578actor(22);
-SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''From a player'', NULL)', '42501'),
+SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''From a player'', current_date + 1)', '42501'),
   '8 a player can''t send a task');
 
 -- ── 9. The switch ───────────────────────────────────────────────────────────
@@ -249,7 +265,7 @@ RESET ROLE;
 DELETE FROM public.academy_features WHERE organization_id = pg_temp.t578id(100) AND feature = 'tasks';
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.t578actor(10);
-SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''Switched off'', NULL)', '42501'),
+SELECT pg_temp.t578check(pg_temp.t578refused('SELECT public.create_task(''U16'', NULL, ''done'', ''Switched off'', current_date + 1)', '42501'),
   '9 with the switch off the coach can''t send a task');
 SELECT pg_temp.t578actor(25);
 SELECT pg_temp.t578check(pg_temp.t578refused(pg_temp.t578call('respond_to_task', 'squad-got-it'), '42501')
@@ -282,6 +298,6 @@ DECLARE failed text;
 BEGIN
  SELECT string_agg(label || coalesce(' [' || detail || ']', ''), '; ') INTO failed FROM pg_temp.t578_results WHERE NOT ok;
  IF failed IS NOT NULL THEN RAISE EXCEPTION 'Task checks failed: %', failed; END IF;
- IF (SELECT count(*) FROM pg_temp.t578_results) < 41 THEN RAISE EXCEPTION 'Tasks: only % checks ran', (SELECT count(*) FROM pg_temp.t578_results); END IF;
+ IF (SELECT count(*) FROM pg_temp.t578_results) < 44 THEN RAISE EXCEPTION 'Tasks: only % checks ran', (SELECT count(*) FROM pg_temp.t578_results); END IF;
 END $$;
 ROLLBACK;

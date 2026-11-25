@@ -57,9 +57,11 @@ export function tasksToShow(tasks: MyTask[], now: number): MyTask[] {
     .sort((a, b) => Number(b.outdated) - Number(a.outdated) || dueMs(a) - dueMs(b) || 0)
 }
 
-/** "Due today" or "Due Sun 29 Nov", on the academy's clock. */
+/** "Due today" or "Due Sun 29 Nov", on the academy's clock: the last day it can be answered. A coach's task closes at
+ *  the academy's midnight after its day (P18), so the day named is the one just before the closing moment. */
 export function dueLabel(dueAt: string, timeZone: string, now = Date.now()): string {
+  const last = Date.parse(dueAt) - 1
   const day = (ms: number) => new Date(ms).toLocaleDateString('en-CA', { timeZone })
-  if (day(Date.parse(dueAt)) === day(now)) return 'Due today'
-  return `Due ${new Date(dueAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone })}`
+  if (day(last) === day(now)) return 'Due today'
+  return `Due ${new Date(last).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone })}`
 }
