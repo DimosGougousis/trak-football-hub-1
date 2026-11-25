@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -29,6 +29,7 @@ import { useWatchList, useWatchPlayers } from './useWatching'
 import { WatchBadge } from './WatchFirst'
 import { useSquadEvaluations } from './useEvaluation'
 import { rhythmOf, rhythmText } from '@/lib/evaluation'
+import { BADGE, BTN, BTN_DARK, CARD, FOCUS, GOOD, PILL, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-356 (Season plan 8/18, spec TRAK-348): View plan. Once shared, the set-up never comes back: the plan reads part
    by part, each with its Edit. Edits save straight away and wait under "Not shared yet" until the coach shares the
@@ -49,29 +50,14 @@ const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-
 const shortOf = (position: string | null) => POSITIONS.find(p => p.value === position)?.short ?? '–'
 const lastName = (name: string) => name.trim().split(/\s+/).slice(-1)[0]
 
-// The mockup's look, kept in one place.
-const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 // Every state renders the same root and header first, so the header stays put when the plan finishes loading.
 const PAGE = 'grid gap-6 pb-4 sm:gap-7'
-const CARD = 'rounded-2xl border-2 border-slate-300 bg-white shadow-sm'
-const BTN = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-900 transition-colors hover:border-slate-900 disabled:opacity-50 print:hidden ${FOCUS}`
-const BTN_DARK = `inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50 print:hidden ${FOCUS}`
-const GOOD = 'inline-flex items-center gap-1 rounded-lg border-2 border-green-700 bg-green-50 px-2.5 py-1 text-xs font-extrabold text-green-800'
-const WAIT = 'inline-flex items-center gap-1 rounded-lg border-2 border-amber-500 bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-950'
-const PILL = (on: boolean) => `min-h-[38px] rounded-lg border-2 px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${on ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 bg-white text-slate-900 hover:border-slate-900'}`
 const PHASE_THEME: Record<string, { top: string; badge: string; dot: string }> = {
   in_possession: { top: 'border-t-green-600', badge: 'border-green-700 bg-green-50 text-green-800', dot: 'bg-green-600' },
   out_of_possession: { top: 'border-t-blue-700', badge: 'border-blue-700 bg-blue-50 text-blue-900', dot: 'bg-blue-700' },
   transition: { top: 'border-t-amber-500', badge: 'border-amber-500 bg-amber-50 text-amber-950', dot: 'bg-amber-500' },
 }
 const NO_PHASE_THEME = { top: 'border-t-slate-900', badge: 'border-slate-700 bg-slate-100 text-slate-900', dot: 'bg-slate-900' }
-
-function SectionHeading({ id, bar, children }: { id: string; bar: string; children: ReactNode }) {
-  return <div className="flex items-center gap-2.5">
-    <span aria-hidden="true" className={`h-6 w-2.5 rounded-sm ${bar}`} />
-    <h2 id={id} className="text-sm font-black uppercase tracking-wider text-slate-900 sm:text-base">{children}</h2>
-  </div>
-}
 
 function Meter({ done, of, label, good }: { done: number; of: number; label: string; good: boolean }) {
   const pct = of ? Math.round((done / of) * 100) : 0
@@ -136,7 +122,7 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   const header = (actions: boolean) => (
     <PageTop title="Season plan" trail={<CoachTrail current="Season plan" />}
       pill={<>
-        <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-slate-900 bg-white px-3 py-1.5 text-xs font-extrabold tracking-tight text-slate-900 sm:text-sm">
+        <span className={BADGE}>
           {squad}{roster.isPending ? '' : ` · ${board.total} Players`}
         </span>
         {changes.length

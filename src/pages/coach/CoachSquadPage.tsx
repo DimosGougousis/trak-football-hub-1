@@ -15,6 +15,7 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { useTranslation } from '@/lib/i18n'
 import { PageTop } from '@/components/coach/PageTop'
 import { squadSubtitle } from '@/lib/squad/subtitle'
+import { BADGE } from '@/components/coach/pitch-ready'
 
 /* TRAK-250: Squad is a full-width coach workspace with views of the same
    roster. The view lives in the URL (?tab=), so a view can be linked and a
@@ -77,7 +78,8 @@ export default function CoachSquadPage() {
       <div className={WIDE_COLUMN}>
         {/* TRAK-351: a player's page has the screen to itself. Not `hidden`: the header's flex would show it anyway. */}
         {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. TRAK-422: PageTop. */}
-        {openId == null && <PageTop title={t('nav:squad')} subtitle={roster.players.length ? subtitle : undefined}>
+        {/* Dimos, 25 Nov: the squad and its size in the season plan's badge (pitch-ready look), not as grey text. */}
+        {openId == null && <PageTop title={t('nav:squad')} pill={roster.players.length && subtitle ? <span className={BADGE}>{subtitle}</span> : undefined}>
           {/* On a phone the views take the full width, under the title; on a coach's tablet or laptop they sit in the header. */}
           <div className="arc w-full tablet:w-[440px]">
             <GlassSegmented label={t('coachSquad:squadView')} value={active} onValueChange={choose} fullWidth

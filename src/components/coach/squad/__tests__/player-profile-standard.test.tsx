@@ -1,4 +1,4 @@
-/** Design standard step 3: a player's page, its name a card title, its parts labelled in the standard style. */
+/** A player's page in the season plan's pitch-ready look (Dimos, 25 Nov): its name a black title, its parts labelled as the season plan's. */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -14,13 +14,14 @@ const renderWaiting = () => render(<QueryClientProvider client={new QueryClient(
   <PlayerProfile player={waiting} squad="U16" coachId="coach-1" facts={undefined} factsFailed={false} onRetryFacts={() => {}} />
 </MemoryRouter></QueryClientProvider>)
 
-describe("a player's page in the standard style", () => {
-  it("the player's name is a card title", () => {
+describe("a player's page in the season plan's look", () => {
+  it("the player's name is a black title, with the shirt number on the face and position and squad as badges", () => {
     renderWaiting()
     const name = screen.getByRole('heading', { level: 3, name: 'Ada Synthetic' })
-    expect(name.className).toContain('text-xl')
-    expect(name.className).toContain('font-bold')
-    expect(name.className).toContain('tracking-[-0.01em]')
+    expect(name).toHaveClass('font-black', 'text-2xl')
+    expect(screen.getByText('8')).toHaveTextContent('Shirt number 8')
+    expect(screen.getByText('Midfielder')).toBeInTheDocument()
+    expect(screen.getByText('U16')).toBeInTheDocument()
   })
 
   it('a waiting player shows a needs pill, then says why', () => {
@@ -29,9 +30,9 @@ describe("a player's page in the standard style", () => {
     expect(screen.getByText(/Ada/, { selector: 'p' })).toBeInTheDocument()
   })
 
-  it("the page's sections are labelled in the standard style", () => {
+  it("the page's sections are labelled as the season plan's", () => {
     const source = readFileSync(join(__dirname, '..', 'PlayerProfile.tsx'), 'utf8')
-    expect(source).toContain("import { SECTION_LABEL } from '@/components/trak/standard'")
-    expect(source).toContain('const TITLE = SECTION_LABEL')
+    expect(source).toContain("from '@/components/coach/pitch-ready'")
+    expect(source).toContain('const TITLE = SECTION_TITLE')
   })
 })

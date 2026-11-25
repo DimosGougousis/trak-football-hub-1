@@ -59,7 +59,7 @@ describe('TRAK-351 a player\'s full page', () => {
     await user.click(await within(panel).findByRole('button', { name: /^Bo Synthetic/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad/player/sq-bo'))
     expect(await within(panel).findByRole('region', { name: 'About Bo' })).toBeInTheDocument()
-    expect(within(panel).queryByRole('list', { name: 'Players' })).toBeNull()
+    expect(within(panel).queryByRole('group', { name: 'Filter by position' })).toBeNull()
     expect(screen.queryByRole('radiogroup', { name: 'Squad view' })).toBeNull()
     expect(trailTo('Squad')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
@@ -70,8 +70,8 @@ describe('TRAK-351 a player\'s full page', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     renderApp('/coach/squad')
     const panel = await view()
-    await user.click(await within(panel).findByRole('radio', { name: 'ATT' }))
-    await waitFor(() => expect(within(within(panel).getByRole('list', { name: 'Players' })).getAllByRole('listitem')).toHaveLength(1))
+    await user.click(await within(panel).findByRole('button', { name: /^Attackers: / }))
+    await waitFor(() => expect(within(panel).getAllByRole('listitem')).toHaveLength(1))
     Object.defineProperty(window, 'scrollY', { value: 640, configurable: true })
     await user.click(within(panel).getByRole('button', { name: /^Bo Synthetic/ }))
     await within(panel).findByRole('region', { name: 'About Bo' })
@@ -79,9 +79,10 @@ describe('TRAK-351 a player\'s full page', () => {
 
     await user.click(trailTo('Squad'))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
-    const list = await within(panel).findByRole('list', { name: 'Players' })
-    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
-    expect(within(panel).getByRole('radio', { name: 'ATT' })).toBeChecked()
+    const list = await within(panel).findByRole('list', { name: 'Attackers' })
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(list).getByRole('button', { name: /^Bo Synthetic/ })).toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: /^Attackers: / })).toHaveAttribute('aria-pressed', 'true')
     await waitFor(() => expect(scrollTo).toHaveBeenLastCalledWith({ top: 640 }))
   })
 
@@ -92,7 +93,7 @@ describe('TRAK-351 a player\'s full page', () => {
     expect(await within(panel).findByRole('region', { name: 'About Cy' })).toBeInTheDocument()
     await user.click(trailTo('Squad'))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad'))
-    expect(await within(panel).findByRole('list', { name: 'Players' })).toBeInTheDocument()
+    expect(await within(panel).findByRole('group', { name: 'Filter by position' })).toBeInTheDocument()
   })
 
   // TRAK-368: with every squad in view, a missing player isn't the coach's at all, as the older page said.

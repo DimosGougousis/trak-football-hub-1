@@ -45,7 +45,7 @@ useCase('UC-C02', () => {
 
     renderApp('/coach/squad')
     const heading = await screen.findByRole('heading', { name: 'Squad' })
-    await screen.findByText('Nikos Papadopoulos')
+    await screen.findByRole('button', { name: /^Nikos Papadopoulos/ })
 
     // The header holds the view tabs, each with a name. It must hold no unlabelled "+" that opens /coach/squad/add.
     const unlabelled = [...heading.parentElement!.querySelectorAll('button')].filter(b => !b.textContent?.trim() && !b.getAttribute('aria-label'))

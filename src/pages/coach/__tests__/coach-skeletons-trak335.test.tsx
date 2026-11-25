@@ -123,7 +123,7 @@ describe('TRAK-335: skeletons while the coach app loads', { timeout: 30_000 }, (
     renderApp('/coach/squad')
     await skeleton('Loading your squad…')
     release()
-    expect(await screen.findByText('Angelos Charisteas')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Angelos Charisteas/ })).toBeInTheDocument()
   })
 
   // TRAK-461: one placeholder the size of the week grows into it.
