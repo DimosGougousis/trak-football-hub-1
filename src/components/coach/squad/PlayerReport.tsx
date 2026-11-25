@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CARD as PITCH_CARD, SECTION_TITLE } from '@/components/coach/pitch-ready'
 import { useQuery } from '@tanstack/react-query'
 import { PlayerFace } from '@/components/trak/PlayerFace'
 import { RadarChart } from '@/components/arc/radar-chart/radar-chart'
@@ -26,6 +27,7 @@ import {
    bands, changing a match result, or helper lines. */
 
 const TITLE = 'text-base font-semibold text-ink'
+
 const CARD = 'grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6'
 
 export function PlayerReport({ playerId, name, squad, coachId }: { playerId: string; name: string; squad: string | null; coachId: string }) {
@@ -138,8 +140,8 @@ export function SentReports({ playerId, name, coachId, onOpen }: { playerId: str
   if (sent.isError) return <LoadError what={t('coachSquad:sentReportsWhat', { name: first })} onRetry={() => { void sent.refetch() }} />
   if (!sent.data?.length) return null
   const id = `sent-reports-${playerId}`
-  return <section aria-labelledby={id} className="grid gap-2">
-    <h4 id={id} className={TITLE}>{t('coachSquad:sentReports')}</h4>
+  return <section aria-labelledby={id} className={`${PITCH_CARD} grid gap-2 p-5 sm:p-6`}>
+    <h4 id={id} className={SECTION_TITLE}>{t('coachSquad:sentReports')}</h4>
     <ul className="m-0 grid list-none p-0">
       {sent.data.map(r => {
         const month = reportMonth(r.report.report_day)

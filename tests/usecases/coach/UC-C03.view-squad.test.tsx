@@ -39,8 +39,8 @@ useCase('UC-C03', () => {
 
     renderApp('/coach/squad')
 
-    expect(await screen.findByText('Nikos Papadopoulos')).toBeInTheDocument()
-    expect(screen.getByText('Giorgos Andreou')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Nikos Papadopoulos/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Giorgos Andreou/ })).toBeInTheDocument()
   })
 
   it('shows an explicit empty message for a coach with no players', async () => {
@@ -132,7 +132,7 @@ useCase('UC-C03', () => {
         table('player_watches', []), table('squad_player_profiles', []), rpc('coach_player_birth_dates', () => []),
       )
       renderApp('/coach/squad')
-      expect(await screen.findByText('Nikos Papadopoulos')).toBeInTheDocument()
+      expect(await screen.findByRole('button', { name: /^Nikos Papadopoulos/ })).toBeInTheDocument()
       if (shared) {
         await waitFor(() => expect(screen.queryByText('Due')).toBeNull())
         // Settled: the plan has answered, and still no mark.

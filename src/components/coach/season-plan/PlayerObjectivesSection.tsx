@@ -8,7 +8,7 @@ import { loadSeasonObjectives, seasonObjectivesKey, useSeasonPlan } from '@/lib/
 import { PlayerObjectivesSheet } from './PlayerObjectivesSheet'
 import { usePlayerObjectives } from './usePlayerObjectives'
 import { EditIcon } from '@/components/trak/IconAction'
-import { SECTION_LABEL } from '@/components/trak/standard'
+import { SECTION_TITLE } from '@/components/coach/pitch-ready'
 
 /* TRAK-354 (Season plan 6/18): a player's objectives on their own page, with one edit for both, under the same rules
    as step 3. Each says since when (TRAK-567: not which season objective it supports). No position, no
@@ -41,7 +41,7 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
   return <section aria-labelledby={`objectives-${id}`} className="grid gap-2">
     <div className="flex items-baseline justify-between gap-3">
       {/* TRAK-451: the player's page's bold title. */}
-      <h4 id={`objectives-${id}`} className={SECTION_LABEL}>{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
+      <h4 id={`objectives-${id}`} className={SECTION_TITLE}>{held.length > 1 ? 'Objectives' : 'Objective'}</h4>
       {/* TRAK-455: once there are objectives, editing them is a pencil; giving the first one keeps its words. */}
       {action && (held.length ? <EditIcon label={action} haspopup onClick={() => setEditing(true)} />
         : <button type="button" onClick={() => setEditing(true)} aria-haspopup="dialog"
@@ -59,7 +59,7 @@ export function PlayerObjectivesSection({ coachId, id, name, position, squad }: 
       : <>{held.length === 0 ? <p className="text-sm text-ink-2">No objective yet.</p> : <ul className="m-0 grid list-none gap-3 p-0">
         {held.map(o => (
           <li key={o.id} className="grid gap-1 border-t border-line pt-2.5">
-            <span className="text-[17px] font-medium text-ink">{o.title}</span>
+            <span className="text-[17px] font-extrabold text-ink">{o.title}</span>
             {/* TRAK-567 (phone review, 23 Nov): no "Supports: <season objective>" here any more, only since when. */}
             <span className="text-sm text-ink-3">Since {since(o.since)}</span>
           </li>

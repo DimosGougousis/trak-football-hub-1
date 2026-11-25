@@ -216,10 +216,11 @@ describe('TRAK-352 positions', () => {
     squad = [child(1), child(2, 'Attacker'), child(3)]
     waiting = new Set(['p3'])
     renderApp('/coach/squad')
-    // The mark follows the switch, which answers after the roster.
-    await waitFor(() => expect(screen.getByRole('button', { name: /Synthetic Player 01/ })).toHaveTextContent('No position yet'))
-    expect(screen.getByRole('button', { name: /Synthetic Player 02/ })).toHaveTextContent('Attacker')
-    expect(screen.getByRole('button', { name: /Synthetic Player 03/ })).not.toHaveTextContent('No position yet')
+    // Dimos, 25 Nov: Squad clusters by position, so an unplaced player sits under "No position yet".
+    const cluster = (name: string) => within(screen.getByRole('list', { name }))
+    await waitFor(() => expect(cluster('No position yet').getByRole('button', { name: /Synthetic Player 01/ })).toBeInTheDocument())
+    expect(cluster('Attackers').getByRole('button', { name: /Synthetic Player 02/ })).toBeInTheDocument()
+    expect(cluster('Waiting for consent').getByRole('button', { name: /Synthetic Player 03/ })).toBeInTheDocument()
   })
 
   it('leaves Squad as it was where the season plan is off', async () => {
