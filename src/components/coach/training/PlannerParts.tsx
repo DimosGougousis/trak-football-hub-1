@@ -7,10 +7,10 @@ import { partColour, partLine, playersLine, totalMinutes, type Part, type PlanDr
 import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EditIcon, RemoveIcon } from '@/components/trak/IconAction'
+import { ShareIcon } from '@/components/coach/ShareEventButton'
 
 /* TRAK-340 (Training redo 2/5, spec TRAK-338, 2 Nov prototype): the planner's pieces. A drill tile (its name only since
-   TRAK-404), the time bar, and Your session: the whole session at a glance, where the coach shapes
-   it (drag or arrow keys to move a part, × to remove one, Add a part). */
+   TRAK-404), the time bar, and Your session: the whole session at a glance, each part a card that opens it. */
 
 /** A drill to pick for a part: its name, the tick when picked, and why it's offered (Your usual, Starter drill…). */
 export function DrillTile({ drill, picked, tag, onPick }: { drill: PlanDrill; picked: boolean; tag: string; onPick: () => void }) {
@@ -56,36 +56,62 @@ export function TotalLine({ parts, length }: { parts: Part[]; length: number | n
     {length ? t('coachTraining:totalOf', { total, length }) : t('coachHome:minutes', { count: total })}</span>
 }
 
-/** Your session: the parts in order. While planning, each opens its step; drag or the arrow keys on its handle move it,
- *  and × removes it. */
-export function SessionCard({ parts, length, current, onOpen, onReorder, onMove, onRemove, onAdd, onStandard, fromShape, standard }: {
-  parts: Part[]; length: number | null; current: string; onOpen: (key: string) => void; onReorder: (parts: Part[]) => void
-  onMove: (index: number, by: -1 | 1) => void; onRemove: (index: number) => void; onAdd: () => void; onStandard: () => void
-  fromShape: boolean; standard: boolean
+/** Your session, under the part being planned (Plan session one column, 25 Nov mockup): the parts as compact cards in
+ *  a row that wraps, each opening its part above. Renaming, moving and removing a part happen in the part itself, so
+ *  the cards carry no controls. Add a part, and the plan's one Review & share, close the card. */
+export function SessionCard({ parts, length, current, onOpen, onAdd, onReview, onStandard, fromShape, standard }: {
+  parts: Part[]; length: number | null; current: string; onOpen: (key: string) => void; onAdd: () => void; onReview: () => void
+  onStandard: () => void; fromShape: boolean; standard: boolean
 }) {
   const { t } = useTranslation()
   const at = parts.findIndex(p => p.key === current)
-  return <aside aria-labelledby="your-session" className="arc grid content-start gap-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+  return <section aria-labelledby="your-session" className="arc grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
     <div className="flex items-baseline justify-between gap-3">
       <h2 id="your-session" className="text-lg font-medium text-ink">{t('coachTraining:yourSession')}</h2>
       <TotalLine parts={parts} length={length} />
     </div>
     <TimeBar parts={parts} length={length} current={current} />
-    {/* TRAK-457: the drag line is gone; a keyboard user still hears how to move a part. */}
-    <p className="sr-only">{t('coachTraining:dragHint')}</p>
-    <Reorder.Group as="ol" axis="y" values={parts} onReorder={onReorder} aria-label={t('coachTraining:partsOfSession')} className="grid gap-1.5">
-      {parts.map((part, i) => <SessionRow key={part.key} part={part} index={i} count={parts.length}
-        state={part.key === current ? 'now' : at >= 0 && i < at ? 'done' : 'next'}
-        onOpen={() => onOpen(part.key)} onMove={by => onMove(i, by)} onRemove={() => onRemove(i)} />)}
-    </Reorder.Group>
-    <div className="grid justify-items-start gap-2 pt-1">
+    {/* auto-fit: five parts fill one row on a laptop; more, or a phone, wrap in order. */}
+    <ol aria-label={t('coachTraining:partsOfSession')} className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]">
+      {parts.map((part, i) => <li key={part.key} className="min-w-0">
+        <SessionTile part={part} index={i} count={parts.length} state={part.key === current ? 'now' : at >= 0 && i < at ? 'done' : 'next'}
+          onOpen={() => onOpen(part.key)} />
+      </li>)}
+    </ol>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <Button size="sm" variant="secondary" onClick={onAdd}><Plus aria-hidden size={16} />{t('coachTraining:addAPart')}</Button>
-      {fromShape && <p className="text-[13px] text-ink-3">{t('coachTraining:startedFromShape')}</p>}
       {!standard && <button type="button" onClick={onStandard}
         className="min-h-9 rounded text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         {t('coachTraining:startFromTrak')}</button>}
+      {fromShape && <p className="text-[13px] text-ink-3">{t('coachTraining:startedFromShape')}</p>}
+      <span className="flex-1" />
+      <Button onClick={onReview}><ShareIcon size={16} tight />{t('coachMatches:reviewShare')}</Button>
     </div>
-  </aside>
+  </section>
+}
+
+/** A part in Your session: its number (a tick once planned and passed), its full name, its drill and its minutes. */
+function SessionTile({ part, index, count, state, onOpen }: {
+  part: Part; index: number; count: number; state: 'now' | 'done' | 'next'; onOpen: () => void
+}) {
+  const { t } = useTranslation()
+  const drill = !part.drill ? t('coachTraining:noDrillYet') : part.drill.name !== part.name ? part.drill.name : null
+  // The current part's ring sits inside its border, so picking another part never shifts the row.
+  return <button type="button" onClick={onOpen} aria-current={state === 'now' ? 'step' : undefined}
+    className={`flex h-full w-full items-start gap-2.5 rounded-xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${state === 'now' ? 'border-brand bg-brand/5 ring-1 ring-inset ring-brand' : 'border-line hover:bg-raised'}`}>
+    <span className="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-line text-[12px] text-ink-2">
+      {state === 'done' && part.drill ? <Check aria-hidden size={14} /> : index + 1}</span>
+    <span className="grid min-w-0 flex-1 gap-0.5">
+      <span className="flex items-baseline gap-1.5 text-sm font-medium text-ink">
+        <span aria-hidden="true" className="h-2.5 w-2.5 flex-none translate-y-[-1px] rounded-full" style={{ background: partColour(index, count) }} />
+        <span className="min-w-0 break-words">{partName(part.name)}</span></span>
+      {/* Too narrow for both, the minutes drop under the drill rather than break its name. */}
+      <span className="flex flex-wrap items-baseline justify-between gap-x-2 text-[13px]">
+        <span className="min-w-0 break-words text-ink-3">{drill}</span>
+        <span className="ml-auto flex-none text-ink-2">{t('coachHome:minutes', { count: part.minutes })}</span>
+      </span>
+    </span>
+  </button>
 }
 
 /** What moves a part, in Your session and on Review: drag it, or the up and down arrow keys. `busy` ignores both for now,
@@ -105,30 +131,6 @@ function MoveHandle({ name, index, count, controls, onMove, busy = false }: {
     onPointerDown={event => { if (!busy && typeof (event.target as Element).setPointerCapture === 'function') controls.start(event) }} style={{ touchAction: 'none' }}
     className="inline-flex h-11 w-7 flex-none cursor-grab items-center justify-center rounded-lg text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
     <GripVertical aria-hidden size={16} /></button>
-}
-
-function SessionRow({ part, index, count, state, onOpen, onMove, onRemove }: {
-  part: Part; index: number; count: number; state: 'now' | 'done' | 'next'; onOpen: () => void; onMove: (by: -1 | 1) => void; onRemove: () => void
-}) {
-  const { t } = useTranslation()
-  const controls = useDragControls()
-  return <Reorder.Item as="li" value={part} dragListener={false} dragControls={controls}
-    className="flex items-center gap-1 rounded-xl bg-surface">
-    <MoveHandle name={partName(part.name)} index={index} count={count} controls={controls} onMove={onMove} />
-    <button type="button" onClick={onOpen} aria-current={state === 'now' ? 'step' : undefined}
-      className={`flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${state === 'now' ? 'bg-brand/10' : 'hover:bg-raised'}`}>
-      <span className="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-line text-[12px] text-ink-2">
-        {state === 'done' && part.drill ? <Check aria-hidden size={14} /> : index + 1}</span>
-      <span className="grid min-w-0 flex-1">
-        <span className="flex items-center gap-1.5 truncate text-sm font-medium text-ink">
-          <span aria-hidden="true" className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: partColour(index, count) }} />
-          <span className="truncate">{partName(part.name)}</span></span>
-        {part.drill?.name !== part.name && <span className="truncate text-[13px] text-ink-3">{part.drill?.name ?? t('coachTraining:noDrillYet')}</span>}
-      </span>
-      <span className="flex-none text-[13px] text-ink-2">{t('coachHome:minutes', { count: part.minutes })}</span>
-    </button>
-    <RemoveIcon label={t('coachTraining:removeNamed', { name: partName(part.name) })} onClick={onRemove} />
-  </Reorder.Item>
 }
 
 

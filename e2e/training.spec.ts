@@ -412,6 +412,16 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await expect(warmup.getByRole('button', { name: /^Tag games/, pressed: true })).toBeVisible()
     await expect(warmup.getByRole('button', { name: /^Moving warm-up/, pressed: false })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Write your own' })).toHaveCount(0)
+    // Plan session one column (25 Nov mockup): the part across the page, Your session under it at the same width, and
+    // one Review & share. On a laptop the five parts sit in one row; on a phone they wrap, in order.
+    const session = page.getByRole('region', { name: 'Your session' })
+    const [partBox, sessionBox] = [(await warmup.boundingBox())!, (await session.boundingBox())!]
+    expect(sessionBox.y).toBeGreaterThan(partBox.y + partBox.height)
+    expect(Math.abs(sessionBox.width - partBox.width)).toBeLessThan(2)
+    await expect(page.getByRole('button', { name: 'Review & share' })).toHaveCount(1)
+    const cardTops = await page.getByRole('list', { name: 'Parts of the session' }).getByRole('listitem').evaluateAll(items => items.map(li => Math.round(li.getBoundingClientRect().top)))
+    if (width > 1000) expect(new Set(cardTops).size).toBe(1)
+    else expect(cardTops).toEqual([...cardTops].sort((a, b) => a - b))
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-plan-part-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
@@ -419,7 +429,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     expect(keyboard.count).toBeGreaterThan(15)
     expect(keyboard.missed).toEqual([])
 
-    for (let i = 0; i < 5; i++) await page.getByRole('button', { name: /^Next: / }).click()
+    for (let i = 0; i < 4; i++) await page.getByRole('button', { name: /^Next: / }).click()
+    await expect(page.getByRole('button', { name: /^Next: / })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Review & share' }).click()
     await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
     await expect(page.getByRole('list', { name: 'The plan' }).getByRole('listitem')).toHaveCount(6)
     await page.getByLabel(/A note for you/).fill('Remind the back four to talk.')
@@ -512,7 +524,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   })
 
   // TRAK-341: a saved plan's page is Review. TRAK-456: it is Review & share, the planner's last step on the training
-  // page's Training plan tab: a pencil opens that part, Back to Review & share comes back.
+  // page's Training plan tab: a pencil opens that part, Your session's Review & share comes back.
   test(`Review a saved plan at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/t-tue?tab=plan', width, height)
     await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
@@ -528,7 +540,7 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.waitForTimeout(400)
     await page.screenshot({ path: testInfo.outputPath(`training-review-edit-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
-    await page.getByRole('button', { name: /^Back to Review/ }).click()
+    await page.getByRole('button', { name: 'Review & share' }).click()
     await expect(page.getByRole('region', { name: 'Training plan review' })).toBeVisible()
     await expect(page).toHaveURL(/\/coach\/training\/t-tue\?tab=plan$/)
     expect(unexpected).toEqual([])
@@ -536,8 +548,8 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
   })
 
   // TRAK-342: Who's here, with the register saved: one of the two U16 players came; Trak checks each part.
-  // TRAK-367 (Kostas, 3 Nov): a part moves on Review as it does while planning: by its handle, with a finger or a mouse.
-  // TRAK-456: in Your session, beside a part of the saved plan; it saves with Save the plan.
+  // TRAK-367 (Kostas, 3 Nov): a part moves on Review as it does while planning. Plan session one column (25 Nov): its
+  // card in Your session opens it, and Move earlier moves it; it saves with Save the plan.
   test(`Moving a part on Review at ${width} px`, async ({ page, context }, testInfo) => {
     const { unexpected, errors } = await open(page, context, '/coach/training/t-tue?tab=plan', width, height)
     await page.getByRole('button', { name: 'Edit warm-up: rondos 4v1' }).click()
@@ -547,17 +559,13 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.screenshot({ path: testInfo.outputPath(`training-review-move-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
 
-    await page.getByRole('button', { name: /^Move Pressing on the trigger/ }).scrollIntoViewIfNeeded()
-    const from = await page.getByRole('button', { name: /^Move Pressing on the trigger/ }).boundingBox()
-    const to = await rows.first().boundingBox()
-    await page.mouse.move(from!.x + from!.width / 2, from!.y + from!.height / 2)
-    await page.mouse.down()
-    await page.mouse.move(from!.x + from!.width / 2, to!.y + 10, { steps: 12 })
-    await page.mouse.move(from!.x + from!.width / 2, to!.y - 6, { steps: 6 })
-    await page.mouse.up()
+    await rows.nth(1).getByRole('button').click()
+    await expect(page.getByRole('region', { name: 'Pressing on the trigger' })).toBeVisible()
+    await page.getByRole('button', { name: 'Move Pressing on the trigger earlier' }).click()
     await expect(rows.first()).toContainText('Pressing on the trigger')
+    await expect(page.getByRole('button', { name: 'Move Pressing on the trigger earlier' })).toBeDisabled()
     // Saved with the plan: the page read again keeps the new order.
-    await page.getByRole('button', { name: /^Back to Review/ }).click()
+    await page.getByRole('button', { name: 'Review & share' }).click()
     await page.getByRole('button', { name: 'Save the plan' }).click()
     await expect(page).toHaveURL(/\/coach\/training$/)
     await page.goto('/coach/training/t-tue?tab=plan')

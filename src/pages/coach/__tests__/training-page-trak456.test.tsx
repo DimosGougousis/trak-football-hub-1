@@ -115,7 +115,9 @@ describe('TRAK-456: a training’s page is laid out like a match’s', { timeout
     database([training('soon', onTheMinute(Date.now() + DAY))], { soon: SAVED })
     renderApp('/coach/training/soon?tab=plan')
     const steps = await screen.findByRole('navigation', { name: 'Planning steps' })
-    expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent('Review & share')
+    // Plan session one column (25 Nov): the steps are the parts alone, every one done at Review & share.
+    expect(steps.querySelector('[aria-current="step"]')).toBeNull()
+    expect(steps).not.toHaveTextContent('Review & share')
     const review = screen.getByRole('region', { name: 'Training plan review' })
     const parts = within(within(review).getByRole('list', { name: 'The plan' })).getAllByRole('listitem').map(li => li.textContent)
     expect(parts).toEqual([expect.stringContaining('Logistics'), expect.stringContaining('Dry warm-up'), expect.stringContaining('Rondo')])

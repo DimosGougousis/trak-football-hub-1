@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /* TRAK-455 (11 Nov walk-through): a rule for the whole app. Edit is a pencil, never the word; removing a part of a
@@ -23,5 +23,14 @@ export function RemoveIcon({ label, onClick, className, disabled }: Props & { on
   return <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled}
     className={cn(BOX, 'text-ink-2 hover:bg-raised hover:text-danger', className)}>
     <Trash2 aria-hidden size={18} strokeWidth={1.75} />
+  </button>
+}
+
+/** An arrow that moves something one place earlier or later in a list. */
+export function MoveIcon({ label, direction, onClick, className, disabled }: Props & { direction: 'earlier' | 'later'; onClick: () => void }) {
+  const Arrow = direction === 'earlier' ? ChevronLeft : ChevronRight
+  return <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled}
+    className={cn(BOX, 'text-ink-2 hover:bg-raised', className)}>
+    <Arrow aria-hidden size={18} strokeWidth={1.75} />
   </button>
 }
