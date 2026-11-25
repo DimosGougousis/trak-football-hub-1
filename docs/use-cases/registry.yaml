@@ -233,7 +233,7 @@ use_cases:
     requirement: REQ-002
     status: enforced
     tier: [1, 2]
-    spec_version: 6
+    spec_version: 7
     given: A signed-in coach with at least one squad player
     when: They select a player, set the six sliders and submit
     then:
@@ -242,6 +242,7 @@ use_cases:
       - Submitting is refused until a player is selected
       - Where the academy's season plan is on and the squad's plan is shared, its due report day sends all six scores for each consented player, starting from their latest scores, with no session; one player can be sent first, and Send then sends only the rest
       - Where the squad's plan is shared, Assess also asks how each of the player's open objectives is going (Not yet, Some progress, On track or Met) and saves only once each has an answer, with the six scores in the same save
+      - Where the squad's plan is shared, the assessment stays with the coach (TRAK-532) - Assess ends with one Save and no message to the player, the row is saved unpublished, its objective answers apply at once, and the card says Coach only; report day's assessments are saved unpublished too, and families read the report
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 
   # PARKED 2026-09-23 (Q-2026-09-23-01, TRAK-19). J1: coach TRK- codes are not an admission path in the pilot (TRAK-36).

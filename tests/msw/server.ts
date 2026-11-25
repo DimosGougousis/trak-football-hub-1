@@ -1,6 +1,8 @@
 import { setupServer } from 'msw/node'
-import { authHandlers, consentBatchFromSingle, table } from './supabase'
+import { authHandlers, consentBatchFromSingle, rpc, table } from './supabase'
 
 // TRAK-312: the roster-wide consent check is answered from each test's single-child answers.
 // TRAK-528: a player's page lists his sent reports; none unless a test says so. TRAK-529: so do the family's Homes.
-export const server = setupServer(...authHandlers(), consentBatchFromSingle(), table('report_for_player', []), table('report_for_family', []))
+// TRAK-579: the player's Home asks for My tasks; none unless a test says so.
+export const server = setupServer(...authHandlers(), consentBatchFromSingle(), table('report_for_player', []), table('report_for_family', []),
+  rpc('my_tasks', () => []))

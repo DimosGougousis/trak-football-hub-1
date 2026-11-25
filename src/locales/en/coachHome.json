@@ -103,6 +103,7 @@
   "nothingPlanned": "Nothing planned",
   "noTimeSet": "no time set",
   "stateDraft": "Draft",
+  "stateCoachOnly": "Coach only",
   "stateDue": "Due",
   "stateClash": "Clashes",
   "timeDone": "Done",

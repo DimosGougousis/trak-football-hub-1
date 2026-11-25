@@ -290,6 +290,11 @@ function CoachAssessmentForm() {
   const squad = (selectedPlayer?.age_group as string | undefined)?.trim() || null
   const plan = useQuery({ queryKey: seasonPlanKey(userId, squad), queryFn: () => loadSeasonPlan(userId!, squad!), enabled: seasonPlanOn && !!userId && !!squad })
   const asksObjectives = seasonPlanOn && !!plan.data?.shared_at
+  // TRAK-532 (Imad, 21 Nov): there, an assessment stays with the coach; families get reports. One Save (no Publish, no
+  // Save draft), no message to the player; the private note stays. One published before this keeps what it had.
+  const coachOnly = asksObjectives
+  // Until the plan is read, it isn't known whether a save may publish: Save waits.
+  const planKnown = !seasonPlanOn || !squad || plan.isSuccess
   const playerObjectives = usePlayerObjectives(userId, asksObjectives)
   const openObjectives = asksObjectives ? playerObjectives.of(playerId).map(o => ({ id: o.id, title: o.title })) : []
   const [checkIn, setCheckIn] = useState<ObjectivesEntry>(emptyObjectives)
@@ -349,12 +354,15 @@ function CoachAssessmentForm() {
      review step also offers Save draft, which keeps the message unpublished
      (published_at NULL, as Unpublish), so only the coach sees it.
      Unpublish is not a save: see handleUnpublish below. */
-  const handleSave = async (draft = false) => {
-    if (!user || !playerId || saving || !formReady || consentWait || saveRequest.current) return
+  const handleSave = async (asDraft = false) => {
+    if (!user || !playerId || saving || !formReady || consentWait || !planKnown || saveRequest.current) return
+    // TRAK-532: where it stays with the coach, every save is unpublished (a published one keeps its date), and the
+    // message is left as it was.
+    const draft = asDraft || coachOnly
     // Rewriting an unchanged, still-published message would re-stamp it and
     // mark it "new" for the player again. Leave it alone, unless it's being
     // taken back to a draft.
-    const writeShared = (message.length > 0 || sharedExists) && !(liveUnchanged && !draft)
+    const writeShared = !coachOnly && (message.length > 0 || sharedExists) && !(liveUnchanged && !draft)
     const controller = new AbortController()
     saveRequest.current = controller
     const isCurrent = () => !controller.signal.aborted && currentScope.current === scope
@@ -494,7 +502,7 @@ function CoachAssessmentForm() {
         setSharedPublished(message.length > 0 && !draft)
         setPublishedBody(message && !draft ? message : null)
       }
-      toast.success(writeShared && message
+      toast.success(coachOnly ? t('coachAssess:savedCoachOnly') : writeShared && message
         ? draft ? t('coachAssess:savedDraftMsg', { name: firstName }) : t('coachAssess:savedCanRead', { name: firstName })
         : t('coachAssess:assessmentSaved'))
       trackEvent('assessment_submitted', {
@@ -717,7 +725,8 @@ function CoachAssessmentForm() {
             coach needs to see which words the player will read. Nothing copies
             the private note into here. Parents see the bands only, never this
             message (TRAK-63, 25 Sep), so the label names the player alone. */}
-        <div className="space-y-1.5">
+        {/* TRAK-532: no message to the player where the assessment stays with the coach. */}
+        {!coachOnly && <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <div>
               <label htmlFor="assess-message" className="text-[9px] font-medium tracking-[0.12em] uppercase text-ink-2" style={{ fontFamily: 'var(--t-font-mono)' }}>
@@ -752,7 +761,7 @@ function CoachAssessmentForm() {
                   ? t('coachAssess:statusNotSent', { name: firstName })
                   : t('coachAssess:optional')}
           </p>
-        </div>
+        </div>}
 
         {/* ---- 8. private note ----
             The label used to read "AI will expand these into personalised
@@ -806,7 +815,7 @@ function CoachAssessmentForm() {
                     <span className={answer === null ? 'shrink-0 text-warning' : 'shrink-0 text-ink-3'}>{answer ?? t('coachAssess:objectiveNoAnswer')}</span>
                   </li>)}
                 </ul>],
-              [t('coachAssess:messageTo', { name: firstName }), message || t('coachSchedule:none')],
+              [t('coachAssess:messageTo', { name: firstName }), coachOnly ? null : message || t('coachSchedule:none')],
               [t('coachAssess:privateNote'), <>{note.trim() || t('coachSchedule:none')}<span className="block mt-1 text-[11px] text-ink-3">{t('coachSquad:onlyYou')}</span></>],
             ] as const).filter(([, value]) => value !== null).map(([term, value]) => (
               <div key={term} className="flex gap-3 px-4 py-3">
@@ -842,15 +851,15 @@ function CoachAssessmentForm() {
           <Button size="lg" variant="secondary" aria-label={t('coachSchedule:backTo', { step: steps[step - 1].label })} onClick={() => setStep(step - 1)}><ChevronLeft size={18} aria-hidden="true" /></Button>
           {/* Save draft only for a message the player hasn't got: on a published
               one it would take it back (Kostas, #313). That stays Unpublish's job. */}
-          {message && !sharedPublished ? <>
+          {!coachOnly && message && !sharedPublished ? <>
             <Button size="lg" variant="secondary" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait || !objectivesReady} onClick={() => void handleSave(true)}>{t('coachSchedule:saveDraft')}</Button>
+              disabled={!playerId || !formReady || consentWait || !objectivesReady || !planKnown} onClick={() => void handleSave(true)}>{t('coachSchedule:saveDraft')}</Button>
             <Button size="lg" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait || !objectivesReady} onClick={() => void handleSave()}>{t('coachHome:publish')}</Button>
+              disabled={!playerId || !formReady || consentWait || !objectivesReady || !planKnown} onClick={() => void handleSave()}>{t('coachHome:publish')}</Button>
           </> : (
             <Button size="lg" className="flex-1" loading={saving}
-              disabled={!playerId || !formReady || consentWait || !objectivesReady} onClick={() => void handleSave()}>
-              {message && !liveUnchanged ? t('coachHome:publish') : t('common:save')}
+              disabled={!playerId || !formReady || consentWait || !objectivesReady || !planKnown} onClick={() => void handleSave()}>
+              {!coachOnly && message && !liveUnchanged ? t('coachHome:publish') : t('common:save')}
             </Button>
           )}
         </> : <>
