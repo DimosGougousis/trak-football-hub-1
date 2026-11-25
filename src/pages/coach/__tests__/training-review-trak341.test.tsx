@@ -117,7 +117,7 @@ describe('TRAK-341: a saved plan’s Review page', { timeout: 30_000 }, () => {
     expect(screen.getByText('25 of 90 min')).toBeInTheDocument()
   })
 
-  it('a pencil opens that part; Back to Review & share, then Save the plan saves the plan whole', async () => {
+  it('a pencil opens that part; Review & share, then Save the plan saves the plan whole', async () => {
     const user = userEvent.setup()
     const { saves } = database([training('soon', onTheMinute(Date.now() + DAY))], SAVED)
     renderApp('/coach/training/soon?tab=plan')
@@ -127,7 +127,7 @@ describe('TRAK-341: a saved plan’s Review page', { timeout: 30_000 }, () => {
     expect(within(rondo).getByRole('button', { name: /^Rondo 4 v 2/, pressed: true })).toHaveTextContent('Trak drill')
     await user.click(within(rondo).getByRole('button', { name: /^Four corners/ }))
     await user.click(within(rondo).getByRole('button', { name: '20 min' }))
-    await user.click(screen.getByRole('button', { name: /^Back to Review/ }))
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     await user.click(await screen.findByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     expect(sent(saves[0])).toEqual(['Dry warm-up: Dynamic warm-up 10', 'Rondo: Four corners 20'])
@@ -140,7 +140,7 @@ describe('TRAK-341: a saved plan’s Review page', { timeout: 30_000 }, () => {
     renderApp('/coach/training/soon?tab=plan')
     await user.click(await screen.findByRole('button', { name: 'Edit dry warm-up' }))
     await screen.findByRole('region', { name: 'Dry warm-up' })
-    await user.click(screen.getByRole('button', { name: /^Back to Review/ }))
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     expect(await screen.findByRole('region', { name: 'Training plan review' })).toBeInTheDocument()
     expect(saves).toHaveLength(0)
   })
@@ -176,7 +176,8 @@ describe('TRAK-341: a saved plan’s Review page', { timeout: 30_000 }, () => {
     await user.click(within(sheet).getByRole('button', { name: /^Game/ }))
     await user.click(within(sheet).getByRole('button', { name: 'Add part' }))
     expect(within(await screen.findByRole('region', { name: 'Game' })).getByRole('button', { name: /^Pass then score/, pressed: true })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Back to Review/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     await user.click(await screen.findByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     expect(sent(saves[0])).toEqual(['Dry warm-up: Dynamic warm-up 10', 'Rondo: Rondo 4 v 2 15', 'Game: Pass then score 25'])

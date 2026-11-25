@@ -35,7 +35,7 @@ import { Input } from '@/components/arc/input/input'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Textarea } from '@/components/arc/textarea/textarea'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-import { EditIcon, RemoveIcon } from '@/components/trak/IconAction'
+import { EditIcon, MoveIcon, RemoveIcon } from '@/components/trak/IconAction'
 import { PlanReview, type ReviewRow } from '@/components/arc/blocks/plan-review/plan-review'
 
 /* TRAK-340 (Training redo 2/5, spec TRAK-338, 2 Nov prototype): Plan session. A plan is a list of parts; the coach goes
@@ -138,8 +138,6 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
   const [note, setNote] = useState(start.note)
   const [at, setAt] = useState(start.at)
   const [dirty, setDirty] = useState(start.dirty)
-  // Opened from Review & share to change one part: Back to Review & share, not Next.
-  const [fromReview, setFromReview] = useState(start.at === REVIEW && !!saved)
   const [sheet, setSheet] = useState<'add' | 'more' | null>(null)
   const [viewing, setViewing] = useState<LibraryDrill | null>(null)
   const bookmarks = useBookmarks().data ?? []
@@ -154,9 +152,7 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
   const [seen, setSeen] = useState<number>()
   if (open && open.n !== seen) {
     setSeen(open.n)
-    const key = open.part == null ? REVIEW : parts[open.part]?.key ?? REVIEW
-    setAt(key)
-    setFromReview(key !== REVIEW)
+    setAt(open.part == null ? REVIEW : parts[open.part]?.key ?? REVIEW)
   }
   const step = at === REVIEW ? parts.length : Math.max(0, parts.findIndex(p => p.key === at))
   const part = at === REVIEW ? null : parts[step] ?? null
@@ -178,8 +174,8 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
     const part: Part = { key: newKey(), type, name, minutes: partInfo(type).mins, drill: usualFor(type, candidates(type, players), usage) }
     setParts([...parts, part])
     setSheet(null)
-    // From Review, the new part opens to pick its drill, then comes back.
-    if (at === REVIEW) { setFromReview(true); setAt(part.key) }
+    // From Review, the new part opens to pick its drill; Your session's Review & share goes back.
+    if (at === REVIEW) setAt(part.key)
   }
   const pick = (drill: PlanDrill) => { if (part) update(part.key, { drill }); setSheet(null); setViewing(null) }
   const toStandard = () => {
@@ -227,10 +223,12 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
   }
   const leave = () => navigate(TRAINING_PATH)
 
-  const steps = [...parts.map(p => ({ id: p.key, label: partName(p.name) })), { id: REVIEW, label: t('coachMatches:reviewShare') }]
+  // Plan session one column (25 Nov mockup): the steps are the parts alone; Review & share is Your session's button, and
+  // at Review every step shows done.
+  const steps = parts.map(p => ({ id: p.key, label: partName(p.name) }))
 
   // The page's header holds the training's name, when and where (TRAK-456), so the tab starts at its steps.
-  return <div className="grid gap-6 laptop:gap-8 pt-4">
+  return <div className="grid gap-6 pt-2">
     {start.added && <p role="status" className={`rounded-xl px-4 py-3 text-sm ${start.added.how === 'full' ? 'bg-warning/15 text-ink' : 'bg-raised text-ink-2'}`}>
       {start.added.how === 'added' ? t('coachTraining:addedAtEnd', { name: start.added.name })
         : start.added.how === 'there' ? t('coachTraining:alreadyIn', { name: start.added.name, part: start.added.part ? partName(start.added.part) : '' })
@@ -240,8 +238,9 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
     <div className="arc"><Stepper label={t('coachTraining:planningSteps')} steps={steps} current={step} onStepSelect={go} jumpAhead /></div>
     {problem && <p role="alert" className="text-[15px] text-danger">{problem}</p>}
 
-    <div className={`grid gap-6 laptop:gap-8 ${part ? 'laptop:grid-cols-[minmax(0,1fr)_360px] laptop:items-start' : ''}`}>
-      {part ? <section aria-label={partName(part.name)} className="arc grid min-w-0 gap-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+    {/* Plan session one column (25 Nov mockup): the part being planned across the page, Your session under it. */}
+    {part ? <>
+      <section aria-label={partName(part.name)} className="arc grid min-w-0 gap-5 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 gap-1">
             <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:partOf', { n: step + 1, total: parts.length, note: partNote(part.type) })}</p>
@@ -286,29 +285,27 @@ function PlannerBody({ training, saved, draft, past, players, open, logistics }:
               <span aria-hidden className="invisible px-1 py-1 text-sm">{t('coachTraining:viewDrill')}</span></li>
           </ul>
         </div>
+        {/* Rename is the pencil above; move and remove sit here, by the part they change. The last part has no Next:
+            Your session's Review & share, just below, is the one way on. */}
         <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-          {fromReview ? <>
-            <DraftNote saving={saveDraft.isPending} saved={drafted} />
-            <span className="flex-1" />
+          <Button variant="secondary" onClick={() => step === 0 ? leave() : go(step - 1)}>{step === 0 ? t('coachSchedule:cancel') : t('common:back')}</Button>
+          <DraftNote saving={saveDraft.isPending} saved={drafted} />
+          <span className="flex-1" />
+          <span className="flex flex-none items-center">
+            <MoveIcon direction="earlier" label={t('coachTraining:moveEarlierNamed', { name: partName(part.name) })} disabled={step === 0}
+              onClick={() => setParts(moveTo(parts, step, step - 1))} className="rounded-full" />
+            <MoveIcon direction="later" label={t('coachTraining:moveLaterNamed', { name: partName(part.name) })} disabled={step === parts.length - 1}
+              onClick={() => setParts(moveTo(parts, step, step + 1))} className="rounded-full" />
             <RemoveButton name={partName(part.name)} onRemove={() => remove(step)} />
-            <Button onClick={() => { setFromReview(false); go(parts.length) }}>{t('coachTraining:backToReview')}<ArrowRight aria-hidden size={16} /></Button>
-          </> : <>
-            <Button variant="secondary" onClick={() => step === 0 ? leave() : go(step - 1)}>{step === 0 ? t('coachSchedule:cancel') : t('common:back')}</Button>
-            <DraftNote saving={saveDraft.isPending} saved={drafted} />
-            <span className="flex-1" />
-            <RemoveButton name={partName(part.name)} onRemove={() => remove(step)} />
-            <Button onClick={() => go(step + 1)}>{t('coachTraining:nextNamed', { name: step + 1 < parts.length ? partName(parts[step + 1].name) : t('coachMatches:reviewShare') })}<ArrowRight aria-hidden size={16} /></Button>
-          </>}
+          </span>
+          {step + 1 < parts.length && <Button onClick={() => go(step + 1)}>{t('coachTraining:nextNamed', { name: partName(parts[step + 1].name) })}<ArrowRight aria-hidden size={16} /></Button>}
         </div>
-      </section> : <ReviewShare training={training} parts={parts} length={length} note={note} onNote={value => { setNote(value); setDirty(true) }}
-        onEdit={i => { setFromReview(true); go(i) }} onAdd={() => setSheet('add')} onBack={() => parts.length ? go(parts.length - 1) : leave()} onSave={save}
-        saving={savePlan.isPending} draftNote={autosave ? <DraftNote saving={saveDraft.isPending} saved={drafted} /> : null} logistics={logistics} />}
-
-      {/* TRAK-456: Review & share is one card, as a match's; Your session sits beside each part. */}
-      {part && <SessionCard parts={parts} length={length} current={part.key} onOpen={key => setAt(key)} onReorder={setParts}
-        onMove={(i, by) => setParts(moveTo(parts, i, i + by))} onRemove={remove} onAdd={() => setSheet('add')} onStandard={toStandard}
-        fromShape={start.fromShape && !dirty} standard={isStandard(parts)} />}
-    </div>
+      </section>
+      <SessionCard parts={parts} length={length} current={part.key} onOpen={key => setAt(key)} onAdd={() => setSheet('add')}
+        onReview={() => go(parts.length)} onStandard={toStandard} fromShape={start.fromShape && !dirty} standard={isStandard(parts)} />
+    </> : <ReviewShare training={training} parts={parts} length={length} note={note} onNote={value => { setNote(value); setDirty(true) }}
+      onEdit={go} onAdd={() => setSheet('add')} onBack={() => parts.length ? go(parts.length - 1) : leave()} onSave={save}
+      saving={savePlan.isPending} draftNote={autosave ? <DraftNote saving={saveDraft.isPending} saved={drafted} /> : null} logistics={logistics} />}
 
     <AddPartSheet open={sheet === 'add'} onClose={() => setSheet(null)} onAdd={add} />
     <MoreDrillsSheet part={sheet === 'more' ? part : null} players={players} usage={usage} bookmarks={bookmarks} onClose={() => setSheet(null)}

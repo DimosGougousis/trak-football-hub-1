@@ -150,7 +150,10 @@ describe('TRAK-340: a new plan', { timeout: 30_000 }, () => {
     await next('Rondo')
     await next('Functional drills')
     await next('Game')
-    await next('Review & share')
+    // Plan session one column (25 Nov): the last part has no Next; Your session's Review & share is the one way on.
+    expect(screen.queryByRole('button', { name: /^Next: / })).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Review & share' })).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     expect(await screen.findByRole('region', { name: 'Training plan review' })).toBeInTheDocument()
     await user.type(screen.getByLabelText(/A note for you/), 'Remind the back four to talk.')
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
@@ -189,16 +192,24 @@ describe('TRAK-340: a new plan', { timeout: 30_000 }, () => {
 })
 
 describe('TRAK-340: Your session', { timeout: 30_000 }, () => {
-  it('moves a part with the arrow keys, removes one with Undo, and adds one', async () => {
+  // Plan session one column (25 Nov): a card in Your session opens its part; the part itself moves and removes.
+  it('a card opens its part, which moves earlier and is removed with Undo; and Add a part adds one', async () => {
     const user = userEvent.setup()
     database([training('soon', onTheMinute(Date.now() + DAY))])
     renderApp('/coach/training/soon/plan')
     await part('Dry warm-up')
-    screen.getByRole('button', { name: /^Move Rondo\./ }).focus()
-    await user.keyboard('{ArrowUp}')
+    const cards = () => within(screen.getByRole('list', { name: 'Parts of the session' }))
+    expect(cards().queryByRole('button', { name: /^(Remove|Edit|Move) / })).toBeNull()
+    await user.click(cards().getByRole('button', { name: /Rondo/ }))
+    await part('Rondo')
+    expect(cards().getByRole('button', { name: /Rondo/ })).toHaveAttribute('aria-current', 'step')
+    await user.click(screen.getByRole('button', { name: 'Move Rondo earlier' }))
     expect(session()[1]).toContain('Rondo')
     expect(session()[2]).toContain('Passing & movement')
+    expect(await part('Rondo')).toBeInTheDocument()
 
+    await user.click(cards().getByRole('button', { name: /\bGame\b/ }))
+    expect(screen.getByRole('button', { name: 'Move Game later' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Remove Game' }))
     await waitFor(() => expect(session()).toHaveLength(4))
     await user.click(await screen.findByRole('button', { name: 'Undo' }))
@@ -223,14 +234,15 @@ describe('TRAK-340: Your session', { timeout: 30_000 }, () => {
     await user.click(within(sheet).getByRole('button', { name: 'Add part' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     // Through every part to Review.
-    for (let i = 0; i < 6; i++) await user.click(screen.getByRole('button', { name: /^Next: / }))
+    for (let i = 0; i < 5; i++) await user.click(screen.getByRole('button', { name: /^Next: / }))
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     await screen.findByRole('region', { name: 'Training plan review' })
     await user.click(screen.getByRole('button', { name: 'Save the plan' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Select a drill for Pressing game, or remove the part.')
     expect(saves).toHaveLength(0)
     await user.click(screen.getByRole('button', { name: 'Edit pressing game' }))
     expect(await part('Pressing game')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Back to Review/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Review & share' })).toBeInTheDocument()
   })
 })
 
@@ -292,7 +304,7 @@ describe('TRAK-392: View drill', { timeout: 30_000 }, () => {
 
     await next('Functional drills')
     await next('Game')
-    await next('Review')
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     await user.click(await screen.findByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     const sent = (saves[0].p_practices as Record<string, unknown>[])[2]
@@ -349,7 +361,7 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     expect(await part('Rondo')).toBeInTheDocument()
   })
 
-  it('a saved plan opens at Review; Edit opens only that part, then Back to Review', async () => {
+  it('a saved plan opens at Review; Edit opens only that part, then Review & share', async () => {
     const user = userEvent.setup()
     const { saves } = database([training('soon', onTheMinute(Date.now() + DAY))], {
       soon: [trak(1, 'w1', 'Dynamic warm-up', 'Dry warm-up', 'warmup', 10), trak(2, 'r1', 'Rondo 4 v 2', 'Rondo', 'rondo')],
@@ -361,7 +373,7 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('button', { name: 'Edit rondo' }))
     const rondo = await part('Rondo')
     await user.click(within(rondo).getByRole('button', { name: '20 min' }))
-    await user.click(screen.getByRole('button', { name: /Back to Review/ }))
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     await user.click(await screen.findByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     expect((saves[0].p_practices as Record<string, unknown>[]).map(p => `${p.name} ${p.minutes}`)).toEqual(['Dynamic warm-up 10', 'Rondo 4 v 2 20'])

@@ -125,7 +125,8 @@ describe('TRAK-297: Copy a past session', { timeout: 30_000 }, () => {
     expect(screen.getByText('70 of 90 min')).toBeInTheDocument()
     expect(saves).toHaveLength(0)
 
-    for (let i = 0; i < 3; i++) await user.click(screen.getByRole('button', { name: /^Next: / }))
+    for (let i = 0; i < 2; i++) await user.click(screen.getByRole('button', { name: /^Next: / }))
+    await user.click(screen.getByRole('button', { name: 'Review & share' }))
     await user.click(await screen.findByRole('button', { name: 'Save the plan' }))
     await waitFor(() => expect(saves).toHaveLength(1))
     expect(saves[0].p_event_id).toBe('next')
