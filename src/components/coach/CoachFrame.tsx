@@ -117,7 +117,7 @@ function Framed({ userId, name }: { userId: string; name: string }) {
       brand={{ name: club, logo: <Avatar name={club} src={identity?.logo ?? undefined} size="sm" /> }}
       items={items} footerItem={{ id: 'settings', label: t('nav:settings'), icon: Settings }}
       profile={{ name, detail: identity?.role ?? undefined, avatar: <Avatar name={name} src={photo ?? undefined} size="sm" /> }}
-      active={screen ?? ''} onSelect={select}
+      active={screen ?? ''} onSelect={select} foldKey="trak.coach.railFolded"
       afterBrand={switcher}
       actions={<><CoachAlertsBell coachId={userId} /><CoachCreate placement="top" onSaved={saved} /></>}>
       <Suspense fallback={<div className="min-h-screen bg-ground" />}><Outlet /></Suspense>

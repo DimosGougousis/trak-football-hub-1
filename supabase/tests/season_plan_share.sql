@@ -228,10 +228,20 @@ UPDATE public.season_objectives SET title = title, looks_like = looks_like WHERE
 RESET ROLE;
 SELECT pg_temp.ss356check(pg_temp.ss356waiting(50) = '|', '5 saving an objective unchanged lists nothing');
 
+-- 6. Phase of play (24 Nov, the coach's cards only): one of the four, and a phase alone never waits to be shared, since
+-- players and families read the shared snapshot, which has none.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ss356actor(10);
+SELECT pg_temp.ss356check(pg_temp.ss356changed(format('UPDATE public.season_objectives SET phase = ''transition'' WHERE id = %L',pg_temp.ss356id(60))) = 1
+  AND pg_temp.ss356refused(format('UPDATE public.season_objectives SET phase = ''counter_attack'' WHERE id = %L',pg_temp.ss356id(60)),'23514'),
+  '6 the coach sets one of the four phases, and no other');
+RESET ROLE;
+SELECT pg_temp.ss356check(pg_temp.ss356waiting(50) = '|', '6 a phase alone never waits to be shared');
+
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.ss356_results;
- IF total <> 32 THEN RAISE EXCEPTION 'Season plan share: % checks ran; expected 32', total; END IF;
+ IF total <> 34 THEN RAISE EXCEPTION 'Season plan share: % checks ran; expected 34', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.ss356_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Season plan share checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Season plan share: % of % passed', total, total;

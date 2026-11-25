@@ -97,6 +97,34 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
     })
   })
 
+  // TRAK-542 (found live, 22 Nov): jumping to Review left Objectives ticked, Review without them, and Save grey with no reason.
+  it('Review lists each objective, says which has no answer and why Save waits; the steps tick Objectives only once answered', async () => {
+    const user = userEvent.setup()
+    showForm()
+    await pickOption('Player', 'Alex Synthetic')
+    await waitFor(() => expect(next()).toBeEnabled())
+    const stepButton = (name: string) => within(screen.getByRole('navigation', { name: 'Assessment steps' })).getByRole('button', { name: new RegExp(`^${name}`) })
+    await user.click(stepButton('Review'))
+
+    const objectives = await screen.findByRole('list', { name: 'Objectives' })
+    expect(within(objectives).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Shoot first timeNo answer', 'Press from the frontNo answer'])
+    expect(screen.getByText('Answer each objective to save.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(stepButton('Objectives')).not.toHaveAccessibleName(/Completed/)
+
+    await user.click(stepButton('Objectives'))
+    await user.click(within(await screen.findByRole('group', { name: 'Progress on Shoot first time' })).getByRole('button', { name: 'On track' }))
+    await user.click(within(screen.getByRole('group', { name: 'Progress on Press from the front' })).getByRole('button', { name: 'Met' }))
+    await user.click(stepButton('Review'))
+    expect(within(await screen.findByRole('list', { name: 'Objectives' })).getAllByRole('listitem').map(item => item.textContent))
+      .toEqual(['Shoot first timeOn track', 'Press from the frontMet'])
+    expect(screen.queryByText('Answer each objective to save.')).not.toBeInTheDocument()
+    expect(stepButton('Objectives')).toHaveAccessibleName(/Completed/)
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByText('Coach home')
+    expect(saves).toHaveLength(1)
+  })
+
   it('a squad with no shared plan has no Objectives step and saves as before', async () => {
     shared = null
     const user = userEvent.setup()

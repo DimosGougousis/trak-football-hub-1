@@ -6,7 +6,7 @@ import { CoachTrail } from '@/components/coach/CoachTrail'
 import { useFeature } from '@/components/trak/parked'
 import { PitchIcon } from '@/components/icons/PitchIcon'
 import { useTranslation } from '@/lib/i18n'
-import { BANDS } from '@/lib/types'
+import { TILE_TONES, type TileTone } from '@/lib/types'
 import type words from '@/locales/en/coachHowTrakWorks.json'
 import { PageTop } from '@/components/coach/PageTop'
 
@@ -24,8 +24,8 @@ type Word = keyof typeof words
 type Icon = ComponentType<LucideProps>
 type Tone = { text: string; bg: string }
 
-const tone = (band: string): Tone => {
-  const found = BANDS.find(b => b.word === band)!
+const tone = (band: TileTone): Tone => {
+  const found = TILE_TONES[band]
   return { text: found.text, bg: found.bg }
 }
 // The four jobs, each in its own colour; the season's first steps in calmer ones.

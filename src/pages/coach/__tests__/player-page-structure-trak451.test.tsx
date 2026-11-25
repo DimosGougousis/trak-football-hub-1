@@ -1,7 +1,8 @@
 /**
  * TRAK-451 (walk-through of 11 Nov): a player's page in Squad gets structure. Inside the page's card, two smaller cards:
  * position, roles and the profile with Edit profile; then the season so far with the radar chart, a light line above the
- * chart. Every block has a bold title. Test people are named after footballers.
+ * chart. Every block has a bold title. TRAK-546 (Kostas, 22 Nov): "Season so far" and its radar come off; Position and
+ * roles, and About, are a card each, About's pencil right of its title. Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, within } from '@testing-library/react'
@@ -49,18 +50,18 @@ afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
 const innerCard = (element: HTMLElement) => element.closest('[data-inner-card]')
 
 describe("TRAK-451: a player's page has structure", () => {
-  it('two smaller cards: position, roles and profile with Edit profile; the season with its radar chart under a light line', async () => {
+  it('TRAK-546: two smaller cards, position and roles, and About with its pencil right of its title; no season radar', async () => {
     renderApp('/coach/squad/player/p1')
     const position = await screen.findByRole('heading', { name: 'Position and roles' })
     const about = await screen.findByRole('heading', { name: 'About Traianos' })
-    const season = screen.getByRole('heading', { name: 'Season so far' })
     expect(innerCard(position)).not.toBeNull()
-    expect(innerCard(about)).toBe(innerCard(position))
-    expect(await within(innerCard(about) as HTMLElement).findByRole('button', { name: /profile/i })).toBeInTheDocument()
-    expect(innerCard(season)).not.toBeNull()
-    expect(innerCard(season)).not.toBe(innerCard(position))
-    const chart = await within(innerCard(season) as HTMLElement).findByRole('figure', { name: /Traianos Dellas/ })
-    expect(chart.closest('[data-chart-rule]')).not.toBeNull()
+    expect(innerCard(about)).not.toBeNull()
+    expect(innerCard(about)).not.toBe(innerCard(position))
+    // The pencil shares the title's row, as Position and roles' does.
+    const pencil = await within(innerCard(about) as HTMLElement).findByRole('button', { name: /profile/i })
+    expect(about.parentElement).toContainElement(pencil)
+    expect(screen.queryByRole('heading', { name: 'Season so far' })).toBeNull()
+    expect(screen.queryByRole('figure', { name: /Traianos Dellas/ })).toBeNull()
   })
 
   it('every block has a bold title, the same one each time', async () => {
@@ -68,18 +69,19 @@ describe("TRAK-451: a player's page has structure", () => {
     await screen.findByRole('heading', { name: 'About Traianos' })
     // TRAK-461: the assessments grow into place once read.
     await screen.findByRole('heading', { name: 'Assessments', level: 4 })
-    const titles = ['Position and roles', 'About Traianos', 'Season so far', 'Objective', 'Assessments']
+    const titles = ['Position and roles', 'About Traianos', 'Objective', 'Assessments']
       .map(name => screen.getByRole('heading', { name, level: 4 }))
-    for (const title of titles) expect(title).toHaveClass('font-semibold')
+    // Design standard step 3: the standard's section label, the same on every block.
+    for (const title of titles) expect(title).toHaveClass('font-bold', 'uppercase')
     expect(new Set(titles.map(title => title.className)).size).toBe(1)
   })
 
-  it('without the season plan: the profile card alone beside the season, still titled', async () => {
+  it('without the season plan: the profile card alone, still titled, and no season radar', async () => {
     seasonPlan = false
     renderApp('/coach/squad/player/p1')
     const about = await screen.findByRole('heading', { name: 'About Traianos' })
     expect(screen.queryByRole('heading', { name: 'Position and roles' })).toBeNull()
     expect(innerCard(about)).not.toBeNull()
-    expect(innerCard(screen.getByRole('heading', { name: 'Season so far' }))).not.toBe(innerCard(about))
+    expect(screen.queryByRole('heading', { name: 'Season so far' })).toBeNull()
   })
 })

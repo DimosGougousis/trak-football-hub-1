@@ -10,7 +10,7 @@ export const SELF_RATING_BAND: Record<string, Band> = {
   excellent: 'Exceptional',
   good: 'Good',
   average: 'Steady',
-  poor: 'Mixed',
+  poor: 'Developing', // TRAK-556: Mixed is gone; the band under Steady.
 }
 
 // Map a 0–10 coach category score to a band word.

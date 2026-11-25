@@ -79,6 +79,8 @@ async function coachBackend(context: BrowserContext, unexpected: string[], withM
     // TRAK-354: so a player's page lists their objectives; there are none.
     if (path === '/rest/v1/player_objectives') return json([])
     if (path === '/rest/v1/objective_progress') return json([])
+    // TRAK-526: each assessment card reads its objective answers; none here (TRAK-538).
+    if (path === '/rest/v1/assessment_objectives') return json([])
     if (path === '/rest/v1/rpc/stuck_player_objectives') return json([])
     if (path.startsWith('/rest/v1/rpc/')) return json([])
     if (path === '/rest/v1/session_attendance') return json(players.map(p => ({ session_id: 'session-1', squad_player_id: p.id, status: 'present' })))
@@ -131,7 +133,8 @@ test.describe('TRAK-182 coach screens', () => {
     ['squad', '/coach/squad', 'Bukayo Saka'],
     ['assess', '/coach/assess', 'Assessment'],
     // TRAK-368: the player's own page in Squad; the list behind it is hidden, so wait for the page's own section.
-    ['player', '/coach/squad/player/sq-2', 'Season so far'],
+    // TRAK-546: "Season so far" is gone from it, so About is the section waited for.
+    ['player', '/coach/squad/player/sq-2', 'About Bukayo'],
     // TRAK-418: the coach's own How Trak works, opened from Settings.
     ['how-trak-works', '/coach/how-trak-works', 'Every week'],
   ] as const) {
@@ -513,6 +516,37 @@ for (const width of [390, 1280]) {
   })
 }
 
+// TRAK-554 (Kostas, 23 Nov): a published event's "Published" is a state, not a button: it sits at the pop-up's top
+// right, under the date and above the kick-off time, not in the row of buttons with Share.
+for (const [width, height] of [[1280, 800], [390, 844]] as const) {
+  test.describe(`TRAK-554 at ${width} px`, () => {
+    test.use({ timezoneId: 'Asia/Dubai', viewport: { width, height } })
+
+    test('the event pop-up says Published at its top right, under the date', async ({ page, context }, testInfo) => {
+      const unexpected: string[] = []
+      await coachBackend(context, unexpected, true)
+      const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai' }).format(new Date())
+      // Before tonight's kick-off, so the sheet still offers Share.
+      await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
+      await page.goto('/coach/home')
+      await page.getByRole('button', { name: /Rivals FC/ }).first().click()
+      await page.getByRole('button', { name: 'Details' }).click()
+      const sheet = page.getByRole('dialog', { name: 'vs Rivals FC' })
+      const published = sheet.getByText('Published', { exact: true })
+      await expect(published).toBeVisible()
+      await expect(sheet.getByRole('button', { name: 'Share' })).toBeVisible()
+      await page.waitForTimeout(500)
+      const [p, title, kickOff, share] = await Promise.all([published.boundingBox(), sheet.getByRole('heading', { name: 'vs Rivals FC' }).boundingBox(),
+        sheet.getByText('Kick-off', { exact: true }).boundingBox(), sheet.getByRole('button', { name: 'Share' }).boundingBox()])
+      expect(p!.x, 'right of the title').toBeGreaterThan(title!.x + title!.width)
+      expect(p!.y + p!.height, 'above the kick-off time').toBeLessThanOrEqual(kickOff!.y)
+      expect(p!.y + p!.height, 'above the buttons').toBeLessThan(share!.y)
+      await page.screenshot({ path: testInfo.outputPath(`event-published-${width}.png`) })
+      expect(unexpected).toEqual([])
+    })
+  })
+}
+
 // Imad's 23 Oct phone review: picking a player in a long list lagged, and the profile under the list needed scrolling to.
 // On a phone the profile now takes the list's place, and "All players" returns to the same spot. TRAK-351: on every
 // screen a player opens as their own page, and going back returns to the same spot (TRAK-428: by the trail).
@@ -849,7 +883,7 @@ test("TRAK-428 at 390 px: a player's page has one way back, and neither the name
   })
   await context.route('**/rest/v1/coach_assessments?*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
     id: 'as-9', squad_player_id: 'sq-2', coach_user_id: ids.coach, created_at: '2026-11-10T08:00:00Z', published_at: '2026-11-10T09:00:00Z',
-    coach_rating: 9, work_rate: 9, tactical: 9, attitude: 9, technical: 9, physical: 9, coachability: 9, squad_players: { player_name: 'Giourkas Seitaridis' } }]) }))
+    coach_rating: 10, work_rate: 10, tactical: 10, attitude: 10, technical: 10, physical: 10, coachability: 10, squad_players: { player_name: 'Giourkas Seitaridis' } }]) })) // TRAK-556: Exceptional is a 10
   await page.goto('/coach/squad')
   await page.getByRole('button', { name: /^Giourkas Seitaridis/ }).click()
   const profile = page.locator('article[aria-label^="Giourkas Seitaridis,"]')

@@ -123,6 +123,8 @@ beforeEach(() => {
     rpc('coach_squad_season', () => []),
     table('coach_assessment_notes', []),
     table('coach_shared_feedback', []),
+    // The pitch-ready page's pitch (24 Nov): no default formation, so Positions shows the list.
+    table('formations', []),
   )
 })
 afterEach(() => { cleanup(); forgetScreens(); localStorage.clear() })
@@ -138,7 +140,7 @@ describe('TRAK-356 Share', () => {
     expect(screen.queryByRole('checkbox')).toBeNull()
     await user().click(screen.getByRole('button', { name: 'Share now' }))
     await waitFor(() => expect(shares).toEqual([{ p_plan_id: 'plan-1', p_talked: false }]))
-    expect(await screen.findByText('Shared 6 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 6 Nov')).toBeInTheDocument()
     // TRAK-494 (Kostas, 20 Nov): the Shared box is its title alone.
     expect(screen.queryByText('Edits wait here until you share them.')).toBeNull()
     expect(screen.queryByText(/don.t see the season plan/)).toBeNull()
@@ -186,11 +188,11 @@ describe('TRAK-356 once shared', () => {
     expect(within(card).getByText(/^\d+ weeks? left$/)).toBeInTheDocument()
     await user().click(within(card).getByRole('button', { name: 'Open the U16 season plan' }))
     await user().click(screen.getByRole('button', { name: 'View plan' }))
-    expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
     for (const step of ['positions', 'objectives', 'share']) {
       cleanup()
       renderApp(`/coach/season-plan/${step}`)
-      expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+      expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
       expect(window.location.pathname).toBe('/coach/season-plan')
       expect(screen.queryByRole('navigation', { name: 'Season plan steps' })).toBeNull()
     }
@@ -200,21 +202,22 @@ describe('TRAK-356 once shared', () => {
     sharedPlan()
     objectives = [seasonObjective('so-1', 1, 'Win it back within 5 seconds'), seasonObjective('so-2', 2, 'Stay compact')]
     renderApp('/coach/season-plan')
-    await user().click(await screen.findByRole('button', { name: 'Edit season objectives' }))
+    await user().click(await screen.findByRole('button', { name: 'Edit Objectives' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Season objectives' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Season plan steps' })).toBeNull()
     await user().type(screen.getByLabelText('Objective 1'), ', always')
     await user().click(screen.getByRole('button', { name: 'Remove Stay compact' }))
     await user().click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
     expect(screen.getByText('Win it back within 5 seconds')).toBeInTheDocument()
     expect(screen.getByText('Stay compact')).toBeInTheDocument()
 
-    await user().click(screen.getByRole('button', { name: 'Edit the season’s dates' }))
-    expect(await screen.findByRole('heading', { level: 1, name: 'Season dates' })).toBeInTheDocument()
+    // 24 Nov: the dates and reports share one Edit schedule screen.
+    await user().click(screen.getByRole('button', { name: 'Edit Schedule' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Season schedule' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     await user().click(screen.getByRole('button', { name: 'Season plan' }))
-    expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
     expect(writes).toEqual([])
   }, 30_000)
 
@@ -222,7 +225,7 @@ describe('TRAK-356 once shared', () => {
     sharedPlan()
     objectives = [seasonObjective('so-1', 1, 'Win it back within 5 seconds'), seasonObjective('so-2', 2, 'Stay compact')]
     renderApp('/coach/season-plan')
-    await user().click(await screen.findByRole('button', { name: 'Edit season objectives' }))
+    await user().click(await screen.findByRole('button', { name: 'Edit Objectives' }))
     await user().click(await screen.findByRole('button', { name: 'Remove Stay compact' }))
     await user().click(screen.getByRole('button', { name: 'Save' }))
 
@@ -232,11 +235,11 @@ describe('TRAK-356 once shared', () => {
     // September is "Sept" or "Sep", by the runtime's ICU: the app's own format.
     const added = new Date('2026-09-01T08:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     expect(removed).toHaveTextContent(`Stay compact · added ${added}, removed 6 Nov`)
-    expect(within(screen.getByRole('region', { name: 'Season objectives' })).getAllByRole('listitem')[0]).toHaveTextContent('Win it back within 5 seconds')
+    expect(within(screen.getByRole('region', { name: 'Core tactical objectives' })).getAllByRole('listitem')[0]).toHaveTextContent('Win it back within 5 seconds')
 
     await user().click(screen.getByRole('button', { name: 'Share the changes' }))
     await waitFor(() => expect(shares).toEqual([{ p_plan_id: 'plan-1', p_talked: false }]))
-    expect(await screen.findByText('Shared 6 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 6 Nov')).toBeInTheDocument()
     // The banner's old line crossfades out (Arc's alert).
     await waitFor(() => expect(screen.queryByText(/^Not shared yet/)).toBeNull())
     expect(screen.queryByRole('button', { name: 'Share the changes' })).toBeNull()
@@ -247,10 +250,11 @@ describe('TRAK-356 once shared', () => {
     server.use(table('squad_players', [child('pat', 'Pat Synthetic', 'Defender'), child('uma', 'Uma Synthetic', null)]))
     renderApp('/coach/home')
     await user().click(await screen.findByRole('button', { name: 'Place them' }))
-    expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
     expect(window.location.pathname).toBe('/coach/season-plan')
-    const positions = screen.getByRole('region', { name: 'Positions' })
-    expect(positions).toHaveTextContent('1 of 2 players placed.')
+    // The header shows while the plan loads (24 Nov), so wait for the card itself.
+    const positions = await screen.findByRole('region', { name: 'Positions' })
+    expect(positions).toHaveTextContent(/1 \/ 2\s*players placed/)
     await user().click(within(positions).getByRole('button', { name: 'Uma Synthetic' }))
     expect(await screen.findByRole('dialog', { name: "Uma's position and roles" })).toBeInTheDocument()
   }, 30_000)
@@ -261,9 +265,10 @@ describe('TRAK-356 once shared', () => {
     held = [playerObjective('po-gone', 'pat', 'Wins their headers', '2026-11-05T10:00:00Z')]
     renderApp('/coach/season-plan')
     expect(await screen.findByText('Not shared yet: season dates, Quinn’s objectives.')).toBeInTheDocument()
-    expect(screen.getByText('2 changes not shared')).toBeInTheDocument()
-    await user().click(screen.getByRole('button', { name: /^Player objectives/ }))
-    expect(screen.getByRole('button', { name: /^Pat Synthetic/ })).toHaveTextContent('Removed: Wins their headers (5 Nov)')
+    // 24 Nov: the header's pill says changes wait; the player rows no longer fold.
+    expect(screen.getByText('Changes not shared')).toBeInTheDocument()
+    const players = screen.getByRole('region', { name: 'Player Objectives' })
+    expect(within(players).getByRole('button', { name: /^Pat Synthetic/ })).toHaveTextContent('Removed: Wins their headers (5 Nov)')
 
     cleanup()
     renderApp('/coach/squad/player/pat')
@@ -272,18 +277,18 @@ describe('TRAK-356 once shared', () => {
     expect(section).toHaveTextContent('Wins their headers · given 1 Nov, removed 5 Nov')
   }, 30_000)
 
-  // TRAK-423: Edit is the pencil, never the word, and an Edit screen has no grey "Edit" over its title.
-  it("a player's row ends in the pencil, and an Edit screen is titled by its part alone", async () => {
+  // TRAK-423: an Edit screen has no grey "Edit" over its title. 24 Nov (mockup): a player's row ends in a chevron,
+  // its accessible name still ending in Edit.
+  it("a player's row ends in the chevron, and an Edit screen is titled by its part alone", async () => {
     sharedPlan()
     renderApp('/coach/season-plan')
-    await user().click(await screen.findByRole('button', { name: /^Player objectives/ }))
-    const pat = screen.getByRole('button', { name: /^Pat Synthetic/ })
-    expect(pat.querySelector('svg.lucide-pencil')).not.toBeNull()
+    const pat = within(await screen.findByRole('region', { name: 'Player Objectives' })).getByRole('button', { name: /^Pat Synthetic/ })
+    expect(pat.querySelector('svg.lucide-chevron-right')).not.toBeNull()
     expect(pat).toHaveAccessibleName(/Edit$/)
     expect(within(pat).queryByText('Edit', { ignore: '.sr-only' })).toBeNull()
 
-    await user().click(screen.getByRole('button', { name: 'Edit the season’s dates' }))
-    const title = await screen.findByRole('heading', { level: 1, name: 'Season dates' })
+    await user().click(screen.getByRole('button', { name: 'Edit Schedule' }))
+    const title = await screen.findByRole('heading', { level: 1, name: 'Season schedule' })
     expect(title.closest('header')).not.toHaveTextContent(/^Edit/)
   }, 30_000)
 
@@ -305,18 +310,18 @@ describe('TRAK-356 once shared', () => {
     expect(watching).toHaveTextContent('Quinn Synthetic')
     expect(watching).toHaveTextContent('0 of 2 weeks so far')
 
-    await user().click(within(watching).getByRole('button', { name: 'Edit the watching reminder' }))
+    await user().click(within(watching).getByRole('button', { name: 'Edit Reminder' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Watching reminder' })).toBeInTheDocument()
     expect(screen.getByText('Only you see this.')).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: '4 weeks' }))
     await user().click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
     expect(writes).toEqual([])
 
-    await user().click(screen.getByRole('button', { name: 'Edit the watching reminder' }))
+    await user().click(screen.getByRole('button', { name: 'Edit Reminder' }))
     await user().click(await screen.findByRole('button', { name: '4 weeks' }))
     await user().click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByText('Shared 1 Nov.')).toBeInTheDocument()
+    expect(await screen.findByText('Shared · 1 Nov')).toBeInTheDocument()
     expect(writes).toEqual([{ method: 'PATCH', table: 'season_plans', body: { watch_rule: 'w4' } }])
     expect(screen.queryByText(/^Not shared yet/)).toBeNull()
   }, 30_000)

@@ -60,7 +60,7 @@ beforeEach(() => { isNew = true; seenCalls = []; readFor = []; GUARDIAN = { id: 
 afterEach(() => cleanup())
 
 describe('TRAK-400: the family\'s Season plan page', () => {
-  it('shows position, squad objectives with what each looks like, the child\'s objectives with one row per evaluation, and the quiet line', async () => {
+  it('shows position, squad objectives with what each looks like, the child\'s objectives with one row per evaluation (the quiet line went in TRAK-494)', async () => {
     setup()
     renderApp('/parent/season')
     expect(await screen.findByRole('heading', { name: "Alex's season" })).toBeInTheDocument()
@@ -71,7 +71,6 @@ describe('TRAK-400: the family\'s Season plan page', () => {
     const objectives = screen.getByRole('region', { name: "Alex's objectives" })
     expect(within(objectives).getByText('Plays forward on the half-turn').parentElement).toHaveTextContent('Some progress')
     expect(within(screen.getByRole('list', { name: 'History of Scans before receiving' })).getAllByRole('listitem')).toHaveLength(2)
-    expect(screen.getByText('Your coach updates this at each evaluation. You can read it here; nothing needs a reply.')).toBeInTheDocument()
     // The evaluation note is the player's alone, and the function never returns it.
     expect(screen.queryByText(/note/i)).toBeNull()
     await waitFor(() => expect(seenCalls).toEqual([{ p_child: ALEX }]))

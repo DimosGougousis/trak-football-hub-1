@@ -4,10 +4,12 @@ import { Check, LayoutGrid, Pencil, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { Alert } from '@/components/arc/alert/alert'
-import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { MorphSelect } from '@/components/arc/morph-select/morph-select'
+import { Select } from '@/components/arc/select/select'
+import { useCoachSquad } from '@/lib/coach-squad'
+import { NumberBlock, SECTION_LABEL, SectionCard, SectionLabel, StatusPill } from '@/components/trak/standard'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { usePlayerRoles } from '@/components/coach/squad/usePlayerRoles'
@@ -42,9 +44,16 @@ type Edit = { draft: FormationDraft; history: FormationDraft[] }
 export function FormationsTab({ roster }: { roster: SquadRoster }) {
   const { user } = useAuth()
   const { t } = useTranslation()
+  const { pick } = useCoachSquad(user?.id)
   // The squad picked, or a coach's only squad.
   const squad = roster.squad ?? (roster.squads.length === 1 ? roster.squads[0] : null)
-  // TRAK-432: Arc's empty state; the squad is chosen in the menu, so there is no button here.
+  // TRAK-562 (phone review, 23 Nov): with All squads selected, a squad dropdown here. Selecting one picks it as the side
+  // menu does, so every coach page follows it.
+  if (!squad && user && roster.squads.length >= 2) return <div className="arc pt-6 max-w-sm">
+    <Select label={t('nav:squad')} description={t('coachSquad:fmPickSquad')} placeholder={t('coachSquad:fmSelectSquad')}
+      value="" onValueChange={pick} options={roster.squads.map(name => ({ value: name, label: name }))} />
+  </div>
+  // TRAK-432: Arc's empty state, while there is no squad to select.
   if (!squad || !user) return <div className="arc pt-10">
     <EmptyState icon={<LayoutGrid size={24} strokeWidth={1.5} />} title={t('coachSquad:fmPickSquad')} description={t('coachSquad:fmPickSquadBody')} />
   </div>
@@ -103,21 +112,19 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   }, [list, unplaced, roles.isPending, consented, writes.start])
 
   // Arc's styles apply inside .arc; a phone's frame doesn't give one (the laptop's does), so each view brings its own.
-  if (unplaced > 0) return <section aria-labelledby="formations-locked" className="arc grid justify-items-start gap-3 rounded-2xl border border-line bg-surface p-6">
-    <h2 id="formations-locked" className="text-lg font-medium text-ink">{t('coachSquad:fmPlaceToOpen', { count: unplaced })}</h2>
-    <p className="max-w-prose text-sm text-ink-2">{t('coachSquad:fmNeedsPosition', { squad })}</p>
-    <Button variant="secondary" onClick={() => navigate('/coach/season-plan/positions')}>{t('coachSquad:fmGoPositions')}</Button>
-  </section>
+  // Design standard step 3: how many are placed, as a number block, until everyone is.
+  const placed = consented.length - unplaced
+  if (unplaced > 0) return <div className="arc"><SectionCard titleAs="h2" title={t('coachSquad:fmPlaceToOpen', { count: unplaced })}>
+    <NumberBlock value={`${placed} / ${consented.length}`} caption={t('coachSquad:fmPlacedCaption')} progress={consented.length ? placed / consented.length : 0} tone="needs" />
+    <p className="max-w-prose text-[15px] text-ink-2">{t('coachSquad:fmNeedsPosition', { squad })}</p>
+    <div><Button variant="secondary" onClick={() => navigate('/coach/season-plan/positions')}>{t('coachSquad:fmGoPositions')}</Button></div>
+  </SectionCard></div>
   if (formations.isError || roles.isError) return <LoadError what={t('coachSquad:fmWhat')} onRetry={() => { void formations.refetch(); void roles.refetch() }} />
   if (!list || roles.isPending || writes.start.isPending) return <LoadingSkeleton label={t('coachSquad:fmLoading')} lines={3} rows={2} />
 
-  const header = <div className="flex flex-wrap items-end justify-between gap-3">
-    <div className="grid gap-2">
-      <h2 className="text-lg font-medium text-ink">{t('coachSquad:fmPlaybook')}</h2>
-    </div>
-    <Button variant="secondary" onClick={() => { setNamingProblem(null); setNaming({ kind: 'new', format: 11, shape: DEFAULT_FORMATION[11] }) }}>
-      <Plus size={18} aria-hidden="true" />{t('coachSquad:fmNew')}</Button>
-  </div>
+  // Design standard step 3: the saved formations sit under their label, New on its right.
+  const header = <SectionLabel id="formations-saved" action={<Button variant="secondary" onClick={() => { setNamingProblem(null); setNaming({ kind: 'new', format: 11, shape: DEFAULT_FORMATION[11] }) }}>
+    <Plus size={18} aria-hidden="true" />{t('coachSquad:fmNew')}</Button>}>{t('coachSquad:fmSavedList')}</SectionLabel>
   const nameSheet = naming && <NameSheet mode={naming} problem={namingProblem} saving={writes.save.isPending} onClose={() => setNaming(null)} onDone={named => {
     if (naming.kind === 'rename') return rename(named.name)
     const from = current ?? { name: named.name, format: named.format, shape: named.shape, starters: {} }
@@ -210,13 +217,13 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
   // TRAK-514: the formation editor keeps the content width it had under the page's old 1,280 px cap (see GamePlan).
   return <div className="arc grid max-w-[1216px] gap-6 laptop:gap-8">
     {header}
-    <div role="group" aria-label={t('coachSquad:fmSavedList')} className="grid gap-2 tablet:grid-cols-2 laptop:grid-cols-3">
+    <div role="group" aria-labelledby="formations-saved" className="-mt-2 grid gap-2 tablet:grid-cols-2 laptop:grid-cols-3 laptop:-mt-4">
       {list.map(f => {
         const shown = edits[f.id]?.draft ?? draftOf(f), changed = !!edits[f.id] && !same(edits[f.id].draft, draftOf(f))
         return <button key={f.id} type="button" aria-pressed={f.id === saved.id} onClick={() => choose(f.id)}
           className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${f.id === saved.id ? 'border-brand bg-brand/10' : 'border-line bg-surface'}`}>
           <span className="grid min-w-0 flex-1">
-            <span className="truncate text-[15px] font-medium text-ink">{shown.name}</span>
+            <span className="truncate text-[15px] font-semibold text-ink">{shown.name}</span>
             <span className="text-sm text-ink-3">{shown.shape} · {changed ? t('coachSquad:fmUnsaved') : t('coachSquad:fmStartersSaved', { count: Object.keys(shown.starters).length })}</span>
           </span>
           {f.id === saved.id && <Check size={18} aria-hidden="true" className="shrink-0 text-brand" />}
@@ -224,21 +231,37 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
       })}
     </div>
 
-    <section aria-labelledby="formation-name" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <div className="flex items-center gap-1">
-            <h2 id="formation-name" className="text-xl font-medium text-ink">{current.name}</h2>
-            <button type="button" aria-label={t('coachSquad:fmRename')} onClick={() => { setNamingProblem(null); setNaming({ kind: 'rename', name: saved.name }) }}
-              className="grid size-10 place-items-center rounded-md text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Pencil size={18} aria-hidden="true" /></button>
-          </div>
-          <p role="status" className="flex items-center gap-1.5 text-sm text-ink-3">{dirty ? t('coachSquad:fmUnsaved') : <><Check size={14} aria-hidden="true" />{t('coachSquad:fmAllSaved')}</>}</p>
-        </div>
+    {/* Design standard step 3: the formation in view is a card titled with its name; its saved state a pill. */}
+    <SectionCard title={current.name}
+      pill={<>
+        <button type="button" aria-label={t('coachSquad:fmRename')} onClick={() => { setNamingProblem(null); setNaming({ kind: 'rename', name: saved.name }) }}
+          className="-ml-2 grid size-11 place-items-center rounded-xl text-ink-2 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Pencil size={18} aria-hidden="true" /></button>
+        <span role="status">{dirty ? <StatusPill tone="needs" size="sm">{t('coachSquad:fmUnsaved')}</StatusPill>
+          : <StatusPill tone="good" size="sm">{t('coachSquad:fmAllSaved')}</StatusPill>}</span>
+      </>}
+      action={<div className="flex flex-wrap items-center gap-2">
+        {dirty && <Button variant="ghost" onClick={discard}>{t('coachSquad:fmDiscard')}</Button>}
+        <Button onClick={save} disabled={!dirty} loading={writes.save.isPending && !naming}>{t('coachSchedule:saveChanges')}</Button>
+      </div>}
+      footer={<div className="grid gap-5">
+        {/* TRAK-452 (11 Nov walk-through): Set for matchday shows only once the formation has been copied to a match. */}
+        {saved.copies.length > 0 && <section aria-labelledby="formation-matchday" className="grid gap-2">
+          <h4 id="formation-matchday" className={SECTION_LABEL}>{t('coachSquad:fmSetMatchday')}</h4>
+          <ul className="m-0 grid list-none gap-1 p-0">{saved.copies.map(copy => <li key={copy.eventId} className="text-sm text-ink-2">
+            {t('coachSquad:fmCopiedOn', { label: copy.label, day: weekdayDayMonth(copy.copiedAt.slice(0, 10)) })}
+            {copy.notComing > 0 && t('coachSquad:fmNotComing', { count: copy.notComing })}
+            {copy.skipped > 0 && t('coachSquad:fmSkipped', { count: copy.skipped })}</li>)}</ul>
+        </section>}
         <div className="flex flex-wrap items-center gap-2">
-          {dirty && <Button variant="ghost" onClick={discard}>{t('coachSquad:fmDiscard')}</Button>}
-          <Button onClick={save} disabled={!dirty} loading={writes.save.isPending && !naming}>{t('coachSchedule:saveChanges')}</Button>
+          {confirming
+            ? <>
+              <span className="text-sm text-ink-2">{t('coachSquad:fmDeleteAsk', { name: saved.name })}</span>
+              <Button variant="danger" size="sm" loading={writes.remove.isPending} onClick={remove}>{t('coachSchedule:delete')}</Button>
+              <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>{t('coachSquad:fmKeep')}</Button>
+            </>
+            : <Button variant="ghost" size="sm" onClick={() => setConfirming(true)}>{t('coachSquad:fmDelete')}</Button>}
         </div>
-      </div>
+      </div>}>
       {copied && <Alert open tone="success" title={t('coachSquad:fmCopied', { name: copied.name, count: copied.eventIds.length })} onDismiss={() => setCopied(null)}>
         <Button size="sm" variant="secondary" loading={writes.undoCopy.isPending} onClick={undoCopy}>{t('coachSquad:fmUndoCopy')}</Button>
       </Alert>}
@@ -248,7 +271,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
         <Button variant="secondary" size="sm" disabled={writes.save.isPending} onClick={() => saveThen(() => { setUseProblem(null); setUsing(true) })}>{t('coachSquad:fmUse')}</Button>
         <Button variant="secondary" size="sm" disabled={writes.save.isPending} loading={writes.setDefault.isPending} onClick={() => saveThen(() => makeDefault(!saved.isDefault))}>
           {saved.isDefault ? t('coachSquad:fmRemoveDefault') : t('coachSquad:fmMakeDefault', { count: current.format })}</Button>
-        {saved.isDefault && <Badge size="sm" tone="info">{t('coachSquad:fmDefaultBadge', { count: saved.format })}</Badge>}
+        {saved.isDefault && <StatusPill tone="neutral" size="sm">{t('coachSquad:fmDefaultBadge', { count: saved.format })}</StatusPill>}
       </div>
 
       {/* TRAK-453: one control for format and shape, the one a match's line-up has; a shape in another format switches the format. */}
@@ -262,26 +285,7 @@ function Playbook({ coachId, squad, roster }: { coachId: string; squad: string; 
 
       <FormationBoard title={current.name} shape={current.shape} format={current.format} starters={current.starters} players={boardPlayers} bench={bench}
         onSwap={(a: Spot, b: Spot) => change(d => ({ ...d, starters: swapXI(d.starters, a, b) }))} onUndo={undo} canUndo={!!edit?.history.length} />
-
-      {/* TRAK-452 (11 Nov walk-through): Set for matchday shows only once the formation has been copied to a match. */}
-      {saved.copies.length > 0 && <section aria-label={t('coachSquad:fmSetMatchday')} className="grid gap-2 border-t border-line pt-4">
-        <h3 className="text-[15px] font-medium text-ink">{t('coachSquad:fmSetMatchday')}</h3>
-        <ul className="m-0 grid list-none gap-1 p-0">{saved.copies.map(copy => <li key={copy.eventId} className="text-sm text-ink-2">
-          {t('coachSquad:fmCopiedOn', { label: copy.label, day: weekdayDayMonth(copy.copiedAt.slice(0, 10)) })}
-          {copy.notComing > 0 && t('coachSquad:fmNotComing', { count: copy.notComing })}
-          {copy.skipped > 0 && t('coachSquad:fmSkipped', { count: copy.skipped })}</li>)}</ul>
-      </section>}
-
-      <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-        {confirming
-          ? <>
-            <span className="text-sm text-ink-2">{t('coachSquad:fmDeleteAsk', { name: saved.name })}</span>
-            <Button variant="danger" size="sm" loading={writes.remove.isPending} onClick={remove}>{t('coachSchedule:delete')}</Button>
-            <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>{t('coachSquad:fmKeep')}</Button>
-          </>
-          : <Button variant="ghost" size="sm" onClick={() => setConfirming(true)}>{t('coachSquad:fmDelete')}</Button>}
-      </div>
-    </section>
+    </SectionCard>
     {nameSheet}
     {using && <UseForMatchesSheet formation={saved} squad={squad} using={writes.use.isPending} problem={useProblem} onClose={() => setUsing(false)} onUse={copyTo} />}
   </div>

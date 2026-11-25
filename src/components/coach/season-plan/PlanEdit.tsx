@@ -24,9 +24,11 @@ import { evaluationDates, evaluationDue, nextDateLine, rhythmOf, type EvalEvery 
    (TRAK-355) is the coach's alone, so it never waits to be shared. TRAK-364: the evaluation's rhythm, which waits
    under "Not shared yet" as the evaluation dates, as the season's dates do. */
 
-const PLAN_PARTS = { dates: 'Season dates', evaluation: 'Evaluation', objectives: 'Season objectives', reminder: 'Watching reminder' } as const
+const PLAN_PARTS = { schedule: 'Season schedule', objectives: 'Season objectives', reminder: 'Watching reminder' } as const
 type Part = keyof typeof PLAN_PARTS
 const isPart = (part: string): part is Part => part in PLAN_PARTS
+// The two screens Edit schedule replaced (24 Nov) keep their addresses.
+const OLD_PARTS: Record<string, Part> = { dates: 'schedule', evaluation: 'schedule' }
 
 const PLAN = '/coach/season-plan'
 const SAVE_FAILED = "Couldn't save. Check your connection and try again; your changes are still here."
@@ -40,9 +42,9 @@ export function PlanEdit({ part, coachId, squad, plan, seasonObjectives }: {
   plan: SeasonPlan
   seasonObjectives: SeasonObjective[]
 }) {
+  if (OLD_PARTS[part]) return <Navigate to={`${PLAN}/edit/${OLD_PARTS[part]}`} replace />
   if (!isPart(part)) return <Navigate to={PLAN} replace />
-  return part === 'dates' ? <DatesEdit coachId={coachId} squad={squad} plan={plan} />
-    : part === 'evaluation' ? <EvaluationEdit coachId={coachId} squad={squad} plan={plan} />
+  return part === 'schedule' ? <ScheduleEdit coachId={coachId} squad={squad} plan={plan} />
     : part === 'reminder' ? <ReminderEdit coachId={coachId} squad={squad} plan={plan} />
     : <ObjectivesEdit coachId={coachId} squad={squad} plan={plan} saved={seasonObjectives} />
 }
@@ -73,18 +75,33 @@ function EditScreen({ part, problem, saving, canSave, onSave, children }: {
   )
 }
 
-function DatesEdit({ coachId, squad, plan }: { coachId: string; squad: string; plan: SeasonPlan }) {
+/** 24 Nov (pitch-ready page): the season's dates and how often reports go out, on one screen behind Edit schedule.
+ *  Each waits under "Not shared yet" as before: the database marks dates and evaluation separately. */
+function ScheduleEdit({ coachId, squad, plan }: { coachId: string; squad: string; plan: SeasonPlan }) {
   const navigate = useNavigate()
   const client = useQueryClient()
   const [startsOn, setStartsOn] = useState(plan.starts_on ?? '')
   const [endsOn, setEndsOn] = useState(plan.ends_on ?? '')
+  const saved = rhythmOf(plan)
+  const [rhythm, setRhythm] = useState<{ every: EvalEvery; day: number }>(saved)
   const [problem, setProblem] = useState<string | null>(null)
-  const changed = startsOn !== (plan.starts_on ?? '') || endsOn !== (plan.ends_on ?? '')
+  const evaluation = useSquadEvaluations(coachId, [squad])
+  const mine = evaluation.list.find(e => e.squad === squad)
+  const datesChanged = startsOn !== (plan.starts_on ?? '') || endsOn !== (plan.ends_on ?? '')
+  const rhythmChanged = rhythm.every !== saved.every || rhythm.day !== saved.day
   // Share needed both dates, so a shared plan keeps them.
   const bad = !startsOn || !endsOn ? 'A shared plan keeps both its dates.' : endsOn <= startsOn ? 'The season has to end after it starts.' : null
+  // As Home will work it out once saved: from the day the plan was shared, after the last evaluation, the academy's day.
+  const line = mine ? nextDateLine(evaluationDue({
+    dates: evaluationDates({ startsOn: startsOn || null, endsOn: endsOn || null, every: rhythm.every, day: rhythm.day }),
+    sharedOn: mine.sharedOn, lastDueOn: mine.lastDueOn, today: evaluation.today,
+  }), evaluation.today) : evaluation.failed ? 'Couldn’t work out the next date.' : 'Working out the next date…'
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('season_plans').update({ starts_on: startsOn, ends_on: endsOn }).eq('id', plan.id)
+      const { error } = await supabase.from('season_plans').update({
+        ...(datesChanged ? { starts_on: startsOn, ends_on: endsOn } : {}),
+        ...(rhythmChanged ? { eval_every: rhythm.every, eval_day: rhythm.day } : {}),
+      }).eq('id', plan.id)
       if (error) throw error
     },
     onSuccess: async () => {
@@ -97,48 +114,15 @@ function DatesEdit({ coachId, squad, plan }: { coachId: string; squad: string; p
   const edit = (set: (iso: string) => void) => (date: Date | undefined) => { set(dateToIso(date)); setProblem(null) }
 
   return (
-    <EditScreen part="dates" problem={problem} saving={save.isPending} canSave={changed && !bad} onSave={() => save.mutate()}>
+    <EditScreen part="schedule" problem={problem} saving={save.isPending} canSave={(datesChanged || rhythmChanged) && !bad} onSave={() => save.mutate()}>
       <section aria-label="Your season" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-        <div className="grid gap-4 tablet:grid-cols-2">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(13rem,1fr))]">
           <DatePicker label="Starts" value={isoToDate(startsOn)} onChange={edit(setStartsOn)} />
           <DatePicker label="Ends" value={isoToDate(endsOn)} onChange={edit(setEndsOn)} minDate={isoToDate(startsOn)} />
         </div>
-        {changed && bad && <p role="alert" className="text-sm text-danger">{bad}</p>}
+        {datesChanged && bad && <p role="alert" className="text-sm text-danger">{bad}</p>}
       </section>
-    </EditScreen>
-  )
-}
-
-function EvaluationEdit({ coachId, squad, plan }: { coachId: string; squad: string; plan: SeasonPlan }) {
-  const navigate = useNavigate()
-  const client = useQueryClient()
-  const saved = rhythmOf(plan)
-  const [rhythm, setRhythm] = useState<{ every: EvalEvery; day: number }>(saved)
-  const [problem, setProblem] = useState<string | null>(null)
-  const evaluation = useSquadEvaluations(coachId, [squad])
-  const mine = evaluation.list.find(e => e.squad === squad)
-  const changed = rhythm.every !== saved.every || rhythm.day !== saved.day
-  // As Home will work it out once saved: from the day the plan was shared, after the last evaluation, the academy's day.
-  const line = mine ? nextDateLine(evaluationDue({
-    dates: evaluationDates({ startsOn: plan.starts_on, endsOn: plan.ends_on, every: rhythm.every, day: rhythm.day }),
-    sharedOn: mine.sharedOn, lastDueOn: mine.lastDueOn, today: evaluation.today,
-  }), evaluation.today) : evaluation.failed ? 'Couldn’t work out the next date.' : 'Working out the next date…'
-  const save = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from('season_plans').update({ eval_every: rhythm.every, eval_day: rhythm.day }).eq('id', plan.id)
-      if (error) throw error
-    },
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: seasonPlanKey(coachId, squad) })
-      toast.success(SAVED)
-      navigate(PLAN)
-    },
-    onError: () => setProblem(SAVE_FAILED),
-  })
-
-  return (
-    <EditScreen part="evaluation" problem={problem} saving={save.isPending} canSave={changed} onSave={() => save.mutate()}>
-      <section aria-label="Evaluation" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
+      <section aria-label="Reports" className="grid gap-4 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
         <EvaluationRhythm every={rhythm.every} day={rhythm.day} line={line} onChange={next => { setRhythm(next); setProblem(null) }} />
       </section>
     </EditScreen>
@@ -148,11 +132,11 @@ function EvaluationEdit({ coachId, squad, plan }: { coachId: string; squad: stri
 function ObjectivesEdit({ coachId, squad, plan, saved }: { coachId: string; squad: string; plan: SeasonPlan; saved: SeasonObjective[] }) {
   const navigate = useNavigate()
   const client = useQueryClient()
-  const [list, setList] = useState<EditableObjective[]>(() => saved.map(o => ({ key: o.id, id: o.id, title: o.title, looksLike: o.looks_like })))
+  const [list, setList] = useState<EditableObjective[]>(() => saved.map(o => ({ key: o.id, id: o.id, title: o.title, looksLike: o.looks_like, phase: o.phase })))
   const [focusKey, setFocusKey] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const nextKey = useRef(0)
-  const changed = JSON.stringify(list.map(o => [o.id, o.title.trim(), o.looksLike.trim()])) !== JSON.stringify(saved.map(o => [o.id, o.title, o.looks_like]))
+  const changed = JSON.stringify(list.map(o => [o.id, o.title.trim(), o.looksLike.trim(), o.phase])) !== JSON.stringify(saved.map(o => [o.id, o.title, o.looks_like, o.phase]))
   const refresh = () => Promise.all([
     client.invalidateQueries({ queryKey: seasonObjectivesKey(coachId, plan.id) }),
     client.invalidateQueries({ queryKey: removedSeasonObjectivesKey(coachId, plan.id) }),
@@ -169,9 +153,9 @@ function ObjectivesEdit({ coachId, squad, plan, saved }: { coachId: string; squa
     onError: () => { setProblem(SAVE_FAILED); void refresh() },
   })
   const change = (next: EditableObjective[]) => { setList(next); setProblem(null) }
-  const add = (title: string, looksLike: string) => {
+  const add = (title: string, looksLike: string, phase: string | null) => {
     const key = `new-${(nextKey.current += 1)}`
-    change([...list, { key, title, looksLike }])
+    change([...list, { key, title, looksLike, phase }])
     if (!title) setFocusKey(key)
   }
   const submit = () => (list.some(o => !o.title.trim()) ? setProblem('Give each objective a title, or remove it.') : save.mutate())

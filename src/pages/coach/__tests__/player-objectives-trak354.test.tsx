@@ -136,7 +136,9 @@ describe('TRAK-354 player objectives', () => {
     await user().click(within(again).getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(within(section).getByText('Presses their centre backs first')).toBeInTheDocument())
-    expect(within(section).getByText('Supports: Win it back within 5 seconds · since 5 Nov')).toBeInTheDocument()
+    // TRAK-567: the player's page says only since when, not which season objective it supports.
+    expect(within(section).getByText('Presses their centre backs first').closest('li')).toHaveTextContent(/Presses their centre backs firstSince 5 Nov$/)
+    expect(within(section).queryByText(/Supports:/)).toBeNull()
     expect(within(section).queryByText('Shoots early from the edge')).toBeNull()
 
     cleanup()

@@ -1538,18 +1538,21 @@ export type Database = {
       report_for_family: {
         Row: {
           evaluation_id: string
+          note: string
           report: Json
           sent_at: string
           squad_player_id: string
         }
         Insert: {
           evaluation_id: string
+          note?: string
           report: Json
           sent_at?: string
           squad_player_id: string
         }
         Update: {
           evaluation_id?: string
+          note?: string
           report?: Json
           sent_at?: string
           squad_player_id?: string
@@ -1582,6 +1585,7 @@ export type Database = {
       }
       season_evaluations: {
         Row: {
+          closed_at: string | null
           due_on: string
           id: string
           plan_id: string
@@ -1589,6 +1593,7 @@ export type Database = {
           published_by: string | null
         }
         Insert: {
+          closed_at?: string | null
           due_on: string
           id?: string
           plan_id: string
@@ -1596,6 +1601,7 @@ export type Database = {
           published_by?: string | null
         }
         Update: {
+          closed_at?: string | null
           due_on?: string
           id?: string
           plan_id?: string
@@ -1617,6 +1623,7 @@ export type Database = {
           created_at: string
           id: string
           looks_like: string
+          phase: string | null
           place: number
           plan_id: string
           retired_at: string | null
@@ -1630,6 +1637,7 @@ export type Database = {
           created_at?: string
           id?: string
           looks_like?: string
+          phase?: string | null
           place: number
           plan_id: string
           retired_at?: string | null
@@ -1643,6 +1651,7 @@ export type Database = {
           created_at?: string
           id?: string
           looks_like?: string
+          phase?: string | null
           place?: number
           plan_id?: string
           retired_at?: string | null
@@ -2444,7 +2453,7 @@ export type Database = {
         Returns: Json
       }
       publish_evaluation_with_objectives: {
-        Args: { p_due_on: string; p_objectives: Json; p_plan_id: string; p_players: Json }
+        Args: { p_close?: boolean; p_due_on: string; p_objectives: Json; p_plan_id: string; p_players: Json }
         Returns: Json
       }
       resolve_stuck_objective: {

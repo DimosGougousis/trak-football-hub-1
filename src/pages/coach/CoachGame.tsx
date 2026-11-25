@@ -1,3 +1,4 @@
+import { TOP_BAR as RAIL_TOP_BAR } from '@/components/arc/blocks/sidebar-rail/sidebar-rail'
 import { useTranslation } from '@/lib/i18n'
 import { MATCH_WORD } from '@/lib/games/match-words'
 import { shown } from '@/lib/squad/trait-words'
@@ -47,7 +48,7 @@ const TABS = [
   { id: 'logistics', label: 'coachMatches:actLogistics' }, { id: 'plan', label: 'coachHome:gamePlan' }, { id: 'evaluation', label: 'nav:evaluation' },
 ] as const satisfies readonly { id: GameTab; label: string }[]
 /** The laptop's top bar (Arc's sidebar rail) is pinned above the page; the header pins under it. */
-const TOP_BAR = '60px'
+const TOP_BAR = `${RAIL_TOP_BAR}px`
 const icon = { size: 16, strokeWidth: 1.75, 'aria-hidden': true } as const
 const metaIcon = { size: 14, strokeWidth: 1.75, 'aria-hidden': true } as const
 type Plan = UseQueryResult<Tables<'game_plans'> | null>

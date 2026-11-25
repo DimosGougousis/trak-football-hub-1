@@ -176,7 +176,7 @@ export default function ClubHome() {
   const ready = !pending && !failed
 
   // Top 3 bands for display
-  const TOP_BANDS = ['exceptional', 'standout', 'good', 'steady']
+  const TOP_BANDS = ['exceptional', 'good', 'steady']
 
   return (
     <ClubShell>

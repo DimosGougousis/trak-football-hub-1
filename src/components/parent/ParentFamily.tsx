@@ -5,7 +5,7 @@ import { BandPill } from '@/components/trak'
 import { HomeTitle } from '@/components/trak/HomeHeader'
 import { DropdownMenu } from '@/components/arc/dropdown-menu/dropdown-menu'
 import { TeamSwitcher } from '@/components/arc/team-switcher/team-switcher'
-import { scoreToBand } from '@/lib/rating-engine'
+import { scoreColor, scoreToBand } from '@/lib/rating-engine'
 import { BANDS } from '@/lib/types'
 import type { ParentAssessment } from '@/lib/parent-data'
 
@@ -85,7 +85,7 @@ export function ChildSwitcher() {
   const { children, selectedChild, selectChild } = useParentChildren()
   if (!selectedChild) return null
   const initials = (name: string) => name.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
-  return <TeamSwitcher className="arc" manage={false} noun={{ one: 'child', many: 'Children' }} value={selectedChild.id} onSwitch={async () => {}}
+  return <TeamSwitcher className="arc" size="compact" manage={false} noun={{ one: 'child', many: 'Children' }} value={selectedChild.id} onSwitch={async () => {}}
     onValueChange={selectChild} workspaces={children.map(child => ({ id: child.id, name: child.name,
       logo: <span aria-hidden="true" style={{ fontSize: '.4em', fontWeight: 500 }}>{initials(child.name)}</span> }))} />
 }
@@ -128,9 +128,9 @@ export function ParentAssessmentBands({ assessment }: { assessment: ParentAssess
         return <div key={category.label} className="flex items-center gap-3">
           <span className="w-24 text-xs text-muted-foreground">{category.label}</span>
           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden="true">
-            {rated && <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(10, category.score)) * 10}%`, backgroundColor: band?.color }} />}
+            {rated && <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(10, category.score)) * 10}%`, backgroundColor: scoreColor(category.score) }} />}
           </div>
-          <span className="text-xs w-20 text-right text-muted-foreground" style={band ? { color: band.text } : undefined}>{band?.word ?? 'Not assessed'}</span>
+          <span className={`text-xs w-20 text-right ${band ? 'text-ink' : 'text-muted-foreground'}`}>{band?.word ?? 'Not assessed'}</span>
         </div>
       })}
     </div>

@@ -1,7 +1,9 @@
-import type { ReactElement, ReactNode } from 'react'
+import { useState, type ReactElement, type ReactNode } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Link, useLocation } from 'react-router-dom'
-import { Ban, CalendarPlus, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
+import { Ban, CalendarPlus, Check, CircleCheck, CircleDashed, MapPin } from 'lucide-react'
+import { Badge } from '@/components/arc/badge/badge'
+import { SheetStateContext, type SheetState } from '@/components/trak/event-sheet-state'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { CANCELLED_COLOR } from '@/lib/coach-events'
 import { updatedNote } from '@/lib/alert-read-state'
@@ -17,8 +19,10 @@ import { venueParts } from '@/lib/venue-link'
    Maps), kit, note. No status line for an ordinary event: the coach's
    Published button says it. Cancelled, Logged and Draft still show. The role's
    own part (the coach's buttons and Attending, a family's Can't make it) comes
-   in as children; "Updated 3h ago" sits under the buttons. */
+   in as children; "Updated 3h ago" sits under the buttons. TRAK-554 (Kostas, 23 Nov): the coach's "Published" is a
+   state, not a button, so it sits at the top right under the date, where the coach's part of the sheet puts it. */
 type SheetRole = 'coach' | 'parent' | 'player'
+
 
 const KIND_NAME: Record<StripEvent['kind'], string> = { training: 'Training', match: 'Match', tournament: 'Tournament', other: 'Event' }
 
@@ -68,6 +72,7 @@ export function EventSheet({ event, role, trigger, squad, children }: {
   children?: ReactNode
 }) {
   const { pathname } = useLocation()
+  const [state, setState] = useState<SheetState>(null)
   const status = sheetStatus(event, role)
   const updated = updatedNote(event)
   const cancelled = event.status === 'cancelled'
@@ -95,9 +100,15 @@ export function EventSheet({ event, role, trigger, squad, children }: {
   const Icon = status?.tone === 'cancelled' ? Ban : status?.tone === 'draft' ? CircleDashed : CircleCheck
   const color = status?.tone === 'cancelled' ? CANCELLED_COLOR : status?.tone === 'draft' ? 'rgb(var(--t-ink-2))' : 'rgb(var(--t-success))'
 
+  const date = format(parseISO(event.date), 'EEE MMM d')
+  // TRAK-554: the date at top right, and under it "Published" when the coach's part says so.
+  const aside = state === 'published' && !cancelled
+    ? <span className="grid justify-items-end gap-1.5">{date}<Badge pill tone="success" size="sm" icon={<Check size={12} aria-hidden="true" />}>Published</Badge></span>
+    : date
   return (
+    <SheetStateContext.Provider value={setState}>
     <BottomSheet trigger={trigger} title={sheetTitle(event)} description={[squad, sheetPlace(event)].filter(Boolean).join(' · ') || undefined}
-      aside={format(parseISO(event.date), 'EEE MMM d')} detents={[0.62, 0.92]} initialDetent={event.kitSnapshot ? 1 : 0} className="arc">
+      aside={aside} detents={[0.62, 0.92]} initialDetent={event.kitSnapshot ? 1 : 0} className="arc">
       <div className="space-y-5 pb-4">
         <TimeRow event={event} />
         {status && (
@@ -130,5 +141,6 @@ export function EventSheet({ event, role, trigger, squad, children }: {
         {role !== 'coach' && updated && <p className="text-[13px] text-ink-2">{updated}</p>}
       </div>
     </BottomSheet>
+    </SheetStateContext.Provider>
   )
 }

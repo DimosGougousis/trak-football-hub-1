@@ -5,6 +5,7 @@ import { useCoachSquad } from '@/lib/coach-squad'
 import { squadName } from '@/lib/coach-week'
 import { useFeature } from '@/components/trak/parked'
 import { useSideMenuScreen } from '@/lib/side-menu-screen'
+import { ABOVE_TAB_BAR } from '@/components/coach/coach-frame-context'
 import {
   COMPETITIONS, DURATIONS, EVENT_COLOR, EVENT_KINDS, FAMILY_NOTE_MAX, WEEKDAYS, blankRepeat, dateAsDay, dayAsDate, formatEventDay,
   repeatProblem, seriesDates, type EventForm, type Repeat,
@@ -219,7 +220,7 @@ export function EventEditSheet({ sheet, onChange, onClose, onSave, saving, venue
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div role="dialog" aria-label={sheet.row ? t('coachSchedule:editEvent') : t('coachSchedule:newEvent')}
         className={`w-full px-5 pt-5 space-y-3 overflow-y-auto ${laptop ? 'max-w-[42rem] rounded-2xl flex flex-col' : 'max-w-sheet rounded-t-2xl'}`}
-        style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', ...(laptop ? { height: '85vh' } : { maxHeight: '85vh', marginBottom: 64 }) }}>
+        style={{ background: 'rgb(var(--t-raised))', border: '1px solid rgb(var(--t-line))', ...(laptop ? { height: '85vh' } : { maxHeight: '85vh', marginBottom: ABOVE_TAB_BAR }) }}>
         <div className="flex items-center justify-between">
           <span className="text-[16px] font-medium text-ink" style={font}>
             {sheet.row ? t('coachSchedule:editEvent') : t('coachSchedule:newEvent')}

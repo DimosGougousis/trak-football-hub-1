@@ -134,12 +134,12 @@ describe('academy dashboard correctness and recovery', () => {
     }
     server.use(table('coach_assessments', [row]))
     await loadRoute('/club/squads', 'matches')
-    expect.soft(screen.queryByText('Mixed'), observed()).toBeInTheDocument()
+    expect.soft(screen.queryByText('Steady'), observed()).toBeInTheDocument()
     expect(screen.queryByText('Exceptional'), observed()).not.toBeInTheDocument()
   })
 
   it('uses the newest assessment for home bands even when natural database order is oldest-first', async () => {
-    const older = assessment('older-exceptional', 9, '2026-09-01T10:00:00Z')
+    const older = assessment('older-exceptional', 10, '2026-09-01T10:00:00Z')
     const newer = assessment('newer-good', 7, '2026-09-20T10:00:00Z')
     let requestedOrder: string | null = null
     server.use(http.get(endpoint('coach_assessments'), ({ request }) => {
@@ -160,7 +160,7 @@ describe('academy dashboard correctness and recovery', () => {
   // on that screen. The test above pins it for /club/home only; reversing the
   // Squads order passed all 23 tests and showed each player's oldest band.
   it('uses the newest assessment for the squads band even when natural database order is oldest-first', async () => {
-    const older = assessment('older-exceptional', 9, '2026-09-01T10:00:00Z')
+    const older = assessment('older-exceptional', 10, '2026-09-01T10:00:00Z')
     const newer = assessment('newer-good', 7, '2026-09-20T10:00:00Z')
     let requestedOrder: string | null = null
     server.use(http.get(endpoint('coach_assessments'), ({ request }) => {
@@ -173,11 +173,11 @@ describe('academy dashboard correctness and recovery', () => {
     expect(screen.queryByText('Exceptional'), detail).not.toBeInTheDocument()
   })
 
-  it('includes zero in the home distribution when it moves Exceptional down to Standout', async () => {
+  it('includes zero in the home distribution when it moves Exceptional down to Good (TRAK-556)', async () => {
     server.use(table('coach_assessments', [{ ...assessment('with-zero', 10, '2026-09-20T10:00:00Z'), work_rate: 0 }]))
     await loadRoute('/club/home', 'coach_assessments')
     const card = screen.getByText('U15 test squad').closest('div.p-4') as HTMLElement
-    expect(within(card).getByText('S', { exact: true })).toBeInTheDocument()
+    expect(within(card).getByText('G', { exact: true })).toBeInTheDocument()
     expect(within(card).queryByText('E', { exact: true })).not.toBeInTheDocument()
   })
 

@@ -57,6 +57,7 @@ const PlayerEvent = lazy(() => import("./pages/player/PlayerEvent"));
 const PlayerCalendar = lazy(() => import("./pages/player/PlayerCalendar"));
 const PlayerProfilePage = lazy(() => import("./pages/player/PlayerProfilePage"));
 const PlayerFeedback = lazy(() => import("./pages/player/PlayerFeedback"));
+const FamilyReport = lazy(() => import("./pages/FamilyReport"));
 const PlayerSeason = lazy(() => import("./pages/player/PlayerSeason"));
 const HowTrakWorks = lazy(() => import("./pages/HowTrakWorks"));
 
@@ -170,6 +171,7 @@ const App = () => (
             {/* TRAK-440 (Imad, 11 Nov): Card left the bar; it becomes part of Profile (TRAK-441, slice 6). The parked card (TRAK-30) has no address. */}
             <Route path="/player/evolution" element={<Navigate to="/player/profile" replace />} />
             <Route path="/player/feedback/:assessmentId" element={<RouteGuard allowedRole="player"><PlayerFeedback /></RouteGuard>} />
+            <Route path="/player/report/:evaluationId" element={<RouteGuard allowedRole="player"><FamilyReport as="player" /></RouteGuard>} />
             <Route path="/player/trainings" element={<RouteGuard allowedRole="player"><TrainingsPage role="player" /></RouteGuard>} />
             </Route>
 
@@ -233,6 +235,7 @@ const App = () => (
             <Route path="/parent/events" element={<Navigate to="/parent/matches" replace />} />
             <Route path="/parent/assessments" element={<RouteGuard allowedRole="parent"><ParentAssessments /></RouteGuard>} />
             <Route path="/parent/assessment/:id" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
+            <Route path="/parent/report/:evaluationId" element={<RouteGuard allowedRole="parent"><FamilyReport as="parent" /></RouteGuard>} />
             <Route path="/parent/session/:sessionId/assessment" element={<RouteGuard allowedRole="parent"><ParentAssessment /></RouteGuard>} />
             <Route path="/parent/match/:id" element={<RouteGuard allowedRole="parent"><ParentMatchDetail /></RouteGuard>} />
             <Route path="/parent/event/:id" element={<RouteGuard allowedRole="parent"><ParentEvent /></RouteGuard>} />

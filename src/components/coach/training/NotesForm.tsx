@@ -25,7 +25,7 @@ export function NotesForm({ training, planned, onReview, onClosed }: { training:
   }
   return <div className="grid gap-4">
     {/* As the mockup: the question and the note in one soft panel. */}
-    <div className="grid gap-3 rounded-xl bg-ground p-4">
+    <div className="grid gap-3 rounded-xl bg-raised p-4">
     <div className="grid justify-items-start gap-2">
       {/* The loop above already says Notes are optional. */}
       <p aria-hidden="true" className="text-[15px] font-medium text-ink">{t('coachTraining:runAgain')}</p>

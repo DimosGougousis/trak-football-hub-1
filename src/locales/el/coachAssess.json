@@ -1,6 +1,8 @@
 {
   "stepRatings": "Βαθμολογίες",
   "stepMessage": "Μήνυμα & σημείωση",
+  "stepPlayerBands": "Παίκτης & βαθμίδες",
+  "stepObjectivesNotes": "Στόχοι & σημειώσεις",
   "thePlayer": "ο παίκτης",
   "logged": " · καταγράφηκε {{time}}",
   "sessionFallback": "Δραστηριότητα",
@@ -44,10 +46,8 @@
   "sliderCoachability": "Δεκτικότητα",
   "overallBand": "ΣΥΝΟΛΙΚΗ ΒΑΘΜΙΔΑ",
   "band_exceptional": "Εξαιρετικός",
-  "band_standout": "Ξεχωρίζει",
   "band_good": "Καλός",
   "band_steady": "Σταθερός",
-  "band_mixed": "Άνισος",
   "band_developing": "Σε εξέλιξη",
   "band_difficult": "Δύσκολος",
   "messageTo": "Μήνυμα προς {{name}}",
@@ -100,5 +100,7 @@
   "stepObjectives": "Objectives",
   "objectivesCaps": "OBJECTIVES",
   "objectiveAdded": "Added",
-  "couldntLoadObjectives": "Couldn't load the objectives."
+  "couldntLoadObjectives": "Couldn't load the objectives.",
+  "objectiveNoAnswer": "Χωρίς απάντηση",
+  "answerEachObjective": "Απαντήστε σε κάθε στόχο για να αποθηκεύσετε."
 }

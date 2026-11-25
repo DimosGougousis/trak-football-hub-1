@@ -14,13 +14,15 @@ import { renderApp } from '../../tests/support/render-app'
 import { signInAs } from '../../tests/support/session'
 import { server } from '../../tests/msw/server'
 import { table, rpc } from '../../tests/msw/supabase'
-import { BANDS } from '@/lib/types'
+import { BANDS, SCORE_COLORS } from '@/lib/types'
 
 const PLAYER = { id: 'player-bands-189' }
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
-const BAND_RGB = new Set(BANDS.flatMap(b => [b.color, b.text]).map(rgb))
+// TRAK-556: a bar takes its score's colour (its word is in Trak's ink, TRAK-557); a pill keeps its band's colours.
+const BAND_RGB = new Set([...BANDS.flatMap(b => [b.color, b.text]), ...SCORE_COLORS].map(rgb))
 // Bar colours too light for small text: a word in one of these is the bug.
-const BAR_ONLY = new Set(BANDS.filter(b => b.color !== b.text).map(b => rgb(b.color)))
+const READABLE = new Set(BANDS.map(b => b.text).map(rgb))
+const BAR_ONLY = new Set([...BANDS.map(b => b.color), ...SCORE_COLORS].map(rgb).filter(c => !READABLE.has(c)))
 
 /** Every element whose text or fill is a band colour; whether it sits on a dark card; whether its text is a bar-only colour. */
 function bandPainted() {
@@ -43,7 +45,7 @@ beforeEach(() => {
     rpc('child_events', () => []),
     table('squad_players', [{ id: 'squad-1', coach_user_id: 'coach-1', linked_player_id: PLAYER.id, status: 'active' }]),
     table('coach_assessments', [{ id: 'as-1', squad_player_id: 'squad-1', coach_user_id: 'coach-1', created_at: '2026-10-12T10:00:00Z',
-      work_rate: 9, tactical: 6, attitude: 8, technical: 5, physical: 7, coachability: 3 }]),
+      work_rate: 10, tactical: 6, attitude: 8, technical: 4, physical: 7, coachability: 1 }]),
     table('player_parent_links', []),
     rpc('get_player_invites_for_current_user', () => []),
     rpc('my_consent_status', () => ({ required: false, invited_parent: null })),
@@ -71,7 +73,7 @@ describe('TRAK-229: band colours on light cards, words in readable shades', () =
 
   it("the coach's assessment card on a player's profile (TRAK-200's Arc card)", () => {
     render(<MemoryRouter><CoachAssessmentCard assessment={{ id: 'as-card', created_at: '2026-10-12T10:00:00Z', published_at: null,
-      work_rate: 9, tactical: 6, attitude: 8, technical: 5, physical: 7, coachability: 3 }} /></MemoryRouter>)
+      work_rate: 10, tactical: 6, attitude: 8, technical: 4, physical: 7, coachability: 1 }} /></MemoryRouter>)
     const painted = bandPainted()
     expect(painted.length).toBeGreaterThan(6)
     onLight(painted)

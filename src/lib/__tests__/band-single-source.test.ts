@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { BANDS, bandConfig, type BandType } from '@/lib/types'
-import { scoreToBand, bandForScore } from '@/lib/rating-engine'
+import { scoreToBand, bandForScore, wholeScore } from '@/lib/rating-engine'
 import { categoryScoreToBand } from '@/lib/matchDetailHelpers'
 import { BAND_COLORS as CLUB_BAND_COLORS } from '@/lib/clubMock'
 import { BAND_COLORS as MATCH_BAND_COLORS } from '@/lib/matchDetailHelpers'
@@ -35,7 +35,8 @@ describe('there is exactly one score to band ladder', () => {
 
   it('BANDS.minScore is the same ladder, not a second one that agrees today', () => {
     for (const score of SCORES) {
-      const fromMinScore = BANDS.find(b => score >= b.minScore) ?? BANDS[BANDS.length - 1]
+      // TRAK-556: minScore is a whole score; an average rounds first.
+      const fromMinScore = BANDS.find(b => wholeScore(score) >= b.minScore) ?? BANDS[BANDS.length - 1]
       expect({ score, word: fromMinScore.word.toLowerCase() })
         .toEqual({ score, word: scoreToBand(score) })
     }
@@ -50,7 +51,7 @@ describe('there is exactly one band to colour map', () => {
     for (const band of produced) {
       expect(BANDS.some(b => b.word.toLowerCase() === band)).toBe(true)
     }
-    // All seven are reachable; a band nobody can score is dead config.
+    // All five are reachable; a band nobody can score is dead config.
     expect(produced.size).toBe(BANDS.length)
   })
 
@@ -72,16 +73,20 @@ describe('there is exactly one band to colour map', () => {
 })
 
 describe('the specific contradictions Kostas saw', () => {
-  it('a 5 is Mixed and yellow (TRAK-458), on every screen', () => {
-    expect(bandForScore(5).word).toBe('Mixed')
-    expect(bandForScore(5).color).toBe('#F2B705')
-    expect(categoryScoreToBand(5)).toBe('Mixed')
+  it('a 5 is Steady (TRAK-556), on every screen', () => {
+    expect(bandForScore(5).word).toBe('Steady')
+    expect(categoryScoreToBand(5)).toBe('Steady')
   })
 
-  it('9.5 is Exceptional, not Standout', () => {
-    // The removed ladder topped out at Standout and had no Exceptional at all.
+  it('9.5 rounds to 10 and is Exceptional; 9.4 is Good (TRAK-556)', () => {
     expect(bandForScore(9.5).word).toBe('Exceptional')
     expect(categoryScoreToBand(9.5)).toBe('Exceptional')
+    expect(bandForScore(9.4).word).toBe('Good')
+  })
+
+  it('no screen can say Standout or Mixed (TRAK-556)', () => {
+    const words = new Set(SCORES.map(s => bandForScore(s).word))
+    expect([...words]).toEqual(['Difficult', 'Developing', 'Steady', 'Good', 'Exceptional'])
   })
 
   it('a 0 is Difficult, which the removed ladder could not express', () => {

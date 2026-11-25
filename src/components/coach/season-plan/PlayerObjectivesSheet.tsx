@@ -18,6 +18,14 @@ import { usePlayerObjectives, useSavePlayerObjectives } from './usePlayerObjecti
    Save writes the list; Players see them once the plan is shared (TRAK-356, TRAK-366). TRAK-512 (Imad, 20 Nov): no
    helper lines; a card's second line only when it backs a season objective; Create your own shows an "e.g.". */
 
+/** The season plan page's quick-tap presets (24 Nov): one tap adds it as the coach's own. */
+const QUICK = [
+  { label: 'Scan before receiving', title: 'Scan twice before receiving on the half-turn' },
+  { label: 'Early diagonal switch', title: 'Hit an early diagonal switch to the weak-side winger' },
+  { label: '3-second counter-press', title: 'Counter-press within 3 seconds of losing it' },
+  { label: 'Break lines on first touch', title: 'Break the midfield line with a first touch forward' },
+] as const
+
 const same = (a: ObjectivePick[], b: ObjectivePick[]) =>
   JSON.stringify(a.map(o => [o.title, o.seasonObjectiveId]).sort()) === JSON.stringify(b.map(o => [o.title, o.seasonObjectiveId]).sort())
 const card = (on: boolean) =>
@@ -75,6 +83,7 @@ function Picker({ coachId, player, first, seasonObjectives, saved, saveLabel, sa
   const pickedTitle = (title: string) => picked.some(o => o.title.toLowerCase() === title.toLowerCase())
   const toggle = (pick: ObjectivePick) => { const next = togglePlayerObjective(picked, pick); setPicked(next.picked); setRefused(next.refused) }
   const addOwn = () => { const next = addOwnObjective(picked, own, library); setPicked(next.picked); setRefused(next.refused); if (!next.refused) setOwn('') }
+  const addQuick = (title: string) => { const next = addOwnObjective(picked, title, library); setPicked(next.picked); setRefused(next.refused) }
   const onOwnKey = (event: KeyboardEvent<HTMLInputElement>) => { if (event.key === 'Enter') { event.preventDefault(); addOwn() } }
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -113,6 +122,10 @@ function Picker({ coachId, player, first, seasonObjectives, saved, saveLabel, sa
           placeholder="e.g. Scans before the ball arrives"
           className="min-h-11 min-w-0 flex-1 basis-60 rounded-xl border border-line bg-surface px-3 text-[15px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" />
         <Button type="button" variant="secondary" onClick={addOwn} disabled={!own.trim()}>Create</Button>
+      </div>
+      <div role="group" aria-label="Quick-tap presets" className="flex flex-wrap gap-2">
+        {QUICK.filter(q => !pickedTitle(q.title)).map(q => (
+          <Button key={q.title} type="button" variant="secondary" size="sm" title={q.title} onClick={() => addQuick(q.title)}>+ {q.label}</Button>))}
       </div>
     </div>
 

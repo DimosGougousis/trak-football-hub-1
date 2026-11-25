@@ -130,8 +130,9 @@ describe('TRAK-182: the event sheet', () => {
     await user.click(await within(sheet).findByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(load).toHaveBeenCalledTimes(2))
     expect(await screen.findByRole('dialog', { name: 'vs Rivals FC' })).toBeInTheDocument()
-    // TRAK-427: a state (Arc's pill), not a disabled button.
-    expect(await within(screen.getByRole('dialog')).findByText('Published')).toBeInTheDocument()
+    // TRAK-427: a state (Arc's pill), not a disabled button. TRAK-554: it appears at the top right, with the date.
+    const published = await within(screen.getByRole('dialog')).findByText('Published')
+    expect(published.closest('span.grid')).toHaveTextContent(format(parseISO(day), 'EEE MMM d'))
     expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Published' })).toBeNull()
   })
 
@@ -145,6 +146,11 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).queryByText('Published.')).toBeNull()
     expect(await within(sheet).findByText('Published')).toBeInTheDocument()
     expect(within(sheet).queryByRole('button', { name: 'Published' })).toBeNull()
+    // TRAK-554 (Kostas, 23 Nov): at the top right under the date, not in the row of buttons with Share.
+    const published = within(sheet).getByText('Published')
+    expect(published.closest('span.grid')).toHaveTextContent(format(parseISO(day), 'EEE MMM d'))
+    const buttons = (await within(sheet).findByRole('button', { name: 'Share' })).parentElement!
+    expect(buttons).not.toContainElement(published)
     // J8.16's pre-written message, with the event's own link, not a bare link to paste.
     // TRAK-427: Share is Arc's button; without a share sheet it opens WhatsApp's link in a new tab.
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
@@ -164,6 +170,16 @@ describe('TRAK-182: the event sheet', () => {
     expect(within(sheet).getByText('School')).toBeInTheDocument()
     await user.click(within(sheet).getByRole('button', { name: 'Edit event' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/coach/schedule?edit=ev-1')
+  })
+
+  it('TRAK-554: a cancelled event shows no Published at the top right', async () => {
+    eventRow = row({ published: true, opponent: 'Rivals FC', home_away: 'away', status: 'cancelled', cancel_reason: 'Pitch flooded' })
+    const user = userEvent.setup()
+    renderStrip([event({ status: 'cancelled', cancelReason: 'Pitch flooded' })], 'coach')
+    await user.click(screen.getByRole('button', { name: /Rivals FC/ }))
+    const sheet = await screen.findByRole('dialog', { name: 'vs Rivals FC' })
+    expect(await within(sheet).findByText('Cancelled.')).toBeInTheDocument()
+    expect(within(sheet).queryByText('Published')).toBeNull()
   })
 
   it('cancels a published event through Schedule\'s cancel sheet', async () => {

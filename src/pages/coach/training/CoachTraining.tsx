@@ -153,7 +153,7 @@ function SessionsView() {
         : reads.some(r => r.isPending) ? <LoadingSkeleton label={t('coachTraining:loadingTrainings')} rows={3} className="pt-6" />
         : <div className="grid gap-6">
           {closed && <div role="status" className="arc flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-5 py-3.5">
-            <Check aria-hidden size={18} className="text-brand" />
+            <Check aria-hidden size={18} className="text-success" />
             <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">{t('coachTraining:closedMsg', { title: closed })}</span>
               <span className="text-ink-2">{t('coachTraining:nowInPast')}</span></p>
             <Button size="sm" variant="secondary" onClick={() => navigate(PAST_PATH)}>{t('coachTraining:pastTrainings')}</Button>
@@ -162,7 +162,7 @@ function SessionsView() {
           </div>}
 
           {justSaved && <div role="status" className="arc flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-5 py-3.5">
-            <Check aria-hidden size={18} className="text-brand" />
+            <Check aria-hidden size={18} className="text-success" />
             <p className="min-w-0 flex-1 text-[15px] text-ink"><span className="font-medium">{t('coachTraining:planSavedFor', { title: justSaved.title, day: gameWhen(justSaved).day })}</span>
               {nextToPlan && <span className="text-ink-2">{t('coachTraining:nextToPlan', { title: nextToPlan.title, day: gameWhen(nextToPlan).day })}</span>}</p>
             {nextToPlan && <Button size="sm" onClick={() => navigate(planPath(nextToPlan.id))}>

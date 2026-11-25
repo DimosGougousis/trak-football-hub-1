@@ -11,15 +11,16 @@ import { CoachTrail } from '@/components/coach/CoachTrail'
 import { Alert } from '@/components/arc/alert/alert'
 import { Button } from '@/components/arc/button/button'
 import { useSquadRoster } from '@/components/coach/squad/useSquadRoster'
-import { useSquadEvaluations } from '@/components/coach/season-plan/useEvaluation'
+import { useReportDayAnswers, useSentOnDay, useSquadEvaluations } from '@/components/coach/season-plan/useEvaluation'
 import { EvaluationSteps } from '@/components/coach/season-plan/Evaluation'
 import { usePlayerObjectives } from '@/components/coach/season-plan/usePlayerObjectives'
 import { PageTop } from '@/components/coach/PageTop'
 
-/* TRAK-364 (Season plan 16/18, spec TRAK-348): the squad's evaluation, behind the season plan's switch (App.tsx). It
-   opens on its due date, once the plan is shared, and stays open until it's published (a missed date stays due). Home's
-   Evaluation due card leads here. Before it's due it says when; after the season's last one, that there are no more.
-   Assess player (/coach/assess) rates one player, with no session since TRAK-500. */
+/* TRAK-364 (Season plan 16/18, spec TRAK-348), TRAK-531 (Reports 8/10): report day, behind the season plan's switch
+   (App.tsx). It opens on its due date, once the plan is shared, and stays open until the squad's Send (a missed date
+   stays due, and so does a day some players were already sent). Home's Reports ready card leads here. Before it's due
+   it says when; after the season's last one, that there are no more. Assess player (/coach/assess) rates one player,
+   with no session since TRAK-500. "Evaluation" is a match's word since TRAK-531; the address stays. */
 
 export default function CoachEvaluation() {
   const navigate = useNavigate()
@@ -37,25 +38,30 @@ export default function CoachEvaluation() {
   const plan = season.plan
   const mine = evaluations.list.find(e => e.squad === squad) ?? null
   const due = mine?.due ?? null
+  const sent = useSentOnDay(user?.id, mine?.openId ?? null)
+  const lastReportDay = mine?.lastDueOn ?? null
+  // TRAK-531: each player's objectives start from his latest answers since the last report day.
+  const answers = useReportDayAnswers(user?.id, { after: lastReportDay, from: plan?.starts_on ?? null, zone: evaluations.zone })
 
   let body
-  if (!squad) body = <p className="text-sm text-ink-2">Select one squad in the menu to evaluate it.</p>
+  if (!squad) body = <p className="text-sm text-ink-2">Select one squad in the menu to send its reports.</p>
   else if (season.error) body = <LoadError what="your season plan" onRetry={season.retry} />
-  else if (season.isPending) body = <LoadingSkeleton label="Loading your evaluation…" lines={3} className="pt-2" />
+  else if (season.isPending) body = <LoadingSkeleton label="Loading your reports…" lines={3} className="pt-2" />
   else if (!plan?.shared_at) {
     body = <div className="arc grid justify-items-start gap-3">
-      <p className="text-sm text-ink-2">The evaluation opens once the season plan is shared, on its first date.</p>
+      <p className="text-sm text-ink-2">Reports open once the season plan is shared, on its first date.</p>
       <Button variant="secondary" onClick={() => navigate('/coach/season-plan')}>Season plan</Button>
     </div>
-  } else if (evaluations.failed || roster.error || held.isError) {
-    body = <LoadError what="your evaluation" onRetry={() => { evaluations.retry(); roster.retry(); void held.refetch() }} />
-  } else if (!evaluations.ready || !mine || roster.isPending || held.isPending) body = <LoadingSkeleton label="Loading your evaluation…" lines={1} avatar rows={4} className="pt-2" />
-  else if (!due?.dueOn) {
+  } else if (evaluations.failed || roster.error || held.isError || sent.isError || answers.isError) {
+    body = <LoadError what="your reports" onRetry={() => { evaluations.retry(); roster.retry(); void held.refetch(); void sent.refetch(); void answers.refetch() }} />
+  } else if (!evaluations.ready || !mine || roster.isPending || held.isPending || sent.isPending || (!!plan.starts_on && answers.isPending)) {
+    body = <LoadingSkeleton label="Loading your reports…" lines={1} avatar rows={4} className="pt-2" />
+  } else if (!due?.dueOn) {
     body = <div className="arc grid gap-4">
-      {published !== null && <Alert tone="success" title={`Published to ${published} ${published === 1 ? 'player' : 'players'}.`} />}
+      {published !== null && <Alert tone="success" title={published ? `Sent to ${published} ${published === 1 ? 'player' : 'players'}.` : 'Every report is sent.'} />}
       <p className="rounded-2xl border border-line bg-surface p-5 laptop:p-6 text-sm text-ink-2">{due?.next
-        ? `The next evaluation opens ${evalDay(due.next, true)}.`
-        : 'No more evaluations this season.'}</p>
+        ? `The next reports open ${evalDay(due.next, true)}.`
+        : 'No more reports this season.'}</p>
       <div><Button variant="secondary" onClick={() => navigate('/coach/home')}>Back to Home</Button></div>
     </div>
   } else {
@@ -66,7 +72,8 @@ export default function CoachEvaluation() {
     body = <div className="grid gap-4">
       {due.since && due.since < evaluations.today && <Alert tone="warning" title={`Due since ${evalDay(due.since)}.`} />}
       <EvaluationSteps key={`${plan.id}:${due.dueOn}`} coachId={user!.id} planId={plan.id} squad={squad} dueOn={due.dueOn}
-        players={players} waiting={waiting} latest={latestRatings(roster.assessments)} objectivesOf={held.of}
+        lastReportDay={lastReportDay} players={players} waiting={waiting} latest={latestRatings(roster.assessments)}
+        sent={sent.sent} answersOf={id => answers.data?.get(id)} objectivesOf={held.of}
         onPublished={setPublished} onRefused={roster.retry} />
     </div>
   }
@@ -74,8 +81,8 @@ export default function CoachEvaluation() {
   return (
     <div className="min-h-screen bg-ground pb-24">
       <div className={WIDE_COLUMN}>
-        <PageTop title="Evaluation" trail={<CoachTrail current="Evaluation" />}
-          below={squad && due?.dueOn && <p className="-mt-1 text-sm text-ink-3">{squad} · due {evalDay(due.dueOn)} · only you see it until you publish</p>} />
+        <PageTop title="Reports" trail={<CoachTrail current="Reports" />}
+          below={squad && due?.dueOn && <p className="-mt-1 text-sm text-ink-3">{squad} · due {evalDay(due.dueOn)} · only you see them until you send</p>} />
         {body}
       </div>
       <NavBar role="coach" activeTab={location.pathname} onNavigate={navigate} />

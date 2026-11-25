@@ -159,7 +159,8 @@ export function GamePlan({ game, form, draft, who, step, onStep, sharedAt, chang
         : <ShareStep game={game} form={form} who={who} sharedAt={sharedAt} changes={changes} onShare={shareNow} onSchedule={scheduleAt}
             sharing={sharing} problem={shareProblem} locked={locked} onStep={onStep} onEditLogistics={onEditLogistics} picking={picking} onPicking={onPicking} />}
       <div className="flex flex-wrap items-center gap-3">
-        {step > 0 && <Button variant="ghost" onClick={() => onStep(step - 1)}>{t('common:back')}</Button>}
+        {/* TRAK-570 (Tarek, phone review, 23 Nov): Back looks as Training's, an outlined secondary button. */}
+        {step > 0 && <Button variant="secondary" onClick={() => onStep(step - 1)}>{t('common:back')}</Button>}
         {/* TRAK-448: no Draft badge here; the match's state sits beside the title. */}
         {step < 2 && <Button className="ml-auto" onClick={() => onStep(step + 1)}>{step === 0 ? t('coachMatches:nextLineUp') : t('coachMatches:nextReview')}</Button>}
       </div>

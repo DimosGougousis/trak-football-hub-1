@@ -1,3 +1,4 @@
+import { TOP_BAR as RAIL_TOP_BAR } from '@/components/arc/blocks/sidebar-rail/sidebar-rail'
 import { useTranslation } from '@/lib/i18n'
 import { partName, TRAINING_WORD } from '@/lib/training/words'
 import { shown } from '@/lib/squad/trait-words'
@@ -14,7 +15,7 @@ import { useSideMenuScreen } from '@/lib/side-menu-screen'
 import type { EventRow } from '@/lib/coach-events'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { useNotes, usePlan, useRegisters, useTraining, type Plan, type Training } from '@/components/coach/training/useTraining'
-import { MenuTrail } from '@/components/coach/MenuTrail'
+import { CoachTrail } from '@/components/coach/CoachTrail'
 import { RegisterSheet } from '@/components/coach/training/RegisterSheet'
 import { NotesForm } from '@/components/coach/training/NotesForm'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
@@ -44,7 +45,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 type Row = Training & EventRow
 /** The laptop's top bar is pinned above the page; the header pins under it, as a match's. */
-const TOP_BAR = '60px'
+const TOP_BAR = `${RAIL_TOP_BAR}px`
 const icon = { size: 16, strokeWidth: 1.75, 'aria-hidden': true } as const
 const metaIcon = { size: 14, strokeWidth: 1.75, 'aria-hidden': true } as const
 
@@ -138,8 +139,9 @@ function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) 
   return <>
     <PageHeader className="[--ph-bleed:1.25rem] tablet:[--ph-bleed:2rem]" top={wide ? TOP_BAR : '0px'}
       title={training.title} status={status}
-      // TRAK-367: the trail says which training by its day, as a training's name can be long.
-      crumbs={<MenuTrail current={day} />}
+      // TRAK-367: the trail says which training by its day, as a training's name can be long. TRAK-569 (phone review,
+      // 23 Nov): no coach avatar beside it (the side menu isn't needed here), as a match's page.
+      crumbs={<CoachTrail current={day} />}
       details={<>
         <span><CalendarDays {...metaIcon} /><strong>{day}</strong></span>
         {time && <span><Clock {...metaIcon} />{[time, minutes ? t('coachHome:minutes', { count: minutes }) : null, academy].filter(Boolean).join(' · ')}</span>}
@@ -223,8 +225,8 @@ function PitchView({ training, plan }: { training: Training; plan: Plan | null }
   // TRAK-429: the coach pages' width, its title where theirs is.
   return <div className="grid gap-5 pt-5">
     {/* TRAK-334: opened from Training home's View plan, the trail goes back there; from the training's page, to that,
-        which is also where it sits when opened from a link. */}
-    <MenuTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
+        which is also where it sits when opened from a link. TRAK-572: no coach avatar beside it, as on the training's page. */}
+    <CoachTrail current={t('coachTraining:view')} parents={[{ label: day, href: `${TRAINING_PATH}/${training.id}` }]} />
     <header className="grid gap-1">
       <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:view')}</p>
       <h1 className={INNER_TITLE}>{[day, time].filter(Boolean).join(' · ')}</h1>

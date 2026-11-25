@@ -45,6 +45,8 @@ export interface TeamSwitcherProps {
   manage?: boolean;
   /** Trak (TRAK-441): what one item is, in the spoken labels: a coach's squad, a parent's child. Defaults to squad. */
   noun?: { one: string; many: string };
+  /** Trak (TRAK-769, design standard): 'compact' is a 44 px pill on one line (each workspace's `short`, or its name). */
+  size?: "default" | "compact";
 }
 
 type Status = "idle" | "switching" | "error";
@@ -114,7 +116,7 @@ function Swap({ k, children, className, reduced }: { k: string; children: ReactN
 export function TeamSwitcher({
   workspaces: workspacesProp, value, defaultValue, onValueChange, onSwitch, onCreateWorkspace, onJoinWorkspace,
   open: openProp, defaultOpen = false, onOpenChange, globalShortcuts = false, simulatedDelay = 650, disabled = false, className,
-  manage = true, noun = { one: "squad", many: "Squads" },
+  manage = true, noun = { one: "squad", many: "Squads" }, size = "default",
 }: TeamSwitcherProps) {
   const One = noun.one.charAt(0).toUpperCase() + noun.one.slice(1);
   const reduced = useReducedMotion() ?? false;
@@ -420,20 +422,23 @@ export function TeamSwitcher({
         aria-label={`${One}: ${shown?.name ?? "none"}. ${status === "switching" ? "Switching." : metaOf(shown ?? { id: "", name: "" })}`}
         disabled={disabled}
         data-open={open || undefined}
+        data-size={size === "compact" ? "compact" : undefined}
         onClick={() => setOpen(!open)}
         onKeyDown={event => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); setOpen(true); } }}
       >
-        {shown && <Swap k={shown.id} reduced={reduced} className={styles.triggerTile}><WorkspaceTile workspace={shown} size={32} /></Swap>}
-        <span className={styles.triggerText}>
+        {shown && <Swap k={shown.id} reduced={reduced} className={styles.triggerTile}><WorkspaceTile workspace={shown} size={size === "compact" ? 28 : 32} /></Swap>}
+        {size === "compact" && triggerStatus === "idle"
+          ? <span className={styles.compactLine}><span data-pill-name className={styles.pillName}>{shown?.name}</span>{shown?.count != null && <span data-pill-count className={styles.pillCount}> · {shown.count}</span>}</span>
+          : <span className={styles.triggerText}>
           <Swap k={shown?.id ?? "none"} reduced={reduced} className={styles.triggerName}><span className={styles.truncate}>{shown?.name}</span></Swap>
           <Swap k={`${triggerStatus}:${shown?.id}`} reduced={reduced} className={styles.triggerMeta}>
             {triggerStatus === "switching" ? <TextShimmer className={styles.truncate}>Switching squad</TextShimmer>
               : triggerStatus === "error" ? <span className={styles.errorLine}><CircleAlert size={14} aria-hidden="true" /><span className={styles.truncate}>{errorText}</span></span>
               : <span className={styles.truncate}>{shown ? metaOf(shown) : ""}</span>}
           </Swap>
-        </span>
+        </span>}
         <Swap k={triggerStatus === "switching" ? "spin" : "chevron"} reduced={reduced} className={styles.triggerEnd}>
-          {triggerStatus === "switching" ? <LoaderCircle size={16} className={styles.spin} aria-hidden="true" /> : <ChevronsUpDown size={16} aria-hidden="true" />}
+          {triggerStatus === "switching" ? <LoaderCircle size={16} className={styles.spin} aria-hidden="true" /> : <ChevronsUpDown size={size === "compact" ? 14 : 16} aria-hidden="true" />}
         </Swap>
       </button>
 

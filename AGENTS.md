@@ -64,6 +64,8 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   substitute for its consent and assignment checks.
 - Wording (TRAK-454, 11 Nov walk-through): write "e.g." (Greek "π.χ."), never "For example"; and "select",
   never "pick" ("Select a date", "None selected"), in English and Greek.
+- New and changed screens follow the design standard in `docs/design-system/`
+  (colour, type, spacing, and the shared pieces in `src/components/trak/standard/`).
 - Follow the existing mobile shell and design tokens. Use `BANDS` for band
   wording and colors; keep player-visible messages separate from private notes.
 - Spacing and corners follow [docs/design-system/spacing-and-corners.md](docs/design-system/spacing-and-corners.md)

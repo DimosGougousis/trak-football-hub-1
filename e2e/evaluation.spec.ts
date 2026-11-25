@@ -1,9 +1,9 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
 // TRAK-364 (Season plan 16/18): the issue's own check, in a real browser on a laptop and a phone. With the season plan
-// on and the squad's plan shared, Home shows one Evaluation due card (a missed date stays due) and no per-player Assess
-// card; Evaluate opens the squad's evaluation. Pat starts from last time; Quinn has no ratings and holds Publish back
-// until rated; a note goes to Quinn alone. A failed publish keeps everything; the retry sends the same. Production
+// on and the squad's plan shared, Home shows one Reports ready card (TRAK-531; a missed date stays due) and no
+// per-player Assess card; Open opens the squad's report day. Pat starts from last time; Quinn has no ratings and holds
+// Send back until rated; a note goes to Quinn and his parents. A failed publish keeps everything; the retry sends the same. Production
 // build, synthetic intercepted backend. Dates are worked out from today: shared 90 days ago, every 2 weeks.
 const coachId = '97364000-0000-4000-8000-000000000001'
 type Row = Record<string, unknown>
@@ -70,63 +70,63 @@ async function backend(context: BrowserContext, unexpected: string[]) {
 const noSidewaysScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
 
 for (const [width, height] of [[1280, 800], [390, 844]] as const) {
-  test(`evaluation at ${width} px: Home's card, last time's ratings, a player to rate, a note, and a retried publish`, async ({ context, page }, testInfo) => {
+  test(`report day at ${width} px: Home's card, last time's ratings, a player to rate, a note, and a retried send`, async ({ context, page }, testInfo) => {
     const unexpected: string[] = []
     const { published } = await backend(context, unexpected)
     await page.setViewportSize({ width, height })
     await page.goto('/coach/home')
 
-    // Home: one Evaluation due card, missed a while ago, and no Assess card for Quinn, who was never assessed.
-    const card = page.getByRole('listitem').filter({ hasText: 'Evaluation due' })
+    // Home: one Reports ready card, missed a while ago, and no Assess card for Quinn, who was never assessed.
+    const card = page.getByRole('listitem').filter({ hasText: 'Reports ready' })
     await expect(card).toBeVisible()
-    await expect(card.getByText(/^Due since \w{3} \d+ \w{3}\.$/)).toBeVisible()
+    // TRAK-538: once the due date is far enough back, Home leads with "Urgent: ".
+    await expect(card.getByText(/^(Urgent: )?Due since \w{3} \d+ \w{3}\.$/)).toBeVisible()
     await expect(page.getByText(/Never assessed/)).toHaveCount(0)
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.screenshot({ path: testInfo.outputPath(`home-${width}.png`) })
-    await card.getByRole('button', { name: 'Evaluate' }).click()
+    await card.getByRole('button', { name: 'Open' }).click()
 
-    // Players: Pat from last time, Quinn not rated yet, Rae waiting for a parent.
+    // Players: Pat from last time, Quinn not rated yet; Rae waits for a parent, with no helper line (TRAK-531).
     await expect(page).toHaveURL(/\/coach\/evaluation$/)
     const list = page.getByRole('list', { name: 'Players' })
     await expect(list.getByRole('button', { name: /^Pat Synthetic/ })).toContainText('Steady · 6.2')
     await expect(list.getByRole('button', { name: /^Quinn Synthetic/ })).toContainText('Not rated yet')
-    await expect(page.getByText(/^Not in this evaluation: Rae Synthetic\./)).toBeVisible()
+    await expect(list.getByText('Rae Synthetic')).toHaveCount(0)
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.screenshot({ path: testInfo.outputPath(`players-${width}.png`) })
 
-    // Quinn alone: Technical from 5 to 8, a note only Quinn sees, Done.
+    // Quinn alone: Technical from 5 to 8, a note to Quinn and his parents, Done.
     await list.getByRole('button', { name: /^Quinn Synthetic/ }).click()
-    // Arc's text morph renders the words twice (one for screen readers), so the first is enough.
-    await expect(page.getByText('Optional. Only Quinn sees it.').first()).toBeAttached()
+    await expect(page.getByRole('button', { name: 'Preview' })).toBeVisible()
     const technical = page.getByRole('slider').nth(3)
     await technical.focus()
     for (let i = 0; i < 3; i++) await technical.press('ArrowRight')
-    await page.getByLabel('Note to Quinn').fill('Great first month.')
+    await page.getByLabel('Note to Quinn and parents').fill('Great first month.')
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     await page.screenshot({ path: testInfo.outputPath(`player-${width}.png`) })
     await page.getByRole('button', { name: 'Done' }).click()
 
-    // Publish: fails once, keeps everything, then goes.
-    await page.getByRole('button', { name: 'Next: Publish' }).click()
+    // Send: fails once, keeps everything, then goes.
+    await page.getByRole('button', { name: 'Next: Send' }).click()
     await expect(page.getByRole('region', { name: 'Bands' })).toBeVisible()
-    await page.getByRole('button', { name: 'Publish to 2 players' }).click()
-    await expect(page.getByText("Couldn't publish the evaluation. Check your connection and try again; everything you entered is still here.")).toBeVisible()
+    await page.getByRole('button', { name: 'Send to 2 players' }).click()
+    await expect(page.getByText("Couldn't send the reports. Check your connection and try again; everything you entered is still here.")).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`publish-failed-${width}.png`) })
-    await page.getByRole('button', { name: 'Publish to 2 players' }).click()
-    await expect(page.getByText('Published to 2 players.')).toBeVisible()
+    await page.getByRole('button', { name: 'Send to 2 players' }).click()
+    await expect(page.getByText('Sent to 2 players.')).toBeVisible()
     expect(published).toHaveLength(2)
     expect(published[1]).toEqual(published[0])
     expect(published[0]).toMatchObject({ p_plan_id: 'plan-1', p_players: [
-      { squad_player_id: 'pat', work_rate: 7, tactical: 6, attitude: 6, technical: 6, physical: 6, coachability: 6, note: '' },
-      { squad_player_id: 'quinn', work_rate: 5, tactical: 5, attitude: 5, technical: 8, physical: 5, coachability: 5, note: 'Great first month.' },
+      { squad_player_id: 'pat', work_rate: 7, tactical: 6, attitude: 6, technical: 6, physical: 6, coachability: 6, report_note: '' },
+      { squad_player_id: 'quinn', work_rate: 5, tactical: 5, attitude: 5, technical: 8, physical: 5, coachability: 5, report_note: 'Great first month.' },
     ] })
-    await expect(page.getByText(/^The next evaluation opens /)).toBeVisible()
+    await expect(page.getByText(/^The next reports open /)).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`published-${width}.png`) })
 
     // Home again: the card has gone.
     await page.goto('/coach/home')
     await expect(page.getByRole('heading', { name: /^Needs you/ })).toBeVisible()
-    await expect(page.getByText('Evaluation due')).toHaveCount(0)
+    await expect(page.getByText('Reports ready')).toHaveCount(0)
     expect(unexpected).toEqual([])
   })
 }

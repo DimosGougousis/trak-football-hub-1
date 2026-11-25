@@ -10,8 +10,12 @@ import { motionTokens } from "../../lib/motion-tokens";
 import styles from "./sidebar-rail.module.css";
 import { useTranslation } from "@/lib/i18n";
 
-const FULL = 240;
-const RAIL = 64;
+/** Design standard (TRAK-769): the laptop rail, open and folded. */
+export const RAIL_WIDTH = { open: 192, folded: 68 } as const;
+/** The laptop's top bar height in px (TRAK-769): pages that pin a header under it start here. */
+export const TOP_BAR = 64;
+const FULL = RAIL_WIDTH.open;
+const RAIL = RAIL_WIDTH.folded;
 /** Below this shell width the opened sidebar floats over the page from the rail instead of squeezing it, the way a tablet drawer does. */
 const FLOAT = 640;
 /** Below this shell width the sidebar starts as the icon rail, so the page keeps room to read. It can still be opened. */
@@ -53,9 +57,21 @@ export interface SidebarRailProps {
   onSheetOpenChange?: (open: boolean) => void;
   /** Groups open at first, by id. */
   defaultOpen?: Record<string, boolean>;
-  /** The width the sidebar takes from the page (240 open, 64 folded), for fixed bars that centre on the page. */
+  /** The width the sidebar takes from the page (RAIL_WIDTH: 192 open, 68 folded), for fixed bars that centre on the page. */
   onWidthChange?: (width: number) => void;
+  /** TRAK-769: where this device remembers the person's fold ('1' folded, '0' open). Without it the rail starts open. */
+  foldKey?: string;
   children: ReactNode;
+}
+
+/** The fold this device remembers, or null; storage can be unavailable (a private window). */
+function readFold(key?: string): boolean | null {
+  if (!key) return null;
+  try { const value = localStorage.getItem(key); return value === '1' ? true : value === '0' ? false : null; } catch { return null; }
+}
+function writeFold(key: string | undefined, folded: boolean) {
+  if (!key) return;
+  try { localStorage.setItem(key, folded ? '1' : '0'); } catch { /* not remembered, still works */ }
 }
 
 const curve = (points: readonly number[]) => [...points] as [number, number, number, number];
@@ -101,8 +117,8 @@ function NavRow({ entry, nested, current, lit, expanded, turned, controls, colla
   const { t } = useTranslation();
   return <RailTip enabled={tips} label={entry.label} note={entry.count ? t("nav:needYou", { count: entry.count }) : undefined}>
     <button type="button" className={[styles.item, nested ? styles.nested : "", lit ? styles.lit : ""].join(" ")} aria-current={current ? "page" : undefined} aria-expanded={expanded} aria-controls={controls} onClick={onClick}>
-      {lit && <motion.span layoutId={layoutId} className={styles.highlight} style={{ borderRadius: 8 }} transition={reduce ? instant : motionTokens.spring.morph} />}
-      {Icon && <Icon className={styles.icon} size={16} strokeWidth={1.75} aria-hidden="true" />}
+      {lit && <motion.span layoutId={layoutId} className={styles.highlight} style={{ borderRadius: 12 }} transition={reduce ? instant : motionTokens.spring.morph} />}
+      {Icon && <Icon className={styles.icon} size={18} strokeWidth={1.9} aria-hidden="true" />}
       <motion.span className={styles.label} initial={false} animate={{ opacity: collapsed ? 0 : 1, x: collapsed ? -6 : 0 }} transition={fade}>{entry.label}{entry.count ? <span className={styles.srOnly}>, {entry.count} need you</span> : null}</motion.span>
       {entry.count ? <>
         <motion.span className={styles.count} aria-hidden="true" initial={false} animate={{ opacity: collapsed ? 0 : 1 }} transition={fade}>{entry.count}</motion.span>
@@ -154,7 +170,7 @@ function PanelGlyph({ collapsed, reduce }: { collapsed: boolean; reduce: boolean
   </svg>;
 }
 
-export function SidebarRail({ label, brand, items, footerItem, profile, active, onSelect, title, trail, actions, afterBrand, narrow = false, sheetOpen = false, onSheetOpenChange, defaultOpen = {}, onWidthChange, children }: SidebarRailProps) {
+export function SidebarRail({ label, brand, items, footerItem, profile, active, onSelect, title, trail, actions, afterBrand, narrow = false, sheetOpen = false, onSheetOpenChange, defaultOpen = {}, onWidthChange, foldKey, children }: SidebarRailProps) {
   const baseId = useId();
   const prefersReduced = !!useReducedMotion();
   // The first measurement settles the layout before paint, so it never animates.
@@ -181,12 +197,11 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
       if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
       event.preventDefault();
       if (narrow) { onSheetOpenChange?.(!sheetOpen); return; }
-      setCollapsed(value => !value);
-      setStatus(collapsed ? "sidebarExpanded" : "sidebarCollapsed");
+      toggleRail();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [narrow, collapsed, sheetOpen, onSheetOpenChange]);
+  }, [narrow, collapsed, sheetOpen, onSheetOpenChange, foldKey]);
 
   // A mid-width shell starts on the rail; crossing the threshold later folds or opens it once.
   const roomy = useRef<boolean | null>(null);
@@ -197,7 +212,8 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
       const floats = width < FLOAT;
       setFloating(floats);
       const next = width >= ROOMY;
-      if (roomy.current !== next) { roomy.current = next; setCollapsed(!next); }
+      // A roomy shell opens, unless this person folded it last time (TRAK-769); a mid-width one always starts folded.
+      if (roomy.current !== next) { roomy.current = next; setCollapsed(!next || readFold(foldKey) === true); }
       // A panel left open while the shell narrows would cover the page, so it folds back to the rail.
       else if (floats) setCollapsed(true);
     };
@@ -213,6 +229,8 @@ export function SidebarRail({ label, brand, items, footerItem, profile, active, 
 
   function toggleRail() {
     setCollapsed(!collapsed);
+    // Only a choice made where the rail starts open is remembered: a peek on a narrow window is not (TRAK-769 review).
+    if (roomy.current) writeFold(foldKey, !collapsed);
     setStatus(collapsed ? "sidebarExpanded" : "sidebarCollapsed");
   }
 

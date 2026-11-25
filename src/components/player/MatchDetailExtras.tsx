@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
-import { BAND_COLORS, SELF_RATING_BAND, categoryScoreToBand } from '@/lib/matchDetailHelpers'
-import { BANDS, BAND_TEXT } from '@/lib/types'
+import { SELF_RATING_BAND, categoryScoreToBand } from '@/lib/matchDetailHelpers'
+import { BANDS } from '@/lib/types'
+import { scoreColor } from '@/lib/rating-engine'
 import type { Band } from '@/lib/clubMock'
 
 interface Props {
@@ -95,7 +96,7 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
             {CATEGORIES.map(c => {
               const score = assessment[c.key] ?? 5
               const band = categoryScoreToBand(score)
-              const color = BAND_COLORS[band]
+              const color = scoreColor(score)
               return (
                 <div key={c.key} className="flex items-center gap-3">
                   <div
@@ -125,7 +126,7 @@ export function MatchDetailExtras({ matchId, selfRating, note }: Props) {
                       flex: '0 0 80px',
                       fontSize: 11,
                       textAlign: 'right',
-                      color: BAND_TEXT[band],
+                      color: 'rgb(var(--t-ink))',
                     }}
                   >
                     {band}

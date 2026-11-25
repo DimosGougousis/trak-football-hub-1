@@ -36,7 +36,11 @@ let look: boolean
 let event: Record<string, unknown>
 let asked: string[]
 
+// TRAK-571: the page shows the phone's own clock (TRAK-223), so the phone is in the academy's zone here, whatever the
+// computer running the test is set to (it passed in Dubai and failed in New York or on a UTC runner).
+const realZone = process.env.TZ
 beforeEach(() => {
+  process.env.TZ = 'Asia/Dubai'
   localStorage.clear()
   look = true
   event = TRAINING
@@ -58,7 +62,7 @@ beforeEach(() => {
   )
 })
 const clients: QueryClient[] = []
-afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()) })
+afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); process.env.TZ = realZone })
 
 function renderParent() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0 } } })

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { readPlayItRight } from '../../../../scripts/play-it-right-read.mjs'
 import content from '../play-it-right.json'
 import { MOMENTS, PARTS, momentsOf, seniorOf, shownOrder, speaker } from '../play-it-right'
-import { BANDS } from '@/lib/types'
+import { TILE_TONES } from '@/lib/types' // TRAK-556: the tiles keep their colours by the old band names
 
 /**
  * TRAK-268: the coach's Play It Right reads the old page's own content. If
@@ -47,7 +47,7 @@ describe('TRAK-268: the tiles and the calls', () => {
   }
 
   it('uses the assessment colours, mostly green, never the same colour side by side (2 or 3 a row)', () => {
-    const words = PARTS.map(p => BANDS.find(b => b.text === p.colour)?.word)
+    const words = PARTS.map(p => Object.entries(TILE_TONES).find(([, t]) => t.text === p.colour)?.[0])
     expect(words.filter(w => ['Exceptional', 'Standout'].includes(w!))).toHaveLength(4)
     expect(words.filter(w => w === 'Steady')).toHaveLength(1)
     expect(words.filter(w => w === 'Mixed')).toHaveLength(1)
@@ -71,6 +71,6 @@ describe('TRAK-268: the tiles and the calls', () => {
   it('gives each speaker the same badge every time', () => {
     expect(speaker('Kai')).toEqual(speaker('Kai'))
     expect(speaker('Kai').initials).toBe('KA')
-    expect(BANDS.map(b => b.text)).toContain(speaker('Amara').colour)
+    expect(Object.values(TILE_TONES).map(t => t.text)).toContain(speaker('Amara').colour)
   })
 })

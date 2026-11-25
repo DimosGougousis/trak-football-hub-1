@@ -153,18 +153,18 @@ export default function CoachHomePage() {
       at: Date.parse(game.starts_at),
     }]
   })
-  // TRAK-364: one Evaluation due card per squad whose evaluation is due, in place of its per-player Assess cards. A
+  // TRAK-364, TRAK-531: one Reports ready card per squad whose report day is due, in place of its per-player Assess cards. A
   // missed date stays due (urgent once its day has passed). Under All, the card picks its squad, as the others do.
   const evaluationEvents: OwedEvent[] = evaluations.list.filter(e => e.due.dueOn && (everySquad || coachSquad.inSquad(e.squad))).map(({ squad, due }) => ({
     id: `evaluation:${squad}`,
-    title: t('coachHome:evaluationDue'),
+    title: t('coachHome:reportsReady'),
     when: evalDay(due.since!),
     squad: coachSquad.squads.length >= 2 ? squad : null,
     reason: due.since! < evaluations.today ? t('coachHome:evaluationDueSince', { day: evalDay(due.since!) })
       : t('coachHome:evaluationDueNow'),
     urgent: due.since! < evaluations.today,
     at: Date.parse(`${due.since}T00:00`),
-    action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => { if (everySquad) coachSquad.pick(squad); navigate('/coach/evaluation') }}>{t('coachHome:evaluate')}</Button></span>,
+    action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => { if (everySquad) coachSquad.pick(squad); navigate('/coach/evaluation') }}>{t('coachHome:open')}</Button></span>,
   }))
   // TRAK-352: where the season plan is on, one card per squad with consented players still to place. A newly
   // consented child has no position, so they join it.

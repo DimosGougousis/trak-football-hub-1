@@ -257,7 +257,7 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     expect(await within(shape).findByText('U16')).toBeInTheDocument()
     expect(within(shape).queryByText(/this month against last/)).toBeNull()
     expect(within(shape).queryByRole('list', { name: 'Players per band' })).toBeNull()
-    expect(within(shape).queryByText('Standout')).toBeNull()
+    expect(within(shape).queryByText('Good')).toBeNull()
   })
 
   it('opens on All, every squad; a squad tapped shows only it and is remembered (TRAK-305)', async () => {

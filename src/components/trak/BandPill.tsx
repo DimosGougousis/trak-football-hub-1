@@ -9,8 +9,9 @@ export const BandPill = memo(
         ref={ref}
         className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full"
         style={{
-          // TRAK-458 (Kostas, 13 Nov): the band's bright colour, its darker edge, the word in black (5:1 or more).
-          color: 'rgb(var(--t-on-bright))',
+          // TRAK-458 (Kostas, 13 Nov): the band's colour and its darker edge; TRAK-556: the word in the band's ink,
+          // black, or white on the dark violet and crimson (4.5:1 or more).
+          color: config.ink,
           background: config.color,
           border: `1px solid ${config.border}`,
           fontFamily: 'var(--t-font)',

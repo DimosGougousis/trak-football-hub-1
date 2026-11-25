@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check } from 'lucide-react'
+import { Ban } from 'lucide-react'
+import { useSheetState } from '@/components/trak/event-sheet-state'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { consentRequired } from '@/lib/consent-pending'
 import { publishEvent } from '@/lib/event-publish'
 import { FaceDrawing, PlayerFace } from '@/components/trak/PlayerFace'
 import { AvatarGroup } from '@/components/arc/avatar-group/avatar-group'
-import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { TakeRegister } from '@/components/coach/TakeRegister'
 import { startedLocked, type EventRow } from '@/lib/coach-events'
@@ -135,6 +135,9 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
 
   const row = details.data?.row
   const cancelled = event.status === 'cancelled'
+  // TRAK-427: "Published" is a state, not an action. TRAK-554 (Kostas, 23 Nov): it shows at the sheet's top right, under
+  // the date, not in this row of buttons; from here, so it's there the moment Publish succeeds.
+  useSheetState(row?.published && !cancelled ? 'published' : null)
   const canRegister = row && registerProblem(row) === null
   const heading = 'text-[15px] font-medium text-ink mb-2'
   const updated = updatedNote(event)
@@ -152,10 +155,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               {/* TRAK-455: no "Edit" word; a taken register opens again under its own name. */}
               {sessionId ? t('coachSchedule:register') : t('coachHome:takeRegister')}
             </Button>
-          ) : row?.published ? (
-            // TRAK-427: a state, not an action: Arc's pill, as Schedule's cards show it, not a disabled button.
-            <span className="arc self-center"><Badge pill tone="success" icon={<Check size={14} aria-hidden="true" />}>{t('coachHome:notePublished')}</Badge></span>
-          ) : (
+          ) : row?.published ? null : (
             <Button disabled={!row || publish.isPending}
               onClick={() => row && (row.series_id ? navigate(`/coach/schedule?publish=${row.id}`) : publish.mutate(row))}>
               {publish.isPending ? t('coachHome:publishing') : t('coachHome:publish')}

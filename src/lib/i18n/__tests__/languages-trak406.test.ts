@@ -21,6 +21,13 @@ const EXTRA_VARIABLES: Record<string, string[]> = {
   'settings:switchLoadError': ['label'],
 }
 
+/** A group of words' fields and how many lines each has, so two languages' groups can be compared. */
+const shape = (value: unknown): unknown => Array.isArray(value) ? value.map(() => 'line')
+  : typeof value === 'object' && value !== null ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shape(v)])) : typeof value
+/** Every word or line in a group, with where it is. */
+const leaves = (value: unknown, at: string): [string, string][] => Array.isArray(value) ? value.flatMap((v, i) => leaves(v, `${at}.${i}`))
+  : typeof value === 'object' && value !== null ? Object.entries(value).flatMap(([k, v]) => leaves(v, `${at}.${k}`)) : [[at, String(value)]]
+
 /** The keys a language needs: English's, with each plural word in the language's own plural forms. */
 function keysFor(code: string, area: string) {
   const forms = new Intl.PluralRules(code).resolvedOptions().pluralCategories
@@ -47,7 +54,15 @@ describe('TRAK-406: the word files', () => {
     for (const area of AREAS) {
       const words = read(code, area)
       expect(Object.keys(words).sort(), `${code}/${area}.json`).toEqual(keysFor(code, area))
-      for (const [key, text] of Object.entries(words)) {
+      // TRAK-409: an entry may hold a group of words (a drill's name, how to play…): the same fields, lines and
+      // order of lines as English's, each a word or a line of words, never empty.
+      for (const [key, value] of Object.entries(words)) {
+        if (typeof value !== 'object' || value === null) continue
+        const english = (read(SOURCE_LANGUAGE, area) as unknown as Record<string, unknown>)[key]
+        expect(shape(value), `${code}/${area}.json ${key}`).toEqual(shape(english))
+        for (const [line, text] of leaves(value, key)) expect(text.trim().length > 0, `${code}/${area}.json ${line} is empty`).toBe(true)
+      }
+      for (const [key, text] of Object.entries(words).filter(([, value]) => typeof value !== 'object' || value === null)) {
         expect(typeof text === 'string' && text.trim().length > 0, `${code}/${area}.json ${key} is empty`).toBe(true)
         const english = read(SOURCE_LANGUAGE, area)[key.replace(PLURAL, '_other')] ?? read(SOURCE_LANGUAGE, area)[key]
         const allowed = [...variables(english), ...(EXTRA_VARIABLES[`${area}:${key}`] ?? [])]

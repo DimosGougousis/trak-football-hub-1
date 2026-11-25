@@ -1,5 +1,5 @@
 import catalogue from './catalogue.json'
-import { BANDS, type BandConfig } from '@/lib/types'
+import { TILE_TONES, type TileTone } from '@/lib/types'
 import { TRAINING_THEMES, type TrainingTheme } from '@/lib/training-theme'
 
 /* TRAK-264 (Kostas, 22 Oct): the coach's Library. Its sessions are the
@@ -38,7 +38,7 @@ export const TOPICS = catalogue.topics as Record<string, string[]>
 
 /** Kostas, 22 Oct: the tiles take the assessment colours (TRAK-229), mostly green with
  *  one slate and one clay. Each library borrows a band's readable shade and its tint. */
-const LIBRARY_BANDS: [TrainingTheme, string, BandConfig['word']][] = [
+const LIBRARY_BANDS: [TrainingTheme, string, TileTone][] = [
   ['technical', 'Technical', 'Exceptional'],
   ['defending', 'Defending', 'Steady'],
   ['attacking', 'Attacking', 'Standout'],
@@ -61,7 +61,7 @@ export interface Library {
 
 /** The libraries in the Library's tile order. A library's key is a training's theme key. */
 export const LIBRARIES: Library[] = LIBRARY_BANDS.map(([key, label, word]) => {
-  const band = BANDS.find(b => b.word === word)!
+  const band = TILE_TONES[word]
   return { key, label, name: TRAINING_THEMES.find(t => t.key === key)!.library, colour: band.text, tint: band.bg }
 })
 
