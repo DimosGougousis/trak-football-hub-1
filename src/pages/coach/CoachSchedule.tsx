@@ -37,7 +37,7 @@ import { DraftsReviewSheet } from '@/components/coach/DraftsReview'
 import { publishDrafts, upcomingDrafts } from '@/lib/draft-review'
 import { useOldLogRetired } from '@/components/coach/old-log'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
-import { Calendar } from '@/components/arc/calendar/calendar'
+import { MonthStrip } from '@/components/coach/MonthStrip'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
@@ -645,37 +645,36 @@ export default function CoachSchedule() {
         {/* ── One column on every screen: the month on top, then any notice (TRAK-154's drafts to come, as the season
             plan's "Not shared yet" box), then the picked day's events. ── */}
         <div className="grid gap-6">
-        <section aria-label={t('coachSchedule:calendar')} className={`${CARD} arc grid justify-items-center gap-3 p-4 sm:gap-2 sm:px-5 sm:py-3`}>
-          {/* The month (Arc calendar, TRAK-182) stretches across the top of the page on short rows, so the day's events
-              stay in view under it; a phone keeps its square days. */}
-          <Calendar locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()} showToday stretch className="!w-full"
+        <section aria-label={t('coachSchedule:calendar')} className={`${CARD} arc grid gap-3 px-4 py-3 sm:px-5`}>
+          {/* TRAK-574: the month as one low strip across the top (MonthStrip), not a square grid, so a tapped day's
+              events show straight under it without scrolling. */}
+          <MonthStrip locale={currentLanguage() === 'en' ? 'en-GB' : currentLanguage()}
             value={new Date(`${selected}T12:00:00`)} onChange={date => setSelected(toDateStr(date))}
             month={new Date(viewYear, viewMonth, 1)}
             onMonthChange={month => { setViewYear(month.getFullYear()); setViewMonth(month.getMonth()) }}
             marks={date => (byDate[toDateStr(date)] ?? []).map(ev => ev.row && isCancelled(ev.row) ? { color: CANCELLED_COLOR, hollow: true } : TYPE_COLOR[ev.type])}
             attention={date => needsYou.has(toDateStr(date))} />
 
-          {/* Legend. TRAK-255: Cancelled (the hollow ring the month draws) and Needs you (the amber corner). Under the
-              month. */}
+          {/* Legend. TRAK-255: Cancelled (the hollow ring the strip draws) and Needs you (the amber corner). */}
           <div role="group" aria-label={t('coachSchedule:colourKey')}
-            className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-1.5 border-t-2 border-line-soft pt-3">
+            className="flex w-full flex-wrap items-center gap-x-4 gap-y-1.5 border-t-2 border-line-soft pt-2.5">
             {EVENT_KINDS.map(type => (
-              <span key={type} className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLOR[type] }} />
+              <div key={type} className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full" style={{ background: TYPE_COLOR[type] }} />
                 <span className="text-xs font-bold text-ink-2">{t(TYPE_WORD[type])}</span>
-              </span>
+              </div>
             ))}
-            <span className="flex items-center gap-2">
-              <span className="box-border h-2.5 w-2.5 rounded-full" style={{ border: `1.5px solid ${CANCELLED_COLOR}` }} />
+            <div className="flex items-center gap-2">
+              <div className="box-border h-2.5 w-2.5 rounded-full" style={{ border: `1.5px solid ${CANCELLED_COLOR}` }} />
               <span className="text-xs font-bold text-ink-2">{t('coachHome:noteCancelled')}</span>
-            </span>
-            <span className="flex items-center gap-2">
-              {/* Coach Home's corner (TRAK-270), as the month draws it. */}
-              <span className="h-2.5 w-2.5" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
-                <span className="block h-full w-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
-              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Coach Home's corner (TRAK-270), as the strip draws it. */}
+              <div className="h-2.5 w-2.5" style={{ filter: 'drop-shadow(0 0 .6px rgb(var(--t-warning)))' }}>
+                <div className="h-full w-full" style={{ background: NEEDS_YOU_COLOR, clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }} />
+              </div>
               <span className="text-xs font-bold text-ink-2">{t('coachHome:needsYouTitle')}</span>
-            </span>
+            </div>
           </div>
         </section>
 

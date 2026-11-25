@@ -408,15 +408,16 @@ test('Feedback on a phone keeps its list', async ({ page, context }) => {
   await expect(page.getByRole('table')).toHaveCount(0)
 })
 
-for (const [label, width, height, beside] of [['an upright tablet', 820, 1180, false], ['a laptop', 1440, 900, true]] as const) {
-  test(`the Calendar on ${label}: the chosen day ${beside ? 'beside' : 'under'} the month`, async ({ page, context }) => {
+// TRAK-574 (Dimos, 25 Nov): one column on every screen. The month is a low strip across the top, and the chosen day
+// sits under it, in view without scrolling.
+for (const [label, width, height] of [['an upright tablet', 820, 1180], ['a laptop', 1440, 900], ['a short laptop', 1280, 720]] as const) {
+  test(`the Calendar on ${label}: the chosen day under the month strip, in view`, async ({ page, context }) => {
     const { unexpected } = await open(page, context, 'coach', '/coach/schedule', width, height)
     const month = (await page.getByRole('grid').boundingBox())!
     const day = (await page.getByText('Nothing planned', { exact: true }).boundingBox())!
-    if (beside) {
-      expect(day.x).toBeGreaterThan(month.x + month.width)
-      expect(day.y).toBeLessThan(month.y + month.height)
-    } else expect(day.y).toBeGreaterThan(month.y + month.height)
+    expect(day.y).toBeGreaterThan(month.y + month.height)
+    expect(day.y + day.height).toBeLessThan(height)
+    expect(month.height).toBeLessThan(120)
     expect(await noSidewaysScroll(page)).toBeLessThanOrEqual(0)
     expect(unexpected).toEqual([])
   })

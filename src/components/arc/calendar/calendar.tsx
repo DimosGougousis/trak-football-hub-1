@@ -30,9 +30,6 @@ export interface CalendarProps {
   marks?: (date: Date) => CalendarMark[];
   /** Trak (TRAK-255): a day with something waiting for the user gets an amber corner, read as "needs you". */
   attention?: (date: Date) => boolean;
-  /** Trak (TRAK-574): from 640 px wide the month fills its container on short rows instead of square ones,
-   *  so a full-width month stays low (28 px days). Each day's disc stays round. */
-  stretch?: boolean;
 }
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -130,7 +127,6 @@ export function Calendar({
   showToday = false,
   marks,
   attention,
-  stretch = false,
 }: CalendarProps) {
   const titleId = useId();
   const today = useToday();
@@ -334,7 +330,7 @@ export function Calendar({
   </>;
   };
 
-  return <section className={cx(styles.calendar, stretch && styles.stretch, className)} aria-labelledby={titleId}>
+  return <section className={cx(styles.calendar, className)} aria-labelledby={titleId}>
       <div className={styles.header}>
         <h2 id={titleId} className={styles.heading}>
           <span className={styles.srOnly}>{monthLabel}</span>
