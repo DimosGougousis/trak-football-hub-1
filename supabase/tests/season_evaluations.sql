@@ -202,8 +202,8 @@ SELECT pg_temp.ev364check(pg_temp.ev364refused(pg_temp.ev364publish(50, pg_temp.
 RESET ROLE;
 SELECT pg_temp.ev364check(pg_temp.ev364written() = '0/0/0', '2 a refused publish writes nothing at all');
 
--- 3. Publishing: one assessment per player, no session, the note as its message. TRAK-532: the assessment and its note stay
--- with the coach (published_at NULL on the assessment); the player and parents read the report and its own note.
+-- 3. Publishing: one assessment per player, no session, published (TRAK-585: again, as before TRAK-532), the note as the
+-- player's message.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.ev364actor(10);
 INSERT INTO pg_temp.ev364_published SELECT public.publish_evaluation(pg_temp.ev364id(50), pg_temp.ev364today() - 3,
@@ -218,9 +218,9 @@ SELECT pg_temp.ev364check(pg_temp.ev364count(format(
   '3 the evaluation records its plan, the date it closes, who published it and when');
 SELECT pg_temp.ev364check(pg_temp.ev364count(format(
   'SELECT count(*) FROM public.coach_assessments a WHERE a.evaluation_id = %L AND a.session_id IS NULL AND a.appearance IS NULL
-     AND a.published_at IS NULL AND a.coach_user_id = %L AND a.coach_name_snapshot = ''Synthetic Coach One'' AND a.organization_id = %L',
+     AND a.published_at = now() AND a.coach_user_id = %L AND a.coach_name_snapshot = ''Synthetic Coach One'' AND a.organization_id = %L',
   (SELECT result ->> 'evaluation_id' FROM pg_temp.ev364_published), pg_temp.ev364id(10), pg_temp.ev364id(100))) = 2,
-  '3 each is the coach''s assessment, unpublished (TRAK-532), in the academy, with no session and no appearance');
+  '3 each is the coach''s assessment, published, in the academy, with no session and no appearance');
 SELECT pg_temp.ev364check(pg_temp.ev364count(format(
   'SELECT count(*) FROM public.coach_assessments a WHERE a.squad_player_id = %L AND a.evaluation_id IS NOT NULL
      AND (a.work_rate, a.tactical, a.attitude, a.technical, a.physical, a.coachability) = (7, 8, 7, 9, 6, 7)
@@ -243,12 +243,12 @@ SELECT pg_temp.ev364check(pg_temp.ev364refused(pg_temp.ev364publish(50, pg_temp.
 RESET ROLE;
 SELECT pg_temp.ev364check(pg_temp.ev364written() = '1/2/1', '3 and the refused retry wrote nothing');
 
--- 4. Who reads what. TRAK-532: the bands and the note stay with the coach; the family reads the report.
+-- 4. Who reads what. The note: the player reads it; a guardian never does, while seeing the bands.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.ev364actor(30);
 SELECT pg_temp.ev364check(pg_temp.ev364count(format(
-  'SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = %L AND evaluation_id IS NOT NULL', pg_temp.ev364id(40))) = 0,
-  '4 Pat''s guardian doesn''t see the evaluation''s bands: they stay with the coach (TRAK-532)');
+  'SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = %L AND evaluation_id IS NOT NULL AND work_rate = 7', pg_temp.ev364id(40))) = 1,
+  '4 Pat''s guardian sees the evaluation''s bands, as any published assessment''s');
 SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.coach_shared_feedback') = 0
   AND pg_temp.ev364count(format('SELECT count(*) FROM public.coach_shared_feedback f WHERE f.assessment_id IN
     (SELECT a.id FROM public.coach_assessments a WHERE a.squad_player_id = %L)', pg_temp.ev364id(40))) = 0,
@@ -258,13 +258,12 @@ SELECT pg_temp.ev364actor(31);
 SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.coach_shared_feedback') = 0
   AND pg_temp.ev364count('SELECT count(*) FROM public.coach_assessments') = 0, '4 another child''s guardian reads none of it');
 SELECT pg_temp.ev364actor(20);
-SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.coach_shared_feedback WHERE body = ''Well done this month, Pat.''') = 0
-  AND pg_temp.ev364count(format('SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = %L AND evaluation_id IS NOT NULL', pg_temp.ev364id(40))) = 0,
-  '4 Pat reads neither the assessment nor its note: they stay with the coach (TRAK-532)');
+SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.coach_shared_feedback WHERE body = ''Well done this month, Pat.''') = 1,
+  '4 Pat reads the note');
 SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.season_evaluations') = 0, '4 a player doesn''t read the evaluation itself');
 SELECT pg_temp.ev364actor(23);
 SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.coach_shared_feedback') = 0
-  AND pg_temp.ev364count('SELECT count(*) FROM public.coach_assessments') = 0, '4 Ola reads no evaluation assessment and nobody''s note (TRAK-532)');
+  AND pg_temp.ev364count('SELECT count(*) FROM public.coach_assessments') = 1, '4 Ola reads her own assessment and nobody''s note');
 SELECT pg_temp.ev364actor(10);
 SELECT pg_temp.ev364check(pg_temp.ev364count(format('SELECT count(*) FROM public.season_evaluations WHERE plan_id = %L', pg_temp.ev364id(50))) = 1,
   '4 the coach reads their evaluation');
@@ -300,10 +299,41 @@ SELECT pg_temp.ev364check(pg_temp.ev364refused(format(
   '5 the coach never writes, moves or deletes an evaluation');
 RESET ROLE;
 
+-- 6. TRAK-585 (Imad, 25 Nov): an assessment is shared with the player and parents; only the coach edits it. Assess's
+--    one Save in this squad, whose plan is shared, sends a new assessment with no published_at: it is published, Pat
+--    and his guardian read its bands, another family doesn't, and their writes change nothing.
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ev364actor(10);
+SELECT public.save_assessment_with_objectives(NULL, jsonb_build_object('squad_player_id', pg_temp.ev364id(40),
+  'coach_name_snapshot', 'Synthetic Coach One', 'work_rate', 3, 'tactical', 6, 'attitude', 6, 'technical', 6, 'physical', 6,
+  'coachability', 6, 'consistency', 6, 'impact', 6, 'workrate', 3, 'technique', 6, 'spirit', 6), '[]'::jsonb, '[]'::jsonb);
+RESET ROLE;
+SELECT pg_temp.ev364check(pg_temp.ev364count(format('SELECT count(*) FROM public.coach_assessments
+    WHERE squad_player_id = %L AND evaluation_id IS NULL AND work_rate = 3 AND published_at = now()', pg_temp.ev364id(40))) = 1,
+  '6 TRAK-585: Assess''s Save where the plan is shared publishes the assessment');
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.ev364actor(20);
+SELECT pg_temp.ev364refused(format('UPDATE public.coach_assessments SET work_rate = 9 WHERE squad_player_id = %L', pg_temp.ev364id(40)), '42501');
+SELECT pg_temp.ev364check(pg_temp.ev364count(format(
+  'SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = %L AND evaluation_id IS NULL AND work_rate = 3', pg_temp.ev364id(40))) = 1,
+  '6 TRAK-585: Pat reads its bands, and his write changes nothing');
+SELECT pg_temp.ev364actor(30);
+SELECT pg_temp.ev364refused(format('UPDATE public.coach_assessments SET work_rate = 9 WHERE squad_player_id = %L', pg_temp.ev364id(40)), '42501');
+SELECT pg_temp.ev364check(pg_temp.ev364count(format(
+  'SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = %L AND evaluation_id IS NULL AND work_rate = 3', pg_temp.ev364id(40))) = 1,
+  '6 TRAK-585: Pat''s guardian reads its bands, and her write changes nothing');
+SELECT pg_temp.ev364actor(31);
+SELECT pg_temp.ev364check(pg_temp.ev364count('SELECT count(*) FROM public.coach_assessments') = 0,
+  '6 TRAK-585: another child''s guardian reads none of it');
+SELECT pg_temp.ev364actor(23);
+SELECT pg_temp.ev364check(pg_temp.ev364count(format('SELECT count(*) FROM public.coach_assessments WHERE squad_player_id = %L', pg_temp.ev364id(40))) = 0,
+  '6 TRAK-585: a teammate reads none of it');
+RESET ROLE;
+
 DO $$ DECLARE failures text; total integer;
 BEGIN
  SELECT count(*) INTO total FROM pg_temp.ev364_results;
- IF total <> 44 THEN RAISE EXCEPTION 'Season evaluations: % checks ran; expected 44', total; END IF;
+ IF total <> 49 THEN RAISE EXCEPTION 'Season evaluations: % checks ran; expected 49', total; END IF;
  SELECT string_agg(label, E'\n') INTO failures FROM pg_temp.ev364_results WHERE NOT ok;
  IF failures IS NOT NULL THEN RAISE EXCEPTION 'Season evaluation checks failed:%', E'\n' || failures; END IF;
  RAISE NOTICE 'Season evaluations: % of % passed', total, total;

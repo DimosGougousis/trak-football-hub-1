@@ -227,13 +227,18 @@ use_cases:
   # SPEC v6 2026-11-23 (TRAK-531, Reports 8/10): Imad renamed the squad
   # evaluation report day: one Send for the squad, and the coach can send one
   # player's report on its own first (the fourth line).
+  # SPEC v8 2026-11-26 (TRAK-585): Imad decided on 25 Nov, with Makis, that an
+  # assessment is shared with the player and parents and only the coach edits
+  # it. v7 (TRAK-532, 25 Nov) kept it with the coach, unpublished, where the
+  # squad's plan is shared; now Assess's one Save and report day publish it
+  # (the sixth line).
   - id: UC-C04
     actor: coach
     title: Assess a player on six sliders producing a band
     requirement: REQ-002
     status: enforced
     tier: [1, 2]
-    spec_version: 7
+    spec_version: 8
     given: A signed-in coach with at least one squad player
     when: They select a player, set the six sliders and submit
     then:
@@ -242,7 +247,7 @@ use_cases:
       - Submitting is refused until a player is selected
       - Where the academy's season plan is on and the squad's plan is shared, its due report day sends all six scores for each consented player, starting from their latest scores, with no session; one player can be sent first, and Send then sends only the rest
       - Where the squad's plan is shared, Assess also asks how each of the player's open objectives is going (Not yet, Some progress, On track or Met) and saves only once each has an answer, with the six scores in the same save
-      - Where the squad's plan is shared, the assessment stays with the coach (TRAK-532) - Assess ends with one Save and no message to the player, the row is saved unpublished, its objective answers apply at once, and the card says Coach only; report day's assessments are saved unpublished too, and families read the report
+      - Where the squad's plan is shared, Assess ends with one Save and no message to the player (TRAK-532), and that Save publishes the assessment (TRAK-585) - its objective answers apply at once, the player and parents read its bands as any published assessment's, and the card never says Coach only; report day's assessments are published too
     source: https://github.com/kostasanastasioubusiness-lang/trak-football-hub/blob/d0ed55ff618ee0a0b943399236527f9e3f7ebbb5/docs/superpowers/specs/2026-07-27-trak-pilot-mvp-design.md
 
   # PARKED 2026-09-23 (Q-2026-09-23-01, TRAK-19). J1: coach TRK- codes are not an admission path in the pilot (TRAK-36).

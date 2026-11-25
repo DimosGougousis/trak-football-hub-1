@@ -94,8 +94,8 @@ describe('TRAK-526: Assess asks about objectives', { timeout: 30_000 }, () => {
       p_progress: [{ player_objective_id: 'obj-a', status: 'on_track' }, { player_objective_id: 'obj-b', status: 'met' }],
       p_add: ['Scan before receiving'],
     })
-    // TRAK-532: saved unpublished, the coach's own; families get reports.
-    expect(saves[0].p_row).toHaveProperty('published_at', null)
+    // TRAK-585: Save publishes (TRAK-532 sent published_at null): a new one takes the database's now().
+    expect(saves[0].p_row).not.toHaveProperty('published_at')
   })
 
   // TRAK-532 (Imad, 21 Nov): with a shared plan, one Save; no Publish, no Save draft, no message to the player.

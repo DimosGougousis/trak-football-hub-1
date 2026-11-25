@@ -293,13 +293,13 @@ useCase('UC-C04', () => {
     expect(nextButton()).toBeDisabled()
     await user.click(within(answers).getByRole('button', { name: 'Some progress' }))
     await user.click(nextButton())
-    // v7 (TRAK-532): with a shared plan the assessment stays with the coach: one Save, no Publish.
+    // v7 (TRAK-532): with a shared plan, one Save and no Publish. v8 (TRAK-585): that Save publishes it.
     expect(screen.queryByRole('button', { name: /^Publish/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(saved).toHaveLength(1))
     expect(saved[0]).toMatchObject({ p_assessment_id: null, p_row: { squad_player_id: 'squad-1', work_rate: 8 },
       p_progress: [{ player_objective_id: 'obj-1', status: 'some_progress' }], p_add: [] })
     expect(saved[0]).not.toHaveProperty('p_row.session_id')
-    expect(saved[0]).toHaveProperty('p_row.published_at', null)
+    expect(saved[0]).not.toHaveProperty('p_row.published_at')
   }, 20_000)
 })

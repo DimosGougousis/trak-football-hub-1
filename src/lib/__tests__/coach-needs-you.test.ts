@@ -36,16 +36,13 @@ describe('needs you', () => {
   })
 
   // TRAK-364: an evaluated squad (its season plan shared) has no per-player Assess cards: its Evaluation due card takes
-  // their place. Another squad keeps them, and drafts still show everywhere.
-  it('drops the Assess cards of an evaluated squad only; TRAK-532: its unpublished assessments are no drafts', () => {
+  // their place. Another squad keeps them, and drafts still show everywhere (TRAK-585: again, as before TRAK-532).
+  it('drops the Assess cards of an evaluated squad only, and keeps its drafts', () => {
     const players = [{ ...player('a', 'Thierry Henry'), age_group: 'U16 ' }, { ...player('b', 'Patrick Vieira'), age_group: 'U14' },
-      { ...player('c', 'Robert Pires'), age_group: 'U16' }, { ...player('d', 'Sol Campbell'), age_group: 'U14' }]
-    const items = needsYou({ players, waitingForParent: new Set(),
-      assessments: [assessed('c', '2026-10-20T12:00:00Z', null), assessed('d', '2026-10-20T12:00:00Z', null)], now,
+      { ...player('c', 'Robert Pires'), age_group: 'U16' }]
+    const items = needsYou({ players, waitingForParent: new Set(), assessments: [assessed('c', '2026-10-20T12:00:00Z', null)], now,
       evaluatedSquads: new Set(['U16']) })
-    // Robert's (U16, evaluated) stays with the coach: no Finish draft. Sol's (U14) is still a draft.
-    expect(items.filter(i => i.kind === 'draft').map(i => i.playerId)).toEqual(['d'])
-    expect(items.some(i => i.playerId === 'a' || i.playerId === 'c')).toBe(false)
-    expect(needsYou({ players, waitingForParent: new Set(), assessments: [], now }).map(i => i.playerId).sort()).toEqual(['a', 'b', 'c', 'd'])
+    expect(items.map(i => [i.playerId, i.kind])).toEqual([['b', 'assess'], ['c', 'draft']])
+    expect(needsYou({ players, waitingForParent: new Set(), assessments: [], now }).map(i => i.playerId).sort()).toEqual(['a', 'b', 'c'])
   })
 })

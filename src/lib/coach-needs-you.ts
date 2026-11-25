@@ -22,8 +22,8 @@ export interface NeedsYouItem {
  * families can't see yet. Trainings aren't counted here: the cards are about assessing. A player waiting for a
  * parent is left out, as nothing can be recorded about them.
  * TRAK-364: in a squad that is evaluated (the season plan is on and the squad's plan is shared), the per-player
- * Assess cards give way to the squad's one Evaluation due card. TRAK-532: there an unpublished assessment is no draft
- * but the coach's own (families get reports), so it raises no Finish draft either.
+ * Assess cards give way to the squad's one Evaluation due card. Drafts still show: they wait for the coach either way
+ * (TRAK-585: again, as TRAK-532 had made them the coach's own there).
  */
 export function needsYou({ players, waitingForParent, assessments, now, evaluatedSquads }: {
   players: { id: string; player_name: string; created_at: string | null; position?: string | null; shirt_number?: number | null; age_group?: string | null }[]
@@ -49,8 +49,7 @@ export function needsYou({ players, waitingForParent, assessments, now, evaluate
 
   const drafts = new Map<string, string[]>()
   for (const a of assessments) {
-    if (a.published_at !== null || !a.created_at || !byId.has(a.squad_player_id) || waitingForParent.has(a.squad_player_id)
-      || evaluated(byId.get(a.squad_player_id)!)) continue
+    if (a.published_at !== null || !a.created_at || !byId.has(a.squad_player_id) || waitingForParent.has(a.squad_player_id)) continue
     drafts.set(a.squad_player_id, [...(drafts.get(a.squad_player_id) ?? []), a.created_at])
   }
   const draft = [...drafts].map(([id, dates]): NeedsYouItem => {

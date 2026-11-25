@@ -56,7 +56,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
  * elsewhere. TRAK-546 (Kostas, 22 Nov): no "Season so far" radar here; the hexagon lives only in the report. Imad, 23 Oct: one row of cards, the latest first, swiping to
  * earlier ones, with no date line above them (the card's quick look has the date and session).
  */
-export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, placement, onViewReport, onOpenReport, coachOnly = false }: {
+export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRetryFacts, placement, onViewReport, onOpenReport }: {
   player: SquadPlayer
   squad: string | null
   coachId: string
@@ -69,8 +69,6 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   onViewReport?: () => void
   /** TRAK-528 (Reports 5/10): the reports he was sent, under his assessments, each opening by its evaluation. */
   onOpenReport?: (evaluationId: string) => void
-  /** TRAK-532: the squad's plan is shared, so an unpublished assessment says "Coach only", not Draft. */
-  coachOnly?: boolean
 }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -93,7 +91,7 @@ export function PlayerProfile({ player, squad, coachId, facts, factsFailed, onRe
   const card = (assessment: (typeof list)[number]) => <CoachAssessmentCard assessment={assessment} playerName={player.name}
     message={assessments.data?.messages[assessment.id]} messageFailed={assessments.data?.sent === undefined} note={assessments.data?.notes[assessment.id]}
     objectives={assessments.data?.objectives?.[assessment.id]} objectivesFailed={!!assessments.data && assessments.data.objectives === undefined}
-    onChanged={() => { void client.invalidateQueries({ queryKey: key }) }} coachOnly={coachOnly} />
+    onChanged={() => { void client.invalidateQueries({ queryKey: key }) }} />
 
   // The season plan's look: the face large, its shirt number on it, the name in black, position and squad as badges.
   const header = <div className={`${INNER} flex flex-wrap items-center gap-4 sm:gap-5`}>

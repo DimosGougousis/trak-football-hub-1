@@ -124,16 +124,19 @@ unpublished, so nothing reaches the player. A message the player already has
 gets one Save that keeps it published; Unpublish takes it back. Nothing reaches
 the player before Publish. A partial failure states what saved and what did not.
 
-**Assessments stay with the coach (Imad, 21 Nov, TRAK-532).** Where the player's
-squad has a shared season plan, an assessment is the coach's own: families get
-reports (J6). Assess player ends with one Save: no Publish, no Save draft and no
-message to the child; the step holds the private note alone. A saved assessment
-is not a draft, so Home and Squad show no draft for it, and its card says "Coach
-only", with Edit behind it. Only its coach reads it: not the player, a parent or
-another coach of the academy. The next report includes it. An assessment
-published before this stays as it was; a squad with no shared plan keeps the
-assessment described above. Save waits until the page knows whether the
-squad's plan is shared, so nothing is published by mistake while it loads.
+**Assessments are shared with the player and parents (Imad, 25 Nov, TRAK-585,
+reversing TRAK-532 of 21 Nov).** The coach writes an assessment and shares it with
+the player and their parents; only its coach edits it. Where the player's squad
+has a shared season plan, Assess player ends with one Save (TRAK-532): no
+Publish, no Save draft and no message to the child; the step holds the
+objectives and the private note. That Save publishes the assessment: the player
+and parents read its bands as any published assessment's, a parent never reads a
+message (TRAK-63), and the private note stays its coach's. The next report
+includes it. Its card says Published, or Draft with Publish, as in every squad,
+and Home shows a draft as a draft. One saved unpublished under TRAK-532 stays
+unpublished until its coach publishes it. A squad with no shared plan keeps the
+assessment described above. Save waits until the page knows whether the squad's
+plan is shared, so it never saves without the objectives' answers while it loads.
 
 An assessment has no session (Imad, 19 Nov, TRAK-500, replacing TRAK-68 and
 TRAK-100's required attended session): the Player step selects the player
@@ -165,10 +168,10 @@ written before this, or from Assess, stays the child's alone. Preview shows the
 player's report as it will be sent. "Send {name}'s report" sends one player on
 his own; the list then says Sent, and "Send to N players" sends only the rest
 and closes the day, so nobody is sent twice (Imad, 21 Nov). Each send writes one
-assessment per player with no session, kept with the coach as Assess's is
-(TRAK-532), all its players or none, and a failed send keeps everything entered.
-Families read the report, not the bands (J6). The
-session assessment stays available. Changing the rhythm after sharing waits
+published assessment per player with no session (TRAK-585; TRAK-532 had kept it
+with the coach), all its players or none, and a failed send keeps everything
+entered. Families see the bands as for any published assessment, and read the
+report (J6). The session assessment stays available. Changing the rhythm after sharing waits
 under Not shared yet as the evaluation dates.
 
 **Reports (TRAK-523; 4/10, TRAK-527).** The evaluation dates are report days, and
@@ -195,9 +198,9 @@ parent see coach-recorded match and training history. Parents see bands and
 history for the selected child, never the coach's message or private notes. A
 sent report's note to the player and parents is the one note they read, with the
 report (TRAK-531; the family's report page is TRAK-529). Where the squad's plan
-is shared, assessments stay with the coach (TRAK-532): the player and parents see
-the report, not the bands of each assessment; ones published before that stay
-visible.
+is shared, the player and parents see each assessment's bands as well as the
+report (TRAK-585, reversing TRAK-532); one saved unpublished under TRAK-532 shows
+once its coach publishes it.
 Sibling switching must show only the selected child's data.
 
 A failed load shows a clear error and retry control. It must not look like an
