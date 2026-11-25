@@ -1,8 +1,8 @@
 /**
  * TRAK-339 (Training redo 1/5, spec TRAK-338, 2 Nov prototype): Training home laid out like Matches. The Next training
- * card shows one training, where it is in its loop (Logistics → Plan → Who's here → Notes) and its next action: Plan
- * session or Use a past plan; Review plan and Edit plan; on the day Who's here; after it, Notes ("Would you run this
- * session again?") saved or skipped. Upcoming trainings is a row; Past trainings is a button at the bottom that opens
+ * card shows one training and its next action. TRAK-584 (Kostas, 25 Nov): in the Next match card's style: the badge as
+ * Matches', one split button (Plan session, Continue plan, View plan, Who's here, Notes) with the rest behind its chevron,
+ * the countdown always; after it, Notes ("Would you run this session again?") in a sheet, saved or skipped. Upcoming trainings is a row; Past trainings is a button at the bottom that opens
  * its own page, where a plan can be copied into a training coming up. Test people are named after footballers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -93,60 +93,80 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 
-const nextCard = (title: string) => screen.findByRole('region', { name: title }, { timeout: 5000 })
+/** TRAK-584: the card is the "Next training" region, as Matches' is "Next match"; the training's name is under the label. */
+async function nextCard(title: string) {
+  const card = await screen.findByRole('region', { name: 'Next training' }, { timeout: 5000 })
+  await within(card).findByText(title, { selector: 'p' }, { timeout: 5000 })
+  return card
+}
+const menu = async (user: ReturnType<typeof userEvent.setup>, card: HTMLElement, main: string) => {
+  await user.click(within(card).getByRole('button', { name: `${main} more actions` }))
+  const items = (await screen.findAllByRole('menuitem')).map(item => item.textContent)
+  await user.keyboard('{Escape}')
+  return items
+}
 
 describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
-  it('not planned: Plan session goes straight to the planner; the message to players and the loop show', async () => {
+  // TRAK-584 (Kostas, 25 Nov): in the Next match card's style. A label over the name, the badge as Matches', one split
+  // button, the countdown; no loop stepper and no message to players on the card (it's edited in Events).
+  it('not planned: Plan not written, and Plan session goes straight to the planner; Use a past plan and Logistics behind it', async () => {
     const user = userEvent.setup()
     database([training('soon', onTheMinute(Date.now() + 2 * DAY), { title: 'Pressing triggers', family_note: 'Bring shin pads.' }),
       training('later', onTheMinute(Date.now() + 4 * DAY))])
     renderApp('/coach/training')
     const card = await nextCard('Pressing triggers')
-    // Kostas, 30 Oct: no "Next training" title; the name leads the card. TRAK-422 (Kostas, 13 Nov): the page has the one
-    // coach page title, "Training", like every coach page.
+    // TRAK-422 (Kostas, 13 Nov): the page has the one coach page title, "Training", like every coach page.
     expect(screen.getByRole('heading', { level: 1, name: 'Training' })).not.toHaveClass('sr-only')
-    expect(within(card).queryByText('Next training')).toBeNull()
+    expect(within(card).getByRole('heading', { level: 2, name: 'Next training' })).toBeInTheDocument()
     expect(within(card).getByText('Plan not written')).toBeInTheDocument()
     expect(within(card).getByText(/Pitch 2 · 90 min/)).toBeInTheDocument()
-    for (const step of ['Logistics', 'Plan', 'Who’s here', 'Notes']) expect(within(card).getAllByText(step).length).toBeGreaterThan(0)
-    expect(within(card).getByText('Bring shin pads.')).toBeInTheDocument()
-    expect(within(card).getByRole('link', { name: 'Edit the message to players' })).toHaveAttribute('href', '/coach/schedule?edit=soon&step=2')
-    expect(within(card).getByRole('button', { name: 'Use a past plan' })).toBeInTheDocument()
+    expect(within(card).queryByRole('list', { name: 'Where this training is' })).toBeNull()
+    expect(within(card).queryByText('Bring shin pads.')).toBeNull()
+    expect(within(card).getByRole('timer', { name: 'Starts in' })).toBeInTheDocument()
+    expect(await menu(user, card, 'Plan session')).toEqual(['Use a past plan', 'Logistics'])
     await user.click(within(card).getByRole('button', { name: 'Plan session' }))
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan'))
     expect(screen.queryByRole('dialog', { name: 'How do you want to plan it?' })).toBeNull()
   })
 
-  it('planned: Review plan opens the plan, Edit plan the planner', async () => {
+  it('planned: Plan ready, View plan opens the plan, Logistics the training’s first tab', async () => {
     const user = userEvent.setup()
     database([training('soon', onTheMinute(Date.now() + 2 * DAY))], { soon: [practice(1, 'Rondo 4 v 2')] })
     renderApp('/coach/training')
     const card = await nextCard('Training soon')
     expect(await within(card).findByText('Plan ready')).toBeInTheDocument()
     expect(within(card).queryByRole('button', { name: 'Plan session' })).toBeNull()
-    await user.click(within(card).getByRole('button', { name: 'Edit plan' }))
-    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan'))
+    await user.click(within(card).getByRole('button', { name: 'View plan more actions' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Logistics' }))
+    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=logistics'))
     window.history.back()
-    // TRAK-456: the training's page is a region of that name too, so the card is looked for once Training is back.
     await waitFor(() => expect(window.location.pathname).toBe('/coach/training'))
-    await user.click(within(await nextCard('Training soon')).getByRole('button', { name: 'Review plan' }))
+    await user.click(within(await nextCard('Training soon')).getByRole('button', { name: 'View plan' }))
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/soon?tab=plan'))
   })
 
-  it('on the day: Today, and Who’s here opens the register', async () => {
+  it('later today, planned: still Plan ready and View plan, as a match keeps Plan shared until kick-off', async () => {
+    database([training('today', onTheMinute(Date.now() + 2 * MINUTE))], { today: [practice(1, 'Rondo 4 v 2')] })
+    renderApp('/coach/training')
+    const card = await nextCard('Training today')
+    expect(await within(card).findByText('Plan ready')).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'View plan' })).toBeInTheDocument()
+  })
+
+  it('on now: Started, and Who’s here opens the register; View plan and Logistics behind it', async () => {
     const user = userEvent.setup()
     database([training('today', onTheMinute(Date.now() - 20 * MINUTE))], { today: [practice(1, 'Rondo 4 v 2')] })
     renderApp('/coach/training')
     const card = await nextCard('Training today')
-    expect(within(card).getByText('Today', { selector: 'span' })).toBeInTheDocument()
-    expect(within(card).getByRole('button', { name: 'Review plan' })).toBeInTheDocument()
+    expect(within(card).getByText('Started', { selector: 'span:not([aria-hidden])' })).toBeInTheDocument()
+    expect(await menu(user, card, 'Who’s here')).toEqual(['View plan', 'Logistics'])
     // TRAK-342: Who's here is its own page.
     await user.click(within(card).getByRole('button', { name: 'Who’s here' }))
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/today?tab=after'))
     expect(await screen.findByRole('button', { name: 'Mohamed Salah: present' })).toBeInTheDocument()
   })
 
-  it('after the training: Notes on the card; Save and close keeps the answer and moves the card on', async () => {
+  it('after the training: Finished; Notes opens in a sheet, and Save and close keeps the answer and moves the card on', async () => {
     const user = userEvent.setup()
     const written = database([
       training('done', onTheMinute(Date.now() - 3 * HOUR), { title: 'Defending the box' }),
@@ -154,13 +174,15 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
     ], { done: [practice(1, 'Rondo 4 v 2')] }, { done: 'session-done' })
     renderApp('/coach/training')
     const card = await nextCard('Defending the box')
-    expect(await within(card).findByText('2 here')).toBeInTheDocument()
-    expect(within(card).queryByText('No register taken')).toBeNull()
-    expect(within(card).queryByText('No plan written')).toBeNull()
-    expect(within(card).getByText('Would you run this session again?')).toBeInTheDocument()
-    await user.click(within(card).getByRole('button', { name: 'Yes, with changes' }))
-    await user.type(within(card).getByLabelText('A note for next time'), '  Rondo grids too small. ')
-    await user.click(within(card).getByRole('button', { name: 'Save and close' }))
+    expect(within(card).getAllByText('Finished').length).toBeGreaterThan(0)
+    expect(within(card).queryByText('Would you run this session again?')).toBeNull()
+    expect(await menu(user, card, 'Notes')).toEqual(['View plan', 'Logistics'])
+    await user.click(within(card).getByRole('button', { name: 'Notes' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Notes' })
+    expect(within(sheet).getByText('Would you run this session again?')).toBeInTheDocument()
+    await user.click(within(sheet).getByRole('button', { name: 'Yes, with changes' }))
+    await user.type(within(sheet).getByLabelText('A note for next time'), '  Rondo grids too small. ')
+    await user.click(within(sheet).getByRole('button', { name: 'Save and close' }))
     await waitFor(() => expect(written).toEqual([{ event_id: 'done', again: 'changes', note: 'Rondo grids too small.' }]))
     expect(await screen.findByText('Defending the box is closed.')).toBeInTheDocument()
     expect(await nextCard('Counter-attacks')).toBeInTheDocument()
@@ -171,13 +193,12 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
     const written = database([training('done', onTheMinute(Date.now() - 3 * HOUR), { title: 'Defending the box' })])
     renderApp('/coach/training')
     const card = await nextCard('Defending the box')
-    expect(within(card).getByText('Finished')).toBeInTheDocument()
-    // Live check, 3 Nov: no register, so Who's here isn't ticked; it says so.
-    expect(within(card).getAllByText('No register taken').length).toBeGreaterThan(0)
-    expect(within(card).getAllByText('No plan written').length).toBeGreaterThan(0)
-    // No plan, so nothing to review.
-    expect(within(card).queryByRole('button', { name: 'Review today’s plan' })).toBeNull()
-    await user.click(within(card).getByRole('button', { name: 'Skip and close' }))
+    // No plan, so nothing to view behind Notes; nor Review today's plan in the sheet.
+    expect(await menu(user, card, 'Notes')).toEqual(['Logistics'])
+    await user.click(within(card).getByRole('button', { name: 'Notes' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Notes' })
+    expect(within(sheet).queryByRole('button', { name: 'Review today’s plan' })).toBeNull()
+    await user.click(within(sheet).getByRole('button', { name: 'Skip and close' }))
     await waitFor(() => expect(written).toEqual([{ event_id: 'done', again: null, note: '' }]))
     expect(await screen.findByText('No training coming up')).toBeInTheDocument()
   })
@@ -185,8 +206,8 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
   it('a training that ended over a day ago doesn’t wait for Notes: the card shows the next one', async () => {
     database([training('old', onTheMinute(Date.now() - 2 * DAY)), training('next', onTheMinute(Date.now() + DAY))])
     renderApp('/coach/training')
-    expect(await nextCard('Training next')).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Training old' })).toBeNull()
+    const card = await nextCard('Training next')
+    expect(within(card).queryByText('Training old')).toBeNull()
   })
 
   it('Upcoming trainings: every one coming up, soonest first, each with its badge', async () => {
