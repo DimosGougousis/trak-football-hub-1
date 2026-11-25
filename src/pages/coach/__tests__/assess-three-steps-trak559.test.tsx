@@ -66,7 +66,7 @@ const stepNames = () => within(screen.getByRole('navigation', { name: 'Assessmen
   .map(item => ['Player & bands', 'Objectives & notes', 'Message & note', 'Review'].find(name => item.textContent?.includes(name)))
 
 describe('TRAK-559: Assess player in 3 steps', { timeout: 30_000 }, () => {
-  it('player and bands, then objectives and notes, then review; saves the bands, answers, message and note', async () => {
+  it('player and bands, then objectives and notes, then review; saves the bands, answers and note (TRAK-532: no message)', async () => {
     const user = userEvent.setup()
     showForm()
 
@@ -80,27 +80,29 @@ describe('TRAK-559: Assess player in 3 steps', { timeout: 30_000 }, () => {
     await waitFor(() => expect(next()).toBeEnabled())
     await user.click(next())
 
-    // Step 2: the objectives, the message and the private note together; Next waits for every answer.
+    // Step 2: the objectives and the private note together; Next waits for every answer. TRAK-532: with a shared plan
+    // the assessment stays with the coach, so there is no message to the player.
     const progress = await screen.findByRole('group', { name: 'Progress on Shoot first time' })
-    expect(screen.getByLabelText('Message to Alex')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Message to Alex')).not.toBeInTheDocument()
     expect(screen.getByLabelText(/Private note/)).toBeInTheDocument()
     expect(next()).toBeDisabled()
     await user.click(within(progress).getByRole('button', { name: 'Met' }))
-    await user.type(screen.getByLabelText('Message to Alex'), 'Well played')
     await user.type(screen.getByLabelText(/Private note/), 'Ready for U17')
     await user.click(next())
 
-    // Step 3: review and save.
-    await user.click(await screen.findByRole('button', { name: 'Publish' }))
+    // Step 3: review and one Save (no Publish, no Save draft).
+    expect(await screen.findByRole('button', { name: 'Save' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Save' }))
     await screen.findByText('Coach home')
     expect(saves).toHaveLength(1)
     expect(saves[0]).toMatchObject({ p_assessment_id: null, p_row: { squad_player_id: 'player-a', work_rate: 5 },
       p_progress: [{ player_objective_id: 'obj-a', status: 'met' }] })
-    expect(feedback).toMatchObject([{ assessment_id: 'assessment-1', body: 'Well played' }])
+    expect(feedback).toEqual([])
     expect(notes).toMatchObject([{ assessment_id: 'assessment-1', note: 'Ready for U17' }])
   })
 
-  it('a saved draft opens again with its bands, objective answers, message and note', async () => {
+  it('a saved draft opens again with its bands, objective answers and note', async () => {
     const user = userEvent.setup()
     showForm('/coach/assess?assessment=draft-1')
     expect(await screen.findByText('Alex Synthetic')).toBeInTheDocument()
@@ -109,8 +111,8 @@ describe('TRAK-559: Assess player in 3 steps', { timeout: 30_000 }, () => {
     await user.click(next())
     const progress = await screen.findByRole('group', { name: 'Progress on Shoot first time' })
     await waitFor(() => expect(within(progress).getByRole('button', { name: 'On track' })).toHaveAttribute('aria-pressed', 'true'))
-    expect(screen.getByLabelText('Message to Alex')).toHaveValue('Great pressing today')
-    expect(screen.getByLabelText(/Private note/)).toHaveValue('Work on the first touch')
+    expect(screen.queryByLabelText('Message to Alex')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByLabelText(/Private note/)).toHaveValue('Work on the first touch'))
   })
 
   it('a squad with no shared plan still has 3 steps: the second holds the message and the note', async () => {

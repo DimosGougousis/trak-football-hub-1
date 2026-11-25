@@ -112,9 +112,9 @@ Review; Imad, 15–16 Oct, TRAK-182). Where the player's squad has a shared seas
 plan, an Objectives step follows Ratings (Imad, 21 Nov, TRAK-526): it asks what
 the squad evaluation asks, Not yet, Some progress, On track or Met for every open
 objective, and the coach can add one. The six scores and the answers save
-together. A draft keeps its answers; Met closes the objective and an added one
-starts only when the assessment is published, and then the answers are final
-(Tarek, 21 Nov). The card shows the date it was saved top right and, opened,
+together. Met closes the objective and an added one starts when the assessment
+is saved, and then the answers are final (Kostas, 23 Nov, TRAK-532; before it, a
+draft kept its answers until it was published, Tarek, 21 Nov). The card shows the date it was saved top right and, opened,
 each objective with its answer. Families see what they saw before: their
 Progress line and "stuck" (three Not yets in a row) come from squad evaluations
 only. It has six sliders, the resulting band, a
@@ -123,6 +123,17 @@ its coach, in separate labelled boxes on the same step. On Review, Publish saves
 unpublished, so nothing reaches the player. A message the player already has
 gets one Save that keeps it published; Unpublish takes it back. Nothing reaches
 the player before Publish. A partial failure states what saved and what did not.
+
+**Assessments stay with the coach (Imad, 21 Nov, TRAK-532).** Where the player's
+squad has a shared season plan, an assessment is the coach's own: families get
+reports (J6). Assess player ends with one Save: no Publish, no Save draft and no
+message to the child; the step holds the private note alone. A saved assessment
+is not a draft, so Home and Squad show no draft for it, and its card says "Coach
+only", with Edit behind it. Only its coach reads it: not the player, a parent or
+another coach of the academy. The next report includes it. An assessment
+published before this stays as it was; a squad with no shared plan keeps the
+assessment described above. Save waits until the page knows whether the
+squad's plan is shared, so nothing is published by mistake while it loads.
 
 An assessment has no session (Imad, 19 Nov, TRAK-500, replacing TRAK-68 and
 TRAK-100's required attended session): the Player step selects the player
@@ -154,8 +165,9 @@ written before this, or from Assess, stays the child's alone. Preview shows the
 player's report as it will be sent. "Send {name}'s report" sends one player on
 his own; the list then says Sent, and "Send to N players" sends only the rest
 and closes the day, so nobody is sent twice (Imad, 21 Nov). Each send writes one
-published assessment per player with no session, all its players or none, and a
-failed send keeps everything entered. Families see the bands as they do now. The
+assessment per player with no session, kept with the coach as Assess's is
+(TRAK-532), all its players or none, and a failed send keeps everything entered.
+Families read the report, not the bands (J6). The
 session assessment stays available. Changing the rhythm after sharing waits
 under Not shared yet as the evaluation dates.
 
@@ -182,7 +194,10 @@ assessment it says the player is waiting for their coach. The player and linked
 parent see coach-recorded match and training history. Parents see bands and
 history for the selected child, never the coach's message or private notes. A
 sent report's note to the player and parents is the one note they read, with the
-report (TRAK-531; the family's report page is TRAK-529).
+report (TRAK-531; the family's report page is TRAK-529). Where the squad's plan
+is shared, assessments stay with the coach (TRAK-532): the player and parents see
+the report, not the bands of each assessment; ones published before that stay
+visible.
 Sibling switching must show only the selected child's data.
 
 A failed load shows a clear error and retry control. It must not look like an

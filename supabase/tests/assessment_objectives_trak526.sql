@@ -1,8 +1,9 @@
 -- @trak-suite mode=--assessment-objectives in-all=true
 -- TRAK-526 (Reports 3/10, Imad 21 Nov; storage and drafts decided by Tarek, 21 Nov): Assess player's objective
 -- check-in. save_assessment_with_objectives() writes the assessment as the coach and the answers in one transaction:
--- every open objective once, Not yet to Met; added titles. A draft keeps them; publishing applies Met and creates the
--- added objectives; a published one's answers are final. A squad with no shared plan has no check-in. Only the coach
+-- every open objective once, Not yet to Met; added titles. TRAK-532 (Kostas, 23 Nov): with a shared plan an assessment
+-- stays with the coach (saved unpublished) and Save applies Met and creates the added objectives at once; a saved
+-- one's answers are final. A squad with no shared plan has no check-in. Only the coach
 -- reads it; nobody writes it directly; squad evaluations' objective_progress is untouched. Synthetic fixtures; rolls back.
 BEGIN;
 SET LOCAL TIME ZONE 'UTC';
@@ -100,21 +101,21 @@ SELECT pg_temp.a526check(pg_temp.a526count(format('SELECT count(*) FROM public.a
 SELECT pg_temp.a526check((SELECT count(*) FROM public.assessment_objectives WHERE assessment_id = (SELECT id FROM pg_temp.a526_ids WHERE name = 'ola')) = 3,
   '1 the coach reads it');
 
--- 2. A draft keeps its answers and an added title; Met waits for publish, and publishing applies it once.
+-- 2. TRAK-532: saved unpublished (as Assess now saves where the plan is shared), Met closes C and the added objective
+--    starts at once; the assessment stays with the coach, and its check-in is final.
 INSERT INTO pg_temp.a526_ids SELECT 'pia', (SELECT public.save_assessment_with_objectives(NULL, pg_temp.a526row(41, 'draft'),
   jsonb_build_array(jsonb_build_object('player_objective_id', pg_temp.a526obj(41, 'C'), 'status', 'met')), '["Scan before receiving"]'::jsonb));
-SELECT pg_temp.a526check(pg_temp.a526status(41, 'C') = 'open' AND pg_temp.a526obj(41, 'Scan before receiving') IS NULL
-  AND pg_temp.a526count(format('SELECT count(*) FROM public.assessment_objectives WHERE assessment_id = %L AND applied_at IS NULL',
+SELECT pg_temp.a526check(pg_temp.a526status(41, 'C') = 'met' AND pg_temp.a526status(41, 'Scan before receiving') = 'open'
+  AND pg_temp.a526count(format('SELECT count(*) FROM public.assessment_objectives WHERE assessment_id = %L AND applied_at IS NOT NULL',
     (SELECT id FROM pg_temp.a526_ids WHERE name = 'pia'))) = 2,
-  '2 a draft keeps its answers and the added title; C stays open');
-SELECT public.save_assessment_with_objectives((SELECT id FROM pg_temp.a526_ids WHERE name = 'pia'), pg_temp.a526row(41, 'publish'),
-  jsonb_build_array(jsonb_build_object('player_objective_id', pg_temp.a526obj(41, 'C'), 'status', 'met')), '["Scan before receiving"]'::jsonb);
-SELECT pg_temp.a526check(pg_temp.a526status(41, 'C') = 'met' AND pg_temp.a526status(41, 'Scan before receiving') = 'open',
-  '2 publishing the draft closes C and creates the added objective');
+  '2 TRAK-532: Save closes C and creates the added objective, unpublished');
+SELECT pg_temp.a526check(pg_temp.a526count(format('SELECT count(*) FROM public.coach_assessments WHERE id = %L AND published_at IS NULL',
+    (SELECT id FROM pg_temp.a526_ids WHERE name = 'pia'))) = 1,
+  '2 TRAK-532: the assessment stays with the coach');
 SELECT pg_temp.a526check(pg_temp.a526refused(pg_temp.a526save((SELECT id FROM pg_temp.a526_ids WHERE name = 'pia'), 41, 'keep',
     jsonb_build_array(jsonb_build_object('player_objective_id', pg_temp.a526obj(41, 'Scan before receiving'), 'status', 'not_yet'))), 'P0001')
   AND pg_temp.a526count(format('SELECT count(*) FROM public.coach_assessments WHERE id = %L', (SELECT id FROM pg_temp.a526_ids WHERE name = 'pia'))) = 1,
-  '2 a published check-in is final; an edit that only changes the bands still saves');
+  '2 a saved check-in is final; an edit that only changes the bands still saves');
 SELECT public.save_assessment_with_objectives((SELECT id FROM pg_temp.a526_ids WHERE name = 'pia'), pg_temp.a526row(41, 'keep'), NULL, NULL);
 
 -- 3. The squad evaluation's rules: every open objective once, the four answers only, up to two open.
@@ -150,7 +151,8 @@ SET LOCAL ROLE anon;
 SELECT pg_temp.a526check(pg_temp.a526refused('SELECT count(*) FROM public.assessment_objectives', '42501'), '5 anon reads nothing');
 RESET ROLE;
 
--- 7. Publishing a draft from its card applies its check-in once; Unpublish and publish again change nothing.
+-- 7. TRAK-532: saved unpublished, the check-in applies once; publishing it from the card (an older squad's way),
+--    Unpublish and publish again change nothing.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.a526actor(10);
 INSERT INTO pg_temp.a526_ids SELECT 'card', (SELECT public.save_assessment_with_objectives(NULL, pg_temp.a526row(40, 'draft'),
@@ -161,7 +163,7 @@ SELECT public.set_assessment_published((SELECT id FROM pg_temp.a526_ids WHERE na
 SELECT pg_temp.a526check(pg_temp.a526status(40, 'A') = 'met' AND pg_temp.a526status(40, 'Shoot first time') = 'open'
   AND pg_temp.a526count(format('SELECT count(*) FROM public.assessment_objectives WHERE assessment_id = %L AND applied_at IS NOT NULL',
     (SELECT id FROM pg_temp.a526_ids WHERE name = 'card'))) = 2,
-  '7 publishing from the card closes Met once; the other stays open');
+  '7 Met closes once, whatever the card does after; the other stays open');
 RESET ROLE;
 
 -- 6. The squad evaluations' answers are untouched.

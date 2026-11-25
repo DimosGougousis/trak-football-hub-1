@@ -30,8 +30,10 @@ const average = (a: CoachAssessment) =>
  * Tapping opens the quick look: opponent, date, the message, the private note.
  * A draft is the coach's alone, bands included (published_at NULL); Publish
  * shows the bands and the message to the family, Unpublish hides both.
+ * TRAK-532 (Imad, 21 Nov): where the squad's plan is shared (`coachOnly`), an unpublished one says "Coach only", with
+ * Edit behind it and no Publish: families get reports. One published before that is as above.
  */
-export function CoachAssessmentCard({ assessment, playerName, message, messageFailed = false, note, objectives = [], objectivesFailed = false, onChanged }: {
+export function CoachAssessmentCard({ assessment, playerName, message, messageFailed = false, note, objectives = [], objectivesFailed = false, onChanged, coachOnly = false }: {
   assessment: CoachAssessment
   playerName?: string
   message?: string | null
@@ -42,6 +44,8 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
   objectives?: AssessmentObjective[]
   objectivesFailed?: boolean
   onChanged?: (published: boolean) => void
+  /** TRAK-532: the player's squad has a shared plan, so an unpublished assessment is the coach's own, not a draft. */
+  coachOnly?: boolean
 }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -50,7 +54,8 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
   const band = scoreToBand(average(assessment))
   const bandName = BANDS.find(b => b.word.toLowerCase() === band)?.word ?? null
   const date = new Date(assessment.created_at).toLocaleDateString(currentLanguage() === 'en' ? 'en-GB' : currentLanguage(), { day: 'numeric', month: 'short' })
-  const label = published ? t('coachHome:notePublished') : t('coachHome:stateDraft')
+  const kept = coachOnly && !published
+  const label = published ? t('coachHome:notePublished') : kept ? t('coachHome:stateCoachOnly') : t('coachHome:stateDraft')
 
   const setPublishedTo = async (next: boolean) => {
     if (busy) return
@@ -84,11 +89,11 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
       // TRAK-557 (Imad, 23 Nov): the overall band in the pill a player's page shows at its top right.
       meta={<BandChip band={bandName} />}
       action={<SplitButton
-        label={published ? t('coachHome:notePublished') : t('coachHome:publish')}
+        label={published ? t('coachHome:notePublished') : kept ? t('coachHome:stateCoachOnly') : t('coachHome:publish')}
         // TRAK-497 (Imad, 20 Nov): green like Evaluate once published too (it turned grey).
         variant="primary"
         disabled={busy}
-        onClick={published ? undefined : () => void setPublishedTo(true)}
+        onClick={published || kept ? undefined : () => void setPublishedTo(true)}
         actions={published ? [edit, { label: t('coachAssess:unpublish'), onSelect: () => void setPublishedTo(false) }] : [edit]}
       />}
       details={<div className="space-y-3 text-sm">
@@ -102,10 +107,11 @@ export function CoachAssessmentCard({ assessment, playerName, message, messageFa
               <span className="shrink-0 text-muted-foreground">{o.status === 'added' ? t('coachAssess:objectiveAdded') : progressLabel(o.status)}</span>
             </li>)}</ul>
           </div>}
-        <div>
+        {/* TRAK-532: one kept with the coach has no message to the player, unless it had one from before. */}
+        {!(kept && !message && !messageFailed) && <div>
           <MetadataLabel text={t('coachAssess:messageToPlayerCaps')} />
           <p className="mt-1 text-foreground">{messageFailed ? t('coachAssess:couldntLoadMessage') : message || t('coachAssess:noMessage')}</p>
-        </div>
+        </div>}
         {note ? <div>
           <MetadataLabel text={t('coachAssess:privateNoteCaps')} />
           <p className="mt-1 italic text-muted-foreground">{note}</p>
