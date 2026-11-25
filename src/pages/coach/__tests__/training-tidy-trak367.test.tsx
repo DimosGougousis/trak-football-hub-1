@@ -154,36 +154,15 @@ describe('TRAK-367: moving a part on Review', { timeout: 30_000 }, () => {
 })
 
 describe('TRAK-367: the message to players', { timeout: 30_000 }, () => {
-  const card = (title: string) => screen.findByRole('region', { name: title }, { timeout: 5000 })
-
-  it('with a message, Edit opens the form at the note', async () => {
+  // TRAK-584 (Kostas, 25 Nov): the Next training card is the match card's style, which has no message to players; the
+  // message is edited in Events, as a match's is.
+  it('the Next training card has no message line: it is edited in Events', async () => {
     database([training('soon', onTheMinute(Date.now() + 2 * DAY), { family_note: 'Bring shin pads.' })])
     renderApp('/coach/training')
-    const next = await card('Training soon')
-    expect(within(next).getByText('Bring shin pads.')).toBeInTheDocument()
-    expect(within(next).getByRole('link', { name: 'Edit the message to players' })).toHaveAttribute('href', '/coach/schedule?edit=soon&step=2')
-  })
-
-  it('with none, Add a message is there', async () => {
-    database([training('soon', onTheMinute(Date.now() + 2 * DAY))])
-    renderApp('/coach/training')
-    const next = await card('Training soon')
-    expect(within(next).getByRole('link', { name: 'Add a message' })).toHaveAttribute('href', '/coach/schedule?edit=soon&step=2')
-  })
-
-  it('once it has started, the message stays with nothing to edit', async () => {
-    database([training('now', onTheMinute(Date.now() - 20 * MINUTE), { family_note: 'Bring shin pads.' })])
-    renderApp('/coach/training')
-    const next = await card('Training now')
-    expect(within(next).getByText('Bring shin pads.')).toBeInTheDocument()
-    expect(within(next).queryByRole('link', { name: 'Edit the message to players' })).toBeNull()
-  })
-
-  it('once it has started with no message, there is no line', async () => {
-    database([training('empty', onTheMinute(Date.now() - 20 * MINUTE))])
-    renderApp('/coach/training')
-    const next = await card('Training empty')
-    expect(within(next).queryByText(/Message to players/)).toBeNull()
+    const next = await screen.findByRole('region', { name: 'Next training' }, { timeout: 5000 })
+    await within(next).findByText('Training soon')
+    expect(within(next).queryByText('Bring shin pads.')).toBeNull()
+    expect(within(next).queryByRole('link', { name: /message/i })).toBeNull()
   })
 
   it('Schedule opens the event straight at its note', async () => {
@@ -225,7 +204,9 @@ describe('TRAK-367: Use a past plan', { timeout: 30_000 }, () => {
       { new: [trak(1, 'r1', 'Rondo 4 v 2', 'Rondo', 'rondo')], old: [trak(1, 'g1', 'Game 7 v 7', 'Game', 'game')] })
     server.use(table('training_notes', [{ event_id: 'old', again: 'yes', note: '' }, { event_id: 'new', again: 'no', note: '' }]))
     renderApp('/coach/training')
-    await user.click(await screen.findByRole('button', { name: 'Use a past plan' }, { timeout: 5000 }))
+    // TRAK-584: behind the Next training card's Plan session.
+    await user.click(await screen.findByRole('button', { name: 'Plan session more actions' }, { timeout: 5000 }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Use a past plan' }))
     const list = await screen.findByRole('list', { name: 'Past plans' })
     await waitFor(() => expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent('Training old'))
     expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent('You’d run it again')

@@ -103,8 +103,11 @@ describe('TRAK-297: Copy a past session', { timeout: 30_000 }, () => {
       ],
     })
     renderApp('/coach/training')
-    const next = await screen.findByRole('region', { name: 'Before Everton' })
-    await user.click(within(next).getByRole('button', { name: 'Use a past plan' }))
+    // TRAK-584: behind the Next training card's Plan session.
+    const next = await screen.findByRole('region', { name: 'Next training' })
+    await within(next).findByText('Before Everton')
+    await user.click(within(next).getByRole('button', { name: 'Plan session more actions' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Use a past plan' }))
 
     const copy = await screen.findByRole('dialog', { name: 'Use a past plan' })
     const list = await within(copy).findByRole('list', { name: 'Past plans' })
@@ -141,7 +144,10 @@ describe('TRAK-297: Copy a past session', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     database([training('next', onTheMinute(Date.now() + DAY), { title: 'Before Everton' })], {})
     renderApp('/coach/training')
-    await user.click(within(await screen.findByRole('region', { name: 'Before Everton' })).getByRole('button', { name: 'Use a past plan' }))
+    const next = await screen.findByRole('region', { name: 'Next training' })
+    await within(next).findByText('Before Everton')
+    await user.click(within(next).getByRole('button', { name: 'Plan session more actions' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Use a past plan' }))
     const copy = await screen.findByRole('dialog', { name: 'Use a past plan' })
     expect(await within(copy).findByText('No past plans yet. Every plan you save is kept here.')).toBeInTheDocument()
     expect(within(copy).queryByRole('list', { name: 'Past plans' })).toBeNull()
