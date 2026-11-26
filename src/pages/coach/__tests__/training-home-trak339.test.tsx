@@ -224,7 +224,7 @@ describe('TRAK-339: the Next training card', { timeout: 30_000 }, () => {
 })
 
 describe('TRAK-339: Past trainings', { timeout: 30_000 }, () => {
-  it('a button at the bottom opens them: newest first, the plan, who came and the Notes; Use this plan copies into a training coming up', async () => {
+  it('a button at the bottom opens them: newest first, each a card as Upcoming trainings\u2019 that opens its training (TRAK-591)', async () => {
     const user = userEvent.setup()
     const now = Date.now()
     database([
@@ -242,21 +242,19 @@ describe('TRAK-339: Past trainings', { timeout: 30_000 }, () => {
     const items = within(list).getAllByRole('listitem')
     expect(items).toHaveLength(2)
     expect(items[0]).toHaveTextContent('Pressing')
-    expect(items[0]).toHaveTextContent('2 practices · 40 min · Rondo 4 v 2, Counter-pressing 5 v 3')
-    await waitFor(() => expect(items[0]).toHaveTextContent('2 here'))
-    expect(items[0]).toHaveTextContent('Run it again: Yes')
-    expect(items[0]).toHaveTextContent('“Keep the five-second rule.”')
-    expect(items[1]).toHaveTextContent('No plan written')
-    expect(within(items[1]).queryByRole('button', { name: /Use this plan/ })).toBeNull()
+    // Kostas, 26 Nov: who came is the badge, "2 attended"; with no register, "Finished".
+    await waitFor(() => expect(within(items[0]).getByText('2 attended').className).toMatch(/\bborder-success\b/))
+    expect(within(items[1]).getByText('Finished')).toBeInTheDocument()
+    // The plan and the Notes are on the training's page, not the row; no buttons on a row.
+    expect(items[0]).not.toHaveTextContent(/practices|Run it again|five-second/)
+    expect(within(list).queryAllByRole('button')).toHaveLength(0)
 
+    // The search still finds a training by its note.
     await user.type(screen.getByRole('searchbox', { name: 'Search past trainings' }), 'five-second')
     await waitFor(() => expect(within(list).getAllByRole('listitem')).toHaveLength(1))
-
-    await user.click(within(list).getByRole('button', { name: /^Use this plan: Pressing/ }))
-    const pick = await screen.findByRole('dialog', { name: 'Copy Pressing into which training?' })
-    await user.click(within(pick).getByRole('button', { name: /^Copy here: Counter-attacks/ }))
-    await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/training/next?tab=plan'))
-    expect(await screen.findByText(/Copied from Pressing, .+ then save it\./)).toBeInTheDocument()
+    // The whole card opens the training.
+    await user.click(within(list).getByRole('link', { name: /Pressing/ }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/training/done'))
   })
 
   it('with none yet, says so', async () => {
