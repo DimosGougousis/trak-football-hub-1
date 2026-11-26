@@ -336,12 +336,12 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('button', { name: 'Back' }))
   })
 
-  it('with no draft, Open drafts says so in Matches\u2019 words and explains nothing (Imad, 15 Nov)', async () => {
+  it('with no draft, there is no Open drafts box and no "No drafts open." (TRAK-589, Kostas, 25 Nov)', async () => {
     database([training('soon', onTheMinute(Date.now() + DAY), { title: 'Pressing triggers' })])
     renderApp('/coach/training')
-    const box = await screen.findByRole('region', { name: 'Open drafts' }, { timeout: 5000 })
-    expect(within(box).getByText('No drafts open.')).toBeInTheDocument()
-    expect(box).not.toHaveTextContent(/Only you see|waits here/)
+    await screen.findByRole('region', { name: 'Next training' }, { timeout: 5000 })
+    expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
+    expect(screen.queryByText('No drafts open.')).toBeNull()
   })
 
   it('with a draft, the Next training card says Draft, and Continue plan carries on where the coach stopped', async () => {
@@ -350,15 +350,14 @@ describe('TRAK-340: drafts and a saved plan', { timeout: 30_000 }, () => {
     database([training('soon', onTheMinute(Date.now() + DAY), { title: 'Pressing triggers' })], {},
       { drafts: [{ event_id: 'soon', step: 2, body: { parts, note: '' }, updated_at: '2026-11-03T10:00:00Z' }] })
     renderApp('/coach/training')
-    // TRAK-584: the card is "Next training", in Matches' words: Draft, and Continue plan. Where the coach stopped is in
-    // Open drafts, under it.
+    // TRAK-584: the card is "Next training", in Matches' words: Draft, and Continue plan. TRAK-589: no Open drafts box;
+    // the Draft badge is amber on the card and on the training's Upcoming row.
     const card = await screen.findByRole('region', { name: 'Next training' }, { timeout: 5000 })
     await within(card).findByText('Pressing triggers')
-    expect(within(card).getByText('Draft')).toBeInTheDocument()
-    // Kostas, 3 Nov: Open drafts sits beside the card, as the mockup.
-    expect(within(screen.getByRole('region', { name: 'Open drafts' })).getByText(/stopped at Rondo/)).toBeInTheDocument()
-    // Imad, 15 Nov: no helper line under the box's title (TRAK-442's rule).
-    expect(screen.getByRole('region', { name: 'Open drafts' })).not.toHaveTextContent(/Only you see/)
+    expect(within(card).getByText('Draft').className).toMatch(/\bborder-attention\b/)
+    const row = within(screen.getByRole('region', { name: 'Upcoming trainings' })).getByRole('link', { name: /Pressing triggers/ })
+    expect(within(row).getByText('Draft').className).toMatch(/\bborder-attention\b/)
+    expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     await user.click(within(card).getByRole('button', { name: 'Continue plan' }))
     expect(await part('Rondo')).toBeInTheDocument()
   })
