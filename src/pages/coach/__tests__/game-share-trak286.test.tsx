@@ -251,16 +251,17 @@ describe('TRAK-286: Needs you and Games home follow the share', { timeout: 30_00
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan&step=share'))
   })
 
-  it('Games home: a shared plan leaves Open drafts; the next game offers Share changes', async () => {
+  it('Games home: a shared plan is no longer a draft; the next game offers Share changes', async () => {
     const user = userEvent.setup()
     games({ g1: ['charisteas'] })
     renderApp('/coach/matches')
-    const drafts = await screen.findByRole('region', { name: 'Open drafts' })
-    expect(within(drafts).getAllByRole('listitem').map(item => item.textContent)).toEqual([expect.stringContaining('vs Harbour Town')])
-    const next = screen.getByRole('region', { name: 'Next match' })
+    const next = await screen.findByRole('region', { name: 'Next match' })
+    // TRAK-588: no Open drafts box; the draft left (Harbour Town's) says so on its row.
+    expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     expect(await within(next).findByText('Changes not shared')).toBeInTheDocument()
-    const strip = screen.getByRole('region', { name: 'Your matches' })
+    const strip = screen.getByRole('region', { name: 'Upcoming matches' })
     expect(within(within(strip).getByRole('link', { name: /Riverside Rovers/ })).getByText('Plan shared')).toBeInTheDocument()
+    expect(within(within(strip).getByRole('link', { name: /Harbour Town/ })).getByText('Draft')).toBeInTheDocument()
     await user.click(within(next).getByRole('button', { name: 'Share changes' }))
     expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan&step=share')
   })

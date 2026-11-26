@@ -37,12 +37,12 @@ describe('TRAK-408: Training in Greek', () => {
     for (const label of english) expect(shown(TRAINING_WORD, label)).not.toBe(label)
   })
 
-  it('counts who is here and a plan\'s practices in the language showing', async () => {
-    expect(trainingBadge({ phase: 'after', planned: true, here: 14 }).label).toBe('14 here')
+  it('counts who attended and a plan\'s practices in the language showing', async () => {
+    expect(trainingBadge({ phase: 'after', planned: true, here: 14 }).label).toBe('14 attended')
     expect(sessionSummary([{ name: 'Rondos', minutes: 15 }])).toBe('1 practice · 15 min · Rondos')
     expect(sessionSummary([{ name: 'Rondos', minutes: 15 }, { name: '8v8', minutes: 30 }])).toBe('2 practices · 45 min · Rondos, 8v8')
     await showLanguage('el')
-    expect(trainingBadge({ phase: 'after', planned: true, here: 14 }).label).toBe('14 παρόντες')
+    expect(trainingBadge({ phase: 'after', planned: true, here: 14 }).label).toBe('14 συμμετείχαν')
     expect(sessionSummary([{ name: 'Rondos', minutes: 15 }])).toBe('1 άσκηση · 15 λ. · Rondos')
   })
 

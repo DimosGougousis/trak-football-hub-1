@@ -83,7 +83,7 @@ describe('TRAK-498: a way back on a phone', { timeout: 30_000 }, () => {
     screenIs(false)
     const user = userEvent.setup()
     renderApp('/coach/matches')
-    await user.click(within(await screen.findByRole('region', { name: 'Your matches' })).getByRole('link', { name: /Parkview Athletic/ }))
+    await user.click(within(await screen.findByRole('region', { name: 'Upcoming matches' })).getByRole('link', { name: /Parkview Athletic/ }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/matches/g1'))
     await user.click(await backArrow())
     await waitFor(() => expect(window.location.pathname).toBe('/coach/matches'))

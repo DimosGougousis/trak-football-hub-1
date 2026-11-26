@@ -99,14 +99,14 @@ async function grown(region: HTMLElement, label: string) {
 }
 
 describe('TRAK-335: skeletons while the coach app loads', { timeout: 30_000 }, () => {
-  // TRAK-461: four placeholders (Next match, Open drafts, the "Your matches" title and its row) grow into the page.
+  // TRAK-461: placeholders (Next match, the "Your matches" list) grow into the page. TRAK-588: no Open drafts. TRAK-590: no month.
   it('Matches shows placeholders shaped like the page, then they grow into the next match', async () => {
     server.use(hold('coach_calendar_events', [game('g1', 'Parkview Athletic', 3)]))
     renderApp('/coach/matches')
-    const region = await morph('Loading your matches…', 4)
+    const region = await morph('Loading your matches…', 2)
     release()
     expect(await screen.findByRole('region', { name: 'Next match' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Open drafts' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     await grown(region, 'Loading your matches…')
   })
 

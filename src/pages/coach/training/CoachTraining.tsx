@@ -3,15 +3,15 @@ import { TRAINING_WORD } from '@/lib/training/words'
 import { shown as shownWord } from '@/lib/squad/trait-words'
 import { useLayoutEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { AlertTriangle, Check, CheckCircle2, Copy, History, Info, TrafficCone, X } from 'lucide-react'
+import { Check, History, Info, TrafficCone, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
 import { splitTrainings, trainingMinutes } from '@/lib/training/sessions'
 import { useTrainingEnded } from '@/lib/training/ended'
-import { herePath, planPath, sessionSummary } from '@/lib/training/plans'
+import { herePath, planPath } from '@/lib/training/plans'
 import { registerProblem } from '@/lib/event-register'
-import { againLabel, nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
+import { nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
 import { gameWhen } from '@/components/coach/games/useGames'
 import { venueName } from '@/lib/venue-link'
 import {
@@ -21,12 +21,11 @@ import { NotesForm } from '@/components/coach/training/NotesForm'
 import { EVENT_COLOR, startedLocked } from '@/lib/coach-events'
 import { squadName } from '@/lib/coach-week'
 import { NOTE_STEP } from '@/lib/event-edit'
-import { CopyTargetSheet, PastPlanSheet, type PlanToCopy } from '@/components/coach/training/PastPlanSheet'
+import { PastPlanSheet } from '@/components/coach/training/PastPlanSheet'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { PitchViewRoute, ToTab, TrainingRoute } from './CoachTrainingPlan'
 import { AllDrills, ChangePractice, DrillPage, LibraryHome, MyDrills, PracticePage } from './DrillLibrary'
 import { LoadError, WIDE_COLUMN } from '@/components/trak'
-import { Badge } from '@/components/arc/badge/badge'
 import { Button } from '@/components/arc/button/button'
 import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
@@ -39,7 +38,7 @@ import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { EditIcon } from '@/components/trak/IconAction'
 import { PageTop } from '@/components/coach/PageTop'
-import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
+import { BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, SquadBadge, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-294 (Training 1/5, spec TRAK-293): Training home, behind the academy's training switch. Sessions lists the
    coach's trainings from Schedule (Coming up, then Last week); Drills holds My drills, then the Library's tiles.
@@ -108,7 +107,7 @@ function Page({ view, children }: { view: 'sessions' | 'drills'; children: React
       <div className={WIDE_COLUMN}>
         {/* Kostas, 30 Oct: no visible title ("training" too repetitive). TRAK-422 (Kostas, 13 Nov): every coach page has
             the one title, Training too, with its Sessions / Drills switch beside it. */}
-        <PageTop title={t('nav:training')} pill={<span className={BADGE}>{coachSquad.everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</span>}>
+        <PageTop title={t('nav:training')} pill={<SquadBadge>{coachSquad.everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</SquadBadge>}>
           {/* TRAK-431 (Kostas, 16 Nov): every page's tabs are Squad's big glass pill. */}
           <div className="arc w-full tablet:w-[320px]">
             <GlassSegmented label={t('coachTraining:trainingView')} value={view} fullWidth
@@ -184,7 +183,7 @@ function SessionsView() {
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden size={16} /></button>
           </div>}
 
-          {/* TRAK-577: one column; Open drafts straight under the Next training. */}
+          {/* TRAK-577: one column. TRAK-589 (Kostas, 25 Nov): no Open drafts box; a draft is the amber Draft badge on its card and row. */}
           {next ? <NextTraining key={next.training.id} draft={drafts.data?.get(next.training.id)} training={next.training} phase={next.phase} planned={!!planned.data?.has(next.training.id)}
             sessionId={registers.data?.get(next.training.id) ?? null} onStart={() => setNow(Date.now())}
             onClosed={() => setClosed(next.training.title)} />
@@ -193,7 +192,6 @@ function SessionsView() {
                 description={t('coachTraining:addInSchedule')}
                 action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_TRAINING })}>{t('coachTraining:addTraining')}</Button>} />
             </div>}
-          <OpenDrafts drafts={upcoming.filter(t => drafts.data?.has(t.id) && !planned.data?.has(t.id)).map(t => ({ training: t, draft: drafts.data!.get(t.id)! }))} />
 
           {upcoming.length > 0 && <section aria-labelledby="upcoming" className="grid min-w-0 gap-3.5">
             <SectionHeading id="upcoming" bar="bg-success">{t('coachTraining:upcomingTrainings')}</SectionHeading>
@@ -202,17 +200,8 @@ function SessionsView() {
                 const { day, time } = gameWhen(training)
                 const badge = trainingBadge({ phase: isToday(training) ? 'day' : 'before', planned: !!planned.data?.has(training.id),
                   draft: drafts.data?.has(training.id) })
-                return <li key={training.id}>
-                  <Link to={`${TRAINING_PATH}/${training.id}`}
-                    className={`relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 border-line bg-surface p-4 pl-6 shadow-sm transition-all hover:border-ink hover:shadow-md active:scale-[.99] motion-reduce:transition-none sm:pl-7 ${FOCUS}`}>
-                    <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5" style={{ background: EVENT_COLOR.training }} />
-                    <span className="grid min-w-0">
-                      <span className="truncate text-base font-black tracking-tight text-ink sm:text-lg">{training.title}</span>
-                      <span className="truncate text-xs font-semibold text-ink-2">{[isToday(training) ? t('coachHome:today') : day, time, everySquad ? training.squad : null].filter(Boolean).join(' · ')}</span>
-                    </span>
-                    <span className={`${toneBadge(badge.tone)} shrink-0`}>{shownWord(TRAINING_WORD, badge.label)}</span>
-                  </Link>
-                </li>
+                return <TrainingRow key={training.id} training={training} badge={badge}
+                  line={[isToday(training) ? t('coachHome:today') : day, time, everySquad ? training.squad : null]} />
               })}
             </ul>
             {upcoming.length > UPCOMING_SHOWN && <div className="arc"><button type="button" className={BTN} onClick={() => setAllUpcoming(!allUpcoming)}>
@@ -299,51 +288,39 @@ function cardBadge({ phase, started, planned, draft }: { phase: Phase; started: 
   return draft ? { label: shownWord(TRAINING_WORD, 'Draft'), tone: 'attention' } : { label: shownWord(TRAINING_WORD, 'Plan not written'), tone: 'attention' }
 }
 
-/** Open drafts, under the Next training as Matches has them under its month (TRAK-577): plans the coach kept for later,
- *  with where they stopped, amber while any is open. Only the coach sees a draft. */
-function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[] }) {
-  const navigate = useNavigate()
-  const { t } = useTranslation()
-  return <section aria-labelledby="open-drafts" className={`arc grid gap-3 rounded-2xl border-2 p-4 sm:p-5 ${drafts.length ? 'border-attention bg-attention/10' : 'border-line bg-surface'}`}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <span className="flex items-center gap-3">
-        {drafts.length > 0 && <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-warning" />}
-        <h2 id="open-drafts" className="text-base font-extrabold text-ink">{t('coachMatches:openDrafts')}</h2>
+/** A training in a list (Upcoming, Past): a bold bordered card with the training's stripe, its name and when, one badge,
+ *  and the whole card opens it, as Matches' rows (TRAK-591). */
+function TrainingRow({ training, line, badge }: { training: Training; line: (string | null | undefined)[]; badge: { label: string; tone: string } }) {
+  return <li>
+    <Link to={`${TRAINING_PATH}/${training.id}`}
+      className={`relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 border-line bg-surface p-4 pl-6 shadow-sm transition-all hover:border-ink hover:shadow-md active:scale-[.99] motion-reduce:transition-none sm:pl-7 ${FOCUS}`}>
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5" style={{ background: EVENT_COLOR.training }} />
+      <span className="grid min-w-0">
+        <span className="truncate text-base font-black tracking-tight text-ink sm:text-lg">{training.title}</span>
+        <span className="truncate text-xs font-semibold text-ink-2">{line.filter(Boolean).join(' · ')}</span>
       </span>
-      {drafts.length === 0 && <span className={GOOD}><CheckCircle2 aria-hidden size={14} strokeWidth={2.5} />{t('coachMatches:noDrafts')}</span>}
-    </div>
-    {drafts.length > 0 && <ul className="grid gap-2">
-        {drafts.map(({ training, draft }) => <li key={training.id} className="flex items-center justify-between gap-3 rounded-xl border-2 border-line bg-surface px-4 py-3">
-          <span className="grid min-w-0">
-            <span className="truncate text-base font-black tracking-tight text-ink">{training.title}</span>
-            <span className="truncate text-xs font-semibold text-ink-2">{t('coachTraining:stoppedAtLine', { day: gameWhen(training).day, step: draft.parts[draft.step]?.name ?? t('coachMatches:reviewShare') })}</span>
-          </span>
-          <button type="button" className={`${BTN} shrink-0`} aria-label={t('coachTraining:continueNamed', { title: training.title })} onClick={() => navigate(planPath(training.id))}>{t('coachSchedule:continue')}</button>
-        </li>)}
-      </ul>}
-  </section>
+      <span className={`${toneBadge(badge.tone)} shrink-0`}>{shownWord(TRAINING_WORD, badge.label)}</span>
+    </Link>
+  </li>
 }
 
 /* ── Past trainings ─────────────────────────────────────────────────────── */
 
-/** Every training that's over, newest first: what was planned, who came, and the Notes. View opens its page; Use this
- *  plan asks which training to copy it into (Kostas, 30 Oct: Past trainings is a list of its own, not a row on the
- *  front page). */
+/** Every training that's over, newest first (Kostas, 30 Oct: Past trainings is a list of its own, not a row on the
+ *  front page). TRAK-591 (Kostas, 26 Nov): each row as Upcoming trainings' (as Previous matches are as Your matches):
+ *  the whole card opens the training; its badge says who came, else Finished. Its plan and Notes are on its page; a
+ *  past plan is reused from the training it's for (Plan session ▾ → Use a past plan). */
 function PastTrainings() {
   const { user } = useAuth()
   const { t } = useTranslation()
   const coachSquad = useCoachSquad(user?.id)
-  const navigate = useNavigate()
   const past = usePastTrainings()
-  const trainings = useTrainings()
   const registers = useRegisters()
   const [query, setQuery] = useState('')
-  const [copying, setCopying] = useState<PlanToCopy | null>(null)
   const { everySquad } = coachSquad
   const inView = (past.data ?? []).filter(t => everySquad || coachSquad.eventInSquad(t.squad))
   const shown = searchPast(inView.map(t => ({ ...t, note: t.notes?.note ?? '' })), query)
   const here = useHere(inView.flatMap(t => registers.data?.get(t.id) ?? []))
-  const coming = splitTrainings((trainings.data ?? []).filter(t => everySquad || coachSquad.eventInSquad(t.squad)), Date.now()).comingUp
 
   return (
     <div className="min-h-screen bg-ground pb-28">
@@ -360,33 +337,15 @@ function PastTrainings() {
             {shown.length === 0 ? <p className="text-[15px] text-ink-2">{t('coachTraining:noPastMatch', { query: query.trim() })}</p>
               : <ul aria-label={t('coachTraining:pastTrainings')} className="grid gap-3">
                 {shown.map(training => {
-                  const { day } = gameWhen(training)
+                  const { day, time } = gameWhen(training)
                   const sessionId = registers.data?.get(training.id)
                   const count = sessionId ? here.data?.get(sessionId) : undefined
-                  const answer = againLabel(training.notes?.again)
-                  const again = answer ? shownWord(TRAINING_WORD, answer) : null
-                  return <li key={training.id} className="arc flex flex-wrap items-start gap-x-6 gap-y-3 rounded-2xl border border-line bg-surface p-5 laptop:p-6">
-                    <div className="grid min-w-0 flex-[1_1_16rem] gap-1.5">
-                      <p className="text-sm text-ink-3">{[day, everySquad ? training.squad : null, count != null ? t('coachTraining:hereCount', { count }) : null].filter(Boolean).join(' · ')}</p>
-                      <p className="text-lg font-medium text-ink break-words">{training.title}</p>
-                      <p className="text-sm text-ink-2 break-words">{training.planned ? sessionSummary(training.practices) : t('coachTraining:noPlanWritten')}</p>
-                      {(again || training.notes?.note) && <p className="flex flex-wrap items-center gap-2 text-sm text-ink-2">
-                        {again && <Badge size="sm" tone={training.notes?.again === 'no' ? 'warning' : 'success'}>{t('coachTraining:runItAgain', { answer: again })}</Badge>}
-                        {training.notes?.note && <span className="break-words">“{training.notes.note}”</span>}
-                      </p>}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => navigate(`${TRAINING_PATH}/${training.id}`)}
-                        aria-label={t('coachTraining:viewNamed', { title: training.title, day })}>{t('coachTraining:view')}</Button>
-                      {training.planned && training.practices.length > 0 && <Button size="sm" aria-label={t('coachTraining:useThisPlanNamed', { title: training.title, day })}
-                        onClick={() => setCopying({ title: training.title, day, practices: training.practices })}><Copy aria-hidden size={16} />{t('coachTraining:useThisPlan')}</Button>}
-                    </div>
-                  </li>
+                  return <TrainingRow key={training.id} training={training} line={[day, time, everySquad ? training.squad : null]}
+                    badge={trainingBadge({ phase: 'after', planned: training.planned, here: count })} />
                 })}
               </ul>}
           </div>}
       </div>
-      <CopyTargetSheet plan={copying} trainings={coming} onClose={() => setCopying(null)} />
     </div>
   )
 }

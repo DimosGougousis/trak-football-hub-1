@@ -225,7 +225,7 @@ async function everyControlByKeyboard(page: Page, scope: string, fields = false)
 }
 
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`Games home at ${width} px: the next game, open drafts and the squad's matches`, async ({ page, context }, testInfo) => {
+  test(`Games home at ${width} px: the next game, its draft and the squad's matches`, async ({ page, context }, testInfo) => {
     const plans: Plans = new Map([['m-next', { event_id: 'm-next', strength: null, their_formation: null, key_players: [], scouting: '',
       goals: [{ title: 'Win it back in their half', looks_like: '' }], created_at: '2026-10-27T17:00:00Z', updated_at: '2026-10-27T17:40:00Z' }]])
     const { unexpected, errors } = await open(page, context, '/coach/matches', width, height, plans)
@@ -236,13 +236,18 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // TRAK-286: with a draft, sharing it is next. TRAK-333: on a split button, with the match's other pages behind it.
     await expect(next.getByRole('button', { name: 'Share plan', exact: true })).toBeVisible()
     await expect(next.getByRole('button', { name: 'Share plan more actions' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Open drafts' }).getByRole('button', { name: 'Open the plan, vs Parkview Athletic U16' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Your matches' }).getByRole('link')).toHaveCount(4)
+    // TRAK-588: no Open drafts box; the draft is on its badge. TRAK-590: no month strip.
+    await expect(page.getByRole('heading', { name: 'Open drafts' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Match calendar' })).toHaveCount(0)
+    // TRAK-592: only the matches to come; the two played are behind Past matches.
+    await expect(page.getByRole('region', { name: 'Upcoming matches' }).getByRole('link')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: /^Past matches/ })).toContainText('2')
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`games-home-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     const keyboard = await everyControlByKeyboard(page, '.trak-wide')
-    expect(keyboard.count).toBeGreaterThan(5)
+    // TRAK-592: split button (2), the 2 matches to come, Past matches: 5.
+    expect(keyboard.count).toBeGreaterThanOrEqual(5)
     expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])
