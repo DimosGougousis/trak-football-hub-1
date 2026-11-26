@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { eventDay, eventHeading, eventTime, type PlayerEvent } from '@/lib/player-events'
+import { venueName } from '@/lib/venue-link'
 // The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
 import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 import { withAlpha } from '@/lib/with-alpha'
@@ -21,7 +22,7 @@ export function UpcomingEventCard({ event, changed, nextUp = false, linkBase = '
 }) {
   const cancelled = event.status === 'cancelled'
   const heading = eventHeading(event)
-  const where = [event.meetTime ? `Meet ${event.meetTime}` : null, event.venue].filter(Boolean).join(' · ')
+  const where = [event.meetTime ? `Meet ${event.meetTime}` : null, venueName(event.venue)].filter(Boolean).join(' · ')
   return (
     <Link
       to={`${linkBase}/${event.id}`}

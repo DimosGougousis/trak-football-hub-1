@@ -16,6 +16,7 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { isPosition } from '@/lib/positions'
 import { POSITION_WORD } from '@/lib/position-words'
 import { useTranslation } from '@/lib/i18n'
+import { venueName } from '@/lib/venue-link'
 
 /* TRAK-250: Squad > Availability. Families confirm in the squad's WhatsApp group; the coach reads it
    and ticks each child Confirmed here. Everyone else is Not confirmed, and a guardian's "Can't make it"
@@ -208,7 +209,7 @@ export function AvailabilityTab({ roster }: { roster: SquadRoster }) {
   const details = [
     time ? t(isMatch ? 'coachSquad:kickOffAt' : 'coachSquad:startsAt', { time }) : '',
     event.home_away === 'home' ? t('coachSchedule:home') : event.home_away === 'away' ? t('coachSchedule:away') : '',
-    event.venue ?? '',
+    venueName(event.venue),
   ].filter(Boolean).join(' · ')
 
   const step = (by: number) => { toggle.reset(); setMoved(null); setPick(upcoming[at + by].id) }

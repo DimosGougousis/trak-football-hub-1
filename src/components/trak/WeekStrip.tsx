@@ -9,6 +9,7 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { WeekPicker, type WeekDay } from '@/components/arc/blocks/availability-picker/week-picker'
 import { dateLocale, i18n } from '@/lib/i18n'
 import { eventHeading, toPlayerEvent, type PlayerEvent } from '@/lib/player-events'
+import { venueName } from '@/lib/venue-link'
 // The coach calendar's colours (TRAK-159, founders 12 Oct): one constant everywhere.
 import { CANCELLED_COLOR, EVENT_COLOR } from '@/lib/coach-events'
 
@@ -214,7 +215,7 @@ function FamilyWeekPicker({ dates, offset, onOffset, events, renderSheet, render
     events: events.filter(event => event.date === date).sort((a, b) => (a.time ?? '99').localeCompare(b.time ?? '99'))
       .map(event => ({ id: event.id, kind: event.kind, title: eventHeading(event), time: event.time,
         state: event.status === 'cancelled' ? 'cancelled' : 'published',
-        note: event.status === 'cancelled' ? i18n.t('coachHome:noteCancelled') : event.absent ? "Can't make it" : event.venue ?? '' })),
+        note: event.status === 'cancelled' ? i18n.t('coachHome:noteCancelled') : event.absent ? "Can't make it" : venueName(event.venue) })),
   }))
   return <WeekPicker family key={dates[0]} title={weekTitle(offset, dates[0])}
     subtitle={`${format(parseISO(dates[0]), 'd')}–${format(parseISO(dates[6]), 'd MMMM', { locale })}`}

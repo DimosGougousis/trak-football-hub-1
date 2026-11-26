@@ -34,6 +34,7 @@ import { Button } from '@/components/arc/button/button'
 import { PageHeader, PageHeaderPanel, type PageHeaderAction, type PageHeaderTab } from '@/components/arc/blocks/page-header/page-header'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { EditIcon } from '@/components/trak/IconAction'
+import { venueName } from '@/lib/venue-link'
 
 /* TRAK-283 (Games 1/8): a game's page. Its header says where it is in the loop; Logistics, Game plan and
    Evaluation are peer panels of the one game, and the panel lives in the URL (?tab=). TRAK-284 to
@@ -195,7 +196,7 @@ function Game({ row, plan, players, sharedAt, evaluation }: { row: EventRow; pla
         {/* Imad, 6 Nov: the kick-off has its own clock, apart from the day; the squad is its age group, no count. */}
         <span><CalendarDays {...metaIcon} /><strong>{day}</strong></span>
         {time && <span><Clock {...metaIcon} />{t('coachSquad:kickOffAt', { time })}{academy && ` · ${academy}`}</span>}
-        {(row.venue || homeAway) && <span><MapPin {...metaIcon} />{row.venue && <strong>{row.venue}</strong>}{row.venue && homeAway && ' · '}{homeAway}</span>}
+        {(venueName(row.venue) || homeAway) && <span><MapPin {...metaIcon} />{venueName(row.venue) && <strong>{venueName(row.venue)}</strong>}{venueName(row.venue) && homeAway && ' · '}{homeAway}</span>}
         {row.squad && <span><Users {...metaIcon} />{row.squad}</span>}
       </>}
       primary={primary} secondary={secondary} menu={menu} onFold={setFolded}

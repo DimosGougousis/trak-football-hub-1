@@ -23,6 +23,7 @@ import { CoachTrail } from '@/components/coach/CoachTrail'
 import { SearchField } from '@/components/arc/search-field/search-field'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, SquadBadge, WAIT } from '@/components/coach/pitch-ready'
+import { venueName } from '@/lib/venue-link'
 
 /* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
    newest first, with its result, and opens on its evaluation.
@@ -47,7 +48,7 @@ const toneBadge = (tone: string) => tone === 'success' ? GOOD : tone === 'attent
 const details = (game: Game, time: string | null) => [
   time ? i18n.t('coachSquad:kickOffAt', { time }) : '',
   game.home_away === 'home' ? i18n.t('coachSchedule:home') : game.home_away === 'away' ? i18n.t('coachSchedule:away') : '',
-  game.venue ?? '',
+  venueName(game.venue),
 ].filter(Boolean).join(' · ')
 
 export default function CoachGames() {

@@ -4,6 +4,7 @@ import { bandConfig } from '@/lib/types'
 import type { Tables } from '@/integrations/supabase/types'
 import { eventDay, eventHeading, toPlayerEvent, upcomingEventsFilter, type PlayerEvent } from '@/lib/player-events'
 import { fetchCoachNames, PARENT_ASSESSMENT_COLUMNS, type ParentAssessment } from './parent-assessments'
+import { venueName } from '@/lib/venue-link'
 export type { ParentAssessment } from './parent-assessments'
 
 export interface ParentChild {
@@ -173,7 +174,7 @@ export function eventAlert(event: PlayerEvent, firstSeen: Record<string, number>
   return {
     ...base,
     title: `${changed ? 'Changed' : 'New'}: ${heading}`,
-    description: [changed ? `Now ${when}` : when, event.venue].filter(Boolean).join(' · '),
+    description: [changed ? `Now ${when}` : when, venueName(event.venue)].filter(Boolean).join(' · '),
   }
 }
 

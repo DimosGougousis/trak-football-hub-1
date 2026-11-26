@@ -56,6 +56,9 @@ export const isMapsUrl = (text: string) => findMapsLink(text.trim()) === text.tr
 
 const mapsSearch = (words: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(words)}`
 
+/** A venue as any screen prints it: its words, never its Maps link (that is for "Open in Maps"). Empty without one. */
+export const venueName = (venue: string | null | undefined): string => (venue ? venueParts(venue).text : '')
+
 /** The venue's words to show, and the link "Open in Maps" opens. */
 export function venueParts(venue: string): { text: string; mapsUrl: string } {
   let mapsUrl: string | null = null
