@@ -69,27 +69,3 @@ export function PastPlanSheet({ open, onOpenChange, training }: { open: boolean;
     </div>
   </BottomSheet>
 }
-
-/** Use this plan, from Past trainings: which training coming up to copy it into. */
-export function CopyTargetSheet({ plan, trainings, onClose }: { plan: PlanToCopy | null; trainings: Training[]; onClose: () => void }) {
-  const copyInto = useCopyInto()
-  const { t } = useTranslation()
-  return <BottomSheet className="arc" open={!!plan} onOpenChange={open => { if (!open) onClose() }}
-    title={plan ? t('coachTraining:copyInto', { title: plan.title }) : t('coachTraining:copyIntoPlain')}
-    description={t('coachTraining:plannerOpens')}>
-    <div className="grid gap-4 pb-4">
-      {trainings.length === 0 ? <p className="text-[15px] text-ink-2">{t('coachTraining:noTrainingAddFirst')}</p>
-        : <ul aria-label="Trainings coming up" className="divide-y divide-line rounded-2xl border border-line bg-surface px-4">
-          {trainings.map(training => <li key={training.id} className="flex flex-wrap items-center justify-between gap-3 py-3.5">
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium text-ink break-words">{training.title}</p>
-              <p className="text-[13px] text-ink-3">{when(training)}</p>
-            </div>
-            <Button size="sm" aria-label={t('coachTraining:copyHereNamed', { title: training.title, when: when(training) })}
-              onClick={() => { if (plan) { onClose(); copyInto(training, plan) } }}>{t('coachTraining:copyHere')}</Button>
-          </li>)}
-        </ul>}
-      <div className="flex justify-end"><Button variant="ghost" onClick={onClose}>{t('coachSchedule:cancel')}</Button></div>
-    </div>
-  </BottomSheet>
-}
