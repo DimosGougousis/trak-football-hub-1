@@ -112,7 +112,8 @@ describe('Coach–player P18: Send a task from "+"', { timeout: 20_000 }, () => 
     await userEvent.type(what, 'Read the plan')
     await pickDate(userEvent.setup(), 'Due', addDays(localTodayISO(), 1))
     await userEvent.click(screen.getByRole('button', { name: 'Send' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn\'t send it. Try again.')
+    // The alert can be in the page a moment before its words (seen under the full suite's load).
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Couldn\'t send it. Try again.'))
     expect(what).toHaveValue('Read the plan')
   })
 })
