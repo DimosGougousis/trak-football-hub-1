@@ -22,7 +22,7 @@ import { PageTop } from '@/components/coach/PageTop'
 import { CoachTrail } from '@/components/coach/CoachTrail'
 import { SearchField } from '@/components/arc/search-field/search-field'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
-import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
+import { BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, SquadBadge, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
    newest first, with its result, and opens on its evaluation.
@@ -79,7 +79,7 @@ export default function CoachGames() {
     <div className="min-h-screen bg-ground pb-24">
       <div className={WIDE_COLUMN}>
         {/* TRAK-376 (Imad, 5 Nov): on a phone the avatar opens the side menu, where the squad picker is. TRAK-422: PageTop. */}
-        <PageTop title={t('nav:matches')} pill={<span className={BADGE}>{everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</span>} />
+        <PageTop title={t('nav:matches')} pill={<SquadBadge>{everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</SquadBadge>} />
 
         {games.error || plans.error || shares.error || evaluations.error
             ? <LoadError what={t('coachMatches:matchesWhat')} onRetry={() => { void games.refetch(); void plans.refetch(); void shares.refetch(); void evaluations.refetch() }}

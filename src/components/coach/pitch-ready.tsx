@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 
 /* The season plan's pitch-ready look (Tarek, 24 Nov, season_plan_pitch_ready_mockup.html), kept in one place so the
    Squad page and a player's page read the same as /coach/season-plan: white cards with a firm border, black headings
@@ -17,6 +18,14 @@ export const LOST = 'inline-flex items-center gap-1 rounded-lg border-2 border-d
 export const PILL = (on: boolean) => `min-h-[38px] rounded-lg border-2 px-3 py-1.5 text-xs font-extrabold transition-colors ${FOCUS} ${on ? 'border-brand bg-brand text-on-brand' : 'border-line bg-surface text-ink hover:border-ink'}`
 /** The squad badge beside a page's title ("U16 · 15 Players"). */
 export const BADGE = 'inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-surface px-3 py-1.5 text-xs font-extrabold tracking-tight text-ink sm:text-sm'
+
+/** TRAK-594–598 (Kostas, 25 Nov): the squad beside a coach page's title ("U18", "All squads", "U18 · 26 players") shows
+ *  only where the side menu, and its squad picker, is off screen: a phone, a tablet held upright. On a laptop the
+ *  picker already says it. A printed page keeps it, since paper has no side menu. */
+export function SquadBadge({ children }: { children: ReactNode }) {
+  const sideMenu = useSideMenuScreen()
+  return <span data-squad-badge="" className={sideMenu ? `${BADGE.replace('inline-flex ', '')} hidden print:inline-flex` : BADGE}>{children}</span>
+}
 /** A block's title inside a page, as SectionHeading draws it (the bar, black capitals), for an h3 or h4 in place. */
 export const SECTION_TITLE = "flex items-center gap-2.5 text-sm font-black uppercase tracking-wider text-ink before:h-5 before:w-2 before:shrink-0 before:rounded-sm before:bg-ink before:content-['']"
 
