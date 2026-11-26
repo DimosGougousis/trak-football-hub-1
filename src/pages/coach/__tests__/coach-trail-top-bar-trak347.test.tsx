@@ -79,7 +79,7 @@ async function crumbs(last: string) {
 describe('TRAK-347: on a laptop, the top bar is the trail', { timeout: 30_000 }, () => {
   it('a nav row shows its name only: no club', async () => {
     renderApp('/coach/matches')
-    await screen.findByRole('region', { name: 'Your matches' })
+    await screen.findByRole('region', { name: 'Upcoming matches' })
     expect(await crumbs('Matches')).toEqual(['Matches'])
     expect(within(topBar()).queryByText('Rehearsal FC')).toBeNull()
   })
@@ -87,7 +87,7 @@ describe('TRAK-347: on a laptop, the top bar is the trail', { timeout: 30_000 },
   it('from Matches: Matches / vs Parkview Athletic, with no trail on the page; Matches goes back', async () => {
     const user = userEvent.setup()
     renderApp('/coach/matches')
-    await user.click(within(await screen.findByRole('region', { name: 'Your matches' })).getByRole('link', { name: /Parkview Athletic/ }))
+    await user.click(within(await screen.findByRole('region', { name: 'Upcoming matches' })).getByRole('link', { name: /Parkview Athletic/ }))
     expect(await screen.findByRole('heading', { level: 1, name: 'vs Parkview Athletic' })).toBeInTheDocument()
     expect(await crumbs('vs Parkview Athletic')).toEqual(['Matches', 'vs Parkview Athletic'])
     expect(within(topBar()).getByText('vs Parkview Athletic').closest('li')).toHaveAttribute('aria-current', 'page')

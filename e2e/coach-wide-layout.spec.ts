@@ -626,7 +626,7 @@ const TITLED_PAGES = [
   ['Home', '/coach/home', 'menu'], ['Schedule', '/coach/schedule', 'menu'], ['Squad', '/coach/squad', 'menu'],
   ['Matches', '/coach/matches', 'menu'], ['Training', '/coach/training', 'menu'], ['Drills', '/coach/training/drills', 'menu'],
   ['Feedback', '/coach/feedback', 'menu'], ['Settings', '/settings', 'menu'],
-  ['Season plan', '/coach/season-plan', 'sub'], ['Evaluation', '/coach/evaluation', 'sub'], ['Past trainings', '/coach/training/past', 'sub'],
+  ['Season plan', '/coach/season-plan', 'sub'], ['Evaluation', '/coach/evaluation', 'sub'], ['Past trainings', '/coach/training/past', 'sub'], ['Past matches', '/coach/matches/past', 'sub'],
   ['My drills', '/coach/training/drills/mine', 'sub'], ['All drills', '/coach/training/drills/all', 'sub'], ['How Trak works', '/coach/how-trak-works', 'sub'],
 ] as const
 for (const [label, width, height, size, menuTop, subTop] of [['a phone', 390, 844, 22, 20, 60], ['a laptop', 1440, 900, 26, 80, 80]] as const) {

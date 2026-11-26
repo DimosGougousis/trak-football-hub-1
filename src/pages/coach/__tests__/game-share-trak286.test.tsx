@@ -259,7 +259,7 @@ describe('TRAK-286: Needs you and Games home follow the share', { timeout: 30_00
     // TRAK-588: no Open drafts box; the draft left (Harbour Town's) says so on its row.
     expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     expect(await within(next).findByText('Changes not shared')).toBeInTheDocument()
-    const strip = screen.getByRole('region', { name: 'Your matches' })
+    const strip = screen.getByRole('region', { name: 'Upcoming matches' })
     expect(within(within(strip).getByRole('link', { name: /Riverside Rovers/ })).getByText('Plan shared')).toBeInTheDocument()
     expect(within(within(strip).getByRole('link', { name: /Harbour Town/ })).getByText('Draft')).toBeInTheDocument()
     await user.click(within(next).getByRole('button', { name: 'Share changes' }))

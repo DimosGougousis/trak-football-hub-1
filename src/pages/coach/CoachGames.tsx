@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { History } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
@@ -18,16 +19,27 @@ import { i18n, useTranslation } from '@/lib/i18n'
 import { COMPETITION_WORD, MATCH_WORD } from '@/lib/games/match-words'
 import { shown } from '@/lib/squad/trait-words'
 import { PageTop } from '@/components/coach/PageTop'
+import { CoachTrail } from '@/components/coach/CoachTrail'
+import { SearchField } from '@/components/arc/search-field/search-field'
+import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
    newest first, with its result, and opens on its evaluation.
    TRAK-576: the season plan's pitch-ready look (TRAK-348, Tarek's 24 Nov mockup), as Events has it (TRAK-574): one column
    on every screen. The next match, the matches to come and the previous ones as bold bordered cards. The season's top scorers and assists (TRAK-321) are no longer on
-   this page. TRAK-590 (Kostas, 26 Nov): no month strip; Home and Events show the month. */
+   this page. TRAK-590 (Kostas, 26 Nov): no month strip; Home and Events show the month.
+   TRAK-592 (Kostas, 26 Nov): as Training. Upcoming matches are those still to kick off; the played ones are on their own
+   page behind a Past matches button at the bottom (Home's Needs you asks for their evaluation). TRAK-593: Upcoming
+   matches shows 4, then Show all. */
 
 /** Schedule's quick hand-over (TRAK-182 part 8): New event, on its first step, with Match picked. */
 const ADD_MATCH = { quickEvent: { kind: 'match' } }
+const PAST_PATH = '/coach/matches/past'
+/** TRAK-593: as Upcoming trainings, the soonest 4 and then Show all. */
+const UPCOMING_SHOWN = 4
+/** The count on Past matches, as the season plan's quiet badge (as Past trainings'). */
+const QUIET_COUNT = 'inline-flex items-center rounded-lg border-2 border-line bg-raised px-2 py-0.5 text-xs font-extrabold text-ink-2'
 /** A placeholder that fills its column, as the card it grows into does. */
 const FILL = { width: '100%' }
 /** The season plan's badge for an Arc tone: green good, amber waiting, red lost, else quiet. */
@@ -58,8 +70,9 @@ export default function CoachGames() {
   const progress = (game: Game): PlanProgress => ({ drafted: plans.data?.has(game.id), shared: shares.data?.has(game.id), sharedAt: shares.data?.get(game.id),
     changes: changes.data?.get(game.id)?.length, evaluated: evaluations.data?.has(game.id), published: !!evaluations.data?.get(game.id)?.publishedAt })
   const stateOf = (game: Game) => gameStatus(game, now, progress(game))
-  const published = (game: Game) => !!evaluations.data?.get(game.id)?.publishedAt
-  const previous = ordered.filter(published)
+  const [allUpcoming, setAllUpcoming] = useState(false)
+  const upcoming = ordered.filter(game => Date.parse(game.starts_at) > now)
+  const played = ordered.filter(game => Date.parse(game.starts_at) <= now)
   const loading = games.isPending || plans.isPending || shares.isPending || evaluations.isPending
 
   return (
@@ -88,24 +101,21 @@ export default function CoachGames() {
                 </section>
               ))}</MorphBlock>
 
-              <MorphBlock height={160} radius={16} className="grid min-w-0" style={FILL}>{!loading &&
-                <MatchList id="your-matches" title={t('coachMatches:yourMatches')} bar="bg-success"
-                  rows={ordered.filter(game => !published(game)).map(game => {
+              <MorphBlock height={160} radius={16} className="grid min-w-0" style={FILL}>{!loading && upcoming.length > 0 &&
+                <MatchList id="upcoming-matches" title={t('coachMatches:upcomingMatches')} bar="bg-success"
+                  rows={(allUpcoming ? upcoming : upcoming.slice(0, UPCOMING_SHOWN)).map(game => {
                     const state = stateOf(game)
                     const { day, time } = gameWhen(game)
                     return { game, to: `/coach/matches/${game.id}`, line: [day, time, everySquad ? game.squad : null].filter(Boolean).join(' · '),
                       badge: <span className={toneBadge(state.tone)}>{shown(MATCH_WORD, state.label)}</span> }
-                  })} />}</MorphBlock>
+                  })}
+                  more={upcoming.length > UPCOMING_SHOWN && <div className="arc"><button type="button" className={BTN} onClick={() => setAllUpcoming(!allUpcoming)}>
+                    {allUpcoming ? t('coachTraining:showFewer') : t('coachTraining:showAll', { count: upcoming.length })}</button></div>} />}</MorphBlock>
 
-              {previous.length > 0 && <MatchList id="previous-matches" title={t('coachMatches:previousMatches')} bar="bg-line-strong"
-                rows={previous.map(game => {
-                  const { ourScore: our, theirScore: their } = evaluations.data!.get(game.id)!
-                  // TRAK-362: said the same way as on Home's Season plan card.
-                  const result = matchResult(our, their)
-                  const competition = game.competition && game.competition in COMPETITION_WORD ? t(COMPETITION_WORD[game.competition as keyof typeof COMPETITION_WORD]) : undefined
-                  return { game, to: `/coach/matches/${game.id}?tab=evaluation`, line: [gameWhen(game).day, competition, everySquad ? game.squad : null].filter(Boolean).join(' · '),
-                    badge: <span className={toneBadge(result.tone)}>{result.label}</span> }
-                })} />}
+              {!loading && <div className="arc flex flex-wrap items-center gap-3 border-t-2 border-line-soft pt-5">
+                <button type="button" className={BTN} onClick={() => navigate(PAST_PATH)}><History aria-hidden size={16} />{t('coachMatches:pastMatches')}
+                  <span className={QUIET_COUNT}>{played.length}</span></button>
+              </div>}
             </div>
           </SkeletonMorph>}
       </div>
@@ -114,11 +124,11 @@ export default function CoachGames() {
 }
 
 /** A titled list of matches, one bold bordered card each: the match's stripe on its left edge, as Events' cards. */
-function MatchList({ id, title, bar, rows }: { id: string; title: string; bar: string; rows: { game: Game; to: string; line: string; badge: ReactNode }[] }) {
+function MatchList({ id, title, bar, rows, more }: { id?: string; title?: string; bar?: string; rows: { game: Game; to: string; line: string; badge: ReactNode }[]; more?: ReactNode }) {
   return (
     <section aria-labelledby={id} className="grid gap-3.5">
-      <SectionHeading id={id} bar={bar}>{title}</SectionHeading>
-      <ul className="grid gap-3">
+      {id && <SectionHeading id={id} bar={bar ?? 'bg-success'}>{title}</SectionHeading>}
+      <ul aria-label={id ? undefined : title} className="grid gap-3">
         {rows.map(({ game, to, line, badge }) => <li key={game.id}>
           <Link to={to}
             className={`relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 border-line bg-surface p-4 pl-6 shadow-sm transition-all hover:border-ink hover:shadow-md active:scale-[.99] motion-reduce:transition-none sm:pl-7 ${FOCUS}`}>
@@ -131,7 +141,60 @@ function MatchList({ id, title, bar, rows }: { id: string; title: string; bar: s
           </Link>
         </li>)}
       </ul>
+      {more}
     </section>
+  )
+}
+
+/** TRAK-592 (Kostas, 26 Nov): every match whose kick-off has passed, newest first, on a page of its own as Past
+ *  trainings: its result once published, else where it stands (Full time, Evaluation draft); the whole card opens it. */
+export function CoachPastMatches() {
+  const { user } = useAuth()
+  const { t } = useTranslation()
+  const coachSquad = useCoachSquad(user?.id)
+  const games = useGames()
+  const plans = useGamePlans()
+  const shares = useGameShares()
+  const evaluations = useGameEvaluations()
+  const [query, setQuery] = useState('')
+  const { everySquad } = coachSquad
+  const now = Date.now()
+  const played = (games.data ?? []).filter(game => (everySquad || coachSquad.eventInSquad(game.squad)) && Date.parse(game.starts_at) <= now)
+    .sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at))
+  const competitionOf = (game: Game) => game.competition && game.competition in COMPETITION_WORD ? t(COMPETITION_WORD[game.competition as keyof typeof COMPETITION_WORD]) : undefined
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const shownGames = played.filter(game => { const text = [gameTitle(game), competitionOf(game) ?? ''].join(' ').toLowerCase(); return words.every(word => text.includes(word)) })
+  const loading = games.isPending || plans.isPending || shares.isPending || evaluations.isPending
+  const failed = games.error || plans.error || shares.error || evaluations.error
+
+  return (
+    <div className="min-h-screen bg-ground pb-28">
+      <div className={WIDE_COLUMN}>
+        <PageTop className="arc" title={t('coachMatches:pastMatches')} trail={<CoachTrail current={t('coachMatches:pastMatches')} />} />
+        {failed ? <LoadError what={t('coachMatches:pastWhat')} onRetry={() => { void games.refetch(); void evaluations.refetch() }} retrying={games.isFetching || evaluations.isFetching} />
+          : loading ? <LoadingSkeleton label={t('coachMatches:loadingPast')} lines={2} rows={4} className="pt-6" />
+          : played.length === 0 ? <div className="arc"><EmptyState icon={<History size={24} strokeWidth={1.5} />} title={t('coachMatches:noPastYet')}
+              description={t('coachMatches:pastKept')} /></div>
+          : <div className="grid gap-4">
+            <div className="arc max-w-[560px]">
+              <SearchField label={t('coachMatches:searchPast')} placeholder={t('coachMatches:searchPastPh')} value={query} onValueChange={setQuery} />
+            </div>
+            {shownGames.length === 0 ? <p className="text-[15px] text-ink-2">{t('coachMatches:noPastMatch', { query: query.trim() })}</p>
+              : <MatchList title={t('coachMatches:pastMatches')} rows={shownGames.map(game => {
+                const evaluation = evaluations.data?.get(game.id)
+                const line = [gameWhen(game).day, competitionOf(game), everySquad ? game.squad : null].filter(Boolean).join(' · ')
+                if (evaluation?.publishedAt) {
+                  // TRAK-362: said the same way as on Home's Season plan card.
+                  const result = matchResult(evaluation.ourScore, evaluation.theirScore)
+                  return { game, to: `/coach/matches/${game.id}?tab=evaluation`, line, badge: <span className={toneBadge(result.tone)}>{result.label}</span> }
+                }
+                const state = gameStatus(game, now, { drafted: plans.data?.has(game.id), shared: shares.data?.has(game.id), sharedAt: shares.data?.get(game.id),
+                  evaluated: !!evaluation, published: false })
+                return { game, to: `/coach/matches/${game.id}`, line, badge: <span className={toneBadge(state.tone)}>{shown(MATCH_WORD, state.label)}</span> }
+              })} />}
+          </div>}
+      </div>
+    </div>
   )
 }
 
