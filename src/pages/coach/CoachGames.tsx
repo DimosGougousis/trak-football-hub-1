@@ -1,11 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { squadName } from '@/lib/coach-week'
-import { actionLink, type GameAction, type GameState, type PlanProgress, gameState, gameStatus, orderGames } from '@/lib/games/loop'
+import { type GameState, type PlanProgress, gameState, gameStatus, orderGames } from '@/lib/games/loop'
 import { gameTitle, gameWhen, useGameEvaluations, useGamePlanChanges, useGamePlans, useGameShares, useGames, type Game } from '@/components/coach/games/useGames'
 import { matchResult } from '@/lib/games/results'
 import { EVENT_COLOR } from '@/lib/coach-events'
@@ -17,17 +16,16 @@ import { Countdown } from '@/components/arc/countdown/countdown'
 import { EmptyState } from '@/components/arc/empty-state/empty-state'
 import { MatchAction } from '@/components/coach/games/MatchAction'
 import { MorphBlock, SkeletonMorph } from '@/components/arc/skeleton-morph/skeleton-morph'
-import { currentLanguage, dateLocale, i18n, useTranslation } from '@/lib/i18n'
+import { currentLanguage, i18n, useTranslation } from '@/lib/i18n'
 import { COMPETITION_WORD, MATCH_WORD } from '@/lib/games/match-words'
 import { shown } from '@/lib/squad/trait-words'
 import { PageTop } from '@/components/coach/PageTop'
 import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
 
-/* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, the open
-   drafts, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
+/* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
    newest first, with its result, and opens on its evaluation.
    TRAK-576: the season plan's pitch-ready look (TRAK-348, Tarek's 24 Nov mockup), as Events has it (TRAK-574): one column
-   on every screen. The month of matches on top, the open drafts straight under it, then the next match, the matches to
+   on every screen. The month of matches on top (a draft's day marked amber), then the next match, the matches to
    come and the previous ones as bold bordered cards. The season's top scorers and assists (TRAK-321) are no longer on
    this page. */
 
@@ -67,20 +65,13 @@ export default function CoachGames() {
   const { next, games: ordered } = orderGames(inView, now)
   // TRAK-286: edits since sharing, for shared matches still to kick off. A failed read shows them as shared.
   const changes = useGamePlanChanges(ordered.filter(game => shares.data?.has(game.id) && now < Date.parse(game.starts_at)).map(game => game.id))
-  const open = (game: Game, action: Omit<GameAction, 'label'>) => navigate(actionLink(game.id, action))
   const progress = (game: Game): PlanProgress => ({ drafted: plans.data?.has(game.id), shared: shares.data?.has(game.id), sharedAt: shares.data?.get(game.id),
     changes: changes.data?.get(game.id)?.length, evaluated: evaluations.data?.has(game.id), published: !!evaluations.data?.get(game.id)?.publishedAt })
   const stateOf = (game: Game) => gameStatus(game, now, progress(game))
   // TRAK-284: a plan draft stays open until it's shared (TRAK-286) or its match kicks off and locks it (TRAK-287).
   // TRAK-288: an evaluation draft stays open until it's published (TRAK-289).
-  const drafts = [
-    ...ordered.filter(game => plans.data?.has(game.id) && !shares.data?.has(game.id) && now < Date.parse(game.starts_at))
-      .map(game => ({ game, what: t('coachHome:gamePlan'), saved: plans.data!.get(game.id)!, tab: 'plan' as const })),
-    ...ordered.flatMap(game => {
-      const evaluation = evaluations.data?.get(game.id)
-      return evaluation && !evaluation.publishedAt ? [{ game, what: t('nav:evaluation'), saved: evaluation.savedAt, tab: 'evaluation' as const }] : []
-    }),
-  ]
+  const drafts = ordered.filter(game => (plans.data?.has(game.id) && !shares.data?.has(game.id) && now < Date.parse(game.starts_at))
+    || (evaluations.data?.has(game.id) && !evaluations.data.get(game.id)!.publishedAt))
 
   const published = (game: Game) => !!evaluations.data?.get(game.id)?.publishedAt
   const previous = ordered.filter(published)
@@ -89,7 +80,7 @@ export default function CoachGames() {
   // The month: a dot on each match day (green once its evaluation is published), the amber corner where a draft is open.
   const byDay = new Map<string, Game[]>()
   for (const game of ordered) byDay.set(gameDay(game), [...(byDay.get(gameDay(game)) ?? []), game])
-  const draftDays = new Set(drafts.map(({ game }) => gameDay(game)))
+  const draftDays = new Set(drafts.map(gameDay))
   const [month, setMonth] = useState<Date | null>(null)
   const shownMonth = month ?? (next ? new Date(`${gameDay(next)}T12:00:00`) : new Date())
   // Picking a match day opens its match: its evaluation once published, else the match.
@@ -133,30 +124,8 @@ export default function CoachGames() {
                   </div>
                 </section>}</MorphBlock>
 
-              {/* ── TRAK-284: plan drafts. TRAK-288: evaluation drafts. Under the month, as the season plan's
-                  "Not shared yet" box: amber while any is open. ── */}
-              <MorphBlock height={120} radius={16} className="grid min-w-0" style={FILL}>{!loading &&
-                <section aria-labelledby="open-drafts" className={`arc grid gap-3 rounded-2xl border-2 p-4 sm:p-5 ${drafts.length ? 'border-attention bg-attention/10' : 'border-line bg-surface'}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="flex items-center gap-3">
-                      {drafts.length > 0 && <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-warning" />}
-                      <h2 id="open-drafts" className="text-base font-extrabold text-ink">{t('coachMatches:openDrafts')}</h2>
-                    </span>
-                    {drafts.length === 0 && <span className={GOOD}><CheckCircle2 aria-hidden size={14} strokeWidth={2.5} />{t('coachMatches:noDrafts')}</span>}
-                  </div>
-                  {drafts.length > 0 && <ul className="grid gap-2">
-                    {drafts.map(({ game, what, saved, tab }) => <li key={`${tab}:${game.id}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border-2 border-line bg-surface px-4 py-3">
-                      <span className="grid min-w-0">
-                        <span className="truncate text-base font-black tracking-tight text-ink">{gameTitle(game)}</span>
-                        <span className="truncate text-xs font-semibold text-ink-2">{t('coachMatches:savedAt', { what, when: format(new Date(saved), 'EEE d MMM, HH:mm', { locale: dateLocale() }) })}</span>
-                      </span>
-                      <button type="button" className={`${BTN} shrink-0`} aria-label={t(tab === 'plan' ? 'coachMatches:openPlanOf' : 'coachMatches:openEvaluationOf', { title: gameTitle(game) })}
-                        onClick={() => open(game, { tab })}>{t('coachMatches:open')}</button>
-                    </li>)}
-                  </ul>}
-                </section>}</MorphBlock>
-
+              {/* TRAK-588 (Kostas, 25 Nov): no Open drafts box. A draft shows on its match's badge (Draft, Evaluation draft)
+                  and as the amber corner on its day in the month. */}
               <MorphBlock height={196} radius={16} className="grid min-w-0" style={FILL}>{!loading && (next ? <NextGame game={next} state={stateOf(next)} step={gameState(next, now, progress(next))} onKickOff={() => setNow(Date.now())} /> : (
                 <section aria-labelledby="next-game" className={`${CARD} grid gap-3 p-5 sm:p-6`}>
                   <SectionHeading id="next-game" bar="bg-ink">{t('coachMatches:nextMatch')}</SectionHeading>

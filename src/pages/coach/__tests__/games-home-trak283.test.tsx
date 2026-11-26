@@ -211,10 +211,11 @@ describe("TRAK-576: one column in the season plan's look", { timeout: 20_000 }, 
     ]))
     renderApp('/coach/matches')
     const calendar = await screen.findByRole('region', { name: 'Match calendar' })
-    const drafts = screen.getByRole('region', { name: 'Open drafts' })
-    expect(within(drafts).getByText('No drafts open.')).toBeInTheDocument()
-    // One column: the month, then the open drafts, then the next match, the matches to come and the previous ones.
-    const order = [calendar, drafts, screen.getByRole('region', { name: 'Next match' }),
+    // TRAK-588: no Open drafts box.
+    expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
+    expect(screen.queryByText('No drafts open.')).toBeNull()
+    // One column: the month, then the next match, the matches to come and the previous ones.
+    const order = [calendar, screen.getByRole('region', { name: 'Next match' }),
       screen.getByRole('region', { name: 'Your matches' }), screen.getByRole('region', { name: 'Previous matches' })]
     order.slice(1).forEach((region, i) => expect(order[i].compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy())
     // TRAK-321's table is gone from this page.
