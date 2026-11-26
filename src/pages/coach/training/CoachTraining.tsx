@@ -3,7 +3,7 @@ import { TRAINING_WORD } from '@/lib/training/words'
 import { shown as shownWord } from '@/lib/squad/trait-words'
 import { useLayoutEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { AlertTriangle, Check, CheckCircle2, Copy, History, Info, TrafficCone, X } from 'lucide-react'
+import { Check, Copy, History, Info, TrafficCone, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCoachSquad } from '@/lib/coach-squad'
 import { localTodayISO, phoneEventTime } from '@/lib/event-time'
@@ -183,7 +183,7 @@ function SessionsView() {
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden size={16} /></button>
           </div>}
 
-          {/* TRAK-577: one column; Open drafts straight under the Next training. */}
+          {/* TRAK-577: one column. TRAK-589 (Kostas, 25 Nov): no Open drafts box; a draft is the amber Draft badge on its card and row. */}
           {next ? <NextTraining key={next.training.id} draft={drafts.data?.get(next.training.id)} training={next.training} phase={next.phase} planned={!!planned.data?.has(next.training.id)}
             sessionId={registers.data?.get(next.training.id) ?? null} onStart={() => setNow(Date.now())}
             onClosed={() => setClosed(next.training.title)} />
@@ -192,7 +192,6 @@ function SessionsView() {
                 description={t('coachTraining:addInSchedule')}
                 action={<Button onClick={() => navigate('/coach/schedule', { state: ADD_TRAINING })}>{t('coachTraining:addTraining')}</Button>} />
             </div>}
-          <OpenDrafts drafts={upcoming.filter(t => drafts.data?.has(t.id) && !planned.data?.has(t.id)).map(t => ({ training: t, draft: drafts.data!.get(t.id)! }))} />
 
           {upcoming.length > 0 && <section aria-labelledby="upcoming" className="grid min-w-0 gap-3.5">
             <SectionHeading id="upcoming" bar="bg-success">{t('coachTraining:upcomingTrainings')}</SectionHeading>
@@ -296,31 +295,6 @@ function cardBadge({ phase, started, planned, draft }: { phase: Phase; started: 
   if (started) return { label: i18n.t('coachTraining:started'), tone: 'neutral' }
   if (planned) return { label: shownWord(TRAINING_WORD, 'Plan ready'), tone: 'success' }
   return draft ? { label: shownWord(TRAINING_WORD, 'Draft'), tone: 'attention' } : { label: shownWord(TRAINING_WORD, 'Plan not written'), tone: 'attention' }
-}
-
-/** Open drafts, under the Next training as Matches has them under its month (TRAK-577): plans the coach kept for later,
- *  with where they stopped, amber while any is open. Only the coach sees a draft. */
-function OpenDrafts({ drafts }: { drafts: { training: Training; draft: Draft }[] }) {
-  const navigate = useNavigate()
-  const { t } = useTranslation()
-  return <section aria-labelledby="open-drafts" className={`arc grid gap-3 rounded-2xl border-2 p-4 sm:p-5 ${drafts.length ? 'border-attention bg-attention/10' : 'border-line bg-surface'}`}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <span className="flex items-center gap-3">
-        {drafts.length > 0 && <AlertTriangle aria-hidden size={20} strokeWidth={2.25} className="shrink-0 text-warning" />}
-        <h2 id="open-drafts" className="text-base font-extrabold text-ink">{t('coachMatches:openDrafts')}</h2>
-      </span>
-      {drafts.length === 0 && <span className={GOOD}><CheckCircle2 aria-hidden size={14} strokeWidth={2.5} />{t('coachMatches:noDrafts')}</span>}
-    </div>
-    {drafts.length > 0 && <ul className="grid gap-2">
-        {drafts.map(({ training, draft }) => <li key={training.id} className="flex items-center justify-between gap-3 rounded-xl border-2 border-line bg-surface px-4 py-3">
-          <span className="grid min-w-0">
-            <span className="truncate text-base font-black tracking-tight text-ink">{training.title}</span>
-            <span className="truncate text-xs font-semibold text-ink-2">{t('coachTraining:stoppedAtLine', { day: gameWhen(training).day, step: draft.parts[draft.step]?.name ?? t('coachMatches:reviewShare') })}</span>
-          </span>
-          <button type="button" className={`${BTN} shrink-0`} aria-label={t('coachTraining:continueNamed', { title: training.title })} onClick={() => navigate(planPath(training.id))}>{t('coachSchedule:continue')}</button>
-        </li>)}
-      </ul>}
-  </section>
 }
 
 /* ── Past trainings ─────────────────────────────────────────────────────── */

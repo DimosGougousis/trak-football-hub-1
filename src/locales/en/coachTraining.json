@@ -48,7 +48,6 @@
   "started": "Started",
   "hereOpens": "Who’s here opens when the training starts.",
   "stoppedAt": "You stopped at {{step}}.",
-  "stoppedAtLine": "{{day}} · stopped at {{step}}",
   "couldntSaveNotes": "Couldn’t save. Check your connection and try again. Nothing you typed is lost.",
   "runAgain": "Would you run this session again?",
   "noteNextTime": "A note for next time",
