@@ -26,6 +26,7 @@ import { Badge } from '@/components/arc/badge/badge'
 import { PageHeader, PageHeaderPanel, type PageHeaderAction } from '@/components/arc/blocks/page-header/page-header'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { INNER_TITLE } from '@/components/coach/PageTop'
+import { venueName } from '@/lib/venue-link'
 
 /* TRAK-295 (Training 2/5, spec TRAK-293, mockup boards 3A and 5): a training's plan; only the coach sees it. TRAK-298
    (Training 5/5): the page runs the loop: Who's here opens the existing register, and the training closes on its own
@@ -148,7 +149,7 @@ function TrainingPage({ training, plan }: { training: Row; plan: Plan | null }) 
       details={<>
         <span><CalendarDays {...metaIcon} /><strong>{day}</strong></span>
         {time && <span><Clock {...metaIcon} />{[time, minutes ? t('coachHome:minutes', { count: minutes }) : null, academy].filter(Boolean).join(' · ')}</span>}
-        {training.venue && <span><MapPin {...metaIcon} /><strong>{training.venue}</strong></span>}
+        {venueName(training.venue) && <span><MapPin {...metaIcon} /><strong>{venueName(training.venue)}</strong></span>}
         {training.squad && <span><Users {...metaIcon} />{training.squad}</span>}
       </>}
       primary={primary} secondary={secondary}
@@ -233,7 +234,7 @@ function PitchView({ training, plan }: { training: Training; plan: Plan | null }
     <header className="grid gap-1">
       <p className="text-[11px] font-medium uppercase tracking-[.09em] text-brand">{t('coachTraining:view')}</p>
       <h1 className={INNER_TITLE}>{[day, time].filter(Boolean).join(' · ')}</h1>
-      <p className="text-base text-ink-2 break-words">{[training.title, training.venue].filter(Boolean).join(' · ')}</p>
+      <p className="text-base text-ink-2 break-words">{[training.title, venueName(training.venue)].filter(Boolean).join(' · ')}</p>
     </header>
     {practices.length === 0 ? <p className="text-[17px] text-ink-2">{t('coachTraining:nothingPlannedYet')} <Link to={planPath(training.id)} className={linkClass}>{t('coachTraining:planIt')}</Link></p>
       : <ol aria-label="Practices to run" className="grid gap-3">

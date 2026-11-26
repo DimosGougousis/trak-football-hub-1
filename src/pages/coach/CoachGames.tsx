@@ -22,6 +22,7 @@ import { COMPETITION_WORD, MATCH_WORD } from '@/lib/games/match-words'
 import { shown } from '@/lib/squad/trait-words'
 import { PageTop } from '@/components/coach/PageTop'
 import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
+import { venueName } from '@/lib/venue-link'
 
 /* TRAK-283 (Games 1/8): Games home. The next game with where it is in its loop and its one next action, the open
    drafts, and every match of the squad in view. TRAK-320 (Imad, 30 Oct): a published match moves to Previous matches,
@@ -47,7 +48,7 @@ const gameDay = (game: Game) => game.event_date ?? dayKey(new Date(game.starts_a
 const details = (game: Game, time: string | null) => [
   time ? i18n.t('coachSquad:kickOffAt', { time }) : '',
   game.home_away === 'home' ? i18n.t('coachSchedule:home') : game.home_away === 'away' ? i18n.t('coachSchedule:away') : '',
-  game.venue ?? '',
+  venueName(game.venue),
 ].filter(Boolean).join(' · ')
 
 export default function CoachGames() {

@@ -13,6 +13,7 @@ import { herePath, planPath, sessionSummary } from '@/lib/training/plans'
 import { registerProblem } from '@/lib/event-register'
 import { againLabel, nextTraining, searchPast, trainingBadge, type Phase } from '@/lib/training/next'
 import { gameWhen } from '@/components/coach/games/useGames'
+import { venueName } from '@/lib/venue-link'
 import {
   useDrafts, useHere, useNotes, usePastTrainings, usePlannedTrainings, useRegisters, useTrainings, type Draft, type Training,
 } from '@/components/coach/training/useTraining'
@@ -269,7 +270,7 @@ function NextTraining({ training, phase, planned, draft, sessionId, onStart, onC
       <div className="grid min-w-0 gap-1.5">
         <p className="text-[22px] font-black tracking-tight text-ink break-words sm:text-2xl">{training.title}</p>
         <p className="text-sm font-semibold text-ink-2">{[phase !== 'before' && phoneEventTime(training).date === localTodayISO() ? t('coachHome:today') : day, time,
-          training.venue, minutes ? t('coachHome:minutes', { count: minutes }) : null].filter(Boolean).join(' · ')}</p>
+          venueName(training.venue), minutes ? t('coachHome:minutes', { count: minutes }) : null].filter(Boolean).join(' · ')}</p>
         {academy && <p className="text-xs font-semibold text-ink-3">{academy}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-3">
