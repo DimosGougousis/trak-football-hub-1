@@ -65,6 +65,7 @@
   "reviewIn": "Νέα αξιολόγηση",
   "timeChanged": "Άλλαξε η ώρα",
   "changed": "Άλλαξε",
+  "coachChangedOn": "Ο προπονητής σου το άλλαξε στις {{day}}.",
   "cantMakeItSent": "Δηλώθηκε απουσία",
   "againstExpected": "Σε σχέση με όσα περιμέναμε",
   "whatWeAsked": "Τι ζητήσαμε",

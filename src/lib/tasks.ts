@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -45,6 +46,36 @@ export function useAnswerTask() {
     onError: (_error, _vars, context) => client.setQueryData(tasks, context?.before),
     onSettled: () => client.invalidateQueries({ queryKey: tasks }),
   })
+}
+
+/** TRAK-580: the events the coach changed since the player last opened them (an event's "seen" ask, not yet answered
+ *  or outdated), as event id → task id. */
+export function unseenEventChanges(tasks: MyTask[] | undefined): Map<string, string> {
+  return new Map((tasks ?? []).filter(t => t.source_type === 'event' && t.answer_kind === 'seen' && t.source_id && (!t.answered || t.outdated))
+    .map(t => [t.source_id!, t.task_id]))
+}
+
+/** TRAK-580: opening an event records that the player saw its latest change, once per change, with no button. True
+ *  when it was unseen as it opened, so the page can still say so on this visit. */
+export function useSeenOnOpen(eventId: string | undefined): boolean {
+  const tasks = useMyTasks()
+  const taskId = eventId ? unseenEventChanges(tasks.data).get(eventId) : undefined
+  const { mutate } = useAnswerTask()
+  const sent = useRef<string>()
+  const [wasUnseen, setWasUnseen] = useState(false)
+  useEffect(() => {
+    if (!taskId || sent.current === taskId) return
+    sent.current = taskId
+    setWasUnseen(true)
+    mutate({ taskId, undo: false })
+  }, [taskId, mutate])
+  return wasUnseen
+}
+
+/** For an event sheet's contents, which mount only while it is open. */
+export function SeenOnOpen({ eventId }: { eventId: string }) {
+  useSeenOnOpen(eventId)
+  return null
 }
 
 const dueMs = (t: MyTask) => (t.due_at ? Date.parse(t.due_at) : Infinity)
