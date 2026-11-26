@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext, type Page } from '@playwright/test'
+import { test, expect, devices, type BrowserContext, type Locator, type Page } from '@playwright/test'
 
 // TRAK-283 (Games 1/8): Games home and a game's page with the academy's games switch on, at a phone's and a
 // laptop's width: no sideways scroll, and the keyboard reaches every control. TRAK-284: plan step 1, opponent and
@@ -380,6 +380,33 @@ test("a game's line-up at 390 px: the player's sheet opens, scrolls and closes w
   expect(await sideways(page)).toBeLessThanOrEqual(0)
   expect(unexpected).toEqual([])
   expect(errors).toEqual([])
+})
+
+// Imad, 26 Nov: on an iPhone, picking who plays in a slot zoomed the page in and it stayed zoomed. The sheet's boxes
+// are Arc's, at 14 px, which TRAK-178's 16 px rule for touch screens missed.
+test.describe('on an iPhone', () => {
+  const { viewport, deviceScaleFactor, isMobile, hasTouch } = devices['iPhone 15']
+  test.use({ viewport, deviceScaleFactor, isMobile, hasTouch })
+
+  test("a game's line-up sheet: no box small enough for iPhone to zoom in on it", async ({ page, context }, testInfo) => {
+    const { unexpected, errors } = await open(page, context, '/coach/matches/m-next?tab=plan', viewport.width, viewport.height)
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'a touch screen').toBe(true)
+    const px = (box: Locator) => box.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+    await page.getByRole('button', { name: 'Next: Line-up and jobs' }).click()
+    await page.getByRole('button', { name: 'Slot 1, empty' }).click()
+    const sheet = page.getByRole('dialog')
+    const search = sheet.getByRole('combobox', { name: 'Who plays here?' })
+    expect(await px(search), 'Who plays here?').toBeGreaterThanOrEqual(16)
+    await search.click()
+    await page.getByRole('option', { name: /^Theodoros Zagorakis/ }).click()
+    const job = sheet.getByLabel('Job · only Theodoros sees it')
+    expect(await px(job), 'Job').toBeGreaterThanOrEqual(16)
+    await job.fill('Command the box on crosses.')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: testInfo.outputPath('line-up-sheet-iphone.png') })
+    expect(unexpected).toEqual([])
+    expect(errors).toEqual([])
+  })
 })
 
 // TRAK-285: on a laptop the sheet is a panel beside the pitch, so the pitch stays in view while the coach edits.

@@ -405,6 +405,9 @@
     [class~="text-[12px]"], [class~="text-[13px]"], [class~="text-[14px]"], [class~="text-[15px]"]) {
     font-size: 16px;
   }
+  /* Arc's boxes are sized by Arc's text sizes, not a class (Imad, 26 Nov: the line-up sheet's
+     boxes, at 14px, zoomed the page in). On the box itself those sizes are 16px. */
+  :is(input, textarea, select) { --text-xs: 1rem; --text-sm: 1rem; }
 }
 
 /* Season plan's Print / Pitch Sheet (24 Nov): only the plan prints; the menus, bars and buttons stay off the paper. */
