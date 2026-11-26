@@ -38,7 +38,7 @@ import { publishDrafts, upcomingDrafts } from '@/lib/draft-review'
 import { useOldLogRetired } from '@/components/coach/old-log'
 import { DatePicker } from '@/components/arc/date-picker/date-picker'
 import { MonthStrip } from '@/components/coach/MonthStrip'
-import { BTN, BTN_DARK, CARD, SectionHeading } from '@/components/coach/pitch-ready'
+import { BTN, BTN_DARK, CARD, SectionHeading, SquadBadge } from '@/components/coach/pitch-ready'
 import { TimePicker } from '@/components/arc/time-picker/time-picker'
 import { Stepper } from '@/components/arc/stepper/stepper'
 import { Button } from '@/components/arc/button/button'
@@ -111,7 +111,6 @@ const WAIT = `${BADGE} border-attention bg-attention/20 text-warning`
 const DRAFT_BADGE = `${BADGE} border-dashed border-line-strong bg-surface text-ink-2`
 const QUIET_BADGE = `${BADGE} border-line bg-raised text-ink-2`
 const CANCELLED_BADGE = `${BADGE} border-danger bg-danger/10 text-danger`
-const SQUAD_PILL = 'inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-surface px-3 py-1.5 text-xs font-extrabold tracking-tight text-ink sm:text-sm'
 
 
 const TYPE_LABEL: Record<ShownType, string> = { ...KIND_LABEL, tournament: 'Tournament' }
@@ -615,7 +614,7 @@ export default function CoachSchedule() {
                   so TRAK-498's arrow sits beside the avatar. */}
               <PhoneBack to={COACH_SCREEN_PATH.home} />
               <PageTitle>{t('nav:events')}</PageTitle>
-              <span className={SQUAD_PILL}>{everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</span>
+              <SquadBadge>{everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</SquadBadge>
               {/* TRAK-154: the drafts waiting are the box under the month; with none, this says so. */}
               {eventsOn && loaded && drafts.length === 0 && <span className={`${GOOD} px-3 py-1.5 sm:text-sm`}>
                 <CheckCircle2 aria-hidden size={16} strokeWidth={2.5} className="text-success" />{t('coachSchedule:allPublished')}</span>}

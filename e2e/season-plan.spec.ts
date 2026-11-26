@@ -93,7 +93,8 @@ for (const [width, height] of [[1280, 800], [390, 844]] as const) {
     seen.push('--- reload')
     await page.reload()
     try {
-      await expect(page.getByText('U16 · Draft, only you see it')).toBeVisible()
+      // TRAK-598: on a laptop the side menu's picker names the squad, so the line gives only the state.
+      await expect(page.getByText(width >= 1024 ? 'Draft, only you see it' : 'U16 · Draft, only you see it', { exact: true })).toBeVisible()
       await expect(page.getByLabel('Objective 1', { exact: true })).toHaveValue('Stay compact')
       await expect(page.getByLabel('Objective 2', { exact: true })).toHaveValue('Win the second ball')
     } catch (error) {

@@ -37,7 +37,7 @@ import { GlassSegmented } from '@/components/arc/glass-segmented/glass-segmented
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { EditIcon } from '@/components/trak/IconAction'
 import { PageTop } from '@/components/coach/PageTop'
-import { BADGE, BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
+import { BTN, CARD, FOCUS, GOOD, LOST, QUIET, SectionHeading, SquadBadge, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-294 (Training 1/5, spec TRAK-293): Training home, behind the academy's training switch. Sessions lists the
    coach's trainings from Schedule (Coming up, then Last week); Drills holds My drills, then the Library's tiles.
@@ -106,7 +106,7 @@ function Page({ view, children }: { view: 'sessions' | 'drills'; children: React
       <div className={WIDE_COLUMN}>
         {/* Kostas, 30 Oct: no visible title ("training" too repetitive). TRAK-422 (Kostas, 13 Nov): every coach page has
             the one title, Training too, with its Sessions / Drills switch beside it. */}
-        <PageTop title={t('nav:training')} pill={<span className={BADGE}>{coachSquad.everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</span>}>
+        <PageTop title={t('nav:training')} pill={<SquadBadge>{coachSquad.everySquad ? t('coachHome:allSquads') : squadName(coachSquad.squad)}</SquadBadge>}>
           {/* TRAK-431 (Kostas, 16 Nov): every page's tabs are Squad's big glass pill. */}
           <div className="arc w-full tablet:w-[320px]">
             <GlassSegmented label={t('coachTraining:trainingView')} value={view} fullWidth

@@ -29,7 +29,7 @@ import { useWatchList, useWatchPlayers } from './useWatching'
 import { WatchBadge } from './WatchFirst'
 import { useSquadEvaluations } from './useEvaluation'
 import { rhythmOf, rhythmText } from '@/lib/evaluation'
-import { BADGE, BTN, BTN_DARK, CARD, FOCUS, GOOD, PILL, SectionHeading, WAIT } from '@/components/coach/pitch-ready'
+import { BTN, BTN_DARK, CARD, FOCUS, GOOD, PILL, SectionHeading, SquadBadge, WAIT } from '@/components/coach/pitch-ready'
 
 /* TRAK-356 (Season plan 8/18, spec TRAK-348): View plan. Once shared, the set-up never comes back: the plan reads part
    by part, each with its Edit. Edits save straight away and wait under "Not shared yet" until the coach shares the
@@ -122,9 +122,9 @@ export function PlanView({ coachId, squad, plan, seasonObjectives }: {
   const header = (actions: boolean) => (
     <PageTop title="Season plan" trail={<CoachTrail current="Season plan" />}
       pill={<>
-        <span className={BADGE}>
+        <SquadBadge>
           {squad}{roster.isPending ? '' : ` · ${board.total} Players`}
-        </span>
+        </SquadBadge>
         {changes.length
           ? <span className={`${WAIT} px-3 py-1.5 sm:text-sm`}><AlertTriangle aria-hidden size={16} strokeWidth={2.5} className="text-warning" />Changes not shared</span>
           : <span className={`${GOOD} px-3 py-1.5 sm:text-sm`}><CheckCircle2 aria-hidden size={16} strokeWidth={2.5} className="text-success" />Shared{shared ? ` · ${shortDate(shared)}` : ''}</span>}

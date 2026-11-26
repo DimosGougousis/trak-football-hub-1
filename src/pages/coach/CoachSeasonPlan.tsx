@@ -25,6 +25,7 @@ import { EvaluationRhythm } from '@/components/coach/season-plan/EvaluationRhyth
 import { firstDateLine, rhythmOf, type EvalEvery } from '@/lib/evaluation'
 import { localTodayISO } from '@/lib/event-time'
 import { PageTop } from '@/components/coach/PageTop'
+import { useSideMenuScreen } from '@/lib/side-menu-screen'
 
 /* TRAK-350 (Season plan 2/18, spec TRAK-348): the season plan's set-up, step 1. The season's dates and up to three
    season objectives (the mockup's six, or the coach's own), each editable and deletable. It saves as a draft only the
@@ -63,6 +64,8 @@ export default function CoachSeasonPlan() {
   const location = useLocation()
   const { user } = useAuth()
   const squad = planSquad(useCoachSquad(user?.id))
+  // TRAK-598: on a laptop the side menu's picker names the squad, so the line under the title gives only the state.
+  const sideMenu = useSideMenuScreen()
   const season = useSeasonPlan(user?.id, squad)
   const objectives = useQuery({
     queryKey: seasonObjectivesKey(user?.id, season.plan?.id),
@@ -87,7 +90,7 @@ export default function CoachSeasonPlan() {
           : shared && editing ? <CoachTrail className="mt-5" current="Season plan" />
           // TRAK-378: on a phone the avatar opens the side menu, where the squad picker is (TRAK-376).
           : <PageTop title="Season plan" trail={<CoachTrail current="Season plan" />}
-            below={squad && !season.isPending && <p className="-mt-1 text-sm text-ink-3">{squad} · {sharedOn ? `Shared ${shortDate(sharedOn)}` : season.plan ? 'Draft, only you see it' : 'Not started'}</p>} />}
+            below={squad && !season.isPending && <p className="-mt-1 text-sm text-ink-3">{sideMenu ? '' : `${squad} · `}{sharedOn ? `Shared ${shortDate(sharedOn)}` : season.plan ? 'Draft, only you see it' : 'Not started'}</p>} />}
         {!squad ? <p className="text-sm text-ink-2">Select one squad in the menu to plan its season.</p>
           : season.error || objectives.error ? (
             <div className="arc grid justify-items-start gap-3">
