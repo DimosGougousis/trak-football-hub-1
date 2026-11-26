@@ -90,7 +90,7 @@ describe('TRAK-334: a match page\'s trail', { timeout: 30_000 }, () => {
   it('opened from Matches it reads Matches › vs Parkview Athletic, and Matches goes back', async () => {
     const user = userEvent.setup()
     renderApp('/coach/matches')
-    await user.click(within(await screen.findByRole('region', { name: 'Your matches' })).getByRole('link', { name: /Parkview Athletic/ }))
+    await user.click(within(await screen.findByRole('region', { name: 'Upcoming matches' })).getByRole('link', { name: /Parkview Athletic/ }))
     expect(await crumbs('vs Parkview Athletic')).toEqual(['Matches', 'vs Parkview Athletic'])
     await user.click(within(screen.getByRole('navigation', { name: 'Breadcrumb trail' })).getByRole('link', { name: 'Matches' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/matches'))

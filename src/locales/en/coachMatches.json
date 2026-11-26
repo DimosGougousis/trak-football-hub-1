@@ -6,7 +6,6 @@
   "nextMatch": "Next match",
   "noMatchComing": "No match coming up.",
   "open": "Open",
-  "yourMatches": "Your matches",
   "kickOffIn": "Kick-off in",
   "locked": "Locked",
   "previousMatches": "Previous matches",
@@ -279,5 +278,14 @@
   "asPlayer": "As the player",
   "asParent": "As the parent",
   "ownGoal": "Own goal",
-  "notApplicable": "N/A"
+  "notApplicable": "N/A",
+  "upcomingMatches": "Upcoming matches",
+  "pastMatches": "Past matches",
+  "pastWhat": "your past matches",
+  "loadingPast": "Loading your past matches…",
+  "noPastYet": "No past matches yet",
+  "pastKept": "Once a match has kicked off, it’s kept here with its result.",
+  "searchPast": "Search past matches",
+  "searchPastPh": "Search by opponent or competition",
+  "noPastMatch": "No past match found for “{{query}}”."
 }

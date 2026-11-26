@@ -78,10 +78,11 @@ describe('TRAK-284: plan drafts on Games home and in Needs you', { timeout: 30_0
     expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     expect(screen.queryByText('No drafts open.')).toBeNull()
     expect(within(next).getByText('Draft')).toBeInTheDocument()
-    const strip = screen.getByRole('region', { name: 'Your matches' })
+    const strip = screen.getByRole('region', { name: 'Upcoming matches' })
     expect(within(within(strip).getByRole('link', { name: /Parkview Athletic/ })).getByText('Draft')).toBeInTheDocument()
     expect(within(within(strip).getByRole('link', { name: /Riverside Rovers/ })).getByText('Plan not written')).toBeInTheDocument()
-    expect(within(within(strip).getByRole('link', { name: /Harbour Town/ })).queryByText('Draft')).toBeNull()
+    // TRAK-592: a match that has kicked off is in Past matches, not Upcoming.
+    expect(within(strip).queryByRole('link', { name: /Harbour Town/ })).toBeNull()
 
     await user.click(within(strip).getByRole('link', { name: /Parkview Athletic/ }))
     expect(window.location.pathname).toBe('/coach/matches/g1')

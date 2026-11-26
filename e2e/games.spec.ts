@@ -239,12 +239,15 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // TRAK-588: no Open drafts box; the draft is on its badge. TRAK-590: no month strip.
     await expect(page.getByRole('heading', { name: 'Open drafts' })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Match calendar' })).toHaveCount(0)
-    await expect(page.getByRole('region', { name: 'Your matches' }).getByRole('link')).toHaveCount(4)
+    // TRAK-592: only the matches to come; the two played are behind Past matches.
+    await expect(page.getByRole('region', { name: 'Upcoming matches' }).getByRole('link')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: /^Past matches/ })).toContainText('2')
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`games-home-${width}.png`), fullPage: true })
     expect(await sideways(page)).toBeLessThanOrEqual(0)
     const keyboard = await everyControlByKeyboard(page, '.trak-wide')
-    expect(keyboard.count).toBeGreaterThan(5)
+    // TRAK-592: split button (2), the 2 matches to come, Past matches: 5.
+    expect(keyboard.count).toBeGreaterThanOrEqual(5)
     expect(keyboard.missed).toEqual([])
     expect(unexpected).toEqual([])
     expect(errors).toEqual([])

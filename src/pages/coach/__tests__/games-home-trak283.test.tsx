@@ -74,11 +74,11 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); localStorage.clear(); vi.unstubAllGlobals() })
 
-const cards = () => within(screen.getByRole('region', { name: 'Your matches' })).getAllByRole('link')
+const cards = () => within(screen.getByRole('region', { name: 'Upcoming matches' })).getAllByRole('link')
   .map(card => card.getAttribute('href'))
 
 describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
-  it("lists the coach's matches of the squad in view: played in the last two weeks, then soonest first, then older; each opens its game page", async () => {
+  it("lists the squad in view's matches to come, soonest first, each opening its game page; the played ones are behind Past matches (TRAK-592)", async () => {
     const user = userEvent.setup()
     const now = Date.now()
     const asked = eventsRead([
@@ -88,12 +88,12 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
       match('soon', 'U16', onTheMinute(now + 3 * DAY), { opponent: 'Parkview Athletic' }),
     ])
     renderApp('/coach/matches')
-    await screen.findByRole('region', { name: 'Your matches' })
+    await screen.findByRole('region', { name: 'Upcoming matches' })
     // TRAK-446: no helper line under Drafts.
     expect(screen.queryByText(/Only you see a draft/)).toBeNull()
-    // All squads (TRAK-266): every match. TRAK-326: the one played 3 days ago first, as it waits for its evaluation;
-    // then soonest first; the one played 20 days ago, outside the two weeks, last.
-    expect(cards()).toEqual(['/coach/matches/past-new', '/coach/matches/soon', '/coach/matches/later', '/coach/matches/past-old'])
+    // All squads (TRAK-266): every match to come, soonest first. TRAK-592: the two played are counted on Past matches.
+    expect(cards()).toEqual(['/coach/matches/soon', '/coach/matches/later'])
+    expect(screen.getByRole('button', { name: /^Past matches/ })).toHaveTextContent('2')
     const next = screen.getByRole('region', { name: 'Next match' })
     expect(within(next).getByText('vs Parkview Athletic')).toBeInTheDocument()
     expect(within(next).getByText('Plan not written')).toBeInTheDocument()
@@ -111,11 +111,11 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
 
     // U14: its own match and the whole roster's; the next game follows.
     await pickSquad('U14')
-    await waitFor(() => expect(cards()).toEqual(['/coach/matches/past-new', '/coach/matches/later']))
+    await waitFor(() => expect(cards()).toEqual(['/coach/matches/later']))
     expect(within(screen.getByRole('region', { name: 'Next match' })).getByText('vs Opponent later')).toBeInTheDocument()
 
-    await user.click(within(screen.getByRole('region', { name: 'Your matches' })).getByRole('link', { name: /vs Opponent past-new/ }))
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches/past-new'))
+    await user.click(within(screen.getByRole('region', { name: 'Upcoming matches' })).getByRole('link', { name: /vs Opponent later/ }))
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches/later'))
   })
 
   it("counts down to the event's instant whatever the phone's zone, and shows the academy's own time", async () => {
@@ -165,8 +165,8 @@ describe('TRAK-283: Games home', { timeout: 20_000 }, () => {
     expect(await screen.findByRole('note', { name: 'This screen is coming soon' })).toBeInTheDocument()
   })
 
-describe('TRAK-320: Previous matches', { timeout: 20_000 }, () => {
-  it('a published match leaves Your matches for Previous matches, newest first, with its result; it opens on its evaluation', async () => {
+describe('TRAK-592: Past matches', { timeout: 20_000 }, () => {
+  it('a button at the bottom opens every played match, newest first: its result once published, else where it stands; search finds one', async () => {
     const user = userEvent.setup()
     const now = Date.now()
     eventsRead([
@@ -181,18 +181,60 @@ describe('TRAK-320: Previous matches', { timeout: 20_000 }, () => {
       { event_id: 'owed', saved_at: '2026-10-28T18:00:00Z', published_at: null, our_score: 1, their_score: 1 },
     ]))
     renderApp('/coach/matches')
-    const previous = await screen.findByRole('region', { name: 'Previous matches' })
-    // TRAK-326: the draft still owed, played 2 days ago, comes before the match to come.
-    expect(cards()).toEqual(['/coach/matches/owed', '/coach/matches/soon'])
-    const links = within(previous).getAllByRole('link')
-    expect(links.map(link => link.getAttribute('href'))).toEqual(['/coach/matches/lost?tab=evaluation', '/coach/matches/won?tab=evaluation'])
-    expect(links[0]).toHaveTextContent('vs Dubai City FC')
-    expect(links[0]).toHaveTextContent('Tournament')
-    expect(links[0]).toHaveTextContent('Lost 0–2')
-    expect(links[1]).toHaveTextContent('League')
-    expect(links[1]).toHaveTextContent('Won 3–1')
-    await user.click(links[1])
+    await screen.findByRole('region', { name: 'Upcoming matches' })
+    // Only the match to come is on Matches; Previous matches is gone from it.
+    expect(cards()).toEqual(['/coach/matches/soon'])
+    expect(screen.queryByRole('region', { name: 'Previous matches' })).toBeNull()
+    const button = screen.getByRole('button', { name: /^Past matches/ })
+    expect(button).toHaveTextContent('3')
+    await user.click(button)
+    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches/past'))
+
+    const list = await screen.findByRole('list', { name: 'Past matches' })
+    const links = within(list).getAllByRole('link')
+    expect(links.map(link => link.getAttribute('href'))).toEqual(['/coach/matches/owed', '/coach/matches/lost?tab=evaluation', '/coach/matches/won?tab=evaluation'])
+    // The evaluation still owed says so (Home's Needs you asks for it).
+    expect(links[0]).toHaveTextContent('Evaluation draft')
+    expect(links[1]).toHaveTextContent('vs Dubai City FC')
+    expect(links[1]).toHaveTextContent('Tournament')
+    expect(links[1]).toHaveTextContent('Lost 0–2')
+    expect(links[2]).toHaveTextContent('League')
+    expect(links[2]).toHaveTextContent('Won 3–1')
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search past matches' }), 'mirdif')
+    await waitFor(() => expect(within(list).getAllByRole('link')).toHaveLength(1))
+    await user.click(within(list).getByRole('link', { name: /Mirdif Rangers/ }))
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/won?tab=evaluation'))
+  })
+
+  it('with none yet, says so', async () => {
+    eventsRead([match('soon', 'U16', onTheMinute(Date.now() + 3 * DAY))])
+    renderApp('/coach/matches/past')
+    expect(await screen.findByText('No past matches yet')).toBeInTheDocument()
+  })
+})
+
+describe('TRAK-593: Upcoming matches show 4, then Show all', { timeout: 20_000 }, () => {
+  it('six to come: four, then Show all 6 shows them all, and Show fewer folds them back', async () => {
+    const user = userEvent.setup()
+    const now = Date.now()
+    eventsRead([1, 2, 3, 4, 5, 6].map(n => match(`m${n}`, 'U16', onTheMinute(now + n * DAY))))
+    renderApp('/coach/matches')
+    await screen.findByRole('region', { name: 'Upcoming matches' })
+    expect(cards()).toHaveLength(4)
+    await user.click(screen.getByRole('button', { name: 'Show all 6' }))
+    expect(cards()).toHaveLength(6)
+    await user.click(screen.getByRole('button', { name: 'Show fewer' }))
+    expect(cards()).toHaveLength(4)
+  })
+
+  it('four or fewer: no button', async () => {
+    const now = Date.now()
+    eventsRead([1, 2, 3].map(n => match(`m${n}`, 'U16', onTheMinute(now + n * DAY))))
+    renderApp('/coach/matches')
+    await screen.findByRole('region', { name: 'Upcoming matches' })
+    expect(cards()).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: /^Show all/ })).toBeNull()
   })
 })
 
@@ -216,9 +258,8 @@ describe("TRAK-576: one column in the season plan's look", { timeout: 20_000 }, 
     // TRAK-588: no Open drafts box.
     expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     expect(screen.queryByText('No drafts open.')).toBeNull()
-    // One column: the next match, the matches to come and the previous ones.
-    const order = [next,
-      screen.getByRole('region', { name: 'Your matches' }), screen.getByRole('region', { name: 'Previous matches' })]
+    // One column: the next match, the matches to come, then the Past matches button (TRAK-592).
+    const order = [next, screen.getByRole('region', { name: 'Upcoming matches' }), screen.getByRole('button', { name: /^Past matches/ })]
     order.slice(1).forEach((region, i) => expect(order[i].compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy())
     // TRAK-321's table is gone from this page.
     expect(screen.queryByRole('table')).toBeNull()
