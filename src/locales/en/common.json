@@ -65,6 +65,7 @@
   "reviewIn": "Review in",
   "timeChanged": "Time changed",
   "changed": "Changed",
+  "coachChangedOn": "Your coach changed it on {{day}}.",
   "cantMakeItSent": "Can’t make it sent",
   "againstExpected": "Against what we expected",
   "whatWeAsked": "What we asked",

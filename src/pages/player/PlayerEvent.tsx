@@ -13,6 +13,9 @@ import { SharedGameReview } from '@/components/player/SharedGameReview'
 import { useEventBack } from '@/lib/event-back'
 import { useFamilyLook } from '@/components/trak/FamilyFrame'
 import { FamilyMatch } from '@/components/player/FamilyMatch'
+import { useSeenOnOpen } from '@/lib/tasks'
+import { dateLocale, useTranslation } from '@/lib/i18n'
+import { format, parseISO } from 'date-fns'
 
 /**
  * The event page (TRAK-130, J8.7): every detail of one of the squad's events.
@@ -60,6 +63,13 @@ export default function PlayerEvent() {
   const forThemselves = consent.data?.age != null && consent.data.consent_age != null && consent.data.age >= consent.data.consent_age
 
   const current = result && result.id === id && result.reloadKey === reloadKey ? result : null
+  // TRAK-580: opening it records that they saw the coach's latest change. This device may not have the old version
+  // to say what moved, so the page says when the coach changed it (a cancellation says so itself).
+  const { t } = useTranslation()
+  const sawChange = useSeenOnOpen(current?.event ? id : undefined)
+  const updatedAt = current?.event?.status === 'scheduled' ? current.event.updatedAt : null
+  const changes = current?.changes.length || !sawChange || !updatedAt ? current?.changes ?? []
+    : [t('common:coachChangedOn', { day: format(parseISO(updatedAt), 'EEE d MMM', { locale: dateLocale() }) })]
   const back = (
     <button type="button" onClick={backTo.go}
       className="flex items-center gap-1 text-[13px] text-ink-2">
@@ -80,7 +90,7 @@ export default function PlayerEvent() {
     body = <p className="text-[13px] text-ink-2">This event isn't available. Your coach may have removed it.</p>
   } else {
     body = <>
-      <EventDetails event={current.event} changes={current.changes} />
+      <EventDetails event={current.event} changes={changes} />
       {/* TRAK-289: once the coach publishes, After the game, with the coach's note to them. */}
       {user && <SharedGameReview event={current.event} childId={user.id} childName="" as="player" />}
       {/* TRAK-286: the coach's game plan, once shared: the goals, their job and the note to them. */}
@@ -93,7 +103,7 @@ export default function PlayerEvent() {
   const inLook = look && user && current?.event ? current.event : null
   return (
     <MobileShell width={inLook ? 'wide' : 'page'}>
-      {inLook ? <div className="pb-28"><FamilyMatch event={inLook} changes={current!.changes} child={{ id: user!.id, name: '' }} as="player" back={backTo}
+      {inLook ? <div className="pb-28"><FamilyMatch event={inLook} changes={changes} child={{ id: user!.id, name: '' }} as="player" back={backTo}
         cantMakeIt={forThemselves && <CantMakeIt event={inLook} child={{ id: user!.id, name: 'you' }} self />} /></div>
         : <div className="pt-12 pb-28 space-y-5">
           {back}
