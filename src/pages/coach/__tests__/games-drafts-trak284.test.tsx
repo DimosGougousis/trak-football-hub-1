@@ -1,5 +1,5 @@
 /**
- * TRAK-284 (Games 2/8): a plan draft shows on Games home, in Open drafts and as "Plan not shared". Home's Needs you
+ * TRAK-284 (Games 2/8): a plan draft shows on Games home as "Draft" (TRAK-588: no Open drafts box) and as "Plan not shared". Home's Needs you
  * lists a match whose logistics are shared, kicking off within 7 days, with no plan shared: "Plan not shared · Write
  * the plan". Neither shows with the games switch off. Test people are named after footballers.
  */
@@ -66,25 +66,28 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear() })
 
 describe('TRAK-284: plan drafts on Games home and in Needs you', { timeout: 30_000 }, () => {
-  it('Games home lists an open plan draft and says the plan is not shared; a kicked-off match\'s draft is closed', async () => {
+  it('Games home marks an open plan draft on its badge and its day; a kicked-off match\'s draft is closed', async () => {
     const user = userEvent.setup()
     server.use(
       table('coach_calendar_events', [game('g1', 'Parkview Athletic', 5), game('g2', 'Riverside Rovers', 8), game('g0', 'Harbour Town', -1)]),
       table('game_plans', [plan('g1'), plan('g0')]),
     )
     renderApp('/coach/matches')
-    const drafts = await screen.findByRole('region', { name: 'Open drafts' })
-    expect(within(drafts).getAllByRole('listitem')).toHaveLength(1)
-    expect(within(drafts).getByText('vs Parkview Athletic')).toBeInTheDocument()
-    expect(within(drafts).getByText('Game plan · saved Tue 27 Oct, 21:40')).toBeInTheDocument()
-
-    const next = screen.getByRole('region', { name: 'Next match' })
+    const next = await screen.findByRole('region', { name: 'Next match' })
+    // TRAK-588: no Open drafts box.
+    expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
+    expect(screen.queryByText('No drafts open.')).toBeNull()
     expect(within(next).getByText('Draft')).toBeInTheDocument()
     const strip = screen.getByRole('region', { name: 'Your matches' })
+    expect(within(within(strip).getByRole('link', { name: /Parkview Athletic/ })).getByText('Draft')).toBeInTheDocument()
     expect(within(within(strip).getByRole('link', { name: /Riverside Rovers/ })).getByText('Plan not written')).toBeInTheDocument()
+    expect(within(within(strip).getByRole('link', { name: /Harbour Town/ })).queryByText('Draft')).toBeNull()
+    // The month marks only the open draft's day, amber.
+    const calendar = screen.getByRole('region', { name: 'Match calendar' })
+    expect(calendar.querySelectorAll('[data-attention]')).toHaveLength(1)
 
-    await user.click(within(drafts).getByRole('button', { name: 'Open the plan, vs Parkview Athletic' }))
-    expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan')
+    await user.click(within(strip).getByRole('link', { name: /Parkview Athletic/ }))
+    expect(window.location.pathname).toBe('/coach/matches/g1')
   })
 
   it('Needs you lists a shared match kicking off within 7 days: "Plan not shared · Write plan"', async () => {

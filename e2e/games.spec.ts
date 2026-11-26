@@ -225,7 +225,7 @@ async function everyControlByKeyboard(page: Page, scope: string, fields = false)
 }
 
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`Games home at ${width} px: the next game, open drafts and the squad's matches`, async ({ page, context }, testInfo) => {
+  test(`Games home at ${width} px: the next game, its draft and the squad's matches`, async ({ page, context }, testInfo) => {
     const plans: Plans = new Map([['m-next', { event_id: 'm-next', strength: null, their_formation: null, key_players: [], scouting: '',
       goals: [{ title: 'Win it back in their half', looks_like: '' }], created_at: '2026-10-27T17:00:00Z', updated_at: '2026-10-27T17:40:00Z' }]])
     const { unexpected, errors } = await open(page, context, '/coach/matches', width, height, plans)
@@ -236,7 +236,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // TRAK-286: with a draft, sharing it is next. TRAK-333: on a split button, with the match's other pages behind it.
     await expect(next.getByRole('button', { name: 'Share plan', exact: true })).toBeVisible()
     await expect(next.getByRole('button', { name: 'Share plan more actions' })).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Open drafts' }).getByRole('button', { name: 'Open the plan, vs Parkview Athletic U16' })).toBeVisible()
+    // TRAK-588: no Open drafts box; the draft is on its badge and its day in the month.
+    await expect(page.getByRole('heading', { name: 'Open drafts' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Match calendar' }).locator('[data-attention]')).toHaveCount(1)
     await expect(page.getByRole('region', { name: 'Your matches' }).getByRole('link')).toHaveCount(4)
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`games-home-${width}.png`), fullPage: true })
