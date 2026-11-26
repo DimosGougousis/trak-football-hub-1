@@ -197,8 +197,7 @@ describe('TRAK-320: Previous matches', { timeout: 20_000 }, () => {
 })
 
 describe("TRAK-576: one column in the season plan's look", { timeout: 20_000 }, () => {
-  it('shows the month of matches, the open drafts straight under it, and no top scorers or assists', async () => {
-    const user = userEvent.setup()
+  it('shows the next match first (no month strip, no Open drafts) and no top scorers or assists', async () => {
     const now = Date.now()
     const soon = onTheMinute(now + 3 * DAY)
     eventsRead([
@@ -210,21 +209,20 @@ describe("TRAK-576: one column in the season plan's look", { timeout: 20_000 }, 
         goals: [{ scorer: 'sp-2', assist: 'sp-1' }] },
     ]))
     renderApp('/coach/matches')
-    const calendar = await screen.findByRole('region', { name: 'Match calendar' })
+    const next = await screen.findByRole('region', { name: 'Next match' })
+    // TRAK-590 (Kostas, 26 Nov): no month strip; Home and Events show the month.
+    expect(screen.queryByRole('region', { name: 'Match calendar' })).toBeNull()
+    expect(screen.queryByText('Draft open')).toBeNull()
     // TRAK-588: no Open drafts box.
     expect(screen.queryByRole('heading', { name: 'Open drafts' })).toBeNull()
     expect(screen.queryByText('No drafts open.')).toBeNull()
-    // One column: the month, then the next match, the matches to come and the previous ones.
-    const order = [calendar, screen.getByRole('region', { name: 'Next match' }),
+    // One column: the next match, the matches to come and the previous ones.
+    const order = [next,
       screen.getByRole('region', { name: 'Your matches' }), screen.getByRole('region', { name: 'Previous matches' })]
     order.slice(1).forEach((region, i) => expect(order[i].compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy())
     // TRAK-321's table is gone from this page.
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.queryByText(/Top scorers/)).toBeNull()
-
-    // The month opens on the next match's; its day opens the match.
-    await user.click(calendar.querySelector<HTMLButtonElement>(`[data-present] [data-date="${athens(soon).year}-${athens(soon).month}-${athens(soon).day}"]`)!)
-    await waitFor(() => expect(window.location.pathname).toBe('/coach/matches/soon'))
   })
 })
 })

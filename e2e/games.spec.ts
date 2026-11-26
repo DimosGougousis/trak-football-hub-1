@@ -236,9 +236,9 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     // TRAK-286: with a draft, sharing it is next. TRAK-333: on a split button, with the match's other pages behind it.
     await expect(next.getByRole('button', { name: 'Share plan', exact: true })).toBeVisible()
     await expect(next.getByRole('button', { name: 'Share plan more actions' })).toBeVisible()
-    // TRAK-588: no Open drafts box; the draft is on its badge and its day in the month.
+    // TRAK-588: no Open drafts box; the draft is on its badge. TRAK-590: no month strip.
     await expect(page.getByRole('heading', { name: 'Open drafts' })).toHaveCount(0)
-    await expect(page.getByRole('region', { name: 'Match calendar' }).locator('[data-attention]')).toHaveCount(1)
+    await expect(page.getByRole('region', { name: 'Match calendar' })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Your matches' }).getByRole('link')).toHaveCount(4)
     await page.waitForTimeout(500)
     await page.screenshot({ path: testInfo.outputPath(`games-home-${width}.png`), fullPage: true })
