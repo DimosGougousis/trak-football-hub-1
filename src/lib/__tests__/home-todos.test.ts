@@ -75,6 +75,12 @@ describe('Take the register (rank 3)', () => {
     expect(keys('2026-11-26T00:00', { trainings: [w] })).not.toContain('register:w')
   })
 
+  it("a training never published asks for no register and no notes: its plan's Share comes first", () => {
+    const draft = training('w', '2026-11-25', { published: false })
+    expect(keys('2026-11-25T09:00', { trainings: [draft] })).toEqual([])
+    expect(keys('2026-11-25T06:00', { trainings: [draft] })).toEqual(['training-plan:w'])
+  })
+
   it('notes saved or skipped close the training, so no register is owed', () => {
     const w = training('w', '2026-11-25', { notedAt: '2026-11-25T08:30:00+02:00' })
     expect(keys('2026-11-25T09:00', { trainings: [w] })).not.toContain('register:w')
