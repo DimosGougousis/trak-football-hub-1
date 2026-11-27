@@ -13,7 +13,7 @@ import type { UpcomingEvent } from './useHomeTodos'
    button: Plan for a training; Share logistics, Write plan, Share plan for a match. "✓ Ready" when nothing is missing;
    "In To-do" when its step is in today's list. Today's events are in To-do. */
 
-export function UpcomingWeek({ week, inTodo, coachId, showSquad, onChanged, matchesOn }: {
+export function UpcomingWeek({ week, inTodo, coachId, showSquad, onChanged, matchesOn, trainingOn }: {
   /** null while loading. */
   week: UpcomingEvent[] | null
   /** The keys of today's to-dos. */
@@ -23,6 +23,8 @@ export function UpcomingWeek({ week, inTodo, coachId, showSquad, onChanged, matc
   onChanged: () => void
   /** Where Matches is off there is no Matches card. */
   matchesOn: boolean
+  /** Where Training is off a training has no plan, so it's never "Ready" either: its row shows no step. */
+  trainingOn: boolean
 }) {
   const { t } = useTranslation()
   const card = (kind: 'training' | 'match') => {
@@ -45,6 +47,7 @@ export function UpcomingWeek({ week, inTodo, coachId, showSquad, onChanged, matc
               {step && inTodo.has(step.todo.key)
                 ? <span className="rounded-full bg-raised px-2.5 py-1 text-[13px] font-medium text-ink-2">{t('coachHome:upcomingInTodo')}</span>
                 : step ? <TodoAction item={step} coachId={coachId} onChanged={onChanged} />
+                : kind === 'training' && !trainingOn ? null
                 : <span className="rounded-full bg-success/10 px-2.5 py-1 text-[13px] font-medium text-success">{t('coachHome:upcomingReady')}</span>}
             </li>
           })}

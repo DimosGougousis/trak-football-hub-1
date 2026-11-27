@@ -18,9 +18,10 @@ const DAY = 24 * 60 * 60_000
 
 export type HomeTodoEvent = { todo: HomeTodo; row: EventRow | null }
 
-/** Today's trainings and matches in view, for the greeting's line; and whether yesterday had a match. */
 /** TRAK-611: an event in Upcoming (tomorrow to 7 days ahead), with its next missing step, or null when nothing is. */
 export type UpcomingEvent = { row: EventRow; step: HomeTodoEvent | null }
+
+/** Today's trainings and matches in view, for the greeting's line; and whether yesterday had a match. */
 
 export type HomeDay = { trainings: EventRow[]; matches: EventRow[]; matchYesterday: boolean; now: number }
 

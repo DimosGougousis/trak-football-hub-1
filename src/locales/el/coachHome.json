@@ -202,5 +202,6 @@
   "upcomingLoading": "Φορτώνουν οι επόμενες 7 μέρες…",
   "upcomingNone": "Τίποτα αυτή την εβδομάδα.",
   "upcomingInTodo": "Στις εκκρεμότητες",
-  "upcomingReady": "✓ Έτοιμο"
+  "upcomingReady": "✓ Έτοιμο",
+  "todoShareTraining": "Μοιράσου την προπόνηση ({{day}})"
 }

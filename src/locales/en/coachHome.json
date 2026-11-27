@@ -202,5 +202,6 @@
   "upcomingLoading": "Loading the next 7 days…",
   "upcomingNone": "None this week.",
   "upcomingInTodo": "In To-do",
-  "upcomingReady": "✓ Ready"
+  "upcomingReady": "✓ Ready",
+  "todoShareTraining": "Share {{day}}'s training"
 }
