@@ -22,6 +22,7 @@ await context.route('**/*',async route=>{
  if(u.hostname!=='xbykbqolvqyqmipikuae.supabase.co') { if(!u.hostname.includes('fonts.')) unexpected.push(req.url()); return route.abort(); }
  if(req.method()!=='GET') writes.push({path:u.pathname,method:req.method()});
  if(u.pathname==='/auth/v1/user') return json(user);
+ if(u.pathname==='/rest/v1/rpc/my_announcements') return json([]); // TRAK-603: no announcements
  if(u.pathname==='/auth/v1/logout') return logoutFails?json({msg:'Synthetic logout failure'},500):route.fulfill({status:204});
  if(u.pathname==='/rest/v1/telemetry_events') return json(null,201);
  if(u.pathname==='/rest/v1/rpc/get_children_awaiting_consent') return json([]);
@@ -158,6 +159,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         if (url.hostname !== 'xbykbqolvqyqmipikuae.supabase.co') { unexpected.push(req.url()); return route.abort() }
         if (req.method() !== 'GET') writes.push(url.pathname)
         if (url.pathname === '/auth/v1/user') return json(user)
+        if (url.pathname === '/rest/v1/rpc/my_announcements') return json([]) // TRAK-603: no announcements
         if (url.pathname === '/rest/v1/profiles') {
           const filter = url.searchParams.get('user_id') ?? ''
           const people = [ { user_id: id, id, role, full_name: `Synthetic ${role}` },
