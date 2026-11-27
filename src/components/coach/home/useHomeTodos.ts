@@ -18,7 +18,11 @@ const DAY = 24 * 60 * 60_000
 
 export type HomeTodoEvent = { todo: HomeTodo; row: EventRow | null }
 
+/** TRAK-611: an event in Upcoming (tomorrow to 7 days ahead), with its next missing step, or null when nothing is. */
+export type UpcomingEvent = { row: EventRow; step: HomeTodoEvent | null }
+
 /** Today's trainings and matches in view, for the greeting's line; and whether yesterday had a match. */
+
 export type HomeDay = { trainings: EventRow[]; matches: EventRow[]; matchYesterday: boolean; now: number }
 
 /** The coach's To-do, each with its event's row (for its buttons), or null until the reads answer. */
@@ -28,7 +32,7 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
   reports: HomeReport[]
   trainingOn: boolean
   gamesOn: boolean
-}): { items: HomeTodoEvent[] | null; upcoming: HomeTodoEvent[] | null; day: HomeDay | null; failed: boolean; retry: () => void; refresh: () => void } {
+}): { items: HomeTodoEvent[] | null; upcoming: HomeTodoEvent[] | null; week: UpcomingEvent[] | null; day: HomeDay | null; failed: boolean; retry: () => void; refresh: () => void } {
   const records = useQuery({
     queryKey: ['coach', coachId, 'home-todos', gamesOn, trainingOn],
     enabled: !!coachId,
@@ -99,15 +103,25 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
       }
     })
     const withRow = (todo: HomeTodo) => ({ todo, row: todo.eventId ? byId.get(todo.eventId) ?? null : null })
+    // TRAK-610: what's still missing this week, for the first suggestion.
+    const upcoming = upcomingSteps({ trainings, matches, now, zone: zone.zone, inView, training: trainingOn }).map(withRow)
+    // TRAK-611: Upcoming lists every training and match from tomorrow to 7 days ahead, each with its missing step.
+    const stepOf = new Map(upcoming.map(item => [item.todo.eventId, item]))
+    const today = dayIn(zone.zone, new Date(now))
+    const week: UpcomingEvent[] = rows
+      .filter(row => (row.event_type === 'training' || (gamesOn && row.event_type === 'match')) && row.starts_at && !isCancelled(row)
+        && inView(row.squad ?? null) && dayIn(zone.zone, new Date(row.starts_at)) > today && Date.parse(row.starts_at) <= now + 7 * DAY)
+      .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!))
+      .map(row => ({ row, step: stepOf.get(row.id) ?? null }))
     return {
       items: homeTodos({ trainings, matches, reports, now, zone: zone.zone, inView, training: trainingOn }).map(withRow),
-      // TRAK-610: what's still missing this week, for the first suggestion (and Upcoming, TRAK-611).
-      upcoming: upcomingSteps({ trainings, matches, now, zone: zone.zone, inView, training: trainingOn }).map(withRow),
+      upcoming, week,
     }
   }, [records.data, waiting, planned.data, plans.data, shares.data, changes.data, reports, now, zone.zone, inView, trainingOn, gamesOn])
 
   const items = worked?.items ?? null
   const upcoming = worked?.upcoming ?? null
+  const week = worked?.week ?? null
 
   // The clock moves Home on by itself: at the next time a button opens or a to-do leaves (a match's plan at kick-off,
   // TRAK-287), and at least once a minute.
@@ -133,7 +147,7 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
   }, [records.data, inView, zone.zone, now])
 
   return {
-    items, upcoming, day, failed,
+    items, upcoming, week, day, failed,
     retry: () => { void records.refetch(); void planned.refetch(); void plans.refetch(); void shares.refetch() },
     refresh: () => { void records.refetch() },
   }

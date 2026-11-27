@@ -194,5 +194,14 @@
   "suggestDraftsWhy_other": "{{count}} waiting.",
   "suggestAssess": "Assess players",
   "suggestAssessWhy_one": "{{count}} is due.",
-  "suggestAssessWhy_other": "{{count}} are due."
+  "suggestAssessWhy_other": "{{count}} are due.",
+  "upcomingTitle": "Upcoming",
+  "upcomingSub": "next 7 days",
+  "upcomingTrainings": "Trainings",
+  "upcomingMatches": "Matches",
+  "upcomingLoading": "Loading the next 7 days…",
+  "upcomingNone": "None this week.",
+  "upcomingInTodo": "In To-do",
+  "upcomingReady": "✓ Ready",
+  "todoShareTraining": "Share {{day}}'s training"
 }

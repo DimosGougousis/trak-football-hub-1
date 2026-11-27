@@ -194,5 +194,14 @@
   "suggestDraftsWhy_other": "{{count}} περιμένουν.",
   "suggestAssess": "Αξιολόγησε παίκτες",
   "suggestAssessWhy_one": "{{count}} χρειάζεται αξιολόγηση.",
-  "suggestAssessWhy_other": "{{count}} χρειάζονται αξιολόγηση."
+  "suggestAssessWhy_other": "{{count}} χρειάζονται αξιολόγηση.",
+  "upcomingTitle": "Ερχόμενα",
+  "upcomingSub": "επόμενες 7 μέρες",
+  "upcomingTrainings": "Προπονήσεις",
+  "upcomingMatches": "Αγώνες",
+  "upcomingLoading": "Φορτώνουν οι επόμενες 7 μέρες…",
+  "upcomingNone": "Τίποτα αυτή την εβδομάδα.",
+  "upcomingInTodo": "Στις εκκρεμότητες",
+  "upcomingReady": "✓ Έτοιμο",
+  "todoShareTraining": "Μοιράσου την προπόνηση ({{day}})"
 }

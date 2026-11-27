@@ -85,6 +85,12 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
   </section>
 }
 
+/** TRAK-611: a to-do's own next step, for Upcoming's rows. */
+export function TodoAction({ item, coachId, onChanged }: { item: HomeTodoEvent; coachId: string; onChanged: () => void }) {
+  const { t } = useTranslation()
+  return <>{action(item.todo, item.row, { t, coachId, onChanged, onOpenReports: () => {} })}</>
+}
+
 function SuggestionRow({ title, line, action }: { title: string; line: string; action: ReactNode }) {
   return <li className="flex flex-wrap items-center justify-between gap-3 border-t border-line/60 py-3 first:border-t-0">
     <span className="grid min-w-0"><span className="text-[15px] font-medium text-ink">{title}</span>{line && <span className="text-sm text-ink-3">{line}</span>}</span>
@@ -133,7 +139,10 @@ function title(todo: Todo, row: EventRow | null, t: T): string {
     case 'evaluate': return t('coachHome:todoEvaluate')
     case 'publish': return t('coachHome:todoPublish')
     case 'reports': return t('coachHome:reportsReady')
-    case 'next-training': return t('coachHome:todoNextTraining', { day: row?.starts_at ? format(new Date(row.starts_at), 'EEEE', { locale: dateLocale() }) : '' })
+    case 'next-training': {
+      const day = row?.starts_at ? format(new Date(row.starts_at), 'EEEE', { locale: dateLocale() }) : ''
+      return todo.step === 'share' ? t('coachHome:todoShareTraining', { day }) : t('coachHome:todoNextTraining', { day })
+    }
     case 'next-match': return todo.step === 'logistics' ? t('coachHome:todoShareLogistics', { opponent: opponent(row) })
       : todo.step === 'plan' ? t('coachHome:todoWritePlan', { opponent: opponent(row) }) : t('coachHome:todoSharePlan', { opponent: opponent(row) })
   }
@@ -169,7 +178,8 @@ function action(todo: Todo, row: EventRow | null, { t, coachId, onChanged, onOpe
     case 'training-plan':
       if (todo.step === 'shared') return pill(t('coachHome:todoShared'))
       return <Go to={planPath(row!.id)} label={todo.step === 'plan' ? t('coachHome:todoPlanTraining') : t('coachHome:share')} />
-    case 'next-training': return <Go to={planPath(row!.id)} label={t('coachHome:todoPlanTraining')} />
+    // TRAK-611: a planned training still a draft is shared from its plan's Review & share, which publishes it first.
+    case 'next-training': return <Go to={planPath(row!.id)} label={todo.step === 'share' ? t('coachHome:share') : t('coachHome:todoPlanTraining')} />
     case 'register':
       if (todo.done) return pill(t('coachHome:todoSaved'))
       return <NextStep item={weekItem(row!, 'register')} coachId={coachId} roster={undefined} onChanged={onChanged} />

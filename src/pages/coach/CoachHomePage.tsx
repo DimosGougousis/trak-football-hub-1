@@ -5,11 +5,11 @@ import { MobileShell } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
 import { HomeHeader } from '@/components/trak/HomeHeader'
 import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
-import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { TodoList, type Suggestion } from '@/components/coach/home/TodoList'
 import { HomeGreeting } from '@/components/coach/home/HomeGreeting'
 import { useHomeTodos } from '@/components/coach/home/useHomeTodos'
+import { UpcomingWeek } from '@/components/coach/home/UpcomingWeek'
 import type { OwedEvent } from '@/components/coach/home/NeedsYou'
 import { SeasonPlanCard } from '@/components/coach/home/SeasonPlanCard'
 import { planSquad } from '@/lib/season-plan'
@@ -42,8 +42,6 @@ export default function CoachHomePage() {
   const { t, language } = useLanguage()
   const coachSquad = useCoachSquad(user?.id)
   const wide = useSideMenuScreen()
-  // TRAK-182 part 8: a quick-add draft shows in the week at once.
-  const [weekVersion, setWeekVersion] = useState(0)
   // TRAK-305: All or one squad, as picked at the top of the frame. All exists only with two squads or more.
   const { everySquad } = coachSquad
   const roster = useSquadRoster()
@@ -67,7 +65,7 @@ export default function CoachHomePage() {
   const reports = useMemo(() => evaluations.list.filter(e => e.due.dueOn && e.due.since).map(e => ({ squad: e.squad, since: e.due.since! })),
     [evaluations.list])
   const todos = useHomeTodos({ coachId: user?.id, inView, reports, trainingOn, gamesOn })
-  const todosChanged = () => { setWeekVersion(v => v + 1); todos.refresh() }
+  const todosChanged = () => todos.refresh()
   const needsReady = evaluations.ready
   // TRAK-352: where the season plan is on, one card per squad with consented players still to place. A newly
   // consented child has no position, so they join it.
@@ -148,7 +146,9 @@ export default function CoachHomePage() {
             showSquad={everySquad && coachSquad.squads.length >= 2} onChanged={todosChanged}
             onOpenReports={squad => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/evaluation') }}
             nextStep={nextStep} playerJob={playerJob} />}
-          {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
+          {/* TRAK-611 (New Home 5/8): Upcoming in the week strip's place; Schedule keeps the strip. */}
+          {user && <UpcomingWeek week={todos.week} inTodo={todoKeys} coachId={user.id} showSquad={everySquad && coachSquad.squads.length >= 2}
+            onChanged={todosChanged} matchesOn={gamesOn} trainingOn={trainingOn} />}
         </div>
         {/* TRAK-350: the season plan, where the academy's switch is on; TRAK-361: the card that folds, one per squad under All. */}
         {user && <SeasonPlanCard coachId={user.id} squads={coachSquad.squads} squadsReady={coachSquad.ready} squadsFailed={coachSquad.failed} onRetry={coachSquad.retry}
