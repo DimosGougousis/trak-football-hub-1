@@ -193,7 +193,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
         // TRAK-262: notification_settings is coach Home's Needs you switch (no row: on).
         if (['matches', 'player_details', 'coach_details', 'recognition_awards', 'session_attendance', 'event_absences', 'notification_settings',
           // TRAK-286: no game plan, shared or not.
-          'game_plans', 'game_shares', 'game_evaluations', 'game_evaluation_players', 'game_evaluation_notes', 'game_for_family', 'game_for_player', 'game_review_for_family', 'game_review_for_player', 'training_plans', 'training_plan_practices', 'training_notes'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+          'game_plans', 'game_shares', 'game_evaluations', 'game_evaluation_players', 'game_evaluation_notes', 'game_for_family', 'game_for_player', 'game_review_for_family', 'game_review_for_player', 'training_plans', 'training_plan_practices', 'training_notes',
+          // TRAK-612, TRAK-613: the coach's own to-dos and their order on Home; none.
+          'coach_todos', 'coach_home_order'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
         unexpected.push(`${req.method()} ${url.pathname}`)
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
       })
@@ -202,7 +204,11 @@ test.describe('TRAK-171 Home follow-ups', () => {
       await page.clock.setFixedTime(new Date(Math.min(Date.now(), Date.parse(`${day}T13:00:00Z`))))
       await page.goto(`/${role}/home`)
       const week = page.getByRole('region', { name: 'This week' })
-      await expect(week).toBeVisible()
+      // TRAK-611 (#809): coach Home shows Upcoming, the next 7 days, in the week's place; Schedule has today's events.
+      if (role === 'coach') {
+        await expect(page.getByRole('heading', { name: /^Upcoming/ })).toBeVisible()
+        await expect(week).toHaveCount(0)
+      } else await expect(week).toBeVisible()
       if (role === 'player') await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath(`${role}-home.png`), fullPage: true })
       await expect(page.getByText('NEXT UP', { exact: true })).toHaveCount(0)
@@ -248,12 +254,16 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await expect(page.getByRole('heading', { name: 'Coach feedback' })).toBeVisible()
         await expect(page.getByText('Keep pressing after losing the ball.', { exact: true })).toBeVisible()
       } else {
-        // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too. Open
-        // session goes to its record, and Back comes back to Home, not to the
-        // sessions history. TRAK-334: the trail's Home, in place of Back.
-        // TRAK-262: the coach's week picks an event on a tap; Details opens its sheet.
-        await week.getByRole('button', { name: /Logged set pieces/ }).click()
-        await week.getByRole('button', { name: 'Details' }).click()
+        // TRAK-182 (Imad, 16 Oct): a logged session opens its sheet too.
+        // TRAK-611 (#809): the week left coach Home, so the sheets open from Schedule's day, as TRAK-272 has them.
+        // TRAK-255: the coach's is called Schedule, and a day with a started event that has no
+        // register yet also says "needs you" (by the time of day this runs).
+        await page.getByRole('link', { name: 'Events' }).click()
+        await expect(page.getByRole('gridcell', { name: /, 2 events(, needs you)?$/ })).toHaveAttribute('aria-selected', 'true')
+        await page.screenshot({ path: testInfo.outputPath('coach-schedule-month.png'), fullPage: true })
+        // The picked day's events, under the month.
+        const day = page.locator('section[aria-labelledby="schedule-day"]')
+        await day.getByRole('button', { name: 'Logged set pieces', exact: true }).click()
         const logged = page.getByRole('dialog', { name: 'Logged set pieces' })
         await expect(logged.getByText('Logged.')).toBeVisible()
         // Imad, 23 Oct (TRAK-278): the sheet shows the log, read only. TRAK-426 (Kostas, 12 Nov): with Training and
@@ -264,8 +274,7 @@ test.describe('TRAK-171 Home follow-ups', () => {
         await sheetAtRest(logged)
         await page.keyboard.press('Escape')
         await expect(logged).toBeHidden()
-        await week.getByRole('button', { name: /Technical training/ }).click()
-        await week.getByRole('button', { name: 'Details' }).click()
+        await day.getByRole('button', { name: 'Technical training', exact: true }).click()
         const sheet = page.getByRole('dialog', { name: 'Technical training' })
         // TRAK-427 (#675): "Published" is Arc's pill, not a disabled button.
         await expect(sheet.getByText('Published', { exact: true })).toBeVisible()
@@ -276,17 +285,11 @@ test.describe('TRAK-171 Home follow-ups', () => {
         if (await share.evaluate(el => el.tagName === 'A')) await expect(share).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=/)
         await expect(sheet.getByRole('button', { name: 'Edit event' })).toBeVisible()
         await expect(sheet.getByText('No players in your squad yet.')).toBeVisible()
-        await expect(page).toHaveURL(/\/coach\/home$/)
+        await expect(page).toHaveURL(/\/coach\/schedule$/)
         await sheetAtRest(sheet)
         await page.screenshot({ path: testInfo.outputPath('coach-event-sheet.png') })
-        // TRAK-182: Schedule's month is Arc's calendar, with today's two entries counted.
         await page.keyboard.press('Escape')
         await expect(sheet).toHaveCount(0)
-        // TRAK-255: the coach's is called Schedule, and a day with a started event that has no
-        // register yet also says "needs you" (by the time of day this runs).
-        await page.getByRole('link', { name: 'Events' }).click()
-        await expect(page.getByRole('gridcell', { name: /, 2 events(, needs you)?$/ })).toHaveAttribute('aria-selected', 'true')
-        await page.screenshot({ path: testInfo.outputPath('coach-schedule-month.png'), fullPage: true })
       }
       expect(errors).toEqual([])
       expect(unexpected).toEqual([])
