@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Button } from '@/components/arc/button/button'
@@ -13,6 +14,7 @@ import { squadName, type WeekItem } from '@/lib/coach-week'
 import { dateLocale, useTranslation } from '@/lib/i18n'
 import type { EventRow } from '@/lib/coach-events'
 import type { HomeTodoEvent } from './useHomeTodos'
+import { TodoPreview, type PreviewKind } from './TodoPreview'
 
 /* TRAK-608 (New Home 2/8, spec TRAK-606): Home's To-do. One numbered list in homeTodos()'s order (TRAK-607): an urgent
    to-do has a yellow number, a done one a green tick, and a button that can't be used yet is greyed and says when it
@@ -35,6 +37,9 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
 }) {
   const { t } = useTranslation()
   const urgent = !!items?.some(({ todo }) => todo.urgent && !todo.done)
+  // TRAK-609: which previews are open; each starts closed.
+  const [open, setOpen] = useState<Set<string>>(() => new Set())
+  const toggle = (key: string) => setOpen(now => { const next = new Set(now); if (!next.delete(key)) next.add(key); return next })
   return <section aria-labelledby="todo-title" className="grid gap-3">
     <h2 id="todo-title" className="text-lg font-medium text-ink">{t('coachHome:todoTitle')}</h2>
     {failed ? <LoadError what={t('coachHome:todoWhat')} onRetry={onRetry} />
@@ -51,6 +56,8 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
               {todo.urgent && !todo.done && <span className="sr-only">{t('coachHome:urgent')}</span>}{title(todo, row, t)}
             </span>
             <span className="text-sm text-ink-2">{[showSquad ? squadName(todo.squad) : null, line(todo, row, t)].filter(Boolean).join(' · ')}</span>
+            {row && previewOf(todo) && <PreviewToggle kind={previewOf(todo)!} open={open.has(todo.key)} onToggle={() => toggle(todo.key)} />}
+            {row && previewOf(todo) && open.has(todo.key) && <TodoPreview kind={previewOf(todo)!} eventId={row.id} theme={row.training_theme ?? null} />}
           </span>
           <span className="col-start-2 laptop:col-start-auto">{action(todo, row, { t, coachId, onChanged, onOpenReports })}</span>
         </li>)}
@@ -60,6 +67,31 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
 }
 
 type T = ReturnType<typeof useTranslation>['t']
+
+/** TRAK-609: what a to-do can preview, once there's something written: a plan, saved Notes, a drafted evaluation. */
+function previewOf(todo: HomeTodoEvent['todo']): PreviewKind | null {
+  if (todo.kind === 'training-plan') return todo.step === 'plan' ? null : 'training-plan'
+  if (todo.kind === 'match-plan') return todo.step === 'plan' || todo.step === 'logistics' ? null : 'match-plan'
+  if (todo.kind === 'notes') return todo.done ? 'notes' : null
+  if (todo.kind === 'publish') return 'evaluation'
+  return null
+}
+
+const TOGGLE: Record<PreviewKind, ['coachHome:previewPlanShow' | 'coachHome:previewNotesShow' | 'coachHome:previewEvaluationShow',
+  'coachHome:previewPlanHide' | 'coachHome:previewNotesHide' | 'coachHome:previewEvaluationHide']> = {
+  'training-plan': ['coachHome:previewPlanShow', 'coachHome:previewPlanHide'],
+  'match-plan': ['coachHome:previewPlanShow', 'coachHome:previewPlanHide'],
+  notes: ['coachHome:previewNotesShow', 'coachHome:previewNotesHide'],
+  evaluation: ['coachHome:previewEvaluationShow', 'coachHome:previewEvaluationHide'],
+}
+
+function PreviewToggle({ kind, open, onToggle }: { kind: PreviewKind; open: boolean; onToggle: () => void }) {
+  const { t } = useTranslation()
+  return <button type="button" aria-expanded={open} onClick={onToggle}
+    className="mt-1 justify-self-start rounded text-sm font-medium text-ink-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+    {t(TOGGLE[kind][open ? 1 : 0])} <span aria-hidden>{open ? '▴' : '▾'}</span>
+  </button>
+}
 type Todo = HomeTodoEvent['todo']
 
 const opponent = (row: EventRow | null) => row?.opponent || row?.title || ''
