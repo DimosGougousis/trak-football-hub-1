@@ -120,7 +120,8 @@ export default function CoachHomePage() {
   const drafts = (needsReady ? cards ?? [] : []).filter(card => card.kind === 'draft')
   const due = (needsReady ? cards ?? [] : []).filter(card => card.kind === 'assess')
   const fromCard = (card: OwedEvent | undefined): Suggestion | null => card ? { key: card.id, title: card.title, line: card.reason, action: card.action } : null
-  const playerJob: Suggestion | null = drafts.length
+  // Only once the roster and the evaluations have answered, so a lower job never shows first and then gives way.
+  const playerJob: Suggestion | null = !loaded || !needsReady ? null : drafts.length
     // TRAK-200: the profile's assessment card says Draft and has Publish.
     ? { key: 'drafts', title: t('coachHome:suggestDrafts'), line: t('coachHome:suggestDraftsWhy', { count: drafts.length }),
       action: go(t('coachHome:finishDraft'), () => navigate(`/coach/squad/player/${drafts[0].playerId}`)) }
