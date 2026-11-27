@@ -6,6 +6,7 @@ import { Button } from '@/components/arc/button/button'
 import { LoadError } from '@/components/trak/LoadError'
 import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { MatchAction } from '@/components/coach/games/MatchAction'
+import { gameTitle } from '@/components/coach/games/useGames'
 import { NextStep } from '@/components/coach/CoachWeekStrip'
 import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { phoneEventTime } from '@/lib/event-time'
@@ -257,8 +258,10 @@ function line(todo: Todo, row: EventRow | null, t: T): string {
     case 'training-plan': return todo.step === 'plan' && time?.time ? t('coachHome:todoPlanBefore', { time: time.time }) : event
     case 'match-plan': return todo.step === 'plan' || todo.step === 'logistics'
       ? t('coachHome:todoWriteBefore', { time: time?.time ?? '' }) : event
-    case 'evaluate': return t('coachHome:todoEvaluateWhy')
-    case 'publish': return t('coachHome:todoPublishWhy')
+    // TRAK-615 (Kostas, live check of 27 Nov): which match or training it's for, with its day, so two to-dos with the
+    // same title (two matches to evaluate, two trainings' notes) are always told apart.
+    case 'evaluate': case 'publish': return [row ? gameTitle(row) : null, time?.date ? evalDay(time.date) : null].filter(Boolean).join(' · ')
+    case 'register': case 'notes': return [row?.title, time?.date ? evalDay(time.date) : null, time?.time].filter(Boolean).join(' · ')
     case 'reports': return t('coachHome:evaluationDueSince', { day: evalDay(new Date(todo.at).toISOString().slice(0, 10)) })
     case 'next-training': case 'next-match': return [time?.date ? evalDay(time.date) : null, time?.time].filter(Boolean).join(' · ')
     case 'own': return t('coachHome:todoAddedByYou')
