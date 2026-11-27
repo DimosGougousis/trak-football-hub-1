@@ -145,7 +145,7 @@ export default function CoachHomePage() {
           {user && <TodoList items={todos.items} failed={todos.failed} onRetry={todos.retry} coachId={user.id}
             showSquad={everySquad && coachSquad.squads.length >= 2} onChanged={todosChanged}
             onOpenReports={squad => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/evaluation') }}
-            nextStep={nextStep} playerJob={playerJob} />}
+            nextStep={nextStep} playerJob={playerJob} today={todos.day?.today ?? null} />}
           {/* TRAK-611 (New Home 5/8): Upcoming in the week strip's place; Schedule keeps the strip. */}
           {user && <UpcomingWeek week={todos.week} inTodo={todoKeys} coachId={user.id} showSquad={everySquad && coachSquad.squads.length >= 2}
             onChanged={todosChanged} matchesOn={gamesOn} />}

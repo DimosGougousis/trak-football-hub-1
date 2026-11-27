@@ -22,14 +22,14 @@ import { dayIn } from '@/lib/watch-first'
    evaluation starts at Yes · Met (game_evaluation_players), so nobody is ever unrated. */
 
 export type TodoGroup = 'training' | 'match' | 'players' | 'yours'
-export type TodoKind = 'match-plan' | 'training-plan' | 'register' | 'evaluate' | 'publish' | 'notes' | 'reports' | 'next-training' | 'next-match'
+export type TodoKind = 'match-plan' | 'training-plan' | 'register' | 'evaluate' | 'publish' | 'notes' | 'reports' | 'next-training' | 'next-match' | 'own'
 
 export const RANK: Record<TodoKind, number> = {
-  'match-plan': 1, 'training-plan': 2, register: 3, evaluate: 4, publish: 5, notes: 6, reports: 7, 'next-training': 8, 'next-match': 8,
+  'match-plan': 1, 'training-plan': 2, register: 3, evaluate: 4, publish: 5, notes: 6, reports: 7, 'next-training': 8, 'next-match': 8, own: 9,
 }
 const GROUP: Record<TodoKind, TodoGroup> = {
   'match-plan': 'match', 'training-plan': 'training', register: 'training', evaluate: 'match', publish: 'match', notes: 'training',
-  reports: 'players', 'next-training': 'training', 'next-match': 'match',
+  reports: 'players', 'next-training': 'training', 'next-match': 'match', own: 'yours',
 }
 
 const HOUR = 60 * 60_000
@@ -75,6 +75,9 @@ export type HomeMatch = {
   remindAt: string | null
 }
 
+/** TRAK-612: one of the coach's own to-dos (coach_todos): its text, the academy day it's for, and when it was ticked. */
+export type HomeOwnTodo = { id: string; title: string; dueOn: string; urgent: boolean; doneAt: string | null; createdAt: string }
+
 /** A squad whose report day has come (TRAK-364, TRAK-531): `since` is the academy day it fell due. */
 export type HomeReport = { squad: string; since: string }
 
@@ -97,6 +100,8 @@ export type HomeTodo = {
   leavesAt: number | null
   /** Where a plan is: Plan, Share or Shared for a training; the match's own state (gameState) for a match. */
   step?: 'plan' | 'share' | 'shared' | GameState
+  /** TRAK-612: the coach's own words, for their own to-do. */
+  title?: string
 }
 
 const parse = (iso: string) => Date.parse(iso)
@@ -104,10 +109,12 @@ const parse = (iso: string) => Date.parse(iso)
 const trainingStart = (t: HomeTraining) => (t.start_time ? parse(t.starts_at) : trainingEnd(t))
 
 /** The coach's To-do at `now`, in order. `zone` is the academy's time zone; `inView` is the squad picked (All: every). */
-export function homeTodos({ trainings, matches, reports = [], now, zone, inView = () => true, training = true }: {
+export function homeTodos({ trainings, matches, reports = [], own = [], now, zone, inView = () => true, training = true }: {
   trainings: HomeTraining[]
   matches: HomeMatch[]
   reports?: HomeReport[]
+  /** TRAK-612: the coach's own to-dos, shown under every squad. */
+  own?: HomeOwnTodo[]
   now: number
   zone: string
   inView?: (squad: string | null) => boolean
@@ -194,6 +201,14 @@ export function homeTodos({ trainings, matches, reports = [], now, zone, inView 
     if (!inView(r.squad) || r.since > today) continue
     add('reports', r.squad, { squad: r.squad, eventId: null, at: Date.parse(`${r.since}T00:00:00Z`), done: false,
       urgent: r.since < today, opensAt: null, leavesAt: null })
+  }
+
+  // TRAK-612: the coach's own, from its day until ticked (an unticked one moves on to the next day), then ticked until
+  // midnight. Rank 9, after Trak's; an urgent one goes up with the urgent. Under every squad, as they're the coach's.
+  for (const o of own) {
+    if (o.doneAt ? !doneToday(o.doneAt) : o.dueOn > today) continue
+    add('own', o.id, { squad: null, eventId: null, at: parse(o.createdAt), done: !!o.doneAt, urgent: o.urgent && !o.doneAt,
+      opensAt: null, leavesAt: null, title: o.title })
   }
 
   // A day with no training or match: the next training's plan and the next match's next step, while still missing.
