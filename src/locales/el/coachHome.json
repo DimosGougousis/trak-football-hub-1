@@ -219,5 +219,12 @@
   "todoDoneShort": "✓ Έγινε",
   "todoAddFailed": "Δεν προστέθηκε. Δοκίμασε ξανά.",
   "todoTickFailed": "Δεν σημειώθηκε. Δοκίμασε ξανά.",
-  "todoShareTraining": "Μοιράσου την προπόνηση ({{day}})"
+  "todoShareTraining": "Μοιράσου την προπόνηση ({{day}})",
+  "orderChange": "Άλλαξε σειρά",
+  "orderDone": "Έτοιμο",
+  "orderUp": "Πάνω: {{name}}",
+  "orderDown": "Κάτω: {{name}}",
+  "orderRemove": "Αφαίρεση: {{name}}",
+  "orderSaveFailed": "Η σειρά δεν αποθηκεύτηκε. Δοκίμασε ξανά.",
+  "todoRemoveFailed": "Δεν αφαιρέθηκε. Δοκίμασε ξανά."
 }

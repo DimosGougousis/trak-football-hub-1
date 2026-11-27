@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { homeTodos, startOfNextDay, upcomingSteps, type HomeMatch, type HomeOwnTodo, type HomeTraining, type HomeReport } from '../home-todos'
+import { applyOrder, homeTodos, startOfNextDay, upcomingSteps, type HomeMatch, type HomeOwnTodo, type HomeTraining, type HomeReport } from '../home-todos'
 
 // TRAK-607: the coach's To-do, one test per row of the 26 Nov rules (TRAK-606). Days are the academy's: Athens, which
 // is UTC+2 in November. Wed 25 Nov 2026 is a training day; Sat 28 Nov a match day.
@@ -275,6 +275,25 @@ describe('where Training is off (TRAK-608)', () => {
     const off = (now: string, trainings: HomeTraining[]) => homeTodos({ trainings, matches: [], now: t(now), zone: Z, training: false }).map(todo => todo.key)
     expect(off('2026-11-25T09:00', [training('w', '2026-11-25', { planned: false })])).toEqual(['register:w'])
     expect(off('2026-11-23T08:00', [training('w', '2026-11-25', { planned: false })])).toEqual([])
+  })
+})
+
+describe("the coach's order (TRAK-613)", () => {
+  const item = (key: string, urgent = false, done = false) => ({ todo: { key, urgent, done } as ReturnType<typeof homeTodos>[number] })
+  const keysOf = (list: { todo: { key: string } }[]) => list.map(i => i.todo.key)
+
+  it("without one, Trak's order", () => {
+    expect(keysOf(applyOrder([item('a'), item('b')], null))).toEqual(['a', 'b'])
+    expect(keysOf(applyOrder([item('a'), item('b')], []))).toEqual(['a', 'b'])
+  })
+
+  it('keeps the saved places; one gone drops out', () => {
+    expect(keysOf(applyOrder([item('a'), item('b'), item('c')], ['c', 'gone', 'a', 'b']))).toEqual(['c', 'a', 'b'])
+  })
+
+  it('a new urgent one goes to the top, anything else new to the bottom', () => {
+    expect(keysOf(applyOrder([item('u', true), item('a'), item('b'), item('n')], ['b', 'a']))).toEqual(['u', 'b', 'a', 'n'])
+    expect(keysOf(applyOrder([item('d', true, true), item('a')], ['a']))).toEqual(['a', 'd'])
   })
 })
 

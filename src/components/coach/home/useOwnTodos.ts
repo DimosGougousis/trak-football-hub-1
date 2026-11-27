@@ -48,3 +48,29 @@ export function useTickTodo() {
     onSuccess: () => client.invalidateQueries({ queryKey: key(user?.id) }),
   })
 }
+
+/** TRAK-613: marks one of the coach's own to-dos urgent, or not. */
+export function useSetUrgent() {
+  const { user } = useAuth()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, urgent }: { id: string; urgent: boolean }) => {
+      const { error } = await supabase.from('coach_todos').update({ urgent }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: key(user?.id) }),
+  })
+}
+
+/** TRAK-613: removes one of the coach's own to-dos. */
+export function useRemoveTodo() {
+  const { user } = useAuth()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('coach_todos').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: key(user?.id) }),
+  })
+}
