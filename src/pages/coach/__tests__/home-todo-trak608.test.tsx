@@ -150,11 +150,11 @@ describe('TRAK-608: the To-do on coach Home', { timeout: 20_000 }, () => {
     expect(await titles()).toEqual(['Take the register'])
   })
 
-  it('on a phone the greeting and the To-do come before the week', async () => {
+  it('the greeting and the To-do come before Upcoming (TRAK-611)', async () => {
     home({ events: [event('t1', 'training', '2026-11-04T16:00')], practices: [practice('t1', 1, 'Rondos 4v1', 15)] })
     renderApp('/coach/home')
     const list = await todo()
-    const week = await screen.findByRole('region', { name: /week/i }, { timeout: 5000 })
+    const week = await screen.findByRole('region', { name: /^Upcoming/ }, { timeout: 5000 })
     expect(list.compareDocumentPosition(week) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

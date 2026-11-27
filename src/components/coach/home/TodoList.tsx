@@ -85,6 +85,12 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
   </section>
 }
 
+/** TRAK-611: a to-do's own next step, for Upcoming's rows. */
+export function TodoAction({ item, coachId, onChanged }: { item: HomeTodoEvent; coachId: string; onChanged: () => void }) {
+  const { t } = useTranslation()
+  return <>{action(item.todo, item.row, { t, coachId, onChanged, onOpenReports: () => {} })}</>
+}
+
 function SuggestionRow({ title, line, action }: { title: string; line: string; action: ReactNode }) {
   return <li className="flex flex-wrap items-center justify-between gap-3 border-t border-line/60 py-3 first:border-t-0">
     <span className="grid min-w-0"><span className="text-[15px] font-medium text-ink">{title}</span>{line && <span className="text-sm text-ink-3">{line}</span>}</span>

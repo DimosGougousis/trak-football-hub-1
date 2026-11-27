@@ -127,13 +127,14 @@ describe('TRAK-335: skeletons while the coach app loads', { timeout: 30_000 }, (
   })
 
   // TRAK-461: one placeholder the size of the week grows into it.
-  it("Home's week shows a placeholder the size of the week, then grows into it", async () => {
+  // TRAK-611: Upcoming took the week strip's place on Home.
+  it("Home's Upcoming shows a placeholder while the events load, then the week", async () => {
     server.use(hold('coach_calendar_events', []))
     renderApp('/coach/home')
-    const region = await morph('Loading this week', 1)
+    const statuses = await screen.findAllByRole('status', { name: 'Loading the next 7 days…' }, { timeout: 5000 })
+    expect(statuses.length).toBeGreaterThan(0)
     release()
-    expect(await within(region).findByRole('heading', { name: 'This week' })).toBeInTheDocument()
-    await grown(region, 'Loading this week')
+    expect(await within(await screen.findByRole('region', { name: 'Trainings' })).findByText('None this week.', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('Training shows a skeleton while it loads', async () => {
