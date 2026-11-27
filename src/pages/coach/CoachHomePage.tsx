@@ -148,7 +148,7 @@ export default function CoachHomePage() {
             nextStep={nextStep} playerJob={playerJob} today={todos.day?.today ?? null} />}
           {/* TRAK-611 (New Home 5/8): Upcoming in the week strip's place; Schedule keeps the strip. */}
           {user && <UpcomingWeek week={todos.week} inTodo={todoKeys} coachId={user.id} showSquad={everySquad && coachSquad.squads.length >= 2}
-            onChanged={todosChanged} matchesOn={gamesOn} />}
+            onChanged={todosChanged} matchesOn={gamesOn} trainingOn={trainingOn} />}
         </div>
         {/* TRAK-350: the season plan, where the academy's switch is on; TRAK-361: the card that folds, one per squad under All. */}
         {user && <SeasonPlanCard coachId={user.id} squads={coachSquad.squads} squadsReady={coachSquad.ready} squadsFailed={coachSquad.failed} onRetry={coachSquad.retry}

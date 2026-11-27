@@ -257,6 +257,11 @@ describe('upcoming steps (TRAK-610)', () => {
     expect(list).toEqual(['next-training:wed:plan', 'next-training:fri:plan', 'next-match:sat:planDraft'])
   })
 
+  it('a planned training still a draft asks to be shared (TRAK-611)', () => {
+    expect(steps('2026-11-24T09:00', [training('w', '2026-11-25', { published: false })])).toEqual(['next-training:w:share'])
+    expect(steps('2026-11-24T09:00', [training('w', '2026-11-25', { published: false, planned: false })])).toEqual(['next-training:w:plan'])
+  })
+
   it('not today, not one with nothing missing, not a cancelled one, and no plans where Training is off', () => {
     expect(steps('2026-11-25T06:00', [training('w', '2026-11-25', { planned: false })])).toEqual([])
     expect(steps('2026-11-24T09:00', [training('w', '2026-11-25')], [match('m', '2026-11-28')])).toEqual([])

@@ -218,5 +218,6 @@
   "todoDone": "Έγινε",
   "todoDoneShort": "✓ Έγινε",
   "todoAddFailed": "Δεν προστέθηκε. Δοκίμασε ξανά.",
-  "todoTickFailed": "Δεν σημειώθηκε. Δοκίμασε ξανά."
+  "todoTickFailed": "Δεν σημειώθηκε. Δοκίμασε ξανά.",
+  "todoShareTraining": "Μοιράσου την προπόνηση ({{day}})"
 }

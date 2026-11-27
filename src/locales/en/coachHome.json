@@ -218,5 +218,6 @@
   "todoDone": "Done",
   "todoDoneShort": "✓ Done",
   "todoAddFailed": "Couldn't add the to-do. Try again.",
-  "todoTickFailed": "Couldn't tick it. Try again."
+  "todoTickFailed": "Couldn't tick it. Try again.",
+  "todoShareTraining": "Share {{day}}'s training"
 }

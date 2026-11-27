@@ -112,6 +112,22 @@ describe('TRAK-611: Upcoming on coach Home', { timeout: 20_000 }, () => {
     expect(screen.queryByRole('heading', { name: 'This week' })).toBeNull()
   })
 
+  it('a planned training still a draft offers Share, not Ready', async () => {
+    home({ events: [event('fri', 'training', '2026-11-06T14:00', { title: 'Pressing', published: false })], practices: [practice('fri', 1, 'Rondos 4v1', 15)] })
+    renderApp('/coach/home')
+    const row = await rowOf('Trainings', 'Pressing')
+    expect(within(row).getByRole('button', { name: 'Share' })).toBeInTheDocument()
+    expect(within(row).queryByText('✓ Ready')).toBeNull()
+  })
+
+  it('with Training off, a training is listed with no step and never "Ready"', async () => {
+    home({ events: [event('fri', 'training', '2026-11-06T14:00', { title: 'Pressing' })], features: ['events'] })
+    renderApp('/coach/home')
+    const row = await rowOf('Trainings', 'Pressing')
+    expect(within(row).queryByText('✓ Ready')).toBeNull()
+    expect(within(row).queryByRole('button')).toBeNull()
+  })
+
   it('with Matches off, there is no Matches card', async () => {
     home({ events: [], features: ['events', 'training'] })
     renderApp('/coach/home')

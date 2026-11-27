@@ -234,8 +234,8 @@ export function homeTodos({ trainings, matches, reports = [], own = [], now, zon
   return todos.sort(byOrder)
 }
 
-/** TRAK-610: every training and match from tomorrow to 7 days ahead still missing a step (a training's plan; a match's
- *  logistics, plan or share), soonest first, as next-training and next-match to-dos. Home suggests the first that isn't
+/** TRAK-610: every training and match from tomorrow to 7 days ahead still missing a step (a training's plan, then its
+ *  share while it's a draft, TRAK-611; a match's logistics, plan or share), soonest first, as next-training and next-match to-dos. Home suggests the first that isn't
  *  already a to-do; Upcoming (TRAK-611) lists them all. */
 export function upcomingSteps({ trainings, matches, now, zone, inView = () => true, training = true }: {
   trainings: HomeTraining[]
@@ -251,9 +251,9 @@ export function upcomingSteps({ trainings, matches, now, zone, inView = () => tr
   const base = { done: false, urgent: false, opensAt: null, leavesAt: null }
   if (training) {
     for (const t of trainings) {
-      if (t.cancelled || !inView(t.squad) || !ahead(t.starts_at) || t.planned) continue
+      if (t.cancelled || !inView(t.squad) || !ahead(t.starts_at) || (t.planned && t.published)) continue
       steps.push({ ...base, key: `next-training:${t.id}`, kind: 'next-training', group: 'training', rank: RANK['next-training'],
-        squad: t.squad, eventId: t.id, at: parse(t.starts_at), step: 'plan' })
+        squad: t.squad, eventId: t.id, at: parse(t.starts_at), step: t.planned ? 'share' : 'plan' })
     }
   }
   for (const m of matches) {
