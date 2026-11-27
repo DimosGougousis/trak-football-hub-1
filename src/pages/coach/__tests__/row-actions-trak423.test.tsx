@@ -1,52 +1,19 @@
 /**
  * TRAK-423 (walk-through of 11 Nov): one look for a row's small actions. "Assess" and "Finish draft" are Arc's small
- * button wherever they appear, the same button as the week's actions on Home's Needs you ("Take register"). Squad's row
+ * button wherever they appear (TRAK-614: Home's Needs you, where they first were, has gone). Squad's row
  * tag is a state ("Due"), not a second Assess. Edit is the pencil, never the word. Test people are named after footballers.
  */
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { Button } from '@/components/arc/button/button'
-import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { BTN_DARK } from '@/components/coach/pitch-ready'
-import { NeedsYou } from '@/components/coach/home/NeedsYou'
 import { PlanReview } from '@/components/arc/blocks/plan-review/plan-review'
-import type { NeedsYouItem } from '@/lib/coach-needs-you'
 import { renderApp } from '../../../../tests/support/render-app'
 import { signInAs } from '../../../../tests/support/session'
 import { server } from '../../../../tests/msw/server'
 import { rpc, rpcRows, table } from '../../../../tests/msw/supabase'
 
 afterEach(cleanup)
-
-/** The classes Arc's Button gives a size and an extra class: what the week's card actions are made of. */
-function lookOf(extra?: string, size: 'sm' | 'md' = 'sm') {
-  const { unmount } = render(<Button size={size} className={extra}>x</Button>)
-  const classes = screen.getByRole('button', { name: 'x' }).className
-  unmount()
-  return classes
-}
-
-const player = (name: string, kind: NeedsYouItem['kind']): NeedsYouItem =>
-  ({ playerId: name, name, detail: '', kind, reason: kind === 'draft' ? 'Draft from Mon 9 Nov' : 'Never assessed', urgent: false, at: 0 })
-
-describe('TRAK-423: Needs you', () => {
-  // TRAK-497 (Imad, 20 Nov): the week's next step is now the medium (44 px) button; Assess still matches it.
-  it("a player's Assess and Finish draft are the week's next-step button, one per card, named for the player", () => {
-    const week = lookOf(NEXT_STEP_WIDTH, NEXT_STEP_SIZE)
-    render(<NeedsYou items={[player('Angelos Basinas', 'assess'), player('Giourkas Seitaridis', 'draft')]}
-      events={[{ id: 'e1', title: 'Training', when: 'Mon', squad: null, reason: 'Register to take',
-        action: <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH}>Take register</Button> }]}
-      failed={false} onRetry={() => {}} onOpen={() => {}} />)
-    const assess = screen.getByRole('button', { name: 'Assess Angelos Basinas' })
-    const draft = screen.getByRole('button', { name: 'Finish draft: Giourkas Seitaridis' })
-    expect(assess).toHaveTextContent(/^Assess$/)
-    expect(draft).toHaveTextContent(/^Finish draft$/)
-    expect(assess.className).toBe(week)
-    expect(draft.className).toBe(week)
-    expect(screen.getByRole('button', { name: 'Take register' }).className).toBe(week)
-    for (const card of screen.getAllByRole('listitem')) expect(within(card).getAllByRole('button')).toHaveLength(1)
-  })
-})
 
 describe("TRAK-423: a player's page and Squad", () => {
   const coach = () => {
