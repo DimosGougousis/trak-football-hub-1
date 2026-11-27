@@ -114,8 +114,8 @@ describe('TRAK-284: plan drafts on Games home and in Needs you', { timeout: 30_0
       table('coach_calendar_events', [game('g1', 'Parkview Athletic', 3)]),
     )
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    await within(needs).findByRole('button', { name: /Angelos Charisteas/ })
-    expect(within(screen.getByRole('region', { name: 'To-do' })).queryByText(/Parkview Athletic/)).toBeNull()
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    await within(todo).findByText('Nothing to do today.', {}, { timeout: 5000 })
+    expect(within(todo).queryByText(/Parkview Athletic/)).toBeNull()
   })
 })

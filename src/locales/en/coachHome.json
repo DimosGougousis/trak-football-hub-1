@@ -186,5 +186,13 @@
   "previewPlayed": "Played",
   "previewPlayedCount": "{{count}} played",
   "notesWhat": "the notes",
-  "evaluationWhat": "the evaluation"
+  "evaluationWhat": "the evaluation",
+  "todoAllDone": "All done for today.",
+  "todoIfTime": "If you have time",
+  "suggestDrafts": "Publish assessment drafts",
+  "suggestDraftsWhy_one": "{{count}} waiting.",
+  "suggestDraftsWhy_other": "{{count}} waiting.",
+  "suggestAssess": "Assess players",
+  "suggestAssessWhy_one": "{{count}} is due.",
+  "suggestAssessWhy_other": "{{count}} are due."
 }

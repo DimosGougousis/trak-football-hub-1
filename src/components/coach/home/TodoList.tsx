@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Button } from '@/components/arc/button/button'
@@ -23,7 +23,10 @@ import { TodoPreview, type PreviewKind } from './TodoPreview'
 
 const hhmm = (ms: number) => format(new Date(ms), 'HH:mm')
 
-export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged, onOpenReports }: {
+/** TRAK-610: a suggestion that isn't an event's step: the top Players job (drafts, assess, positions, watched, stuck). */
+export type Suggestion = { key: string; title: string; line: string; action: ReactNode }
+
+export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged, onOpenReports, nextStep = null, playerJob = null }: {
   /** null while loading. */
   items: HomeTodoEvent[] | null
   failed: boolean
@@ -34,6 +37,10 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
   onChanged: () => void
   /** Reports ready opens the squad's reports, picking that squad under All. */
   onOpenReports: (squad: string | null) => void
+  /** TRAK-610: the next missing step this week that isn't already a to-do, the first suggestion. */
+  nextStep?: HomeTodoEvent | null
+  /** TRAK-610: the top Players job, the second suggestion. */
+  playerJob?: Suggestion | null
 }) {
   const { t } = useTranslation()
   const urgent = !!items?.some(({ todo }) => todo.urgent && !todo.done)
@@ -62,8 +69,27 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
           <span className="col-start-2 laptop:col-start-auto">{action(todo, row, { t, coachId, onChanged, onOpenReports })}</span>
         </li>)}
       </ol>}
+    {/* TRAK-610: once every to-do is done (a greyed one isn't), 2 suggestions at most. */}
+    {items && items.every(({ todo }) => todo.done) && (nextStep || playerJob) && <div className="arc grid gap-1 rounded-2xl border border-line bg-surface px-4 py-3 laptop:px-5">
+      {items.length > 0 && <p className="flex items-center gap-3 py-1 font-medium text-ink">
+        <span aria-hidden className="grid size-7 place-items-center rounded-full bg-success text-[13px] font-semibold text-on-brand">✓</span>{t('coachHome:todoAllDone')}
+      </p>}
+      <h3 className="pt-1 text-[11px] font-semibold uppercase tracking-[.12em] text-ink-3">{t('coachHome:todoIfTime')}</h3>
+      <ul aria-label={t('coachHome:todoIfTime')} className="grid">
+        {nextStep && <SuggestionRow title={title(nextStep.todo, nextStep.row, t)} line={line(nextStep.todo, nextStep.row, t)}
+          action={action(nextStep.todo, nextStep.row, { t, coachId, onChanged, onOpenReports })} />}
+        {playerJob && <SuggestionRow title={playerJob.title} line={playerJob.line} action={playerJob.action} />}
+      </ul>
+    </div>}
     {urgent && <p className="flex items-center gap-2 text-sm text-ink-3"><span aria-hidden className="size-3 rounded-full bg-attention" />{t('coachHome:todoUrgentKey')}</p>}
   </section>
+}
+
+function SuggestionRow({ title, line, action }: { title: string; line: string; action: ReactNode }) {
+  return <li className="flex flex-wrap items-center justify-between gap-3 border-t border-line/60 py-3 first:border-t-0">
+    <span className="grid min-w-0"><span className="text-[15px] font-medium text-ink">{title}</span>{line && <span className="text-sm text-ink-3">{line}</span>}</span>
+    <span>{action}</span>
+  </li>
 }
 
 type T = ReturnType<typeof useTranslation>['t']

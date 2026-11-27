@@ -29,6 +29,8 @@ let switchOn = true
 let switchAnswered = false
 
 const param = (url: URL, key: string) => url.searchParams.get(key)?.replace(/^eq\./, '') ?? null
+const recentlyAssessed = (...ids: string[]) => table('coach_assessments', ids.map(id => ({ squad_player_id: id, coach_user_id: COACH.id,
+  created_at: new Date(Date.now() - 86400_000).toISOString(), published_at: new Date(Date.now() - 86400_000).toISOString() })))
 const child = (i: number, position: string | null = null): Row => ({
   id: `p${i}`, coach_user_id: COACH.id, player_name: `Synthetic Player ${String(i).padStart(2, '0')}`, age_group: 'U16', status: 'active',
   shirt_number: i, position, created_at: '2026-10-01T08:00:00Z', linked_player_id: `child-${i}`,
@@ -192,11 +194,13 @@ describe('TRAK-352 positions', () => {
     expect(planWrites).toEqual([{ squad: 'U16', starts_on: null, ends_on: null, eval_every: 'month', eval_day: 0 }])
   })
 
-  it("asks on Home for consented players with no position, and the card goes once they're placed", async () => {
+  // TRAK-610: a suggestion once nobody is due an assessment (the Players jobs' order).
+  it("asks on Home for consented players with no position, and the suggestion goes once they're placed", async () => {
     squad = [child(1), child(2), child(3)]
     waiting = new Set(['p3'])
+    server.use(recentlyAssessed('p1', 'p2', 'p3'))
     renderApp('/coach/home')
-    expect(await screen.findByText('2 players need a position')).toBeInTheDocument()
+    expect(await screen.findByText('2 players need a position', {}, { timeout: 5000 })).toBeInTheDocument()
     await user().click(screen.getByRole('button', { name: 'Place them' }))
     await answer(/^Yes/)
     await user().click(within(await screen.findByRole('group', { name: "Synthetic Player 01's position" })).getByRole('button', { name: 'Goalkeeper' }))
@@ -208,7 +212,7 @@ describe('TRAK-352 positions', () => {
     expect(await screen.findByRole('heading', { name: 'What goes out' })).toBeInTheDocument()
     cleanup()
     renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: /^Needs you/ })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText(/players? needs? a position$/)).not.toBeInTheDocument()
   })
 
@@ -237,7 +241,7 @@ describe('TRAK-352 positions', () => {
     squad = [child(1), child(2)]
     switchOn = false
     renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: /^Needs you/ })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText(/players? needs? a position$/)).not.toBeInTheDocument())
   })
 })

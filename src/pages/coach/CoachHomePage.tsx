@@ -1,7 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
 import { QuickAdd } from '@/components/coach/QuickAdd'
@@ -9,10 +7,10 @@ import { HomeHeader } from '@/components/trak/HomeHeader'
 import { CoachAlertsBell } from '@/components/coach/CoachAlertsBell'
 import { CoachWeekStrip } from '@/components/coach/CoachWeekStrip'
 import { CoachMenuButton } from '@/components/coach/CoachFrame'
-import { TodoList } from '@/components/coach/home/TodoList'
+import { TodoList, type Suggestion } from '@/components/coach/home/TodoList'
 import { HomeGreeting } from '@/components/coach/home/HomeGreeting'
 import { useHomeTodos } from '@/components/coach/home/useHomeTodos'
-import { NeedsYou, type OwedEvent } from '@/components/coach/home/NeedsYou'
+import type { OwedEvent } from '@/components/coach/home/NeedsYou'
 import { SeasonPlanCard } from '@/components/coach/home/SeasonPlanCard'
 import { planSquad } from '@/lib/season-plan'
 import { useFeature } from '@/components/trak/parked'
@@ -50,17 +48,6 @@ export default function CoachHomePage() {
   const { everySquad } = coachSquad
   const roster = useSquadRoster()
 
-  // The coach's "Needs you" switch (Settings, TRAK-261): on unless turned off. A switch that can't be read shows the cards.
-  const needsYouSwitch = useQuery({
-    queryKey: ['coach', user?.id, 'needs-you'],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('notification_settings').select('needs_you').eq('user_id', user!.id).maybeSingle()
-      if (error) throw error
-      return data?.needs_you ?? true
-    },
-  })
-
   const loaded = !roster.isPending && !roster.error
   // TRAK-364: where the season plan is on and a squad's plan is shared, the squad's evaluation takes the place of its
   // per-player Assess cards. Until that's known the cards wait, so none shows and then goes. A failed read only leaves
@@ -72,8 +59,8 @@ export default function CoachHomePage() {
     // TRAK-407: the reasons are words, so a new language writes them again.
     : null, [loaded, roster.players, roster.consentPending, roster.assessments, evaluations.evaluated, evaluations.failed, language])
 
-  // TRAK-608 (New Home 2/8): the To-do takes Needs you's event cards and the Today card. Needs you keeps its player
-  // cards until 4/8 (TRAK-610) moves them into the suggestions.
+  // TRAK-608 (New Home 2/8): the To-do takes Needs you's event cards and the Today card. TRAK-610: Needs you's player
+  // cards became the suggestions, so Needs you left Home.
   const gamesOn = useFeature('games')
   const trainingOn = useFeature('training')
   const inView = useCallback((squad: string | null) => everySquad || coachSquad.eventInSquad(squad), [everySquad, coachSquad])
@@ -124,6 +111,23 @@ export default function CoachHomePage() {
     action: <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={() => { if (everySquad && w.squad) coachSquad.pick(w.squad); navigate(`/coach/season-plan/${w.step}?player=${w.playerId}`) }}>{t('coachHome:setUp')}</Button></span>,
   }))
 
+  // TRAK-610: the suggestions once every to-do is done. First, the next missing step this week that isn't a to-do
+  // already; second, the top Players job: drafts, then assessing, positions, a watched player back, a stuck objective.
+  const todoKeys = new Set((todos.items ?? []).map(({ todo }) => todo.key))
+  const nextStep = (todos.upcoming ?? []).find(({ todo }) => !todoKeys.has(todo.key)) ?? null
+  const go = (label: string, onClick: () => void) =>
+    <span className="arc"><Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} onClick={onClick}>{label}</Button></span>
+  const drafts = (needsReady ? cards ?? [] : []).filter(card => card.kind === 'draft')
+  const due = (needsReady ? cards ?? [] : []).filter(card => card.kind === 'assess')
+  const fromCard = (card: OwedEvent | undefined): Suggestion | null => card ? { key: card.id, title: card.title, line: card.reason, action: card.action } : null
+  const playerJob: Suggestion | null = drafts.length
+    // TRAK-200: the profile's assessment card says Draft and has Publish.
+    ? { key: 'drafts', title: t('coachHome:suggestDrafts'), line: t('coachHome:suggestDraftsWhy', { count: drafts.length }),
+      action: go(t('coachHome:finishDraft'), () => navigate(`/coach/squad/player/${drafts[0].playerId}`)) }
+    : due.length
+      ? { key: 'assess', title: t('coachHome:suggestAssess'), line: t('coachHome:suggestAssessWhy', { count: due.length }),
+        action: go(t('coachHome:assess'), () => navigate('/coach/assess', { state: { preselectedPlayerId: due[0].playerId } })) }
+      : fromCard(positionEvents[0]) ?? fromCard(watchEvents[0]) ?? fromCard(stuckEvents[0])
 
   return (
     <MobileShell width="wide">
@@ -141,19 +145,10 @@ export default function CoachHomePage() {
           <HomeGreeting name={profile?.full_name || t('nav:coach')} day={todos.day} />
           {user && <TodoList items={todos.items} failed={todos.failed} onRetry={todos.retry} coachId={user.id}
             showSquad={everySquad && coachSquad.squads.length >= 2} onChanged={todosChanged}
-            onOpenReports={squad => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/evaluation') }} />}
+            onOpenReports={squad => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/evaluation') }}
+            nextStep={nextStep} playerJob={playerJob} />}
           {user && <CoachWeekStrip coachId={user.id} version={weekVersion} everySquad={everySquad} />}
         </div>
-        {/* Shown once the switch is known, so a coach who turned it off never sees it flash in. */}
-        {(needsYouSwitch.data === true || needsYouSwitch.isError) && <div className={wide ? 'mt-8' : 'mt-6'}>
-          <NeedsYou items={needsReady ? cards : null} events={[...stuckEvents, ...positionEvents, ...watchEvents]}
-            failed={!!roster.error}
-            onRetry={() => { roster.retry(); if (evaluations.failed) evaluations.retry() }}
-            onOpen={item => item.kind === 'draft'
-              // TRAK-200: the profile's assessment card says Draft and has Publish.
-              ? navigate(`/coach/squad/player/${item.playerId}`)
-              : navigate('/coach/assess', { state: { preselectedPlayerId: item.playerId } })} />
-        </div>}
         {/* TRAK-350: the season plan, where the academy's switch is on; TRAK-361: the card that folds, one per squad under All. */}
         {user && <SeasonPlanCard coachId={user.id} squads={coachSquad.squads} squadsReady={coachSquad.ready} squadsFailed={coachSquad.failed} onRetry={coachSquad.retry}
           squad={planSquad(coachSquad)} everySquad={everySquad}

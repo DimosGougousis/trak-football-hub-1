@@ -190,20 +190,20 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     expect(screen.queryByRole('region', { name: /Player overview|Feedback and assessment/ })).toBeNull()
   })
 
-  it('Needs you has a card for a player never assessed after 3 weeks, which opens Assess for them', async () => {
+  // TRAK-610: Needs you's player cards became the suggestions under a done To-do: the top Players job only.
+  it('a player never assessed after 3 weeks is the Assess players suggestion, which opens Assess for them', async () => {
     home({ players: [player('a', 'Ade Okafor'), player('b', 'Bo Lind')], present: cameToAll('a', 'b'),
       assessments: [{ squad_player_id: 'b', coach_user_id: COACH.id, created_at: daysAgo(1), published_at: daysAgo(1), coach_rating: 7,
         work_rate: 7, technical: 7, physical: 7, coachability: 7, attitude: 7, tactical: 7 }] })
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    const card = await within(needs).findByRole('button', { name: /Ade Okafor/ })
-    expect(card.closest('li')).toHaveTextContent('Never assessed, 5 weeks in the squad')
-    expect(within(needs).queryByRole('button', { name: /Bo Lind/ })).toBeNull()
-    await userEvent.click(card)
+    const ideas = await screen.findByRole('list', { name: 'If you have time' }, { timeout: 5000 })
+    const row = within(ideas).getByText('Assess players').closest('li')!
+    expect(row).toHaveTextContent('1 is due.')
+    await userEvent.click(within(row).getByRole('button', { name: 'Assess' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/assess'))
   })
 
-  it('Needs you leaves Home when the coach turns it off in Settings', async () => {
+  it('Needs you has left Home (TRAK-610)', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'), settings: [{ user_id: COACH.id, event_reminders: true, needs_you: false, cant_make_it_alerts: true }] })
     renderApp('/coach/home')
     expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
@@ -228,18 +228,17 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     expect(within(todo).getByText('Urgent')).toBeInTheDocument()
     // With Matches off, a played match asks nothing here, and there's never a "Log it" (TRAK-499).
     expect(screen.queryByRole('button', { name: 'Log it' })).toBeNull()
-    const needs = await screen.findByRole('region', { name: /Needs you/ })
-    expect(within(needs).queryByText(/Tactical|Rovers/)).toBeNull()
+    expect(screen.queryByRole('region', { name: /Needs you/ })).toBeNull()
   })
 
-  it("a draft families can't see yet has its own card, which opens the player", async () => {
+  it("a draft families can't see yet is the first suggestion, which opens the player", async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'),
       assessments: [{ squad_player_id: 'a', coach_user_id: COACH.id, created_at: daysAgo(1), published_at: null, coach_rating: 7,
         work_rate: 7, technical: 7, physical: 7, coachability: 7, attitude: 7, tactical: 7 }] })
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    const card = await within(needs).findByRole('button', { name: /Finish draft/ })
-    await userEvent.click(card)
+    const ideas = await screen.findByRole('list', { name: 'If you have time' }, { timeout: 5000 })
+    expect(within(ideas).getByText('Publish assessment drafts').closest('li')).toHaveTextContent('1 waiting.')
+    await userEvent.click(within(ideas).getByRole('button', { name: 'Finish draft' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad/player/a'))
   })
 
@@ -254,12 +253,12 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
   it('opens on All, every squad; a squad tapped shows only it and is remembered (TRAK-305)', async () => {
     home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByRole('button', { name: /Ade Okafor/ })).toBeInTheDocument()
-    expect(within(needs).getByRole('button', { name: /Bo Lind/ })).toBeInTheDocument()
+    // Both never assessed: under All the suggestion counts both; U16 alone, one.
+    const ideas = await screen.findByRole('list', { name: 'If you have time' }, { timeout: 5000 })
+    expect(await within(ideas).findByText('2 are due.')).toBeInTheDocument()
     await expectSquadPicked('All')
     await pickSquad('U16')
-    await waitFor(() => expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull())
+    expect(await within(await screen.findByRole('list', { name: 'If you have time' })).findByText('1 is due.')).toBeInTheDocument()
     expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16')
     expect(localStorage.getItem(`trak:coach-squad-all:${COACH.id}`)).toBe('0')
   })

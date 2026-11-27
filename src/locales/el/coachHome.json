@@ -186,5 +186,13 @@
   "previewPlayed": "Έπαιξαν",
   "previewPlayedCount": "Έπαιξαν {{count}}",
   "notesWhat": "τις σημειώσεις",
-  "evaluationWhat": "την αξιολόγηση"
+  "evaluationWhat": "την αξιολόγηση",
+  "todoAllDone": "Όλα έτοιμα για σήμερα.",
+  "todoIfTime": "Αν έχεις χρόνο",
+  "suggestDrafts": "Δημοσίευσε τα πρόχειρα αξιολογήσεων",
+  "suggestDraftsWhy_one": "{{count}} περιμένει.",
+  "suggestDraftsWhy_other": "{{count}} περιμένουν.",
+  "suggestAssess": "Αξιολόγησε παίκτες",
+  "suggestAssessWhy_one": "{{count}} χρειάζεται αξιολόγηση.",
+  "suggestAssessWhy_other": "{{count}} χρειάζονται αξιολόγηση."
 }

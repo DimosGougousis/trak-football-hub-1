@@ -219,6 +219,38 @@ export function homeTodos({ trainings, matches, reports = [], now, zone, inView 
   return todos.sort(byOrder)
 }
 
+/** TRAK-610: every training and match from tomorrow to 7 days ahead still missing a step (a training's plan; a match's
+ *  logistics, plan or share), soonest first, as next-training and next-match to-dos. Home suggests the first that isn't
+ *  already a to-do; Upcoming (TRAK-611) lists them all. */
+export function upcomingSteps({ trainings, matches, now, zone, inView = () => true, training = true }: {
+  trainings: HomeTraining[]
+  matches: HomeMatch[]
+  now: number
+  zone: string
+  inView?: (squad: string | null) => boolean
+  training?: boolean
+}): HomeTodo[] {
+  const today = dayIn(zone, new Date(now))
+  const ahead = (iso: string) => dayIn(zone, new Date(parse(iso))) > today && parse(iso) <= now + AHEAD
+  const steps: HomeTodo[] = []
+  const base = { done: false, urgent: false, opensAt: null, leavesAt: null }
+  if (training) {
+    for (const t of trainings) {
+      if (t.cancelled || !inView(t.squad) || !ahead(t.starts_at) || t.planned) continue
+      steps.push({ ...base, key: `next-training:${t.id}`, kind: 'next-training', group: 'training', rank: RANK['next-training'],
+        squad: t.squad, eventId: t.id, at: parse(t.starts_at), step: 'plan' })
+    }
+  }
+  for (const m of matches) {
+    if (m.cancelled || !inView(m.squad) || !ahead(m.starts_at)) continue
+    const state = gameState(m, now, m.plan)
+    if (state !== 'logistics' && state !== 'plan' && state !== 'planDraft' && state !== 'changes') continue
+    steps.push({ ...base, key: `next-match:${m.id}`, kind: 'next-match', group: 'match', rank: RANK['next-match'],
+      squad: m.squad, eventId: m.id, at: parse(m.starts_at), step: state })
+  }
+  return steps.sort((a, b) => a.at - b.at || a.key.localeCompare(b.key))
+}
+
 /** Urgent first, then by rank, then the earlier event. */
 export function byOrder(a: HomeTodo, b: HomeTodo): number {
   return Number(b.urgent) - Number(a.urgent) || a.rank - b.rank || a.at - b.at || a.key.localeCompare(b.key)
