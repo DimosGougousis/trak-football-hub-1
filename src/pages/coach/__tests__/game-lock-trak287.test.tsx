@@ -181,8 +181,9 @@ describe('TRAK-287: locked at kick-off', { timeout: 30_000 }, () => {
     renderApp('/coach/home')
     // TRAK-608: the match plan is a to-do on match day; not shared, it leaves at kick-off.
     const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
-    expect(await within(todo).findByText(/Parkview Athletic/, {}, { timeout: 5000 })).toBeInTheDocument()
+    // TRAK-615: the match's Evaluate the game names it too, so watch the plan's own to-do.
+    expect(await within(todo).findByText('No plan for Parkview Athletic yet', {}, { timeout: 5000 })).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000) })
-    await waitFor(() => expect(within(todo).queryByText(/Parkview Athletic/)).toBeNull())
+    await waitFor(() => expect(within(todo).queryByText('No plan for Parkview Athletic yet')).toBeNull())
   })
 })
