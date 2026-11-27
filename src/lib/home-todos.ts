@@ -266,6 +266,19 @@ export function upcomingSteps({ trainings, matches, now, zone, inView = () => tr
   return steps.sort((a, b) => a.at - b.at || a.key.localeCompare(b.key))
 }
 
+/** TRAK-613 (Kostas, 26 Nov): the coach's own order, which holds until midnight. Without one, Trak's order. With one, the
+ *  saved keys still on the list keep their places; a new urgent to-do goes to the top and anything else new to the
+ *  bottom, in Trak's order. */
+export function applyOrder<T extends { todo: HomeTodo }>(items: T[], saved: string[] | null | undefined): T[] {
+  if (!saved?.length) return items
+  const byKey = new Map(items.map(item => [item.todo.key, item]))
+  const known = new Set(saved)
+  const kept = saved.flatMap(key => byKey.has(key) ? [byKey.get(key)!] : [])
+  const fresh = items.filter(item => !known.has(item.todo.key))
+  const pressing = (item: T) => item.todo.urgent && !item.todo.done
+  return [...fresh.filter(pressing), ...kept, ...fresh.filter(item => !pressing(item))]
+}
+
 /** Urgent first, then by rank, then the earlier event. */
 export function byOrder(a: HomeTodo, b: HomeTodo): number {
   return Number(b.urgent) - Number(a.urgent) || a.rank - b.rank || a.at - b.at || a.key.localeCompare(b.key)

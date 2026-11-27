@@ -609,6 +609,30 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_home_order: {
+        Row: {
+          coach_user_id: string
+          day: string
+          item_keys: string[]
+          squad_view: string
+          updated_at: string
+        }
+        Insert: {
+          coach_user_id?: string
+          day: string
+          item_keys: string[]
+          squad_view: string
+          updated_at?: string
+        }
+        Update: {
+          coach_user_id?: string
+          day?: string
+          item_keys?: string[]
+          squad_view?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coach_sessions: {
         Row: {
           coach_user_id: string

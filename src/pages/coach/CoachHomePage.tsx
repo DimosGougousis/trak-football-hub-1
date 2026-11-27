@@ -9,6 +9,10 @@ import { CoachMenuButton } from '@/components/coach/CoachFrame'
 import { TodoList, type Suggestion } from '@/components/coach/home/TodoList'
 import { HomeGreeting } from '@/components/coach/home/HomeGreeting'
 import { useHomeTodos } from '@/components/coach/home/useHomeTodos'
+import { useHomeOrder } from '@/components/coach/home/useHomeOrder'
+import { useRemoveTodo, useSetUrgent } from '@/components/coach/home/useOwnTodos'
+import { applyOrder } from '@/lib/home-todos'
+import { toast } from 'sonner'
 import { UpcomingWeek } from '@/components/coach/home/UpcomingWeek'
 import type { OwedEvent } from '@/components/coach/home/NeedsYou'
 import { SeasonPlanCard } from '@/components/coach/home/SeasonPlanCard'
@@ -111,6 +115,25 @@ export default function CoachHomePage() {
 
   // TRAK-610: the suggestions once every to-do is done. First, the next missing step this week that isn't a to-do
   // already; second, the top Players job: drafts, then assessing, positions, a watched player back, a stuck objective.
+  // TRAK-613: the coach's own order, for today and the squad view, until midnight.
+  const order = useHomeOrder(user?.id, todos.day?.today ?? null, everySquad ? 'all' : coachSquad.squad ?? 'all')
+  const ordered = useMemo(() => todos.items ? applyOrder(todos.items, order.saved) : null, [todos.items, order.saved])
+  const saveOrder = (keys: string[]) => order.save(keys, { onError: () => toast.error(t('coachHome:orderSaveFailed')) })
+  const move = (key: string, by: -1 | 1) => {
+    const keys = (ordered ?? []).map(({ todo }) => todo.key)
+    const from = keys.indexOf(key), to = from + by
+    if (from < 0 || to < 0 || to >= keys.length) return
+    ;[keys[from], keys[to]] = [keys[to], keys[from]]
+    saveOrder(keys)
+  }
+  const setUrgent = useSetUrgent()
+  const remove = useRemoveTodo()
+  // Marking one urgent moves it to the top (Kostas, 26 Nov); taking it off leaves it where it is.
+  const onSetUrgent = (id: string, urgent: boolean) => {
+    setUrgent.mutate({ id, urgent }, { onError: () => toast.error(t('coachHome:todoTickFailed')) })
+    if (urgent) saveOrder([`own:${id}`, ...(ordered ?? []).map(({ todo }) => todo.key).filter(key => key !== `own:${id}`)])
+  }
+  const onRemove = (id: string) => remove.mutate(id, { onError: () => toast.error(t('coachHome:todoRemoveFailed')) })
   const todoKeys = new Set((todos.items ?? []).map(({ todo }) => todo.key))
   const nextStep = (todos.upcoming ?? []).find(({ todo }) => !todoKeys.has(todo.key)) ?? null
   const go = (label: string, onClick: () => void) =>
@@ -142,10 +165,10 @@ export default function CoachHomePage() {
             stays under it until Upcoming replaces it (5/8, TRAK-611). */}
         <div className={wide ? 'grid gap-8' : 'grid gap-6'}>
           <HomeGreeting name={profile?.full_name || t('nav:coach')} day={todos.day} />
-          {user && <TodoList items={todos.items} failed={todos.failed} onRetry={todos.retry} coachId={user.id}
+          {user && <TodoList items={ordered} failed={todos.failed} onRetry={todos.retry} coachId={user.id}
             showSquad={everySquad && coachSquad.squads.length >= 2} onChanged={todosChanged}
             onOpenReports={squad => { if (everySquad && squad) coachSquad.pick(squad); navigate('/coach/evaluation') }}
-            nextStep={nextStep} playerJob={playerJob} today={todos.day?.today ?? null} />}
+            nextStep={nextStep} playerJob={playerJob} today={todos.day?.today ?? null} onMove={move} onSetUrgent={onSetUrgent} onRemove={onRemove} />}
           {/* TRAK-611 (New Home 5/8): Upcoming in the week strip's place; Schedule keeps the strip. */}
           {user && <UpcomingWeek week={todos.week} inTodo={todoKeys} coachId={user.id} showSquad={everySquad && coachSquad.squads.length >= 2}
             onChanged={todosChanged} matchesOn={gamesOn} trainingOn={trainingOn} />}

@@ -219,5 +219,12 @@
   "todoDoneShort": "✓ Done",
   "todoAddFailed": "Couldn't add the to-do. Try again.",
   "todoTickFailed": "Couldn't tick it. Try again.",
-  "todoShareTraining": "Share {{day}}'s training"
+  "todoShareTraining": "Share {{day}}'s training",
+  "orderChange": "Change order",
+  "orderDone": "Done",
+  "orderUp": "Move up: {{name}}",
+  "orderDown": "Move down: {{name}}",
+  "orderRemove": "Remove: {{name}}",
+  "orderSaveFailed": "Couldn't save the order. Try again.",
+  "todoRemoveFailed": "Couldn't remove it. Try again."
 }

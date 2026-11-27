@@ -28,7 +28,7 @@ const hhmm = (ms: number) => format(new Date(ms), 'HH:mm')
 /** TRAK-610: a suggestion that isn't an event's step: the top Players job (drafts, assess, positions, watched, stuck). */
 export type Suggestion = { key: string; title: string; line: string; action: ReactNode }
 
-export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged, onOpenReports, nextStep = null, playerJob = null, today = null }: {
+export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged, onOpenReports, nextStep = null, playerJob = null, today = null, onMove, onSetUrgent, onRemove }: {
   /** null while loading. */
   items: HomeTodoEvent[] | null
   failed: boolean
@@ -45,14 +45,27 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
   playerJob?: Suggestion | null
   /** TRAK-612: the academy's day (YYYY-MM-DD), for adding a to-do; null until known. */
   today?: string | null
+  /** TRAK-613: Change order moves a to-do up (-1) or down (1). Without it there's no Change order. */
+  onMove?: (key: string, by: -1 | 1) => void
+  /** TRAK-613: the coach's own to-do marked urgent, or not; and removed. */
+  onSetUrgent?: (id: string, urgent: boolean) => void
+  onRemove?: (id: string) => void
 }) {
   const { t } = useTranslation()
   const urgent = !!items?.some(({ todo }) => todo.urgent && !todo.done)
   // TRAK-609: which previews are open; each starts closed.
   const [open, setOpen] = useState<Set<string>>(() => new Set())
   const toggle = (key: string) => setOpen(now => { const next = new Set(now); if (!next.delete(key)) next.add(key); return next })
+  // TRAK-613: Change order puts ↑ and ↓ on every to-do (and Urgent and ✕ on the coach's own) in place of their buttons.
+  const [ordering, setOrdering] = useState(false)
+  const canOrder = !!onMove && !!items && items.length > 1
   return <section aria-labelledby="todo-title" className="grid gap-3">
-    <h2 id="todo-title" className="text-lg font-medium text-ink">{t('coachHome:todoTitle')}</h2>
+    <div className="flex items-center justify-between gap-3">
+      <h2 id="todo-title" className="text-lg font-medium text-ink">{t('coachHome:todoTitle')}</h2>
+      {(canOrder || ordering) && (ordering
+        ? <Button size="sm" onClick={() => setOrdering(false)}>{t('coachHome:orderDone')}</Button>
+        : <Button size="sm" variant="ghost" onClick={() => setOrdering(true)}>{t('coachHome:orderChange')}</Button>)}
+    </div>
     {failed ? <LoadError what={t('coachHome:todoWhat')} onRetry={onRetry} />
       : !items ? <LoadingSkeleton label={t('coachHome:todoLoading')} lines={3} className="rounded-2xl border border-line bg-surface p-5" />
       : <ol className="arc overflow-hidden rounded-2xl border border-line bg-surface">
@@ -70,10 +83,14 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
             {row && previewOf(todo) && <PreviewToggle kind={previewOf(todo)!} open={open.has(todo.key)} onToggle={() => toggle(todo.key)} />}
             {row && previewOf(todo) && open.has(todo.key) && <TodoPreview kind={previewOf(todo)!} eventId={row.id} theme={row.training_theme ?? null} />}
           </span>
-          <span className="col-start-2 laptop:col-start-auto">{action(todo, row, { t, coachId, onChanged, onOpenReports })}</span>
+          <span className="col-start-2 laptop:col-start-auto">{ordering && onMove
+            ? <OrderButtons name={title(todo, row, t)} first={index === 0} last={index === items.length - 1} onMove={by => onMove(todo.key, by)}
+              own={todo.kind === 'own' ? { urgent: todo.urgent, onUrgent: () => onSetUrgent?.(todo.key.slice('own:'.length), !todo.urgent),
+                onRemove: () => onRemove?.(todo.key.slice('own:'.length)) } : null} />
+            : action(todo, row, { t, coachId, onChanged, onOpenReports })}</span>
         </li>)}
         {/* TRAK-612: the last step, in dotted lines: the coach adds their own. */}
-        {today && <AddTodo today={today} />}
+        {today && !ordering && <AddTodo today={today} />}
       </ol>}
     {/* TRAK-610: once every to-do is done (a greyed one isn't), 2 suggestions at most. */}
     {items && items.every(({ todo }) => todo.done) && (nextStep || playerJob) && <div className="arc grid gap-1 rounded-2xl border border-line bg-surface px-4 py-3 laptop:px-5">
@@ -95,6 +112,23 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
 export function TodoAction({ item, coachId, onChanged }: { item: HomeTodoEvent; coachId: string; onChanged: () => void }) {
   const { t } = useTranslation()
   return <>{action(item.todo, item.row, { t, coachId, onChanged, onOpenReports: () => {} })}</>
+}
+
+/** TRAK-613: a to-do's ↑ and ↓ while the coach changes the order; the coach's own also get Urgent and ✕. */
+function OrderButtons({ name, first, last, onMove, own }: {
+  name: string; first: boolean; last: boolean; onMove: (by: -1 | 1) => void
+  own: { urgent: boolean; onUrgent: () => void; onRemove: () => void } | null
+}) {
+  const { t } = useTranslation()
+  const square = 'grid size-9 place-items-center rounded-lg border border-line bg-surface text-ink disabled:text-line-strong disabled:opacity-50'
+  return <span className="flex flex-wrap gap-1.5">
+    <button type="button" className={square} disabled={first} aria-label={t('coachHome:orderUp', { name })} onClick={() => onMove(-1)}>↑</button>
+    <button type="button" className={square} disabled={last} aria-label={t('coachHome:orderDown', { name })} onClick={() => onMove(1)}>↓</button>
+    {own && <button type="button" aria-pressed={own.urgent} onClick={own.onUrgent}
+      className={`rounded-lg border px-3 text-[13px] font-medium ${own.urgent ? 'border-attention bg-attention text-ink' : 'border-line bg-surface text-ink-2'}`}>
+      {t('coachHome:todoAddUrgent')}</button>}
+    {own && <button type="button" className={square} aria-label={t('coachHome:orderRemove', { name })} onClick={own.onRemove}>✕</button>}
+  </span>
 }
 
 /** TRAK-612: ticks one of the coach's own to-dos. */
