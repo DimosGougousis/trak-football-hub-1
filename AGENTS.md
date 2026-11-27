@@ -73,6 +73,10 @@ remains hidden; the pilot uses `/coach/assess`. Existing AI handlers return
   (TRAK-464): cards 16 px corners and `p-5 laptop:p-6`, boxes inside 12 px; no one-off `rounded-[Npx]`.
 - The roster owns the child's name. A child email is optional. Use the existing
   guardian-created login/recovery flow for a child without email (TRAK-84).
+- A player's avatar is the drawn face (`PlayerFace`), never a photo (G7). Its
+  hair comes from the name unless the player's coach selected one
+  (`squad_player_profiles`, TRAK-617); pass `playerId` on coach screens. Skin
+  tone is the same for every child and is never offered.
 - The consent screen must offer only choices the backend enforces. The
   unenforced "I can see their progress" box was removed for that reason
   (TRAK-145, notice `2026-10-09.1`); bump `CONSENT_NOTICE_VERSION` whenever the

@@ -48,6 +48,7 @@ describe('TRAK-220: every Arc panel opened into <body> carries the arc class', (
       'src/components/coach/DraftsReview.tsx', // TRAK-154: Events' drafts to publish.
       'src/components/coach/games/LineUpAndJobs.tsx',
       'src/components/coach/season-plan/PlayerObjectivesSheet.tsx', 'src/components/coach/season-plan/StuckSheet.tsx',
+      'src/components/coach/squad/PlayerAvatarEditor.tsx', // TRAK-617: a player's avatar.
       'src/components/coach/squad/PlayerFactsEditor.tsx', 'src/components/coach/squad/PositionAndRolesSheet.tsx',
       'src/components/coach/squad/formations/NameSheet.tsx', 'src/components/coach/squad/formations/UseForMatchesSheet.tsx',
       'src/components/coach/training/PastPlanSheet.tsx', 'src/components/coach/training/PlannerSheets.tsx', 'src/components/coach/training/RegisterSheet.tsx',

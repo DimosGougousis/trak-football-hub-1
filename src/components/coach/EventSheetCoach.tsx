@@ -99,7 +99,7 @@ export function People({ heading, people }: { heading: string; people: Person[] 
     {people.length > 0 && <>
       <button type="button" aria-expanded={open} aria-label={t(open ? 'coachSchedule:hideNames' : 'coachSchedule:showNames', { heading })}
         onClick={() => setOpen(o => !o)} className="arc rounded-full focus-visible:ring-2 focus-visible:ring-primary">
-        <AvatarGroup members={people.map(p => ({ name: p.name, fallback: <FaceDrawing name={p.name} /> }))} max={6} size="sm" label={heading} />
+        <AvatarGroup members={people.map(p => ({ name: p.name, fallback: <FaceDrawing name={p.name} playerId={p.id} /> }))} max={6} size="sm" label={heading} />
       </button>
       {open && (
         <ul aria-label={heading} className="mt-3 space-y-2">
@@ -216,7 +216,7 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               <ul className="space-y-2">
                 {squad.data.away.map(p => (
                   <li key={p.id} className="flex items-center gap-3">
-                    <PlayerFace name={p.name} size="sm" className="arc" aria-hidden />
+                    <PlayerFace name={p.name} playerId={p.id} size="sm" className="arc" aria-hidden />
                     <span className="text-[14px] text-ink">{p.name}</span>
                     {p.reason && <span className="text-[12px] text-ink-2 truncate">{p.reason}</span>}
                   </li>

@@ -1984,6 +1984,8 @@ export type Database = {
       }
       squad_player_profiles: {
         Row: {
+          face_hair_colour: number | null
+          face_hair_style: number | null
           nationality: string | null
           preferred_foot: string | null
           squad_player_id: string
@@ -1991,6 +1993,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          face_hair_colour?: number | null
+          face_hair_style?: number | null
           nationality?: string | null
           preferred_foot?: string | null
           squad_player_id: string
@@ -1998,6 +2002,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          face_hair_colour?: number | null
+          face_hair_style?: number | null
           nationality?: string | null
           preferred_foot?: string | null
           squad_player_id?: string
