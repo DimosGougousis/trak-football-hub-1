@@ -30,7 +30,6 @@ import { StuckSheet, type StuckTarget } from '@/components/coach/season-plan/Stu
 import { Button } from '@/components/arc/button/button'
 import { NEXT_STEP_SIZE, NEXT_STEP_WIDTH } from '@/components/coach/next-step'
 import { useLanguage } from '@/lib/i18n'
-import { PageTitle, PageTop } from '@/components/coach/PageTop'
 
 /* TRAK-262 (Imad, 22 Oct): coach Home on Arc. Squad pills (each squad, then All, which is Home's only); the week
    in Tarek's colour key with one next step per event; the Squad shape radar; Needs you. "Assess a player" and
@@ -159,9 +158,8 @@ export default function CoachHomePage() {
         {/* TRAK-259: on a phone the avatar opens the menu and the calendar sits beside the bell; a laptop has both
             in the frame (the sidebar, the top bar). */}
         {!wide && <HomeHeader calendarTo="/coach/schedule" left={<CoachMenuButton name={profile?.full_name || t('nav:coach')} />}
-          center={<PageTitle><span className="truncate">{profile?.full_name || t('nav:coach')}</span></PageTitle>} right={user && <CoachAlertsBell coachId={user.id} />} />}
-        {/* TRAK-422 (Kostas, 13 Nov): Home keeps the coach's name as its title, on a laptop too. */}
-        {wide && <PageTop className="pt-0" menu={false} title={profile?.full_name || t('nav:coach')} />}
+          center={null} right={user && <CoachAlertsBell coachId={user.id} />} />}
+        {/* TRAK-616 (Kostas, 27 Nov): no name heading; the greeting is Home's heading. */}
 
         {/* TRAK-608 (New Home 2/8): the greeting, then the To-do in the Today card's and Squad shape's place. The week
             stays under it until Upcoming replaces it (5/8, TRAK-611). */}

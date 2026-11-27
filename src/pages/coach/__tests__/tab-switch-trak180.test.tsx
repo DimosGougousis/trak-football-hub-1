@@ -71,7 +71,7 @@ describe('TRAK-180 switching between Home and the overview tab', () => {
     let release!: () => void
     coachReads(PLAYERS, new Promise<void>(resolve => { release = resolve }))
     await toHome()
-    await screen.findByRole('heading', { name: 'Coach Vasilis' })
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Coach$/ })
 
     await backToFeedback()
     expect(homeRow('Ade Okafor')).not.toBeNull()
@@ -86,7 +86,7 @@ describe('TRAK-180 switching between Home and the overview tab', () => {
     renderApp('/coach/feedback')
     await waitFor(() => expect(homeRow('Ade Okafor')).not.toBeNull(), HOME_LOAD)
     await toHome()
-    await screen.findByRole('heading', { name: 'Coach Vasilis' })
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Coach$/ })
 
     // The assessments decide each level, so a failed read can't keep the old list.
     server.use(http.get(`${SUPABASE_URL}/rest/v1/coach_assessments`, () =>
