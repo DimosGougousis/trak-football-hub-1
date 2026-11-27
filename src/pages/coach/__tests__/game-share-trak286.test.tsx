@@ -231,23 +231,18 @@ describe('TRAK-286: Needs you and Games home follow the share', { timeout: 30_00
     )
   }
 
-  it('Needs you: changes not shared for a shared plan with edits, nothing for one without, and the draft\'s next step', async () => {
+  // TRAK-608: the To-do takes the next match's next step on a day with no events (the others wait in Upcoming, TRAK-611).
+  it('To-do: changes not shared for a shared plan with edits; nothing for one without', async () => {
     const user = userEvent.setup()
     games({ g1: ['charisteas', 'basinas'] })
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    const card = (title: string) => within(needs).getByText(title).closest('li')!
-    await within(needs).findByText('vs Parkview Athletic')
-    expect(within(card('vs Parkview Athletic')).getByText('Changes not shared · 2 players')).toBeInTheDocument()
-    expect(within(needs).queryByText('vs Riverside Rovers')).toBeNull()
-    expect(within(card('vs Harbour Town')).getByText('Plan not shared')).toBeInTheDocument()
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    const card = (await within(todo).findByText('Share the plan for Parkview Athletic', {}, { timeout: 5000 })).closest('li')!
     // TRAK-333 (Imad, 2 Nov): split buttons; the match's other pages sit behind the chevron.
-    expect(within(card('vs Harbour Town')).getByRole('button', { name: 'Share plan' })).toBeInTheDocument()
-    expect(within(card('vs Northgate United')).getByRole('button', { name: 'Write plan' })).toBeInTheDocument()
-    await user.click(within(card('vs Parkview Athletic')).getByRole('button', { name: 'Share changes more actions' }))
+    await user.click(within(card).getByRole('button', { name: 'Share changes more actions' }))
     expect((await screen.findAllByRole('menuitem')).map(item => item.textContent)).toEqual(['View plan', 'Logistics'])
     await user.keyboard('{Escape}')
-    await user.click(within(card('vs Parkview Athletic')).getByRole('button', { name: 'Share changes' }))
+    await user.click(within(card).getByRole('button', { name: 'Share changes' }))
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan&step=share'))
   })
 

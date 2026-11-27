@@ -179,9 +179,10 @@ describe('TRAK-287: locked at kick-off', { timeout: 30_000 }, () => {
     setup({ kickOffIn: 30_000 })
     server.use(table('game_plans', []), table('game_plan_players', []))
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByText('vs Parkview Athletic')).toBeInTheDocument()
+    // TRAK-608: the match plan is a to-do on match day; not shared, it leaves at kick-off.
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    expect(await within(todo).findByText(/Parkview Athletic/, {}, { timeout: 5000 })).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(31_000) })
-    expect(within(needs).queryByText('vs Parkview Athletic')).toBeNull()
+    await waitFor(() => expect(within(todo).queryByText(/Parkview Athletic/)).toBeNull())
   })
 })

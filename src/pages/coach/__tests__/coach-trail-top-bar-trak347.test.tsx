@@ -101,8 +101,9 @@ describe('TRAK-347: on a laptop, the top bar is the trail', { timeout: 30_000 },
   it('from Home: Home / vs Parkview Athletic, and Home goes back', async () => {
     const user = userEvent.setup()
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    const card = (await within(needs).findByText('vs Parkview Athletic')).closest('li')!
+    // TRAK-608: on a day with no events, the To-do takes the next match's next step.
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    const card = (await within(todo).findByText('Write the plan for Parkview Athletic', {}, { timeout: 5000 })).closest('li')!
     await user.click(within(card).getByRole('button', { name: 'Write plan' }))
     expect(await crumbs('vs Parkview Athletic')).toEqual(['Home', 'vs Parkview Athletic'])
     await user.click(within(topBar()).getByRole('link', { name: 'Home' }))

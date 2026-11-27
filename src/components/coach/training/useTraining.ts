@@ -79,11 +79,11 @@ export function usePlan(eventId: string | undefined) {
 }
 
 /** The trainings the coach has planned. The database returns only their own plans. */
-export function usePlannedTrainings() {
+export function usePlannedTrainings(enabled = true) {
   const { user } = useAuth()
   return useQuery({
     queryKey: ['coach', user?.id, 'training-plans'],
-    enabled: !!user,
+    enabled: !!user && enabled,
     queryFn: async (): Promise<Set<string>> => {
       const { data, error } = await supabase.from('training_plans').select('event_id')
       if (error) throw error

@@ -104,13 +104,15 @@ const parse = (iso: string) => Date.parse(iso)
 const trainingStart = (t: HomeTraining) => (t.start_time ? parse(t.starts_at) : trainingEnd(t))
 
 /** The coach's To-do at `now`, in order. `zone` is the academy's time zone; `inView` is the squad picked (All: every). */
-export function homeTodos({ trainings, matches, reports = [], now, zone, inView = () => true }: {
+export function homeTodos({ trainings, matches, reports = [], now, zone, inView = () => true, training = true }: {
   trainings: HomeTraining[]
   matches: HomeMatch[]
   reports?: HomeReport[]
   now: number
   zone: string
   inView?: (squad: string | null) => boolean
+  /** TRAK-608: whether the academy's Training is on. Off, a training has no plan or notes to ask for; its register stays. */
+  training?: boolean
 }): HomeTodo[] {
   const today = dayIn(zone, new Date(now))
   const dayOf = (instant: number) => dayIn(zone, new Date(instant))
@@ -129,7 +131,7 @@ export function homeTodos({ trainings, matches, reports = [], now, zone, inView 
     const base = { squad: t.squad, at }
 
     // Today's plan: Plan, then Share, then ✓ Shared. Missing on the day, it's urgent; it leaves at the start.
-    if (isToday) {
+    if (isToday && training) {
       const shared = t.planned && (t.sharedAt ? parse(t.sharedAt) <= now : t.published)
       const deadline = trainingStart(t)
       if (shared || now < deadline) {
@@ -146,7 +148,7 @@ export function homeTodos({ trainings, matches, reports = [], now, zone, inView 
     }
 
     // Notes: from the end, never urgent, for 48 h.
-    if (t.notedAt ? doneToday(t.notedAt) : !registerGone) {
+    if (training && (t.notedAt ? doneToday(t.notedAt) : !registerGone)) {
       add('notes', t.id, { ...base, done: !!t.notedAt, urgent: false,
         opensAt: !t.notedAt && now < end ? end : null, leavesAt: t.notedAt ? null : end + TRAINING_KEEP })
     }
@@ -196,7 +198,7 @@ export function homeTodos({ trainings, matches, reports = [], now, zone, inView 
     const endOfDay = startOfNextDay(now, zone)
     const ahead = (iso: string) => dayOf(parse(iso)) > today && parse(iso) <= now + AHEAD
     const nextTraining = liveTrainings.filter(t => ahead(t.starts_at)).sort((a, b) => parse(a.starts_at) - parse(b.starts_at))[0]
-    if (nextTraining && !nextTraining.planned) {
+    if (training && nextTraining && !nextTraining.planned) {
       add('next-training', nextTraining.id, { squad: nextTraining.squad, at: parse(nextTraining.starts_at), done: false, urgent: false,
         opensAt: null, leavesAt: endOfDay, step: 'plan' })
     }

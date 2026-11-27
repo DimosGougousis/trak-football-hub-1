@@ -80,20 +80,20 @@ describe('TRAK-290: the morning-after nudge', { timeout: 30_000 }, () => {
     expect(screen.queryByText(/Good morning|^Draft saved/)).toBeNull()
   })
 
-  it('Home\'s Needs you card for the draft turns urgent from 09:00 the next morning', async () => {
+  // TRAK-608: the draft's Publish is a to-do; it turns urgent (a yellow number) from 09:00 the next morning.
+  it('Home\'s Publish the evaluation to-do turns urgent from 09:00 the next morning', async () => {
     vi.setSystemTime(EVENING)
     renderApp('/coach/home')
-    let needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    let reason = await within(needs).findByText('Evaluation draft · only you see it')
-    expect(within(needs).queryByText('Urgent:')).toBeNull()
-    expect(reason.previousElementSibling).toHaveClass('bg-warning')
+    let todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    let row = (await within(todo).findByText('Publish the evaluation', { exact: false }, { timeout: 5000 })).closest('li')!
+    expect(within(row).queryByText('Urgent:')).toBeNull()
     cleanup()
 
     vi.setSystemTime(MORNING)
     renderApp('/coach/home')
-    needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    reason = await within(needs).findByText('Evaluation draft · only you see it', { exact: false })
-    expect(within(needs).getByText('Urgent:')).toBeInTheDocument()
-    expect(reason.previousElementSibling).toHaveClass('bg-danger')
+    todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    row = (await within(todo).findByText('Publish the evaluation', { exact: false }, { timeout: 5000 })).closest('li')!
+    expect(within(row).getByText('Urgent:')).toBeInTheDocument()
+    expect(within(todo).getByText('Urgent')).toBeInTheDocument()
   })
 })
