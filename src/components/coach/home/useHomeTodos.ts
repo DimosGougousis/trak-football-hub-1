@@ -8,6 +8,7 @@ import { homeTodos, upcomingSteps, type HomeMatch, type HomeReport, type HomeTod
 import { useGamePlanChanges, useGamePlans, useGameShares } from '@/components/coach/games/useGames'
 import { usePlannedTrainings } from '@/components/coach/training/useTraining'
 import { useAcademyTimeZone } from '@/components/coach/season-plan/useWatching'
+import { useOwnTodos } from './useOwnTodos'
 import { dayIn } from '@/lib/watch-first'
 
 /* TRAK-608 (New Home 2/8): what homeTodos() (TRAK-607) reads, from the records Home already asks for. The coach's events
@@ -22,8 +23,7 @@ export type HomeTodoEvent = { todo: HomeTodo; row: EventRow | null }
 export type UpcomingEvent = { row: EventRow; step: HomeTodoEvent | null }
 
 /** Today's trainings and matches in view, for the greeting's line; and whether yesterday had a match. */
-
-export type HomeDay = { trainings: EventRow[]; matches: EventRow[]; matchYesterday: boolean; now: number }
+export type HomeDay = { trainings: EventRow[]; matches: EventRow[]; matchYesterday: boolean; now: number; today: string }
 
 /** The coach's To-do, each with its event's row (for its buttons), or null until the reads answer. */
 export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: {
@@ -68,6 +68,8 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
   const plans = useGamePlans(gamesOn)
   const shares = useGameShares(gamesOn)
   const zone = useAcademyTimeZone(coachId)
+  // TRAK-612: the coach's own. Never waited for: Trak's to-dos show first, and a failed read only leaves them out.
+  const own = useOwnTodos(coachId)
   const [now, setNow] = useState(() => Date.now())
 
   // Changes since sharing, for the matches today and ahead that are shared (TRAK-286).
@@ -114,10 +116,10 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
       .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!))
       .map(row => ({ row, step: stepOf.get(row.id) ?? null }))
     return {
-      items: homeTodos({ trainings, matches, reports, now, zone: zone.zone, inView, training: trainingOn }).map(withRow),
+      items: homeTodos({ trainings, matches, reports, own: own.data ?? [], now, zone: zone.zone, inView, training: trainingOn }).map(withRow),
       upcoming, week,
     }
-  }, [records.data, waiting, planned.data, plans.data, shares.data, changes.data, reports, now, zone.zone, inView, trainingOn, gamesOn])
+  }, [own.data, records.data, waiting, planned.data, plans.data, shares.data, changes.data, reports, now, zone.zone, inView, trainingOn, gamesOn])
 
   const items = worked?.items ?? null
   const upcoming = worked?.upcoming ?? null
@@ -142,7 +144,7 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
       trainings: live.filter(row => row.event_type === 'training' && on(row, today)),
       matches: live.filter(row => row.event_type === 'match' && on(row, today)),
       matchYesterday: live.some(row => row.event_type === 'match' && row.published && on(row, yesterday)),
-      now,
+      now, today,
     }
   }, [records.data, inView, zone.zone, now])
 

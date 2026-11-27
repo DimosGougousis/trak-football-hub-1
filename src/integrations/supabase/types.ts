@@ -654,6 +654,39 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_todos: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          done_at: string | null
+          due_on: string
+          id: string
+          title: string
+          updated_at: string
+          urgent: boolean
+        }
+        Insert: {
+          coach_user_id?: string
+          created_at?: string
+          done_at?: string | null
+          due_on: string
+          id?: string
+          title: string
+          updated_at?: string
+          urgent?: boolean
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          done_at?: string | null
+          due_on?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          urgent?: boolean
+        }
+        Relationships: []
+      }
       event_absences: {
         Row: {
           event_id: string

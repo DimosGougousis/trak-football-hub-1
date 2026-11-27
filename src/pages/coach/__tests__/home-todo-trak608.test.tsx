@@ -80,7 +80,9 @@ const rowOf = async (text: string | RegExp) => (await within(await todo()).findB
 const titles = async () => {
   const list = await todo()
   await waitFor(() => expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0), { timeout: 5000 })
-  return within(list).getAllByRole('listitem').map(li => li.querySelector('span.grid > span')!.textContent!.replace(/^Urgent: /, ''))
+  // TRAK-612: the dotted "Add a to-do" step at the end isn't a to-do.
+  return within(list).getAllByRole('listitem').filter(li => !within(li).queryByRole('button', { name: 'Add a to-do' }))
+    .map(li => li.querySelector('span.grid > span')!.textContent!.replace(/^Urgent: /, ''))
 }
 
 describe('TRAK-608: the To-do on coach Home', { timeout: 20_000 }, () => {

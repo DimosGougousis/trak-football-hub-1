@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { homeTodos, startOfNextDay, upcomingSteps, type HomeMatch, type HomeTraining, type HomeReport } from '../home-todos'
+import { homeTodos, startOfNextDay, upcomingSteps, type HomeMatch, type HomeOwnTodo, type HomeTraining, type HomeReport } from '../home-todos'
 
 // TRAK-607: the coach's To-do, one test per row of the 26 Nov rules (TRAK-606). Days are the academy's: Athens, which
 // is UTC+2 in November. Wed 25 Nov 2026 is a training day; Sat 28 Nov a match day.
@@ -211,6 +211,39 @@ describe('the order and the squads', () => {
   it('a cancelled event takes all its to-dos off at once', () => {
     expect(keys('2026-11-25T09:00', { trainings: [training('w', '2026-11-25', { cancelled: true })] })).toEqual([])
     expect(keys('2026-11-28T18:00', { matches: [match('m', '2026-11-28', { cancelled: true })] })).toEqual([])
+  })
+})
+
+describe("the coach's own to-dos (TRAK-612)", () => {
+  const own = (id: string, dueOn: string, extra: Partial<HomeOwnTodo> = {}): HomeOwnTodo => ({
+    id, title: `To-do ${id}`, dueOn, urgent: false, doneAt: null, createdAt: '2026-11-20T10:00:00+02:00', ...extra,
+  })
+  const ownKeys = (now: string, list: HomeOwnTodo[], data: Parameters<typeof homeTodos>[0] extends infer P ? Partial<P> : never = {}) =>
+    homeTodos({ trainings: [], matches: [], ...data, own: list, now: t(now), zone: Z }).map(todo => todo.key)
+
+  it('shows from its day, and every day after until ticked', () => {
+    expect(ownKeys('2026-11-24T09:00', [own('a', '2026-11-25')])).toEqual([])
+    expect(ownKeys('2026-11-25T00:00', [own('a', '2026-11-25')])).toEqual(['own:a'])
+    expect(ownKeys('2026-11-28T09:00', [own('a', '2026-11-25')])).toEqual(['own:a'])
+  })
+
+  it('ticked today stays, ticked, until midnight', () => {
+    const done = own('a', '2026-11-25', { doneAt: '2026-11-26T10:00:00+02:00' })
+    expect(homeTodos({ trainings: [], matches: [], own: [done], now: t('2026-11-26T20:00'), zone: Z })[0]).toMatchObject({ done: true, urgent: false, group: 'yours', rank: 9 })
+    expect(ownKeys('2026-11-27T00:00', [done])).toEqual([])
+  })
+
+  it("rank 9 after Trak's, in the order added; an urgent one goes up with the urgent, and keeps its words", () => {
+    const list = [own('late', '2026-11-25', { createdAt: '2026-11-24T10:00:00+02:00' }), own('first', '2026-11-25'),
+      own('now', '2026-11-25', { urgent: true, createdAt: '2026-11-25T08:00:00+02:00' })]
+    const result = homeTodos({ trainings: [training('w', '2026-11-25')], matches: [], own: list, now: t('2026-11-25T06:00'), zone: Z })
+    expect(result.map(todo => todo.key)).toEqual(['own:now', 'training-plan:w', 'register:w', 'notes:w', 'own:first', 'own:late'])
+    expect(result[0]).toMatchObject({ title: 'To-do now', urgent: true, squad: null })
+  })
+
+  it('shows under every squad', () => {
+    expect(homeTodos({ trainings: [], matches: [], own: [own('a', '2026-11-25')], now: t('2026-11-25T09:00'), zone: Z, inView: s => s === 'U16' })
+      .map(todo => todo.key)).toEqual(['own:a'])
   })
 })
 

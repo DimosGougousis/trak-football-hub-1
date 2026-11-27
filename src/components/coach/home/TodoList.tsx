@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Button } from '@/components/arc/button/button'
@@ -15,6 +16,7 @@ import { dateLocale, useTranslation } from '@/lib/i18n'
 import type { EventRow } from '@/lib/coach-events'
 import type { HomeTodoEvent } from './useHomeTodos'
 import { TodoPreview, type PreviewKind } from './TodoPreview'
+import { useAddTodo, useTickTodo } from './useOwnTodos'
 
 /* TRAK-608 (New Home 2/8, spec TRAK-606): Home's To-do. One numbered list in homeTodos()'s order (TRAK-607): an urgent
    to-do has a yellow number, a done one a green tick, and a button that can't be used yet is greyed and says when it
@@ -26,7 +28,7 @@ const hhmm = (ms: number) => format(new Date(ms), 'HH:mm')
 /** TRAK-610: a suggestion that isn't an event's step: the top Players job (drafts, assess, positions, watched, stuck). */
 export type Suggestion = { key: string; title: string; line: string; action: ReactNode }
 
-export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged, onOpenReports, nextStep = null, playerJob = null }: {
+export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged, onOpenReports, nextStep = null, playerJob = null, today = null }: {
   /** null while loading. */
   items: HomeTodoEvent[] | null
   failed: boolean
@@ -41,6 +43,8 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
   nextStep?: HomeTodoEvent | null
   /** TRAK-610: the top Players job, the second suggestion. */
   playerJob?: Suggestion | null
+  /** TRAK-612: the academy's day (YYYY-MM-DD), for adding a to-do; null until known. */
+  today?: string | null
 }) {
   const { t } = useTranslation()
   const urgent = !!items?.some(({ todo }) => todo.urgent && !todo.done)
@@ -51,8 +55,8 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
     <h2 id="todo-title" className="text-lg font-medium text-ink">{t('coachHome:todoTitle')}</h2>
     {failed ? <LoadError what={t('coachHome:todoWhat')} onRetry={onRetry} />
       : !items ? <LoadingSkeleton label={t('coachHome:todoLoading')} lines={3} className="rounded-2xl border border-line bg-surface p-5" />
-      : !items.length ? <p className="rounded-2xl border border-line bg-surface p-5 text-sm text-ink-2">{t('coachHome:todoNone')}</p>
       : <ol className="arc overflow-hidden rounded-2xl border border-line bg-surface">
+        {!items.length && <li className="p-5 text-sm text-ink-2">{t('coachHome:todoNone')}</li>}
         {items.map(({ todo, row }, index) => <li key={todo.key} className="grid grid-cols-[28px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 border-t border-line/60 p-4 first:border-t-0 laptop:grid-cols-[28px_minmax(0,1fr)_auto] laptop:px-5">
           <span aria-hidden className={`grid size-7 place-items-center rounded-full border-[1.5px] text-[13px] font-semibold tabular-nums ${
             todo.done ? 'border-success bg-success text-on-brand' : todo.urgent ? 'border-attention bg-attention text-ink' : 'border-line-strong text-ink-2'}`}>
@@ -62,12 +66,14 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
             <span className={`text-base font-medium ${todo.done ? 'text-ink-2' : 'text-ink'}`}>
               {todo.urgent && !todo.done && <span className="sr-only">{t('coachHome:urgent')}</span>}{title(todo, row, t)}
             </span>
-            <span className="text-sm text-ink-2">{[showSquad ? squadName(todo.squad) : null, line(todo, row, t)].filter(Boolean).join(' · ')}</span>
+            <span className="text-sm text-ink-2">{[showSquad && todo.kind !== 'own' ? squadName(todo.squad) : null, line(todo, row, t)].filter(Boolean).join(' · ')}</span>
             {row && previewOf(todo) && <PreviewToggle kind={previewOf(todo)!} open={open.has(todo.key)} onToggle={() => toggle(todo.key)} />}
             {row && previewOf(todo) && open.has(todo.key) && <TodoPreview kind={previewOf(todo)!} eventId={row.id} theme={row.training_theme ?? null} />}
           </span>
           <span className="col-start-2 laptop:col-start-auto">{action(todo, row, { t, coachId, onChanged, onOpenReports })}</span>
         </li>)}
+        {/* TRAK-612: the last step, in dotted lines: the coach adds their own. */}
+        {today && <AddTodo today={today} />}
       </ol>}
     {/* TRAK-610: once every to-do is done (a greyed one isn't), 2 suggestions at most. */}
     {items && items.every(({ todo }) => todo.done) && (nextStep || playerJob) && <div className="arc grid gap-1 rounded-2xl border border-line bg-surface px-4 py-3 laptop:px-5">
@@ -89,6 +95,67 @@ export function TodoList({ items, failed, onRetry, coachId, showSquad, onChanged
 export function TodoAction({ item, coachId, onChanged }: { item: HomeTodoEvent; coachId: string; onChanged: () => void }) {
   const { t } = useTranslation()
   return <>{action(item.todo, item.row, { t, coachId, onChanged, onOpenReports: () => {} })}</>
+}
+
+/** TRAK-612: ticks one of the coach's own to-dos. */
+function TickButton({ id }: { id: string }) {
+  const { t } = useTranslation()
+  const tick = useTickTodo()
+  return <Button size={NEXT_STEP_SIZE} variant="secondary" className={NEXT_STEP_WIDTH} loading={tick.isPending}
+    onClick={() => tick.mutate(id, { onError: () => toast.error(t('coachHome:todoTickFailed')) })}>{t('coachHome:todoDone')}</Button>
+}
+
+const addDays = (iso: string, days: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
+
+/** TRAK-612 (Kostas, 26 Nov): the dotted "Add a to-do" step. It opens in place: the words, Today / Tomorrow / Pick a date,
+ *  and Urgent. Not linked to an event and not in + Create; only the coach sees it. */
+function AddTodo({ today }: { today: string }) {
+  const { t } = useTranslation()
+  const add = useAddTodo()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [when, setWhen] = useState<'today' | 'tomorrow' | 'date'>('today')
+  const [date, setDate] = useState(() => addDays(today, 2))
+  const [urgent, setUrgent] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const dueOn = when === 'today' ? today : when === 'tomorrow' ? addDays(today, 1) : date
+  const close = () => { setOpen(false); setText(''); setWhen('today'); setUrgent(false) }
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    if (!text.trim() || !dueOn || dueOn < today) return
+    add.mutate({ title: text, dueOn, urgent }, {
+      onSuccess: () => { setNote(dueOn === today ? null : t('coachHome:todoAddedFor', { day: evalDay(dueOn) })); close() },
+      onError: () => toast.error(t('coachHome:todoAddFailed')),
+    })
+  }
+  const chip = (pressed: boolean) => `rounded-full border px-3 py-1 text-[13px] font-medium ${pressed ? 'border-brand bg-brand text-on-brand' : 'border-line bg-surface text-ink-2'}`
+  if (!open) return <li className="p-3 laptop:px-4">
+    <button type="button" onClick={() => { setOpen(true); setNote(null) }}
+      className="grid w-full grid-cols-[28px_minmax(0,1fr)] items-center gap-3 rounded-xl border-[1.5px] border-dashed border-line-strong px-3 py-3 text-left text-[15px] font-medium text-ink-3 hover:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <span aria-hidden className="grid size-7 place-items-center rounded-full border-[1.5px] border-dashed border-line-strong text-base">+</span>{t('coachHome:todoAdd')}
+    </button>
+    {note && <p role="status" className="mt-2 px-1 text-sm font-medium text-success">{note}</p>}
+  </li>
+  return <li className="p-3 laptop:px-4">
+    <form onSubmit={submit} aria-label={t('coachHome:todoAdd')} className="grid gap-3 rounded-xl border-[1.5px] border-dashed border-line-strong p-3">
+      <input autoFocus value={text} maxLength={120} onChange={event => setText(event.target.value)} aria-label={t('coachHome:todoAddWhat')}
+        placeholder={t('coachHome:todoAddWhat')} className="w-full rounded-xl border border-line bg-ground px-3 py-2.5 text-[16px] text-ink placeholder-ink-3 outline-none focus-visible:ring-2 focus-visible:ring-primary" />
+      <div role="group" aria-label={t('coachHome:todoAddWhen')} className="flex flex-wrap gap-2">
+        {(['today', 'tomorrow', 'date'] as const).map(option => <button key={option} type="button" aria-pressed={when === option} className={chip(when === option)}
+          onClick={() => setWhen(option)}>{t(option === 'today' ? 'coachHome:todoAddToday' : option === 'tomorrow' ? 'coachHome:todoAddTomorrow' : 'coachHome:todoAddPick')}</button>)}
+      </div>
+      {when === 'date' && <input type="date" value={date} min={today} onChange={event => setDate(event.target.value)} aria-label={t('coachHome:todoAddDate')}
+        className="w-full rounded-xl border border-line bg-ground px-3 py-2 text-[16px] text-ink" />}
+      <button type="button" aria-pressed={urgent} onClick={() => setUrgent(value => !value)}
+        className={`flex items-center gap-2 justify-self-start rounded-full border px-3 py-1 text-[13px] font-medium ${urgent ? 'border-attention bg-attention/20 text-ink' : 'border-line bg-surface text-ink-2'}`}>
+        <span aria-hidden className={`size-2.5 rounded-full border-[1.5px] border-attention ${urgent ? 'bg-attention' : ''}`} />{t('coachHome:todoAddUrgent')}
+      </button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="ghost" size="sm" onClick={close}>{t('coachHome:todoAddCancel')}</Button>
+        <Button type="submit" size="sm" loading={add.isPending} disabled={!text.trim()}>{t('coachHome:todoAddSave')}</Button>
+      </div>
+    </form>
+  </li>
 }
 
 function SuggestionRow({ title, line, action }: { title: string; line: string; action: ReactNode }) {
@@ -139,6 +206,7 @@ function title(todo: Todo, row: EventRow | null, t: T): string {
     case 'evaluate': return t('coachHome:todoEvaluate')
     case 'publish': return t('coachHome:todoPublish')
     case 'reports': return t('coachHome:reportsReady')
+    case 'own': return todo.title ?? ''
     case 'next-training': {
       const day = row?.starts_at ? format(new Date(row.starts_at), 'EEEE', { locale: dateLocale() }) : ''
       return todo.step === 'share' ? t('coachHome:todoShareTraining', { day }) : t('coachHome:todoNextTraining', { day })
@@ -159,6 +227,7 @@ function line(todo: Todo, row: EventRow | null, t: T): string {
     case 'publish': return t('coachHome:todoPublishWhy')
     case 'reports': return t('coachHome:evaluationDueSince', { day: evalDay(new Date(todo.at).toISOString().slice(0, 10)) })
     case 'next-training': case 'next-match': return [time?.date ? evalDay(time.date) : null, time?.time].filter(Boolean).join(' · ')
+    case 'own': return t('coachHome:todoAddedByYou')
     default: return event
   }
 }
@@ -167,6 +236,7 @@ function action(todo: Todo, row: EventRow | null, { t, coachId, onChanged, onOpe
   const button = (label: string, onClick?: () => void, disabled = false) =>
     <Button size={NEXT_STEP_SIZE} className={NEXT_STEP_WIDTH} disabled={disabled} onClick={onClick}>{label}</Button>
   const pill = (label: string) => <span className="inline-flex rounded-full bg-success/10 px-2.5 py-1 text-sm font-medium text-success">{label}</span>
+  if (todo.kind === 'own') return todo.done ? pill(t('coachHome:todoDoneShort')) : <TickButton id={todo.key.slice('own:'.length)} />
   if (!row && todo.kind !== 'reports') return null
   // Not yet: greyed, saying when it opens.
   if (!todo.done && todo.opensAt) {
