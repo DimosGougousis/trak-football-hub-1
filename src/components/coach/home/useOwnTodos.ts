@@ -16,7 +16,8 @@ export function useOwnTodos(coachId: string | undefined) {
     queryFn: async (): Promise<HomeOwnTodo[]> => {
       const since = new Date(Date.now() - 2 * DAY).toISOString()
       const { data, error } = await supabase.from('coach_todos').select('id, title, due_on, urgent, done_at, created_at')
-        .or(`done_at.is.null,done_at.gte.${since}`).order('created_at')
+        // A value with ':' or '.' is quoted inside or(), as PostgREST asks.
+        .or(`done_at.is.null,done_at.gte."${since}"`).order('created_at')
       if (error) throw error
       return (data ?? []).map(row => ({ id: row.id, title: row.title, dueOn: row.due_on, urgent: row.urgent, doneAt: row.done_at, createdAt: row.created_at }))
     },

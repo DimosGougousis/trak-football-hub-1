@@ -79,10 +79,15 @@ type Own = { id: string; coach_user_id: string; title: string; due_on: string; u
 let mine: Own[] = []
 let posted: Record<string, unknown>[] = []
 let patched: Record<string, unknown>[] = []
+let orFilters: string[] = []
 function ownTodos() {
-  mine = []; posted = []; patched = []
+  mine = []; posted = []; patched = []; orFilters = []
   server.use(
-    http.get(`${SUPABASE_URL}/rest/v1/coach_todos`, () => HttpResponse.json(mine)),
+    http.get(`${SUPABASE_URL}/rest/v1/coach_todos`, ({ request }) => {
+      // The read asks for the open ones and the ones ticked lately, the time quoted as PostgREST needs.
+      orFilters.push(new URL(request.url).searchParams.get('or') ?? '')
+      return HttpResponse.json(mine)
+    }),
     http.post(`${SUPABASE_URL}/rest/v1/coach_todos`, async ({ request }) => {
       const body = await request.json() as Record<string, unknown>
       posted.push(body)
@@ -158,5 +163,6 @@ describe("TRAK-612: the coach's own to-dos", { timeout: 20_000 }, () => {
     await userEvent.click(within(row).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(patched).toEqual([expect.objectContaining({ id: 'own-a', done_at: expect.any(String) })]))
     expect(await within(row).findByText('✓ Done')).toBeInTheDocument()
+    expect(orFilters[0]).toMatch(/^\(done_at\.is\.null,done_at\.gte\."\d{4}-\d\d-\d\dT[\d:.]+Z"\)$/)
   })
 })
