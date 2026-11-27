@@ -140,6 +140,10 @@ export function homeTodos({ trainings, matches, reports = [], now, zone, inView 
       }
     }
 
+    // A training never published has no register (take_event_register refuses it) and nothing to note: its plan's
+    // Share publishes it first.
+    if (!t.published) continue
+
     // The register: from the start, owed once the training is over, for 48 h. Notes saved or skipped close it.
     const registerGone = now >= end + TRAINING_KEEP
     if (t.registeredAt ? doneToday(t.registeredAt) : !t.notedAt && !registerGone) {
