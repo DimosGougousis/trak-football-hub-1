@@ -137,27 +137,28 @@ describe('TRAK-364 Home', () => {
   it('no card once the due date is published, and the per-player Assess cards still give way', async () => {
     evaluations = [{ plan_id: 'plan-1', due_on: expected().due.dueOn! }]
     renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: /^Needs you/ })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     await waitFor(() => expect(reads).toContain('/rest/v1/season_evaluations'))
-    await waitFor(() => expect(screen.queryByText('Loading who needs you')).toBeNull())
     expect(screen.queryByText('Reports ready')).toBeNull()
     expect(screen.queryByText(/Never assessed/)).toBeNull()
   }, 30_000)
 
-  it('without the season plan, Home is as it was: Quinn’s Assess card, no evaluation, nothing new read', async () => {
+  // TRAK-610: the Assess cards are the Assess players suggestion now.
+  it('without the season plan: Assess players for Quinn, no evaluation, nothing new read', async () => {
     seasonOn = false
     renderApp('/coach/home')
-    expect(await screen.findByText(/^Never assessed, \d+ weeks in the squad$/)).toBeInTheDocument()
-    expect(screen.getByText('Quinn Synthetic')).toBeInTheDocument()
+    const ideas = await screen.findByRole('list', { name: 'If you have time' }, { timeout: 5000 })
+    expect(within(ideas).getByText('Assess players')).toBeInTheDocument()
     expect(screen.queryByText('Reports ready')).toBeNull()
     expect(reads).not.toContain('/rest/v1/season_evaluations')
     expect(reads).not.toContain('/rest/v1/season_plans')
   }, 30_000)
 
-  it('before the plan is shared there is nothing to evaluate, so the Assess cards stay', async () => {
+  it('before the plan is shared there is nothing to evaluate, so Assess players stays', async () => {
     plan = { ...plan, shared_at: null, last_shared_at: null }
     renderApp('/coach/home')
-    expect(await screen.findByText(/^Never assessed, \d+ weeks in the squad$/)).toBeInTheDocument()
+    const ideas = await screen.findByRole('list', { name: 'If you have time' }, { timeout: 5000 })
+    expect(within(ideas).getByText('Assess players')).toBeInTheDocument()
     expect(screen.queryByText('Reports ready')).toBeNull()
   }, 30_000)
 })
@@ -318,7 +319,9 @@ describe('TRAK-365 objectives in the evaluation', () => {
     })
   }, 45_000)
 
+  // TRAK-610: a suggestion once the To-do is done, so this report day is already sent.
   it('shows a stuck objective on Home with its three choices, and Make it simpler sends the easier version', async () => {
+    evaluations = [{ plan_id: 'plan-1', due_on: expected().due.dueOn! }]
     const resolved: Record<string, unknown>[] = []
     server.use(
       table('player_objectives', [objective('oa', 'Win it back within 5 seconds', 1)]),
@@ -329,7 +332,7 @@ describe('TRAK-365 objectives in the evaluation', () => {
       }),
     )
     renderApp('/coach/home')
-    const card = (await screen.findByText('Pat is stuck on an objective')).closest('div')!.parentElement!
+    const card = (await screen.findByText('Pat is stuck on an objective', {}, { timeout: 5000 })).closest('li')!
     expect(within(card).getByText('“Win it back within 5 seconds”: Not yet three times in a row.')).toBeInTheDocument()
     await user().click(within(card).getByRole('button', { name: 'Choose' }))
     expect(await screen.findByRole('button', { name: 'Keep going' })).toBeInTheDocument()

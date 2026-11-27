@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { homeTodos, startOfNextDay, type HomeMatch, type HomeTraining, type HomeReport } from '../home-todos'
+import { homeTodos, startOfNextDay, upcomingSteps, type HomeMatch, type HomeTraining, type HomeReport } from '../home-todos'
 
 // TRAK-607: the coach's To-do, one test per row of the 26 Nov rules (TRAK-606). Days are the academy's: Athens, which
 // is UTC+2 in November. Wed 25 Nov 2026 is a training day; Sat 28 Nov a match day.
@@ -211,6 +211,24 @@ describe('the order and the squads', () => {
   it('a cancelled event takes all its to-dos off at once', () => {
     expect(keys('2026-11-25T09:00', { trainings: [training('w', '2026-11-25', { cancelled: true })] })).toEqual([])
     expect(keys('2026-11-28T18:00', { matches: [match('m', '2026-11-28', { cancelled: true })] })).toEqual([])
+  })
+})
+
+describe('upcoming steps (TRAK-610)', () => {
+  const steps = (now: string, trainings: HomeTraining[], matches: HomeMatch[] = [], training = true) =>
+    upcomingSteps({ trainings, matches, now: t(now), zone: Z, training }).map(s => `${s.key}:${s.step}`)
+
+  it('every training and match from tomorrow to 7 days ahead still missing a step, soonest first', () => {
+    const list = steps('2026-11-24T09:00', [training('wed', '2026-11-25', { planned: false }), training('fri', '2026-11-27', { planned: false })],
+      [match('sat', '2026-11-28', { plan: { drafted: true } }), match('dec5', '2026-12-05', { plan: {} })])
+    expect(list).toEqual(['next-training:wed:plan', 'next-training:fri:plan', 'next-match:sat:planDraft'])
+  })
+
+  it('not today, not one with nothing missing, not a cancelled one, and no plans where Training is off', () => {
+    expect(steps('2026-11-25T06:00', [training('w', '2026-11-25', { planned: false })])).toEqual([])
+    expect(steps('2026-11-24T09:00', [training('w', '2026-11-25')], [match('m', '2026-11-28')])).toEqual([])
+    expect(steps('2026-11-24T09:00', [training('w', '2026-11-25', { planned: false, cancelled: true })])).toEqual([])
+    expect(steps('2026-11-24T09:00', [training('w', '2026-11-25', { planned: false })], [], false)).toEqual([])
   })
 })
 

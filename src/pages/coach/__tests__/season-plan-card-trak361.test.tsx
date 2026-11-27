@@ -27,6 +27,8 @@ let watches: Record<string, unknown>[] = []
 let holdPlans: Promise<void> | null = null
 
 const param = (url: URL, key: string) => url.searchParams.get(key)?.replace(/^eq\./, '') ?? null
+const recentlyAssessed = (...ids: string[]) => table('coach_assessments', ids.map(id => ({ squad_player_id: id, coach_user_id: COACH.id,
+  created_at: new Date(Date.now() - 86400_000).toISOString(), published_at: new Date(Date.now() - 86400_000).toISOString() })))
 const child = (id: string, name: string, squad = 'U16') => ({
   id, coach_user_id: COACH.id, player_name: name, age_group: squad, status: 'active', shirt_number: 4, position: 'Defender',
   created_at: '2026-10-01T08:00:00Z', linked_player_id: `child-${id}`,
@@ -239,12 +241,14 @@ describe('TRAK-361 the Season plan card', () => {
     expect(await screen.findByText(/^U14 · /)).toBeInTheDocument()
   }, 30_000)
 
-  it('under All, Needs you’s Set up opens that squad’s plan, not "pick one squad"', async () => {
+  // TRAK-610: the watched player is a suggestion once nobody is due an assessment.
+  it('under All, the watched player’s Set up opens that squad’s plan, not "pick one squad"', async () => {
     squadPlayers = [...squadPlayers, child('uri', 'Uri Synthetic', 'U14')]
+    server.use(recentlyAssessed('pat', 'quinn', 'rae', 'uri'))
     plans = [{ ...shared('plan-16', 'U16'), shared_at: null, last_shared_at: null }, { ...shared('plan-14', 'U14'), shared_at: null, last_shared_at: null }]
     watches = [{ squad_player_id: 'uri', since: new Date(Date.now() - 30 * 86400_000).toISOString() }]
     renderApp('/coach/home')
-    await user().click(await screen.findByRole('button', { name: 'Set up' }))
+    await user().click(await screen.findByRole('button', { name: 'Set up' }, { timeout: 5000 }))
     await waitFor(() => expect(window.location.pathname).toMatch(/^\/coach\/season-plan/))
     expect(await screen.findByText(/^U14 · /)).toBeInTheDocument()
     expect(screen.queryByText('Select one squad in the menu to plan its season.')).toBeNull()

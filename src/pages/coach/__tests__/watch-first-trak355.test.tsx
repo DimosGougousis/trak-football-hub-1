@@ -29,6 +29,8 @@ let ruleWrites: unknown[] = []
 let trainings: { squad: string | null; status: string }[] = []
 
 const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString()
+const recentlyAssessed = (...ids: string[]) => table('coach_assessments', ids.map(id => ({ squad_player_id: id, coach_user_id: COACH.id,
+  created_at: new Date(Date.now() - 86400_000).toISOString(), published_at: new Date(Date.now() - 86400_000).toISOString() })))
 const child = (i: number, name: string, position: string | null): Row => ({
   id: `p${i}`, coach_user_id: COACH.id, player_name: name, age_group: 'U16', status: 'active',
   shirt_number: i, position, created_at: '2026-10-01T08:00:00Z', linked_player_id: `child-${i}`,
@@ -146,9 +148,12 @@ describe('TRAK-355 watch first', () => {
 
   it('when the reminder is due, Home brings the player back; the card opens their sheet, and setting them up ends it', async () => {
     watches = [{ squad_player_id: 'p2', since: daysAgo(15) }]
+    // TRAK-610: a suggestion once nobody is unplaced or due an assessment (the Players jobs' order).
+    squad = squad.map(p => (p.id === 'p1' ? { ...p, position: 'Goalkeeper' } : p))
+    server.use(recentlyAssessed('p1', 'p2', 'p3', 'p4'))
     renderApp('/coach/home')
     // TRAK-494 (Kostas, 20 Nov): the title says why; the line under it, who.
-    const card = await screen.findByText('Watched 2 weeks')
+    const card = await screen.findByText('Watched 2 weeks', {}, { timeout: 5000 })
     expect(screen.getByText('Set Bea up')).toBeInTheDocument()
     expect(card).toBeInTheDocument()
     await user().click(within(card.closest('li, article, section, div[role="listitem"]') ?? document.body).getAllByRole('button', { name: 'Set up' })[0])
@@ -161,20 +166,22 @@ describe('TRAK-355 watch first', () => {
 
     cleanup()
     renderApp('/coach/home')
-    await screen.findByRole('heading', { name: /^Needs you/ })
+    await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
     expect(screen.queryByText('Set Bea up')).toBeNull()
   }, 30_000)
 
-  it('a due player with no position goes back to Positions, their sheet open; the 4-week net brings them', async () => {
+  // TRAK-610: Omar has no position, and placing players comes before a watched player in the Players jobs' order, so
+  // Home suggests Positions first; it holds the watched card back.
+  it('a due player with no position: Home suggests Positions first, which opens Positions', async () => {
     // Four trainings asked for, none attended: only the safety net brings Omar back.
     plan = { ...plan, watch_rule: 't4' }
     trainings = [{ squad: 'U16', status: 'scheduled' }]
     watches = [{ squad_player_id: 'p1', since: daysAgo(29) }]
+    server.use(recentlyAssessed('p1', 'p2', 'p3', 'p4'))
     renderApp('/coach/home')
-    const card = await screen.findByText('Watched 4 weeks')
-    expect(screen.getByText('Set Omar up')).toBeInTheDocument()
-    await user().click(within(card.closest('li, article, section, div[role="listitem"]') ?? document.body).getAllByRole('button', { name: 'Set up' })[0])
+    const row = (await screen.findByText('1 player needs a position', {}, { timeout: 5000 })).closest('li')!
+    expect(screen.queryByText('Watched 4 weeks')).toBeNull()
+    await user().click(within(row).getByRole('button', { name: 'Place them' }))
     await waitFor(() => expect(window.location.pathname).toBe('/coach/season-plan/positions'))
-    expect(await screen.findByRole('dialog', { name: "Omar's position and roles" })).toBeInTheDocument()
   }, 30_000)
 })

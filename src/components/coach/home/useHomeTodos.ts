@@ -4,7 +4,7 @@ import { addDays, format } from 'date-fns'
 import { supabase } from '@/integrations/supabase/client'
 import type { EventRow } from '@/lib/coach-events'
 import { isCancelled } from '@/lib/coach-events'
-import { homeTodos, type HomeMatch, type HomeReport, type HomeTodo, type HomeTraining } from '@/lib/home-todos'
+import { homeTodos, upcomingSteps, type HomeMatch, type HomeReport, type HomeTodo, type HomeTraining } from '@/lib/home-todos'
 import { useGamePlanChanges, useGamePlans, useGameShares } from '@/components/coach/games/useGames'
 import { usePlannedTrainings } from '@/components/coach/training/useTraining'
 import { useAcademyTimeZone } from '@/components/coach/season-plan/useWatching'
@@ -28,7 +28,7 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
   reports: HomeReport[]
   trainingOn: boolean
   gamesOn: boolean
-}): { items: HomeTodoEvent[] | null; day: HomeDay | null; failed: boolean; retry: () => void; refresh: () => void } {
+}): { items: HomeTodoEvent[] | null; upcoming: HomeTodoEvent[] | null; day: HomeDay | null; failed: boolean; retry: () => void; refresh: () => void } {
   const records = useQuery({
     queryKey: ['coach', coachId, 'home-todos', gamesOn, trainingOn],
     enabled: !!coachId,
@@ -80,7 +80,7 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
     || (anyMatch && (plans.isPending || shares.isPending || (sharedIds.length > 0 && changes.isPending)))
   const failed = records.isError || (anyTraining && planned.isError) || (anyMatch && (plans.isError || shares.isError))
 
-  const items = useMemo(() => {
+  const worked = useMemo(() => {
     if (!records.data || waiting) return null
     const { rows, registered, noted, evaluations } = records.data
     const byId = new Map(rows.map(row => [row.id, row]))
@@ -98,9 +98,16 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
         evaluatedAt: evaluation?.saved_at ?? null, publishedAt: evaluation?.published_at ?? null, remindAt: evaluation?.remind_at ?? null,
       }
     })
-    return homeTodos({ trainings, matches, reports, now, zone: zone.zone, inView, training: trainingOn })
-      .map(todo => ({ todo, row: todo.eventId ? byId.get(todo.eventId) ?? null : null }))
+    const withRow = (todo: HomeTodo) => ({ todo, row: todo.eventId ? byId.get(todo.eventId) ?? null : null })
+    return {
+      items: homeTodos({ trainings, matches, reports, now, zone: zone.zone, inView, training: trainingOn }).map(withRow),
+      // TRAK-610: what's still missing this week, for the first suggestion (and Upcoming, TRAK-611).
+      upcoming: upcomingSteps({ trainings, matches, now, zone: zone.zone, inView, training: trainingOn }).map(withRow),
+    }
   }, [records.data, waiting, planned.data, plans.data, shares.data, changes.data, reports, now, zone.zone, inView, trainingOn, gamesOn])
+
+  const items = worked?.items ?? null
+  const upcoming = worked?.upcoming ?? null
 
   // The clock moves Home on by itself: at the next time a button opens or a to-do leaves (a match's plan at kick-off,
   // TRAK-287), and at least once a minute.
@@ -126,7 +133,7 @@ export function useHomeTodos({ coachId, inView, reports, trainingOn, gamesOn }: 
   }, [records.data, inView, zone.zone, now])
 
   return {
-    items, day, failed,
+    items, upcoming, day, failed,
     retry: () => { void records.refetch(); void planned.refetch(); void plans.refetch(); void shares.refetch() },
     refresh: () => { void records.refetch() },
   }
