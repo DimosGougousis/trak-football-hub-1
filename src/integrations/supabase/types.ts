@@ -2690,6 +2690,33 @@ export type Database = {
         }
         Returns: string
       }
+      post_announcement: {
+        Args: { p_body: string; p_got_it_by?: string; p_link?: string; p_squad: string }
+        Returns: string
+      }
+      withdraw_announcement: { Args: { p_id: string }; Returns: undefined }
+      coach_announcements: {
+        Args: never
+        Returns: {
+          body: string
+          got_it_by: string | null
+          id: string
+          link: string | null
+          published_at: string
+          squad: string
+          withdrawn_at: string | null
+        }[]
+      }
+      my_announcements: {
+        Args: { p_child?: string }
+        Returns: {
+          body: string
+          id: string
+          link: string | null
+          published_at: string
+          time_zone: string
+        }[]
+      }
       watch_players:{ Args: { p_squad_player_ids: string[] }; Returns: number }
       take_event_register: {
         Args: { p_event_id: string; p_present: string[] }
