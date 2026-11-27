@@ -138,7 +138,7 @@ describe('retained coach entry points', () => {
     expect(screen.queryByRole('button', { name: /add players to your squad/i })).toBeNull()
     cleanup()
     renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: 'Squad shape' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /add players to your squad/i })).toBeNull()
     // TRAK-72: the coach invite code is gone from Home.
     expect(screen.queryByText(/TRK-/)).toBeNull()

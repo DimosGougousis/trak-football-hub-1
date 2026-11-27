@@ -214,6 +214,14 @@ describe('the order and the squads', () => {
   })
 })
 
+describe('where Training is off (TRAK-608)', () => {
+  it('a training asks only for its register: no plan, no notes, no next plan', () => {
+    const off = (now: string, trainings: HomeTraining[]) => homeTodos({ trainings, matches: [], now: t(now), zone: Z, training: false }).map(todo => todo.key)
+    expect(off('2026-11-25T09:00', [training('w', '2026-11-25', { planned: false })])).toEqual(['register:w'])
+    expect(off('2026-11-23T08:00', [training('w', '2026-11-25', { planned: false })])).toEqual([])
+  })
+})
+
 describe("the academy's midnight", () => {
   it('is the next day at 00:00, also across a clock change', () => {
     expect(startOfNextDay(t('2026-11-25T10:00'), Z)).toBe(t('2026-11-26T00:00'))

@@ -88,22 +88,27 @@ describe('TRAK-284: plan drafts on Games home and in Needs you', { timeout: 30_0
     expect(window.location.pathname).toBe('/coach/matches/g1')
   })
 
-  it('Needs you lists a shared match kicking off within 7 days: "Plan not shared · Write plan"', async () => {
-    server.use(table('coach_calendar_events', [
-      game('g1', 'Parkview Athletic', 3), game('g2', 'Riverside Rovers', 8), game('g3', 'Harbour Town', 2, { published: false }),
-    ]))
+  // TRAK-608: on a day with no events, the To-do takes the next match's next step; the rest wait in Upcoming (TRAK-611).
+  it('the To-do takes the next match within 7 days: "Write the plan for Parkview Athletic · Write plan"', async () => {
+    server.use(table('coach_calendar_events', [game('g1', 'Parkview Athletic', 3), game('g2', 'Riverside Rovers', 8)]))
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    const card = (await within(needs).findByText('vs Parkview Athletic')).closest('li')!
-    expect(within(card).getByText('Plan not shared')).toBeInTheDocument()
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    const card = (await within(todo).findByText('Write the plan for Parkview Athletic', {}, { timeout: 5000 })).closest('li')!
     // TRAK-333: a split button, as every match action.
     await userEvent.click(within(card).getByRole('button', { name: 'Write plan' }))
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/coach/matches/g1?tab=plan'))
-    expect(within(needs).queryByText('vs Riverside Rovers')).toBeNull()
-    expect(within(needs).queryByText('vs Harbour Town')).toBeNull()
+    expect(within(todo).queryByText(/Riverside Rovers/)).toBeNull()
   })
 
-  it('with the games switch off, Needs you has no plan cards', async () => {
+  it("a draft match coming first asks for its logistics to be shared", async () => {
+    server.use(table('coach_calendar_events', [game('g1', 'Parkview Athletic', 3), game('g3', 'Harbour Town', 2, { published: false })]))
+    renderApp('/coach/home')
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    expect(await within(todo).findByText('Share logistics for Harbour Town', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(todo).queryByText(/Parkview Athletic/)).toBeNull()
+  })
+
+  it('with the games switch off, the To-do has no match', async () => {
     server.use(
       rpc('feature_on', ({ p_feature }) => p_feature === 'events'),
       table('coach_calendar_events', [game('g1', 'Parkview Athletic', 3)]),
@@ -111,6 +116,6 @@ describe('TRAK-284: plan drafts on Games home and in Needs you', { timeout: 30_0
     renderApp('/coach/home')
     const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
     await within(needs).findByRole('button', { name: /Angelos Charisteas/ })
-    expect(within(needs).queryByText('Plan not shared')).toBeNull()
+    expect(within(screen.getByRole('region', { name: 'To-do' })).queryByText(/Parkview Athletic/)).toBeNull()
   })
 })

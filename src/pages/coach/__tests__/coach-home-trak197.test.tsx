@@ -67,12 +67,13 @@ afterEach(() => { vi.useRealTimers(); cleanup(); forgetScreens(); localStorage.c
 
 // TRAK-466: these tests wait up to 5 s for Home's first load, so each needs more than the default 5 s.
 describe('Home under the header (Imad, 23 Oct: no role and academy line)', { timeout: 20_000 }, () => {
-  it('has no role or academy line, no greeting, no chips and no season card', async () => {
+  // TRAK-608 (Kostas, 26 Nov): the new Home greets the coach by first name, as its mockup.
+  it('has no role or academy line, no chips and no season card; it greets the coach by first name', async () => {
     home({ players: [player('a', 'Ade Okafor')], assessments: [{ squad_player_id: 'a', created_at: daysAgo(1) }], present: cameToAll('a') })
     renderApp('/coach/home')
-    expect(await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByText(/Head Coach|Synthetic Athens/)).toBeNull()
-    expect(screen.queryByText(/^Good (morning|afternoon|evening)/)).toBeNull()
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening), Angelos$/ })).toBeInTheDocument()
     expect(screen.queryByText('Active')).toBeNull()
     for (const gone of ['THIS SEASON', 'Players in squad', 'Squad bands', 'RECENT ASSESSMENTS', 'Squad Overview', 'Coach Assistant']) {
       expect(screen.queryByText(gone)).toBeNull()
@@ -183,7 +184,7 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
   it('has no Assess a player or Log a match card: the "+" covers both', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
     renderApp('/coach/home')
-    expect(await screen.findByRole('heading', { name: 'Squad shape' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Assess a player' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Log a match or training' })).toBeNull()
     expect(screen.queryByRole('region', { name: /Player overview|Feedback and assessment/ })).toBeNull()
@@ -205,12 +206,14 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
   it('Needs you leaves Home when the coach turns it off in Settings', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a'), settings: [{ user_id: COACH.id, event_reminders: true, needs_you: false, cant_make_it_alerts: true }] })
     renderApp('/coach/home')
-    expect(await screen.findByText(/No assessments this month or last/, {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('region', { name: /Needs you/ })).toBeNull())
     expect(screen.queryByRole('button', { name: /Ade Okafor/ })).toBeNull()
   })
 
-  it('Imad, 24 Oct: an event waiting for its register or match log is in Needs you too, with its next step', async () => {
+  // TRAK-608 (New Home 2/8): an event waiting for the coach is a to-do now, with the week's own next step; Needs you
+  // keeps only its player cards.
+  it('an event waiting for its register is a to-do, with Take register; Needs you lists no events', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
     const event = (id: string, event_type: string, title: string, event_date: string, opponent: string | null = null) => ({
       id, coach_user_id: COACH.id, event_type, title, opponent, event_date, start_time: '17:00:00', end_time: '18:30:00',
@@ -218,15 +221,15 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     })
     server.use(table('coach_calendar_events', [event('ev-tr', 'training', 'Tactical', '2026-11-29'), event('ev-m', 'match', 'League', '2026-11-28', 'Rovers')]))
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    // TRAK-493: the training ended on 29 Nov, so it says "Finished" alone, never "Started, no register yet".
-    expect(await within(needs).findByText('Finished', {}, { timeout: 5000 })).toBeInTheDocument()
-    expect(within(needs).queryByText(/Started|no register yet/)).toBeNull()
-    expect(within(needs).getByRole('button', { name: 'Take register' })).toBeInTheDocument()
-    expect(within(needs).getByText('Played')).toBeInTheDocument()
-    // TRAK-499 (Imad, 20 Nov): no "Log it" into the old match log, even with Matches off.
-    expect(within(needs).queryByRole('button', { name: 'Log it' })).toBeNull()
-    expect(within(needs).getByText('Match vs Rovers')).toBeInTheDocument()
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    // Yesterday's training ended, so its register is owed, and urgent.
+    expect(await within(todo).findByText('Take the register', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(todo).getByRole('button', { name: 'Take register' })).toBeInTheDocument()
+    expect(within(todo).getByText('Urgent')).toBeInTheDocument()
+    // With Matches off, a played match asks nothing here, and there's never a "Log it" (TRAK-499).
+    expect(screen.queryByRole('button', { name: 'Log it' })).toBeNull()
+    const needs = await screen.findByRole('region', { name: /Needs you/ })
+    expect(within(needs).queryByText(/Tactical|Rovers/)).toBeNull()
   })
 
   it("a draft families can't see yet has its own card, which opens the player", async () => {
@@ -240,24 +243,12 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     await waitFor(() => expect(window.location.pathname).toBe('/coach/squad/player/a'))
   })
 
-  it('Squad shape says so when nothing was assessed this month or last', async () => {
+  it('Squad shape has left Home (TRAK-608)', async () => {
     home({ players: [player('a', 'Ade Okafor')], present: cameToAll('a') })
     renderApp('/coach/home')
-    expect(await screen.findByText(/No assessments this month or last/, {}, { timeout: 5000 })).toBeInTheDocument()
-  })
-
-  it('Squad shape names only the squad, with no band chips (Imad, 23 Oct)', async () => {
-    const rating = { work_rate: 8, technical: 8, physical: 8, coachability: 8, attitude: 8, tactical: 8 }
-    home({ players: [player('a', 'Ade Okafor'), player('b', 'Bo Lind')], present: cameToAll('a', 'b'), assessments: [
-      { squad_player_id: 'a', coach_user_id: COACH.id, created_at: daysAgo(2), published_at: daysAgo(2), coach_rating: 8.2, ...rating },
-      { squad_player_id: 'b', coach_user_id: COACH.id, created_at: daysAgo(3), published_at: daysAgo(3), coach_rating: 8.4, ...rating },
-    ] })
-    renderApp('/coach/home')
-    const shape = await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })
-    expect(await within(shape).findByText('U16')).toBeInTheDocument()
-    expect(within(shape).queryByText(/this month against last/)).toBeNull()
-    expect(within(shape).queryByRole('list', { name: 'Players per band' })).toBeNull()
-    expect(within(shape).queryByText('Good')).toBeNull()
+    expect(await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Squad shape' })).toBeNull()
+    expect(screen.queryByText(/No assessments this month or last/)).toBeNull()
   })
 
   it('opens on All, every squad; a squad tapped shows only it and is remembered (TRAK-305)', async () => {
@@ -267,20 +258,9 @@ describe('TRAK-262: coach Home', { timeout: 20_000 }, () => {
     expect(await within(needs).findByRole('button', { name: /Ade Okafor/ })).toBeInTheDocument()
     expect(within(needs).getByRole('button', { name: /Bo Lind/ })).toBeInTheDocument()
     await expectSquadPicked('All')
-    expect(within(screen.getByRole('region', { name: 'Squad shape' })).getByText('All squads')).toBeInTheDocument()
     await pickSquad('U16')
     await waitFor(() => expect(within(needs).queryByRole('button', { name: /Ade Okafor/ })).toBeNull())
     expect(localStorage.getItem(`trak:coach-squad:${COACH.id}`)).toBe('U16')
     expect(localStorage.getItem(`trak:coach-squad-all:${COACH.id}`)).toBe('0')
-  })
-
-  it('Squad shape names the squad picked in the header', async () => {
-    home({ players: [player('u14', 'Ade Okafor', 'U14'), player('u16', 'Bo Lind', 'U16')], present: cameToAll('u14', 'u16') })
-    localStorage.setItem(`trak:coach-squad:${COACH.id}`, 'U16')
-    renderApp('/coach/home')
-    const shape = await screen.findByRole('region', { name: 'Squad shape' }, { timeout: 5000 })
-    expect(await within(shape).findByText('All squads')).toBeInTheDocument()
-    await pickSquad('U14')
-    expect(await within(shape).findByText('U14')).toBeInTheDocument()
   })
 })

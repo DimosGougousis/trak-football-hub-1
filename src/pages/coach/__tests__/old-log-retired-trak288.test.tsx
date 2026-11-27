@@ -166,19 +166,20 @@ describe('TRAK-288: with Games on, the evaluation replaces the match log', { tim
   it('Home: a played match needs an evaluation; once a draft is saved, publishing it is next', async () => {
     fixtures()
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByText('Played')).toBeInTheDocument()
-    await userEvent.click(within(needs).getByRole('button', { name: 'Evaluate' }))
+    // TRAK-608: the evaluation is a to-do now.
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    expect(await within(todo).findByText('Evaluate the game', {}, { timeout: 5000 })).toBeInTheDocument()
+    await userEvent.click(within(todo).getByRole('button', { name: 'Evaluate' }))
     await waitFor(() => expect(path()).toBe('/coach/matches/match-1?tab=evaluation'))
   })
 
   it('Home: with a draft saved, the card says so and offers Publish', async () => {
     fixtures({ evaluated: true })
     renderApp('/coach/home')
-    const needs = await screen.findByRole('region', { name: /Needs you/ }, { timeout: 5000 })
-    expect(await within(needs).findByText('Evaluation draft · only you see it')).toBeInTheDocument()
-    expect(within(needs).queryByRole('button', { name: 'Log it' })).toBeNull()
-    await userEvent.click(within(needs).getByRole('button', { name: 'Publish' }))
+    const todo = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    expect(await within(todo).findByText('Publish the evaluation', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Log it' })).toBeNull()
+    await userEvent.click(within(todo).getByRole('button', { name: 'Publish' }))
     await waitFor(() => expect(path()).toBe('/coach/matches/match-1?tab=evaluation'))
   })
 })

@@ -117,14 +117,15 @@ afterEach(() => { cleanup(); forgetScreens(); localStorage.clear(); server.event
 const user = () => userEvent.setup()
 
 describe('TRAK-364 Home', () => {
-  it('one Reports ready card in place of the per-player Assess cards; a missed date stays due', async () => {
+  // TRAK-608: Reports ready is a to-do now, urgent once its day has passed.
+  it('one Reports ready to-do in place of the per-player Assess cards; a missed date stays due', async () => {
     const { due, today } = expected()
     expect(due.dueOn).not.toBeNull()
     expect(due.since! < today).toBe(true)
     renderApp('/coach/home')
-    const section = (await screen.findByText('Reports ready')).closest('section')!
-    expect(within(section).getByText(evalDay(due.since!))).toBeInTheDocument()
+    const section = (await screen.findByText('Reports ready', {}, { timeout: 5000 })).closest('section')!
     expect(within(section).getByText(`Due since ${evalDay(due.since!)}.`)).toBeInTheDocument()
+    expect(within(section).getByText('Urgent:')).toBeInTheDocument()
     // Quinn was never assessed: elsewhere an Assess card; here the evaluation covers him.
     expect(within(section).queryByText('Quinn Synthetic')).toBeNull()
     expect(within(section).queryByText(/Never assessed/)).toBeNull()
