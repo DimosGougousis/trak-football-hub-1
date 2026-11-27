@@ -146,6 +146,20 @@ describe('TRAK-608: the To-do on coach Home', { timeout: 20_000 }, () => {
     expect(rows.length).toBeGreaterThanOrEqual(2)
   })
 
+  // TRAK-615 (Kostas, live check of 27 Nov): two to-dos with the same title say which event each is for.
+  it("two matches to evaluate and a training's notes each name their event and day", async () => {
+    home({ events: [
+      event('m1', 'match', '2026-11-01T10:00', { title: 'League', opponent: 'Parkview Athletic' }),
+      event('m2', 'match', '2026-11-02T10:00', { title: 'League', opponent: 'Parkview Athletic' }),
+      event('t3', 'training', '2026-11-03T10:00', { title: 'Finishing' }),
+    ], practices: [practice('t3', 1, 'Rondos 4v1', 15)] })
+    renderApp('/coach/home')
+    const list = await screen.findByRole('region', { name: 'To-do' }, { timeout: 5000 })
+    expect(await within(list).findByText('vs Parkview Athletic · Sun 1 Nov', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(within(list).getByText('vs Parkview Athletic · Mon 2 Nov')).toBeInTheDocument()
+    expect(within(list).getAllByText(/^Finishing · Tue 3 Nov · \d\d:\d\d$/).length).toBeGreaterThan(0)
+  })
+
   it('with Training and Games off, a training asks only for its register', async () => {
     home({ events: [event('t1', 'training', '2026-11-04T16:00')], features: ['events'] })
     renderApp('/coach/home')
