@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { MobileShell } from '@/components/trak'
@@ -14,7 +14,6 @@ import { useRemoveTodo, useSetUrgent } from '@/components/coach/home/useOwnTodos
 import { applyOrder } from '@/lib/home-todos'
 import { toast } from 'sonner'
 import { UpcomingWeek } from '@/components/coach/home/UpcomingWeek'
-import type { OwedEvent } from '@/components/coach/home/NeedsYou'
 import { SeasonPlanCard } from '@/components/coach/home/SeasonPlanCard'
 import { planSquad } from '@/lib/season-plan'
 import { useFeature } from '@/components/trak/parked'
@@ -38,6 +37,9 @@ import { PageTitle, PageTop } from '@/components/coach/PageTop'
    "Log a match" left: the "+" has both. TRAK-266: no onboarding for now (Imad, 22 Oct).
    Imad, 23 Oct: no role and academy line under the header. TRAK-304 (Kostas, 28 Oct): where Training or Games is
    switched on, Today (that day's training or game plan) takes Squad shape's place; on a phone it comes first. */
+
+/** A Players job's card: positions, a watched player back, a stuck objective (TRAK-610's suggestions). */
+type OwedEvent = { id: string; title: string; when: string; squad: string | null; reason: string; action: ReactNode }
 
 export default function CoachHomePage() {
   const { user, profile } = useAuth()

@@ -336,7 +336,6 @@ function AccountSettings({ userId }: { userId: string }) {
       id: 'notifications', label: t('settings:notifications'), icon: Bell,
       content: <SettingsRows>
         <NotificationSwitch userId={userId} column="cant_make_it_alerts" words="cantMakeIt" />
-        <NotificationSwitch userId={userId} column="needs_you" words="needsYou" />
       </SettingsRows>,
     }] : (role === 'parent' || (role === 'player' && !childLogin)) ? [{
       id: 'notifications', label: t('settings:notifications'), icon: Bell,
@@ -450,7 +449,8 @@ function ParentConsent() {
 
 /* ------- notifications ------- */
 
-type SwitchColumn = 'event_reminders' | 'cant_make_it_alerts' | 'needs_you'
+// TRAK-614: Needs you left Home (TRAK-610), so its switch left too; notification_settings.needs_you stays, unread.
+type SwitchColumn = 'event_reminders' | 'cant_make_it_alerts'
 
 /**
  * TRAK-136 (J8.13): the one place reminders are turned off. There is no
@@ -464,7 +464,7 @@ function EventReminders({ userId }: { userId: string }) {
 
 /** One switch on the person's own notification_settings row (TRAK-136; TRAK-261 adds the coach's two). */
 /** TRAK-406: `words` names the switch's words in settings.json: its label, its hint, and the noun its messages use. */
-function NotificationSwitch({ userId, column, words }: { userId: string; column: SwitchColumn; words: 'cantMakeIt' | 'needsYou' | 'eventReminders' }) {
+function NotificationSwitch({ userId, column, words }: { userId: string; column: SwitchColumn; words: 'cantMakeIt' | 'eventReminders' }) {
   const { t } = useTranslation()
   const label = t(`settings:${words}`)
   const hint = t(`settings:${words}Hint`)

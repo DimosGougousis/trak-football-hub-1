@@ -75,8 +75,9 @@ describe('settings controls reflect supported behavior', () => {
       expect(screen.getAllByRole('switch')).toHaveLength(1)
     } else if (role === 'coach') {
       expect(await screen.findByRole('switch', { name: "Can't make it" })).toBeChecked()
-      expect(await screen.findByRole('switch', { name: 'Needs you' })).toBeChecked()
-      expect(screen.getAllByRole('switch')).toHaveLength(2)
+      // TRAK-614: Needs you left Home, and its switch left Settings.
+      expect(screen.queryByRole('switch', { name: 'Needs you' })).toBeNull()
+      expect(screen.getAllByRole('switch')).toHaveLength(1)
     } else {
       expect(screen.queryByRole('switch')).not.toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Notifications' })).not.toBeInTheDocument()
@@ -241,11 +242,9 @@ describe("Settings on Arc's settings page", () => {
       return HttpResponse.json(body, { status: 201 })
     }))
     mount()
-    fireEvent.click(await screen.findByRole('switch', { name: 'Needs you' }))
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Needs you' })).not.toBeChecked())
-    expect(screen.getByRole('switch', { name: "Can't make it" })).toBeChecked()
-    expect(saves).toEqual([{ user_id: 'settings-user', needs_you: false }])
-    expect(state.success).toHaveBeenCalledWith('Needs you off')
+    fireEvent.click(await screen.findByRole('switch', { name: "Can't make it" }))
+    await waitFor(() => expect(screen.getByRole('switch', { name: "Can't make it" })).not.toBeChecked())
+    expect(saves).toEqual([{ user_id: 'settings-user', cant_make_it_alerts: false }])
   })
 })
 

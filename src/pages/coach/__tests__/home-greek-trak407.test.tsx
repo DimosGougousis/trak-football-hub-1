@@ -3,8 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { i18n, showLanguage, SOURCE_LANGUAGE } from '@/lib/i18n'
 import { coachWeek, squadName } from '@/lib/coach-week'
 import { needsYou } from '@/lib/coach-needs-you'
-import { NeedsYou } from '@/components/coach/home/NeedsYou'
-import { SquadShape } from '@/components/coach/home/SquadShape'
+import { TodoList } from '@/components/coach/home/TodoList'
 import { LoadError } from '@/components/trak/LoadError'
 import type { EventRow } from '@/lib/coach-events'
 
@@ -47,23 +46,22 @@ describe('TRAK-407: the coach\'s Home in Greek', () => {
     expect(i18n.t('coachHome:needPosition', { count: 3 })).toBe('3 παίκτες χρειάζονται θέση')
   })
 
-  it('shows Needs you, Squad shape and a failed load in Greek', async () => {
+  // TRAK-614: the To-do took Needs you's and Squad shape's place.
+  it('shows the To-do and a failed load in Greek', async () => {
     await showLanguage('el')
     render(<>
-      <NeedsYou items={[]} failed={false} onRetry={() => {}} onOpen={() => {}} />
-      <SquadShape squadLabel="U14" shape={{ thisMonth: null, lastMonth: null } as never} failed={false} onRetry={() => {}} />
+      <TodoList items={[]} failed={false} onRetry={() => {}} coachId="c" showSquad={false} onChanged={() => {}} onOpenReports={() => {}} />
       <LoadError what={i18n.t('coachHome:weekWhat')} onRetry={() => {}} />
     </>)
-    expect(screen.getByRole('heading', { name: /Σε εκκρεμότητα/ })).toBeInTheDocument()
-    expect(screen.getByText(/Όλα τα παρουσιολόγια και οι καταγραφές έχουν γίνει/)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Εικόνα ομάδας' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Εκκρεμότητες' })).toBeInTheDocument()
+    expect(screen.getByText('Τίποτα για σήμερα.')).toBeInTheDocument()
     expect(screen.getByText('Δεν μπορέσαμε να φορτώσουμε αυτή την εβδομάδα αυτή τη στιγμή. Τα στοιχεία σας δεν άλλαξαν.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ξανά' })).toBeInTheDocument()
   })
 
   it('keeps English as it was', () => {
-    render(<NeedsYou items={[]} failed={false} onRetry={() => {}} onOpen={() => {}} />)
-    expect(screen.getByRole('heading', { name: /Needs you/ })).toBeInTheDocument()
-    expect(screen.getByText('Every register and log is in, every player is assessed and no draft is waiting.')).toBeInTheDocument()
+    render(<TodoList items={[]} failed={false} onRetry={() => {}} coachId="c" showSquad={false} onChanged={() => {}} onOpenReports={() => {}} />)
+    expect(screen.getByRole('heading', { name: 'To-do' })).toBeInTheDocument()
+    expect(screen.getByText('Nothing to do today.')).toBeInTheDocument()
   })
 })
