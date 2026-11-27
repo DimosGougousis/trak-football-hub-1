@@ -98,7 +98,8 @@ describe('TRAK-176: one coach, two squads', { timeout: 20_000 }, () => {
     expect(await screen.findByText('Ade Okafor', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Squad: / })).toBeNull()
     await userEvent.click(screen.getByRole('tab', { name: 'Home' }))
-    expect(await screen.findByRole('heading', { name: 'Angelos Basinas' })).toBeInTheDocument()
+    // TRAK-616: Home's heading is the greeting, with the first name.
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Angelos$/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Squad: / })).toBeNull()
   })
 
