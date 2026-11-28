@@ -1,6 +1,6 @@
 ---
 version: 1
-status: provisional      # confirmed once the "Assumed: confirm" table is empty
+status: confirmed        # provisional again while the "Assumed: confirm" table has rows
 owner: Product (owner of the TRAK-768 design standard)
 updated: 2026-11-28
 ---
@@ -75,13 +75,10 @@ the only filled `primary` button in that view state.
 
 | Screen | 1st | 2nd | 3rd | Main action |
 |---|---|---|---|---|
-| Coach Home `/coach/home` | Today (the next session or match) | Needs you | Squad | The top "Needs you" next step |
+| Coach Home `/coach/home` | Today (the next session or match) | Needs you | Squad | The top "Needs you" next step; the other rows' steps are `secondary` |
 | Coach assess `/coach/assess` | The player being assessed | The rating inputs | The note to the player | Save the assessment |
 | Parent consent `/parent/consent` | What is being agreed to | The choices | Who sees what | Give consent |
 | Parent Home `/parent/home` | The child's latest message and band from the coach | The next event | Alerts | none (a reading screen) |
-
-Every row is provisional; see the table at the end of this file.
-
 ## §8 Discipline budgets
 
 | Count, per view state | Budget |
@@ -121,12 +118,12 @@ See `docs/design-system/components.md`. New and changed screens use the shared p
 | 2026-11-28 | Intent: clear & practical, calm & trustworthy, never cluttered | Pilot users are coaches mid-session and parents giving consent |
 | 2026-11-28 | Section labels stay uppercase but readable: the standard's 12 px bold, 0.12em, `ink-3` | The 8–9 px labels were below readable size |
 | 2026-11-28 | TRAK-768 values win over any value proposed here | One source per value |
+| 2026-11-28 | The eye orders and main actions in §7 for coach Home, coach assess, parent consent and parent Home | One clear next step per key pilot screen (TRAK-628) |
+| 2026-11-28 | Coach Home's "Needs you": only the top row's step is `primary`, the others are `secondary`; no exception | One main action per view state (TRAK-628) |
+| 2026-11-28 | Budgets: ≤ 2 buttons per card, ≤ 6 sections per page, ≤ 5 text sizes per view | Never cluttered, as counts (TRAK-628) |
+| 2026-11-28 | Motion is fades of 200 ms or less only; the 0.4 s `fade-in` slide and the error `shake` are out | Calm (TRAK-628) |
 
 ## Assumed: confirm
 
-| § | Assumed value | Alternative | Confirm? |
-|---|---|---|---|
-| §7 | The four eye orders and main actions above | Your own order per screen | ☐ |
-| §7 / §8 | Coach Home's "Needs you" gives every row a filled `primary` button. Under §8, only the top row keeps it and the others become `secondary` | Allow one `primary` per "Needs you" row as a declared exception | ☐ |
-| §8 | Buttons per card ≤ 2, sections per page ≤ 6, text sizes per view ≤ 5 | Other counts | ☐ |
-| §1 | Motion ≤ 200 ms fades, no other movement | Allow the existing `fade-in` slide (0.4 s) and `shake` on errors | ☐ |
+None. An agent that picks a value the owner hasn't given adds a row here (§, assumed value, alternative), and the
+status goes back to provisional until the owner confirms it.
