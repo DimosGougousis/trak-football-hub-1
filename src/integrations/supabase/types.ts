@@ -680,6 +680,7 @@ export type Database = {
       }
       coach_todos: {
         Row: {
+          calendar_event_id: string | null
           coach_user_id: string
           created_at: string
           done_at: string | null
@@ -690,6 +691,7 @@ export type Database = {
           urgent: boolean
         }
         Insert: {
+          calendar_event_id?: string | null
           coach_user_id?: string
           created_at?: string
           done_at?: string | null
@@ -700,6 +702,7 @@ export type Database = {
           urgent?: boolean
         }
         Update: {
+          calendar_event_id?: string | null
           coach_user_id?: string
           created_at?: string
           done_at?: string | null
@@ -709,7 +712,15 @@ export type Database = {
           updated_at?: string
           urgent?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coach_todos_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "coach_calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_absences: {
         Row: {
