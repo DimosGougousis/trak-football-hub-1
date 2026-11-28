@@ -212,5 +212,7 @@
   "eventTodoAddedFor": "Προστέθηκε. Εμφανίζεται στις εκκρεμότητές σου από {{day}}.",
   "eventTodoTaken": "Αυτό το γεγονός είναι ήδη στις εκκρεμότητές σου.",
   "eventTodoFailed": "Δεν προστέθηκε. Δοκίμασε ξανά.",
-  "eventTodoInFrom": "Στις εκκρεμότητες · {{day}}"
+  "eventTodoInFrom": "Στις εκκρεμότητες · {{day}}",
+  "upcomingOther": "Άλλα",
+  "upcomingOtherSub": "από σήμερα"
 }
