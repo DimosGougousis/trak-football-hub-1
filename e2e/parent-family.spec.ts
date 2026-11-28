@@ -197,7 +197,9 @@ test.describe('TRAK-171 Home follow-ups', () => {
           // TRAK-286: no game plan, shared or not.
           'game_plans', 'game_shares', 'game_evaluations', 'game_evaluation_players', 'game_evaluation_notes', 'game_for_family', 'game_for_player', 'game_review_for_family', 'game_review_for_player', 'training_plans', 'training_plan_practices', 'training_notes',
           // TRAK-612, TRAK-613: the coach's own to-dos and their order on Home; none.
-          'coach_todos', 'coach_home_order'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
+          'coach_todos', 'coach_home_order',
+          // TRAK-617: the players' drawn faces (the squad's chosen hair); none chosen.
+          'squad_player_profiles'].some(name => url.pathname === `/rest/v1/${name}`)) return json([])
         unexpected.push(`${req.method()} ${url.pathname}`)
         return route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"Unmocked request blocked"}' })
       })
