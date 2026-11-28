@@ -212,5 +212,7 @@
   "eventTodoAddedFor": "Added. It shows in your To-do from {{day}}.",
   "eventTodoTaken": "This event is already in your To-do.",
   "eventTodoFailed": "Couldn't add it. Try again.",
-  "eventTodoInFrom": "In To-do · {{day}}"
+  "eventTodoInFrom": "In To-do · {{day}}",
+  "upcomingOther": "Other",
+  "upcomingOtherSub": "from today"
 }
