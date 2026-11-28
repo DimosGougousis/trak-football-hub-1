@@ -76,7 +76,9 @@ export type HomeMatch = {
 }
 
 /** TRAK-612: one of the coach's own to-dos (coach_todos): its text, the academy day it's for, and when it was ticked. */
-export type HomeOwnTodo = { id: string; title: string; dueOn: string; urgent: boolean; doneAt: string | null; createdAt: string }
+export type HomeOwnTodo = { id: string; title: string; dueOn: string; urgent: boolean; doneAt: string | null; createdAt: string
+  /** TRAK-622: the event it was added from (Add to To-do), or null. */
+  eventId?: string | null }
 
 /** A squad whose report day has come (TRAK-364, TRAK-531): `since` is the academy day it fell due. */
 export type HomeReport = { squad: string; since: string }
