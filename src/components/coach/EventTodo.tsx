@@ -2,8 +2,12 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { BottomSheet } from '@/components/arc/bottom-sheet/bottom-sheet'
 import { Button, type ButtonSize, type ButtonVariant } from '@/components/arc/button/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { isCancelled, type EventRow } from '@/lib/coach-events'
+import { phoneEventTime } from '@/lib/event-time'
 import { evalDay } from '@/lib/evaluation'
+import { venueParts } from '@/lib/venue-link'
+import { dayIn } from '@/lib/watch-first'
+import { useAcademyTimeZone } from './season-plan/useWatching'
 import { useTranslation } from '@/lib/i18n'
 import { EVENT_TODO_ACTIONS, EVENT_TODO_WHENS, dueOn, firstWhen, openEventTodos, whenOffered, wordsMax,
   type EventTodoAction, type EventTodoWhen } from '@/lib/event-todo'
@@ -17,11 +21,44 @@ import { useAddTodo, useOwnTodos } from './home/useOwnTodos'
 /** The event, as the pop-up shows it. `day` is the academy's day (YYYY-MM-DD); `time` is HH:mm. */
 export type TodoEvent = { id: string; title: string; day: string; time: string | null; venue: string | null }
 
+
+/** TRAK-623: whether an event offers Add to To-do: an "Other" event of the coach's own, not cancelled and not over (its
+ *  end has passed, or, with no end, its day has). Trainings and matches reach the To-do with their own steps. */
+export function offersEventTodo(row: Pick<EventRow, 'event_type' | 'status' | 'starts_at' | 'ends_at' | 'event_date'> & { coach_user_id?: string },
+  coachId: string | undefined, zone: string, now = Date.now()): boolean {
+  // The screens read only the coach's own events; a row that says whose it is must be theirs (TRAK-621's rule).
+  if (row.event_type !== 'other' || isCancelled(row) || !coachId || (row.coach_user_id && row.coach_user_id !== coachId) || !row.starts_at) return false
+  return row.ends_at ? Date.parse(row.ends_at) > now : eventDay(row, zone) >= dayIn(zone, new Date(now))
+}
+
+/** The event's academy day: its own date, or, for an old row without one, the day its start falls on there. */
+const eventDay = (row: Pick<EventRow, 'starts_at' | 'event_date'>, zone: string) => row.event_date || dayIn(zone, new Date(row.starts_at))
+
+/** TRAK-623: an event as the pop-up shows it: its academy day, its time, and its venue without a Maps link. */
+export function todoEventOf(row: Pick<EventRow, 'id' | 'title' | 'starts_at' | 'event_date' | 'start_time' | 'venue'>, zone: string): TodoEvent {
+  return { id: row.id, title: row.title, day: eventDay(row, zone), time: phoneEventTime(row).time,
+    venue: row.venue ? venueParts(row.venue).text || null : null }
+}
+
 /** The coach's events already In To-do, and the day each shows from. */
-export function useEventTodos() {
-  const { user } = useAuth()
-  const own = useOwnTodos(user?.id)
+export function useEventTodos(coachId: string | undefined) {
+  const own = useOwnTodos(coachId)
   return useMemo(() => openEventTodos(own.data ?? []), [own.data])
+}
+
+/** TRAK-623: Add to To-do for an event row, where it's offered (an "Other" event of the coach's, not cancelled or over),
+ *  or In To-do once added; nothing otherwise. Screens render it only for "Other" events, so no other event asks for the
+ *  coach's to-dos or the academy's time zone. */
+export function EventTodoSlot({ row, coachId, variant, size }: {
+  row: Parameters<typeof offersEventTodo>[0] & Parameters<typeof todoEventOf>[0]
+  coachId: string | undefined
+  variant?: ButtonVariant
+  size?: ButtonSize
+}) {
+  const open = useEventTodos(coachId)
+  const { zone } = useAcademyTimeZone(coachId)
+  if (!offersEventTodo(row, coachId, zone)) return null
+  return <EventTodoButton event={todoEventOf(row, zone)} today={dayIn(zone, new Date())} inTodo={open.get(row.id)} variant={variant} size={size} />
 }
 
 const ACTION_WORD = { invite: 'coachHome:eventTodoInvite', there: 'coachHome:eventTodoThere', bring: 'coachHome:eventTodoBring', else: 'coachHome:eventTodoElse' } as const
