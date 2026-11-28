@@ -22,6 +22,7 @@ import { LoadingSkeleton } from '@/components/trak/LoadingSkeleton'
 import { i18n, useTranslation } from '@/lib/i18n'
 import { EditIcon } from '@/components/trak/IconAction'
 import { absenceReasonWord } from '@/lib/absence-reasons'
+import { EventTodoSlot } from './EventTodo'
 
 /* TRAK-182: the coach's part of the event sheet. Publish (a draft) or
    Published; after the event, Take register (J8.15). Share (the
@@ -169,6 +170,8 @@ export function EventSheetCoach({ event, coachId, onChanged }: { event: StripEve
               <ShareIcon size={18} />{t('coachSchedule:share')}
             </ShareEventButton>
           )}
+          {/* TRAK-623: an "Other" event goes into the coach's To-do from here too, or says it's In To-do. */}
+          {row?.event_type === 'other' && <EventTodoSlot row={row} coachId={coachId} variant="secondary" size="md" />}
           {/* TRAK-185: a logged match is corrected from its event (score, goals, assists, cards). */}
           {/* TRAK-426: where the old log has retired, a match is corrected in its evaluation, not here. TRAK-455: a pencil. */}
           {!cancelled && row?.event_type === 'match' && sessionId && !oldLogRetired && (

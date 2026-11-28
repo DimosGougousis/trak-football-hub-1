@@ -12,6 +12,7 @@ import { server } from '../../../../tests/msw/server'
 import { SUPABASE_URL } from '../../../../tests/msw/supabase'
 import { EventTodoButton, useEventTodos, type TodoEvent } from '../EventTodo'
 
+// The to-do hooks name the signed-in coach; this renders the button on its own, without the app.
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'coach-622' } }) }))
 
 const TODAY = '2026-11-28'
@@ -24,7 +25,7 @@ let posted: Record<string, unknown>[] = []
 let refuse = false
 
 function Host({ event }: { event: TodoEvent }) {
-  const open = useEventTodos()
+  const open = useEventTodos('coach-622')
   return <EventTodoButton event={event} today={TODAY} inTodo={open.get(event.id)} />
 }
 const show = (event: TodoEvent) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Host event={event} /></QueryClientProvider>)
