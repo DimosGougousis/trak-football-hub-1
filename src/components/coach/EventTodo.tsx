@@ -35,7 +35,7 @@ export function offersEventTodo(row: Pick<EventRow, 'event_type' | 'status' | 's
 const eventDay = (row: Pick<EventRow, 'starts_at' | 'event_date'>, zone: string) => row.event_date || dayIn(zone, new Date(row.starts_at))
 
 /** TRAK-623: an event as the pop-up shows it: its academy day, its time, and its venue without a Maps link. */
-export function todoEventOf(row: Pick<EventRow, 'id' | 'title' | 'starts_at' | 'event_date' | 'start_time' | 'venue'>, zone: string): TodoEvent {
+function todoEventOf(row: Pick<EventRow, 'id' | 'title' | 'starts_at' | 'event_date' | 'start_time' | 'venue'>, zone: string): TodoEvent {
   return { id: row.id, title: row.title, day: eventDay(row, zone), time: phoneEventTime(row).time,
     venue: row.venue ? venueParts(row.venue).text || null : null }
 }
@@ -65,7 +65,7 @@ const ACTION_WORD = { invite: 'coachHome:eventTodoInvite', there: 'coachHome:eve
 const WHEN_WORD = { today: 'coachHome:eventTodoToday', before: 'coachHome:eventTodoBefore', onday: 'coachHome:eventTodoOnDay' } as const
 const chip = (pressed: boolean) => `rounded-full border px-3.5 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${pressed ? 'border-brand bg-brand text-on-brand' : 'border-line bg-surface text-ink hover:border-line-strong'}`
 
-export function AddEventTodoSheet({ event, today, open, onOpenChange }: {
+function AddEventTodoSheet({ event, today, open, onOpenChange }: {
   event: TodoEvent
   /** The academy's day. */
   today: string
@@ -131,7 +131,7 @@ export function AddEventTodoSheet({ event, today, open, onOpenChange }: {
 }
 
 /** "In To-do", with the day it shows from when that's later than today. */
-export function InTodoChip({ dueOn: day, today }: { dueOn: string; today: string }) {
+function InTodoChip({ dueOn: day, today }: { dueOn: string; today: string }) {
   const { t } = useTranslation()
   return <span className="whitespace-nowrap rounded-full bg-raised px-2.5 py-1 text-[13px] font-medium text-ink-2">
     {day > today ? t('coachHome:eventTodoInFrom', { day: evalDay(day) }) : t('coachHome:upcomingInTodo')}
