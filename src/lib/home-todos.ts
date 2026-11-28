@@ -209,7 +209,8 @@ export function homeTodos({ trainings, matches, reports = [], own = [], now, zon
   // midnight. Rank 9, after Trak's; an urgent one goes up with the urgent. Under every squad, as they're the coach's.
   for (const o of own) {
     if (o.doneAt ? !doneToday(o.doneAt) : o.dueOn > today) continue
-    add('own', o.id, { squad: null, eventId: null, at: parse(o.createdAt), done: !!o.doneAt, urgent: o.urgent && !o.doneAt,
+    // TRAK-624: one added from an event (Add to To-do) carries it, so its line names the event.
+    add('own', o.id, { squad: null, eventId: o.eventId ?? null, at: parse(o.createdAt), done: !!o.doneAt, urgent: o.urgent && !o.doneAt,
       opensAt: null, leavesAt: null, title: o.title })
   }
 
